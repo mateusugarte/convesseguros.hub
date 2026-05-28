@@ -232,3 +232,8 @@ html.dark .badge-blue    { background: rgba(74,144,217,0.15);  color: #4A90D9; }
   60%  { box-shadow: 0 0 0 2px rgba(16,185,129,0.2); }
   100% { box-shadow: none; }
 }
+
+@keyframes toastProgress {
+  from { width: 100%; }
+  to   { width: 0%; }
+}

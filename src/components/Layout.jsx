@@ -73,11 +73,11 @@ export default function Layout() {
         const prodLabel = PRODUTO_LABELS[p.new.produto] || p.new.produto || ''
         setAbertasCount(n => n + 1)
         toast({
-          type: 'info',
-          title: `Nova ficha — ${prodLabel}`,
+          type: 'ficha',
+          title: prodLabel || 'Novo cliente',
           message: `${p.new.imobiliaria || ''} · ${p.new.nome_interessado || 'Sem nome'}`,
           action: { label: 'Ver ficha', onClick: () => setFichaDetalhe(p.new.id) },
-          duration: 8000,
+          duration: 10000,
         })
       })
       .subscribe()

@@ -1,0 +1,236 @@
+import { useState, useEffect } from 'react'
+import {
+  criarFicha, editarFicha, fetchImobiliariasDistintas, fetchProfiles,
+  STATUS_LABELS, PRODUTO_LABELS,
+} from '../lib/fichas'
+import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
+import { useAuth } from '../contexts/AuthContext'
+import { X, Plus, Save } from 'lucide-react'
+
+const STATUS_OPTIONS  = ['pendente','em_cotacao','em_analise','aprovado','recusado','emitido','cancelado','cpf_invalido']
+const PRODUTO_OPTIONS = ['residencial_pf','comercial_pf','pessoa_juridica']
+
+// ── Masks ─────────────────────────────────────────────────────────────────────
+
+function maskCPF(v) {
+  const d = v.replace(/\D/g, '').slice(0, 11)
+  if (d.length <= 3) return d
+  if (d.length <= 6) return `${d.slice(0,3)}.${d.slice(3)}`
+  if (d.length <= 9) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}`
+  return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`
+}
+
+function maskPhone(v) {
+  const d = v.replace(/\D/g, '').slice(0, 11)
+  if (d.length <= 2) return d
+  if (d.length <= 6) return `(${d.slice(0,2)}) ${d.slice(2)}`
+  if (d.length <= 10) return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`
+  return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`
+}
+
+// ── Field wrapper ─────────────────────────────────────────────────────────────
+
+function Field({ label, children, span2 = false, required = false }) {
+  return (
+    <div className={span2 ? 'col-span-2' : ''}>
+      <label className="block text-xs font-medium text-dark-muted mb-1.5 uppercase tracking-wider">
+        {label}{required && <span className="text-status-danger ml-0.5">*</span>}
+      </label>
+      {children}
+    </div>
+  )
+}
+
+function Sec({ title, children }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-3 pb-2 border-b border-dark-border">{title}</p>
+      <div className="grid grid-cols-2 gap-4">{children}</div>
+    </div>
+  )
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
+
+export default function ModalFicha({ ficha, onClose, onSuccess }) {
+  const { user } = useAuth()
+  const isEdit = !!ficha
+
+  const [form, setForm] = useState({
+    produto:            ficha?.produto            ?? 'residencial_pf',
+    nome_interessado:   ficha?.nome_interessado   ?? '',
+    cpf:                ficha?.cpf                ?? '',
+    celular:            ficha?.celular            ?? '',
+    email:              ficha?.email              ?? '',
+    cep:                ficha?.cep                ?? '',
+    imobiliaria:        ficha?.imobiliaria        ?? '',
+    tipo_imovel:        ficha?.tipo_imovel        ?? '',
+    valor_aluguel:      ficha?.valor_aluguel      ?? '',
+    valor_iptu:         ficha?.valor_iptu         ?? '',
+    valor_condominio:   ficha?.valor_condominio   ?? '',
+    observacoes:        ficha?.observacoes        ?? '',
+    status:             ficha?.status             ?? 'pendente',
+    seguradora:         ficha?.seguradora         ?? '',
+    orcamentista_forms: ficha?.orcamentista_forms ?? '',
+    retorno_enviado:    ficha?.retorno_enviado     ?? false,
+  })
+
+  const [saving,       setSaving]       = useState(false)
+  const [error,        setError]        = useState(null)
+  const [imobiliarias, setImobiliarias] = useState([])
+  const [profiles,     setProfiles]     = useState([])
+
+  useEffect(() => {
+    fetchImobiliariasDistintas().then(setImobiliarias)
+    fetchProfiles().then(setProfiles)
+  }, [])
+
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setSaving(true)
+    setError(null)
+
+    const dados = {
+      ...form,
+      valor_aluguel:    form.valor_aluguel    !== '' ? Number(form.valor_aluguel)    : null,
+      valor_iptu:       form.valor_iptu       !== '' ? Number(form.valor_iptu)       : null,
+      valor_condominio: form.valor_condominio !== '' ? Number(form.valor_condominio) : null,
+    }
+
+    const err = isEdit
+      ? await editarFicha(ficha.id, dados, user?.id)
+      : (await criarFicha(dados)).error
+
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    onSuccess()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-start justify-center p-4 overflow-y-auto animate-fade-in">
+      <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-2xl my-6">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-brand-secondary/20 flex items-center justify-center">
+              {isEdit ? <Save className="w-4 h-4 text-brand-accent" /> : <Plus className="w-4 h-4 text-brand-accent" />}
+            </div>
+            <h2 className="font-bold text-dark-text">{isEdit ? `Editar Ficha — ${ficha.nome_interessado || ''}` : 'Nova Ficha'}</h2>
+          </div>
+          <button onClick={onClose} className="text-dark-muted hover:text-dark-text transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-6">
+          <Sec title="Dados do Interessado">
+            <Field label="Produto">
+              <select value={form.produto} onChange={e => set('produto', e.target.value)} className="select">
+                {PRODUTO_OPTIONS.map(p => <option key={p} value={p}>{PRODUTO_LABELS[p]}</option>)}
+              </select>
+            </Field>
+            <Field label="Imobiliária">
+              <input
+                type="text"
+                list="imob-list"
+                value={form.imobiliaria}
+                onChange={e => set('imobiliaria', e.target.value)}
+                placeholder="Selecione ou digite..."
+                className="input"
+                autoComplete="off"
+              />
+              <datalist id="imob-list">
+                {imobiliarias.map(i => <option key={i} value={i} />)}
+              </datalist>
+            </Field>
+            <Field label="Nome do Interessado" span2>
+              <input type="text" value={form.nome_interessado} onChange={e => set('nome_interessado', e.target.value)} className="input" />
+            </Field>
+            <Field label="CPF">
+              <input
+                type="text"
+                value={form.cpf}
+                onChange={e => set('cpf', maskCPF(e.target.value))}
+                placeholder="000.000.000-00"
+                className="input font-mono"
+              />
+            </Field>
+            <Field label="Celular">
+              <input
+                type="text"
+                value={form.celular}
+                onChange={e => set('celular', maskPhone(e.target.value))}
+                placeholder="(00) 00000-0000"
+                className="input font-mono"
+              />
+            </Field>
+            <Field label="E-mail">
+              <input type="email" value={form.email} onChange={e => set('email', e.target.value)} className="input" />
+            </Field>
+            <Field label="CEP">
+              <input type="text" value={form.cep} onChange={e => set('cep', e.target.value)} className="input" />
+            </Field>
+          </Sec>
+
+          <Sec title="Dados do Imóvel">
+            <Field label="Tipo do Imóvel">
+              <input type="text" value={form.tipo_imovel} onChange={e => set('tipo_imovel', e.target.value)} className="input" />
+            </Field>
+            <Field label="Aluguel (R$)">
+              <input type="number" step="0.01" min="0" value={form.valor_aluguel} onChange={e => set('valor_aluguel', e.target.value)} className="input" />
+            </Field>
+            <Field label="IPTU (R$)">
+              <input type="number" step="0.01" min="0" value={form.valor_iptu} onChange={e => set('valor_iptu', e.target.value)} className="input" />
+            </Field>
+            <Field label="Condomínio (R$)">
+              <input type="number" step="0.01" min="0" value={form.valor_condominio} onChange={e => set('valor_condominio', e.target.value)} className="input" />
+            </Field>
+            <Field label="Orçamentista">
+              <select value={form.orcamentista_forms} onChange={e => set('orcamentista_forms', e.target.value)} className="select">
+                <option value="">Selecionar orçamentista...</option>
+                {profiles.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
+              </select>
+            </Field>
+            <Field label="Observações" span2>
+              <textarea value={form.observacoes} onChange={e => set('observacoes', e.target.value)} rows={2} className="input resize-none" />
+            </Field>
+          </Sec>
+
+          <Sec title="Controle Interno">
+            <Field label="Status">
+              <select value={form.status} onChange={e => set('status', e.target.value)} className="select">
+                {STATUS_OPTIONS.map(s => <option key={s} value={s}>{STATUS_LABELS[s]?.label ?? s}</option>)}
+              </select>
+            </Field>
+            <Field label="Seguradora">
+              <input type="text" value={form.seguradora} onChange={e => set('seguradora', e.target.value)} className="input" />
+            </Field>
+            <div className="col-span-2">
+              <label className="flex items-center gap-3 p-3 rounded-xl border border-dark-border bg-dark-surface2 cursor-pointer hover:border-brand-accent/40 transition-colors">
+                <input type="checkbox" checked={form.retorno_enviado} onChange={e => set('retorno_enviado', e.target.checked)}
+                       className="w-4 h-4 rounded accent-brand-accent" />
+                <span className="text-sm text-dark-text">Retorno enviado ao cliente</span>
+              </label>
+            </div>
+          </Sec>
+
+          {error && (
+            <p className="text-sm text-status-danger bg-status-danger/10 border border-status-danger/20 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
+
+          <div className="flex justify-end gap-3 pt-2 border-t border-dark-border">
+            <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
+            <button type="submit" disabled={saving} className="btn-primary flex items-center gap-2">
+              {isEdit ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              {saving ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Criar Ficha'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}

@@ -1,0 +1,25 @@
+# Credenciais — nunca commitar
+.env.local
+.env.*.local
+
+# Dependências
+node_modules/
+
+# Build
+build/
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dados sensíveis / importações
+*.csv
+*.sql
+
+# Claude Code / Skills locais
+.claude/
+skills/
+
+# n8n workflows — contêm service_role key do Supabase
+n8n/

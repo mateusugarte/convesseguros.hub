@@ -1,0 +1,628 @@
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core'
+import { fetchFichasKanban, assumirFicha, moverFichaStatus, deletarFicha, PRODUTO_LABELS } from '../lib/fichas'
+import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
+import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../contexts/ToastContext'
+import { supabase } from '../lib/supabase'
+import ModalFinalizar from './ModalFinalizar'
+import ModalFicha from './ModalFicha'
+import DetalhesFicha from './DetalhesFicha'
+import { Home, Briefcase, Building, LayoutGrid, RefreshCw, ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
+
+// ── Column config ─────────────────────────────────────────────────────────────
+
+const COLUMNS = [
+  { id: 'pendente',   label: 'Pendentes',     color: '#3B82F6' },
+  { id: 'assumidas',  label: 'Assumidas',     color: '#F59E0B' },
+  { id: 'minhas',     label: 'Minhas Fichas', color: '#C9A84C' },
+  { id: 'em_analise', label: 'Em Análise',    color: '#4A90D9' },
+  { id: 'aprovado',   label: 'Aprovadas',     color: '#10B981' },
+  { id: 'recusado',   label: 'Recusadas',     color: '#EF4444' },
+  { id: 'emitido',    label: 'Emitidas',      color: '#2B5BA8' },
+]
+
+const COL_TO_STATUS = {
+  pendente: 'pendente', assumidas: 'em_cotacao', minhas: 'em_cotacao',
+  em_analise: 'em_analise', aprovado: 'aprovado', recusado: 'recusado', emitido: 'emitido',
+}
+
+const PRODUTO_ICON = {
+  residencial_pf:  Home,
+  comercial_pf:    Briefcase,
+  pessoa_juridica: Building,
+}
+
+const PRODUTO_COLOR = {
+  residencial_pf:  '#4A90D9',
+  comercial_pf:    '#10B981',
+  pessoa_juridica: '#8B5CF6',
+}
+
+const PRODUTO_ABBR = {
+  residencial_pf:  'Res. PF',
+  comercial_pf:    'Com. PF',
+  pessoa_juridica: 'PJ',
+}
+
+const PERIODOS = [
+  { key: 'hoje',    label: 'Hoje' },
+  { key: 'semana',  label: 'Semana' },
+  { key: 'mes',     label: 'Mês' },
+  { key: 'custom',  label: 'Personalizado' },
+]
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getPeriodDates(periodo, customFrom, customTo) {
+  const now = new Date()
+  if (periodo === 'hoje') {
+    const s = new Date(now); s.setHours(0, 0, 0, 0)
+    return [s.toISOString(), now.toISOString()]
+  }
+  if (periodo === 'semana') {
+    const s = new Date(now); s.setDate(s.getDate() - 7); s.setHours(0, 0, 0, 0)
+    return [s.toISOString(), now.toISOString()]
+  }
+  if (periodo === 'mes') {
+    const s = new Date(now.getFullYear(), now.getMonth(), 1)
+    return [s.toISOString(), now.toISOString()]
+  }
+  if (periodo === 'custom') return [customFrom || null, customTo ? new Date(customTo + 'T23:59:59').toISOString() : null]
+  return [null, null]
+}
+
+function getColumnId(ficha, userId) {
+  if (ficha.status === 'pendente') return 'pendente'
+  if (ficha.status === 'em_cotacao') return ficha.orcamentista_id === userId ? 'minhas' : 'assumidas'
+  return ficha.status
+}
+
+function groupFichas(fichas, userId) {
+  const cols = Object.fromEntries(COLUMNS.map(c => [c.id, []]))
+  fichas.forEach(f => {
+    const colId = getColumnId(f, userId)
+    if (cols[colId] !== undefined) cols[colId].push(f)
+  })
+  return cols
+}
+
+function timeSince(dateStr) {
+  const h = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60))
+  if (h < 1) return '<1h'
+  if (h < 24) return `${h}h`
+  return `${Math.floor(h / 24)}d`
+}
+
+function timeBadgeCls(dateStr) {
+  const h = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60))
+  if (h < 4)  return 'bg-status-success/15 text-status-success'
+  if (h < 24) return 'bg-status-warning/15 text-status-warning'
+  return 'bg-status-danger/15 text-status-danger'
+}
+
+function stringColor(str) {
+  const c = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#2B5BA8']
+  let h = 0; for (let i = 0; i < (str||'').length; i++) h = str.charCodeAt(i) + ((h << 5) - h)
+  return c[Math.abs(h) % c.length]
+}
+function initials(n) { return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || '?' }
+
+// ── FichaCard ─────────────────────────────────────────────────────────────────
+
+function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay = false, isNew = false }) {
+  const ProdIcon  = PRODUTO_ICON[ficha.produto] || LayoutGrid
+  const prodColor = PRODUTO_COLOR[ficha.produto] || '#4A90D9'
+  const since     = ficha.assumida_em || ficha.created_at
+
+  return (
+    <div
+      className={`bg-dark-surface border border-dark-border rounded-xl p-2.5 space-y-1.5
+        hover:border-brand-accent/40 hover:scale-[1.02] transition-all duration-150 select-none
+        ${isDragOverlay ? 'shadow-2xl scale-[1.04] rotate-1' : ''}
+        ${isNew ? 'animate-card-new' : ''}
+      `}
+    >
+      {/* Produto badge + tempo */}
+      <div className="flex items-center justify-between gap-1">
+        <span
+          className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+          style={{ background: prodColor + '20', color: prodColor }}
+        >
+          <ProdIcon className="w-2.5 h-2.5" strokeWidth={2} />
+          {PRODUTO_ABBR[ficha.produto] || ''}
+        </span>
+        <span className={`badge text-[9px] font-mono ${timeBadgeCls(since)}`}>{timeSince(since)}</span>
+      </div>
+
+      {/* Nome */}
+      <p className="text-[11px] font-semibold text-dark-text leading-tight truncate">
+        {ficha.nome_interessado || '—'}
+      </p>
+
+      {/* Imobiliária */}
+      <p className="text-[10px] text-dark-muted truncate">
+        {normalizeImobiliaria(ficha.imobiliaria) || '—'}
+      </p>
+
+      {/* Footer: avatar + action */}
+      <div className="flex items-center justify-between pt-1 border-t border-dark-border/50">
+        {ficha.profiles?.nome ? (
+          <div className="flex items-center gap-1 min-w-0">
+            <div
+              className="w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold text-white flex-shrink-0"
+              style={{ background: stringColor(ficha.profiles.nome) }}
+            >
+              {initials(ficha.profiles.nome)}
+            </div>
+            <span className="text-[9px] text-dark-muted truncate max-w-[65px]">
+              {ficha.profiles.nome.split(' ')[0]}
+            </span>
+          </div>
+        ) : (
+          <span className="text-[9px] text-status-warning font-medium">Livre</span>
+        )}
+
+        <div>
+          {ficha.status === 'pendente' && !ficha.assumida && (
+            <button
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); onAssumir(ficha.id) }}
+              className="text-[9px] px-1.5 py-0.5 rounded bg-brand-secondary/20 text-brand-accent border border-brand-accent/20 hover:bg-brand-secondary/40 transition-colors font-medium"
+            >
+              Assumir
+            </button>
+          )}
+          {ficha.status === 'em_cotacao' && ficha.orcamentista_id === userId && (
+            <button
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); onFinalizar(ficha, null) }}
+              className="text-[9px] px-1.5 py-0.5 rounded bg-status-success/15 text-status-success border border-status-success/20 hover:bg-status-success/25 transition-colors font-medium"
+            >
+              Finalizar
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── DraggableCard ─────────────────────────────────────────────────────────────
+
+function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, isNew }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ficha.id })
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onClick={() => onDetalhe(ficha.id)}
+      style={{ opacity: isDragging ? 0.35 : 1, cursor: 'grab' }}
+    >
+      <FichaCard
+        ficha={ficha}
+        userId={userId}
+        onAssumir={onAssumir}
+        onFinalizar={onFinalizar}
+        isNew={isNew}
+      />
+    </div>
+  )
+}
+
+// ── DroppableColumn ───────────────────────────────────────────────────────────
+
+function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinalizar, collapsed, onToggleCollapse, newIds, colIndex }) {
+  const { isOver, setNodeRef } = useDroppable({ id: column.id })
+
+  const animStyle = { animationDelay: `${colIndex * 30}ms`, animationFillMode: 'both' }
+
+  if (collapsed) {
+    return (
+      <div className="animate-fade-in flex flex-col flex-shrink-0" style={{ width: '44px', ...animStyle }}>
+        <button
+          onClick={onToggleCollapse}
+          className="flex flex-col items-center gap-1.5 px-1.5 py-2.5 rounded-t-xl border border-b-0 hover:opacity-80 transition-opacity"
+          style={{ background: column.color + '18', borderColor: column.color + '50' }}
+          title={`${column.label} (${fichas.length}) — expandir`}
+        >
+          <div className="w-2 h-2 rounded-full" style={{ background: column.color }} />
+          <span className="text-[10px] font-mono font-bold" style={{ color: column.color }}>{fichas.length}</span>
+        </button>
+        <div
+          ref={setNodeRef}
+          className="flex-1 rounded-b-xl border transition-colors duration-150"
+          style={{
+            minHeight: '60px',
+            borderColor:     isOver ? column.color + '80' : 'rgb(var(--color-border))',
+            backgroundColor: isOver ? column.color + '15' : 'rgb(var(--color-surface2) / 0.3)',
+            boxShadow:       isOver ? `inset 0 0 0 2px ${column.color}40` : 'none',
+          }}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="animate-fade-in flex flex-col flex-shrink-0" style={{ width: '176px', ...animStyle }}>
+      {/* Column header */}
+      <div
+        className="flex items-center justify-between px-2.5 py-2 rounded-t-xl border border-b-0 transition-colors"
+        style={{ background: column.color + '18', borderColor: column.color + '50' }}
+      >
+        <div className="flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full" style={{ background: column.color }} />
+          <span className="text-[11px] font-semibold" style={{ color: column.color }}>{column.label}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span
+            className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded"
+            style={{ background: column.color + '25', color: column.color }}
+          >
+            {fichas.length}
+          </span>
+          <button
+            onClick={onToggleCollapse}
+            className="opacity-40 hover:opacity-80 transition-opacity p-0.5 rounded text-xs"
+            style={{ color: column.color }}
+            title="Colapsar coluna"
+          >
+            ‹
+          </button>
+        </div>
+      </div>
+
+      {/* Column body */}
+      <div
+        ref={setNodeRef}
+        className="flex-1 space-y-1.5 p-1.5 rounded-b-xl border overflow-y-auto transition-colors duration-150"
+        style={{
+          minHeight:       '120px',
+          maxHeight:       'calc(100vh - 330px)',
+          borderColor:     isOver ? column.color + '80' : 'rgb(var(--color-border))',
+          backgroundColor: isOver ? column.color + '08' : 'rgb(var(--color-surface2) / 0.4)',
+          boxShadow:       isOver ? `inset 0 0 0 2px ${column.color}40` : 'none',
+        }}
+      >
+        {fichas.length === 0 ? (
+          <div className="flex items-center justify-center h-14 text-[10px] text-dark-muted/30">
+            Vazia
+          </div>
+        ) : fichas.map(f => (
+          <DraggableCard
+            key={f.id}
+            ficha={f}
+            userId={userId}
+            onDetalhe={onDetalhe}
+            onAssumir={onAssumir}
+            onFinalizar={onFinalizar}
+            isNew={newIds?.has(f.id)}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Main KanbanFichas ─────────────────────────────────────────────────────────
+
+export default function KanbanFichas({ produto }) {
+  const { user } = useAuth()
+  const toast    = useToast()
+
+  const [fichas,   setFichas]   = useState([])
+  const [loading,  setLoading]  = useState(true)
+  const [activeId, setActiveId] = useState(null)
+  const [detalhe,  setDetalhe]  = useState(null)
+  const [finalizar,              setFinalizar]              = useState(null)
+  const [finalizarDefaultStatus, setFinalizarDefaultStatus] = useState(null)
+  const [editar,                 setEditar]                 = useState(null)
+
+  const [periodo,    setPeriodo]    = useState('mes')
+  const [customFrom, setCustomFrom] = useState('')
+  const [customTo,   setCustomTo]   = useState('')
+  const [collapsed,  setCollapsed]  = useState(new Set())
+  const [newIds,     setNewIds]     = useState(new Set())
+
+  const [canScrollL, setCanScrollL] = useState(false)
+  const [canScrollR, setCanScrollR] = useState(false)
+  const scrollRef = useRef(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+  )
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const [dateFrom, dateTo] = getPeriodDates(periodo, customFrom, customTo)
+    const data = await fetchFichasKanban({ produto, dateFrom, dateTo })
+    setFichas(data)
+
+    // Auto-collapse empty columns
+    const cols = groupFichas(data, user?.id)
+    const emptyCols = COLUMNS.filter(c => cols[c.id].length === 0).map(c => c.id)
+    setCollapsed(new Set(emptyCols))
+
+    setLoading(false)
+  }, [produto, periodo, customFrom, customTo, user?.id])
+
+  useEffect(() => { load() }, [load])
+
+  // Realtime: new fichas
+  useEffect(() => {
+    const ch = supabase.channel('kanban-fichas-insert')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'fichas' }, p => {
+        const nova = p.new
+        if (produto && produto !== 'todos' && nova.produto !== produto) return
+        setFichas(prev => [nova, ...prev])
+        setCollapsed(prev => {
+          const next = new Set(prev)
+          next.delete('pendente')
+          return next
+        })
+        setNewIds(prev => new Set([...prev, nova.id]))
+        setTimeout(() => setNewIds(prev => {
+          const next = new Set(prev); next.delete(nova.id); return next
+        }), 3000)
+      })
+      .subscribe()
+    return () => supabase.removeChannel(ch)
+  }, [produto])
+
+  // Scroll indicators
+  function updateScrollState() {
+    const el = scrollRef.current
+    if (!el) return
+    setCanScrollL(el.scrollLeft > 5)
+    setCanScrollR(el.scrollLeft < el.scrollWidth - el.clientWidth - 5)
+  }
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    updateScrollState()
+    el.addEventListener('scroll', updateScrollState, { passive: true })
+    const ro = new ResizeObserver(updateScrollState)
+    ro.observe(el)
+    return () => { el.removeEventListener('scroll', updateScrollState); ro.disconnect() }
+  }, [loading])
+
+  function scrollBy(dir) {
+    scrollRef.current?.scrollBy({ left: dir === 'left' ? -200 : 200, behavior: 'smooth' })
+  }
+
+  const cols       = groupFichas(fichas, user?.id)
+  const activeCard = activeId ? fichas.find(f => f.id === activeId) : null
+
+  async function handleAssumir(fichaId) {
+    const err = await assumirFicha(fichaId, user.id)
+    if (err) toast({ type: 'error', title: 'Erro ao assumir ficha' })
+    else { toast({ type: 'success', title: 'Ficha assumida!' }); load() }
+  }
+
+  function handleFinalizar(ficha, defaultStatus) {
+    setFinalizar(ficha)
+    setFinalizarDefaultStatus(defaultStatus || null)
+  }
+
+  async function handleDragEnd({ active, over }) {
+    setActiveId(null)
+    if (!over) return
+
+    const fichaId    = active.id
+    const targetCol  = over.id
+    const ficha      = fichas.find(f => f.id === fichaId)
+    if (!ficha) return
+
+    const sourceCol = getColumnId(ficha, user?.id)
+    if (sourceCol === targetCol) return
+
+    const novoStatus = COL_TO_STATUS[targetCol]
+    if (!novoStatus) return
+
+    const assumirComoAtual = targetCol === 'minhas'
+
+    // Optimistic update
+    setFichas(prev => prev.map(f => {
+      if (f.id !== fichaId) return f
+      const u = { ...f, status: novoStatus }
+      if (assumirComoAtual) {
+        u.orcamentista_id = user?.id
+        u.assumida        = true
+        u.assumida_em     = f.assumida_em || new Date().toISOString()
+      }
+      if (targetCol === 'pendente') {
+        u.orcamentista_id = null
+        u.assumida        = false
+        u.assumida_em     = null
+      }
+      return u
+    }))
+
+    // Persist
+    const err = await moverFichaStatus(fichaId, novoStatus, { assumir: assumirComoAtual, userId: user?.id })
+    if (err) {
+      toast({ type: 'error', title: 'Erro ao mover ficha' })
+      load()
+    } else {
+      const colLabel = COLUMNS.find(c => c.id === targetCol)?.label ?? targetCol
+      toast({ type: 'success', title: `Movida para ${colLabel}` })
+    }
+  }
+
+  function toggleCollapse(colId) {
+    setCollapsed(prev => {
+      const next = new Set(prev)
+      if (next.has(colId)) next.delete(colId)
+      else next.add(colId)
+      return next
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-40 gap-2 text-dark-muted text-sm">
+        <RefreshCw className="w-4 h-4 animate-spin" />
+        Carregando Kanban...
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Period filter bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1 bg-dark-surface2 border border-dark-border rounded-lg p-0.5">
+          {PERIODOS.map(p => (
+            <button
+              key={p.key}
+              onClick={() => setPeriodo(p.key)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                periodo === p.key
+                  ? 'bg-brand-secondary text-white shadow-sm'
+                  : 'text-dark-muted hover:text-dark-text'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        {periodo === 'custom' && (
+          <div className="flex items-center gap-1.5 text-xs text-dark-muted">
+            <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+            <input
+              type="date"
+              value={customFrom}
+              onChange={e => setCustomFrom(e.target.value)}
+              className="input py-1 px-2 text-xs w-[120px]"
+            />
+            <span>—</span>
+            <input
+              type="date"
+              value={customTo}
+              onChange={e => setCustomTo(e.target.value)}
+              className="input py-1 px-2 text-xs w-[120px]"
+            />
+          </div>
+        )}
+
+        <div className="ml-auto flex items-center gap-2 text-xs text-dark-muted">
+          <span>{fichas.length} ficha{fichas.length !== 1 ? 's' : ''}</span>
+          <button onClick={load} className="flex items-center gap-1 hover:text-dark-text transition-colors">
+            <RefreshCw className="w-3.5 h-3.5" /> Atualizar
+          </button>
+        </div>
+      </div>
+
+      {/* Kanban board with scroll indicators */}
+      <div className="relative">
+        {/* Gradient overlays */}
+        {canScrollL && (
+          <div
+            className="absolute left-0 top-0 bottom-4 w-16 z-10 pointer-events-none"
+            style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }}
+          />
+        )}
+        {canScrollR && (
+          <div
+            className="absolute right-0 top-0 bottom-4 w-16 z-10 pointer-events-none"
+            style={{ background: 'linear-gradient(to left, rgb(var(--color-bg)), transparent)' }}
+          />
+        )}
+
+        {/* Scroll arrows */}
+        {canScrollL && (
+          <button
+            onClick={() => scrollBy('left')}
+            className="absolute left-0.5 top-[60px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-md flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-all"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        )}
+        {canScrollR && (
+          <button
+            onClick={() => scrollBy('right')}
+            className="absolute right-0.5 top-[60px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-md flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-all"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Scrollable area */}
+        <div ref={scrollRef} className="overflow-x-auto pb-4" style={{ scrollSnapType: 'x mandatory' }}>
+          <DndContext
+            sensors={sensors}
+            onDragStart={({ active }) => setActiveId(active.id)}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => setActiveId(null)}
+          >
+            <div className="flex gap-2 min-w-max px-0.5">
+              {COLUMNS.map((col, i) => (
+                <DroppableColumn
+                  key={col.id}
+                  column={col}
+                  fichas={cols[col.id] || []}
+                  userId={user?.id}
+                  onDetalhe={setDetalhe}
+                  onAssumir={handleAssumir}
+                  onFinalizar={handleFinalizar}
+                  collapsed={collapsed.has(col.id)}
+                  onToggleCollapse={() => toggleCollapse(col.id)}
+                  newIds={newIds}
+                  colIndex={i}
+                />
+              ))}
+            </div>
+
+            <DragOverlay dropAnimation={null}>
+              {activeCard && (
+                <div style={{ width: '176px' }}>
+                  <FichaCard
+                    ficha={activeCard}
+                    userId={user?.id}
+                    onAssumir={() => {}}
+                    onFinalizar={() => {}}
+                    isDragOverlay
+                  />
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
+        </div>
+      </div>
+
+      {/* Modals */}
+      {detalhe && (
+        <DetalhesFicha
+          id={detalhe}
+          onClose={() => setDetalhe(null)}
+          onEdit={f => { setDetalhe(null); setEditar(f) }}
+          onDelete={async id => {
+            await deletarFicha(id)
+            setDetalhe(null)
+            toast({ type: 'success', title: 'Ficha excluída' })
+            load()
+          }}
+        />
+      )}
+      {editar && (
+        <ModalFicha
+          ficha={editar}
+          onClose={() => setEditar(null)}
+          onSuccess={() => { setEditar(null); load() }}
+        />
+      )}
+      {finalizar && (
+        <ModalFinalizar
+          ficha={finalizar}
+          defaultStatus={finalizarDefaultStatus}
+          onClose={() => { setFinalizar(null); setFinalizarDefaultStatus(null) }}
+          onSuccess={() => { setFinalizar(null); setFinalizarDefaultStatus(null); load() }}
+        />
+      )}
+    </div>
+  )
+}

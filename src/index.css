@@ -1,0 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Theme CSS Variables ─────────────────────────────────────────────────────
+   Values are space-separated RGB channels for Tailwind opacity modifier support.
+   Usage: bg-dark-bg/70 → background-color: rgb(var(--color-bg) / 0.7)
+*/
+:root {
+  /* Light theme */
+  --color-bg:       240 244 255;
+  --color-surface:  255 255 255;
+  --color-surface2: 235 241 255;
+  --color-border:   200 216 240;
+  --color-text:     10 22 40;
+  --color-muted:    90 112 153;
+  --color-success:  5 150 105;
+  --color-warning:  217 119 6;
+  --color-danger:   220 38 38;
+  --color-info:     37 99 235;
+}
+
+html.dark {
+  /* Dark theme */
+  --color-bg:       10 15 30;
+  --color-surface:  17 24 39;
+  --color-surface2: 28 36 56;
+  --color-border:   30 45 69;
+  --color-text:     240 244 255;
+  --color-muted:    136 153 187;
+  --color-success:  16 185 129;
+  --color-warning:  245 158 11;
+  --color-danger:   239 68 68;
+  --color-info:     59 130 246;
+}
+
+@layer base {
+  body {
+    @apply bg-dark-bg text-dark-text antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { @apply bg-transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-dark-border rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { background: #2B5BA8; }
+
+  ::selection { background: rgba(74, 144, 217, 0.25); }
+}
+
+@layer components {
+  /* Buttons */
+  .btn-primary {
+    @apply bg-brand-secondary hover:bg-brand-accent text-white font-medium px-4 py-2 rounded-lg
+           transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed
+           focus:outline-none focus:ring-2 focus:ring-brand-accent/40;
+  }
+  .btn-secondary {
+    @apply bg-dark-surface2 hover:bg-dark-border text-dark-text font-medium px-4 py-2 rounded-lg
+           border border-dark-border transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-brand-accent/40;
+  }
+  .btn-ghost {
+    @apply text-dark-muted hover:text-dark-text hover:bg-dark-surface2 font-medium px-3 py-2 rounded-lg
+           transition-all duration-200 focus:outline-none;
+  }
+  .btn-danger {
+    @apply bg-status-danger/20 hover:bg-status-danger text-status-danger hover:text-white
+           font-medium px-4 py-2 rounded-lg border border-status-danger/30 transition-all duration-200;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-dark-surface rounded-xl border border-dark-border transition-colors duration-300;
+  }
+  .glass {
+    @apply border border-dark-border/80 rounded-xl transition-colors duration-300;
+    background: rgb(var(--color-surface) / 0.7);
+    backdrop-filter: blur(20px);
+  }
+  .card-hover {
+    @apply bg-dark-surface rounded-xl border border-dark-border hover:border-brand-accent/40
+           hover:shadow-glow-sm transition-all duration-200;
+  }
+
+  /* Form inputs */
+  .input {
+    @apply w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2
+           text-sm text-dark-text placeholder-dark-muted outline-none
+           focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20
+           transition-all duration-200;
+  }
+  .select {
+    @apply w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2
+           text-sm text-dark-text outline-none appearance-none
+           focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20
+           transition-all duration-200;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  .badge-soon {
+    @apply text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand-gold/15 text-brand-gold border border-brand-gold/30;
+  }
+
+  /* Sidebar nav */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer;
+  }
+  .nav-item-active {
+    @apply bg-brand-secondary/20 text-brand-accent border border-brand-accent/20 shadow-glow-sm;
+  }
+  .nav-item-inactive {
+    @apply text-dark-muted hover:text-dark-text hover:bg-dark-surface2;
+  }
+  .nav-item-disabled {
+    @apply text-dark-muted/40 cursor-not-allowed;
+  }
+
+  /* Table */
+  .table-row {
+    @apply hover:bg-dark-surface2/60 cursor-pointer transition-colors duration-150;
+  }
+  .th {
+    @apply px-4 py-3 text-left text-xs font-semibold text-dark-muted uppercase tracking-wider;
+  }
+  .td {
+    @apply px-4 py-3 text-sm;
+  }
+}
+
+/* Recharts theme overrides — use CSS variables so they respond to theme */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: rgb(var(--color-border)) !important;
+}
+.recharts-text {
+  fill: rgb(var(--color-muted)) !important;
+}
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}

@@ -10,6 +10,22 @@ import { X, Plus, Save } from 'lucide-react'
 const STATUS_OPTIONS  = ['pendente','em_cotacao','em_analise','aprovado','recusado','emitido','cancelado','cpf_invalido']
 const PRODUTO_OPTIONS = ['residencial_pf','comercial_pf','pessoa_juridica']
 
+// ── Validation ───────────────────────────────────────────────────────────────
+
+function validarFicha(form) {
+  if (!form.nome_interessado?.trim())
+    return 'Nome do interessado é obrigatório'
+  if (!form.produto)
+    return 'Produto é obrigatório'
+  if (form.cpf && !/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(form.cpf))
+    return 'CPF inválido — formato esperado: 000.000.000-00'
+  if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+    return 'E-mail inválido'
+  if (form.valor_aluguel !== '' && Number(form.valor_aluguel) < 0)
+    return 'Valor do aluguel não pode ser negativo'
+  return null
+}
+
 // ── Masks ─────────────────────────────────────────────────────────────────────
 
 function maskCPF(v) {
@@ -89,8 +105,12 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    setSaving(true)
     setError(null)
+
+    const erroValidacao = validarFicha(form)
+    if (erroValidacao) { setError(erroValidacao); return }
+
+    setSaving(true)
 
     const dados = {
       ...form,
@@ -145,8 +165,8 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                 {imobiliarias.map(i => <option key={i} value={i} />)}
               </datalist>
             </Field>
-            <Field label="Nome do Interessado" span2>
-              <input type="text" value={form.nome_interessado} onChange={e => set('nome_interessado', e.target.value)} className="input" />
+            <Field label="Nome do Interessado" span2 required>
+              <input type="text" value={form.nome_interessado} onChange={e => set('nome_interessado', e.target.value)} className="input" placeholder="Nome completo" />
             </Field>
             <Field label="CPF">
               <input

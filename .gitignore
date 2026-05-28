@@ -1,6 +1,9 @@
 # Credenciais — nunca commitar
+.env
 .env.local
+.env.production
 .env.*.local
+*.env
 
 # Dependências
 node_modules/

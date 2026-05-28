@@ -1,13 +1,16 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ToastProvider } from './contexts/ToastContext'
 import { ThemeProvider } from './contexts/ThemeContext'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import Fichas from './pages/Fichas'
-import GestaoEmissoes from './pages/GestaoEmissoes'
-import MinhasFichas from './pages/MinhasFichas'
 import Layout from './components/Layout'
+import { PageSkeleton } from './components/Skeleton'
+
+// Pages loaded only when first visited
+const Dashboard      = lazy(() => import('./pages/Dashboard'))
+const Fichas         = lazy(() => import('./pages/Fichas'))
+const GestaoEmissoes = lazy(() => import('./pages/GestaoEmissoes'))
+const MinhasFichas   = lazy(() => import('./pages/MinhasFichas'))
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -25,18 +28,22 @@ function PrivateRoute({ children }) {
 function AppRoutes() {
   const { user } = useAuth()
   return (
-    <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-      <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
-        <Route index element={<Dashboard />} />
-        <Route path="fichas/*" element={<Fichas />} />
-        <Route path="emissoes" element={<GestaoEmissoes />} />
-        <Route path="minhas-fichas" element={<MinhasFichas />} />
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <Suspense fallback={<PageSkeleton />}>
+      <Routes>
+        <Route path="/login" element={user ? <Navigate to="/" replace /> : <LazyLogin />} />
+        <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
+          <Route index         element={<Dashboard />} />
+          <Route path="fichas/*" element={<Fichas />} />
+          <Route path="emissoes" element={<GestaoEmissoes />} />
+          <Route path="minhas-fichas" element={<MinhasFichas />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   )
 }
+
+const LazyLogin = lazy(() => import('./pages/Login'))
 
 export default function App() {
   return (

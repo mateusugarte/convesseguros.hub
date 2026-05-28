@@ -57,10 +57,23 @@ export default function Layout() {
   const { theme, toggleTheme } = useTheme()
 
   const [sidebarOpen,  setSidebarOpen]  = useState(true)
+  const [isMobile,     setIsMobile]     = useState(false)
   const [abertasCount, setAbertasCount] = useState(0)
   const [cmdOpen,      setCmdOpen]      = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [fichaDetalhe, setFichaDetalhe] = useState(null)
+
+  // Responsive: drawer on mobile, fixed sidebar on desktop
+  useEffect(() => {
+    function check() {
+      const mobile = window.innerWidth < 1024
+      setIsMobile(mobile)
+      setSidebarOpen(!mobile)
+    }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     if (user) fetchContagemAbertaOrcamentista(user.id).then(setAbertasCount)
@@ -96,10 +109,20 @@ export default function Layout() {
   return (
     <div className="flex h-screen bg-dark-bg overflow-hidden">
 
+      {/* ── Mobile backdrop ─────────────────────────────────────────────────── */}
+      {isMobile && sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
       <aside
         className={`fixed left-0 top-0 h-full z-40 flex flex-col bg-dark-surface border-r border-dark-border transition-all duration-300 ${
-          sidebarOpen ? 'w-60' : 'w-16'
+          isMobile
+            ? `w-64 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
+            : sidebarOpen ? 'w-60' : 'w-16'
         }`}
         style={{ boxShadow: 'var(--shadow-sm)' }}
       >
@@ -182,18 +205,22 @@ export default function Layout() {
           )}
         </div>
 
-        {/* Collapse toggle */}
-        <button
-          onClick={() => setSidebarOpen(o => !o)}
-          className="absolute -right-3 top-[72px] w-6 h-6 rounded-full bg-dark-surface border border-dark-border flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/60 transition-all z-50"
-          style={{ boxShadow: 'var(--shadow-card)' }}
-        >
-          {sidebarOpen ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-        </button>
+        {/* Collapse toggle — desktop only */}
+        {!isMobile && (
+          <button
+            onClick={() => setSidebarOpen(o => !o)}
+            className="absolute -right-3 top-[72px] w-6 h-6 rounded-full bg-dark-surface border border-dark-border flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/60 transition-all z-50"
+            style={{ boxShadow: 'var(--shadow-card)' }}
+          >
+            {sidebarOpen ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+          </button>
+        )}
       </aside>
 
       {/* ── Main area ───────────────────────────────────────────────────────── */}
-      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${sidebarOpen ? 'ml-60' : 'ml-16'}`}>
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
+        isMobile ? 'ml-0' : sidebarOpen ? 'ml-60' : 'ml-16'
+      }`}>
 
         {/* ── Header ── */}
         <header

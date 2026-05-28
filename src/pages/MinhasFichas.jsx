@@ -8,6 +8,7 @@ import DetalhesFicha from '../components/DetalhesFicha'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Clock, CheckCircle2, FileText, TrendingUp } from 'lucide-react'
+import { TableSkeleton } from '../components/Skeleton'
 
 function stringColor(str) {
   const c = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#2B5BA8']
@@ -132,22 +133,31 @@ export default function MinhasFichas() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-40 gap-2 text-dark-muted text-sm">
-            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
-            Carregando...
-          </div>
+          <TableSkeleton rows={6} cols={tab === 'abertas' ? 5 : 6} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-dark-surface2/80 border-b border-dark-border">
                 <tr>
-                  {tab === 'abertas'
-                    ? ['Data','Imobiliária','Nome','Produto','Tempo',''].map(h => <th key={h} className="th">{h}</th>)
-                    : ['Data','Imobiliária','Nome','Produto','Status','Seguradora'].map(h => <th key={h} className="th">{h}</th>)
-                  }
+                  {tab === 'abertas' ? (
+                    <>
+                      <th className="th hidden sm:table-cell">Data</th>
+                      <th className="th">Imobiliária</th>
+                      <th className="th">Nome</th>
+                      <th className="th hidden sm:table-cell">Produto</th>
+                      <th className="th">Tempo</th>
+                      <th className="th" />
+                    </>
+                  ) : (
+                    <>
+                      <th className="th hidden sm:table-cell">Data</th>
+                      <th className="th">Imobiliária</th>
+                      <th className="th">Nome</th>
+                      <th className="th hidden sm:table-cell">Produto</th>
+                      <th className="th">Status</th>
+                      <th className="th hidden md:table-cell">Seguradora</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-border">
@@ -161,19 +171,19 @@ export default function MinhasFichas() {
                   const si = STATUS_LABELS[f.status] ?? { label: f.status, color: '' }
                   return (
                     <tr key={f.id} className="table-row" onClick={() => setDetalhe(f.id)}>
-                      <td className="td text-dark-muted text-xs font-mono whitespace-nowrap">
+                      <td className="td text-dark-muted text-xs font-mono whitespace-nowrap hidden sm:table-cell">
                         {format(parseISO(f.created_at), 'dd/MM/yy', { locale: ptBR })}
                       </td>
                       <td className="td font-medium text-dark-text max-w-[140px] truncate">{f.imobiliaria || '—'}</td>
                       <td className="td text-dark-text max-w-[140px] truncate">{f.nome_interessado || '—'}</td>
-                      <td className="td text-dark-muted text-xs">{PRODUTO_LABELS[f.produto]}</td>
+                      <td className="td text-dark-muted text-xs hidden sm:table-cell">{PRODUTO_LABELS[f.produto]}</td>
                       {tab === 'abertas' ? (
                         <>
                           <td className="td"><TimeBadge since={f.assumida_em || f.created_at} /></td>
                           <td className="td text-right" onClick={e => e.stopPropagation()}>
                             <button
                               onClick={() => setFinalizar(f)}
-                              className="text-xs px-2.5 py-1 rounded-lg bg-status-success/15 text-status-success border border-status-success/20 hover:bg-status-success/25 transition-colors font-medium"
+                              className="text-xs px-2.5 py-1.5 rounded-lg bg-status-success/15 text-status-success border border-status-success/20 hover:bg-status-success/25 transition-colors font-medium min-h-[36px] sm:min-h-0"
                             >
                               Finalizar
                             </button>
@@ -182,7 +192,7 @@ export default function MinhasFichas() {
                       ) : (
                         <>
                           <td className="td"><span className={`badge ${si.color}`}>{si.label}</span></td>
-                          <td className="td text-dark-muted text-xs">{f.seguradora || '—'}</td>
+                          <td className="td text-dark-muted text-xs hidden md:table-cell">{f.seguradora || '—'}</td>
                         </>
                       )}
                     </tr>

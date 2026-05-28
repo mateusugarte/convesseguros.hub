@@ -9,6 +9,7 @@ import ModalFinalizar from './ModalFinalizar'
 import ModalFicha from './ModalFicha'
 import DetalhesFicha from './DetalhesFicha'
 import { Home, Briefcase, Building, LayoutGrid, RefreshCw, ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
+import { KanbanSkeleton } from './Skeleton'
 
 // ── Column config ─────────────────────────────────────────────────────────────
 
@@ -216,7 +217,7 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, isNew
 function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinalizar, collapsed, onToggleCollapse, newIds, colIndex }) {
   const { isOver, setNodeRef } = useDroppable({ id: column.id })
 
-  const animStyle = { animationDelay: `${colIndex * 30}ms`, animationFillMode: 'both' }
+  const animStyle = { animationDelay: `${colIndex * 30}ms`, animationFillMode: 'both', scrollSnapAlign: 'start' }
 
   if (collapsed) {
     return (
@@ -246,7 +247,7 @@ function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinal
 
   return (
     <div className="animate-fade-in flex flex-col flex-shrink-0" style={{ width: '224px', ...animStyle }}>
-      {/* Column header */}
+      {/* Column header — scrollSnapAlign already set in animStyle */}
       <div
         className="flex items-center justify-between px-2.5 py-2 rounded-t-xl border border-b-0 transition-colors"
         style={{ background: column.color + '18', borderColor: column.color + '50' }}
@@ -462,9 +463,13 @@ export default function KanbanFichas({ produto }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-40 gap-2 text-dark-muted text-sm">
-        <RefreshCw className="w-4 h-4 animate-spin" />
-        Carregando Kanban...
+      <div className="space-y-3">
+        <div className="flex gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-8 w-16 rounded-md bg-dark-border/40 animate-pulse" />
+          ))}
+        </div>
+        <KanbanSkeleton />
       </div>
     )
   }
@@ -551,7 +556,7 @@ export default function KanbanFichas({ produto }) {
         )}
 
         {/* Scrollable area */}
-        <div ref={scrollRef} className="overflow-x-auto pb-4" style={{ scrollSnapType: 'x mandatory' }}>
+        <div ref={scrollRef} className="overflow-x-auto pb-4" style={{ scrollSnapType: 'x proximity', WebkitOverflowScrolling: 'touch' }}>
           <DndContext
             sensors={sensors}
             onDragStart={({ active }) => setActiveId(active.id)}

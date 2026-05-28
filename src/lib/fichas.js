@@ -208,8 +208,11 @@ export async function fetchContagemProdutos() {
 
 export async function fetchFichasDoOrcamentista(orcamentistaId) {
   const { data } = await supabase
-    .from('fichas').select('*, profiles(nome)').eq('orcamentista_id', orcamentistaId)
-    .eq('status', 'em_cotacao').order('assumida_em', { ascending: false })
+    .from('fichas')
+    .select('id,created_at,produto,imobiliaria,nome_interessado,cpf,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,profiles(nome)')
+    .eq('orcamentista_id', orcamentistaId)
+    .eq('status', 'em_cotacao')
+    .order('assumida_em', { ascending: false })
   return data || []
 }
 

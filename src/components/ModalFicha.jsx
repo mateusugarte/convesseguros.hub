@@ -129,8 +129,12 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-start justify-center p-4 overflow-y-auto animate-fade-in">
-      <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-2xl my-6">
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-start justify-center sm:p-4 overflow-y-auto animate-fade-in">
+      <div className="bg-dark-surface border border-dark-border rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-2xl sm:my-6 max-h-[92vh] overflow-y-auto">
+        {/* Mobile drag handle */}
+        <div className="sm:hidden flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-dark-border" />
+        </div>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
           <div className="flex items-center gap-3">
@@ -243,8 +247,8 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
           )}
 
           <div className="flex justify-end gap-3 pt-2 border-t border-dark-border">
-            <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
-            <button type="submit" disabled={saving} className="btn-primary flex items-center gap-2">
+            <button type="button" onClick={onClose} className="btn-secondary min-h-[44px] sm:min-h-0">Cancelar</button>
+            <button type="submit" disabled={saving} className="btn-primary flex items-center gap-2 min-h-[44px] sm:min-h-0">
               {isEdit ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
               {saving ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Criar Ficha'}
             </button>

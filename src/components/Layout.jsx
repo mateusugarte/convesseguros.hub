@@ -15,14 +15,28 @@ import {
 
 const LOGO = 'https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/conves/file.jpeg'
 
-const NAV = [
-  { to: '/',             icon: LayoutDashboard, label: 'Dashboard',          end: true },
-  { to: '/fichas',       icon: FileText,        label: 'Fichas' },
-  { to: '/minhas-fichas',icon: User,            label: 'Minhas Fichas' },
-  { to: '/emissoes',     icon: FileCheck,       label: 'Gestão de Emissões', soon: true },
-  { to: '/imobiliarias', icon: Building2,       label: 'Imobiliárias',       soon: true },
-  { to: '/relatorios',   icon: BarChart2,       label: 'Relatórios',         soon: true },
-  { to: '/configuracoes',icon: Settings,        label: 'Configurações',      soon: true },
+// Nav items grouped by section
+const NAV_GROUPS = [
+  {
+    items: [
+      { to: '/',             icon: LayoutDashboard, label: 'Dashboard',     end: true },
+      { to: '/fichas',       icon: FileText,        label: 'Fichas' },
+      { to: '/minhas-fichas',icon: User,            label: 'Minhas Fichas' },
+    ],
+  },
+  {
+    label: 'Gestão',
+    items: [
+      { to: '/emissoes',     icon: FileCheck,  label: 'Gestão de Emissões', soon: true },
+      { to: '/imobiliarias', icon: Building2,  label: 'Imobiliárias',       soon: true },
+      { to: '/relatorios',   icon: BarChart2,  label: 'Relatórios',         soon: true },
+    ],
+  },
+  {
+    items: [
+      { to: '/configuracoes', icon: Settings, label: 'Configurações', soon: true },
+    ],
+  },
 ]
 
 function initials(nome) {
@@ -42,17 +56,17 @@ export default function Layout() {
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
 
-  const [sidebarOpen,   setSidebarOpen]   = useState(true)
-  const [abertasCount,  setAbertasCount]  = useState(0)
-  const [cmdOpen,       setCmdOpen]       = useState(false)
-  const [userMenuOpen,  setUserMenuOpen]  = useState(false)
-  const [fichaDetalhe,  setFichaDetalhe]  = useState(null)
+  const [sidebarOpen,  setSidebarOpen]  = useState(true)
+  const [abertasCount, setAbertasCount] = useState(0)
+  const [cmdOpen,      setCmdOpen]      = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [fichaDetalhe, setFichaDetalhe] = useState(null)
 
   useEffect(() => {
     if (user) fetchContagemAbertaOrcamentista(user.id).then(setAbertasCount)
   }, [user])
 
-  // Supabase realtime — new ficha toast
+  // Realtime — new ficha toast
   useEffect(() => {
     const ch = supabase.channel('layout-fichas-new')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'fichas' }, p => {
@@ -70,7 +84,7 @@ export default function Layout() {
     return () => supabase.removeChannel(ch)
   }, [toast])
 
-  // Ctrl+K global shortcut
+  // Ctrl+K
   useEffect(() => {
     const handler = e => { if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setCmdOpen(o => !o) } }
     window.addEventListener('keydown', handler)
@@ -82,65 +96,76 @@ export default function Layout() {
   return (
     <div className="flex h-screen bg-dark-bg overflow-hidden">
 
-      {/* ── Sidebar ── */}
+      {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
       <aside
         className={`fixed left-0 top-0 h-full z-40 flex flex-col bg-dark-surface border-r border-dark-border transition-all duration-300 ${
           sidebarOpen ? 'w-60' : 'w-16'
         }`}
+        style={{ boxShadow: 'var(--shadow-sm)' }}
       >
         {/* Logo */}
-        <div className={`flex items-center gap-3 px-4 py-4 border-b border-dark-border ${!sidebarOpen && 'justify-center px-2'}`}>
-          <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 border border-dark-border shadow-glow-sm">
+        <div className={`flex items-center gap-3 h-16 px-4 border-b border-dark-border flex-shrink-0 ${!sidebarOpen && 'justify-center px-3'}`}>
+          <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 border border-dark-border/60">
             <img src={LOGO} alt="Conves" className="w-full h-full object-cover" />
           </div>
           {sidebarOpen && (
             <div>
               <p className="text-sm font-bold text-dark-text leading-none">Conves</p>
-              <p className="text-[10px] text-dark-muted">Seguros</p>
+              <p className="text-[10px] text-dark-muted mt-0.5">Sistema de Fichas</p>
             </div>
           )}
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
-          {NAV.map(item => {
-            const Icon = item.icon
-            if (item.soon) {
-              return (
-                <div
-                  key={item.to}
-                  className={`nav-item nav-item-disabled ${!sidebarOpen && 'justify-center px-0'}`}
-                  title={!sidebarOpen ? item.label : undefined}
-                >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  {sidebarOpen && (
-                    <>
-                      <span className="flex-1 text-sm truncate">{item.label}</span>
-                      <span className="badge-soon">Em Breve</span>
-                    </>
-                  )}
-                </div>
-              )
-            }
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                title={!sidebarOpen ? item.label : undefined}
-                className={({ isActive }) =>
-                  `nav-item ${isActive ? 'nav-item-active' : 'nav-item-inactive'} ${!sidebarOpen ? 'justify-center px-0' : ''}`
+        <nav className="flex-1 px-2 py-3 overflow-y-auto space-y-0.5">
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={gi}>
+              {gi > 0 && <div className="nav-separator" />}
+              {group.label && sidebarOpen && (
+                <p className="px-4 pt-1 pb-2 text-[10px] font-semibold text-dark-muted/60 uppercase tracking-widest">
+                  {group.label}
+                </p>
+              )}
+              {group.items.map(item => {
+                const Icon = item.icon
+                if (item.soon) {
+                  return (
+                    <div
+                      key={item.to}
+                      className={`nav-item nav-item-disabled ${!sidebarOpen && 'justify-center'}`}
+                      title={!sidebarOpen ? item.label : undefined}
+                    >
+                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      {sidebarOpen && (
+                        <>
+                          <span className="flex-1 text-sm truncate">{item.label}</span>
+                          <span className="badge-soon">Em Breve</span>
+                        </>
+                      )}
+                    </div>
+                  )
                 }
-              >
-                <Icon className="w-4 h-4 flex-shrink-0" />
-                {sidebarOpen && <span className="flex-1 text-sm truncate">{item.label}</span>}
-              </NavLink>
-            )
-          })}
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    title={!sidebarOpen ? item.label : undefined}
+                    className={({ isActive }) =>
+                      `nav-item ${isActive ? 'nav-item-active' : 'nav-item-inactive'} ${!sidebarOpen ? 'justify-center' : ''}`
+                    }
+                  >
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    {sidebarOpen && <span className="flex-1 text-sm truncate">{item.label}</span>}
+                  </NavLink>
+                )
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* User footer */}
-        <div className={`border-t border-dark-border px-3 py-3 ${!sidebarOpen ? 'flex justify-center' : 'flex items-center gap-2.5'}`}>
+        <div className={`border-t border-dark-border px-3 py-3 flex-shrink-0 ${!sidebarOpen ? 'flex justify-center' : 'flex items-center gap-2.5'}`}>
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
             style={{ background: avatarColor }}
@@ -151,7 +176,7 @@ export default function Layout() {
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-dark-text truncate">{profile?.nome}</p>
               {abertasCount > 0 && (
-                <p className="text-[10px] text-status-warning">{abertasCount} em cotação</p>
+                <p className="text-[10px] text-status-warning mt-0.5">{abertasCount} em cotação</p>
               )}
             </div>
           )}
@@ -160,18 +185,21 @@ export default function Layout() {
         {/* Collapse toggle */}
         <button
           onClick={() => setSidebarOpen(o => !o)}
-          className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-dark-surface2 border border-dark-border flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent transition-all z-50 shadow-md"
+          className="absolute -right-3 top-[72px] w-6 h-6 rounded-full bg-dark-surface border border-dark-border flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/60 transition-all z-50"
+          style={{ boxShadow: 'var(--shadow-card)' }}
         >
           {sidebarOpen ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
         </button>
       </aside>
 
-      {/* ── Main area ── */}
+      {/* ── Main area ───────────────────────────────────────────────────────── */}
       <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${sidebarOpen ? 'ml-60' : 'ml-16'}`}>
 
         {/* ── Header ── */}
-        <header className="sticky top-0 z-30 h-14 flex items-center justify-between px-5 border-b border-dark-border bg-dark-surface/90 backdrop-blur-xl">
-
+        <header
+          className="sticky top-0 z-30 h-16 flex items-center justify-between px-5 border-b border-dark-border bg-dark-surface/95 backdrop-blur-xl flex-shrink-0"
+          style={{ boxShadow: 'var(--shadow-sm)' }}
+        >
           <div className="flex items-center gap-3">
             <button onClick={() => setSidebarOpen(o => !o)} className="btn-ghost p-2">
               <Menu className="w-4 h-4" />
@@ -180,15 +208,15 @@ export default function Layout() {
             {/* Search trigger */}
             <button
               onClick={() => setCmdOpen(true)}
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-dark-border bg-dark-surface2 text-dark-muted text-sm hover:border-brand-accent/50 transition-colors"
+              className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg border border-dark-border bg-dark-surface2 text-dark-muted hover:border-brand-accent/50 transition-colors"
             >
               <Search className="w-3.5 h-3.5" />
-              <span className="text-xs">Buscar fichas...</span>
-              <kbd className="ml-4 text-[10px] border border-dark-border rounded px-1.5 py-0.5 text-dark-muted/60">Ctrl K</kbd>
+              <span className="text-xs text-dark-muted">Buscar fichas...</span>
+              <kbd className="ml-4 text-[10px] border border-dark-border rounded px-1.5 py-0.5 text-dark-muted/50">Ctrl K</kbd>
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {/* Mobile search */}
             <button onClick={() => setCmdOpen(true)} className="md:hidden btn-ghost p-2">
               <Search className="w-4 h-4" />
@@ -197,8 +225,8 @@ export default function Layout() {
             {/* Theme toggle */}
             <button
               onClick={toggleTheme}
-              className="btn-ghost p-2"
-              title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+              className="btn-ghost p-2 rounded-lg"
+              title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
             >
               {theme === 'dark'
                 ? <Sun className="w-4 h-4 text-brand-gold" />
@@ -206,19 +234,19 @@ export default function Layout() {
               }
             </button>
 
-            {/* Notifications bell */}
-            <button className="btn-ghost p-2 relative">
+            {/* Bell */}
+            <button className="btn-ghost p-2 relative rounded-lg">
               <Bell className="w-4 h-4" />
               {abertasCount > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-status-warning" />
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-status-warning" />
               )}
             </button>
 
             {/* User menu */}
-            <div className="relative">
+            <div className="relative ml-1">
               <button
                 onClick={() => setUserMenuOpen(o => !o)}
-                className="flex items-center gap-2.5 pl-3 pr-2 py-1.5 rounded-lg border border-dark-border bg-dark-surface2 hover:border-brand-accent/50 transition-colors"
+                className="flex items-center gap-2 pl-2.5 pr-2 py-1.5 rounded-lg border border-dark-border bg-dark-surface2 hover:border-brand-accent/50 transition-colors"
               >
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
@@ -237,7 +265,10 @@ export default function Layout() {
               {userMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
-                  <div className="absolute right-0 top-full mt-1.5 w-48 bg-dark-surface border border-dark-border rounded-xl shadow-2xl z-50 py-1 animate-slide-up">
+                  <div
+                    className="absolute right-0 top-full mt-2 w-48 bg-dark-surface border border-dark-border rounded-xl z-50 py-1 animate-slide-up overflow-hidden"
+                    style={{ boxShadow: 'var(--shadow-lg)' }}
+                  >
                     <button
                       onClick={() => { setUserMenuOpen(false); navigate('/minhas-fichas') }}
                       className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-dark-text hover:bg-dark-surface2 transition-colors"
@@ -262,7 +293,7 @@ export default function Layout() {
 
         {/* ── Content ── */}
         <main className="flex-1 overflow-y-auto">
-          <div className="p-5 max-w-screen-2xl mx-auto">
+          <div className="p-6 max-w-screen-2xl mx-auto">
             <Outlet />
           </div>
         </main>
@@ -275,7 +306,6 @@ export default function Layout() {
         onOpenFicha={id => { setCmdOpen(false); setFichaDetalhe(id) }}
       />
 
-      {/* Ficha detail from cmd palette */}
       {fichaDetalhe && (
         <LazyDetalhesFicha id={fichaDetalhe} onClose={() => setFichaDetalhe(null)} />
       )}

@@ -6,20 +6,25 @@
 
 /* ── Theme CSS Variables ─────────────────────────────────────────────────────
    Values are space-separated RGB channels for Tailwind opacity modifier support.
-   Usage: bg-dark-bg/70 → background-color: rgb(var(--color-bg) / 0.7)
 */
 :root {
   /* Light theme */
-  --color-bg:       240 244 255;
+  --color-bg:       248 250 255;
   --color-surface:  255 255 255;
-  --color-surface2: 235 241 255;
-  --color-border:   200 216 240;
+  --color-surface2: 241 245 252;
+  --color-border:   220 230 245;
   --color-text:     10 22 40;
   --color-muted:    90 112 153;
   --color-success:  5 150 105;
   --color-warning:  217 119 6;
   --color-danger:   220 38 38;
   --color-info:     37 99 235;
+
+  /* Shadows */
+  --shadow-card:  0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-hover: 0 4px 16px rgba(0,0,0,0.10);
+  --shadow-sm:    0 1px 3px rgba(0,0,0,0.06);
+  --shadow-lg:    0 8px 30px rgba(0,0,0,0.12);
 }
 
 html.dark {
@@ -34,6 +39,11 @@ html.dark {
   --color-warning:  245 158 11;
   --color-danger:   239 68 68;
   --color-info:     59 130 246;
+
+  --shadow-card:  0 1px 4px rgba(0,0,0,0.35);
+  --shadow-hover: 0 4px 20px rgba(0,0,0,0.45);
+  --shadow-sm:    0 1px 3px rgba(0,0,0,0.3);
+  --shadow-lg:    0 8px 30px rgba(0,0,0,0.5);
 }
 
 @layer base {
@@ -52,89 +62,159 @@ html.dark {
 }
 
 @layer components {
-  /* Buttons */
+
+  /* ── Buttons ──────────────────────────────────────────────────────────────── */
   .btn-primary {
-    @apply bg-brand-secondary hover:bg-brand-accent text-white font-medium px-4 py-2 rounded-lg
-           transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed
+    @apply inline-flex items-center justify-center gap-2
+           bg-brand-primary hover:bg-brand-secondary
+           text-white font-medium text-sm
+           px-4 py-2 rounded-lg
+           transition-colors duration-150
+           disabled:opacity-40 disabled:cursor-not-allowed
            focus:outline-none focus:ring-2 focus:ring-brand-accent/40;
   }
   .btn-secondary {
-    @apply bg-dark-surface2 hover:bg-dark-border text-dark-text font-medium px-4 py-2 rounded-lg
-           border border-dark-border transition-all duration-200
-           focus:outline-none focus:ring-2 focus:ring-brand-accent/40;
+    @apply inline-flex items-center justify-center gap-2
+           bg-transparent border border-dark-border
+           text-dark-text font-medium text-sm
+           px-4 py-2 rounded-lg
+           transition-all duration-150
+           hover:border-brand-accent/50 hover:bg-dark-surface2
+           focus:outline-none focus:ring-2 focus:ring-brand-accent/20;
   }
   .btn-ghost {
-    @apply text-dark-muted hover:text-dark-text hover:bg-dark-surface2 font-medium px-3 py-2 rounded-lg
-           transition-all duration-200 focus:outline-none;
+    @apply inline-flex items-center justify-center gap-2
+           text-dark-muted hover:text-dark-text hover:bg-dark-surface2
+           font-medium px-3 py-2 rounded-lg
+           transition-all duration-150
+           focus:outline-none;
   }
   .btn-danger {
-    @apply bg-status-danger/20 hover:bg-status-danger text-status-danger hover:text-white
-           font-medium px-4 py-2 rounded-lg border border-status-danger/30 transition-all duration-200;
+    @apply inline-flex items-center justify-center gap-2
+           bg-status-danger/10 hover:bg-status-danger
+           text-status-danger hover:text-white
+           font-medium text-sm px-4 py-2 rounded-lg
+           border border-status-danger/30
+           transition-all duration-150;
   }
 
-  /* Cards */
+  /* ── Cards ────────────────────────────────────────────────────────────────── */
   .card {
-    @apply bg-dark-surface rounded-xl border border-dark-border transition-colors duration-300;
+    @apply bg-dark-surface border border-dark-border rounded-xl transition-all duration-200;
+    box-shadow: var(--shadow-sm);
+  }
+  .card:hover {
+    box-shadow: var(--shadow-hover);
   }
   .glass {
     @apply border border-dark-border/80 rounded-xl transition-colors duration-300;
-    background: rgb(var(--color-surface) / 0.7);
+    background: rgb(var(--color-surface) / 0.8);
     backdrop-filter: blur(20px);
   }
   .card-hover {
-    @apply bg-dark-surface rounded-xl border border-dark-border hover:border-brand-accent/40
-           hover:shadow-glow-sm transition-all duration-200;
+    @apply bg-dark-surface border border-dark-border rounded-xl
+           transition-all duration-200 cursor-pointer;
+    box-shadow: var(--shadow-sm);
+  }
+  .card-hover:hover {
+    @apply border-brand-accent/40;
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-1px);
+  }
+  .card-hover:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
   }
 
-  /* Form inputs */
+  /* ── Form inputs ──────────────────────────────────────────────────────────── */
   .input {
     @apply w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2
            text-sm text-dark-text placeholder-dark-muted outline-none
            focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20
-           transition-all duration-200;
+           transition-all duration-150;
   }
   .select {
     @apply w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2
            text-sm text-dark-text outline-none appearance-none
            focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20
-           transition-all duration-200;
+           transition-all duration-150;
   }
 
-  /* Badges */
+  /* ── Badges ───────────────────────────────────────────────────────────────── */
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold;
   }
   .badge-soon {
     @apply text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand-gold/15 text-brand-gold border border-brand-gold/30;
   }
 
-  /* Sidebar nav */
+  /* Badge color variants — light mode */
+  .badge-success { background: #D1FAE5; color: #065F46; }
+  .badge-danger  { background: #FEE2E2; color: #991B1B; }
+  .badge-warning { background: #FEF3C7; color: #92400E; }
+  .badge-info    { background: #DBEAFE; color: #1E40AF; }
+  .badge-purple  { background: #EDE9FE; color: #5B21B6; }
+  .badge-muted   { background: #F1F5F9; color: #475569; }
+  .badge-blue    { background: #DBEAFE; color: #1D4ED8; }
+
+  /* ── Sidebar nav ──────────────────────────────────────────────────────────── */
   .nav-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer;
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer;
   }
   .nav-item-active {
-    @apply bg-brand-secondary/20 text-brand-accent border border-brand-accent/20 shadow-glow-sm;
+    @apply text-brand-accent;
+    background: rgba(43, 91, 168, 0.12);
   }
   .nav-item-inactive {
-    @apply text-dark-muted hover:text-dark-text hover:bg-dark-surface2;
+    @apply text-dark-muted hover:text-dark-text hover:bg-dark-surface2/80;
   }
   .nav-item-disabled {
     @apply text-dark-muted/40 cursor-not-allowed;
   }
+  .nav-separator {
+    @apply my-2 border-t border-dark-border/60;
+  }
 
-  /* Table */
+  /* ── Table ────────────────────────────────────────────────────────────────── */
   .table-row {
-    @apply hover:bg-dark-surface2/60 cursor-pointer transition-colors duration-150;
+    @apply transition-colors duration-100 cursor-pointer;
+  }
+  .table-row:hover td {
+    @apply bg-dark-surface2/50;
   }
   .th {
-    @apply px-4 py-3 text-left text-xs font-semibold text-dark-muted uppercase tracking-wider;
+    @apply px-4 py-3 text-left text-[11px] font-semibold text-dark-muted uppercase tracking-wider;
   }
   .td {
-    @apply px-4 py-3 text-sm;
+    @apply px-4 py-3 text-sm border-b border-dark-border/60;
+  }
+
+  /* ── Kanban ───────────────────────────────────────────────────────────────── */
+  .kanban-card {
+    @apply bg-dark-surface border border-dark-border rounded-xl p-3 space-y-2 select-none cursor-pointer
+           transition-all duration-150;
+    box-shadow: var(--shadow-sm);
+  }
+  .kanban-card:hover {
+    @apply border-dark-border/80;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+    transform: translateY(-1px);
+  }
+  html.dark .kanban-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
   }
 }
 
-/* Recharts theme overrides — use CSS variables so they respond to theme */
+/* Dark mode — badge overrides */
+html.dark .badge-success { background: rgba(16,185,129,0.15);  color: #10B981; }
+html.dark .badge-danger  { background: rgba(239,68,68,0.15);   color: #EF4444; }
+html.dark .badge-warning { background: rgba(245,158,11,0.15);  color: #F59E0B; }
+html.dark .badge-info    { background: rgba(59,130,246,0.15);  color: #3B82F6; }
+html.dark .badge-purple  { background: rgba(139,92,246,0.15);  color: #8B5CF6; }
+html.dark .badge-muted   { background: rgba(136,153,187,0.15); color: #8899BB; }
+html.dark .badge-blue    { background: rgba(74,144,217,0.15);  color: #4A90D9; }
+
+/* Recharts theme overrides — use CSS variables */
 .recharts-cartesian-grid-horizontal line,
 .recharts-cartesian-grid-vertical line {
   stroke: rgb(var(--color-border)) !important;
@@ -144,4 +224,11 @@ html.dark {
 }
 .recharts-tooltip-wrapper {
   outline: none !important;
+}
+
+/* ── Animation keyframes ────────────────────────────────────────────────────── */
+@keyframes cardNew {
+  0%   { box-shadow: 0 0 0 3px rgba(16,185,129,0.6); border-color: #10B981; }
+  60%  { box-shadow: 0 0 0 2px rgba(16,185,129,0.2); }
+  100% { box-shadow: none; }
 }

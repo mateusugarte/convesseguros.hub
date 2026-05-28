@@ -4,14 +4,14 @@ import { normalizeImobiliaria } from './normalizeImobiliaria'
 export { normalizeImobiliaria }
 
 export const STATUS_LABELS = {
-  pendente:     { label: 'Pendente',     color: 'bg-status-info/15 text-status-info' },
-  em_cotacao:   { label: 'Em Cotação',   color: 'bg-status-warning/15 text-status-warning' },
-  em_analise:   { label: 'Em Análise',   color: 'bg-brand-accent/15 text-brand-accent' },
-  aprovado:     { label: 'Aprovado',     color: 'bg-status-success/15 text-status-success' },
-  recusado:     { label: 'Recusado',     color: 'bg-status-danger/15 text-status-danger' },
-  emitido:      { label: 'Emitido',      color: 'bg-brand-secondary/20 text-brand-accent' },
-  cancelado:    { label: 'Cancelado',    color: 'bg-dark-muted/15 text-dark-muted' },
-  cpf_invalido: { label: 'CPF Inválido', color: 'bg-status-warning/15 text-status-warning' },
+  pendente:     { label: 'Pendente',     color: 'badge-info' },
+  em_cotacao:   { label: 'Em Cotação',   color: 'badge-warning' },
+  em_analise:   { label: 'Em Análise',   color: 'badge-blue' },
+  aprovado:     { label: 'Aprovado',     color: 'badge-success' },
+  recusado:     { label: 'Recusado',     color: 'badge-danger' },
+  emitido:      { label: 'Emitido',      color: 'badge-purple' },
+  cancelado:    { label: 'Cancelado',    color: 'badge-muted' },
+  cpf_invalido: { label: 'CPF Inválido', color: 'badge-warning' },
 }
 
 export const PRODUTO_LABELS = {

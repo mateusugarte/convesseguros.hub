@@ -96,9 +96,9 @@ function timeSince(dateStr) {
 
 function timeBadgeCls(dateStr) {
   const h = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60))
-  if (h < 4)  return 'bg-status-success/15 text-status-success'
-  if (h < 24) return 'bg-status-warning/15 text-status-warning'
-  return 'bg-status-danger/15 text-status-danger'
+  if (h < 4)  return 'badge-success'
+  if (h < 24) return 'badge-warning'
+  return 'badge-danger'
 }
 
 function stringColor(str) {
@@ -117,9 +117,8 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay = fals
 
   return (
     <div
-      className={`bg-dark-surface border border-dark-border rounded-xl p-2.5 space-y-1.5
-        hover:border-brand-accent/40 hover:scale-[1.02] transition-all duration-150 select-none
-        ${isDragOverlay ? 'shadow-2xl scale-[1.04] rotate-1' : ''}
+      className={`kanban-card
+        ${isDragOverlay ? 'scale-[1.04] rotate-1 !shadow-lg' : ''}
         ${isNew ? 'animate-card-new' : ''}
       `}
     >
@@ -246,7 +245,7 @@ function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinal
   }
 
   return (
-    <div className="animate-fade-in flex flex-col flex-shrink-0" style={{ width: '176px', ...animStyle }}>
+    <div className="animate-fade-in flex flex-col flex-shrink-0" style={{ width: '224px', ...animStyle }}>
       {/* Column header */}
       <div
         className="flex items-center justify-between px-2.5 py-2 rounded-t-xl border border-b-0 transition-colors"
@@ -579,7 +578,7 @@ export default function KanbanFichas({ produto }) {
 
             <DragOverlay dropAnimation={null}>
               {activeCard && (
-                <div style={{ width: '176px' }}>
+                <div style={{ width: '224px' }}>
                   <FichaCard
                     ficha={activeCard}
                     userId={user?.id}

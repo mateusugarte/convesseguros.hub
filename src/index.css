@@ -206,6 +206,55 @@ html.dark {
   html.dark .kanban-card:hover {
     box-shadow: 0 4px 16px rgba(0,0,0,0.4);
   }
+
+  /* Kanban column — responsive width via CSS custom property */
+  .kanban-col {
+    width: var(--kanban-col-w, 224px);
+    flex-shrink: 0;
+  }
+
+  /* Kanban column body — responsive max-height */
+  .kanban-col-body {
+    min-height: 120px;
+    max-height: calc(100vh - 330px);
+  }
+
+  /* Kanban scroll container — snap behavior */
+  .kanban-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+  }
+}
+
+/* ── Kanban: webkit scrollbar customizada ──────────────────────────────────── */
+.kanban-scroll::-webkit-scrollbar         { height: 4px; }
+.kanban-scroll::-webkit-scrollbar-track  { background: transparent; }
+.kanban-scroll::-webkit-scrollbar-thumb  { background: rgb(var(--color-border)); border-radius: 2px; }
+.kanban-scroll::-webkit-scrollbar-thumb:hover { background: #2B5BA8; }
+
+.kanban-col-body::-webkit-scrollbar        { width: 3px; }
+.kanban-col-body::-webkit-scrollbar-track { background: transparent; }
+.kanban-col-body::-webkit-scrollbar-thumb { background: rgb(var(--color-border)); border-radius: 2px; }
+
+/* ── Kanban mobile: coluna ocupa ~85vw, snap mandatório ───────────────────── */
+@media (max-width: 768px) {
+  :root { --kanban-col-w: min(85vw, 300px); }
+
+  .kanban-scroll {
+    scroll-snap-type: x mandatory;
+  }
+}
+
+/* ── Landscape mobile/tablet: corrigir alturas ────────────────────────────── */
+@media (orientation: landscape) and (max-height: 600px) {
+  .kanban-col-body {
+    max-height: calc(100vh - 140px);
+  }
+
+  /* Modal bottom-sheet não pode ser tão alto em landscape */
+  .fixed.items-end > div {
+    max-height: 80vh;
+  }
 }
 
 /* Dark mode — badge overrides */

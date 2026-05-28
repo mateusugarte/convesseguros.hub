@@ -129,7 +129,7 @@ export default function Layout() {
         {/* Logo */}
         <div className={`flex items-center gap-3 h-16 px-4 border-b border-dark-border flex-shrink-0 ${!sidebarOpen && 'justify-center px-3'}`}>
           <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 border border-dark-border/60">
-            <img src={LOGO} alt="Conves" className="w-full h-full object-cover" />
+            <img src={LOGO} alt="Conves" className="w-full h-full object-cover" width="36" height="36" loading="eager" decoding="async" />
           </div>
           {sidebarOpen && (
             <div>

@@ -246,8 +246,8 @@ function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinal
   }
 
   return (
-    <div className="animate-fade-in flex flex-col flex-shrink-0" style={{ width: '224px', ...animStyle }}>
-      {/* Column header — scrollSnapAlign already set in animStyle */}
+    <div className="kanban-col animate-fade-in flex flex-col flex-shrink-0" style={{ ...animStyle }}>
+      {/* Column header */}
       <div
         className="flex items-center justify-between px-2.5 py-2 rounded-t-xl border border-b-0 transition-colors"
         style={{ background: column.color + '18', borderColor: column.color + '50' }}
@@ -277,10 +277,8 @@ function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinal
       {/* Column body */}
       <div
         ref={setNodeRef}
-        className="flex-1 space-y-1.5 p-1.5 rounded-b-xl border overflow-y-auto transition-colors duration-150"
+        className="kanban-col-body flex-1 space-y-1.5 p-1.5 rounded-b-xl border overflow-y-auto transition-colors duration-150"
         style={{
-          minHeight:       '120px',
-          maxHeight:       'calc(100vh - 330px)',
           borderColor:     isOver ? column.color + '80' : 'rgb(var(--color-border))',
           backgroundColor: isOver ? column.color + '08' : 'rgb(var(--color-surface2) / 0.4)',
           boxShadow:       isOver ? `inset 0 0 0 2px ${column.color}40` : 'none',
@@ -556,7 +554,7 @@ export default function KanbanFichas({ produto }) {
         )}
 
         {/* Scrollable area */}
-        <div ref={scrollRef} className="overflow-x-auto pb-4" style={{ scrollSnapType: 'x proximity', WebkitOverflowScrolling: 'touch' }}>
+        <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
           <DndContext
             sensors={sensors}
             onDragStart={({ active }) => setActiveId(active.id)}
@@ -583,7 +581,7 @@ export default function KanbanFichas({ produto }) {
 
             <DragOverlay dropAnimation={null}>
               {activeCard && (
-                <div style={{ width: '224px' }}>
+                <div className="kanban-col">
                   <FichaCard
                     ficha={activeCard}
                     userId={user?.id}

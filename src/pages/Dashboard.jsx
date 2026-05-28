@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, PieChart, Pie, CartesianGrid,
@@ -13,6 +14,7 @@ import {
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import ModalFinalizar from '../components/ModalFinalizar'
+import { DashboardSkeleton } from '../components/Skeleton'
 import {
   TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle,
   BarChart3, Activity, Zap,
@@ -108,33 +110,41 @@ function TimeBadge({ since }) {
 export default function Dashboard() {
   const { user } = useAuth()
   const { theme } = useTheme()
+  const [finalizar, setFinalizar] = useState(null)
 
-  const [kpis,         setKpis]         = useState(null)
-  const [emitidas,     setEmitidas]     = useState(0)
-  const [grafico,      setGrafico]      = useState([])
-  const [topImob,      setTopImob]      = useState([])
-  const [distribuicao, setDistribuicao] = useState([])
-  const [prodMes,      setProdMes]      = useState([])
-  const [metricas,     setMetricas]     = useState(null)
-  const [atividade,    setAtividade]    = useState([])
-  const [minhasFichas, setMinhasFichas] = useState([])
-  const [finalizar,    setFinalizar]    = useState(null)
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['dashboard', user?.id],
+    queryFn: async () => {
+      const [k, em, g, ti, dist, pm, met, atv, mf] = await Promise.all([
+        fetchKPIs(),
+        fetchEmitidas(),
+        fetchFichasPorDia(30),
+        fetchTopImobiliarias(5),
+        fetchDistribuicaoStatus(),
+        fetchFichasPorProdutoMes(),
+        fetchMetricas(),
+        fetchAtividadeRecente(10),
+        user ? fetchFichasDoOrcamentista(user.id) : Promise.resolve([]),
+      ])
+      return { kpis: k, emitidas: em, grafico: g, topImob: ti, distribuicao: dist, prodMes: pm, metricas: met, atividade: atv, minhasFichas: mf }
+    },
+  })
 
-  const load = useCallback(async () => {
-    const [k, em, g, ti, dist, pm, met, atv] = await Promise.all([
-      fetchKPIs(), fetchEmitidas(), fetchFichasPorDia(30), fetchTopImobiliarias(5),
-      fetchDistribuicaoStatus(), fetchFichasPorProdutoMes(), fetchMetricas(), fetchAtividadeRecente(10),
-    ])
-    setKpis(k); setEmitidas(em); setGrafico(g); setTopImob(ti)
-    setDistribuicao(dist); setProdMes(pm); setMetricas(met); setAtividade(atv)
-    if (user) fetchFichasDoOrcamentista(user.id).then(setMinhasFichas)
-  }, [user])
-
-  useEffect(() => { load() }, [load])
+  const kpis         = data?.kpis         ?? null
+  const emitidas     = data?.emitidas     ?? 0
+  const grafico      = data?.grafico      ?? []
+  const topImob      = data?.topImob      ?? []
+  const distribuicao = data?.distribuicao ?? []
+  const prodMes      = data?.prodMes      ?? []
+  const metricas     = data?.metricas     ?? null
+  const atividade    = data?.atividade    ?? []
+  const minhasFichas = data?.minhasFichas ?? []
 
   // Theme-responsive chart colors
   const chartGrid = theme === 'dark' ? '#1E2D45' : '#C8D8F0'
   const chartTick = theme === 'dark' ? '#8899BB' : '#5A7099'
+
+  if (isLoading) return <DashboardSkeleton />
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -363,7 +373,7 @@ export default function Dashboard() {
         <ModalFinalizar
           ficha={finalizar}
           onClose={() => setFinalizar(null)}
-          onSuccess={() => { setFinalizar(null); load() }}
+          onSuccess={() => { setFinalizar(null); refetch() }}
         />
       )}
     </div>

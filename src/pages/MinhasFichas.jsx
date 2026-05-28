@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchFichasDoOrcamentista, fetchFichas, deletarFicha, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -30,35 +31,28 @@ function TimeBadge({ since }) {
 export default function MinhasFichas() {
   const { user, profile } = useAuth()
   const toast = useToast()
-  const [abertas,   setAbertas]   = useState([])
-  const [passadas,  setPassadas]  = useState([])
   const [tab,       setTab]       = useState('abertas')
-  const [loading,   setLoading]   = useState(true)
   const [finalizar, setFinalizar] = useState(null)
   const [detalhe,   setDetalhe]   = useState(null)
   const [editar,    setEditar]    = useState(null)
 
+  const queryClient = useQueryClient()
   const avatarColor = stringColor(profile?.nome || '')
 
-  useEffect(() => {
-    if (!user) return
-    setLoading(true)
-    Promise.all([
+  const { data: fichasData, isLoading } = useQuery({
+    queryKey: ['minhas-fichas', user?.id],
+    queryFn: () => Promise.all([
       fetchFichasDoOrcamentista(user.id),
       fetchFichas({ tipo: 'passadas_por_mim', orcamentistaId: user.id, pageSize: 100 }),
-    ]).then(([ab, { data }]) => {
-      setAbertas(ab)
-      setPassadas(data)
-      setLoading(false)
-    })
-  }, [user])
+    ]).then(([ab, { data }]) => ({ abertas: ab, passadas: data })),
+    enabled: !!user?.id,
+  })
+
+  const abertas  = fichasData?.abertas  ?? []
+  const passadas = fichasData?.passadas ?? []
 
   function refresh() {
-    if (!user) return
-    Promise.all([
-      fetchFichasDoOrcamentista(user.id),
-      fetchFichas({ tipo: 'passadas_por_mim', orcamentistaId: user.id, pageSize: 100 }),
-    ]).then(([ab, { data }]) => { setAbertas(ab); setPassadas(data) })
+    queryClient.invalidateQueries({ queryKey: ['minhas-fichas', user?.id] })
   }
 
   const metricas = {

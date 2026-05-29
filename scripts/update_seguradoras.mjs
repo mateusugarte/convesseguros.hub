@@ -167,6 +167,12 @@ function processGenerico(cols, produto) {
   return { fichaId, nome, cpf: cpfNorm, imob: rawImob.trim(), rawTimestamp, produto }
 }
 
+// Sanitiza string para uso em comentário SQL — remove newlines internos
+function safeLine(v, maxLen) {
+  const s = String(v || '—').replace(/[\r\n\t]+/g, ' ').trim()
+  return maxLen ? s.slice(0, maxLen) : s
+}
+
 // ── Gerador de SQL UPDATE (Residencial) ─────────────────────────────────────
 
 function buildUpdateSQL(f, rowNum) {
@@ -174,7 +180,11 @@ function buildUpdateSQL(f, rowNum) {
     ? `\n  OR regexp_replace(COALESCE(cpf, ''), '[^0-9]', '', 'g') = '${f.cpfNorm}'`
     : ''
 
-  return `-- #${rowNum}: ${(f.nome || '—').slice(0,40)} | ${f.imob || '—'} | ${f.seguradora}${f.numApolice ? ' #' + f.numApolice : ''}
+  // safeLine evita que newlines internos nos campos quebrem o comentário SQL
+  const nomeStr = safeLine(f.nome, 40)
+  const imobStr = safeLine(f.imob)
+
+  return `-- #${rowNum}: ${nomeStr} | ${imobStr} | ${f.seguradora}${f.numApolice ? ' #' + f.numApolice : ''}
 UPDATE public.fichas SET
   seguradora     = ${esc(f.seguradora)},
   numero_apolice = ${esc(f.numApolice)}
@@ -189,11 +199,15 @@ WHERE (
 // Gera UPDATE comentado (Comercial/Juridica — sem dados de seguradora no CSV)
 function buildManualUpdateSQL(f, rowNum, produto) {
   const field = produto === 'pessoa_juridica' ? 'cnpj' : 'cpf'
+  // Prefixo -- antes do OR para manter o bloco inteiro comentado
   const cpfClause = f.cpf.length >= 8
-    ? `\n  OR regexp_replace(COALESCE(${field}, ''), '[^0-9]', '', 'g') = '${f.cpf}'`
+    ? `\n--   OR regexp_replace(COALESCE(${field}, ''), '[^0-9]', '', 'g') = '${f.cpf}'`
     : ''
 
-  return `-- #${rowNum}: ${(f.nome || '—').slice(0,50)} | ${f.imob || '—'}
+  const nomeStr = safeLine(f.nome, 50)
+  const imobStr = safeLine(f.imob)
+
+  return `-- #${rowNum}: ${nomeStr} | ${imobStr}
 -- ⚠ Seguradora NÃO disponível no CSV — preencher manualmente:
 -- UPDATE public.fichas SET
 --   seguradora     = 'NOME_DA_SEGURADORA',

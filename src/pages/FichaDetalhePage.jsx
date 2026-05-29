@@ -18,7 +18,7 @@ function fmtDt(v) {
 }
 function fmtBRL(v) {
   if (v === null || v === undefined || v === '') return null
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
+  return String(v)
 }
 
 // ── InlineField — campo editável com click ────────────────────────────────────

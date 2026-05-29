@@ -52,8 +52,6 @@ function validarFicha(form) {
   if (!form.produto) return 'Produto é obrigatório'
   if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
     return 'E-mail inválido'
-  if (form.valor_aluguel !== '' && Number(form.valor_aluguel) < 0)
-    return 'Valor do aluguel não pode ser negativo'
   return null
 }
 
@@ -138,11 +136,11 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
 
     const dados = {
       ...form,
-      valor_aluguel:    form.valor_aluguel    !== '' ? Number(form.valor_aluguel)    : null,
-      valor_iptu:       form.valor_iptu       !== '' ? Number(form.valor_iptu)       : null,
-      valor_condominio: form.valor_condominio !== '' ? Number(form.valor_condominio) : null,
-      total_rendimentos: form.total_rendimentos !== '' ? Number(form.total_rendimentos) : null,
-      capital_social:    form.capital_social   !== '' ? Number(form.capital_social)   : null,
+      valor_aluguel:     form.valor_aluguel     || null,
+      valor_iptu:        form.valor_iptu        || null,
+      valor_condominio:  form.valor_condominio  || null,
+      total_rendimentos: form.total_rendimentos || null,
+      capital_social:    form.capital_social    || null,
       // Limpar campo não usado por produto
       cpf:  isPJ ? null : form.cpf || null,
       cnpj: isPJ ? form.cnpj || null : null,
@@ -276,14 +274,14 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
             <Field label="CEP">
               <input type="text" value={form.cep} onChange={e => set('cep', e.target.value)} className="input" />
             </Field>
-            <Field label="Aluguel (R$)">
-              <input type="number" step="0.01" min="0" value={form.valor_aluguel} onChange={e => set('valor_aluguel', e.target.value)} className="input" />
+            <Field label="Aluguel">
+              <input type="text" value={form.valor_aluguel} onChange={e => set('valor_aluguel', e.target.value)} className="input" placeholder="Ex: 1500,00" />
             </Field>
-            <Field label="IPTU (R$)">
-              <input type="number" step="0.01" min="0" value={form.valor_iptu} onChange={e => set('valor_iptu', e.target.value)} className="input" />
+            <Field label="IPTU">
+              <input type="text" value={form.valor_iptu} onChange={e => set('valor_iptu', e.target.value)} className="input" placeholder="Ex: 200,00" />
             </Field>
-            <Field label="Condomínio (R$)">
-              <input type="number" step="0.01" min="0" value={form.valor_condominio} onChange={e => set('valor_condominio', e.target.value)} className="input" />
+            <Field label="Condomínio">
+              <input type="text" value={form.valor_condominio} onChange={e => set('valor_condominio', e.target.value)} className="input" placeholder="Ex: 300,00" />
             </Field>
             <Field label="Orçamentista">
               <select value={form.orcamentista_forms} onChange={e => set('orcamentista_forms', e.target.value)} className="select">
@@ -302,11 +300,11 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
               <Field label="Atividade">
                 <input type="text" value={form.atividade} onChange={e => set('atividade', e.target.value)} className="input" placeholder="Atividade no imóvel" />
               </Field>
-              <Field label="Total de Rendimentos (R$)">
-                <input type="number" step="0.01" min="0" value={form.total_rendimentos} onChange={e => set('total_rendimentos', e.target.value)} className="input" />
+              <Field label="Total de Rendimentos">
+                <input type="text" value={form.total_rendimentos} onChange={e => set('total_rendimentos', e.target.value)} className="input" placeholder="Ex: 5000,00" />
               </Field>
-              <Field label="Capital Social (R$)">
-                <input type="number" step="0.01" min="0" value={form.capital_social} onChange={e => set('capital_social', e.target.value)} className="input" />
+              <Field label="Capital Social">
+                <input type="text" value={form.capital_social} onChange={e => set('capital_social', e.target.value)} className="input" placeholder="Ex: 10000,00" />
               </Field>
               <Field label="Motivo da Locação">
                 <input type="text" value={form.motivo_locacao} onChange={e => set('motivo_locacao', e.target.value)} className="input" />

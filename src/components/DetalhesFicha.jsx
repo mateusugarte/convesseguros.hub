@@ -7,8 +7,8 @@ import { useNavigate } from 'react-router-dom'
 
 function fmt(v) { if (v === null || v === undefined) return '—'; return String(v) }
 function fmtBRL(v) {
-  if (v === null || v === undefined) return '—'
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
+  if (v === null || v === undefined || v === '') return '—'
+  return String(v)
 }
 function fmtDt(v) {
   if (!v) return '—'

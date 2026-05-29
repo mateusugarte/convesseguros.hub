@@ -266,15 +266,15 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
             <Field label="E-mail">
               <input type="email" value={form.email} onChange={e => set('email', e.target.value)} className="input" />
             </Field>
-            <Field label="CEP">
-              <input type="text" value={form.cep} onChange={e => set('cep', e.target.value)} className="input" />
-            </Field>
           </Sec>
 
           {/* ── Imóvel ── */}
           <Sec title="Dados do Imóvel">
             <Field label="Tipo do Imóvel">
               <input type="text" value={form.tipo_imovel} onChange={e => set('tipo_imovel', e.target.value)} className="input" />
+            </Field>
+            <Field label="CEP">
+              <input type="text" value={form.cep} onChange={e => set('cep', e.target.value)} className="input" />
             </Field>
             <Field label="Aluguel (R$)">
               <input type="number" step="0.01" min="0" value={form.valor_aluguel} onChange={e => set('valor_aluguel', e.target.value)} className="input" />

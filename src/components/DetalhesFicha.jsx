@@ -149,16 +149,16 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
             )}
             <Field label="Celular" value={ficha.celular} />
             <Field label="E-mail"  value={ficha.email} />
-            <Field label="CEP"     value={ficha.cep} />
           </Section>
 
           <Section title="Dados do Imóvel">
             <Field label="Imobiliária"  value={ficha.imobiliaria} />
             <Field label="Tipo"         value={ficha.tipo_imovel} />
+            <Field label="CEP"          value={ficha.cep} />
             <Field label="Aluguel"      value={fmtBRL(ficha.valor_aluguel)} />
             <Field label="IPTU"         value={fmtBRL(ficha.valor_iptu)} />
             <Field label="Condomínio"   value={fmtBRL(ficha.valor_condominio)} />
-            <Field label="Observações"  value={ficha.observacoes} />
+            <Field label="Observações"  value={ficha.observacoes || '—'} />
           </Section>
 
           {/* Campos extras para Comercial PF e PJ */}

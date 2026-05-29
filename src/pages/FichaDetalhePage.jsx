@@ -354,7 +354,6 @@ export default function FichaDetalhePage() {
               )}
               <ReadField label="Celular" value={ficha.celular} />
               <ReadField label="E-mail" value={ficha.email} />
-              <ReadField label="CEP" value={ficha.cep} />
             </div>
           </div>
 
@@ -366,19 +365,18 @@ export default function FichaDetalhePage() {
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
               <ReadField label="Imobiliária" value={ficha.imobiliaria} />
               <ReadField label="Tipo" value={ficha.tipo_imovel} />
+              <ReadField label="CEP" value={ficha.cep} />
               <ReadField label="Aluguel" value={fmtBRL(ficha.valor_aluguel)} />
               <ReadField label="IPTU" value={fmtBRL(ficha.valor_iptu)} />
               <ReadField label="Condomínio" value={fmtBRL(ficha.valor_condominio)} />
-              {ficha.observacoes && (
-                <div className="col-span-2">
-                  <InlineField
-                    label="Observações"
-                    value={ficha.observacoes}
-                    onSave={v => updateField('observacoes', v)}
-                    rows={3}
-                  />
-                </div>
-              )}
+              <div className="col-span-2">
+                <InlineField
+                  label="Observações"
+                  value={ficha.observacoes}
+                  onSave={v => updateField('observacoes', v)}
+                  rows={3}
+                />
+              </div>
             </div>
           </div>
 

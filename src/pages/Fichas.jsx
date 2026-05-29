@@ -25,7 +25,7 @@ import {
   Home, Briefcase, Building, LayoutGrid,
   ChevronRight, Search, Download, Plus,
   FileText, Clock, CheckCircle2, XCircle,
-  AlignJustify, Pencil, TrendingUp, TrendingDown, BarChart2, UserSquare2,
+  AlignJustify, Pencil, TrendingUp, TrendingDown, BarChart2, UserSquare2, AlertCircle,
 } from 'lucide-react'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -576,12 +576,13 @@ export default function Fichas() {
   const [anos,            setAnos]            = useState([agora.getFullYear()])
   const [mesesComFichas,  setMesesComFichas]  = useState([agora.getMonth() + 1])
 
-  const [tab,      setTab]      = useState('abertas')
-  const [search,   setSearch]   = useState('')
-  const [page,     setPage]     = useState(0)
-  const [fichas,   setFichas]   = useState([])
-  const [total,    setTotal]    = useState(0)
-  const [loading,  setLoading]  = useState(false)
+  const [tab,           setTab]           = useState('abertas')
+  const [search,        setSearch]        = useState('')
+  const [semSeguradora, setSemSeguradora] = useState(false)
+  const [page,          setPage]          = useState(0)
+  const [fichas,        setFichas]        = useState([])
+  const [total,         setTotal]         = useState(0)
+  const [loading,       setLoading]       = useState(false)
 
   const PAGE_SIZE = 30
 
@@ -637,16 +638,17 @@ export default function Fichas() {
       tipo: tab,
       search,
       orcamentistaId: tab === 'passadas_por_mim' ? user?.id : undefined,
+      semSeguradora: (tab === 'passadas' || tab === 'passadas_por_mim') ? semSeguradora : false,
       page, pageSize: PAGE_SIZE,
     })
     setFichas(data)
     setTotal(count)
     setLoading(false)
-  }, [produto, ano, mes, tab, search, page, user, view])
+  }, [produto, ano, mes, tab, search, semSeguradora, page, user, view])
 
   useEffect(() => { loadFichas() }, [loadFichas])
 
-  function changeTab(t) { setTab(t); setPage(0); setSearch('') }
+  function changeTab(t) { setTab(t); setPage(0); setSearch(''); setSemSeguradora(false) }
 
   function changeProduto(p) {
     setProduto(p)
@@ -770,6 +772,19 @@ export default function Fichas() {
                 className="text-sm flex-1 outline-none bg-transparent text-dark-text placeholder-dark-muted"
               />
             </div>
+            {(tab === 'passadas' || tab === 'passadas_por_mim') && (
+              <button
+                onClick={() => { setSemSeguradora(s => !s); setPage(0) }}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
+                  semSeguradora
+                    ? 'border-status-warning bg-status-warning/10 text-status-warning'
+                    : 'border-dark-border text-dark-muted hover:text-dark-text hover:border-dark-muted'
+                }`}
+              >
+                <AlertCircle className="w-3.5 h-3.5" />
+                Sem seguradora
+              </button>
+            )}
             <span className="text-xs text-dark-muted ml-auto">{total} ficha{total !== 1 ? 's' : ''}</span>
             <button
               onClick={() => exportCSV(fichas, `conves-fichas-${produto}-${ano}-${mes}.csv`)}

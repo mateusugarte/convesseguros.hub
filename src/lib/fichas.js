@@ -24,15 +24,9 @@ export const PRODUTO_LABELS = {
 export const SEGURADORAS = [
   'Porto Seguro',
   'Tokio Marine',
-  'Mapfre',
-  'Sompo',
-  'Allianz',
-  'HDI',
+  'TOO',
   'Junto Seguros',
   'Potencial',
-  'Alpha',
-  'Chubb',
-  'SulAmérica',
 ]
 
 // "Em Aberto" = fichas que ainda precisam de atenção
@@ -239,7 +233,7 @@ export async function fetchContagemAbertaOrcamentista(orcamentistaId) {
 
 // ── Main fichas query ─────────────────────────────────────────────────────────
 
-export async function fetchFichas({ produto, ano, mes, tipo, search, imobiliaria, orcamentistaId, page = 0, pageSize = 30 }) {
+export async function fetchFichas({ produto, ano, mes, tipo, search, imobiliaria, orcamentistaId, semSeguradora, page = 0, pageSize = 30 }) {
   let q = supabase
     .from('fichas')
     .select('id,created_at,produto,imobiliaria,nome_interessado,cpf,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,profiles!orcamentista_id(nome)', { count: 'exact' })
@@ -271,6 +265,8 @@ export async function fetchFichas({ produto, ano, mes, tipo, search, imobiliaria
     q = q.in('status', STATUS_PASSADOS)
          .or(`orcamentista_id.eq.${orcamentistaId},finalizado_por.eq.${orcamentistaId}`)
   }
+
+  if (semSeguradora) q = q.is('seguradora', null)
 
   const from = page * pageSize
   q = q.range(from, from + pageSize - 1)

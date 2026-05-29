@@ -12,6 +12,7 @@ export const STATUS_LABELS = {
   emitido:      { label: 'Emitido',      color: 'badge-purple' },
   cancelado:    { label: 'Cancelado',    color: 'badge-muted' },
   cpf_invalido: { label: 'CPF Inválido', color: 'badge-warning' },
+  expirada:     { label: 'Expirada',     color: 'badge-muted' },
 }
 
 export const PRODUTO_LABELS = {
@@ -24,7 +25,7 @@ export const PRODUTO_LABELS = {
 export const STATUS_EM_ABERTO = ['pendente', 'em_cotacao']
 
 // "Passadas" = fichas já finalizadas/encerradas
-export const STATUS_PASSADOS = ['em_analise', 'aprovado', 'recusado', 'emitido', 'cancelado', 'cpf_invalido']
+export const STATUS_PASSADOS = ['em_analise', 'aprovado', 'recusado', 'emitido', 'cancelado', 'cpf_invalido', 'expirada']
 
 // ── KPIs ─────────────────────────────────────────────────────────────────────
 
@@ -425,4 +426,24 @@ export async function editarFicha(id, dados, userId) {
 export async function deletarFicha(id) {
   const { error } = await supabase.from('fichas').delete().eq('id', id)
   return error
+}
+
+// ── Relatório Mensal ──────────────────────────────────────────────────────────
+
+export async function fetchRelatorioMensal({ ano, mes, produto }) {
+  const inicio = new Date(ano, mes - 1, 1).toISOString()
+  const fim    = new Date(ano, mes, 0, 23, 59, 59).toISOString()
+
+  let q = supabase
+    .from('fichas')
+    .select('id, created_at, nome_interessado, nome_empresa, cpf, cnpj, imobiliaria, status, produto, retorno_enviado, assumida, orcamentista_forms')
+    .gte('created_at', inicio)
+    .lte('created_at', fim)
+    .order('imobiliaria', { ascending: true })
+    .order('created_at', { ascending: true })
+
+  if (produto && produto !== 'todos') q = q.eq('produto', produto)
+
+  const { data } = await q
+  return data || []
 }

@@ -22,11 +22,13 @@ const COLUMNS = [
   { id: 'aprovado',   label: 'Aprovadas',     color: '#10B981' },
   { id: 'recusado',   label: 'Recusadas',     color: '#EF4444' },
   { id: 'emitido',    label: 'Emitidas',      color: '#2B5BA8' },
+  { id: 'expirada',   label: 'Expiradas',     color: '#6B7280' },
 ]
 
 const COL_TO_STATUS = {
   pendente: 'pendente', assumidas: 'em_cotacao', minhas: 'em_cotacao',
   em_analise: 'em_analise', aprovado: 'aprovado', recusado: 'recusado', emitido: 'emitido',
+  expirada: 'expirada',
 }
 
 const PRODUTO_ICON = {

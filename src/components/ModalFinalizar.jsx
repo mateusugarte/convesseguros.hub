@@ -9,6 +9,7 @@ const STATUS_FINAIS = [
   { value: 'em_analise',   label: 'Em Análise',   color: 'text-brand-accent' },
   { value: 'cancelado',    label: 'Cancelado',    color: 'text-dark-muted' },
   { value: 'cpf_invalido', label: 'CPF Inválido', color: 'text-status-warning' },
+  { value: 'expirada',     label: 'Expirada',     color: 'text-dark-muted' },
 ]
 
 export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSuccess }) {

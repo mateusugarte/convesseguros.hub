@@ -20,11 +20,12 @@ import ModalAssumir from '../components/ModalAssumir'
 import ModalFinalizar from '../components/ModalFinalizar'
 import ModalFicha from '../components/ModalFicha'
 import KanbanFichas from '../components/KanbanFichas'
+import RelatorioMensal from '../components/RelatorioMensal'
 import {
   Home, Briefcase, Building, LayoutGrid,
   ChevronRight, Search, Download, Plus,
   FileText, Clock, CheckCircle2, XCircle,
-  AlignJustify, Pencil, TrendingUp, TrendingDown,
+  AlignJustify, Pencil, TrendingUp, TrendingDown, BarChart2,
 } from 'lucide-react'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -42,7 +43,7 @@ const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho
 const STATUS_CHART_COLORS = {
   aprovado: '#10B981', recusado: '#EF4444', em_cotacao: '#F59E0B',
   pendente: '#3B82F6', emitido: '#2B5BA8', em_analise: '#4A90D9',
-  cancelado: '#8899BB', cpf_invalido: '#F59E0B',
+  cancelado: '#8899BB', cpf_invalido: '#F59E0B', expirada: '#6B7280',
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -177,7 +178,7 @@ function DarkTip({ active, payload, label }) {
 
 // ── Visão Geral ───────────────────────────────────────────────────────────────
 
-function VisaoGeral({ contagem, onSelectProduto, onCriar }) {
+function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio }) {
   const [kpis, setKpis]           = useState(null)
   const [statusDist, setStatusDist] = useState([])
   const [fichasPorDia, setDia]    = useState([])
@@ -205,9 +206,15 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar }) {
           <h1 className="text-lg font-bold text-dark-text">Fichas</h1>
           <p className="text-xs text-dark-muted mt-0.5 capitalize">Visão geral · {mesLabel}</p>
         </div>
-        <button onClick={onCriar} className="btn-primary flex items-center gap-2 text-sm">
-          <Plus className="w-4 h-4" /> Nova Ficha
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={onRelatorio}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors">
+            <BarChart2 className="w-3.5 h-3.5" /> Relatório Mensal
+          </button>
+          <button onClick={onCriar} className="btn-primary flex items-center gap-2 text-sm">
+            <Plus className="w-4 h-4" /> Nova Ficha
+          </button>
+        </div>
       </div>
 
       {/* KPI cards */}
@@ -486,7 +493,7 @@ function TabelaPassadas({ fichas, user, navigate, onEditar }) {
 
 // ── PageShell ─────────────────────────────────────────────────────────────────
 
-function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, viewToggle, selectorSlot, children }) {
+function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, onRelatorio, viewToggle, selectorSlot, children }) {
   const PIcon = prodInfo?.Icon
   return (
     <div className="space-y-4 animate-fade-in">
@@ -508,6 +515,10 @@ function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, 
         </div>
         <div className="flex items-center gap-2">
           {viewToggle}
+          <button onClick={onRelatorio}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors">
+            <BarChart2 className="w-3.5 h-3.5" /> Relatório
+          </button>
           <button onClick={onCreate} className="btn-primary flex items-center gap-2 text-sm">
             <Plus className="w-4 h-4" /> Nova Ficha
           </button>
@@ -553,6 +564,7 @@ export default function Fichas() {
   const [finalizar, setFinalizar] = useState(null)
   const [criar,     setCriar]     = useState(false)
   const [editar,    setEditar]    = useState(null)
+  const [relatorio, setRelatorio] = useState(false)
 
   // Contagem de produtos (sempre carregado)
   useEffect(() => {
@@ -637,8 +649,10 @@ export default function Fichas() {
           contagem={contagem}
           onSelectProduto={changeProduto}
           onCriar={() => setCriar(true)}
+          onRelatorio={() => setRelatorio(true)}
         />
         {criar && <ModalFicha ficha={null} onClose={() => setCriar(false)} onSuccess={() => { setCriar(false); fetchContagemProdutos().then(setContagem) }} />}
+        {relatorio && <RelatorioMensal onClose={() => setRelatorio(false)} />}
       </>
     )
   }
@@ -667,6 +681,7 @@ export default function Fichas() {
       onHome={() => setProduto(null)}
       onProduto={() => setProduto(null)}
       onCreate={() => setCriar(true)}
+      onRelatorio={() => setRelatorio(true)}
       viewToggle={<ViewToggle view={view} onChange={setView} />}
       selectorSlot={selectorSlot}
     >
@@ -768,6 +783,7 @@ export default function Fichas() {
       {finalizar && <ModalFinalizar ficha={finalizar} onClose={() => setFinalizar(null)} onSuccess={() => { setFinalizar(null); refresh() }} />}
       {criar && <ModalFicha ficha={null} onClose={() => setCriar(false)} onSuccess={onFichaSuccess} />}
       {editar && <ModalFicha ficha={editar} onClose={() => setEditar(null)} onSuccess={onFichaSuccess} />}
+      {relatorio && <RelatorioMensal onClose={() => setRelatorio(false)} />}
     </PageShell>
   )
 }

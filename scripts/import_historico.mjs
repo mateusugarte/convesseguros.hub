@@ -528,16 +528,15 @@ async function main() {
   let apoliceCount    = 0
   const savedFiles    = []
 
-  for (const [produto, fichas] of Object.entries(porProduto)) {
-    const filename = `import_fichas_${produto}.sql`
+  // Salva um bloco de fichas em um arquivo SQL
+  function saveFichasSQL({ filename, label, produto, fichas, part, totalParts }) {
     const filepath = path.join(ROOT, filename)
-    const label    = PROD_LABEL[produto]
-
-    const lines = []
+    const partInfo = totalParts > 1 ? ` (parte ${part}/${totalParts})` : ''
+    const lines    = []
 
     lines.push(`-- ============================================================
 -- CONVES SYSTEM — ${filename}
--- ${label} — Importação histórica (${dateBR})
+-- ${label}${partInfo} — Importação histórica (${dateBR})
 -- ============================================================
 --
 -- PRÉ-REQUISITO: rodar supabase/07_status_expirada.sql antes.
@@ -574,6 +573,25 @@ COMMIT;`)
     const kb = (fs.statSync(filepath).size / 1024).toFixed(0)
     console.log(`  ✓ ${filename} — ${fichas.length} fichas, ${kb} KB`)
     savedFiles.push({ filename, filepath, count: fichas.length, kb })
+  }
+
+  for (const [produto, fichas] of Object.entries(porProduto)) {
+    const label = PROD_LABEL[produto]
+
+    // Residencial PF → dividir em 3 partes
+    if (produto === 'residencial_pf' && fichas.length > 1000) {
+      const partSize = Math.ceil(fichas.length / 3)
+      for (let p = 0; p < 3; p++) {
+        const chunk    = fichas.slice(p * partSize, (p + 1) * partSize)
+        const filename = `import_fichas_residencial_pf_parte${p + 1}.sql`
+        saveFichasSQL({ filename, label, produto, fichas: chunk, part: p + 1, totalParts: 3 })
+      }
+    } else {
+      saveFichasSQL({
+        filename:   `import_fichas_${produto}.sql`,
+        label, produto, fichas, part: 1, totalParts: 1,
+      })
+    }
   }
 
   // 4. Gerar import_apolices.sql
@@ -629,10 +647,12 @@ COMMIT;`)
 
   console.log('\n  ORDEM DE EXECUÇÃO NO SUPABASE SQL EDITOR:')
   console.log('    1. supabase/07_status_expirada.sql')
-  console.log('    2. import_fichas_residencial_pf.sql')
-  console.log('    3. import_fichas_comercial_pf.sql')
-  console.log('    4. import_fichas_pessoa_juridica.sql')
-  console.log('    5. import_apolices.sql')
+  console.log('    2. import_fichas_residencial_pf_parte1.sql')
+  console.log('    3. import_fichas_residencial_pf_parte2.sql')
+  console.log('    4. import_fichas_residencial_pf_parte3.sql')
+  console.log('    5. import_fichas_comercial_pf.sql')
+  console.log('    6. import_fichas_pessoa_juridica.sql')
+  console.log('    7. import_apolices.sql')
   console.log('═══════════════════════════════════════════════════\n')
 }
 

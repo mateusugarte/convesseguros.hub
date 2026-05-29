@@ -293,13 +293,41 @@ export async function fetchFichasKanban({ produto, dateFrom, dateTo }) {
   return fetchAllRows(() => {
     let q = supabase
       .from('fichas')
-      .select('id,created_at,produto,imobiliaria,nome_interessado,cpf,status,assumida,orcamentista_id,assumida_em,retorno_enviado,profiles(nome)')
+      .select('id,created_at,produto,imobiliaria,nome_interessado,nome_empresa,cpf,cnpj,status,assumida,orcamentista_id,assumida_em,retorno_enviado,profiles(nome)')
       .order('created_at', { ascending: false })
     if (produto && produto !== 'todos') q = q.eq('produto', produto)
     if (dateFrom) q = q.gte('created_at', dateFrom)
     if (dateTo)   q = q.lte('created_at', dateTo)
     return q
   })
+}
+
+export async function fetchKPIsVisaoGeral() {
+  const agora = new Date()
+  const inicioHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate()).toISOString()
+  const inicioSemana = (() => {
+    const d = new Date(); const day = d.getDay()
+    d.setDate(d.getDate() - day + (day === 0 ? -6 : 1)); d.setHours(0, 0, 0, 0); return d.toISOString()
+  })()
+  const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1).toISOString()
+  const inicioMesAnterior = new Date(agora.getFullYear(), agora.getMonth() - 1, 1).toISOString()
+  const fimMesAnterior = new Date(agora.getFullYear(), agora.getMonth(), 0, 23, 59, 59).toISOString()
+
+  const results = await Promise.all([
+    supabase.from('fichas').select('*', { count: 'exact', head: true }).gte('created_at', inicioMes),
+    supabase.from('fichas').select('*', { count: 'exact', head: true }).gte('created_at', inicioMesAnterior).lte('created_at', fimMesAnterior),
+    supabase.from('fichas').select('*', { count: 'exact', head: true }).gte('created_at', inicioHoje),
+    supabase.from('fichas').select('*', { count: 'exact', head: true }).gte('created_at', inicioSemana),
+    supabase.from('fichas').select('*', { count: 'exact', head: true }).eq('status', 'pendente'),
+    supabase.from('fichas').select('*', { count: 'exact', head: true }).eq('status', 'em_cotacao'),
+  ])
+
+  const [totalMes, totalMesAnterior, hoje, semana, pendentes, emCotacao] = results.map(r => r.count || 0)
+  const variacaoMes = totalMesAnterior
+    ? Math.round(((totalMes - totalMesAnterior) / totalMesAnterior) * 100)
+    : null
+
+  return { totalMes, variacaoMes, hoje, semana, pendentes, emCotacao }
 }
 
 // ── Lookup helpers ────────────────────────────────────────────────────────────
@@ -317,12 +345,32 @@ export async function fetchProfiles() {
   return data || []
 }
 
+// ── Auditoria ─────────────────────────────────────────────────────────────────
+
+// Registra ação crítica no audit_log. Nunca bloqueia a operação principal.
+async function registrarAudit(action, fichaId, dadosAntes, dadosDepois) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase.from('audit_log').insert({
+      user_id: user.id,
+      action,
+      ficha_id: fichaId,
+      dados_antes: dadosAntes ?? null,
+      dados_depois: dadosDepois ?? null,
+    })
+  } catch (_) {
+    // auditoria nunca bloqueia a operação principal
+  }
+}
+
 // ── Actions ───────────────────────────────────────────────────────────────────
 
 export async function assumirFicha(id, orcamentistaId) {
   const { error } = await supabase.from('fichas').update({
     assumida: true, orcamentista_id: orcamentistaId, status: 'em_cotacao', assumida_em: new Date().toISOString(),
   }).eq('id', id).or('assumida.eq.false,assumida.is.null')
+  if (!error) registrarAudit('assumir_ficha', id, { assumida: false }, { assumida: true, orcamentista_id: orcamentistaId, status: 'em_cotacao' })
   return error
 }
 
@@ -330,6 +378,7 @@ export async function finalizarFicha(id, { status, seguradora, retorno_enviado }
   const { error } = await supabase.from('fichas').update({
     status, seguradora, retorno_enviado, finalizada_em: new Date().toISOString(),
   }).eq('id', id)
+  if (!error) registrarAudit('finalizar_ficha', id, null, { status, seguradora, retorno_enviado })
   return error
 }
 

@@ -61,7 +61,6 @@ export default function Layout() {
   const [abertasCount, setAbertasCount] = useState(0)
   const [cmdOpen,      setCmdOpen]      = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [fichaDetalhe, setFichaDetalhe] = useState(null)
 
   // Responsive: drawer on mobile, fixed sidebar on desktop
   useEffect(() => {
@@ -89,7 +88,7 @@ export default function Layout() {
           type: 'ficha',
           title: prodLabel || 'Novo cliente',
           message: `${p.new.imobiliaria || ''} · ${p.new.nome_interessado || 'Sem nome'}`,
-          action: { label: 'Ver ficha', onClick: () => setFichaDetalhe(p.new.id) },
+          action: { label: 'Ver ficha', onClick: () => navigate(`/fichas/${p.new.id}`) },
           duration: 10000,
         })
       })
@@ -330,21 +329,9 @@ export default function Layout() {
       <CommandPalette
         open={cmdOpen}
         onClose={() => setCmdOpen(false)}
-        onOpenFicha={id => { setCmdOpen(false); setFichaDetalhe(id) }}
+        onOpenFicha={id => { setCmdOpen(false); navigate(`/fichas/${id}`) }}
       />
 
-      {fichaDetalhe && (
-        <LazyDetalhesFicha id={fichaDetalhe} onClose={() => setFichaDetalhe(null)} />
-      )}
     </div>
   )
-}
-
-function LazyDetalhesFicha({ id, onClose }) {
-  const [Comp, setComp] = useState(null)
-  useEffect(() => {
-    import('./DetalhesFicha').then(m => setComp(() => m.default))
-  }, [])
-  if (!Comp) return null
-  return <Comp id={id} onClose={onClose} onEdit={() => onClose()} onDelete={async () => { onClose() }} />
 }

@@ -18,10 +18,11 @@ const queryClient = new QueryClient({
 })
 
 // Pages loaded only when first visited
-const Dashboard      = lazy(() => import('./pages/Dashboard'))
-const Fichas         = lazy(() => import('./pages/Fichas'))
-const GestaoEmissoes = lazy(() => import('./pages/GestaoEmissoes'))
-const MinhasFichas   = lazy(() => import('./pages/MinhasFichas'))
+const Dashboard        = lazy(() => import('./pages/Dashboard'))
+const Fichas           = lazy(() => import('./pages/Fichas'))
+const FichaDetalhePage = lazy(() => import('./pages/FichaDetalhePage'))
+const GestaoEmissoes   = lazy(() => import('./pages/GestaoEmissoes'))
+const MinhasFichas     = lazy(() => import('./pages/MinhasFichas'))
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -44,7 +45,8 @@ function AppRoutes() {
         <Route path="/login" element={user ? <Navigate to="/" replace /> : <LazyLogin />} />
         <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route index         element={<Dashboard />} />
-          <Route path="fichas/*" element={<Fichas />} />
+          <Route path="fichas" element={<Fichas />} />
+          <Route path="fichas/:id" element={<FichaDetalhePage />} />
           <Route path="emissoes" element={<GestaoEmissoes />} />
           <Route path="minhas-fichas" element={<MinhasFichas />} />
         </Route>

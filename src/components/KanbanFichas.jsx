@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core'
 import { fetchFichasKanban, assumirFicha, moverFichaStatus, deletarFicha, PRODUTO_LABELS } from '../lib/fichas'
 import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
@@ -47,10 +48,10 @@ const PRODUTO_ABBR = {
 }
 
 const PERIODOS = [
-  { key: 'hoje',    label: 'Hoje' },
-  { key: 'semana',  label: 'Semana' },
-  { key: 'mes',     label: 'Mês' },
-  { key: 'custom',  label: 'Personalizado' },
+  { key: 'hoje',   label: 'Hoje' },
+  { key: 'semana', label: 'Semana' },
+  { key: 'mes',    label: 'Mês' },
+  { key: 'custom', label: 'Personalizado' },
 ]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -109,6 +110,12 @@ function stringColor(str) {
 }
 function initials(n) { return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || '?' }
 
+// Nome principal por produto (PJ usa nome_empresa)
+function nomePrincipal(ficha) {
+  if (ficha.produto === 'pessoa_juridica') return ficha.nome_empresa || ficha.nome_interessado || '—'
+  return ficha.nome_interessado || '—'
+}
+
 // ── FichaCard ─────────────────────────────────────────────────────────────────
 
 function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay = false, isNew = false }) {
@@ -135,9 +142,9 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay = fals
         <span className={`badge text-[9px] font-mono ${timeBadgeCls(since)}`}>{timeSince(since)}</span>
       </div>
 
-      {/* Nome */}
+      {/* Nome (PJ: nome_empresa) */}
       <p className="text-[11px] font-semibold text-dark-text leading-tight truncate">
-        {ficha.nome_interessado || '—'}
+        {nomePrincipal(ficha)}
       </p>
 
       {/* Imobiliária */}
@@ -247,7 +254,6 @@ function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinal
 
   return (
     <div className="kanban-col animate-fade-in flex flex-col flex-shrink-0" style={{ ...animStyle }}>
-      {/* Column header */}
       <div
         className="flex items-center justify-between px-2.5 py-2 rounded-t-xl border border-b-0 transition-colors"
         style={{ background: column.color + '18', borderColor: column.color + '50' }}
@@ -274,7 +280,6 @@ function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinal
         </div>
       </div>
 
-      {/* Column body */}
       <div
         ref={setNodeRef}
         className="kanban-col-body flex-1 space-y-1.5 p-1.5 rounded-b-xl border overflow-y-auto transition-colors duration-150"
@@ -285,9 +290,7 @@ function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinal
         }}
       >
         {fichas.length === 0 ? (
-          <div className="flex items-center justify-center h-14 text-[10px] text-dark-muted/30">
-            Vazia
-          </div>
+          <div className="flex items-center justify-center h-14 text-[10px] text-dark-muted/30">Vazia</div>
         ) : fichas.map(f => (
           <DraggableCard
             key={f.id}
@@ -306,9 +309,13 @@ function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinal
 
 // ── Main KanbanFichas ─────────────────────────────────────────────────────────
 
-export default function KanbanFichas({ produto }) {
+export default function KanbanFichas({ produto, externalDateFrom, externalDateTo }) {
   const { user } = useAuth()
   const toast    = useToast()
+  const navigate = useNavigate()
+
+  // Quando datas externas são fornecidas (via seletor de mês/ano na página), ignorar período interno
+  const useExternal = !!(externalDateFrom || externalDateTo)
 
   const [fichas,   setFichas]   = useState([])
   const [loading,  setLoading]  = useState(true)
@@ -334,36 +341,45 @@ export default function KanbanFichas({ produto }) {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const [dateFrom, dateTo] = getPeriodDates(periodo, customFrom, customTo)
+    let dateFrom, dateTo
+    if (useExternal) {
+      dateFrom = externalDateFrom
+      dateTo   = externalDateTo
+    } else {
+      [dateFrom, dateTo] = getPeriodDates(periodo, customFrom, customTo)
+    }
     const data = await fetchFichasKanban({ produto, dateFrom, dateTo })
     setFichas(data)
 
-    // Auto-collapse empty columns
     const cols = groupFichas(data, user?.id)
     const emptyCols = COLUMNS.filter(c => cols[c.id].length === 0).map(c => c.id)
     setCollapsed(new Set(emptyCols))
 
     setLoading(false)
-  }, [produto, periodo, customFrom, customTo, user?.id])
+  }, [produto, periodo, customFrom, customTo, user?.id, useExternal, externalDateFrom, externalDateTo])
 
   useEffect(() => { load() }, [load])
 
-  // Realtime: new fichas
+  // Realtime: INSERT, UPDATE, DELETE
   useEffect(() => {
-    const ch = supabase.channel('kanban-fichas-insert')
+    const ch = supabase.channel('kanban-fichas-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'fichas' }, p => {
         const nova = p.new
         if (produto && produto !== 'todos' && nova.produto !== produto) return
         setFichas(prev => [nova, ...prev])
-        setCollapsed(prev => {
-          const next = new Set(prev)
-          next.delete('pendente')
-          return next
-        })
+        setCollapsed(prev => { const next = new Set(prev); next.delete('pendente'); return next })
         setNewIds(prev => new Set([...prev, nova.id]))
-        setTimeout(() => setNewIds(prev => {
-          const next = new Set(prev); next.delete(nova.id); return next
-        }), 3000)
+        setTimeout(() => setNewIds(prev => { const next = new Set(prev); next.delete(nova.id); return next }), 3000)
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'fichas' }, p => {
+        const updated = p.new
+        if (produto && produto !== 'todos' && updated.produto !== produto) return
+        setFichas(prev => prev.map(f =>
+          f.id === updated.id ? { ...updated, profiles: f.profiles } : f
+        ))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'fichas' }, p => {
+        setFichas(prev => prev.filter(f => f.id !== p.old.id))
       })
       .subscribe()
     return () => supabase.removeChannel(ch)
@@ -394,10 +410,31 @@ export default function KanbanFichas({ produto }) {
   const cols       = groupFichas(fichas, user?.id)
   const activeCard = activeId ? fichas.find(f => f.id === activeId) : null
 
+  // Assumir com update otimista
   async function handleAssumir(fichaId) {
+    const fichaOriginal = fichas.find(f => f.id === fichaId)
+    if (!fichaOriginal) return
+
+    // Otimista: mover para "minhas" imediatamente
+    setFichas(prev => prev.map(f =>
+      f.id !== fichaId ? f : {
+        ...f,
+        assumida: true,
+        orcamentista_id: user?.id,
+        status: 'em_cotacao',
+        assumida_em: new Date().toISOString(),
+      }
+    ))
+    setCollapsed(prev => { const next = new Set(prev); next.delete('minhas'); return next })
+
     const err = await assumirFicha(fichaId, user.id)
-    if (err) toast({ type: 'error', title: 'Erro ao assumir ficha' })
-    else { toast({ type: 'success', title: 'Ficha assumida!' }); load() }
+    if (err) {
+      // Reverter
+      setFichas(prev => prev.map(f => f.id === fichaId ? fichaOriginal : f))
+      toast({ type: 'error', title: 'Erro ao assumir ficha' })
+    } else {
+      toast({ type: 'success', title: 'Ficha assumida!' })
+    }
   }
 
   function handleFinalizar(ficha, defaultStatus) {
@@ -405,13 +442,18 @@ export default function KanbanFichas({ produto }) {
     setFinalizarDefaultStatus(defaultStatus || null)
   }
 
+  // Abrir detalhe — navega para página dedicada
+  function handleDetalhe(fichaId) {
+    navigate(`/fichas/${fichaId}`)
+  }
+
   async function handleDragEnd({ active, over }) {
     setActiveId(null)
     if (!over) return
 
-    const fichaId    = active.id
-    const targetCol  = over.id
-    const ficha      = fichas.find(f => f.id === fichaId)
+    const fichaId   = active.id
+    const targetCol = over.id
+    const ficha     = fichas.find(f => f.id === fichaId)
     if (!ficha) return
 
     const sourceCol = getColumnId(ficha, user?.id)
@@ -422,24 +464,14 @@ export default function KanbanFichas({ produto }) {
 
     const assumirComoAtual = targetCol === 'minhas'
 
-    // Optimistic update
     setFichas(prev => prev.map(f => {
       if (f.id !== fichaId) return f
       const u = { ...f, status: novoStatus }
-      if (assumirComoAtual) {
-        u.orcamentista_id = user?.id
-        u.assumida        = true
-        u.assumida_em     = f.assumida_em || new Date().toISOString()
-      }
-      if (targetCol === 'pendente') {
-        u.orcamentista_id = null
-        u.assumida        = false
-        u.assumida_em     = null
-      }
+      if (assumirComoAtual) { u.orcamentista_id = user?.id; u.assumida = true; u.assumida_em = f.assumida_em || new Date().toISOString() }
+      if (targetCol === 'pendente') { u.orcamentista_id = null; u.assumida = false; u.assumida_em = null }
       return u
     }))
 
-    // Persist
     const err = await moverFichaStatus(fichaId, novoStatus, { assumir: assumirComoAtual, userId: user?.id })
     if (err) {
       toast({ type: 'error', title: 'Erro ao mover ficha' })
@@ -474,86 +506,76 @@ export default function KanbanFichas({ produto }) {
 
   return (
     <div className="space-y-3">
-      {/* Period filter bar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1 bg-dark-surface2 border border-dark-border rounded-lg p-0.5">
-          {PERIODOS.map(p => (
-            <button
-              key={p.key}
-              onClick={() => setPeriodo(p.key)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                periodo === p.key
-                  ? 'bg-brand-secondary text-white shadow-sm'
-                  : 'text-dark-muted hover:text-dark-text'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-
-        {periodo === 'custom' && (
-          <div className="flex items-center gap-1.5 text-xs text-dark-muted">
-            <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-            <input
-              type="date"
-              value={customFrom}
-              onChange={e => setCustomFrom(e.target.value)}
-              className="input py-1 px-2 text-xs w-[120px]"
-            />
-            <span>—</span>
-            <input
-              type="date"
-              value={customTo}
-              onChange={e => setCustomTo(e.target.value)}
-              className="input py-1 px-2 text-xs w-[120px]"
-            />
+      {/* Period filter bar — oculto quando datas externas são fornecidas */}
+      {!useExternal && (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1 bg-dark-surface2 border border-dark-border rounded-lg p-0.5">
+            {PERIODOS.map(p => (
+              <button
+                key={p.key}
+                onClick={() => setPeriodo(p.key)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  periodo === p.key
+                    ? 'bg-brand-secondary text-white shadow-sm'
+                    : 'text-dark-muted hover:text-dark-text'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
           </div>
-        )}
 
-        <div className="ml-auto flex items-center gap-2 text-xs text-dark-muted">
-          <span>{fichas.length} ficha{fichas.length !== 1 ? 's' : ''}</span>
+          {periodo === 'custom' && (
+            <div className="flex items-center gap-1.5 text-xs text-dark-muted">
+              <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+              <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} className="input py-1 px-2 text-xs w-[120px]" />
+              <span>—</span>
+              <input type="date" value={customTo}   onChange={e => setCustomTo(e.target.value)}   className="input py-1 px-2 text-xs w-[120px]" />
+            </div>
+          )}
+
+          <div className="ml-auto flex items-center gap-2 text-xs text-dark-muted">
+            <span>{fichas.length} ficha{fichas.length !== 1 ? 's' : ''}</span>
+            <button onClick={load} className="flex items-center gap-1 hover:text-dark-text transition-colors">
+              <RefreshCw className="w-3.5 h-3.5" /> Atualizar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Contagem quando usando datas externas */}
+      {useExternal && (
+        <div className="flex items-center justify-between text-xs text-dark-muted">
+          <span>{fichas.length} ficha{fichas.length !== 1 ? 's' : ''} neste período</span>
           <button onClick={load} className="flex items-center gap-1 hover:text-dark-text transition-colors">
             <RefreshCw className="w-3.5 h-3.5" /> Atualizar
           </button>
         </div>
-      </div>
+      )}
 
-      {/* Kanban board with scroll indicators */}
+      {/* Kanban board */}
       <div className="relative">
-        {/* Gradient overlays */}
         {canScrollL && (
-          <div
-            className="absolute left-0 top-0 bottom-4 w-16 z-10 pointer-events-none"
-            style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }}
-          />
+          <div className="absolute left-0 top-0 bottom-4 w-16 z-10 pointer-events-none"
+               style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }} />
         )}
         {canScrollR && (
-          <div
-            className="absolute right-0 top-0 bottom-4 w-16 z-10 pointer-events-none"
-            style={{ background: 'linear-gradient(to left, rgb(var(--color-bg)), transparent)' }}
-          />
+          <div className="absolute right-0 top-0 bottom-4 w-16 z-10 pointer-events-none"
+               style={{ background: 'linear-gradient(to left, rgb(var(--color-bg)), transparent)' }} />
         )}
-
-        {/* Scroll arrows */}
         {canScrollL && (
-          <button
-            onClick={() => scrollBy('left')}
-            className="absolute left-0.5 top-[60px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-md flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-all"
-          >
+          <button onClick={() => scrollBy('left')}
+                  className="absolute left-0.5 top-[60px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-md flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-all">
             <ChevronLeft className="w-4 h-4" />
           </button>
         )}
         {canScrollR && (
-          <button
-            onClick={() => scrollBy('right')}
-            className="absolute right-0.5 top-[60px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-md flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-all"
-          >
+          <button onClick={() => scrollBy('right')}
+                  className="absolute right-0.5 top-[60px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-md flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-all">
             <ChevronRight className="w-4 h-4" />
           </button>
         )}
 
-        {/* Scrollable area */}
         <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
           <DndContext
             sensors={sensors}
@@ -568,7 +590,7 @@ export default function KanbanFichas({ produto }) {
                   column={col}
                   fichas={cols[col.id] || []}
                   userId={user?.id}
-                  onDetalhe={setDetalhe}
+                  onDetalhe={handleDetalhe}
                   onAssumir={handleAssumir}
                   onFinalizar={handleFinalizar}
                   collapsed={collapsed.has(col.id)}
@@ -582,13 +604,7 @@ export default function KanbanFichas({ produto }) {
             <DragOverlay dropAnimation={null}>
               {activeCard && (
                 <div className="kanban-col">
-                  <FichaCard
-                    ficha={activeCard}
-                    userId={user?.id}
-                    onAssumir={() => {}}
-                    onFinalizar={() => {}}
-                    isDragOverlay
-                  />
+                  <FichaCard ficha={activeCard} userId={user?.id} onAssumir={() => {}} onFinalizar={() => {}} isDragOverlay />
                 </div>
               )}
             </DragOverlay>
@@ -596,7 +612,7 @@ export default function KanbanFichas({ produto }) {
         </div>
       </div>
 
-      {/* Modals */}
+      {/* Modals — drawer de detalhes só usado como quick view */}
       {detalhe && (
         <DetalhesFicha
           id={detalhe}
@@ -611,11 +627,7 @@ export default function KanbanFichas({ produto }) {
         />
       )}
       {editar && (
-        <ModalFicha
-          ficha={editar}
-          onClose={() => setEditar(null)}
-          onSuccess={() => { setEditar(null); load() }}
-        />
+        <ModalFicha ficha={editar} onClose={() => setEditar(null)} onSuccess={() => { setEditar(null); load() }} />
       )}
       {finalizar && (
         <ModalFinalizar

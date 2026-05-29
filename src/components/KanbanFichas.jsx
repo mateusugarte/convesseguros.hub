@@ -156,21 +156,24 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay = fals
 
       {/* Footer: avatar + action */}
       <div className="flex items-center justify-between pt-1 border-t border-dark-border/50">
-        {ficha.profiles?.nome ? (
-          <div className="flex items-center gap-1 min-w-0">
-            <div
-              className="w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold text-white flex-shrink-0"
-              style={{ background: stringColor(ficha.profiles.nome) }}
-            >
-              {initials(ficha.profiles.nome)}
+        {(() => {
+          const nome = ficha.profiles?.nome || ficha.orcamentista_forms
+          if (!nome) return <span className="text-[9px] text-status-warning font-medium">Livre</span>
+          return (
+            <div className="flex items-center gap-1 min-w-0">
+              <div
+                className="w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold text-white flex-shrink-0"
+                style={{ background: stringColor(nome) }}
+                title={nome}
+              >
+                {initials(nome)}
+              </div>
+              <span className="text-[9px] text-dark-muted truncate max-w-[65px]">
+                {nome.split(' ')[0]}
+              </span>
             </div>
-            <span className="text-[9px] text-dark-muted truncate max-w-[65px]">
-              {ficha.profiles.nome.split(' ')[0]}
-            </span>
-          </div>
-        ) : (
-          <span className="text-[9px] text-status-warning font-medium">Livre</span>
-        )}
+          )
+        })()}
 
         <div>
           {ficha.status === 'pendente' && !ficha.assumida && (

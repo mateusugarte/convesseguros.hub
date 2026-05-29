@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { finalizarFicha } from '../lib/fichas'
+import { useAuth } from '../contexts/AuthContext'
 import { CheckCircle2, X } from 'lucide-react'
 
 const STATUS_FINAIS = [
@@ -13,6 +14,7 @@ const STATUS_FINAIS = [
 ]
 
 export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSuccess }) {
+  const { user } = useAuth()
   const [status,    setStatus]    = useState(defaultStatus || '')
   const [seguradora,setSeguradora]= useState(ficha?.seguradora ?? '')
   const [retorno,   setRetorno]   = useState(ficha?.retorno_enviado ?? false)
@@ -23,7 +25,12 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
     if (!status) { setError('Selecione o status final.'); return }
     setLoading(true)
     setError('')
-    const err = await finalizarFicha(ficha.id, { status, seguradora: seguradora.trim() || null, retorno_enviado: retorno })
+    const err = await finalizarFicha(ficha.id, {
+      status,
+      seguradora: seguradora.trim() || null,
+      retorno_enviado: retorno,
+      userId: user?.id,
+    })
     if (err) setError('Não foi possível finalizar a ficha.')
     else onSuccess()
     setLoading(false)

@@ -43,7 +43,7 @@ export default function MinhasFichas() {
     queryKey: ['minhas-fichas', user?.id],
     queryFn: () => Promise.all([
       fetchFichasDoOrcamentista(user.id),
-      fetchFichas({ tipo: 'passadas_por_mim', orcamentistaId: user.id, pageSize: 100 }),
+      fetchFichas({ tipo: 'passadas_por_mim', orcamentistaId: user.id, pageSize: 500 }),
     ]).then(([ab, { data }]) => ({ abertas: ab, passadas: data })),
     enabled: !!user?.id,
   })

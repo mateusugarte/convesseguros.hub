@@ -253,7 +253,9 @@ export async function fetchFichas({ produto, ano, mes, tipo, search, imobiliaria
   } else if (tipo === 'abertas') {
     q = q.in('status', STATUS_EM_ABERTO)
   } else if (tipo === 'passadas_por_mim' && orcamentistaId) {
-    q = q.in('status', STATUS_PASSADOS).eq('orcamentista_id', orcamentistaId)
+    // Inclui fichas onde o usuário assumiu OU finalizou
+    q = q.in('status', STATUS_PASSADOS)
+         .or(`orcamentista_id.eq.${orcamentistaId},finalizado_por.eq.${orcamentistaId}`)
   }
 
   const from = page * pageSize
@@ -375,9 +377,11 @@ export async function assumirFicha(id, orcamentistaId) {
   return error
 }
 
-export async function finalizarFicha(id, { status, seguradora, retorno_enviado }) {
+export async function finalizarFicha(id, { status, seguradora, retorno_enviado, userId }) {
   const { error } = await supabase.from('fichas').update({
-    status, seguradora, retorno_enviado, finalizada_em: new Date().toISOString(),
+    status, seguradora, retorno_enviado,
+    finalizada_em: new Date().toISOString(),
+    finalizado_por: userId || null,
   }).eq('id', id)
   if (!error) registrarAudit('finalizar_ficha', id, null, { status, seguradora, retorno_enviado })
   return error

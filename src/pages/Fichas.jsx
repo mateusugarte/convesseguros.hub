@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import {
   fetchFichas, fetchAnosDisponiveis, fetchMesesDisponiveis,
-  fetchContagemProdutos, deletarFicha, fetchKPIsVisaoGeral,
-  fetchDistribuicaoStatus, fetchFichasPorDia,
+  fetchContagemProdutos, fetchContagemAbertaOrcamentista, deletarFicha,
+  fetchKPIsVisaoGeral, fetchDistribuicaoStatus, fetchFichasPorDia,
   PRODUTO_LABELS, STATUS_LABELS, STATUS_EM_ABERTO, STATUS_PASSADOS,
 } from '../lib/fichas'
 import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
@@ -25,7 +25,7 @@ import {
   Home, Briefcase, Building, LayoutGrid,
   ChevronRight, Search, Download, Plus,
   FileText, Clock, CheckCircle2, XCircle,
-  AlignJustify, Pencil, TrendingUp, TrendingDown, BarChart2,
+  AlignJustify, Pencil, TrendingUp, TrendingDown, BarChart2, UserSquare2,
 } from 'lucide-react'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -54,6 +54,22 @@ function stringColor(str) {
   return c[Math.abs(h) % c.length]
 }
 function initials(n) { return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || '?' }
+
+function AvatarOrcamentista({ nome }) {
+  if (!nome) return <span className="text-xs text-dark-muted">—</span>
+  return (
+    <div className="flex items-center gap-1.5">
+      <div
+        className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0"
+        style={{ background: stringColor(nome) }}
+        title={nome}
+      >
+        {initials(nome)}
+      </div>
+      <span className="text-xs text-dark-muted truncate max-w-[90px]">{nome}</span>
+    </div>
+  )
+}
 
 function TimeBadge({ since }) {
   const h = Math.floor((Date.now() - new Date(since).getTime()) / (1000 * 60 * 60))
@@ -178,7 +194,7 @@ function DarkTip({ active, payload, label }) {
 
 // ── Visão Geral ───────────────────────────────────────────────────────────────
 
-function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio }) {
+function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFichasCount }) {
   const [kpis, setKpis]           = useState(null)
   const [statusDist, setStatusDist] = useState([])
   const [fichasPorDia, setDia]    = useState([])
@@ -207,6 +223,16 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio }) {
           <p className="text-xs text-dark-muted mt-0.5 capitalize">Visão geral · {mesLabel}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link to="/minhas-fichas"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors">
+            <UserSquare2 className="w-3.5 h-3.5" />
+            Minhas Fichas
+            {minhasFichasCount > 0 && (
+              <span className="bg-status-warning text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                {minhasFichasCount}
+              </span>
+            )}
+          </Link>
           <button onClick={onRelatorio}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors">
             <BarChart2 className="w-3.5 h-3.5" /> Relatório Mensal
@@ -476,7 +502,7 @@ function TabelaPassadas({ fichas, user, navigate, onEditar }) {
               <td className="td font-medium text-dark-text max-w-[130px] truncate">{normalizeImobiliaria(f.imobiliaria) || '—'}</td>
               <td className="td text-dark-text max-w-[130px] truncate">{nome || '—'}</td>
               <td className="td"><span className={`badge ${si.color}`}>{si.label}</span></td>
-              <td className="td">{f.profiles?.nome ? <OrcBadge nome={f.profiles.nome} isMe={isMe} /> : <span className="text-xs text-dark-muted">—</span>}</td>
+              <td className="td"><AvatarOrcamentista nome={f.profiles?.nome || f.orcamentista_forms} /></td>
               <td className="td text-dark-muted text-xs">{f.seguradora || '—'}</td>
               <td className="td" onClick={e => e.stopPropagation()}>
                 <button onClick={() => onEditar(f)} className="p-1.5 rounded-lg text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-colors">
@@ -559,17 +585,24 @@ export default function Fichas() {
 
   const PAGE_SIZE = 30
 
-  const [detalhe,   setDetalhe]   = useState(null)
-  const [assumir,   setAssumir]   = useState(null)
-  const [finalizar, setFinalizar] = useState(null)
-  const [criar,     setCriar]     = useState(false)
-  const [editar,    setEditar]    = useState(null)
-  const [relatorio, setRelatorio] = useState(false)
+  const [detalhe,          setDetalhe]          = useState(null)
+  const [assumir,          setAssumir]          = useState(null)
+  const [finalizar,        setFinalizar]        = useState(null)
+  const [criar,            setCriar]            = useState(false)
+  const [editar,           setEditar]           = useState(null)
+  const [relatorio,        setRelatorio]        = useState(false)
+  const [minhasFichasCount, setMinhasFichasCount] = useState(0)
 
   // Contagem de produtos (sempre carregado)
   useEffect(() => {
     fetchContagemProdutos().then(setContagem)
   }, [])
+
+  // Contagem de fichas abertas do usuário logado (badge do botão)
+  useEffect(() => {
+    if (!user?.id) return
+    fetchContagemAbertaOrcamentista(user.id).then(setMinhasFichasCount)
+  }, [user?.id])
 
   // Ao selecionar produto: carregar anos disponíveis e auto-selecionar o atual
   useEffect(() => {
@@ -650,6 +683,7 @@ export default function Fichas() {
           onSelectProduto={changeProduto}
           onCriar={() => setCriar(true)}
           onRelatorio={() => setRelatorio(true)}
+          minhasFichasCount={minhasFichasCount}
         />
         {criar && <ModalFicha ficha={null} onClose={() => setCriar(false)} onSuccess={() => { setCriar(false); fetchContagemProdutos().then(setContagem) }} />}
         {relatorio && <RelatorioMensal onClose={() => setRelatorio(false)} />}

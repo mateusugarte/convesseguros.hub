@@ -126,7 +126,7 @@ export default function MinhasFichas() {
           ))}
         </div>
 
-        {loading ? (
+        {isLoading ? (
           <TableSkeleton rows={6} cols={tab === 'abertas' ? 5 : 6} />
         ) : (
           <div className="overflow-x-auto">

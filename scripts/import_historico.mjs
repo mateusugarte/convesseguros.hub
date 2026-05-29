@@ -496,104 +496,114 @@ async function main() {
     console.log(`  ✓ ${countProduto} fichas processadas`)
   }
 
-  // 3. Gerar import_fichas.sql
-  console.log('\n▶ Gerando import_fichas.sql...')
+  // 3. Gerar SQLs separados por produto + apolices
+  console.log('\n▶ Gerando arquivos SQL...')
 
-  const placeholderComment = usingPlaceholders ? `
--- ⚠ ATENÇÃO: UUIDs de orçamentistas NÃO foram resolvidos automaticamente.
---   O campo orcamentista_id está como NULL para todos os registros.
---   Para resolver: adicione SUPABASE_SERVICE_ROLE_KEY ao .env.local e rode novamente,
---   ou atualize manualmente após a importação:
+  const today = new Date().toISOString().slice(0, 10)
+  const dateBR = new Date().toLocaleDateString('pt-BR')
+
+  const orcWarning = usingPlaceholders ? `
+-- ⚠ orcamentista_id = NULL (sem SUPABASE_SERVICE_ROLE_KEY no .env.local).
+--   Após importar, atualize manualmente:
 --   UPDATE public.fichas SET orcamentista_id = (SELECT id FROM public.profiles WHERE nome = 'Davi')
 --   WHERE orcamentista_forms = 'Davi' AND orcamentista_id IS NULL;
-` : `
--- ✓ UUIDs dos orçamentistas resolvidos automaticamente.
+--   (repetir para cada orçamentista)
+` : `-- ✓ UUIDs dos orçamentistas resolvidos automaticamente.
 `
 
-  const fichasHeader = `-- ============================================================
--- CONVES SYSTEM — import_fichas.sql
--- Importação histórica das planilhas (${new Date().toLocaleDateString('pt-BR')})
--- ============================================================
---
--- PRÉ-REQUISITOS:
---   1. Rodar supabase/07_status_expirada.sql ANTES deste arquivo
---   2. Verificar profiles existentes:
---      SELECT id, nome FROM public.profiles ORDER BY nome;
---
--- FICHAS A IMPORTAR:
---   residencial_pf:  ${stats.por_produto['residencial_pf'] || 0}
---   comercial_pf:    ${stats.por_produto['comercial_pf']   || 0}
---   pessoa_juridica: ${stats.por_produto['pessoa_juridica']|| 0}
---   TOTAL:           ${stats.total}
---
--- Para reverter: DELETE FROM public.fichas WHERE id IN (SELECT id FROM import_log);
--- Ou: DELETE FROM public.fichas WHERE raw_data->>'_importado_em' = '${new Date().toISOString().slice(0,10)}';
--- ============================================================
-${placeholderComment}
-BEGIN;
-`
+  // Agrupar fichas por produto
+  const porProduto = {
+    residencial_pf:  allFichas.filter(f => f.produto === 'residencial_pf'),
+    comercial_pf:    allFichas.filter(f => f.produto === 'comercial_pf'),
+    pessoa_juridica: allFichas.filter(f => f.produto === 'pessoa_juridica'),
+  }
 
-  const fichasLines  = [fichasHeader]
+  const PROD_LABEL = {
+    residencial_pf:  'Residencial PF',
+    comercial_pf:    'Comercial PF',
+    pessoa_juridica: 'Pessoa Jurídica',
+  }
+
   const apolicesLines = []
-  let apoliceCount  = 0
+  let apoliceCount    = 0
+  const savedFiles    = []
 
-  allFichas.forEach((f, i) => {
-    fichasLines.push(fichaToSQL(f, i + 1))
-    fichasLines.push('')
+  for (const [produto, fichas] of Object.entries(porProduto)) {
+    const filename = `import_fichas_${produto}.sql`
+    const filepath = path.join(ROOT, filename)
+    const label    = PROD_LABEL[produto]
 
-    if (f.status === 'emitido') {
-      const aSQL = apoliceToSQL(f, apoliceCount + 1)
-      if (aSQL) { apolicesLines.push(aSQL); apolicesLines.push(''); apoliceCount++ }
-    }
-  })
+    const lines = []
 
-  // Verificação e commit
-  fichasLines.push(`
--- Verificação após importação:
-SELECT produto, status, COUNT(*) as total
+    lines.push(`-- ============================================================
+-- CONVES SYSTEM — ${filename}
+-- ${label} — Importação histórica (${dateBR})
+-- ============================================================
+--
+-- PRÉ-REQUISITO: rodar supabase/07_status_expirada.sql antes.
+--
+-- FICHAS: ${fichas.length}
+-- Reverter: DELETE FROM public.fichas
+--           WHERE produto = '${produto}'
+--           AND raw_data->>'_importado_em' = '${today}';
+-- ============================================================
+${orcWarning}
+BEGIN;
+`)
+
+    fichas.forEach((f, i) => {
+      lines.push(fichaToSQL(f, i + 1))
+      lines.push('')
+
+      if (f.status === 'emitido') {
+        const aSQL = apoliceToSQL(f, apoliceCount + 1)
+        if (aSQL) { apolicesLines.push(aSQL); apolicesLines.push(''); apoliceCount++ }
+      }
+    })
+
+    lines.push(`
+-- Verificação:
+SELECT status, COUNT(*) as total
 FROM public.fichas
-WHERE raw_data->>'_importado_em' = '${new Date().toISOString().slice(0,10)}'
-GROUP BY produto, status
-ORDER BY produto, total DESC;
+WHERE produto = '${produto}' AND raw_data->>'_importado_em' = '${today}'
+GROUP BY status ORDER BY total DESC;
 
 COMMIT;`)
 
+    fs.writeFileSync(filepath, lines.join('\n'), 'utf8')
+    const kb = (fs.statSync(filepath).size / 1024).toFixed(0)
+    console.log(`  ✓ ${filename} — ${fichas.length} fichas, ${kb} KB`)
+    savedFiles.push({ filename, filepath, count: fichas.length, kb })
+  }
+
   // 4. Gerar import_apolices.sql
+  const apolicesPath = path.join(ROOT, 'import_apolices.sql')
   const apolicesHeader = `-- ============================================================
 -- CONVES SYSTEM — import_apolices.sql
--- Apólices extraídas da importação histórica (${new Date().toLocaleDateString('pt-BR')})
+-- Apólices extraídas da importação histórica (${dateBR})
 -- ============================================================
 --
--- PRÉ-REQUISITOS:
---   1. Rodar import_fichas.sql ANTES deste arquivo
---   2. A tabela apolices deve existir (supabase/migrations/create_apolices.sql)
---
--- APÓLICES A IMPORTAR: ${apoliceCount}
+-- PRÉ-REQUISITO: rodar os 3 import_fichas_*.sql antes.
+-- APÓLICES: ${apoliceCount}
 -- ============================================================
 
 BEGIN;
 `
-
   apolicesLines.unshift(apolicesHeader)
   apolicesLines.push(`
 -- Verificação:
 SELECT seguradora, COUNT(*) as total
 FROM public.apolices
-WHERE created_at::date = '${new Date().toISOString().slice(0,10)}'
+WHERE created_at::date = '${today}'
 GROUP BY seguradora ORDER BY total DESC;
 
 COMMIT;`)
 
-  // 5. Salvar arquivos
-  const fichasPath   = path.join(ROOT, 'import_fichas.sql')
-  const apolicesPath = path.join(ROOT, 'import_apolices.sql')
-
-  fs.writeFileSync(fichasPath,   fichasLines.join('\n'),   'utf8')
   fs.writeFileSync(apolicesPath, apolicesLines.join('\n'), 'utf8')
 
   stats.apolices = apoliceCount
 
-  // 6. Resumo
+  // 5. Resumo
   console.log('\n═══════════════════════════════════════════════════')
   console.log('  RESUMO')
   console.log('═══════════════════════════════════════════════════')
@@ -605,30 +615,24 @@ COMMIT;`)
   console.log(`  Orçamentistas nulos:   ${stats.orc_nulo}`)
   console.log(`  Linhas ignoradas:      ${stats.ignoradas}`)
   console.log('')
-  console.log(`  ✓ import_fichas.sql   → ${(fs.statSync(fichasPath).size / 1024).toFixed(0)} KB`)
-  console.log(`  ✓ import_apolices.sql → ${(fs.statSync(apolicesPath).size / 1024).toFixed(0)} KB`)
+  savedFiles.forEach(f => console.log(`  ✓ ${f.filename.padEnd(36)} ${f.count} fichas, ${f.kb} KB`))
+  console.log(`  ✓ import_apolices.sql${' '.repeat(15)} ${apoliceCount} apólices, ${(fs.statSync(apolicesPath).size/1024).toFixed(0)} KB`)
   console.log('')
 
   if (usingPlaceholders) {
-    console.log('  ⚠ ATENÇÃO: orcamentista_id = NULL em todos os registros.')
-    console.log('    Adicione SUPABASE_SERVICE_ROLE_KEY ao .env.local e rode novamente.')
-    console.log('    Ou atualize manualmente no Supabase após importar.')
+    console.log('  ⚠ orcamentista_id = NULL. Adicione ao .env.local:')
+    console.log('    SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key')
+    console.log('    Depois rode novamente para resolver os UUIDs.')
   } else {
-    if (hasProfiles) {
-      console.log('  ✓ UUIDs dos orçamentistas resolvidos pelo Supabase.')
-    } else {
-      console.log('  ⚠ orcamentista_id = NULL em todos os registros.')
-      console.log('    Para resolver, adicione ao .env.local:')
-      console.log('      SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key')
-      console.log('    Depois rode: node scripts/import_historico.mjs')
-    }
+    console.log('  ✓ UUIDs dos orçamentistas resolvidos pelo Supabase.')
   }
 
-  console.log('\n  PRÓXIMO PASSO:')
-  console.log('    1. Revise os SQLs gerados')
-  console.log('    2. Certifique-se que 07_status_expirada.sql foi executado')
-  console.log('    3. Execute import_fichas.sql no Supabase SQL Editor')
-  console.log('    4. Execute import_apolices.sql no Supabase SQL Editor')
+  console.log('\n  ORDEM DE EXECUÇÃO NO SUPABASE SQL EDITOR:')
+  console.log('    1. supabase/07_status_expirada.sql')
+  console.log('    2. import_fichas_residencial_pf.sql')
+  console.log('    3. import_fichas_comercial_pf.sql')
+  console.log('    4. import_fichas_pessoa_juridica.sql')
+  console.log('    5. import_apolices.sql')
   console.log('═══════════════════════════════════════════════════\n')
 }
 

@@ -175,7 +175,7 @@ export async function fetchMetricas() {
 export async function fetchAtividadeRecente(limite = 10) {
   const { data } = await supabase
     .from('fichas')
-    .select('id, created_at, nome_interessado, produto, imobiliaria, status, profiles(nome)')
+    .select('id, created_at, nome_interessado, produto, imobiliaria, status, profiles!orcamentista_id(nome)')
     .order('created_at', { ascending: false })
     .limit(limite)
   return data || []
@@ -210,7 +210,7 @@ export async function fetchContagemProdutos() {
 export async function fetchFichasDoOrcamentista(orcamentistaId) {
   const { data } = await supabase
     .from('fichas')
-    .select('id,created_at,produto,imobiliaria,nome_interessado,cpf,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,profiles(nome)')
+    .select('id,created_at,produto,imobiliaria,nome_interessado,cpf,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,profiles!orcamentista_id(nome)')
     .eq('orcamentista_id', orcamentistaId)
     .eq('status', 'em_cotacao')
     .order('assumida_em', { ascending: false })
@@ -228,7 +228,7 @@ export async function fetchContagemAbertaOrcamentista(orcamentistaId) {
 export async function fetchFichas({ produto, ano, mes, tipo, search, imobiliaria, orcamentistaId, page = 0, pageSize = 30 }) {
   let q = supabase
     .from('fichas')
-    .select('id,created_at,produto,imobiliaria,nome_interessado,cpf,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,profiles(nome)', { count: 'exact' })
+    .select('id,created_at,produto,imobiliaria,nome_interessado,cpf,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,profiles!orcamentista_id(nome)', { count: 'exact' })
     .order('created_at', { ascending: false })
 
   if (produto && produto !== 'todos') q = q.eq('produto', produto)
@@ -266,7 +266,7 @@ export async function fetchFichas({ produto, ano, mes, tipo, search, imobiliaria
 }
 
 export async function fetchFichaDetalhe(id) {
-  const { data } = await supabase.from('fichas').select('*, profiles(nome, orcamentista_label)').eq('id', id).single()
+  const { data } = await supabase.from('fichas').select('*, profiles!orcamentista_id(nome, orcamentista_label)').eq('id', id).single()
   return data
 }
 
@@ -296,7 +296,7 @@ export async function fetchFichasKanban({ produto, dateFrom, dateTo }) {
   return fetchAllRows(() => {
     let q = supabase
       .from('fichas')
-      .select('id,created_at,produto,imobiliaria,nome_interessado,nome_empresa,cpf,cnpj,status,assumida,orcamentista_id,assumida_em,retorno_enviado,profiles(nome)')
+      .select('id,created_at,produto,imobiliaria,nome_interessado,nome_empresa,cpf,cnpj,status,assumida,orcamentista_id,assumida_em,retorno_enviado,profiles!orcamentista_id(nome)')
       .order('created_at', { ascending: false })
     if (produto && produto !== 'todos') q = q.eq('produto', produto)
     if (dateFrom) q = q.gte('created_at', dateFrom)

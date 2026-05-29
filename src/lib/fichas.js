@@ -21,6 +21,20 @@ export const PRODUTO_LABELS = {
   pessoa_juridica: 'Pessoa Jurídica',
 }
 
+export const SEGURADORAS = [
+  'Porto Seguro',
+  'Tokio Marine',
+  'Mapfre',
+  'Sompo',
+  'Allianz',
+  'HDI',
+  'Junto Seguros',
+  'Potencial',
+  'Alpha',
+  'Chubb',
+  'SulAmérica',
+]
+
 // "Em Aberto" = fichas que ainda precisam de atenção
 export const STATUS_EM_ABERTO = ['pendente', 'em_cotacao']
 

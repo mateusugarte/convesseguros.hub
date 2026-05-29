@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import {
   criarFicha, editarFicha, fetchImobiliariasDistintas, fetchProfiles,
-  STATUS_LABELS, PRODUTO_LABELS,
+  STATUS_LABELS, PRODUTO_LABELS, SEGURADORAS,
 } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { X, Plus, Save } from 'lucide-react'
 
-const STATUS_OPTIONS  = ['pendente','em_cotacao','em_analise','aprovado','recusado','emitido','cancelado','cpf_invalido']
+const STATUS_OPTIONS  = ['pendente','em_cotacao','em_analise','aprovado','recusado','emitido','cancelado','cpf_invalido','expirada']
 const PRODUTO_OPTIONS = ['residencial_pf','comercial_pf','pessoa_juridica']
 
 // ── Masks ─────────────────────────────────────────────────────────────────────
@@ -334,7 +334,18 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
               </select>
             </Field>
             <Field label="Seguradora">
-              <input type="text" value={form.seguradora} onChange={e => set('seguradora', e.target.value)} className="input" />
+              <input
+                type="text"
+                list="seg-list-modal"
+                value={form.seguradora}
+                onChange={e => set('seguradora', e.target.value)}
+                placeholder="Selecione ou digite..."
+                className="input"
+                autoComplete="off"
+              />
+              <datalist id="seg-list-modal">
+                {SEGURADORAS.map(s => <option key={s} value={s} />)}
+              </datalist>
             </Field>
             <div className="col-span-2">
               <label className="flex items-center gap-3 p-3 rounded-xl border border-dark-border bg-dark-surface2 cursor-pointer hover:border-brand-accent/40 transition-colors">

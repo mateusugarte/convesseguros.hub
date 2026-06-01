@@ -29,7 +29,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/emissoes',     icon: FileCheck,  label: 'Gestão de Emissões', soon: true },
       { to: '/imobiliarias', icon: Building2,  label: 'Imobiliárias',       soon: true },
-      { to: '/relatorios',   icon: BarChart2,  label: 'Relatórios',         soon: true },
+      { to: '/relatorio',    icon: BarChart2,  label: 'Relatório' },
     ],
   },
   {

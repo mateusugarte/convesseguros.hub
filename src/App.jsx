@@ -23,6 +23,7 @@ const Fichas           = lazy(() => import('./pages/Fichas'))
 const FichaDetalhePage = lazy(() => import('./pages/FichaDetalhePage'))
 const GestaoEmissoes   = lazy(() => import('./pages/GestaoEmissoes'))
 const MinhasFichas     = lazy(() => import('./pages/MinhasFichas'))
+const Relatorio        = lazy(() => import('./pages/Relatorio'))
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -49,6 +50,7 @@ function AppRoutes() {
           <Route path="fichas/:id" element={<FichaDetalhePage />} />
           <Route path="emissoes" element={<GestaoEmissoes />} />
           <Route path="minhas-fichas" element={<MinhasFichas />} />
+          <Route path="relatorio" element={<Relatorio />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

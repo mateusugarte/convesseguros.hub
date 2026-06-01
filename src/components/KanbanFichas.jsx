@@ -330,7 +330,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   const [finalizarDefaultStatus, setFinalizarDefaultStatus] = useState(null)
   const [editar,                 setEditar]                 = useState(null)
 
-  const [periodo,    setPeriodo]    = useState('mes')
+  const [periodo,    setPeriodo]    = useState('hoje')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo,   setCustomTo]   = useState('')
   const [collapsed,  setCollapsed]  = useState(new Set())

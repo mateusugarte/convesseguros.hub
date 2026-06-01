@@ -442,6 +442,53 @@ export async function deletarFicha(id) {
   return error
 }
 
+// ── Relatório por Imobiliária ─────────────────────────────────────────────────
+
+const STATUS_RELATORIO = ['aprovado', 'emitido', 'cancelado', 'expirada']
+
+export async function fetchAnosRelatorio() {
+  const data = await fetchAllRows(() =>
+    supabase.from('fichas').select('created_at').in('status', STATUS_RELATORIO)
+  )
+  return [...new Set(data.map(f => new Date(f.created_at).getFullYear()))].sort((a, b) => b - a)
+}
+
+export async function fetchMesesRelatorio(ano) {
+  const data = await fetchAllRows(() =>
+    supabase.from('fichas').select('created_at')
+      .in('status', STATUS_RELATORIO)
+      .gte('created_at', new Date(ano, 0, 1).toISOString())
+      .lte('created_at', new Date(ano, 11, 31, 23, 59, 59).toISOString())
+  )
+  return [...new Set(data.map(f => new Date(f.created_at).getMonth() + 1))].sort((a, b) => a - b)
+}
+
+export async function fetchImobiliariasRelatorio(ano, mes) {
+  const inicio = new Date(ano, mes - 1, 1).toISOString()
+  const fim    = new Date(ano, mes, 0, 23, 59, 59).toISOString()
+  const data   = await fetchAllRows(() =>
+    supabase.from('fichas').select('imobiliaria')
+      .gte('created_at', inicio).lte('created_at', fim)
+      .in('status', STATUS_RELATORIO)
+      .not('imobiliaria', 'is', null)
+  )
+  return [...new Set(data.map(f => f.imobiliaria))].sort()
+}
+
+export async function fetchFichasRelatorio(ano, mes, imobiliaria) {
+  const inicio = new Date(ano, mes - 1, 1).toISOString()
+  const fim    = new Date(ano, mes, 0, 23, 59, 59).toISOString()
+  const { data } = await supabase
+    .from('fichas')
+    .select('id, nome_interessado, nome_empresa, cpf, cnpj, imobiliaria, status, produto, created_at, retorno_enviado, orcamentista_forms, valor_aluguel, numero_apolice, data_emissao')
+    .gte('created_at', inicio)
+    .lte('created_at', fim)
+    .eq('imobiliaria', imobiliaria)
+    .in('status', STATUS_RELATORIO)
+    .order('created_at', { ascending: false })
+  return data || []
+}
+
 // ── Relatório Mensal ──────────────────────────────────────────────────────────
 
 export async function fetchRelatorioMensal({ ano, mes, produto }) {

@@ -254,11 +254,11 @@ export default function FichaDetalhePage() {
       {/* ── Breadcrumb / Header ── */}
       <div className="flex items-start gap-4 flex-wrap">
         <button
-          onClick={() => navigate('/fichas')}
+          onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/fichas')}
           className="flex items-center gap-1.5 text-dark-muted hover:text-dark-text transition-colors text-sm flex-shrink-0 mt-0.5"
         >
           <ArrowLeft className="w-4 h-4" />
-          Fichas
+          Voltar
         </button>
 
         <div className="flex-1 min-w-0">

@@ -403,11 +403,17 @@ export default function Imobiliarias() {
   const carregarDados = useCallback(async () => {
     setLoading(true)
 
-    // 1. Todos os nomes de imobiliária com contagem
-    const nomesData = await fetchNomesImobiliariasAll()
+    // 1. Nomes de imobiliária de fichas + apólices com contagem somada
+    const [nomesData, { data: apolicesData }] = await Promise.all([
+      fetchNomesImobiliariasAll(),
+      supabase.from('apolices').select('imobiliaria').not('imobiliaria', 'is', null),
+    ])
     const contagem = {}
     nomesData?.forEach(f => {
       if (f.imobiliaria) contagem[f.imobiliaria] = (contagem[f.imobiliaria] || 0) + 1
+    })
+    apolicesData?.forEach(a => {
+      if (a.imobiliaria) contagem[a.imobiliaria] = (contagem[a.imobiliaria] || 0) + 1
     })
 
     // 2. Imobiliárias configuradas com seus aliases

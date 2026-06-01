@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { fetchFichaDetalhe, editarFicha, deletarFicha, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -173,6 +173,7 @@ const PROD_COLORS = {
 export default function FichaDetalhePage() {
   const { id }    = useParams()
   const navigate  = useNavigate()
+  const location  = useLocation()
   const { user }  = useAuth()
   const toast     = useToast()
 
@@ -254,7 +255,18 @@ export default function FichaDetalhePage() {
       {/* ── Breadcrumb / Header ── */}
       <div className="flex items-start gap-4 flex-wrap">
         <button
-          onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/fichas')}
+          onClick={() => {
+            const state = location.state
+            if (state?.from === '/fichas') {
+              // Voltar para o Kanban preservando produto/mês/ano/scroll
+              navigate('/fichas', {
+                replace: true,
+                state: { restoreKanban: true, ...state },
+              })
+            } else {
+              navigate('/fichas')
+            }
+          }}
           className="flex items-center gap-1.5 text-dark-muted hover:text-dark-text transition-colors text-sm flex-shrink-0 mt-0.5"
         >
           <ArrowLeft className="w-4 h-4" />

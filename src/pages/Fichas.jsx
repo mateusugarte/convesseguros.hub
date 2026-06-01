@@ -597,15 +597,15 @@ export default function Fichas() {
   const [relatorio,        setRelatorio]        = useState(false)
   const [minhasFichasCount, setMinhasFichasCount] = useState(0)
 
-  // Restaurar estado ao voltar de /fichas/:id
+  // Restaurar Kanban ao voltar de /fichas/:id
   useEffect(() => {
     const state = location.state
-    if (!state?.from) return
+    if (!state?.restoreKanban) return
     if (state.produto) setProduto(state.produto)
     if (state.mes)     setMes(state.mes)
     if (state.ano)     setAno(state.ano)
-    if (state.scrollY) requestAnimationFrame(() =>
-      window.scrollTo({ top: state.scrollY, behavior: 'instant' })
+    if (state.scrollY) setTimeout(() =>
+      window.scrollTo({ top: state.scrollY, behavior: 'instant' }), 150
     )
     window.history.replaceState({}, document.title)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps

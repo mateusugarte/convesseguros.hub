@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchApolicesLista, fetchImobiliariasApolices, STATUS_EMISSAO_LABELS, SEGURADORAS_APOLICE } from '../lib/apolices'
+import { fetchApolicesLista, STATUS_EMISSAO_LABELS, SEGURADORAS_APOLICE } from '../lib/apolices'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Search, Download, Calendar } from 'lucide-react'
+import { Search, Download, Calendar, Filter } from 'lucide-react'
 
 const FILTROS_PERIODO = [
   { key: 'hoje',        label: 'Hoje' },
@@ -60,55 +60,61 @@ function nomeFicha(item) {
 const PAGE_SIZE = 50
 
 export default function ApolicesLista() {
-  const navigate         = useNavigate()
-  const { resolverNome, getAliases } = useImobiliaria()
+  const navigate                          = useNavigate()
+  const { resolverNome, grupos, getAliases } = useImobiliaria()
 
-  const [apolices,    setApolices]    = useState([])
-  const [total,       setTotal]       = useState(0)
-  const [loading,     setLoading]     = useState(false)
-  const [page,        setPage]        = useState(0)
+  const [apolices, setApolices] = useState([])
+  const [total,    setTotal]    = useState(0)
+  const [loading,  setLoading]  = useState(false)
+  const [page,     setPage]     = useState(0)
 
-  const [filtro,      setFiltro]      = useState('mes')
-  const [customFrom,  setCustomFrom]  = useState('')
-  const [customTo,    setCustomTo]    = useState('')
-  const [imobFiltro,  setImobFiltro]  = useState('')
-  const [segFiltro,   setSegFiltro]   = useState('')
-  const [statusFiltro,setStatusFiltro]= useState('')
-  const [busca,       setBusca]       = useState('')
+  // Campos do formulário (não disparam busca automaticamente)
+  const [filtro,       setFiltro]       = useState('mes')
+  const [customFrom,   setCustomFrom]   = useState('')
+  const [customTo,     setCustomTo]     = useState('')
+  const [imobFiltro,   setImobFiltro]   = useState('')
+  const [segFiltro,    setSegFiltro]    = useState('')
+  const [statusFiltro, setStatusFiltro] = useState('')
+  const [busca,        setBusca]        = useState('')
 
-  const [imobiliarias, setImobiliarias] = useState([])
+  // Estado aplicado — atualizado apenas ao clicar "Buscar"
+  const [applied, setApplied] = useState({
+    filtro: 'mes', customFrom: '', customTo: '',
+    imobFiltro: '', segFiltro: '', statusFiltro: '', busca: '',
+  })
 
-  useEffect(() => { fetchImobiliariasApolices().then(setImobiliarias) }, [])
+  function buscar() {
+    setPage(0)
+    setApplied({ filtro, customFrom, customTo, imobFiltro, segFiltro, statusFiltro, busca })
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
-    const [dateFrom, dateTo] = getRangeFiltro(filtro, customFrom, customTo)
+    const [dateFrom, dateTo] = getRangeFiltro(applied.filtro, applied.customFrom, applied.customTo)
 
     let imobiliariasFilter
-    if (imobFiltro) {
-      imobiliariasFilter = await getAliases(imobFiltro)
-      if (!imobiliariasFilter.length) imobiliariasFilter = [imobFiltro]
+    if (applied.imobFiltro) {
+      imobiliariasFilter = await getAliases(applied.imobFiltro)
+      if (!imobiliariasFilter.length) imobiliariasFilter = [applied.imobFiltro]
     }
 
     const { data, count } = await fetchApolicesLista({
       dateFrom,
       dateTo,
-      imobiliarias: imobiliariasFilter,
-      seguradora:   segFiltro || undefined,
-      statusEmissao: statusFiltro || undefined,
-      busca:        busca || undefined,
+      imobiliarias:  imobiliariasFilter,
+      seguradora:    applied.segFiltro    || undefined,
+      statusEmissao: applied.statusFiltro || undefined,
+      busca:         applied.busca        || undefined,
       page,
-      pageSize:     PAGE_SIZE,
+      pageSize:      PAGE_SIZE,
     })
     setApolices(data)
     setTotal(count)
     setLoading(false)
-  }, [filtro, customFrom, customTo, imobFiltro, segFiltro, statusFiltro, busca, page, getAliases])
+  }, [applied, page, getAliases])
 
+  // Carrega na montagem e quando applied/page muda (não ao digitar filtros)
   useEffect(() => { load() }, [load])
-
-  function resetFiltros() { setPage(0) }
-  function changeFilter(setter, val) { setter(val); setPage(0) }
 
   // Métricas do resultado atual
   const emitidas  = apolices.filter(a => a.status_emissao === 'emitida').length
@@ -149,7 +155,7 @@ export default function ApolicesLista() {
         {/* Período */}
         <div className="flex flex-wrap items-center gap-1">
           {FILTROS_PERIODO.map(f => (
-            <button key={f.key} onClick={() => changeFilter(setFiltro, f.key)}
+            <button key={f.key} onClick={() => setFiltro(f.key)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       filtro === f.key ? 'bg-brand-secondary text-white shadow-sm' : 'border border-dark-border text-dark-muted hover:text-dark-text hover:border-brand-accent/40'
                     }`}>
@@ -161,27 +167,27 @@ export default function ApolicesLista() {
         {filtro === 'personalizado' && (
           <div className="flex items-center gap-2 text-xs text-dark-muted">
             <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-            <input type="date" value={customFrom} onChange={e => changeFilter(setCustomFrom, e.target.value)} className="input py-1 px-2 text-xs w-[120px]" />
+            <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} className="input py-1 px-2 text-xs w-[120px]" />
             <span>—</span>
-            <input type="date" value={customTo} onChange={e => changeFilter(setCustomTo, e.target.value)} className="input py-1 px-2 text-xs w-[120px]" />
+            <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} className="input py-1 px-2 text-xs w-[120px]" />
           </div>
         )}
 
         {/* Dropdowns */}
         <div className="flex flex-wrap items-center gap-2">
-          <select value={imobFiltro} onChange={e => changeFilter(setImobFiltro, e.target.value)}
+          <select value={imobFiltro} onChange={e => setImobFiltro(e.target.value)}
                   className="select text-sm py-1.5" style={{ minWidth: '180px' }}>
             <option value="">Imobiliária</option>
-            {imobiliarias.map(i => <option key={i} value={i}>{resolverNome(i) || i}</option>)}
+            {grupos.map(g => <option key={g.id} value={g.nome_canonico}>{g.nome_canonico}</option>)}
           </select>
 
-          <select value={segFiltro} onChange={e => changeFilter(setSegFiltro, e.target.value)}
+          <select value={segFiltro} onChange={e => setSegFiltro(e.target.value)}
                   className="select text-sm py-1.5" style={{ minWidth: '140px' }}>
             <option value="">Seguradora</option>
             {SEGURADORAS_APOLICE.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
 
-          <select value={statusFiltro} onChange={e => changeFilter(setStatusFiltro, e.target.value)}
+          <select value={statusFiltro} onChange={e => setStatusFiltro(e.target.value)}
                   className="select text-sm py-1.5" style={{ minWidth: '140px' }}>
             <option value="">Status</option>
             {Object.entries(STATUS_EMISSAO_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
@@ -189,12 +195,24 @@ export default function ApolicesLista() {
 
           <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2">
             <Search className="w-4 h-4 text-dark-muted flex-shrink-0" />
-            <input type="text" placeholder="Buscar apólice, locatário..."
-                   value={busca} onChange={e => changeFilter(setBusca, e.target.value)}
-                   className="text-sm flex-1 outline-none bg-transparent text-dark-text placeholder-dark-muted" />
+            <input
+              type="text"
+              placeholder="Buscar apólice, locatário..."
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && buscar()}
+              className="text-sm flex-1 outline-none bg-transparent text-dark-text placeholder-dark-muted"
+            />
           </div>
 
-          <button onClick={exportarCSV} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors ml-auto">
+          <button
+            onClick={buscar}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-secondary text-white text-xs font-semibold hover:bg-brand-primary transition-colors"
+          >
+            <Filter className="w-3.5 h-3.5" /> Buscar
+          </button>
+
+          <button onClick={exportarCSV} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors">
             <Download className="w-3.5 h-3.5" /> Exportar
           </button>
         </div>

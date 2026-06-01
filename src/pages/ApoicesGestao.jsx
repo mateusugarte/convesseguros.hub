@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core'
 import {
   fetchApolicesKanban, criarApolice, moverStatusApolice,
-  buscarFichasParaEmissao, fetchImobiliariasApolices,
+  buscarFichasParaEmissao,
   STATUS_EMISSAO_LABELS, SEGURADORAS_APOLICE, FORMA_PAGAMENTO_LABELS,
 } from '../lib/apolices'
 import { useImobiliaria } from '../hooks/useImobiliaria'
@@ -158,26 +158,29 @@ function DroppableColumn({ col, apolices, onDetalhe, resolverNome, colIndex }) {
 // ── Modal Iniciar Emissão ─────────────────────────────────────────────────────
 
 function ModalIniciarEmissao({ onClose, onCriado, toast }) {
+  const { grupos, getAliases } = useImobiliaria()
   const [imobFiltro,        setImobFiltro]        = useState('')
   const [busca,             setBusca]             = useState('')
   const [fichasEncontradas, setFichasEncontradas] = useState([])
   const [fichaSelecionada,  setFichaSelecionada]  = useState(null)
-  const [imobiliarias,      setImobiliarias]      = useState([])
   const [buscando,          setBuscando]          = useState(false)
   const [criando,           setCriando]           = useState(false)
-
-  useEffect(() => { fetchImobiliariasApolices().then(setImobiliarias) }, [])
 
   useEffect(() => {
     if (!busca.trim() && !imobFiltro) { setFichasEncontradas([]); return }
     const t = setTimeout(async () => {
       setBuscando(true)
-      const data = await buscarFichasParaEmissao(busca, imobFiltro)
+      let aliasesFilter
+      if (imobFiltro) {
+        aliasesFilter = await getAliases(imobFiltro)
+        if (!aliasesFilter.length) aliasesFilter = [imobFiltro]
+      }
+      const data = await buscarFichasParaEmissao(busca, aliasesFilter)
       setFichasEncontradas(data)
       setBuscando(false)
     }, 300)
     return () => clearTimeout(t)
-  }, [busca, imobFiltro])
+  }, [busca, imobFiltro, getAliases])
 
   async function criar() {
     if (!fichaSelecionada) return
@@ -211,7 +214,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
             <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Imobiliária</label>
             <select value={imobFiltro} onChange={e => setImobFiltro(e.target.value)} className="select text-sm">
               <option value="">Todas as imobiliárias</option>
-              {imobiliarias.map(i => <option key={i} value={i}>{i}</option>)}
+              {grupos.map(g => <option key={g.id} value={g.nome_canonico}>{g.nome_canonico}</option>)}
             </select>
           </div>
 
@@ -409,15 +412,14 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function ApoicesGestao() {
-  const navigate         = useNavigate()
-  const toast            = useToast()
-  const { resolverNome } = useImobiliaria()
+  const navigate                             = useNavigate()
+  const toast                                = useToast()
+  const { resolverNome, grupos, getAliases } = useImobiliaria()
 
   const [apolices,       setApolices]       = useState([])
   const [loading,        setLoading]        = useState(true)
   const [filtro,         setFiltro]         = useState('semana')
   const [imobFiltro,     setImobFiltro]     = useState('')
-  const [imobiliarias,   setImobiliarias]   = useState([])
   const [activeId,       setActiveId]       = useState(null)
   const [modalIniciar,   setModalIniciar]   = useState(false)
   const [modalFinalizar, setModalFinalizar] = useState(null) // { id, apolice }
@@ -432,13 +434,17 @@ export default function ApoicesGestao() {
   const load = useCallback(async () => {
     setLoading(true)
     const [dateFrom, dateTo] = getPeriodDates(filtro)
-    const data = await fetchApolicesKanban({ dateFrom, dateTo, imobiliaria: imobFiltro || undefined })
+    let imobiliariasFilter
+    if (imobFiltro) {
+      imobiliariasFilter = await getAliases(imobFiltro)
+      if (!imobiliariasFilter.length) imobiliariasFilter = [imobFiltro]
+    }
+    const data = await fetchApolicesKanban({ dateFrom, dateTo, imobiliarias: imobiliariasFilter })
     setApolices(data)
     setLoading(false)
-  }, [filtro, imobFiltro])
+  }, [filtro, imobFiltro, getAliases])
 
   useEffect(() => { load() }, [load])
-  useEffect(() => { fetchImobiliariasApolices().then(setImobiliarias) }, [])
 
   function checkScroll() {
     const el = scrollRef.current; if (!el) return
@@ -520,7 +526,7 @@ export default function ApoicesGestao() {
           <select value={imobFiltro} onChange={e => setImobFiltro(e.target.value)}
                   className="select text-sm py-1.5" style={{ minWidth: '180px' }}>
             <option value="">Todas as imobiliárias</option>
-            {imobiliarias.map(i => <option key={i} value={i}>{resolverNome(i) || i}</option>)}
+            {grupos.map(g => <option key={g.id} value={g.nome_canonico}>{g.nome_canonico}</option>)}
           </select>
           <button onClick={load} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text transition-colors">
             <RefreshCw className="w-3.5 h-3.5" /> Atualizar

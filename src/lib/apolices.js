@@ -105,7 +105,7 @@ export async function fetchPorSeguradora(inicioMes, fimMes) {
 
 // ── Kanban ────────────────────────────────────────────────────────────────────
 
-export async function fetchApolicesKanban({ dateFrom, dateTo, imobiliaria } = {}) {
+export async function fetchApolicesKanban({ dateFrom, dateTo, imobiliarias } = {}) {
   let q = supabase
     .from('apolices')
     .select(`
@@ -117,9 +117,9 @@ export async function fetchApolicesKanban({ dateFrom, dateTo, imobiliaria } = {}
     `)
     .order('created_at', { ascending: false })
 
-  if (dateFrom)    q = q.gte('created_at', dateFrom)
-  if (dateTo)      q = q.lte('created_at', dateTo)
-  if (imobiliaria) q = q.eq('imobiliaria', imobiliaria)
+  if (dateFrom)           q = q.gte('created_at', dateFrom)
+  if (dateTo)             q = q.lte('created_at', dateTo)
+  if (imobiliarias?.length) q = q.in('imobiliaria', imobiliarias)
 
   const { data } = await q
   return data || []
@@ -174,7 +174,7 @@ export async function fetchImobiliariasApolices() {
 
 // ── Busca de fichas para o modal iniciar emissão ──────────────────────────────
 
-export async function buscarFichasParaEmissao(nome, imobiliaria) {
+export async function buscarFichasParaEmissao(nome, imobiliarias) {
   let q = supabase
     .from('fichas')
     .select('id, nome_interessado, nome_empresa, cpf, cnpj, produto, imobiliaria, valor_aluguel, celular')
@@ -184,7 +184,8 @@ export async function buscarFichasParaEmissao(nome, imobiliaria) {
   if (nome?.trim()) {
     q = q.or(`nome_interessado.ilike.%${nome.trim()}%,nome_empresa.ilike.%${nome.trim()}%`)
   }
-  if (imobiliaria) q = q.eq('imobiliaria', imobiliaria)
+  if (Array.isArray(imobiliarias) && imobiliarias.length) q = q.in('imobiliaria', imobiliarias)
+  else if (typeof imobiliarias === 'string' && imobiliarias) q = q.eq('imobiliaria', imobiliarias)
 
   const { data } = await q
   return data || []

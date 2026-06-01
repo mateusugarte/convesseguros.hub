@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   fetchAnosRelatorio, fetchMesesRelatorio,
-  fetchImobiliariasRelatorio, fetchFichasRelatorio,
-  PRODUTO_LABELS,
+  fetchFichasRelatorio, PRODUTO_LABELS,
 } from '../lib/fichas'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { format, parseISO } from 'date-fns'
@@ -16,16 +15,16 @@ const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho
 const MESES_ABBR = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
 const COLUNAS = [
-  { id: 'aprovada', label: 'Aprovada',            color: '#10B981' },
-  { id: 'emitida',  label: 'Emitida',             color: '#1A3A6B' },
-  { id: 'enviada',  label: 'Enviada',             color: '#2B5BA8' },
-  { id: 'desistiu', label: 'Desistiu da Locação', color: '#F59E0B' },
-  { id: 'expirada', label: 'Expirada',            color: '#6B7280' },
+  { id: 'aprovada', label: 'Aprovada',             color: '#10B981' },
+  { id: 'emitida',  label: 'Emitida',              color: '#1A3A6B' },
+  { id: 'enviada',  label: 'Enviada Cobrança',     color: '#2B5BA8' },
+  { id: 'desistiu', label: 'Desistiu da Locação',  color: '#F59E0B' },
+  { id: 'expirada', label: 'Expirada',             color: '#6B7280' },
 ]
 
 function getColuna(ficha) {
   if (ficha.status === 'aprovado')  return 'aprovada'
-  if (ficha.status === 'emitido')   return ficha.retorno_enviado ? 'enviada' : 'emitida'
+  if (ficha.status === 'emitido')   return 'emitida'
   if (ficha.status === 'cancelado') return 'desistiu'
   if (ficha.status === 'expirada')  return 'expirada'
   return null
@@ -214,19 +213,17 @@ function MesPicker({ mes, mesesDisp, onMes }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function Relatorio() {
-  const navigate           = useNavigate()
-  const { resolverNome }   = useImobiliaria()
-  const agora              = new Date()
+  const navigate                        = useNavigate()
+  const { resolverNome, grupos, getAliases } = useImobiliaria()
+  const agora                           = new Date()
 
-  const [ano,          setAno]          = useState(agora.getFullYear())
-  const [mes,          setMes]          = useState(agora.getMonth() + 1)
-  const [imobiliaria,  setImobiliaria]  = useState('')
-  const [anos,         setAnos]         = useState([agora.getFullYear()])
-  const [mesesDisp,    setMesesDisp]    = useState([agora.getMonth() + 1])
-  const [imobiliarias, setImobiliarias] = useState([])
-  const [fichas,       setFichas]       = useState([])
-  const [loading,      setLoading]      = useState(false)
-  const [loadingImobs, setLoadingImobs] = useState(false)
+  const [ano,         setAno]         = useState(agora.getFullYear())
+  const [mes,         setMes]         = useState(agora.getMonth() + 1)
+  const [imobiliaria, setImobiliaria] = useState('')
+  const [anos,        setAnos]        = useState([agora.getFullYear()])
+  const [mesesDisp,   setMesesDisp]   = useState([agora.getMonth() + 1])
+  const [fichas,      setFichas]      = useState([])
+  const [loading,     setLoading]     = useState(false)
 
   const scrollRef    = useRef(null)
   const [canScrollL, setCanScrollL] = useState(false)
@@ -249,25 +246,21 @@ export default function Relatorio() {
     })
   }, [ano])
 
-  // Imobiliárias ao mudar ano+mês
+  // Resetar imobiliária selecionada ao mudar período
   useEffect(() => {
     setImobiliaria('')
     setFichas([])
-    setLoadingImobs(true)
-    fetchImobiliariasRelatorio(ano, mes).then(imobs => {
-      setImobiliarias(imobs)
-      setLoadingImobs(false)
-    })
   }, [ano, mes])
 
-  // Fichas ao selecionar imobiliária
+  // Fichas ao selecionar imobiliária (resolve aliases antes de buscar)
   const carregarFichas = useCallback(async () => {
     if (!imobiliaria) return
     setLoading(true)
-    const data = await fetchFichasRelatorio(ano, mes, imobiliaria)
+    const aliases = await getAliases(imobiliaria)
+    const data = await fetchFichasRelatorio(ano, mes, aliases.length ? aliases : [imobiliaria])
     setFichas(data)
     setLoading(false)
-  }, [ano, mes, imobiliaria])
+  }, [ano, mes, imobiliaria, getAliases])
 
   useEffect(() => { carregarFichas() }, [carregarFichas])
 
@@ -296,7 +289,7 @@ export default function Relatorio() {
     if (col && colunaMap[col]) colunaMap[col].push(f)
   })
 
-  const nomeImob = resolverNome(imobiliaria) || imobiliaria
+  const nomeImob = imobiliaria
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -323,22 +316,18 @@ export default function Relatorio() {
           {/* Meses */}
           <MesPicker mes={mes} mesesDisp={mesesDisp} onMes={m => { setMes(m); setImobiliaria('') }} />
 
-          {/* Imobiliária */}
-          {loadingImobs ? (
-            <span className="text-xs text-dark-muted">Carregando imobiliárias...</span>
-          ) : (
-            <select
-              value={imobiliaria}
-              onChange={e => setImobiliaria(e.target.value)}
-              className="select text-sm py-1.5"
-              style={{ minWidth: '220px' }}
-            >
-              <option value="">Selecione a imobiliária...</option>
-              {imobiliarias.map(i => (
-                <option key={i} value={i}>{resolverNome(i) || i}</option>
-              ))}
-            </select>
-          )}
+          {/* Imobiliária — apenas nomes mapeados */}
+          <select
+            value={imobiliaria}
+            onChange={e => setImobiliaria(e.target.value)}
+            className="select text-sm py-1.5"
+            style={{ minWidth: '220px' }}
+          >
+            <option value="">Selecione a imobiliária...</option>
+            {grupos.map(g => (
+              <option key={g.id} value={g.nome_canonico}>{g.nome_canonico}</option>
+            ))}
+          </select>
         </div>
 
         {imobiliaria && (

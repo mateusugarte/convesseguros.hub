@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import {
   fetchFichas, fetchAnosDisponiveis, fetchMesesDisponiveis,
   fetchContagemProdutos, fetchContagemAbertaOrcamentista, deletarFicha,
@@ -563,9 +563,10 @@ function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, 
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function Fichas() {
-  const { user }       = useAuth()
-  const toast          = useToast()
-  const navigate       = useNavigate()
+  const { user }         = useAuth()
+  const toast            = useToast()
+  const navigate         = useNavigate()
+  const location         = useLocation()
   const { resolverNome } = useImobiliaria()
 
   const agora        = new Date()
@@ -595,6 +596,19 @@ export default function Fichas() {
   const [editar,           setEditar]           = useState(null)
   const [relatorio,        setRelatorio]        = useState(false)
   const [minhasFichasCount, setMinhasFichasCount] = useState(0)
+
+  // Restaurar estado ao voltar de /fichas/:id
+  useEffect(() => {
+    const state = location.state
+    if (!state?.from) return
+    if (state.produto) setProduto(state.produto)
+    if (state.mes)     setMes(state.mes)
+    if (state.ano)     setAno(state.ano)
+    if (state.scrollY) requestAnimationFrame(() =>
+      window.scrollTo({ top: state.scrollY, behavior: 'instant' })
+    )
+    window.history.replaceState({}, document.title)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Contagem de produtos (sempre carregado)
   useEffect(() => {
@@ -728,6 +742,7 @@ export default function Fichas() {
           produto={produto}
           externalDateFrom={dateFrom}
           externalDateTo={dateTo}
+          contextState={{ produto, mes, ano }}
         />
       ) : (
         <>

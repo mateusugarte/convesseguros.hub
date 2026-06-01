@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchApolicesLista, STATUS_EMISSAO_LABELS, SEGURADORAS_APOLICE } from '../lib/apolices'
 import { useImobiliaria } from '../hooks/useImobiliaria'
@@ -88,13 +88,16 @@ export default function ApolicesLista() {
     setApplied({ filtro, customFrom, customTo, imobFiltro, segFiltro, statusFiltro, busca })
   }
 
+  const getAliasesRef = useRef(getAliases)
+  getAliasesRef.current = getAliases
+
   const load = useCallback(async () => {
     setLoading(true)
     const [dateFrom, dateTo] = getRangeFiltro(applied.filtro, applied.customFrom, applied.customTo)
 
     let imobiliariasFilter
     if (applied.imobFiltro) {
-      imobiliariasFilter = await getAliases(applied.imobFiltro)
+      imobiliariasFilter = await getAliasesRef.current(applied.imobFiltro)
       if (!imobiliariasFilter.length) imobiliariasFilter = [applied.imobFiltro]
     }
 
@@ -111,7 +114,7 @@ export default function ApolicesLista() {
     setApolices(data)
     setTotal(count)
     setLoading(false)
-  }, [applied, page, getAliases])
+  }, [applied, page])
 
   // Carrega na montagem e quando applied/page muda (não ao digitar filtros)
   useEffect(() => { load() }, [load])

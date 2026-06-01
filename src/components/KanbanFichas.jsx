@@ -316,7 +316,7 @@ function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinal
 
 // ── Main KanbanFichas ─────────────────────────────────────────────────────────
 
-export default function KanbanFichas({ produto, externalDateFrom, externalDateTo }) {
+export default function KanbanFichas({ produto, externalDateFrom, externalDateTo, contextState }) {
   const { user }       = useAuth()
   const toast          = useToast()
   const navigate       = useNavigate()
@@ -452,7 +452,9 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
   // Abrir detalhe — navega para página dedicada
   function handleDetalhe(fichaId) {
-    navigate(`/fichas/${fichaId}`)
+    navigate(`/fichas/${fichaId}`, {
+      state: { from: '/fichas', scrollY: window.scrollY, ...contextState },
+    })
   }
 
   async function handleDragEnd({ active, over }) {

@@ -2,69 +2,75 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
 
-let _cache = null       // mapa de aliases em memória (compartilhado entre instâncias)
-let _promise = null     // promessa de carregamento em andamento
+// Módulo-level cache — compartilhado entre todas as instâncias do hook
+let _aliasMap = null   // { alias_lower → nome_canonico }
+let _grupos   = null   // [{ id, nome_canonico, ativa }]
+let _promise  = null   // promessa em andamento (evita requests paralelos)
 
 export function useImobiliaria() {
-  const [aliasMap, setAliasMap] = useState(_cache || {})
-  const [grupos,   setGrupos]   = useState([])
-  const [loading,  setLoading]  = useState(!_cache)
+  const [aliasMap, setAliasMap] = useState(_aliasMap || {})
+  const [grupos,   setGrupos]   = useState(_grupos   || [])
+  const [loading,  setLoading]  = useState(!_aliasMap)
 
   const carregar = useCallback(async (forçar = false) => {
-    if (_cache && !forçar) {
-      setAliasMap(_cache)
+    // Cache quente para ambos → usar direto, sem request
+    if (_aliasMap && _grupos && !forçar) {
+      setAliasMap(_aliasMap)
+      setGrupos(_grupos)
       setLoading(false)
       return
     }
 
     if (!_promise || forçar) {
-      _promise = (async () => {
-        const { data: aliasesData } = await supabase
+      _promise = Promise.all([
+        supabase
           .from('imobiliaria_aliases')
-          .select('alias, imobiliarias!imobiliaria_id(id, nome_canonico)')
-
+          .select('alias, imobiliarias!imobiliaria_id(id, nome_canonico)'),
+        supabase
+          .from('imobiliarias')
+          .select('id, nome_canonico, ativa')
+          .eq('ativa', true)
+          .order('nome_canonico'),
+      ]).then(([{ data: aliasesData }, { data: gruposData }]) => {
         const mapa = {}
         aliasesData?.forEach(({ alias, imobiliarias: imob }) => {
           if (imob) mapa[alias.toLowerCase().trim()] = imob.nome_canonico
         })
-        _cache = mapa
-        return mapa
-      })()
+        _aliasMap = mapa
+        _grupos   = gruposData || []
+        return { mapa, grupos: _grupos }
+      })
     }
 
-    const mapa = await _promise
+    const { mapa, grupos: gs } = await _promise
     setAliasMap(mapa)
-
-    const { data: imobs } = await supabase
-      .from('imobiliarias')
-      .select('id, nome_canonico, ativa')
-      .eq('ativa', true)
-      .order('nome_canonico')
-    setGrupos(imobs || [])
+    setGrupos(gs)
     setLoading(false)
   }, [])
 
   useEffect(() => { carregar() }, [carregar])
 
-  // Resolver: alias DB → canônico; fallback → normalizeImobiliaria
-  function resolverNome(nomeOriginal) {
+  // useCallback garante referência estável → não causa loops em dependências
+  const resolverNome = useCallback((nomeOriginal) => {
     if (!nomeOriginal) return '—'
     const chave = nomeOriginal.toLowerCase().trim()
     if (aliasMap[chave]) return aliasMap[chave]
     return normalizeImobiliaria(nomeOriginal) || nomeOriginal
-  }
+  }, [aliasMap])
 
-  async function getAliases(nomeCanônico) {
+  // Estável: [] de dependências → referência nunca muda
+  const getAliases = useCallback(async (nomeCanônico) => {
     const { data } = await supabase
       .from('imobiliaria_aliases')
       .select('alias, imobiliarias!imobiliaria_id!inner(nome_canonico)')
       .eq('imobiliarias.nome_canonico', nomeCanônico)
     return data?.map(d => d.alias) || [nomeCanônico]
-  }
+  }, [])
 
   function recarregar() {
-    _cache = null
-    _promise = null
+    _aliasMap = null
+    _grupos   = null
+    _promise  = null
     return carregar(true)
   }
 

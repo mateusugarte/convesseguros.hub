@@ -15,18 +15,19 @@ const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho
 const MESES_ABBR = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
 const COLUNAS = [
-  { id: 'aprovada', label: 'Aprovada',             color: '#10B981' },
-  { id: 'emitida',  label: 'Emitida',              color: '#1A3A6B' },
-  { id: 'enviada',  label: 'Enviada Cobrança',     color: '#2B5BA8' },
-  { id: 'desistiu', label: 'Desistiu da Locação',  color: '#F59E0B' },
-  { id: 'expirada', label: 'Expirada',             color: '#6B7280' },
+  { id: 'aprovada',         label: 'Aprovada',             color: '#10B981' },
+  { id: 'emitida',          label: 'Emitida',              color: '#1A3A6B' },
+  { id: 'enviado_cobranca', label: 'Enviado Cobrança',     color: '#2B5BA8' },
+  { id: 'desistiu',         label: 'Desistiu da Locação',  color: '#F59E0B' },
+  { id: 'expirada',         label: 'Expirada',             color: '#6B7280' },
 ]
 
 function getColuna(ficha) {
-  if (ficha.status === 'aprovado')  return 'aprovada'
-  if (ficha.status === 'emitido')   return 'emitida'
-  if (ficha.status === 'cancelado') return 'desistiu'
-  if (ficha.status === 'expirada')  return 'expirada'
+  if (ficha.status === 'aprovado')                            return 'aprovada'
+  if (ficha.status === 'emitido' && ficha.retorno_enviado)    return 'enviado_cobranca'
+  if (ficha.status === 'emitido' && !ficha.retorno_enviado)   return 'emitida'
+  if (ficha.status === 'cancelado')                           return 'desistiu'
+  if (ficha.status === 'expirada')                            return 'expirada'
   return null
 }
 
@@ -252,15 +253,18 @@ export default function Relatorio() {
     setFichas([])
   }, [ano, mes])
 
-  // Fichas ao selecionar imobiliária (resolve aliases antes de buscar)
+  // Ref estável para getAliases — evita re-criar carregarFichas a cada render do hook
+  const getAliasesRef = useRef(getAliases)
+  getAliasesRef.current = getAliases
+
   const carregarFichas = useCallback(async () => {
     if (!imobiliaria) return
     setLoading(true)
-    const aliases = await getAliases(imobiliaria)
+    const aliases = await getAliasesRef.current(imobiliaria)
     const data = await fetchFichasRelatorio(ano, mes, aliases.length ? aliases : [imobiliaria])
     setFichas(data)
     setLoading(false)
-  }, [ano, mes, imobiliaria, getAliases])
+  }, [ano, mes, imobiliaria])
 
   useEffect(() => { carregarFichas() }, [carregarFichas])
 

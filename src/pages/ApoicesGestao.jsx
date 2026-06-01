@@ -431,18 +431,21 @@ export default function ApoicesGestao() {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
+  const getAliasesRef = useRef(getAliases)
+  getAliasesRef.current = getAliases
+
   const load = useCallback(async () => {
     setLoading(true)
     const [dateFrom, dateTo] = getPeriodDates(filtro)
     let imobiliariasFilter
     if (imobFiltro) {
-      imobiliariasFilter = await getAliases(imobFiltro)
+      imobiliariasFilter = await getAliasesRef.current(imobFiltro)
       if (!imobiliariasFilter.length) imobiliariasFilter = [imobFiltro]
     }
     const data = await fetchApolicesKanban({ dateFrom, dateTo, imobiliarias: imobiliariasFilter })
     setApolices(data)
     setLoading(false)
-  }, [filtro, imobFiltro, getAliases])
+  }, [filtro, imobFiltro])
 
   useEffect(() => { load() }, [load])
 

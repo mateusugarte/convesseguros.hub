@@ -1,0 +1,547 @@
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
+import { fetchNomesImobiliariasAll } from '../lib/fichas'
+import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
+import { useToast } from '../contexts/ToastContext'
+import {
+  Building2, Plus, Pencil, Trash2, X, Check,
+  ChevronRight, AlertCircle, Search,
+} from 'lucide-react'
+
+// ── Modal de Agrupamento / Criação / Edição ───────────────────────────────────
+
+function ModalAgrupar({ modal, contagemPorNome, onClose, onSalvo, toast }) {
+  const ehEditar  = modal?.mode === 'editar'
+  const imobAtual = modal?.imob
+
+  const [nomeCanonoco,  setNomeCanonoco]  = useState(imobAtual?.nome_canonico || '')
+  const [aliasesModal,  setAliasesModal]  = useState(modal?.variacoes || imobAtual?.aliases || [])
+  const [novoAlias,     setNovoAlias]     = useState('')
+  const [salvando,      setSalvando]      = useState(false)
+
+  const totalFichas = aliasesModal.reduce((s, v) => s + (contagemPorNome[v] || 0), 0)
+
+  function removerAlias(v) {
+    setAliasesModal(prev => prev.filter(x => x !== v))
+  }
+
+  function adicionarAlias() {
+    const t = novoAlias.trim()
+    if (!t || aliasesModal.includes(t)) { setNovoAlias(''); return }
+    setAliasesModal(prev => [...prev, t])
+    setNovoAlias('')
+  }
+
+  async function salvar() {
+    if (!nomeCanonoco.trim()) return
+    setSalvando(true)
+    try {
+      let imobId
+
+      if (ehEditar && imobAtual) {
+        // Atualizar nome canônico
+        const { error } = await supabase.from('imobiliarias')
+          .update({ nome_canonico: nomeCanonoco.trim() })
+          .eq('id', imobAtual.id)
+        if (error) throw error
+        imobId = imobAtual.id
+        // Limpar aliases antigos
+        await supabase.from('imobiliaria_aliases').delete().eq('imobiliaria_id', imobId)
+      } else {
+        // Upsert canônico (cria ou encontra existente)
+        const { data: existe } = await supabase.from('imobiliarias')
+          .select('id').eq('nome_canonico', nomeCanonoco.trim()).maybeSingle()
+
+        if (existe) {
+          imobId = existe.id
+        } else {
+          const { data: novo, error } = await supabase.from('imobiliarias')
+            .insert({ nome_canonico: nomeCanonoco.trim() })
+            .select('id').single()
+          if (error) throw error
+          imobId = novo.id
+        }
+      }
+
+      // Inserir aliases
+      if (aliasesModal.length > 0) {
+        const payload = aliasesModal.map(v => ({ imobiliaria_id: imobId, alias: v.trim() }))
+        const { error } = await supabase.from('imobiliaria_aliases')
+          .upsert(payload, { onConflict: 'alias' })
+        if (error) throw error
+      }
+
+      toast({ type: 'success', title: 'Configuração salva!' })
+      onSalvo()
+      onClose()
+    } catch (e) {
+      toast({ type: 'error', title: 'Erro ao salvar', message: e.message })
+    }
+    setSalvando(false)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-lg">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
+          <h2 className="font-bold text-dark-text text-base">
+            {ehEditar ? 'Editar Imobiliária' : 'Configurar Imobiliária'}
+          </h2>
+          <button onClick={onClose} className="btn-ghost p-1.5 rounded-lg">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          {/* Nome canônico */}
+          <div>
+            <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
+              Como deve aparecer no sistema *
+            </label>
+            <input
+              value={nomeCanonoco}
+              onChange={e => setNomeCanonoco(e.target.value)}
+              placeholder="Ex: Guarulhos Imóveis"
+              className="input"
+              autoFocus
+            />
+            <p className="text-[11px] text-dark-muted mt-1">
+              Este nome aparecerá em todos os filtros, cards e relatórios.
+            </p>
+          </div>
+
+          {/* Aliases */}
+          <div>
+            <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
+              Variações mapeadas
+            </label>
+
+            {aliasesModal.length === 0 ? (
+              <p className="text-xs text-dark-muted italic">Nenhuma variação adicionada</p>
+            ) : (
+              <div className="rounded-xl border border-dark-border divide-y divide-dark-border overflow-hidden mb-2">
+                {aliasesModal.map(v => (
+                  <div key={v} className="flex items-center justify-between px-3 py-2 hover:bg-dark-surface2/40">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-mono text-xs text-dark-text truncate">{v}</span>
+                      {contagemPorNome[v] !== undefined && (
+                        <span className="text-[10px] text-dark-muted flex-shrink-0">
+                          ({contagemPorNome[v]} ficha{contagemPorNome[v] !== 1 ? 's' : ''})
+                        </span>
+                      )}
+                    </div>
+                    <button onClick={() => removerAlias(v)} className="flex-shrink-0 p-1 rounded hover:bg-status-danger/15 text-dark-muted hover:text-status-danger transition-colors ml-2">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Adicionar alias manualmente */}
+            <div className="flex gap-2">
+              <input
+                value={novoAlias}
+                onChange={e => setNovoAlias(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && adicionarAlias()}
+                placeholder="Adicionar variação..."
+                className="input text-xs py-1.5 flex-1"
+              />
+              <button
+                onClick={adicionarAlias}
+                disabled={!novoAlias.trim()}
+                className="btn-secondary px-3 py-1.5 text-xs disabled:opacity-40"
+              >
+                Adicionar
+              </button>
+            </div>
+
+            {aliasesModal.length > 0 && (
+              <p className="text-xs text-dark-muted mt-2">
+                Total:{' '}
+                <span className="font-semibold text-dark-text">{totalFichas}</span>{' '}
+                ficha{totalFichas !== 1 ? 's' : ''} serão exibidas como{' '}
+                <span className="text-brand-accent">"{nomeCanonoco || '...'}"</span>
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-dark-border">
+          <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
+          <button
+            onClick={salvar}
+            disabled={!nomeCanonoco.trim() || salvando}
+            className="btn-primary text-sm"
+          >
+            {salvando ? 'Salvando...' : 'Salvar Configuração'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Tab: Mapeadas ─────────────────────────────────────────────────────────────
+
+function TabMapeadas({ mapeadas, confirmExcluir, setConfirmExcluir, onExcluir, onEditar }) {
+  const navigate = useNavigate()
+
+  if (mapeadas.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3 text-dark-muted">
+        <Building2 className="w-10 h-10 opacity-30" />
+        <p className="text-sm">Nenhuma imobiliária configurada ainda</p>
+        <p className="text-xs">Use a aba "Não Mapeadas" para agrupar variações</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {mapeadas.map(imob => (
+        <div key={imob.id} className="card p-4">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="min-w-0 flex-1">
+              <button
+                onClick={() => navigate(`/imobiliarias/${imob.id}`)}
+                className="font-bold text-dark-text hover:text-brand-accent transition-colors text-left flex items-center gap-1.5 group"
+              >
+                {imob.nome_canonico}
+                <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+              </button>
+              <p className="text-xs text-dark-muted mt-0.5">
+                {imob.aliases.length} variação{imob.aliases.length !== 1 ? 'ões' : ''}{' '}
+                · {imob.totalFichas} ficha{imob.totalFichas !== 1 ? 's' : ''}
+                {!imob.ativa && <span className="ml-2 text-status-warning">· Inativa</span>}
+              </p>
+              {imob.aliases.length > 0 && (
+                <p className="text-[11px] text-dark-muted/60 mt-2 font-mono leading-relaxed">
+                  {imob.aliases.join(' · ')}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => onEditar(imob)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
+              >
+                <Pencil className="w-3.5 h-3.5" /> Editar
+              </button>
+
+              {confirmExcluir === imob.id ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-status-danger font-medium">Confirmar?</span>
+                  <button
+                    onClick={() => onExcluir(imob.id)}
+                    className="px-2 py-1 rounded bg-status-danger text-white text-xs hover:opacity-90"
+                  >
+                    Sim
+                  </button>
+                  <button
+                    onClick={() => setConfirmExcluir(null)}
+                    className="px-2 py-1 rounded border border-dark-border text-xs text-dark-muted hover:text-dark-text"
+                  >
+                    Não
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmExcluir(imob.id)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-status-danger/30 text-xs text-status-danger hover:bg-status-danger/10 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Tab: Não Mapeadas ─────────────────────────────────────────────────────────
+
+function TabNaoMapeadas({ naoMapeadas, selecionados, setSelecionados, onAgrupar }) {
+  const [busca, setBusca] = useState('')
+
+  const filtradas = busca.trim()
+    ? naoMapeadas.filter(n => n.nome.toLowerCase().includes(busca.toLowerCase()))
+    : naoMapeadas
+
+  function toggleSel(nome) {
+    setSelecionados(prev => {
+      const next = new Set(prev)
+      if (next.has(nome)) next.delete(nome)
+      else next.add(nome)
+      return next
+    })
+  }
+
+  function toggleTodos() {
+    if (selecionados.size === filtradas.length) {
+      setSelecionados(new Set())
+    } else {
+      setSelecionados(new Set(filtradas.map(n => n.nome)))
+    }
+  }
+
+  if (naoMapeadas.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3 text-dark-muted">
+        <Check className="w-10 h-10 opacity-30" />
+        <p className="text-sm">Todas as imobiliárias estão mapeadas!</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Info + ações */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-dark-muted">
+          Selecione as variações que são a mesma imobiliária:
+        </p>
+        {selecionados.size > 0 && (
+          <button
+            onClick={onAgrupar}
+            className="btn-primary flex items-center gap-1.5 text-sm"
+          >
+            Agrupar selecionadas ({selecionados.size}) →
+          </button>
+        )}
+      </div>
+
+      {/* Busca */}
+      <div className="flex items-center gap-2 bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2">
+        <Search className="w-4 h-4 text-dark-muted flex-shrink-0" />
+        <input
+          type="text"
+          placeholder="Filtrar variações..."
+          value={busca}
+          onChange={e => setBusca(e.target.value)}
+          className="text-sm flex-1 outline-none bg-transparent text-dark-text placeholder-dark-muted"
+        />
+      </div>
+
+      {/* Lista */}
+      <div className="card overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-dark-surface2/60 border-b border-dark-border">
+          <input
+            type="checkbox"
+            checked={selecionados.size === filtradas.length && filtradas.length > 0}
+            onChange={toggleTodos}
+            className="w-4 h-4 rounded accent-brand-accent"
+          />
+          <span className="text-xs font-semibold text-dark-muted uppercase tracking-wider flex-1">
+            Nome original
+          </span>
+          <span className="text-xs font-semibold text-dark-muted uppercase tracking-wider">
+            Fichas
+          </span>
+        </div>
+
+        {/* Rows */}
+        <div className="divide-y divide-dark-border max-h-[480px] overflow-y-auto">
+          {filtradas.map(n => (
+            <label
+              key={n.nome}
+              className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
+                selecionados.has(n.nome) ? 'bg-brand-accent/5' : 'hover:bg-dark-surface2/40'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={selecionados.has(n.nome)}
+                onChange={() => toggleSel(n.nome)}
+                className="w-4 h-4 rounded accent-brand-accent flex-shrink-0"
+              />
+              <span className="font-mono text-sm text-dark-text flex-1 truncate">{n.nome}</span>
+              <span className="text-xs text-dark-muted flex-shrink-0 font-mono">
+                {n.totalFichas}
+              </span>
+            </label>
+          ))}
+          {filtradas.length === 0 && (
+            <p className="text-center py-8 text-sm text-dark-muted">Nenhum resultado</p>
+          )}
+        </div>
+      </div>
+
+      {selecionados.size > 0 && (
+        <div className="flex justify-end">
+          <button onClick={onAgrupar} className="btn-primary flex items-center gap-1.5 text-sm">
+            Agrupar selecionadas ({selecionados.size}) →
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
+export default function Imobiliarias() {
+  const toast = useToast()
+
+  const [tab,             setTab]             = useState('mapeadas')
+  const [loading,         setLoading]         = useState(true)
+  const [mapeadas,        setMapeadas]        = useState([])
+  const [naoMapeadas,     setNaoMapeadas]     = useState([])
+  const [contagemPorNome, setContagemPorNome] = useState({})
+  const [selecionados,    setSelecionados]    = useState(new Set())
+  const [modal,           setModal]           = useState(null)
+  const [confirmExcluir,  setConfirmExcluir]  = useState(null)
+
+  const carregarDados = useCallback(async () => {
+    setLoading(true)
+
+    // 1. Todos os nomes de imobiliária com contagem
+    const nomesData = await fetchNomesImobiliariasAll()
+    const contagem = {}
+    nomesData?.forEach(f => {
+      if (f.imobiliaria) contagem[f.imobiliaria] = (contagem[f.imobiliaria] || 0) + 1
+    })
+
+    // 2. Imobiliárias configuradas com seus aliases
+    const { data: imobiData } = await supabase
+      .from('imobiliarias')
+      .select('id, nome_canonico, ativa, imobiliaria_aliases(alias)')
+      .order('nome_canonico')
+
+    // 3. Conjunto de aliases mapeados (string exata)
+    const aliasesMapeados = new Set()
+    imobiData?.forEach(imob => {
+      imob.imobiliaria_aliases?.forEach(a => aliasesMapeados.add(a.alias))
+    })
+
+    const mapeadasList = (imobiData || []).map(imob => {
+      const aliases = imob.imobiliaria_aliases?.map(a => a.alias) || []
+      const totalFichas = aliases.reduce((s, alias) => s + (contagem[alias] || 0), 0)
+      return { ...imob, aliases, totalFichas }
+    })
+
+    const naoMapeadasList = Object.entries(contagem)
+      .filter(([nome]) => !aliasesMapeados.has(nome))
+      .map(([nome, totalFichas]) => ({ nome, totalFichas }))
+      .sort((a, b) => b.totalFichas - a.totalFichas)
+
+    setContagemPorNome(contagem)
+    setMapeadas(mapeadasList)
+    setNaoMapeadas(naoMapeadasList)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { carregarDados() }, [carregarDados])
+
+  async function excluirImobiliaria(id) {
+    await supabase.from('imobiliarias').delete().eq('id', id)
+    setConfirmExcluir(null)
+    toast({ type: 'success', title: 'Imobiliária excluída' })
+    carregarDados()
+  }
+
+  function abrirAgrupar() {
+    setModal({ mode: 'criar', variacoes: [...selecionados] })
+  }
+
+  function abrirEditar(imob) {
+    setModal({ mode: 'editar', imob, variacoes: imob.aliases })
+  }
+
+  function abrirNova() {
+    setModal({ mode: 'criar', variacoes: [] })
+  }
+
+  function aoSalvar() {
+    setSelecionados(new Set())
+    carregarDados()
+  }
+
+  return (
+    <div className="space-y-5 animate-fade-in">
+
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-lg font-bold text-dark-text">Imobiliárias</h1>
+          <p className="text-xs text-dark-muted mt-0.5">
+            Mapeie variações de nomes para exibição padronizada no sistema
+          </p>
+        </div>
+        <button onClick={abrirNova} className="btn-primary flex items-center gap-2 text-sm">
+          <Plus className="w-4 h-4" /> Nova Imobiliária
+        </button>
+      </div>
+
+      {/* ── Tabs ── */}
+      <div className="flex items-center gap-1 border-b border-dark-border">
+        {[
+          ['mapeadas',    `Mapeadas (${mapeadas.length})`],
+          ['nao_mapeadas', `Não Mapeadas (${naoMapeadas.length})`],
+        ].map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => { setTab(key); setSelecionados(new Set()) }}
+            className={`px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
+              tab === key
+                ? 'border-brand-accent text-brand-accent'
+                : 'border-transparent text-dark-muted hover:text-dark-text'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+        {naoMapeadas.length > 0 && tab !== 'nao_mapeadas' && (
+          <span className="ml-2 bg-status-warning/15 text-status-warning text-[10px] font-bold px-2 py-0.5 rounded-full">
+            {naoMapeadas.length} sem mapeamento
+          </span>
+        )}
+      </div>
+
+      {/* ── Conteúdo ── */}
+      {loading ? (
+        <div className="flex items-center justify-center h-48 gap-2 text-dark-muted text-sm">
+          <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          Carregando...
+        </div>
+      ) : tab === 'mapeadas' ? (
+        <TabMapeadas
+          mapeadas={mapeadas}
+          confirmExcluir={confirmExcluir}
+          setConfirmExcluir={setConfirmExcluir}
+          onExcluir={excluirImobiliaria}
+          onEditar={abrirEditar}
+        />
+      ) : (
+        <TabNaoMapeadas
+          naoMapeadas={naoMapeadas}
+          selecionados={selecionados}
+          setSelecionados={setSelecionados}
+          onAgrupar={abrirAgrupar}
+        />
+      )}
+
+      {/* ── Modal ── */}
+      {modal && (
+        <ModalAgrupar
+          modal={modal}
+          contagemPorNome={contagemPorNome}
+          onClose={() => setModal(null)}
+          onSalvo={aoSalvar}
+          toast={toast}
+        />
+      )}
+    </div>
+  )
+}

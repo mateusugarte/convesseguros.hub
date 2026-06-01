@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { fetchRelatorioMensal, PRODUTO_LABELS } from '../lib/fichas'
 import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
+import { useImobiliaria } from '../hooks/useImobiliaria'
 import { ChevronLeft, ChevronRight, Download, X, FileText } from 'lucide-react'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -80,7 +81,7 @@ function ResultadoFinal({ status }) {
 function exportarCSV(fichas, mes, ano) {
   const headers = ['Imobiliária','Nome','Doc','Produto','Status','Enviada','Resultado','Desistiu','Orçamentista','Data']
   const rows = fichas.map(f => [
-    normalizeImobiliaria(f.imobiliaria) || f.imobiliaria || '',
+    resolverNome(f.imobiliaria) || '',
     nomePrincipal(f),
     f.produto === 'pessoa_juridica' ? (f.cnpj || '') : (f.cpf || ''),
     PRODUTO_LABELS[f.produto] || f.produto,
@@ -203,6 +204,7 @@ function Rodape({ fichas }) {
 
 export default function RelatorioMensal({ onClose }) {
   const agora = new Date()
+  const { resolverNome } = useImobiliaria()
   const [mes,     setMes]     = useState(agora.getMonth() + 1)
   const [ano,     setAno]     = useState(agora.getFullYear())
   const [produto, setProduto] = useState('todos')
@@ -229,7 +231,7 @@ export default function RelatorioMensal({ onClose }) {
 
   // Agrupar por imobiliária
   const porImobiliaria = fichas.reduce((acc, f) => {
-    const imob = normalizeImobiliaria(f.imobiliaria) || f.imobiliaria || 'Sem Imobiliária'
+    const imob = resolverNome(f.imobiliaria) || 'Sem Imobiliária'
     if (!acc[imob]) acc[imob] = []
     acc[imob].push(f)
     return acc

@@ -353,6 +353,13 @@ export async function fetchImobiliariasDistintas() {
   return raw.map(n => normalizeImobiliaria(n) || n).filter(Boolean).sort()
 }
 
+// Retorna todos os registros {imobiliaria} para contagem na página de Imobiliárias
+export async function fetchNomesImobiliariasAll() {
+  return fetchAllRows(() =>
+    supabase.from('fichas').select('imobiliaria').not('imobiliaria', 'is', null)
+  )
+}
+
 export async function fetchProfiles() {
   const { data } = await supabase.from('profiles').select('id, nome').order('nome')
   return data || []

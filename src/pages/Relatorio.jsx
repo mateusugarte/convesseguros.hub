@@ -5,7 +5,7 @@ import {
   fetchImobiliariasRelatorio, fetchFichasRelatorio,
   PRODUTO_LABELS,
 } from '../lib/fichas'
-import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
+import { useImobiliaria } from '../hooks/useImobiliaria'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { BarChart2 } from 'lucide-react'
@@ -214,8 +214,9 @@ function MesPicker({ mes, mesesDisp, onMes }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function Relatorio() {
-  const navigate = useNavigate()
-  const agora    = new Date()
+  const navigate           = useNavigate()
+  const { resolverNome }   = useImobiliaria()
+  const agora              = new Date()
 
   const [ano,          setAno]          = useState(agora.getFullYear())
   const [mes,          setMes]          = useState(agora.getMonth() + 1)
@@ -295,7 +296,7 @@ export default function Relatorio() {
     if (col && colunaMap[col]) colunaMap[col].push(f)
   })
 
-  const nomeImob = normalizeImobiliaria(imobiliaria) || imobiliaria
+  const nomeImob = resolverNome(imobiliaria) || imobiliaria
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -334,7 +335,7 @@ export default function Relatorio() {
             >
               <option value="">Selecione a imobiliária...</option>
               {imobiliarias.map(i => (
-                <option key={i} value={i}>{normalizeImobiliaria(i) || i}</option>
+                <option key={i} value={i}>{resolverNome(i) || i}</option>
               ))}
             </select>
           )}

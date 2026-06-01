@@ -24,6 +24,8 @@ const FichaDetalhePage = lazy(() => import('./pages/FichaDetalhePage'))
 const GestaoEmissoes   = lazy(() => import('./pages/GestaoEmissoes'))
 const MinhasFichas     = lazy(() => import('./pages/MinhasFichas'))
 const Relatorio        = lazy(() => import('./pages/Relatorio'))
+const Imobiliarias     = lazy(() => import('./pages/Imobiliarias'))
+const ImobiliariaDetalhe = lazy(() => import('./pages/ImobiliariaDetalhe'))
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -51,6 +53,8 @@ function AppRoutes() {
           <Route path="emissoes" element={<GestaoEmissoes />} />
           <Route path="minhas-fichas" element={<MinhasFichas />} />
           <Route path="relatorio" element={<Relatorio />} />
+          <Route path="imobiliarias" element={<Imobiliarias />} />
+          <Route path="imobiliarias/:id" element={<ImobiliariaDetalhe />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

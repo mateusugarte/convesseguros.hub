@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core'
 import { fetchFichasKanban, assumirFicha, moverFichaStatus, deletarFicha, PRODUTO_LABELS } from '../lib/fichas'
-import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
+import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { supabase } from '../lib/supabase'
@@ -120,7 +120,7 @@ function nomePrincipal(ficha) {
 
 // ── FichaCard ─────────────────────────────────────────────────────────────────
 
-function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay = false, isNew = false }) {
+function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay = false, isNew = false, resolverNome }) {
   const ProdIcon  = PRODUTO_ICON[ficha.produto] || LayoutGrid
   const prodColor = PRODUTO_COLOR[ficha.produto] || '#4A90D9'
   const since     = ficha.assumida_em || ficha.created_at
@@ -151,7 +151,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay = fals
 
       {/* Imobiliária */}
       <p className="text-[10px] text-dark-muted truncate">
-        {normalizeImobiliaria(ficha.imobiliaria) || '—'}
+        {(resolverNome ? resolverNome(ficha.imobiliaria) : ficha.imobiliaria) || '—'}
       </p>
 
       {/* Footer: avatar + action */}
@@ -202,7 +202,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay = fals
 
 // ── DraggableCard ─────────────────────────────────────────────────────────────
 
-function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, isNew }) {
+function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, isNew, resolverNome }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ficha.id })
 
   return (
@@ -219,6 +219,7 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, isNew
         onAssumir={onAssumir}
         onFinalizar={onFinalizar}
         isNew={isNew}
+        resolverNome={resolverNome}
       />
     </div>
   )
@@ -226,7 +227,7 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, isNew
 
 // ── DroppableColumn ───────────────────────────────────────────────────────────
 
-function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinalizar, collapsed, onToggleCollapse, newIds, colIndex }) {
+function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinalizar, collapsed, onToggleCollapse, newIds, colIndex, resolverNome }) {
   const { isOver, setNodeRef } = useDroppable({ id: column.id })
 
   const animStyle = { animationDelay: `${colIndex * 30}ms`, animationFillMode: 'both', scrollSnapAlign: 'start' }
@@ -305,6 +306,7 @@ function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinal
             onAssumir={onAssumir}
             onFinalizar={onFinalizar}
             isNew={newIds?.has(f.id)}
+            resolverNome={resolverNome}
           />
         ))}
       </div>
@@ -315,9 +317,10 @@ function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinal
 // ── Main KanbanFichas ─────────────────────────────────────────────────────────
 
 export default function KanbanFichas({ produto, externalDateFrom, externalDateTo }) {
-  const { user } = useAuth()
-  const toast    = useToast()
-  const navigate = useNavigate()
+  const { user }       = useAuth()
+  const toast          = useToast()
+  const navigate       = useNavigate()
+  const { resolverNome } = useImobiliaria()
 
   // Quando datas externas são fornecidas (via seletor de mês/ano na página), ignorar período interno
   const useExternal = !!(externalDateFrom || externalDateTo)
@@ -602,6 +605,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
                   onToggleCollapse={() => toggleCollapse(col.id)}
                   newIds={newIds}
                   colIndex={i}
+                  resolverNome={resolverNome}
                 />
               ))}
             </div>
@@ -609,7 +613,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
             <DragOverlay dropAnimation={null}>
               {activeCard && (
                 <div className="kanban-col">
-                  <FichaCard ficha={activeCard} userId={user?.id} onAssumir={() => {}} onFinalizar={() => {}} isDragOverlay />
+                  <FichaCard ficha={activeCard} userId={user?.id} onAssumir={() => {}} onFinalizar={() => {}} isDragOverlay resolverNome={resolverNome} />
                 </div>
               )}
             </DragOverlay>

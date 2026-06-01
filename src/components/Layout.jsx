@@ -28,7 +28,7 @@ const NAV_GROUPS = [
     label: 'Gestão',
     items: [
       { to: '/emissoes',     icon: FileCheck,  label: 'Gestão de Emissões', soon: true },
-      { to: '/imobiliarias', icon: Building2,  label: 'Imobiliárias',       soon: true },
+      { to: '/imobiliarias', icon: Building2,  label: 'Imobiliárias' },
       { to: '/relatorio',    icon: BarChart2,  label: 'Relatório' },
     ],
   },

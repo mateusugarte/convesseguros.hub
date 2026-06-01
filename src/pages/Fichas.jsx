@@ -7,6 +7,7 @@ import {
   PRODUTO_LABELS, STATUS_LABELS, STATUS_EM_ABERTO, STATUS_PASSADOS,
 } from '../lib/fichas'
 import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
+import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { format, parseISO } from 'date-fns'
@@ -94,11 +95,11 @@ function OrcBadge({ nome, isMe }) {
   )
 }
 
-function exportCSV(fichas, filename) {
+function exportCSV(fichas, filename, resolverNome) {
   const headers = ['Data','Imobiliária','Nome','CPF','Produto','Status','Orçamentista','Seguradora']
   const rows = fichas.map(f => [
     format(parseISO(f.created_at), 'dd/MM/yyyy'),
-    normalizeImobiliaria(f.imobiliaria) || f.imobiliaria || '',
+    (resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || f.imobiliaria || '',
     f.nome_interessado || f.nome_empresa || '',
     f.cpf || f.cnpj || '',
     PRODUTO_LABELS[f.produto] || f.produto,
@@ -420,7 +421,7 @@ function MesAnoSelector({ ano, anos, mes, mesesComFichas, onAnoChange, onMesChan
 
 // ── Tabelas ───────────────────────────────────────────────────────────────────
 
-function TabelaAberta({ fichas, user, navigate, onDetalhe, onAssumir, onFinalizar, onEditar }) {
+function TabelaAberta({ fichas, user, navigate, onDetalhe, onAssumir, onFinalizar, onEditar, resolverNome }) {
   return (
     <table className="w-full text-sm">
       <thead className="bg-dark-surface2/80 border-b border-dark-border">
@@ -443,7 +444,7 @@ function TabelaAberta({ fichas, user, navigate, onDetalhe, onAssumir, onFinaliza
                 {format(parseISO(f.created_at), 'dd/MM/yy', { locale: ptBR })}
               </td>
               <td className="td font-medium text-dark-text max-w-[150px] truncate">
-                {normalizeImobiliaria(f.imobiliaria) || '—'}
+                {(resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || '—'}
               </td>
               <td className="td text-dark-text max-w-[150px] truncate">{nome || '—'}</td>
               <td className="td"><span className={`badge ${si.color}`}>{si.label}</span></td>
@@ -479,7 +480,7 @@ function TabelaAberta({ fichas, user, navigate, onDetalhe, onAssumir, onFinaliza
   )
 }
 
-function TabelaPassadas({ fichas, user, navigate, onEditar }) {
+function TabelaPassadas({ fichas, user, navigate, onEditar, resolverNome }) {
   return (
     <table className="w-full text-sm">
       <thead className="bg-dark-surface2/80 border-b border-dark-border">
@@ -499,7 +500,7 @@ function TabelaPassadas({ fichas, user, navigate, onEditar }) {
               <td className="td text-dark-muted text-xs whitespace-nowrap font-mono">
                 {format(parseISO(f.created_at), 'dd/MM/yy', { locale: ptBR })}
               </td>
-              <td className="td font-medium text-dark-text max-w-[130px] truncate">{normalizeImobiliaria(f.imobiliaria) || '—'}</td>
+              <td className="td font-medium text-dark-text max-w-[130px] truncate">{(resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || '—'}</td>
               <td className="td text-dark-text max-w-[130px] truncate">{nome || '—'}</td>
               <td className="td"><span className={`badge ${si.color}`}>{si.label}</span></td>
               <td className="td"><AvatarOrcamentista nome={f.profiles?.nome || f.orcamentista_forms} /></td>
@@ -562,9 +563,10 @@ function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, 
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function Fichas() {
-  const { user } = useAuth()
-  const toast    = useToast()
-  const navigate = useNavigate()
+  const { user }       = useAuth()
+  const toast          = useToast()
+  const navigate       = useNavigate()
+  const { resolverNome } = useImobiliaria()
 
   const agora        = new Date()
   const [produto, setProduto] = useState(null)
@@ -787,7 +789,7 @@ export default function Fichas() {
             )}
             <span className="text-xs text-dark-muted ml-auto">{total} ficha{total !== 1 ? 's' : ''}</span>
             <button
-              onClick={() => exportCSV(fichas, `conves-fichas-${produto}-${ano}-${mes}.csv`)}
+              onClick={() => exportCSV(fichas, `conves-fichas-${produto}-${ano}-${mes}.csv`, resolverNome)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
             >
               <Download className="w-3.5 h-3.5" /> Exportar
@@ -811,9 +813,9 @@ export default function Fichas() {
             ) : (
               <div className="overflow-x-auto">
                 {tab === 'abertas' ? (
-                  <TabelaAberta fichas={fichas} user={user} navigate={navigate} onDetalhe={id => navigate(`/fichas/${id}`)} onAssumir={setAssumir} onFinalizar={setFinalizar} onEditar={setEditar} />
+                  <TabelaAberta fichas={fichas} user={user} navigate={navigate} onDetalhe={id => navigate(`/fichas/${id}`)} onAssumir={setAssumir} onFinalizar={setFinalizar} onEditar={setEditar} resolverNome={resolverNome} />
                 ) : (
-                  <TabelaPassadas fichas={fichas} user={user} navigate={navigate} onEditar={setEditar} />
+                  <TabelaPassadas fichas={fichas} user={user} navigate={navigate} onEditar={setEditar} resolverNome={resolverNome} />
                 )}
               </div>
             )}

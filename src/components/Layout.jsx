@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -27,9 +27,16 @@ const NAV_GROUPS = [
   {
     label: 'Gestão',
     items: [
-      { to: '/emissoes',     icon: FileCheck,  label: 'Gestão de Emissões', soon: true },
-      { to: '/imobiliarias', icon: Building2,  label: 'Imobiliárias' },
-      { to: '/relatorio',    icon: BarChart2,  label: 'Relatório' },
+      {
+        to: '/apolices', icon: FileCheck, label: 'Apólices',
+        subitems: [
+          { to: '/apolices',        label: 'Dashboard', end: true },
+          { to: '/apolices/gestao', label: 'Gestão' },
+          { to: '/apolices/lista',  label: 'Apólices' },
+        ],
+      },
+      { to: '/imobiliarias', icon: Building2, label: 'Imobiliárias' },
+      { to: '/relatorio',    icon: BarChart2, label: 'Relatório' },
     ],
   },
   {
@@ -52,15 +59,21 @@ function stringColor(str) {
 
 export default function Layout() {
   const { profile, signOut, user } = useAuth()
-  const toast = useToast()
+  const toast    = useToast()
   const navigate = useNavigate()
+  const location = useLocation()
   const { theme, toggleTheme } = useTheme()
 
-  const [sidebarOpen,  setSidebarOpen]  = useState(true)
-  const [isMobile,     setIsMobile]     = useState(false)
-  const [abertasCount, setAbertasCount] = useState(0)
-  const [cmdOpen,      setCmdOpen]      = useState(false)
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [sidebarOpen,    setSidebarOpen]    = useState(true)
+  const [isMobile,       setIsMobile]       = useState(false)
+  const [abertasCount,   setAbertasCount]   = useState(0)
+  const [cmdOpen,        setCmdOpen]        = useState(false)
+  const [userMenuOpen,   setUserMenuOpen]   = useState(false)
+  const [expandedItems,  setExpandedItems]  = useState(() => {
+    const s = new Set()
+    if (location.pathname.startsWith('/apolices')) s.add('/apolices')
+    return s
+  })
 
   // Responsive: drawer on mobile, fixed sidebar on desktop
   useEffect(() => {
@@ -150,6 +163,56 @@ export default function Layout() {
               )}
               {group.items.map(item => {
                 const Icon = item.icon
+
+                // Item com subitems (expandível)
+                if (item.subitems) {
+                  const isExpanded = expandedItems.has(item.to)
+                  const isActive   = location.pathname.startsWith(item.to)
+                  function toggleExpand() {
+                    setExpandedItems(prev => {
+                      const next = new Set(prev)
+                      if (next.has(item.to)) next.delete(item.to)
+                      else next.add(item.to)
+                      return next
+                    })
+                  }
+                  return (
+                    <div key={item.to}>
+                      <button
+                        onClick={toggleExpand}
+                        title={!sidebarOpen ? item.label : undefined}
+                        className={`nav-item w-full ${isActive ? 'nav-item-active' : 'nav-item-inactive'} ${!sidebarOpen ? 'justify-center' : ''}`}
+                      >
+                        <Icon className="w-4 h-4 flex-shrink-0" />
+                        {sidebarOpen && (
+                          <>
+                            <span className="flex-1 text-sm truncate">{item.label}</span>
+                            <ChevronRight className={`w-3 h-3 flex-shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                          </>
+                        )}
+                      </button>
+                      {sidebarOpen && isExpanded && (
+                        <div className="ml-3 mt-0.5 border-l border-dark-border/60 pl-3 space-y-0.5">
+                          {item.subitems.map(sub => (
+                            <NavLink
+                              key={sub.to}
+                              to={sub.to}
+                              end={sub.end}
+                              className={({ isActive }) =>
+                                `flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                                  isActive ? 'text-brand-accent' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/80'
+                                }`
+                              }
+                            >
+                              {sub.label}
+                            </NavLink>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                }
+
                 if (item.soon) {
                   return (
                     <div

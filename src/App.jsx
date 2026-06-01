@@ -24,8 +24,12 @@ const FichaDetalhePage = lazy(() => import('./pages/FichaDetalhePage'))
 const GestaoEmissoes   = lazy(() => import('./pages/GestaoEmissoes'))
 const MinhasFichas     = lazy(() => import('./pages/MinhasFichas'))
 const Relatorio        = lazy(() => import('./pages/Relatorio'))
-const Imobiliarias     = lazy(() => import('./pages/Imobiliarias'))
+const Imobiliarias       = lazy(() => import('./pages/Imobiliarias'))
 const ImobiliariaDetalhe = lazy(() => import('./pages/ImobiliariaDetalhe'))
+const ApolicesDashboard  = lazy(() => import('./pages/ApolicesDashboard'))
+const ApoicesGestao      = lazy(() => import('./pages/ApoicesGestao'))
+const ApolicesLista      = lazy(() => import('./pages/ApolicesLista'))
+const ApoliceDetalhe     = lazy(() => import('./pages/ApoliceDetalhe'))
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -55,6 +59,10 @@ function AppRoutes() {
           <Route path="relatorio" element={<Relatorio />} />
           <Route path="imobiliarias" element={<Imobiliarias />} />
           <Route path="imobiliarias/:id" element={<ImobiliariaDetalhe />} />
+          <Route path="apolices" element={<ApolicesDashboard />} />
+          <Route path="apolices/gestao" element={<ApoicesGestao />} />
+          <Route path="apolices/lista" element={<ApolicesLista />} />
+          <Route path="apolices/:id" element={<ApoliceDetalhe />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

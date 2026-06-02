@@ -173,6 +173,11 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
   const [buscando,          setBuscando]          = useState(false)
   const [criando,           setCriando]           = useState(false)
 
+  // Campos adicionais preenchidos ao iniciar emissão
+  const [numeroOrcamento, setNumeroOrcamento] = useState('')
+  const [endereco,        setEndereco]        = useState('')
+  const [valorParcela,    setValorParcela]    = useState('')
+
   useEffect(() => {
     if (!busca.trim() && !imobFiltro) { setFichasEncontradas([]); return }
     const t = setTimeout(async () => {
@@ -189,6 +194,14 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     return () => clearTimeout(t)
   }, [busca, imobFiltro, getAliases])
 
+  function selecionarFicha(f) {
+    setFichaSelecionada(f)
+    // Pré-preenche endereço com CEP da ficha
+    setEndereco(f.cep || '')
+    // Pré-preenche número do orçamento com número da apólice da ficha (se houver)
+    setNumeroOrcamento(f.numero_apolice || '')
+  }
+
   async function criar() {
     if (!fichaSelecionada) return
     setCriando(true)
@@ -199,6 +212,14 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
       status_emissao:   'recebida',
       valor_aluguel:    fichaSelecionada.valor_aluguel,
       nome_interessado: fichaSelecionada.nome_empresa || fichaSelecionada.nome_interessado,
+      // Campos preenchidos no modal
+      numero_proposta:  numeroOrcamento.trim() || null,
+      valor_parcela:    valorParcela.trim() || null,
+      endereco:         endereco.trim() || null,
+      // Defaults obrigatórios no banco enquanto migração 09 não for rodada
+      numero_apolice:   '',
+      seguradora:       'Outras',
+      data_emissao:     new Date().toISOString().slice(0, 10),
     })
     setCriando(false)
     if (error) { toast({ type: 'error', title: 'Erro ao criar', message: error.message }); return }
@@ -208,8 +229,8 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-lg">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto animate-fade-in">
+      <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-lg my-4">
 
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
           <h2 className="font-bold text-dark-text">Iniciar Emissão</h2>
@@ -234,55 +255,99 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                 onChange={e => setBusca(e.target.value)}
                 placeholder="Nome do locatário..."
                 className="input pl-9"
+                disabled={!!fichaSelecionada}
               />
             </div>
           </div>
 
           {fichaSelecionada ? (
-            <div className="rounded-xl bg-status-success/10 border border-status-success/25 overflow-hidden">
-              {/* Header da ficha selecionada */}
-              <div className="flex items-center justify-between px-3 py-2.5 border-b border-status-success/20">
-                <p className="text-sm font-semibold text-dark-text truncate">
-                  {fichaSelecionada.nome_empresa || fichaSelecionada.nome_interessado}
-                </p>
-                <button onClick={() => setFichaSelecionada(null)} className="flex-shrink-0 ml-2 text-dark-muted hover:text-dark-text">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              {/* Dados da ficha para confirmação */}
-              <div className="px-3 py-2.5 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                {fichaSelecionada.imobiliaria && (
+            <>
+              {/* Dados da ficha selecionada */}
+              <div className="rounded-xl bg-status-success/10 border border-status-success/25 overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2.5 border-b border-status-success/20">
+                  <p className="text-sm font-semibold text-dark-text truncate">
+                    {fichaSelecionada.nome_empresa || fichaSelecionada.nome_interessado}
+                  </p>
+                  <button
+                    onClick={() => { setFichaSelecionada(null); setNumeroOrcamento(''); setEndereco(''); setValorParcela('') }}
+                    className="flex-shrink-0 ml-2 text-dark-muted hover:text-dark-text"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="px-3 py-2.5 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                   <div>
                     <span className="text-dark-muted">Imobiliária</span>
-                    <p className="text-dark-text font-medium truncate">{fichaSelecionada.imobiliaria}</p>
+                    <p className="text-dark-text font-medium truncate">{fichaSelecionada.imobiliaria || '—'}</p>
                   </div>
-                )}
-                {fichaSelecionada.valor_aluguel && (
                   <div>
                     <span className="text-dark-muted">Aluguel</span>
-                    <p className="text-dark-text font-medium">R$ {fichaSelecionada.valor_aluguel}</p>
+                    <p className="text-dark-text font-medium">
+                      {fichaSelecionada.valor_aluguel ? `R$ ${fichaSelecionada.valor_aluguel}` : '—'}
+                    </p>
                   </div>
-                )}
-                {(fichaSelecionada.cpf || fichaSelecionada.cnpj) && (
                   <div>
                     <span className="text-dark-muted">{fichaSelecionada.cnpj ? 'CNPJ' : 'CPF'}</span>
-                    <p className="text-dark-text font-mono">{fichaSelecionada.cnpj || fichaSelecionada.cpf}</p>
+                    <p className="text-dark-text font-mono">{fichaSelecionada.cnpj || fichaSelecionada.cpf || '—'}</p>
                   </div>
-                )}
-                {fichaSelecionada.celular && (
                   <div>
                     <span className="text-dark-muted">Celular</span>
-                    <p className="text-dark-text">{fichaSelecionada.celular}</p>
+                    <p className="text-dark-text">{fichaSelecionada.celular || '—'}</p>
                   </div>
-                )}
-                {fichaSelecionada.produto && (
-                  <div className="col-span-2">
+                  <div>
+                    <span className="text-dark-muted">Tipo de Imóvel</span>
+                    <p className="text-dark-text">{fichaSelecionada.tipo_imovel || '—'}</p>
+                  </div>
+                  <div>
                     <span className="text-dark-muted">Produto</span>
-                    <p className="text-dark-text">{PRODUTO_LABELS[fichaSelecionada.produto] || fichaSelecionada.produto}</p>
+                    <p className="text-dark-text">{PRODUTO_LABELS[fichaSelecionada.produto] || fichaSelecionada.produto || '—'}</p>
                   </div>
-                )}
+                </div>
               </div>
-            </div>
+
+              {/* Campos adicionais da emissão */}
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Dados da Emissão</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
+                      N° do Orçamento
+                    </label>
+                    <input
+                      value={numeroOrcamento}
+                      onChange={e => setNumeroOrcamento(e.target.value)}
+                      placeholder="Ex: 12345"
+                      className="input text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
+                      Valor da Parcela (R$)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={valorParcela}
+                      onChange={e => setValorParcela(e.target.value)}
+                      placeholder="0,00"
+                      className="input text-sm"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
+                      Endereço do Imóvel
+                    </label>
+                    <input
+                      value={endereco}
+                      onChange={e => setEndereco(e.target.value)}
+                      placeholder="Rua, número, bairro, cidade"
+                      className="input text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </>
           ) : (
             <div className="max-h-60 overflow-y-auto space-y-1">
               {buscando ? (
@@ -292,7 +357,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
               ) : fichasEncontradas.map(f => (
                 <button
                   key={f.id}
-                  onClick={() => setFichaSelecionada(f)}
+                  onClick={() => selecionarFicha(f)}
                   className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-dark-surface2 transition-colors border border-transparent hover:border-dark-border"
                 >
                   <p className="text-sm font-medium text-dark-text truncate">

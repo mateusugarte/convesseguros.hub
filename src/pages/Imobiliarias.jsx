@@ -11,9 +11,14 @@ import {
 
 // ── Modal de Agrupamento / Criação / Edição ───────────────────────────────────
 
-function ModalAgrupar({ modal, contagemPorNome, onClose, onSalvo, toast }) {
+function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toast }) {
   const ehEditar  = modal?.mode === 'editar'
   const imobAtual = modal?.imob
+
+  // modo: 'nova' | 'existente' — só relevante quando criando (não editando)
+  const [modo,          setModo]          = useState('nova')
+  const [imobSelecionada, setImobSelecionada] = useState('')
+  const [buscaExistente, setBuscaExistente] = useState('')
 
   const [nomeCanonoco,  setNomeCanonoco]  = useState(imobAtual?.nome_canonico || '')
   const [aliasesModal,  setAliasesModal]  = useState(modal?.variacoes || imobAtual?.aliases || [])
@@ -21,6 +26,10 @@ function ModalAgrupar({ modal, contagemPorNome, onClose, onSalvo, toast }) {
   const [salvando,      setSalvando]      = useState(false)
 
   const totalFichas = aliasesModal.reduce((s, v) => s + (contagemPorNome[v] || 0), 0)
+
+  const mapeadasFiltradas = buscaExistente.trim()
+    ? mapeadas.filter(m => m.nome_canonico.toLowerCase().includes(buscaExistente.toLowerCase()))
+    : mapeadas
 
   function removerAlias(v) {
     setAliasesModal(prev => prev.filter(x => x !== v))
@@ -34,7 +43,6 @@ function ModalAgrupar({ modal, contagemPorNome, onClose, onSalvo, toast }) {
   }
 
   async function salvar() {
-    if (!nomeCanonoco.trim()) return
     setSalvando(true)
     try {
       let imobId
@@ -48,8 +56,15 @@ function ModalAgrupar({ modal, contagemPorNome, onClose, onSalvo, toast }) {
         imobId = imobAtual.id
         // Limpar aliases antigos
         await supabase.from('imobiliaria_aliases').delete().eq('imobiliaria_id', imobId)
+
+      } else if (modo === 'existente') {
+        // Adicionar aliases a imobiliária já existente
+        if (!imobSelecionada) return
+        imobId = imobSelecionada
+
       } else {
-        // Upsert canônico (cria ou encontra existente)
+        // Criar nova (modo padrão)
+        if (!nomeCanonoco.trim()) return
         const { data: existe } = await supabase.from('imobiliarias')
           .select('id').eq('nome_canonico', nomeCanonoco.trim()).maybeSingle()
 
@@ -81,6 +96,14 @@ function ModalAgrupar({ modal, contagemPorNome, onClose, onSalvo, toast }) {
     setSalvando(false)
   }
 
+  const nomeExistenteSelecionado = mapeadas.find(m => m.id === imobSelecionada)?.nome_canonico
+
+  const podeSalvar = ehEditar
+    ? nomeCanonoco.trim()
+    : modo === 'existente'
+      ? !!imobSelecionada && aliasesModal.length > 0
+      : nomeCanonoco.trim()
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in">
       <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-lg">
@@ -96,22 +119,97 @@ function ModalAgrupar({ modal, contagemPorNome, onClose, onSalvo, toast }) {
         </div>
 
         <div className="px-6 py-5 space-y-5">
-          {/* Nome canônico */}
-          <div>
-            <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
-              Como deve aparecer no sistema *
-            </label>
-            <input
-              value={nomeCanonoco}
-              onChange={e => setNomeCanonoco(e.target.value)}
-              placeholder="Ex: Guarulhos Imóveis"
-              className="input"
-              autoFocus
-            />
-            <p className="text-[11px] text-dark-muted mt-1">
-              Este nome aparecerá em todos os filtros, cards e relatórios.
-            </p>
-          </div>
+
+          {/* Toggle Nova / Existente — apenas no modo criar */}
+          {!ehEditar && mapeadas.length > 0 && (
+            <div className="flex rounded-lg border border-dark-border overflow-hidden text-sm font-medium">
+              <button
+                onClick={() => setModo('nova')}
+                className={`flex-1 py-2 transition-colors ${
+                  modo === 'nova'
+                    ? 'bg-brand-accent text-white'
+                    : 'text-dark-muted hover:text-dark-text'
+                }`}
+              >
+                Criar nova imobiliária
+              </button>
+              <button
+                onClick={() => setModo('existente')}
+                className={`flex-1 py-2 transition-colors ${
+                  modo === 'existente'
+                    ? 'bg-brand-accent text-white'
+                    : 'text-dark-muted hover:text-dark-text'
+                }`}
+              >
+                Incluir em existente
+              </button>
+            </div>
+          )}
+
+          {/* Seleção de imobiliária existente */}
+          {!ehEditar && modo === 'existente' ? (
+            <div>
+              <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
+                Selecionar imobiliária *
+              </label>
+              <div className="flex items-center gap-2 bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 mb-2">
+                <Search className="w-4 h-4 text-dark-muted flex-shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Buscar imobiliária..."
+                  value={buscaExistente}
+                  onChange={e => setBuscaExistente(e.target.value)}
+                  className="text-sm flex-1 outline-none bg-transparent text-dark-text placeholder-dark-muted"
+                  autoFocus
+                />
+              </div>
+              <div className="rounded-xl border border-dark-border divide-y divide-dark-border overflow-hidden max-h-40 overflow-y-auto">
+                {mapeadasFiltradas.length === 0 ? (
+                  <p className="text-center py-4 text-xs text-dark-muted">Nenhuma encontrada</p>
+                ) : (
+                  mapeadasFiltradas.map(m => (
+                    <button
+                      key={m.id}
+                      onClick={() => setImobSelecionada(m.id)}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors ${
+                        imobSelecionada === m.id
+                          ? 'bg-brand-accent/10 text-brand-accent'
+                          : 'text-dark-text hover:bg-dark-surface2/60'
+                      }`}
+                    >
+                      <span className="text-sm font-medium truncate">{m.nome_canonico}</span>
+                      <span className="text-xs text-dark-muted flex-shrink-0 ml-2">
+                        {m.totalFichas} fichas
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+              {imobSelecionada && (
+                <p className="text-[11px] text-dark-muted mt-1.5">
+                  As variações serão adicionadas a{' '}
+                  <span className="text-brand-accent font-semibold">"{nomeExistenteSelecionado}"</span>
+                </p>
+              )}
+            </div>
+          ) : (
+            /* Nome canônico — modo nova ou editar */
+            <div>
+              <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
+                Como deve aparecer no sistema *
+              </label>
+              <input
+                value={nomeCanonoco}
+                onChange={e => setNomeCanonoco(e.target.value)}
+                placeholder="Ex: Guarulhos Imóveis"
+                className="input"
+                autoFocus={ehEditar || mapeadas.length === 0}
+              />
+              <p className="text-[11px] text-dark-muted mt-1">
+                Este nome aparecerá em todos os filtros, cards e relatórios.
+              </p>
+            </div>
+          )}
 
           {/* Aliases */}
           <div>
@@ -164,7 +262,9 @@ function ModalAgrupar({ modal, contagemPorNome, onClose, onSalvo, toast }) {
                 Total:{' '}
                 <span className="font-semibold text-dark-text">{totalFichas}</span>{' '}
                 ficha{totalFichas !== 1 ? 's' : ''} serão exibidas como{' '}
-                <span className="text-brand-accent">"{nomeCanonoco || '...'}"</span>
+                <span className="text-brand-accent">
+                  "{modo === 'existente' ? (nomeExistenteSelecionado || '...') : (nomeCanonoco || '...')}"
+                </span>
               </p>
             )}
           </div>
@@ -175,7 +275,7 @@ function ModalAgrupar({ modal, contagemPorNome, onClose, onSalvo, toast }) {
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
           <button
             onClick={salvar}
-            disabled={!nomeCanonoco.trim() || salvando}
+            disabled={!podeSalvar || salvando}
             className="btn-primary text-sm"
           >
             {salvando ? 'Salvando...' : 'Salvar Configuração'}
@@ -543,6 +643,7 @@ export default function Imobiliarias() {
         <ModalAgrupar
           modal={modal}
           contagemPorNome={contagemPorNome}
+          mapeadas={mapeadas}
           onClose={() => setModal(null)}
           onSalvo={aoSalvar}
           toast={toast}

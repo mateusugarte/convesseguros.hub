@@ -416,8 +416,11 @@ export async function moverFichaStatus(fichaId, novoStatus, { assumir = false, u
     update.orcamentista_id = null
     update.assumida_em = null
   }
-  const { error } = await supabase.from('fichas').update(update).eq('id', fichaId)
-  return error
+  // Detecta falha silenciosa de RLS (0 rows affected = sem permissão)
+  const { data, error } = await supabase.from('fichas').update(update).eq('id', fichaId).select('id')
+  if (error) return error
+  if (!data || data.length === 0) return new Error('Sem permissão para mover esta ficha')
+  return null
 }
 
 export async function marcarRetornoEnviado(id) {

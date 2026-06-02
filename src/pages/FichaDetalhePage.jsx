@@ -423,6 +423,20 @@ export default function FichaDetalhePage() {
                 value={ficha.seguradora}
                 onSave={v => updateField('seguradora', v)}
               />
+              {/* Número do orçamento — exibido quando aprovado */}
+              {(ficha.status === 'aprovado' || ficha.numero_orcamento) && (
+                <InlineField
+                  label="Número do Orçamento"
+                  value={ficha.numero_orcamento}
+                  onSave={v => updateField('numero_orcamento', v)}
+                />
+              )}
+              <InlineField
+                label="Valor da Parcela"
+                value={ficha.valor_parcela != null ? String(ficha.valor_parcela) : ''}
+                type="number"
+                onSave={v => updateField('valor_parcela', v ? parseFloat(v) : null)}
+              />
               <div className="col-span-2">
                 <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wider mb-2">Retorno enviado</p>
                 <label className="flex items-center gap-3 cursor-pointer group w-fit">

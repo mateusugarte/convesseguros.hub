@@ -69,6 +69,10 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome }) {
   const ProdIcon = PRODUTO_ICON[prod] || LayoutGrid
   const pColor   = PRODUTO_COLOR[prod] || '#6B7280'
 
+  const dataTransm = apolice.data_transmissao
+    ? (() => { try { return format(parseISO(apolice.data_transmissao), 'dd/MM/yyyy', { locale: ptBR }) } catch { return null } })()
+    : null
+
   return (
     <div className={`kanban-card ${isDragOverlay ? 'scale-[1.04] rotate-1 !shadow-lg' : ''}`}>
       <div className="flex items-center justify-between gap-1">
@@ -78,7 +82,7 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome }) {
           {PRODUTO_LABELS[prod] || prod || '—'}
         </span>
         <span className="text-[10px] text-dark-muted font-mono">
-          {format(parseISO(apolice.created_at), 'dd/MM', { locale: ptBR })}
+          {apolice.created_at ? (() => { try { return format(parseISO(apolice.created_at), 'dd/MM', { locale: ptBR }) } catch { return '' } })() : ''}
         </span>
       </div>
 
@@ -96,11 +100,14 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome }) {
         </p>
       )}
 
-      {apolice.seguradora && (
-        <div className="flex justify-end pt-1 border-t border-dark-border/50">
-          <span className="text-[9px] text-dark-muted">{apolice.seguradora}</span>
-        </div>
-      )}
+      <div className="flex items-center justify-between pt-1 border-t border-dark-border/50">
+        {apolice.seguradora && (
+          <span className="text-[9px] text-dark-muted truncate">{apolice.seguradora}</span>
+        )}
+        {dataTransm && (
+          <span className="text-[9px] text-status-success font-mono ml-auto">Enviada {dataTransm}</span>
+        )}
+      </div>
     </div>
   )
 }
@@ -232,16 +239,49 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
           </div>
 
           {fichaSelecionada ? (
-            <div className="flex items-center justify-between p-3 rounded-xl bg-status-success/10 border border-status-success/25">
-              <div className="min-w-0">
+            <div className="rounded-xl bg-status-success/10 border border-status-success/25 overflow-hidden">
+              {/* Header da ficha selecionada */}
+              <div className="flex items-center justify-between px-3 py-2.5 border-b border-status-success/20">
                 <p className="text-sm font-semibold text-dark-text truncate">
                   {fichaSelecionada.nome_empresa || fichaSelecionada.nome_interessado}
                 </p>
-                <p className="text-xs text-dark-muted">{fichaSelecionada.imobiliaria}</p>
+                <button onClick={() => setFichaSelecionada(null)} className="flex-shrink-0 ml-2 text-dark-muted hover:text-dark-text">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <button onClick={() => setFichaSelecionada(null)} className="flex-shrink-0 ml-2 text-dark-muted hover:text-dark-text">
-                <X className="w-4 h-4" />
-              </button>
+              {/* Dados da ficha para confirmação */}
+              <div className="px-3 py-2.5 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                {fichaSelecionada.imobiliaria && (
+                  <div>
+                    <span className="text-dark-muted">Imobiliária</span>
+                    <p className="text-dark-text font-medium truncate">{fichaSelecionada.imobiliaria}</p>
+                  </div>
+                )}
+                {fichaSelecionada.valor_aluguel && (
+                  <div>
+                    <span className="text-dark-muted">Aluguel</span>
+                    <p className="text-dark-text font-medium">R$ {fichaSelecionada.valor_aluguel}</p>
+                  </div>
+                )}
+                {(fichaSelecionada.cpf || fichaSelecionada.cnpj) && (
+                  <div>
+                    <span className="text-dark-muted">{fichaSelecionada.cnpj ? 'CNPJ' : 'CPF'}</span>
+                    <p className="text-dark-text font-mono">{fichaSelecionada.cnpj || fichaSelecionada.cpf}</p>
+                  </div>
+                )}
+                {fichaSelecionada.celular && (
+                  <div>
+                    <span className="text-dark-muted">Celular</span>
+                    <p className="text-dark-text">{fichaSelecionada.celular}</p>
+                  </div>
+                )}
+                {fichaSelecionada.produto && (
+                  <div className="col-span-2">
+                    <span className="text-dark-muted">Produto</span>
+                    <p className="text-dark-text">{PRODUTO_LABELS[fichaSelecionada.produto] || fichaSelecionada.produto}</p>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <div className="max-h-60 overflow-y-auto space-y-1">

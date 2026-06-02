@@ -10,7 +10,7 @@ import {
   LayoutDashboard, FileText, User, FileCheck,
   Building2, BarChart2, Settings, Search,
   Bell, LogOut, ChevronLeft, ChevronRight, Menu,
-  Sun, Moon,
+  Sun, Moon, Shield,
 } from 'lucide-react'
 
 const LOGO = 'https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/conves/file.jpeg'
@@ -36,6 +36,7 @@ const NAV_GROUPS = [
         ],
       },
       { to: '/imobiliarias', icon: Building2, label: 'Imobiliárias' },
+      { to: '/seguradoras',  icon: Shield,    label: 'Seguradoras' },
       { to: '/relatorio',    icon: BarChart2, label: 'Relatório' },
     ],
   },

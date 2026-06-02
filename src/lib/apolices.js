@@ -14,7 +14,7 @@ export const FORMA_PAGAMENTO_LABELS = {
 }
 
 export const SEGURADORAS_APOLICE = [
-  'Porto Seguro', 'Tokio Marine', 'TOO', 'Junto Seguros', 'Potencial', 'Outras',
+  'Porto Seguro', 'Pottencial Seguros', 'TOO Seguros', 'Junto Seguros', 'Tokio Marine', 'Outras',
 ]
 
 // ── KPIs ─────────────────────────────────────────────────────────────────────
@@ -210,7 +210,8 @@ export async function excluirApolice(id) {
 
 export async function moverStatusApolice(id, novoStatus, dadosExtras = {}) {
   const update = { status_emissao: novoStatus, ...dadosExtras }
-  if (novoStatus === 'emitida' && !update.data_transmissao) {
+  // Registra data de transmissão ao mover para "Apólice Enviada"
+  if (novoStatus === 'enviada' && !update.data_transmissao) {
     update.data_transmissao = new Date().toISOString()
   }
   const { error } = await supabase.from('apolices').update(update).eq('id', id)

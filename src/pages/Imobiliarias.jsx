@@ -500,6 +500,87 @@ function TabNaoMapeadas({ naoMapeadas, selecionados, setSelecionados, onAgrupar 
   )
 }
 
+// ── Tab: Cadastros ────────────────────────────────────────────────────────────
+
+function TabCadastros({ mapeadas, seguradoras, vinculacoes, onToggleSeguradora, salvandoVinc }) {
+  const [busca, setBusca] = useState('')
+  const filtradas = busca.trim()
+    ? mapeadas.filter(m => m.nome_canonico.toLowerCase().includes(busca.toLowerCase()))
+    : mapeadas
+
+  if (mapeadas.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3 text-dark-muted">
+        <Building2 className="w-10 h-10 opacity-30" />
+        <p className="text-sm">Nenhuma imobiliária mapeada ainda</p>
+        <p className="text-xs">Configure imobiliárias na aba "Mapeamento" primeiro</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 max-w-sm">
+        <Search className="w-4 h-4 text-dark-muted flex-shrink-0" />
+        <input
+          type="text"
+          placeholder="Buscar imobiliária..."
+          value={busca}
+          onChange={e => setBusca(e.target.value)}
+          className="text-sm flex-1 outline-none bg-transparent text-dark-text placeholder-dark-muted"
+        />
+      </div>
+
+      <div className="space-y-3">
+        {filtradas.map(imob => {
+          const segsVinc = new Set(vinculacoes[imob.id] || [])
+          return (
+            <div key={imob.id} className="card p-4">
+              <p className="font-bold text-dark-text mb-1">{imob.nome_canonico}</p>
+              <p className="text-xs text-dark-muted mb-3">
+                {imob.totalFichas} ficha{imob.totalFichas !== 1 ? 's' : ''}
+              </p>
+              <div>
+                <p className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider mb-2">
+                  Seguradoras cadastradas
+                </p>
+                {seguradoras.length === 0 ? (
+                  <p className="text-xs text-dark-muted italic">Nenhuma seguradora cadastrada no sistema</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {seguradoras.map(seg => {
+                      const ativa = segsVinc.has(seg.id)
+                      const key = `${imob.id}:${seg.id}`
+                      return (
+                        <button
+                          key={seg.id}
+                          disabled={salvandoVinc.has(key)}
+                          onClick={() => onToggleSeguradora(imob.id, seg.id, ativa)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all disabled:opacity-50 ${
+                            ativa
+                              ? 'bg-status-success/15 text-status-success border-status-success/30'
+                              : 'bg-dark-surface2 text-dark-muted border-dark-border hover:border-dark-muted'
+                          }`}
+                        >
+                          {ativa ? <span className="mr-1">✓</span> : null}
+                          {seg.nome_canonico}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
+        {filtradas.length === 0 && (
+          <p className="text-center py-8 text-sm text-dark-muted">Nenhuma imobiliária encontrada</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function Imobiliarias() {
@@ -509,6 +590,9 @@ export default function Imobiliarias() {
   const [loading,         setLoading]         = useState(true)
   const [mapeadas,        setMapeadas]        = useState([])
   const [naoMapeadas,     setNaoMapeadas]     = useState([])
+  const [seguradoras,     setSeguradoras]     = useState([])
+  const [vinculacoes,     setVinculacoes]     = useState({}) // { imob_id: [seg_id] }
+  const [salvandoVinc,    setSalvandoVinc]    = useState(new Set())
   const [contagemPorNome, setContagemPorNome] = useState({})
   const [selecionados,    setSelecionados]    = useState(new Set())
   const [modal,           setModal]           = useState(null)
@@ -518,10 +602,13 @@ export default function Imobiliarias() {
     setLoading(true)
 
     // 1. Nomes de imobiliária de fichas + apólices com contagem somada
-    const [nomesData, { data: apolicesData }] = await Promise.all([
+    const [nomesData, { data: apolicesData }, { data: seguradoresData }, { data: vinculacoesData }] = await Promise.all([
       fetchNomesImobiliariasAll(),
       supabase.from('apolices').select('imobiliaria').not('imobiliaria', 'is', null),
+      supabase.from('seguradoras').select('id, nome_canonico').eq('ativa', true).order('nome_canonico'),
+      supabase.from('imobiliaria_seguradoras').select('imobiliaria_id, seguradora_id'),
     ])
+
     const contagem = {}
     nomesData?.forEach(f => {
       if (f.imobiliaria) contagem[f.imobiliaria] = (contagem[f.imobiliaria] || 0) + 1
@@ -553,9 +640,18 @@ export default function Imobiliarias() {
       .map(([nome, totalFichas]) => ({ nome, totalFichas }))
       .sort((a, b) => b.totalFichas - a.totalFichas)
 
+    // 4. Vinculations map
+    const vinc = {}
+    vinculacoesData?.forEach(v => {
+      if (!vinc[v.imobiliaria_id]) vinc[v.imobiliaria_id] = []
+      vinc[v.imobiliaria_id].push(v.seguradora_id)
+    })
+
     setContagemPorNome(contagem)
     setMapeadas(mapeadasList)
     setNaoMapeadas(naoMapeadasList)
+    setSeguradoras(seguradoresData || [])
+    setVinculacoes(vinc)
     setLoading(false)
   }, [])
 
@@ -585,6 +681,42 @@ export default function Imobiliarias() {
     carregarDados()
   }
 
+  async function toggleSeguradora(imobId, segId, estaAtiva) {
+    const key = `${imobId}:${segId}`
+    setSalvandoVinc(prev => new Set([...prev, key]))
+
+    // Optimistic
+    setVinculacoes(prev => {
+      const atual = prev[imobId] || []
+      return {
+        ...prev,
+        [imobId]: estaAtiva ? atual.filter(id => id !== segId) : [...atual, segId],
+      }
+    })
+
+    let error
+    if (estaAtiva) {
+      ;({ error } = await supabase.from('imobiliaria_seguradoras')
+        .delete().eq('imobiliaria_id', imobId).eq('seguradora_id', segId))
+    } else {
+      ;({ error } = await supabase.from('imobiliaria_seguradoras')
+        .insert({ imobiliaria_id: imobId, seguradora_id: segId }))
+    }
+
+    if (error) {
+      // Rollback
+      setVinculacoes(prev => {
+        const atual = prev[imobId] || []
+        return {
+          ...prev,
+          [imobId]: estaAtiva ? [...atual, segId] : atual.filter(id => id !== segId),
+        }
+      })
+      toast({ type: 'error', title: 'Erro ao atualizar vínculo', message: error.message })
+    }
+    setSalvandoVinc(prev => { const next = new Set(prev); next.delete(key); return next })
+  }
+
   return (
     <div className="space-y-5 animate-fade-in">
 
@@ -593,19 +725,22 @@ export default function Imobiliarias() {
         <div>
           <h1 className="text-lg font-bold text-dark-text">Imobiliárias</h1>
           <p className="text-xs text-dark-muted mt-0.5">
-            Mapeie variações de nomes para exibição padronizada no sistema
+            Mapeie variações de nomes e gerencie cadastros por imobiliária
           </p>
         </div>
-        <button onClick={abrirNova} className="btn-primary flex items-center gap-2 text-sm">
-          <Plus className="w-4 h-4" /> Nova Imobiliária
-        </button>
+        {tab !== 'cadastros' && (
+          <button onClick={abrirNova} className="btn-primary flex items-center gap-2 text-sm">
+            <Plus className="w-4 h-4" /> Nova Imobiliária
+          </button>
+        )}
       </div>
 
       {/* ── Tabs ── */}
       <div className="flex items-center gap-1 border-b border-dark-border">
         {[
-          ['mapeadas',    `Mapeadas (${mapeadas.length})`],
+          ['mapeadas',     `Mapeamento (${mapeadas.length})`],
           ['nao_mapeadas', `Não Mapeadas (${naoMapeadas.length})`],
+          ['cadastros',    `Cadastros (${mapeadas.length})`],
         ].map(([key, label]) => (
           <button
             key={key}
@@ -643,12 +778,20 @@ export default function Imobiliarias() {
           onExcluir={excluirImobiliaria}
           onEditar={abrirEditar}
         />
-      ) : (
+      ) : tab === 'nao_mapeadas' ? (
         <TabNaoMapeadas
           naoMapeadas={naoMapeadas}
           selecionados={selecionados}
           setSelecionados={setSelecionados}
           onAgrupar={abrirAgrupar}
+        />
+      ) : (
+        <TabCadastros
+          mapeadas={mapeadas}
+          seguradoras={seguradoras}
+          vinculacoes={vinculacoes}
+          onToggleSeguradora={toggleSeguradora}
+          salvandoVinc={salvandoVinc}
         />
       )}
 

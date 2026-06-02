@@ -16,6 +16,7 @@ import {
   Plus, ChevronLeft, ChevronRight, RefreshCw,
   Search, Home, Briefcase, Building, LayoutGrid, X, Check,
 } from 'lucide-react'
+import SeguradoraBadge from '../components/SeguradoraBadge'
 import { KanbanSkeleton } from '../components/Skeleton'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -100,12 +101,15 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome }) {
         </p>
       )}
 
-      <div className="flex items-center justify-between pt-1 border-t border-dark-border/50">
-        {apolice.seguradora && (
-          <span className="text-[9px] text-dark-muted truncate">{apolice.seguradora}</span>
-        )}
+      <div className="flex items-center justify-between pt-1 border-t border-dark-border/50 gap-1">
+        {apolice.seguradora
+          ? <SeguradoraBadge nome={apolice.seguradora} size="xs" />
+          : <span />
+        }
         {dataTransm && (
-          <span className="text-[9px] text-status-success font-mono ml-auto">Enviada {dataTransm}</span>
+          <span className="text-[9px] text-status-success font-mono flex-shrink-0">
+            {dataTransm}
+          </span>
         )}
       </div>
     </div>

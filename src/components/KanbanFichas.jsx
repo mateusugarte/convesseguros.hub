@@ -10,6 +10,7 @@ import ModalFinalizar from './ModalFinalizar'
 import ModalFicha from './ModalFicha'
 import DetalhesFicha from './DetalhesFicha'
 import { Home, Briefcase, Building, LayoutGrid, RefreshCw, ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
+import SeguradoraBadge from './SeguradoraBadge'
 import { KanbanSkeleton } from './Skeleton'
 
 // ── Column config ─────────────────────────────────────────────────────────────
@@ -153,6 +154,11 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay = fals
       <p className="text-[10px] text-dark-muted truncate">
         {(resolverNome ? resolverNome(ficha.imobiliaria) : ficha.imobiliaria) || '—'}
       </p>
+
+      {/* Seguradora — visível quando definida */}
+      {ficha.seguradora && (
+        <SeguradoraBadge nome={ficha.seguradora} size="xs" />
+      )}
 
       {/* Footer: avatar + action */}
       <div className="flex items-center justify-between pt-1 border-t border-dark-border/50">

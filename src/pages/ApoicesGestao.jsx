@@ -17,6 +17,7 @@ import {
   Search, Home, Briefcase, Building, LayoutGrid, X, Check,
 } from 'lucide-react'
 import SeguradoraBadge from '../components/SeguradoraBadge'
+import SeguradoraSelect from '../components/SeguradoraSelect'
 import { KanbanSkeleton } from '../components/Skeleton'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -499,10 +500,7 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
             </div>
             <div>
               <LabelReq>Seguradora</LabelReq>
-              <select value={seguradora} onChange={e => setSeguradora(e.target.value)} className="select">
-                <option value="">Selecione...</option>
-                {SEGURADORAS_APOLICE.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <SeguradoraSelect value={seguradora} onChange={setSeguradora} required />
             </div>
           </div>
         </div>

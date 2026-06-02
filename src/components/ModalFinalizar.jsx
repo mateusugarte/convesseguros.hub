@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { finalizarFicha, SEGURADORAS } from '../lib/fichas'
+import { finalizarFicha } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { CheckCircle2, X } from 'lucide-react'
+import SeguradoraSelect from './SeguradoraSelect'
 
 const STATUS_FINAIS = [
   { value: 'aprovado',     label: 'Aprovado',     color: 'text-status-success' },
@@ -83,18 +84,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
           {/* Seguradora */}
           <div>
             <label className="block text-xs font-medium text-dark-muted mb-1.5 uppercase tracking-wider">Seguradora</label>
-            <input
-              type="text"
-              list="seg-list-finalizar"
-              value={seguradora}
-              onChange={e => setSeguradora(e.target.value)}
-              placeholder="Selecione ou digite..."
-              className="input"
-              autoComplete="off"
-            />
-            <datalist id="seg-list-finalizar">
-              {SEGURADORAS.map(s => <option key={s} value={s} />)}
-            </datalist>
+            <SeguradoraSelect value={seguradora} onChange={setSeguradora} />
           </div>
 
           {/* Retorno */}

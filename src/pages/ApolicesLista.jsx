@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchApolicesLista, STATUS_EMISSAO_LABELS, SEGURADORAS_APOLICE } from '../lib/apolices'
+import { fetchApolicesLista, STATUS_EMISSAO_LABELS } from '../lib/apolices'
+import { supabase } from '../lib/supabase'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -67,6 +68,12 @@ export default function ApolicesLista() {
   const [total,    setTotal]    = useState(0)
   const [loading,  setLoading]  = useState(false)
   const [page,     setPage]     = useState(0)
+  const [segsOpcoes, setSegsOpcoes] = useState([])
+
+  useEffect(() => {
+    supabase.from('seguradoras').select('nome_canonico').eq('ativa', true).order('nome_canonico')
+      .then(({ data }) => setSegsOpcoes(data?.map(s => s.nome_canonico) || []))
+  }, [])
 
   // Campos do formulário (não disparam busca automaticamente)
   const [filtro,       setFiltro]       = useState('mes')
@@ -187,7 +194,7 @@ export default function ApolicesLista() {
           <select value={segFiltro} onChange={e => setSegFiltro(e.target.value)}
                   className="select text-sm py-1.5" style={{ minWidth: '140px' }}>
             <option value="">Seguradora</option>
-            {SEGURADORAS_APOLICE.map(s => <option key={s} value={s}>{s}</option>)}
+            {segsOpcoes.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
 
           <select value={statusFiltro} onChange={e => setStatusFiltro(e.target.value)}

@@ -7,6 +7,7 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ArrowLeft, Pencil, Trash2, Check, X } from 'lucide-react'
 import SeguradoraBadge from '../components/SeguradoraBadge'
+import SeguradoraSelect from '../components/SeguradoraSelect'
 import ModalFicha from '../components/ModalFicha'
 import ModalAssumir from '../components/ModalAssumir'
 import ModalFinalizar from '../components/ModalFinalizar'
@@ -421,14 +422,9 @@ export default function FichaDetalhePage() {
               <ReadField label="Assumida em" value={fmtDt(ficha.assumida_em)} />
               <div>
                 <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wider mb-1.5">Seguradora</p>
-                {ficha.seguradora
-                  ? <SeguradoraBadge nome={ficha.seguradora} size="md" className="mb-1 cursor-pointer" />
-                  : null
-                }
-                <InlineField
-                  label=""
-                  value={ficha.seguradora}
-                  onSave={v => updateField('seguradora', v)}
+                <SeguradoraSelect
+                  value={ficha.seguradora || ''}
+                  onChange={v => updateField('seguradora', v || null)}
                 />
               </div>
               {/* Número do orçamento — exibido quando aprovado */}

@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { fetchApoliceDetalhe, atualizarApolice, excluirApolice, STATUS_EMISSAO_LABELS, FORMA_PAGAMENTO_LABELS, SEGURADORAS_APOLICE } from '../lib/apolices'
+import { fetchApoliceDetalhe, atualizarApolice, excluirApolice, STATUS_EMISSAO_LABELS, FORMA_PAGAMENTO_LABELS } from '../lib/apolices'
 import { PRODUTO_LABELS } from '../lib/fichas'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useToast } from '../contexts/ToastContext'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ArrowLeft, Save, Trash2 } from 'lucide-react'
+import SeguradoraSelect from '../components/SeguradoraSelect'
 
 function fmtDt(v) {
   if (!v) return null
@@ -291,10 +292,12 @@ export default function ApoliceDetalhe() {
             <div className="space-y-4">
               <EditField label="Número da Apólice" value={numeroApolice} onChange={setNumeroApolice} placeholder="000000000" required />
               <EditField label="Número da Proposta" value={numeroProposta} onChange={setNumeroProposta} placeholder="Opcional" />
-              <SelectField
-                label="Seguradora" value={seguradora} onChange={setSeguradora}
-                options={SEGURADORAS_APOLICE} required
-              />
+              <div>
+                <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">
+                  Seguradora<span className="text-status-danger ml-0.5">*</span>
+                </label>
+                <SeguradoraSelect value={seguradora} onChange={setSeguradora} required />
+              </div>
               <SelectField
                 label="Status"
                 value={statusEmissao}

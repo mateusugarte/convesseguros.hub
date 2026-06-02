@@ -54,17 +54,32 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
           .eq('id', imobAtual.id)
         if (error) throw error
         imobId = imobAtual.id
-        // Limpar aliases antigos
+        // Limpar aliases antigos e reinserir (upsert para reassociar aliases de outras imobiliárias)
         await supabase.from('imobiliaria_aliases').delete().eq('imobiliaria_id', imobId)
+        if (aliasesModal.length > 0) {
+          const payload = aliasesModal.map(v => ({ imobiliaria_id: imobId, alias: v.trim() }))
+          const { error: err } = await supabase.from('imobiliaria_aliases')
+            .upsert(payload, { onConflict: 'alias' })
+          if (err) throw err
+        }
 
       } else if (modo === 'existente') {
-        // Adicionar aliases a imobiliária já existente
-        if (!imobSelecionada) return
-        imobId = imobSelecionada
+        // Incluir variações em imobiliária existente
+        // Aliases vêm de naoMapeadas → garantidamente ausentes em imobiliaria_aliases → insert direto
+        if (!imobSelecionada || aliasesModal.length === 0) {
+          toast({ type: 'error', title: 'Selecione uma imobiliária e ao menos uma variação' })
+          return
+        }
+        const payload = aliasesModal.map(v => ({ imobiliaria_id: imobSelecionada, alias: v.trim() }))
+        const { error } = await supabase.from('imobiliaria_aliases').insert(payload)
+        if (error) throw error
 
       } else {
-        // Criar nova (modo padrão)
-        if (!nomeCanonoco.trim()) return
+        // Criar nova imobiliária
+        if (!nomeCanonoco.trim()) {
+          toast({ type: 'error', title: 'Informe o nome da imobiliária' })
+          return
+        }
         const { data: existe } = await supabase.from('imobiliarias')
           .select('id').eq('nome_canonico', nomeCanonoco.trim()).maybeSingle()
 
@@ -77,14 +92,12 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
           if (error) throw error
           imobId = novo.id
         }
-      }
 
-      // Inserir aliases
-      if (aliasesModal.length > 0) {
-        const payload = aliasesModal.map(v => ({ imobiliaria_id: imobId, alias: v.trim() }))
-        const { error } = await supabase.from('imobiliaria_aliases')
-          .upsert(payload, { onConflict: 'alias' })
-        if (error) throw error
+        if (aliasesModal.length > 0) {
+          const payload = aliasesModal.map(v => ({ imobiliaria_id: imobId, alias: v.trim() }))
+          const { error } = await supabase.from('imobiliaria_aliases').insert(payload)
+          if (error) throw error
+        }
       }
 
       toast({ type: 'success', title: 'Configuração salva!' })
@@ -92,8 +105,9 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
       onClose()
     } catch (e) {
       toast({ type: 'error', title: 'Erro ao salvar', message: e.message })
+    } finally {
+      setSalvando(false)
     }
-    setSalvando(false)
   }
 
   const nomeExistenteSelecionado = mapeadas.find(m => m.id === imobSelecionada)?.nome_canonico

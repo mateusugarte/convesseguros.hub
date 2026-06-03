@@ -11,6 +11,7 @@ import ModalFicha from './ModalFicha'
 import DetalhesFicha from './DetalhesFicha'
 import { Home, Briefcase, Building, LayoutGrid, RefreshCw, ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
 import SeguradoraBadge from './SeguradoraBadge'
+import SeguradoraSelect from './SeguradoraSelect'
 import { KanbanSkeleton } from './Skeleton'
 
 // ── Column config ─────────────────────────────────────────────────────────────
@@ -326,6 +327,102 @@ function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinal
   )
 }
 
+// ── ModalConfirmarRecusado ────────────────────────────────────────────────────
+
+function ModalConfirmarRecusado({ onConfirmar, salvando }) {
+  const [retorno, setRetorno] = useState(null)
+  return (
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-sm">
+        <div className="px-6 py-5 space-y-4">
+          <p className="font-semibold text-dark-text text-sm">Confirmar Recusa</p>
+          <p className="text-xs text-dark-muted">O retorno foi enviado ao cliente?</p>
+          <div className="flex gap-3">
+            {[{ v: true, l: 'Sim', cls: 'border-status-success text-status-success bg-status-success/20' },
+              { v: false, l: 'Não', cls: 'border-status-danger text-status-danger bg-status-danger/20' }].map(({ v, l, cls }) => (
+              <button key={l} onClick={() => setRetorno(v)}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
+                  retorno === v ? cls : 'border-dark-border text-dark-muted hover:border-dark-text'
+                }`}>{l}</button>
+            ))}
+          </div>
+        </div>
+        <div className="flex justify-end px-6 pb-5">
+          <button onClick={() => retorno !== null && onConfirmar(retorno)}
+            disabled={retorno === null || salvando} className="btn-primary text-sm">
+            {salvando ? 'Salvando...' : 'Confirmar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── ModalConfirmarAprovado ────────────────────────────────────────────────────
+
+function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
+  const [seguradora,      setSeguradora]      = useState('')
+  const [valorParcela,    setValorParcela]    = useState('')
+  const [numeroOrcamento, setNumeroOrcamento] = useState('')
+  const [retornoEnviado,  setRetornoEnviado]  = useState(null)
+  const valido = seguradora && valorParcela && numeroOrcamento.trim() && retornoEnviado !== null
+
+  return (
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="px-6 py-4 border-b border-dark-border">
+          <p className="font-semibold text-dark-text">Confirmar Aprovação</p>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
+              Seguradora <span className="text-status-danger">*</span>
+            </label>
+            <SeguradoraSelect value={seguradora} onChange={setSeguradora} required />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
+                Valor Parcela (R$) <span className="text-status-danger">*</span>
+              </label>
+              <input type="number" step="0.01" min="0" value={valorParcela}
+                onChange={e => setValorParcela(e.target.value)} placeholder="0,00" className="input text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
+                N° Orçamento <span className="text-status-danger">*</span>
+              </label>
+              <input value={numeroOrcamento} onChange={e => setNumeroOrcamento(e.target.value)}
+                placeholder="Ex: 12345" className="input text-sm" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
+              Retorno enviado? <span className="text-status-danger">*</span>
+            </label>
+            <div className="flex gap-3">
+              {[{ v: true, l: 'Sim', cls: 'border-status-success text-status-success bg-status-success/20' },
+                { v: false, l: 'Não', cls: 'border-status-danger text-status-danger bg-status-danger/20' }].map(({ v, l, cls }) => (
+                <button key={l} onClick={() => setRetornoEnviado(v)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
+                    retornoEnviado === v ? cls : 'border-dark-border text-dark-muted hover:border-dark-text'
+                  }`}>{l}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 px-6 pb-5">
+          <button onClick={onCancelar} className="btn-secondary text-sm">Cancelar</button>
+          <button onClick={() => valido && onConfirmar({ seguradora, valorParcela: parseFloat(valorParcela), numeroOrcamento: numeroOrcamento.trim(), retornoEnviado })}
+            disabled={!valido || salvando} className="btn-primary text-sm">
+            {salvando ? 'Salvando...' : 'Confirmar Aprovação'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Main KanbanFichas ─────────────────────────────────────────────────────────
 
 export default function KanbanFichas({ produto, externalDateFrom, externalDateTo, contextState }) {
@@ -354,6 +451,13 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   const [canScrollL, setCanScrollL] = useState(false)
   const [canScrollR, setCanScrollR] = useState(false)
   const scrollRef = useRef(null)
+
+  // A4 — Modal obrigatório ao arrastar para Recusado
+  const [pendingRecusado,   setPendingRecusado]   = useState(null)  // { fichaId, fichaOriginal }
+  const [salvandoRecusado,  setSalvandoRecusado]  = useState(false)
+  // A5 — Modal obrigatório ao arrastar para Aprovado
+  const [pendingAprovado,   setPendingAprovado]   = useState(null)  // { fichaId, fichaOriginal }
+  const [salvandoAprovado,  setSalvandoAprovado]  = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -462,6 +566,55 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     setFinalizarDefaultStatus(defaultStatus || null)
   }
 
+  // A4 — Confirmar recusa com dados extras
+  async function handleConfirmarRecusado(retornoEnviado) {
+    if (!pendingRecusado) return
+    setSalvandoRecusado(true)
+    const err = await moverFichaStatus(pendingRecusado.fichaId, 'recusado', { userId: user?.id })
+    if (!err) {
+      await supabase.from('fichas').update({
+        retorno_enviado: retornoEnviado,
+        finalizada_em: new Date().toISOString(),
+      }).eq('id', pendingRecusado.fichaId)
+      toast({ type: 'success', title: 'Ficha recusada' })
+    } else {
+      setFichas(prev => prev.map(f => f.id === pendingRecusado.fichaId ? pendingRecusado.fichaOriginal : f))
+      toast({ type: 'error', title: 'Erro ao recusar ficha' })
+    }
+    setSalvandoRecusado(false)
+    setPendingRecusado(null)
+  }
+
+  // A5 — Confirmar aprovação com dados extras
+  async function handleConfirmarAprovado({ seguradora, valorParcela, numeroOrcamento, retornoEnviado }) {
+    if (!pendingAprovado) return
+    setSalvandoAprovado(true)
+    const err = await moverFichaStatus(pendingAprovado.fichaId, 'aprovado', { userId: user?.id })
+    if (!err) {
+      await supabase.from('fichas').update({
+        seguradora,
+        valor_parcela: valorParcela,
+        numero_orcamento: numeroOrcamento,
+        retorno_enviado: retornoEnviado,
+        finalizada_em: new Date().toISOString(),
+      }).eq('id', pendingAprovado.fichaId)
+      toast({ type: 'success', title: 'Ficha aprovada!' })
+      load()
+    } else {
+      setFichas(prev => prev.map(f => f.id === pendingAprovado.fichaId ? pendingAprovado.fichaOriginal : f))
+      toast({ type: 'error', title: 'Erro ao aprovar ficha' })
+    }
+    setSalvandoAprovado(false)
+    setPendingAprovado(null)
+  }
+
+  // A5 — Cancelar aprovação (rollback)
+  function handleCancelarAprovado() {
+    if (!pendingAprovado) return
+    setFichas(prev => prev.map(f => f.id === pendingAprovado.fichaId ? pendingAprovado.fichaOriginal : f))
+    setPendingAprovado(null)
+  }
+
   // Abrir detalhe — navega para página dedicada
   function handleDetalhe(fichaId) {
     navigate(`/fichas/${fichaId}`, {
@@ -483,6 +636,20 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
     const novoStatus = COL_TO_STATUS[targetCol]
     if (!novoStatus) return
+
+    // A4 — Interceptar arrastar para Recusado
+    if (targetCol === 'recusado') {
+      setFichas(prev => prev.map(f => f.id !== fichaId ? f : { ...f, status: 'recusado' }))
+      setPendingRecusado({ fichaId, fichaOriginal: ficha })
+      return
+    }
+
+    // A5 — Interceptar arrastar para Aprovado
+    if (targetCol === 'aprovado') {
+      setFichas(prev => prev.map(f => f.id !== fichaId ? f : { ...f, status: 'aprovado' }))
+      setPendingAprovado({ fichaId, fichaOriginal: ficha })
+      return
+    }
 
     const assumirComoAtual = targetCol === 'minhas'
 
@@ -659,6 +826,16 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
           onClose={() => { setFinalizar(null); setFinalizarDefaultStatus(null) }}
           onSuccess={() => { setFinalizar(null); setFinalizarDefaultStatus(null); load() }}
         />
+      )}
+
+      {/* A4 — Modal obrigatório: confirmar recusa */}
+      {pendingRecusado && (
+        <ModalConfirmarRecusado onConfirmar={handleConfirmarRecusado} salvando={salvandoRecusado} />
+      )}
+
+      {/* A5 — Modal obrigatório: confirmar aprovação */}
+      {pendingAprovado && (
+        <ModalConfirmarAprovado onConfirmar={handleConfirmarAprovado} onCancelar={handleCancelarAprovado} salvando={salvandoAprovado} />
       )}
     </div>
   )

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchFichasDoOrcamentista, fetchFichas, deletarFicha, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
+import { fetchFichasDoOrcamentista, fetchFichas, fetchFichaDetalhe, deletarFicha, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import ModalFinalizar from '../components/ModalFinalizar'
@@ -31,10 +31,11 @@ function TimeBadge({ since }) {
 export default function MinhasFichas() {
   const { user, profile } = useAuth()
   const toast = useToast()
-  const [tab,       setTab]       = useState('abertas')
-  const [finalizar, setFinalizar] = useState(null)
-  const [detalhe,   setDetalhe]   = useState(null)
-  const [editar,    setEditar]    = useState(null)
+  const [tab,          setTab]          = useState('abertas')
+  const [finalizar,    setFinalizar]    = useState(null)
+  const [detalhe,      setDetalhe]      = useState(null)
+  const [editar,       setEditar]       = useState(null)
+  const [editarLoading, setEditarLoading] = useState(false)
 
   const queryClient = useQueryClient()
   const avatarColor = stringColor(profile?.nome || '')
@@ -53,6 +54,16 @@ export default function MinhasFichas() {
 
   function refresh() {
     queryClient.invalidateQueries({ queryKey: ['minhas-fichas', user?.id] })
+  }
+
+  // Busca a ficha completa antes de abrir o modal de edição,
+  // evitando que campos como celular, email, cep, etc. apareçam vazios
+  // (a listagem de passadas só carrega campos parciais).
+  async function handleEditar(fichaId) {
+    setEditarLoading(true)
+    const ficha = await fetchFichaDetalhe(fichaId)
+    setEditarLoading(false)
+    if (ficha) setEditar(ficha)
   }
 
   const metricas = {
@@ -205,7 +216,7 @@ export default function MinhasFichas() {
         <DetalhesFicha
           id={detalhe}
           onClose={() => setDetalhe(null)}
-          onEdit={f => { setDetalhe(null); setEditar(f) }}
+          onEdit={f => { setDetalhe(null); handleEditar(f.id) }}
           onDelete={async id => {
             await deletarFicha(id)
             setDetalhe(null)

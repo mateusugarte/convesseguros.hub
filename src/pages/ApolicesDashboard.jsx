@@ -4,6 +4,7 @@ import {
   fetchKPIsApolices, fetchApolicesPorDia,
   fetchTopImobiliariasApolices, fetchPorSeguradora,
 } from '../lib/apolices'
+import { useTheme } from '../contexts/ThemeContext'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -12,6 +13,45 @@ import {
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { TrendingUp, TrendingDown, FileCheck, LayoutGrid, List } from 'lucide-react'
+
+// ── Chart theme constants ─────────────────────────────────────────────────────
+
+const CHART_COLORS = {
+  light: {
+    grid:    'rgba(8, 20, 50, 0.10)',
+    tick:    'rgba(8, 20, 50, 0.55)',
+    line1:   '#1d4ed8',
+    line2:   '#059669',
+    bar:     '#1d4ed8',
+    tooltip: {
+      background: 'rgba(255,255,255,0.90)',
+      border:     'rgba(8,20,50,0.18)',
+      color:      'rgba(8,20,50,0.90)',
+    },
+  },
+  dark: {
+    grid:    'rgba(180, 210, 255, 0.10)',
+    tick:    'rgba(180, 210, 255, 0.55)',
+    line1:   '#60a5fa',
+    line2:   '#34d399',
+    bar:     '#60a5fa',
+    tooltip: {
+      background: 'rgba(10,30,60,0.92)',
+      border:     'rgba(100,160,255,0.22)',
+      color:      'rgba(220,235,255,0.92)',
+    },
+  },
+}
+
+const tooltipStyle = (theme) => ({
+  background:          CHART_COLORS[theme].tooltip.background,
+  backdropFilter:      'blur(16px)',
+  WebkitBackdropFilter:'blur(16px)',
+  border:              `1px solid ${CHART_COLORS[theme].tooltip.border}`,
+  borderRadius:        '12px',
+  color:               CHART_COLORS[theme].tooltip.color,
+  boxShadow:           '0 8px 32px rgba(0,0,0,0.18)',
+})
 
 const MESES_ABBR = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
@@ -59,6 +99,7 @@ const FILTRO_SEG = [
 
 export default function ApolicesDashboard() {
   const navigate         = useNavigate()
+  const { theme }        = useTheme()
   const { resolverNome } = useImobiliaria()
   const agora            = new Date()
 
@@ -193,8 +234,9 @@ export default function ApolicesDashboard() {
                     <stop offset="95%" stopColor="#1A3A6B" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="dia" tick={{ fontSize: 10, fill: 'rgb(var(--color-muted))' }}
-                       tickFormatter={v => { try { return format(parseISO(v), 'dd/MM') } catch { return v } }} />
+                <XAxis dataKey="dia" tick={{ fontSize: 11, fill: CHART_COLORS[theme].tick }}
+                       tickFormatter={v => { try { return format(parseISO(v), 'dd/MM') } catch { return v } }}
+                       axisLine={false} tickLine={false} />
                 <Tooltip content={<DarkTip />} />
                 <Area type="monotone" dataKey="total" name="Apólices" stroke="#2B5BA8" fill="url(#gradApolice)" strokeWidth={2} dot={false} />
               </AreaChart>
@@ -268,11 +310,11 @@ export default function ApolicesDashboard() {
               layout="vertical"
               margin={{ top: 0, right: 40, left: 0, bottom: 0 }}
             >
-              <XAxis type="number" tick={{ fontSize: 10, fill: 'rgb(var(--color-muted))' }} />
-              <YAxis type="category" dataKey="nome" tick={{ fontSize: 10, fill: 'rgb(var(--color-text))' }} width={130} />
+              <XAxis type="number" tick={{ fontSize: 11, fill: CHART_COLORS[theme].tick }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="nome" tick={{ fontSize: 11, fill: CHART_COLORS[theme].tick }} width={130} axisLine={false} tickLine={false} />
               <Tooltip
                 formatter={(v) => [v, 'Apólices']}
-                contentStyle={{ background: 'rgb(var(--color-surface2))', border: '1px solid rgb(var(--color-border))', borderRadius: '12px', fontSize: 12 }}
+                contentStyle={tooltipStyle(theme)}
               />
               <Bar dataKey="total" fill="#2B5BA8" radius={[0, 4, 4, 0]} />
             </BarChart>

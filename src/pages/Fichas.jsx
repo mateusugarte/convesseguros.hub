@@ -9,6 +9,7 @@ import {
 import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 import { useToast } from '../contexts/ToastContext'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -28,6 +29,45 @@ import {
   FileText, Clock, CheckCircle2, XCircle,
   AlignJustify, Pencil, TrendingUp, TrendingDown, BarChart2, UserSquare2, AlertCircle,
 } from 'lucide-react'
+
+// ── Chart theme constants ─────────────────────────────────────────────────────
+
+const CHART_COLORS = {
+  light: {
+    grid:    'rgba(8, 20, 50, 0.10)',
+    tick:    'rgba(8, 20, 50, 0.55)',
+    line1:   '#1d4ed8',
+    line2:   '#059669',
+    bar:     '#1d4ed8',
+    tooltip: {
+      background: 'rgba(255,255,255,0.90)',
+      border:     'rgba(8,20,50,0.18)',
+      color:      'rgba(8,20,50,0.90)',
+    },
+  },
+  dark: {
+    grid:    'rgba(180, 210, 255, 0.10)',
+    tick:    'rgba(180, 210, 255, 0.55)',
+    line1:   '#60a5fa',
+    line2:   '#34d399',
+    bar:     '#60a5fa',
+    tooltip: {
+      background: 'rgba(10,30,60,0.92)',
+      border:     'rgba(100,160,255,0.22)',
+      color:      'rgba(220,235,255,0.92)',
+    },
+  },
+}
+
+const tooltipStyle = (theme) => ({
+  background:          CHART_COLORS[theme].tooltip.background,
+  backdropFilter:      'blur(16px)',
+  WebkitBackdropFilter:'blur(16px)',
+  border:              `1px solid ${CHART_COLORS[theme].tooltip.border}`,
+  borderRadius:        '12px',
+  color:               CHART_COLORS[theme].tooltip.color,
+  boxShadow:           '0 8px 32px rgba(0,0,0,0.18)',
+})
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -196,6 +236,7 @@ function DarkTip({ active, payload, label }) {
 // ── Visão Geral ───────────────────────────────────────────────────────────────
 
 function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFichasCount }) {
+  const { theme }                  = useTheme()
   const [kpis, setKpis]           = useState(null)
   const [statusDist, setStatusDist] = useState([])
   const [fichasPorDia, setDia]    = useState([])
@@ -296,8 +337,9 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
                     <stop offset="95%" stopColor="#4A90D9" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="dia" tick={{ fontSize: 10, fill: 'rgb(var(--color-muted))' }}
-                       tickFormatter={v => { try { return format(parseISO(v), 'dd/MM') } catch { return v } }} />
+                <XAxis dataKey="dia" tick={{ fontSize: 11, fill: CHART_COLORS[theme].tick }}
+                       tickFormatter={v => { try { return format(parseISO(v), 'dd/MM') } catch { return v } }}
+                       axisLine={false} tickLine={false} />
                 <Tooltip content={<DarkTip />} />
                 <Area type="monotone" dataKey="total" name="Total" stroke="#4A90D9" fill="url(#gradTotal)" strokeWidth={2} dot={false} />
               </AreaChart>
@@ -320,7 +362,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
                     ))}
                   </Pie>
                   <Tooltip content={({ active, payload }) => active && payload?.length ? (
-                    <div className="bg-dark-surface2 border border-dark-border rounded-lg px-2 py-1.5 text-xs">
+                    <div style={tooltipStyle(theme)} className="px-2 py-1.5 text-xs">
                       <span style={{ color: STATUS_CHART_COLORS[payload[0]?.payload?.status] || '#4A90D9' }}>
                         {payload[0]?.payload?.label}: {payload[0]?.value}
                       </span>

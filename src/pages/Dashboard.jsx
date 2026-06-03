@@ -20,6 +20,45 @@ import {
   BarChart3, Activity, Zap,
 } from 'lucide-react'
 
+// ── Chart theme constants ─────────────────────────────────────────────────────
+
+const CHART_COLORS = {
+  light: {
+    grid:    'rgba(8, 20, 50, 0.10)',
+    tick:    'rgba(8, 20, 50, 0.55)',
+    line1:   '#1d4ed8',
+    line2:   '#059669',
+    bar:     '#1d4ed8',
+    tooltip: {
+      background: 'rgba(255,255,255,0.90)',
+      border:     'rgba(8,20,50,0.18)',
+      color:      'rgba(8,20,50,0.90)',
+    },
+  },
+  dark: {
+    grid:    'rgba(180, 210, 255, 0.10)',
+    tick:    'rgba(180, 210, 255, 0.55)',
+    line1:   '#60a5fa',
+    line2:   '#34d399',
+    bar:     '#60a5fa',
+    tooltip: {
+      background: 'rgba(10,30,60,0.92)',
+      border:     'rgba(100,160,255,0.22)',
+      color:      'rgba(220,235,255,0.92)',
+    },
+  },
+}
+
+const tooltipStyle = (theme) => ({
+  background:          CHART_COLORS[theme].tooltip.background,
+  backdropFilter:      'blur(16px)',
+  WebkitBackdropFilter:'blur(16px)',
+  border:              `1px solid ${CHART_COLORS[theme].tooltip.border}`,
+  borderRadius:        '12px',
+  color:               CHART_COLORS[theme].tooltip.color,
+  boxShadow:           '0 8px 32px rgba(0,0,0,0.18)',
+})
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function stringColor(str) {
@@ -150,8 +189,8 @@ export default function Dashboard() {
   const minhasFichas = data?.minhasFichas ?? []
 
   // Theme-responsive chart colors
-  const chartGrid = theme === 'dark' ? '#1E2D45' : '#C8D8F0'
-  const chartTick = theme === 'dark' ? '#8899BB' : '#5A7099'
+  const chartGrid = CHART_COLORS[theme].grid
+  const chartTick = CHART_COLORS[theme].tick
 
   if (isLoading) return <DashboardSkeleton />
 
@@ -214,8 +253,8 @@ export default function Dashboard() {
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartGrid} />
             <XAxis dataKey="dia"
                    tickFormatter={v => { try { return format(parseISO(v), 'dd/MM', { locale: ptBR }) } catch { return v } }}
-                   tick={{ fill: chartTick, fontSize: 10 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-            <YAxis tick={{ fill: chartTick, fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                   tick={{ fill: CHART_COLORS[theme].tick, fontSize: 11 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+            <YAxis tick={{ fill: CHART_COLORS[theme].tick, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
             <Tooltip content={<DarkTip dateLabel />} />
             <Area type="monotone" dataKey="total"    name="Total"    stroke="#4A90D9" fill="url(#gTotal)" strokeWidth={2} dot={false} />
             <Area type="monotone" dataKey="aprovadas" name="Aprovadas" stroke="#10B981" fill="url(#gAprov)" strokeWidth={1.5} dot={false} />
@@ -269,8 +308,8 @@ export default function Dashboard() {
           ) : (
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={topImob} layout="vertical" margin={{ left: -15, right: 5 }}>
-                <XAxis type="number" tick={{ fill: chartTick, fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <YAxis type="category" dataKey="name" tick={{ fill: chartTick, fontSize: 10 }} width={100} axisLine={false} tickLine={false} />
+                <XAxis type="number" tick={{ fill: CHART_COLORS[theme].tick, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" tick={{ fill: CHART_COLORS[theme].tick, fontSize: 11 }} width={100} axisLine={false} tickLine={false} />
                 <Tooltip content={<DarkTip />} />
                 <Bar dataKey="total" name="Aprovações" radius={[0, 4, 4, 0]}>
                   {topImob.map((_, i) => (
@@ -326,8 +365,8 @@ export default function Dashboard() {
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={prodMes} margin={{ left: -20 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartGrid} />
-                <XAxis dataKey="name" tick={{ fill: chartTick, fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: chartTick, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <XAxis dataKey="name" tick={{ fill: CHART_COLORS[theme].tick, fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: CHART_COLORS[theme].tick, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip content={<DarkTip />} />
                 <Bar dataKey="total"     name="Total"    fill="#2B5BA8" radius={[4,4,0,0]} />
                 <Bar dataKey="aprovadas" name="Aprovadas" fill="#10B981" radius={[4,4,0,0]} />

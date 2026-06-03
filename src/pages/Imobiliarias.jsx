@@ -120,7 +120,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-lg">
+      <div className="glass-modal w-full max-w-lg">
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">

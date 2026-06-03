@@ -161,7 +161,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-start justify-center sm:p-4 overflow-y-auto animate-fade-in">
-      <div className="bg-dark-surface border border-dark-border rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-2xl sm:my-6 max-h-[92vh] overflow-y-auto">
+      <div className="glass-modal rounded-t-2xl sm:rounded-2xl w-full max-w-2xl sm:my-6 max-h-[92vh] overflow-y-auto">
         {/* Mobile drag handle */}
         <div className="sm:hidden flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 rounded-full bg-dark-border" />

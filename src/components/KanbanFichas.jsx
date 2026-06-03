@@ -309,7 +309,12 @@ function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinal
         }}
       >
         {fichas.length === 0 ? (
-          <div className="flex items-center justify-center h-14 text-[10px] text-dark-muted/30">Vazia</div>
+          <div className="kanban-empty">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="kanban-empty-icon">
+              <rect x="3" y="3" width="18" height="18" rx="3" strokeDasharray="4 2"/>
+            </svg>
+            <span className="kanban-empty-text">Vazia</span>
+          </div>
         ) : fichas.map(f => (
           <DraggableCard
             key={f.id}
@@ -333,7 +338,7 @@ function ModalConfirmarRecusado({ onConfirmar, salvando }) {
   const [retorno, setRetorno] = useState(null)
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-sm">
+      <div className="glass-modal w-full max-w-sm">
         <div className="px-6 py-5 space-y-4">
           <p className="font-semibold text-dark-text text-sm">Confirmar Recusa</p>
           <p className="text-xs text-dark-muted">O retorno foi enviado ao cliente?</p>
@@ -369,7 +374,7 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-md">
+      <div className="glass-modal w-full max-w-md">
         <div className="px-6 py-4 border-b border-dark-border">
           <p className="font-semibold text-dark-text">Confirmar Aprovação</p>
         </div>

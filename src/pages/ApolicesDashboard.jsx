@@ -68,7 +68,7 @@ const SEG_COLORS = {
 function DarkTip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-dark-surface2 border border-dark-border rounded-xl px-3 py-2 shadow-2xl text-xs">
+    <div className="glass-panel px-3 py-2 text-xs">
       {label && <p className="text-dark-muted mb-1">{(() => { try { return format(parseISO(label), "dd/MM", { locale: ptBR }) } catch { return label } })()}</p>}
       {payload.map((p, i) => (
         <div key={i} className="flex items-center gap-2">
@@ -84,7 +84,7 @@ function SegTip({ active, payload }) {
   if (!active || !payload?.length) return null
   const d = payload[0]?.payload
   return (
-    <div className="bg-dark-surface2 border border-dark-border rounded-xl px-3 py-2 shadow-2xl text-xs">
+    <div className="glass-panel px-3 py-2 text-xs">
       <span style={{ color: SEG_COLORS[d?.seguradora] || '#4A90D9' }}>{d?.seguradora}: {d?.value}</span>
     </div>
   )

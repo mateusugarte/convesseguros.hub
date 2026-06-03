@@ -196,7 +196,12 @@ function DroppableColumn({ col, apolices, onDetalhe, resolverNome, colIndex }) {
              boxShadow:       isOver ? `inset 0 0 0 2px ${col.color}40` : 'none',
            }}>
         {apolices.length === 0 ? (
-          <div className="flex items-center justify-center h-14 text-[10px] text-dark-muted/30">Vazia</div>
+          <div className="kanban-empty">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="kanban-empty-icon">
+              <rect x="3" y="3" width="18" height="18" rx="3" strokeDasharray="4 2"/>
+            </svg>
+            <span className="kanban-empty-text">Vazia</span>
+          </div>
         ) : apolices.map(a => (
           <DraggableCard key={a.id} apolice={a} onDetalhe={onDetalhe} resolverNome={resolverNome} />
         ))}

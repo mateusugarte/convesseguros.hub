@@ -43,7 +43,7 @@ export default function CommandPalette({ open, onClose, onOpenFicha }) {
       onClick={onClose}
     >
       <div
-        className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden"
+        className="glass-modal w-full max-w-xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Input */}

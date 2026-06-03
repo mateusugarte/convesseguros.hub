@@ -80,7 +80,7 @@ export default function SeguradoraSelect({
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-dark-surface border border-dark-border rounded-xl shadow-xl overflow-hidden animate-fade-in">
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 glass-panel overflow-hidden animate-fade-in">
           {/* Opção vazia */}
           {!required && (
             <>

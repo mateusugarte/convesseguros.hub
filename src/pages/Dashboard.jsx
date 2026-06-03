@@ -86,7 +86,7 @@ const STATUS_COLORS = {
 function DarkTip({ active, payload, label, dateLabel }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-dark-surface2 border border-dark-border rounded-xl px-3 py-2.5 shadow-2xl text-xs min-w-[120px]">
+    <div className="glass-panel px-3 py-2.5 text-xs min-w-[120px]">
       {label && (
         <p className="text-dark-muted mb-1.5">
           {dateLabel ? (() => { try { return format(parseISO(label), "dd 'de' MMM", { locale: ptBR }) } catch { return label } })() : label}
@@ -108,15 +108,18 @@ function KPICard({ label, value, sub, icon: Icon, accent }) {
   return (
     <div className="card p-5 space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-dark-muted uppercase tracking-wider">{label}</p>
+        <p className="text-[11px] font-semibold text-dark-muted uppercase tracking-widest">{label}</p>
         {Icon && (
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: accent + '22' }}>
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ background: accent + '30', boxShadow: `0 0 12px ${accent}25` }}
+          >
             <Icon className="w-4 h-4" style={{ color: accent }} />
           </div>
         )}
       </div>
-      <p className="text-3xl font-bold text-dark-text font-mono">{value ?? '—'}</p>
-      {sub && <p className="text-xs text-dark-muted">{sub}</p>}
+      <p className="text-3xl font-bold text-dark-text font-mono tabular-nums">{value ?? '—'}</p>
+      {sub && <p className="text-[11px] text-dark-muted mt-0.5">{sub}</p>}
     </div>
   )
 }
@@ -228,11 +231,11 @@ export default function Dashboard() {
 
       {/* ── KPIs ── */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <KPICard label="Hoje"        value={kpis?.hoje}     icon={Zap}         accent="#4A90D9" />
-        <KPICard label="Esta Semana" value={kpis?.semana}   icon={TrendingUp}  accent="#8B5CF6" />
-        <KPICard label="Este Mês"    value={kpis?.mes}      icon={BarChart3}   accent="#F59E0B" />
-        <KPICard label="Em Aberto"   value={kpis?.emAberto} sub="pendente + cotação" icon={Clock} accent="#F59E0B" />
-        <KPICard label="Emitidas"    value={emitidas}       sub="este mês"    icon={CheckCircle2} accent="#10B981" />
+        <div className="animate-fade-in stagger-1"><KPICard label="Hoje"        value={kpis?.hoje}     icon={Zap}         accent="#4A90D9" /></div>
+        <div className="animate-fade-in stagger-2"><KPICard label="Esta Semana" value={kpis?.semana}   icon={TrendingUp}  accent="#8B5CF6" /></div>
+        <div className="animate-fade-in stagger-3"><KPICard label="Este Mês"    value={kpis?.mes}      icon={BarChart3}   accent="#F59E0B" /></div>
+        <div className="animate-fade-in stagger-4"><KPICard label="Em Aberto"   value={kpis?.emAberto} sub="pendente + cotação" icon={Clock} accent="#F59E0B" /></div>
+        <div className="animate-fade-in stagger-5"><KPICard label="Emitidas"    value={emitidas}       sub="este mês"    icon={CheckCircle2} accent="#10B981" /></div>
       </div>
 
       {/* ── Area chart ── */}
@@ -281,7 +284,7 @@ export default function Dashboard() {
                   if (!active || !payload?.length) return null
                   const p = payload[0]
                   return (
-                    <div className="bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-xs shadow-xl">
+                    <div className="glass-panel px-3 py-2 text-xs">
                       <p className="font-medium text-dark-text">{p.name}: {p.value}</p>
                     </div>
                   )

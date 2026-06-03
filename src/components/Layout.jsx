@@ -120,12 +120,13 @@ export default function Layout() {
   const avatarColor = stringColor(profile?.nome || '')
 
   return (
-    <div className="flex h-screen bg-dark-bg overflow-hidden">
+    <div className="app-root flex h-screen overflow-hidden">
 
       {/* ── Mobile backdrop ─────────────────────────────────────────────────── */}
       {isMobile && sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30"
+          className="fixed inset-0 z-30"
+          style={{ background: 'rgba(0,10,40,0.50)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -278,8 +279,14 @@ export default function Layout() {
         {!isMobile && (
           <button
             onClick={() => setSidebarOpen(o => !o)}
-            className="absolute -right-3 top-[72px] w-6 h-6 rounded-full bg-dark-surface border border-dark-border flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/60 transition-all z-50"
-            style={{ boxShadow: 'var(--shadow-card)' }}
+            className="absolute -right-3 top-[72px] w-6 h-6 rounded-full flex items-center justify-center text-dark-muted hover:text-dark-text transition-all z-50"
+            style={{
+              background: 'var(--glass-bg-heavy)',
+              backdropFilter: 'var(--glass-blur)',
+              WebkitBackdropFilter: 'var(--glass-blur)',
+              border: '1px solid var(--glass-border)',
+              boxShadow: 'var(--glass-shadow)',
+            }}
           >
             {sidebarOpen ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
           </button>
@@ -293,8 +300,14 @@ export default function Layout() {
 
         {/* ── Header ── */}
         <header
-          className="sticky top-0 z-30 h-16 flex items-center justify-between px-5 border-b border-dark-border bg-dark-surface/95 backdrop-blur-xl flex-shrink-0"
-          style={{ boxShadow: 'var(--shadow-sm)' }}
+          className="sticky top-0 z-30 h-16 flex items-center justify-between px-5 flex-shrink-0"
+          style={{
+            background: 'var(--glass-bg-strong)',
+            backdropFilter: 'var(--glass-blur-strong)',
+            WebkitBackdropFilter: 'var(--glass-blur-strong)',
+            borderBottom: '1px solid var(--glass-border-subtle)',
+            boxShadow: 'var(--glass-shadow)',
+          }}
         >
           <div className="flex items-center gap-3">
             <button onClick={() => setSidebarOpen(o => !o)} className="btn-ghost p-2">
@@ -362,8 +375,14 @@ export default function Layout() {
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
                   <div
-                    className="absolute right-0 top-full mt-2 w-48 bg-dark-surface border border-dark-border rounded-xl z-50 py-1 animate-slide-up overflow-hidden"
-                    style={{ boxShadow: 'var(--shadow-lg)' }}
+                    className="absolute right-0 top-full mt-2 w-48 z-50 py-1 animate-slide-up overflow-hidden rounded-xl"
+                    style={{
+                      background: 'var(--glass-bg-heavy)',
+                      backdropFilter: 'var(--glass-blur-strong)',
+                      WebkitBackdropFilter: 'var(--glass-blur-strong)',
+                      border: '1px solid var(--glass-border)',
+                      boxShadow: 'var(--glass-shadow-deep)',
+                    }}
                   >
                     <button
                       onClick={() => { setUserMenuOpen(false); navigate('/minhas-fichas') }}

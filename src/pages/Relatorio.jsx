@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core'
 import {
   fetchAnosRelatorio, fetchMesesRelatorio,
   fetchFichasRelatorio, PRODUTO_LABELS,
 } from '../lib/fichas'
+import { supabase } from '../lib/supabase'
 import { useImobiliaria } from '../hooks/useImobiliaria'
+import { useToast } from '../contexts/ToastContext'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { BarChart2 } from 'lucide-react'
@@ -22,6 +25,16 @@ const COLUNAS = [
   { id: 'desistiu',         label: 'Desistiu da Locação',     color: '#F59E0B' },
   { id: 'expirada',         label: 'Expirada',                color: '#6B7280' },
 ]
+
+// Mapeamento de coluna → campos a atualizar no banco
+const COLUNA_TO_UPDATE = {
+  aprovada:         { status: 'aprovado',  retorno_enviado: false },
+  emitida:          { status: 'emitido',   retorno_enviado: false },
+  enviado_cobranca: { status: 'emitido',   retorno_enviado: true  },
+  recuperados:      { status: 'emitido',   retorno_enviado: true  },
+  desistiu:         { status: 'cancelado', retorno_enviado: false },
+  expirada:         { status: 'expirada',  retorno_enviado: false },
+}
 
 function getColuna(ficha) {
   if (ficha.status === 'aprovado')                                                          return 'aprovada'
@@ -122,12 +135,30 @@ function RelatorioCard({ ficha, onClick }) {
 
 // ── Coluna ────────────────────────────────────────────────────────────────────
 
+function DraggableRelatorioCard({ ficha, onFichaClick }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ficha.id })
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onClick={() => onFichaClick(ficha.id)}
+      style={{ opacity: isDragging ? 0.35 : 1, cursor: 'grab' }}
+    >
+      <RelatorioCard ficha={ficha} onClick={() => {}} />
+    </div>
+  )
+}
+
 function KanbanColuna({ coluna, fichas, onFichaClick, colIndex }) {
+  const { isOver, setNodeRef } = useDroppable({ id: coluna.id })
+
   return (
     <div
       className="flex flex-col flex-shrink-0 animate-fade-in"
       style={{ width: 'var(--kanban-col-w, 224px)', animationDelay: `${colIndex * 40}ms`, animationFillMode: 'both' }}
     >
+      {/* Header */}
       <div
         className="flex items-center justify-between px-2.5 py-2 rounded-t-xl border border-b-0"
         style={{ background: coluna.color + '18', borderColor: coluna.color + '50' }}
@@ -144,14 +175,20 @@ function KanbanColuna({ coluna, fichas, onFichaClick, colIndex }) {
         </span>
       </div>
 
+      {/* Body — droppable */}
       <div
-        className="kanban-col-body flex-1 space-y-1.5 p-1.5 rounded-b-xl border overflow-y-auto"
-        style={{ borderColor: 'rgb(var(--color-border))', backgroundColor: 'rgb(var(--color-surface2) / 0.4)' }}
+        ref={setNodeRef}
+        className="kanban-col-body flex-1 space-y-1.5 p-1.5 rounded-b-xl border overflow-y-auto transition-colors duration-150"
+        style={{
+          borderColor:     isOver ? coluna.color + '80' : 'rgb(var(--color-border))',
+          backgroundColor: isOver ? coluna.color + '08' : 'rgb(var(--color-surface2) / 0.4)',
+          boxShadow:       isOver ? `inset 0 0 0 2px ${coluna.color}40` : 'none',
+        }}
       >
         {fichas.length === 0 ? (
           <div className="flex items-center justify-center h-14 text-[10px] text-dark-muted/30">Vazia</div>
         ) : fichas.map(f => (
-          <RelatorioCard key={f.id} ficha={f} onClick={() => onFichaClick(f.id)} />
+          <DraggableRelatorioCard key={f.id} ficha={f} onFichaClick={onFichaClick} />
         ))}
       </div>
     </div>
@@ -223,6 +260,7 @@ export default function Relatorio() {
   const navigate                        = useNavigate()
   const { grupos, getAliases } = useImobiliaria()
   const agora                           = new Date()
+  const toast                           = useToast()
 
   const [ano,         setAno]         = useState(agora.getFullYear())
   const [mes,         setMes]         = useState(agora.getMonth() + 1)
@@ -231,6 +269,9 @@ export default function Relatorio() {
   const [mesesDisp,   setMesesDisp]   = useState([agora.getMonth() + 1])
   const [fichas,      setFichas]      = useState([])
   const [loading,     setLoading]     = useState(false)
+  const [activeId,    setActiveId]    = useState(null)
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
   const scrollRef    = useRef(null)
   const [canScrollL, setCanScrollL] = useState(false)
@@ -289,12 +330,46 @@ export default function Relatorio() {
     return () => { el.removeEventListener('scroll', checkScroll); ro.disconnect() }
   }, [loading, imobiliaria])
 
+  // Handler de drag-and-drop — move ficha entre colunas
+  async function handleDragEnd({ active, over }) {
+    setActiveId(null)
+    if (!over) return
+    const fichaId   = active.id
+    const targetCol = over.id
+    const ficha     = fichas.find(f => f.id === fichaId)
+    if (!ficha) return
+    const sourceCol = getColuna(ficha)
+    if (sourceCol === targetCol) return
+    const update = COLUNA_TO_UPDATE[targetCol]
+    if (!update) return
+
+    // Atualização otimista
+    setFichas(prev => prev.map(f => {
+      if (f.id !== fichaId) return f
+      return { ...f, status: update.status, retorno_enviado: update.retorno_enviado }
+    }))
+
+    const { error } = await supabase.from('fichas').update({
+      status: update.status,
+      retorno_enviado: update.retorno_enviado,
+    }).eq('id', fichaId)
+
+    if (error) {
+      toast({ type: 'error', title: 'Erro ao mover ficha' })
+      carregarFichas() // rollback
+    } else {
+      toast({ type: 'success', title: 'Ficha movida' })
+    }
+  }
+
   // Agrupar fichas por coluna
   const colunaMap = Object.fromEntries(COLUNAS.map(c => [c.id, []]))
   fichas.forEach(f => {
     const col = getColuna(f)
     if (col && colunaMap[col]) colunaMap[col].push(f)
   })
+
+  const activeFicha = activeId ? fichas.find(f => f.id === activeId) : null
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -377,19 +452,34 @@ export default function Relatorio() {
               />
             )}
 
-            <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
-              <div className="flex gap-2 min-w-max px-0.5">
-                {COLUNAS.map((col, i) => (
-                  <KanbanColuna
-                    key={col.id}
-                    coluna={col}
-                    fichas={colunaMap[col.id] || []}
-                    onFichaClick={id => navigate(`/fichas/${id}`)}
-                    colIndex={i}
-                  />
-                ))}
+            <DndContext
+              sensors={sensors}
+              onDragStart={({ active }) => setActiveId(active.id)}
+              onDragEnd={handleDragEnd}
+              onDragCancel={() => setActiveId(null)}
+            >
+              <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
+                <div className="flex gap-2 min-w-max px-0.5">
+                  {COLUNAS.map((col, i) => (
+                    <KanbanColuna
+                      key={col.id}
+                      coluna={col}
+                      fichas={colunaMap[col.id] || []}
+                      onFichaClick={id => navigate(`/fichas/${id}`)}
+                      colIndex={i}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+
+              <DragOverlay dropAnimation={null}>
+                {activeFicha && (
+                  <div style={{ width: 'calc(var(--kanban-col-w, 224px) - 12px)' }}>
+                    <RelatorioCard ficha={activeFicha} onClick={() => {}} />
+                  </div>
+                )}
+              </DragOverlay>
+            </DndContext>
           </div>
         </div>
       )}

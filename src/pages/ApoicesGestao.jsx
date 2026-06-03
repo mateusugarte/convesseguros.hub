@@ -741,7 +741,7 @@ export default function ApoicesGestao() {
               </div>
               <DragOverlay dropAnimation={null}>
                 {activeCard && (
-                  <div className="kanban-col">
+                  <div style={{ width: "calc(var(--kanban-col-w, 224px) - 12px)" }}>
                     <ApoliceCard apolice={activeCard} isDragOverlay resolverNome={resolverNome} />
                   </div>
                 )}

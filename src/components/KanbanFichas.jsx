@@ -793,7 +793,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
             <DragOverlay dropAnimation={null}>
               {activeCard && (
-                <div className="kanban-col">
+                <div style={{ width: 'calc(var(--kanban-col-w, 224px) - 12px)' }}>
                   <FichaCard ficha={activeCard} userId={user?.id} onAssumir={() => {}} onFinalizar={() => {}} isDragOverlay resolverNome={resolverNome} />
                 </div>
               )}

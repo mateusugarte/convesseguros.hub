@@ -93,13 +93,17 @@ export async function fetchTopImobiliariasApolices(inicioMes, fimMes, limite = 5
 }
 
 export async function fetchPorSeguradora(inicioMes, fimMes) {
-  let q = supabase.from('apolices').select('seguradora')
-  if (inicioMes) q = q.gte('data_emissao', inicioMes)
-  if (fimMes)    q = q.lte('data_emissao', fimMes)
+  let q = supabase
+    .from('apolices')
+    .select('seguradora')
+    .not('seguradora', 'is', null)
+    .neq('seguradora', '')
+  if (inicioMes) q = q.gte('created_at', inicioMes)
+  if (fimMes)    q = q.lte('created_at', fimMes)
   const { data } = await q
   if (!data) return []
   const cnt = {}
-  data.forEach(a => { const s = a.seguradora || 'Outras'; cnt[s] = (cnt[s] || 0) + 1 })
+  data.forEach(a => { cnt[a.seguradora] = (cnt[a.seguradora] || 0) + 1 })
   return Object.entries(cnt).sort((a, b) => b[1] - a[1]).map(([seguradora, value]) => ({ seguradora, value }))
 }
 

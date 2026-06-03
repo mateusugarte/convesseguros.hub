@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../contexts/ToastContext'
 import { ArrowLeft, Pencil, X, Check, Plus } from 'lucide-react'
+import { fetchCodigos, fetchSeguradoras, upsertCodigo, deletarCodigo } from '../lib/imobiliariasCodigos'
 
 // ── Campo editável inline ─────────────────────────────────────────────────────
 
@@ -83,6 +84,12 @@ export default function ImobiliariaDetalhe() {
   const [addingAlias, setAddingAlias] = useState(false)
   const [confirmDel,  setConfirmDel]  = useState(null)
 
+  // Códigos por seguradora
+  const [codigos,     setCodigos]     = useState([])
+  const [seguradoras, setSeguradoras] = useState([])
+  const [novoCodigo,  setNovoCodigo]  = useState({ seguradora_id: '', codigo: '' })
+  const [salvandoCod, setSalvandoCod] = useState(false)
+
   const carregar = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase
@@ -95,6 +102,13 @@ export default function ImobiliariaDetalhe() {
   }, [id])
 
   useEffect(() => { carregar() }, [carregar])
+
+  // Carrega códigos e seguradoras quando id estiver disponível
+  useEffect(() => {
+    if (!id) return
+    fetchCodigos(id).then(setCodigos)
+    fetchSeguradoras().then(setSeguradoras)
+  }, [id])
 
   async function updateField(field, value) {
     const { error } = await supabase.from('imobiliarias').update({ [field]: value }).eq('id', id)
@@ -298,6 +312,68 @@ export default function ImobiliariaDetalhe() {
               <div className="flex justify-between">
                 <span className="text-dark-muted">Variações</span>
                 <span className="text-dark-text font-semibold">{aliases.length}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Código por Seguradora ── */}
+          <div className="card p-5 space-y-4">
+            <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider pb-2 border-b border-dark-border">
+              Código por Seguradora
+            </p>
+            <div className="space-y-1">
+              {codigos.length === 0 && (
+                <p className="text-xs text-dark-muted/50 text-center py-3">Nenhum código cadastrado</p>
+              )}
+              {codigos.map(c => (
+                <div key={c.id} className="flex items-center justify-between gap-3 py-1.5 border-b border-dark-border/50 last:border-0">
+                  <span className="text-xs text-dark-text">{c.seguradoras?.nome_canonico || '—'}</span>
+                  <span className="text-xs font-mono text-dark-muted">{c.codigo}</span>
+                  <button
+                    onClick={async () => {
+                      const err = await deletarCodigo(c.id)
+                      if (!err) setCodigos(prev => prev.filter(x => x.id !== c.id))
+                    }}
+                    className="text-status-danger/60 hover:text-status-danger transition-colors text-xs flex-shrink-0"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col gap-2">
+              <select
+                value={novoCodigo.seguradora_id}
+                onChange={e => setNovoCodigo(p => ({ ...p, seguradora_id: e.target.value }))}
+                className="select text-sm w-full"
+              >
+                <option value="">Seguradora...</option>
+                {seguradoras.map(s => <option key={s.id} value={s.id}>{s.nome_canonico}</option>)}
+              </select>
+              <div className="flex gap-2">
+                <input
+                  value={novoCodigo.codigo}
+                  onChange={e => setNovoCodigo(p => ({ ...p, codigo: e.target.value }))}
+                  onKeyDown={e => e.key === 'Enter' && novoCodigo.seguradora_id && novoCodigo.codigo.trim() && document.getElementById('btn-add-codigo')?.click()}
+                  placeholder="Código"
+                  className="input text-sm flex-1"
+                />
+                <button
+                  id="btn-add-codigo"
+                  onClick={async () => {
+                    if (!novoCodigo.seguradora_id || !novoCodigo.codigo.trim()) return
+                    setSalvandoCod(true)
+                    await upsertCodigo(id, novoCodigo.seguradora_id, novoCodigo.codigo.trim())
+                    const fresh = await fetchCodigos(id)
+                    setCodigos(fresh)
+                    setNovoCodigo({ seguradora_id: '', codigo: '' })
+                    setSalvandoCod(false)
+                  }}
+                  disabled={!novoCodigo.seguradora_id || !novoCodigo.codigo.trim() || salvandoCod}
+                  className="btn-primary text-sm px-3"
+                >
+                  {salvandoCod ? '...' : 'Add'}
+                </button>
               </div>
             </div>
           </div>

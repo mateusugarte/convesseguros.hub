@@ -31,20 +31,23 @@ function TimeBadge({ since }) {
 export default function MinhasFichas() {
   const { user, profile } = useAuth()
   const toast = useToast()
+  const agora = new Date()
   const [tab,          setTab]          = useState('abertas')
   const [finalizar,    setFinalizar]    = useState(null)
   const [detalhe,      setDetalhe]      = useState(null)
   const [editar,       setEditar]       = useState(null)
   const [editarLoading, setEditarLoading] = useState(false)
+  const [filtroAno,    setFiltroAno]    = useState(agora.getFullYear())
+  const [filtroMes,    setFiltroMes]    = useState(agora.getMonth() + 1)
 
   const queryClient = useQueryClient()
   const avatarColor = stringColor(profile?.nome || '')
 
   const { data: fichasData, isLoading } = useQuery({
-    queryKey: ['minhas-fichas', user?.id],
+    queryKey: ['minhas-fichas', user?.id, filtroAno, filtroMes],
     queryFn: () => Promise.all([
       fetchFichasDoOrcamentista(user.id),
-      fetchFichas({ tipo: 'passadas_por_mim', orcamentistaId: user.id, pageSize: 500 }),
+      fetchFichas({ tipo: 'passadas_por_mim', orcamentistaId: user.id, pageSize: 500, ano: filtroAno, mes: filtroMes }),
     ]).then(([ab, { data }]) => ({ abertas: ab, passadas: data })),
     enabled: !!user?.id,
   })
@@ -72,6 +75,8 @@ export default function MinhasFichas() {
     emitidas:       passadas.filter(f => f.status === 'emitido').length,
     taxaAprovacao:  passadas.length ? Math.round((passadas.filter(f => f.status === 'aprovado').length / passadas.length) * 100) : 0,
   }
+
+  const MESES_PASSADAS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -136,6 +141,19 @@ export default function MinhasFichas() {
             </button>
           ))}
         </div>
+
+        {/* Filtro mês/ano — visível apenas na aba de fichas passadas */}
+        {tab === 'passadas' && (
+          <div className="flex items-center gap-2 px-4 pt-3 mb-1">
+            <span className="text-xs text-dark-muted">Período:</span>
+            <select value={filtroMes} onChange={e => setFiltroMes(Number(e.target.value))} className="select py-1 text-xs" style={{ minWidth: '76px' }}>
+              {MESES_PASSADAS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
+            </select>
+            <select value={filtroAno} onChange={e => setFiltroAno(Number(e.target.value))} className="select py-1 text-xs" style={{ minWidth: '70px' }}>
+              {[agora.getFullYear(), agora.getFullYear()-1].map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+        )}
 
         {isLoading ? (
           <TableSkeleton rows={6} cols={tab === 'abertas' ? 5 : 6} />

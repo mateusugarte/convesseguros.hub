@@ -252,6 +252,9 @@ export default function ApoliceDetalhe() {
                 <ReadField label="Celular"  value={ficha.celular} />
                 <ReadField label="Produto"  value={PRODUTO_LABELS[ficha.produto] || ficha.produto} />
                 <ReadField label="Imobiliária" value={resolverNome(apolice.imobiliaria)} />
+                {apolice.profiles?.nome && (
+                  <ReadField label="Emissor" value={apolice.profiles.nome} />
+                )}
               </div>
             </div>
           )}

@@ -262,7 +262,7 @@ export default function ApolicesLista() {
             <table className="w-full text-sm">
               <thead className="bg-dark-surface2/80 border-b border-dark-border">
                 <tr>
-                  {['Data Emissão','Imobiliária','Locatário','Apólice','Seguradora','Status','Parcela',''].map(h => (
+                  {['Data Emissão','Imobiliária','Locatário','Apólice','Seguradora','Status','Parcela','Emissor',''].map(h => (
                     <th key={h} className="th whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -277,6 +277,7 @@ export default function ApolicesLista() {
                     <td className="td text-dark-muted text-xs">{a.seguradora || '—'}</td>
                     <td className="td"><StatusBadge status={a.status_emissao} /></td>
                     <td className="td font-mono text-xs">{a.valor_parcela ? fmtBRL(a.valor_parcela) : '—'}</td>
+                    <td className="td text-dark-muted text-xs">{a.profiles?.nome?.split(' ')[0] || '—'}</td>
                     <td className="td" onClick={e => e.stopPropagation()}>
                       <button onClick={() => navigate(`/apolices/${a.id}`)}
                               className="text-xs px-2 py-1 rounded border border-dark-border text-dark-muted hover:text-dark-text transition-colors">

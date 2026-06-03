@@ -67,6 +67,8 @@ function produtoApolice(apolice) {
 // ── Card ──────────────────────────────────────────────────────────────────────
 
 function ApoliceCard({ apolice, isDragOverlay = false, resolverNome }) {
+  const [expandido, setExpandido] = useState(false)
+
   const prod     = produtoApolice(apolice)
   const ProdIcon = PRODUTO_ICON[prod] || LayoutGrid
   const pColor   = PRODUTO_COLOR[prod] || '#6B7280'
@@ -113,6 +115,42 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome }) {
           </span>
         )}
       </div>
+
+      {/* Emissor */}
+      {apolice.profiles?.nome && (
+        <p className="text-[9px] text-dark-muted truncate">
+          Emissor: {apolice.profiles.nome.split(' ')[0]}
+        </p>
+      )}
+
+      {/* Botão expandir (M2) */}
+      {!isDragOverlay && (
+        <button
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); setExpandido(v => !v) }}
+          className="w-full text-[9px] text-dark-muted hover:text-dark-text transition-colors pt-1 border-t border-dark-border/50 flex items-center justify-center gap-1"
+        >
+          {expandido ? '▲ Menos' : '▼ Detalhes'}
+        </button>
+      )}
+
+      {/* Seção expansível (M2) */}
+      {expandido && !isDragOverlay && (
+        <div className="space-y-0.5 pt-1 animate-fade-in">
+          {apolice.fichas?.celular && (
+            <p className="text-[9px] text-dark-muted">Tel: {apolice.fichas.celular}</p>
+          )}
+          {apolice.fichas?.tipo_imovel && (
+            <p className="text-[9px] text-dark-muted">Imóvel: {apolice.fichas.tipo_imovel}</p>
+          )}
+          {apolice.fichas?.cep && (
+            <p className="text-[9px] text-dark-muted font-mono">CEP: {apolice.fichas.cep}</p>
+          )}
+          {apolice.valor_parcela && (
+            <p className="text-[9px] text-dark-muted">Parcela: R$ {parseFloat(apolice.valor_parcela).toFixed(2)}</p>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -171,6 +209,7 @@ function DroppableColumn({ col, apolices, onDetalhe, resolverNome, colIndex }) {
 
 function ModalIniciarEmissao({ onClose, onCriado, toast }) {
   const { grupos, getAliases } = useImobiliaria()
+  const { user } = useAuth()
   const [imobFiltro,        setImobFiltro]        = useState('')
   const [busca,             setBusca]             = useState('')
   const [fichasEncontradas, setFichasEncontradas] = useState([])
@@ -221,6 +260,8 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
       numero_proposta:  numeroOrcamento.trim() || null,
       valor_parcela:    valorParcela.trim() || null,
       endereco:         endereco.trim() || null,
+      // Emissor: usuário logado que iniciou a emissão
+      emitido_por:      user?.id || null,
       // Defaults obrigatórios no banco enquanto migração 09 não for rodada
       numero_apolice:   '',
       seguradora:       'Outras',

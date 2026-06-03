@@ -60,7 +60,7 @@ export function DashboardSkeleton() {
 
 export function PageSkeleton() {
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-6 space-y-5" style={{ minHeight: '100vh' }}>
       <div className="h-7 w-44 bg-dark-border/40 rounded animate-pulse" />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (

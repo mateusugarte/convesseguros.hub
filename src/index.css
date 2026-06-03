@@ -27,11 +27,11 @@
   --shadow-lg:    0 8px 30px rgba(0,0,0,0.12);
 
   /* Glass — light */
-  --glass-bg:              rgba(255, 255, 255, 0.18);
-  --glass-bg-hover:        rgba(255, 255, 255, 0.28);
-  --glass-bg-active:       rgba(255, 255, 255, 0.38);
-  --glass-bg-heavy:        rgba(255, 255, 255, 0.30);
-  --glass-bg-strong:       rgba(255, 255, 255, 0.30);
+  --glass-bg:              rgba(255, 255, 255, 0.35);
+  --glass-bg-hover:        rgba(255, 255, 255, 0.48);
+  --glass-bg-active:       rgba(255, 255, 255, 0.58);
+  --glass-bg-heavy:        rgba(255, 255, 255, 0.55);
+  --glass-bg-strong:       rgba(255, 255, 255, 0.50);
   --glass-border:          rgba(255, 255, 255, 0.45);
   --glass-border-subtle:   rgba(255, 255, 255, 0.25);
   --glass-shadow:          0 8px 32px rgba(0,80,160,0.18), 0 2px 8px rgba(0,80,160,0.10);
@@ -99,6 +99,14 @@ html.dark {
   --nav-icon-opacity: 0.80;
   --input-placeholder: rgba(150, 185, 255, 0.45);
   --divider-color: rgba(100, 150, 255, 0.15);
+}
+
+/* Fallback background — prevents white flash before wallpaper loads */
+html {
+  background: #eef3ff;
+}
+html.dark {
+  background: #060c1a;
 }
 
 @layer base {
@@ -179,6 +187,7 @@ html.dark {
     border: 1px solid var(--glass-border);
     border-radius: 16px;
     box-shadow: var(--glass-shadow), var(--glass-inset);
+    color: var(--glass-text-primary);
     transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
   }
   .card:hover {
@@ -192,7 +201,7 @@ html.dark {
     border: 1px solid var(--glass-border);
     border-radius: 16px;
     box-shadow: var(--glass-shadow), var(--glass-inset);
-    color: inherit;
+    color: var(--glass-text-primary);
     transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   }
   .glass:hover {
@@ -200,34 +209,58 @@ html.dark {
     box-shadow: var(--glass-shadow-deep), var(--glass-inset);
   }
   .card-hover {
-    @apply bg-dark-surface border border-dark-border rounded-xl
-           transition-all duration-200 cursor-pointer;
-    box-shadow: var(--shadow-sm);
+    @apply rounded-xl transition-all duration-200 cursor-pointer;
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
   }
   .card-hover:hover {
-    @apply border-brand-accent/40;
-    box-shadow: var(--shadow-hover);
+    background: var(--glass-bg-hover);
+    border-color: rgba(43, 91, 168, 0.30);
+    box-shadow: var(--glass-shadow-deep), var(--glass-inset);
     transform: translateY(-1px);
   }
   .card-hover:active {
     transform: translateY(0);
-    box-shadow: var(--shadow-sm);
   }
 
   /* ── Form inputs ──────────────────────────────────────────────────────────── */
   .input {
-    @apply w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2
-           text-sm text-dark-text placeholder-dark-muted outline-none
-           focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20
+    @apply w-full rounded-lg px-3 py-2
+           text-sm outline-none
+           focus:ring-2 focus:ring-brand-accent/20
            transition-all duration-150;
-    font-size: max(14px, 16px); /* min 16px on mobile — prevents iOS zoom */
+    background: var(--glass-bg-heavy);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    color: var(--glass-text-primary);
+    font-size: max(14px, 16px);
+  }
+  .input:focus {
+    border-color: rgba(43, 91, 168, 0.60);
+    box-shadow: 0 0 0 3px rgba(43, 91, 168, 0.15);
+  }
+  .input::placeholder {
+    color: var(--glass-text-muted);
   }
   .select {
-    @apply w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2
-           text-sm text-dark-text outline-none appearance-none
-           focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20
+    @apply w-full rounded-lg px-3 py-2
+           text-sm outline-none appearance-none
+           focus:ring-2 focus:ring-brand-accent/20
            transition-all duration-150;
-    font-size: max(14px, 16px); /* min 16px on mobile — prevents iOS zoom */
+    background: var(--glass-bg-heavy);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    color: var(--glass-text-primary);
+    font-size: max(14px, 16px);
+  }
+  .select:focus {
+    border-color: rgba(43, 91, 168, 0.60);
+    box-shadow: 0 0 0 3px rgba(43, 91, 168, 0.15);
   }
 
   /* ── Badges ───────────────────────────────────────────────────────────────── */
@@ -516,4 +549,32 @@ html.dark textarea::placeholder {
 }
 html.dark .border-dark-border {
   border-color: rgba(100, 150, 255, 0.18) !important;
+}
+
+/* ── Light mode — nav visibility ──────────────────────────────────────── */
+html:not(.dark) .nav-item-inactive {
+  color: rgba(8, 20, 50, 0.65) !important;
+}
+html:not(.dark) .nav-item-inactive:hover {
+  color: rgba(8, 20, 50, 0.90) !important;
+  background: rgba(8, 20, 50, 0.06) !important;
+}
+html:not(.dark) .nav-item-active {
+  color: #1d4ed8 !important;
+  background: rgba(29, 78, 216, 0.10) !important;
+}
+html:not(.dark) .text-dark-muted {
+  color: rgba(8, 20, 50, 0.55);
+}
+html:not(.dark) .btn-ghost {
+  color: rgba(8, 20, 50, 0.65);
+}
+html:not(.dark) .btn-ghost:hover {
+  color: rgba(8, 20, 50, 0.90);
+  background: rgba(8, 20, 50, 0.06);
+}
+html:not(.dark) input::placeholder,
+html:not(.dark) textarea::placeholder {
+  color: rgba(8, 20, 50, 0.35) !important;
+  opacity: 1;
 }

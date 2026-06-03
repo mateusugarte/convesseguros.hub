@@ -1,13 +1,16 @@
 import { useLocation } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export function PageTransition({ children }) {
   const location = useLocation()
-  const [visible, setVisible] = useState(true)
+  const [visible, setVisible] = useState(false)
+  const prevPath = useRef(null)
 
   useEffect(() => {
+    if (prevPath.current === location.pathname) return
+    prevPath.current = location.pathname
     setVisible(false)
-    const t = setTimeout(() => setVisible(true), 20)
+    const t = setTimeout(() => setVisible(true), 16)
     return () => clearTimeout(t)
   }, [location.pathname])
 
@@ -15,9 +18,8 @@ export function PageTransition({ children }) {
     <div
       style={{
         opacity:    visible ? 1 : 0,
-        transform:  visible ? 'translateY(0)' : 'translateY(6px)',
-        transition: 'opacity 180ms ease, transform 180ms ease',
-        willChange: 'opacity, transform',
+        transform:  visible ? 'translateY(0)' : 'translateY(8px)',
+        transition: 'opacity 200ms ease, transform 200ms ease',
       }}
     >
       {children}

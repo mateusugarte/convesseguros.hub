@@ -486,18 +486,19 @@ export async function fetchImobiliariasRelatorio(ano, mes) {
 }
 
 export async function fetchFichasRelatorio(ano, mes, imobiliarias) {
-  // imobiliarias: string[] — aliases da imobiliária canônica selecionada
+  // imobiliarias: string[] — aliases da imobiliária canônica; null/[] carrega todas
   const inicio = new Date(ano, mes - 1, 1).toISOString()
   const fim    = new Date(ano, mes, 0, 23, 59, 59).toISOString()
-  const lista  = Array.isArray(imobiliarias) ? imobiliarias : [imobiliarias]
-  const { data } = await supabase
+  const lista  = Array.isArray(imobiliarias) && imobiliarias.length ? imobiliarias : null
+  let q = supabase
     .from('fichas')
     .select('id, nome_interessado, nome_empresa, cpf, cnpj, imobiliaria, status, produto, created_at, retorno_enviado, orcamentista_forms, valor_aluguel, numero_apolice, data_emissao')
     .gte('created_at', inicio)
     .lte('created_at', fim)
-    .in('imobiliaria', lista)
     .in('status', STATUS_RELATORIO)
     .order('created_at', { ascending: false })
+  if (lista) q = q.in('imobiliaria', lista)
+  const { data } = await q
   return data || []
 }
 

@@ -373,6 +373,19 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                     <span className="text-[10px] text-dark-muted">·</span>
                     <span className="text-[10px] text-dark-muted truncate">{f.imobiliaria}</span>
                   </div>
+                  {(f.numero_apolice || f.cep) && (
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {f.numero_apolice && (
+                        <span className="text-[10px] font-mono font-semibold" style={{ color: '#2B5BA8' }}>
+                          Orç: {f.numero_apolice}
+                        </span>
+                      )}
+                      {f.numero_apolice && f.cep && <span className="text-[10px] text-dark-muted">·</span>}
+                      {f.cep && (
+                        <span className="text-[10px] text-dark-muted font-mono">CEP: {f.cep}</span>
+                      )}
+                    </div>
+                  )}
                 </button>
               ))}
             </div>

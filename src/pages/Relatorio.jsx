@@ -15,19 +15,21 @@ const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho
 const MESES_ABBR = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
 const COLUNAS = [
-  { id: 'aprovada',         label: 'Aprovada',             color: '#10B981' },
-  { id: 'emitida',          label: 'Emitida',              color: '#1A3A6B' },
-  { id: 'enviado_cobranca', label: 'Enviado Cobrança',     color: '#2B5BA8' },
-  { id: 'desistiu',         label: 'Desistiu da Locação',  color: '#F59E0B' },
-  { id: 'expirada',         label: 'Expirada',             color: '#6B7280' },
+  { id: 'aprovada',         label: 'Aprovada',                color: '#10B981' },
+  { id: 'emitida',          label: 'Emitida',                 color: '#1A3A6B' },
+  { id: 'enviado_cobranca', label: 'Enviado Cobrança',        color: '#2B5BA8' },
+  { id: 'recuperados',      label: 'RECUPERADOS (emitidas)',  color: '#7C3AED' },
+  { id: 'desistiu',         label: 'Desistiu da Locação',     color: '#F59E0B' },
+  { id: 'expirada',         label: 'Expirada',                color: '#6B7280' },
 ]
 
 function getColuna(ficha) {
-  if (ficha.status === 'aprovado')                            return 'aprovada'
-  if (ficha.status === 'emitido' && ficha.retorno_enviado)    return 'enviado_cobranca'
-  if (ficha.status === 'emitido' && !ficha.retorno_enviado)   return 'emitida'
-  if (ficha.status === 'cancelado')                           return 'desistiu'
-  if (ficha.status === 'expirada')                            return 'expirada'
+  if (ficha.status === 'aprovado')                                                          return 'aprovada'
+  if (ficha.status === 'emitido' && ficha.numero_apolice)                                   return 'recuperados'
+  if (ficha.status === 'emitido' && ficha.retorno_enviado && !ficha.numero_apolice)          return 'enviado_cobranca'
+  if (ficha.status === 'emitido' && !ficha.retorno_enviado && !ficha.numero_apolice)         return 'emitida'
+  if (ficha.status === 'cancelado')                                                          return 'desistiu'
+  if (ficha.status === 'expirada')                                                           return 'expirada'
   return null
 }
 
@@ -159,18 +161,22 @@ function KanbanColuna({ coluna, fichas, onFichaClick, colIndex }) {
 // ── Métricas ──────────────────────────────────────────────────────────────────
 
 function Metricas({ fichas }) {
-  const totalAprovadas = fichas.filter(f => f.status === 'aprovado' || f.status === 'emitido').length
-  const totalEmitidas  = fichas.filter(f => f.status === 'emitido').length
-  const taxaEmissao    = totalAprovadas > 0 ? ((totalEmitidas / totalAprovadas) * 100).toFixed(1) : '0.0'
-  const semApolice     = fichas.filter(f => f.status === 'aprovado' && !f.numero_apolice).length
+  const totalAprovadas   = fichas.filter(f => f.status === 'aprovado' || f.status === 'emitido').length
+  const totalEmitidas    = fichas.filter(f => f.status === 'emitido').length
+  const totalRecuperados = fichas.filter(f => f.status === 'emitido' && f.numero_apolice).length
+  const taxaRecuperacao  = totalAprovadas > 0 ? ((totalRecuperados / totalAprovadas) * 100).toFixed(1) : '0.0'
+  const desistiram       = fichas.filter(f => f.status === 'cancelado').length
+  const pendentesEmissao = fichas.filter(f => f.status === 'aprovado').length
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
       {[
-        { label: 'Total aprovadas',   val: totalAprovadas,     color: '#10B981', sub: 'fichas aprovadas' },
-        { label: 'Apólices emitidas', val: totalEmitidas,      color: '#2B5BA8', sub: 'status emitido'   },
-        { label: 'Taxa de emissão',   val: `${taxaEmissao}%`,  color: '#4A90D9', sub: 'emitidas / aprovadas' },
-        { label: 'Sem apólice',       val: semApolice,         color: '#F59E0B', sub: 'aprovadas s/ emitir' },
+        { label: 'Total no período',    val: fichas.length,         color: '#6B7280', sub: 'fichas finalizadas'    },
+        { label: 'Aprovadas',           val: totalAprovadas,        color: '#10B981', sub: 'aprovado + emitido'    },
+        { label: 'Aguardando emissão',  val: pendentesEmissao,      color: '#1A3A6B', sub: 'aprovado s/ apólice'   },
+        { label: 'Apólices emitidas',   val: totalEmitidas,         color: '#2B5BA8', sub: 'status emitido'        },
+        { label: 'RECUPERADOS',         val: totalRecuperados,      color: '#7C3AED', sub: 'emitidas c/ n° apólice' },
+        { label: 'Taxa recuperação',    val: `${taxaRecuperacao}%`, color: '#4A90D9', sub: 'recuperados / aprovadas' },
       ].map(({ label, val, color, sub }) => (
         <div key={label} className="card p-4">
           <p className="text-xs text-dark-muted mb-1">{label}</p>
@@ -215,7 +221,7 @@ function MesPicker({ mes, mesesDisp, onMes }) {
 
 export default function Relatorio() {
   const navigate                        = useNavigate()
-  const { resolverNome, grupos, getAliases } = useImobiliaria()
+  const { grupos, getAliases } = useImobiliaria()
   const agora                           = new Date()
 
   const [ano,         setAno]         = useState(agora.getFullYear())
@@ -247,21 +253,18 @@ export default function Relatorio() {
     })
   }, [ano])
 
-  // Resetar imobiliária selecionada ao mudar período
-  useEffect(() => {
-    setImobiliaria('')
-    setFichas([])
-  }, [ano, mes])
-
   // Ref estável para getAliases — evita re-criar carregarFichas a cada render do hook
   const getAliasesRef = useRef(getAliases)
   getAliasesRef.current = getAliases
 
   const carregarFichas = useCallback(async () => {
-    if (!imobiliaria) return
     setLoading(true)
-    const aliases = await getAliasesRef.current(imobiliaria)
-    const data = await fetchFichasRelatorio(ano, mes, aliases.length ? aliases : [imobiliaria])
+    let aliases = null
+    if (imobiliaria) {
+      aliases = await getAliasesRef.current(imobiliaria)
+      if (!aliases.length) aliases = [imobiliaria]
+    }
+    const data = await fetchFichasRelatorio(ano, mes, aliases)
     setFichas(data)
     setLoading(false)
   }, [ano, mes, imobiliaria])
@@ -293,8 +296,6 @@ export default function Relatorio() {
     if (col && colunaMap[col]) colunaMap[col].push(f)
   })
 
-  const nomeImob = imobiliaria
-
   return (
     <div className="space-y-5 animate-fade-in">
 
@@ -320,94 +321,77 @@ export default function Relatorio() {
           {/* Meses */}
           <MesPicker mes={mes} mesesDisp={mesesDisp} onMes={m => { setMes(m); setImobiliaria('') }} />
 
-          {/* Imobiliária — apenas nomes mapeados */}
+          {/* Imobiliária */}
           <select
             value={imobiliaria}
             onChange={e => setImobiliaria(e.target.value)}
             className="select text-sm py-1.5"
             style={{ minWidth: '220px' }}
           >
-            <option value="">Selecione a imobiliária...</option>
+            <option value="">Todas as imobiliárias</option>
             {grupos.map(g => (
               <option key={g.id} value={g.nome_canonico}>{g.nome_canonico}</option>
             ))}
           </select>
         </div>
 
-        {imobiliaria && (
-          <p className="text-xs text-dark-muted">
-            <span className="font-medium text-dark-text">{nomeImob}</span>
-            {' '}· {MESES_FULL[mes - 1]} {ano}
-          </p>
-        )}
+        <p className="text-xs text-dark-muted">
+          <span className="font-medium text-dark-text">{imobiliaria || 'Todas as imobiliárias'}</span>
+          {' '}· {MESES_FULL[mes - 1]} {ano}
+        </p>
       </div>
 
-      {/* ── Estado vazio — sem imobiliária selecionada ── */}
-      {!imobiliaria && (
-        <div className="flex flex-col items-center justify-center py-24 gap-4 text-dark-muted animate-fade-in">
-          <div className="w-16 h-16 rounded-2xl bg-brand-accent/10 flex items-center justify-center">
-            <BarChart2 className="w-8 h-8 text-brand-accent/50" />
-          </div>
-          <div className="text-center">
-            <p className="text-sm font-medium text-dark-text mb-1">Selecione uma imobiliária</p>
-            <p className="text-xs text-dark-muted max-w-xs">
-              Escolha o ano, mês e imobiliária nos filtros acima para visualizar o relatório
-            </p>
-          </div>
+      {/* ── Conteúdo ── */}
+      {loading ? (
+        <div className="flex items-center justify-center h-48 gap-2 text-dark-muted text-sm">
+          <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          Carregando fichas...
         </div>
-      )}
+      ) : fichas.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-2 text-dark-muted">
+          <BarChart2 className="w-8 h-8 opacity-30" />
+          <p className="text-sm">
+            Nenhuma ficha encontrada para {imobiliaria || 'todas as imobiliárias'} em {MESES_FULL[mes - 1]} {ano}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Métricas */}
+          <Metricas fichas={fichas} />
 
-      {/* ── Conteúdo após selecionar imobiliária ── */}
-      {imobiliaria && (
-        loading ? (
-          <div className="flex items-center justify-center h-48 gap-2 text-dark-muted text-sm">
-            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
-            Carregando fichas...
-          </div>
-        ) : fichas.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-2 text-dark-muted">
-            <BarChart2 className="w-8 h-8 opacity-30" />
-            <p className="text-sm">Nenhuma ficha encontrada para {nomeImob} em {MESES_FULL[mes - 1]} {ano}</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Métricas */}
-            <Metricas fichas={fichas} />
+          {/* Kanban */}
+          <div className="relative">
+            {canScrollL && (
+              <div
+                className="absolute left-0 top-0 bottom-4 w-12 z-10 pointer-events-none"
+                style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }}
+              />
+            )}
+            {canScrollR && (
+              <div
+                className="absolute right-0 top-0 bottom-4 w-12 z-10 pointer-events-none"
+                style={{ background: 'linear-gradient(to left, rgb(var(--color-bg)), transparent)' }}
+              />
+            )}
 
-            {/* Kanban */}
-            <div className="relative">
-              {canScrollL && (
-                <div
-                  className="absolute left-0 top-0 bottom-4 w-12 z-10 pointer-events-none"
-                  style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }}
-                />
-              )}
-              {canScrollR && (
-                <div
-                  className="absolute right-0 top-0 bottom-4 w-12 z-10 pointer-events-none"
-                  style={{ background: 'linear-gradient(to left, rgb(var(--color-bg)), transparent)' }}
-                />
-              )}
-
-              <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
-                <div className="flex gap-2 min-w-max px-0.5">
-                  {COLUNAS.map((col, i) => (
-                    <KanbanColuna
-                      key={col.id}
-                      coluna={col}
-                      fichas={colunaMap[col.id] || []}
-                      onFichaClick={id => navigate(`/fichas/${id}`)}
-                      colIndex={i}
-                    />
-                  ))}
-                </div>
+            <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
+              <div className="flex gap-2 min-w-max px-0.5">
+                {COLUNAS.map((col, i) => (
+                  <KanbanColuna
+                    key={col.id}
+                    coluna={col}
+                    fichas={colunaMap[col.id] || []}
+                    onFichaClick={id => navigate(`/fichas/${id}`)}
+                    colIndex={i}
+                  />
+                ))}
               </div>
             </div>
           </div>
-        )
+        </div>
       )}
     </div>
   )

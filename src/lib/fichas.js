@@ -330,7 +330,7 @@ export async function fetchFichasKanban({ produto, dateFrom, dateTo }) {
   })
 }
 
-export async function fetchKPIsVisaoGeral() {
+export async function fetchKPIsVisaoGeral(inicioFiltro, fimFiltro) {
   const agora = new Date()
   const inicioHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate()).toISOString()
   const inicioSemana = (() => {
@@ -341,13 +341,20 @@ export async function fetchKPIsVisaoGeral() {
   const inicioMesAnterior = new Date(agora.getFullYear(), agora.getMonth() - 1, 1).toISOString()
   const fimMesAnterior = new Date(agora.getFullYear(), agora.getMonth(), 0, 23, 59, 59).toISOString()
 
+  // Aplica filtro de período nas queries quando fornecido
+  const applyRange = (q) => {
+    if (inicioFiltro) q = q.gte('created_at', inicioFiltro)
+    if (fimFiltro)    q = q.lte('created_at', fimFiltro)
+    return q
+  }
+
   const results = await Promise.all([
-    supabase.from('fichas').select('*', { count: 'exact', head: true }).gte('created_at', inicioMes),
-    supabase.from('fichas').select('*', { count: 'exact', head: true }).gte('created_at', inicioMesAnterior).lte('created_at', fimMesAnterior),
-    supabase.from('fichas').select('*', { count: 'exact', head: true }).gte('created_at', inicioHoje),
-    supabase.from('fichas').select('*', { count: 'exact', head: true }).gte('created_at', inicioSemana),
-    supabase.from('fichas').select('*', { count: 'exact', head: true }).eq('status', 'pendente'),
-    supabase.from('fichas').select('*', { count: 'exact', head: true }).eq('status', 'em_cotacao'),
+    applyRange(supabase.from('fichas').select('*', { count: 'exact', head: true })),
+    applyRange(supabase.from('fichas').select('*', { count: 'exact', head: true })).gte('created_at', inicioMesAnterior).lte('created_at', fimMesAnterior),
+    applyRange(supabase.from('fichas').select('*', { count: 'exact', head: true })).gte('created_at', inicioHoje),
+    applyRange(supabase.from('fichas').select('*', { count: 'exact', head: true })).gte('created_at', inicioSemana),
+    applyRange(supabase.from('fichas').select('*', { count: 'exact', head: true })).eq('status', 'pendente'),
+    applyRange(supabase.from('fichas').select('*', { count: 'exact', head: true })).eq('status', 'em_cotacao'),
   ])
 
   const [totalMes, totalMesAnterior, hoje, semana, pendentes, emCotacao] = results.map(r => r.count || 0)

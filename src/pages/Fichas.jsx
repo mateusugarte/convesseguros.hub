@@ -200,19 +200,26 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
   const [statusDist, setStatusDist] = useState([])
   const [fichasPorDia, setDia]    = useState([])
 
-  const mesLabel = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' })
+  // Filtro de período — padrão = mês/ano atual
+  const now = new Date()
+  const [filtroAno, setFiltroAno] = useState(now.getFullYear())
+  const [filtroMes, setFiltroMes] = useState(now.getMonth() + 1)
+  const inicioFiltro = new Date(filtroAno, filtroMes - 1, 1).toISOString()
+  const fimFiltro    = new Date(filtroAno, filtroMes, 0, 23, 59, 59).toISOString()
+
+  const mesLabel = new Date(filtroAno, filtroMes - 1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })
 
   useEffect(() => {
     Promise.all([
-      fetchKPIsVisaoGeral(),
-      fetchDistribuicaoStatus(),
+      fetchKPIsVisaoGeral(inicioFiltro, fimFiltro),
+      fetchDistribuicaoStatus(inicioFiltro, fimFiltro),
       fetchFichasPorDia(14),
     ]).then(([k, d, f]) => {
       setKpis(k)
       setStatusDist(d)
       setDia(f)
     })
-  }, [])
+  }, [inicioFiltro, fimFiltro])
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -223,7 +230,16 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
           <h1 className="text-lg font-bold text-dark-text">Fichas</h1>
           <p className="text-xs text-dark-muted mt-0.5 capitalize">Visão geral · {mesLabel}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {/* Seletor mês/ano para os KPIs */}
+          <div className="flex items-center gap-2">
+            <select value={filtroMes} onChange={e => setFiltroMes(Number(e.target.value))} className="select py-1 text-xs" style={{ minWidth: '76px' }}>
+              {MESES_ABBR.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
+            </select>
+            <select value={filtroAno} onChange={e => setFiltroAno(Number(e.target.value))} className="select py-1 text-xs" style={{ minWidth: '70px' }}>
+              {[now.getFullYear(), now.getFullYear()-1, now.getFullYear()-2].map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
           <Link to="/minhas-fichas"
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors">
             <UserSquare2 className="w-3.5 h-3.5" />

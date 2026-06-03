@@ -18,8 +18,9 @@ export function PageTransition({ children }) {
     <div
       style={{
         opacity:    visible ? 1 : 0,
-        transform:  visible ? 'translateY(0)' : 'translateY(8px)',
-        transition: 'opacity 200ms ease, transform 200ms ease',
+        transform:  visible ? 'none' : 'translateY(8px)',
+        transition: 'opacity 200ms ease-out, transform 200ms ease-out',
+        willChange: visible ? 'auto' : 'opacity, transform',
       }}
     >
       {children}

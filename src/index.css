@@ -34,8 +34,8 @@
   --glass-bg-strong:       rgba(255, 255, 255, 0.50);
   --glass-border:          rgba(255, 255, 255, 0.45);
   --glass-border-subtle:   rgba(255, 255, 255, 0.25);
-  --glass-shadow:          0 8px 32px rgba(0,80,160,0.18), 0 2px 8px rgba(0,80,160,0.10);
-  --glass-shadow-deep:     0 16px 48px rgba(0,80,160,0.25), 0 4px 16px rgba(0,80,160,0.15);
+  --glass-shadow:      0 1px 2px rgba(0,0,0,0.08), 0 8px 24px rgba(0,80,160,0.12);
+  --glass-shadow-deep: 0 2px 4px rgba(0,0,0,0.10), 0 16px 40px rgba(0,80,160,0.18);
   --glass-inset:           inset 0 1px 0 rgba(255,255,255,0.60);
   --glass-blur:            blur(20px) saturate(180%);
   --glass-blur-strong:     blur(32px) saturate(200%);
@@ -84,8 +84,8 @@ html.dark {
   --glass-bg-strong:       rgba(5, 20, 45, 0.55);
   --glass-border:          rgba(100, 160, 255, 0.25);
   --glass-border-subtle:   rgba(100, 160, 255, 0.12);
-  --glass-shadow:          0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.30);
-  --glass-shadow-deep:     0 16px 48px rgba(0,0,0,0.60), 0 4px 16px rgba(0,0,0,0.40);
+  --glass-shadow:      0 1px 3px rgba(0,0,0,0.30), 0 8px 24px rgba(0,0,0,0.35);
+  --glass-shadow-deep: 0 2px 6px rgba(0,0,0,0.40), 0 16px 40px rgba(0,0,0,0.50);
   --glass-inset:           inset 0 1px 0 rgba(100,180,255,0.20);
   --glass-blur:            blur(20px) saturate(180%);
   --glass-blur-strong:     blur(32px) saturate(200%);
@@ -181,16 +181,29 @@ html.dark {
 
   /* ── Cards ────────────────────────────────────────────────────────────────── */
   .card {
+    position: relative;
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: 16px;
     box-shadow: var(--glass-shadow), var(--glass-inset);
     color: var(--glass-text-primary);
-    transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 8px; right: 8px;
+    height: 1px;
+    background: rgba(255,255,255,0.50);
+    border-radius: 0 0 2px 2px;
+    pointer-events: none;
+    z-index: 1;
   }
   .card:hover {
     background: var(--glass-bg-hover);
     box-shadow: var(--glass-shadow-deep), var(--glass-inset);
+    transform: translateY(-2px) scale(1.005);
   }
   .glass {
     background: var(--glass-bg);
@@ -219,7 +232,8 @@ html.dark {
     transform: translateY(-1px);
   }
   .card-hover:active {
-    transform: translateY(0);
+    transform: scale(0.99);
+    transition-duration: 60ms;
   }
 
   /* ── Form inputs ──────────────────────────────────────────────────────────── */
@@ -286,7 +300,12 @@ html.dark {
     background: rgba(43, 91, 168, 0.12);
   }
   .nav-item-inactive {
-    @apply text-dark-muted hover:text-dark-text hover:bg-dark-surface2/80;
+    @apply text-dark-muted;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  .nav-item-inactive:hover {
+    @apply text-dark-text;
+    background: var(--glass-bg-hover);
   }
   .nav-item-disabled {
     @apply text-dark-muted/40 cursor-not-allowed;
@@ -318,12 +337,10 @@ html.dark {
     box-shadow: var(--glass-shadow), var(--glass-inset);
   }
   .kanban-card:hover {
-    @apply border-dark-border/80;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.10);
-    transform: translateY(-1px);
-  }
-  html.dark .kanban-card:hover {
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    background: var(--glass-bg-hover);
+    border-color: var(--glass-border);
+    box-shadow: var(--glass-shadow-deep), var(--glass-inset);
+    transform: translateY(-2px) scale(1.01);
   }
 
   /* Kanban column — responsive width via CSS custom property */
@@ -401,13 +418,63 @@ html.dark {
   html.dark .glass-input:focus {
     background: rgba(10,30,60,0.60);
   }
+
+  /* ── Button active feedback ───────────────────────────────────────────────── */
+  .btn-primary:active:not(:disabled) {
+    transform: scale(0.97);
+    box-shadow: 0 1px 4px rgba(43,91,168,0.20);
+    transition-duration: 60ms;
+  }
+  .btn-secondary:active, .btn-ghost:active {
+    transform: scale(0.97);
+    transition-duration: 60ms;
+  }
+
+  /* ── Staggered card reveal ────────────────────────────────────────────────── */
+  .stagger-1 { animation-delay: 40ms;  animation-fill-mode: both; }
+  .stagger-2 { animation-delay: 80ms;  animation-fill-mode: both; }
+  .stagger-3 { animation-delay: 120ms; animation-fill-mode: both; }
+  .stagger-4 { animation-delay: 160ms; animation-fill-mode: both; }
+  .stagger-5 { animation-delay: 200ms; animation-fill-mode: both; }
+
+  /* ── Kanban card top reflection ───────────────────────────────────────────── */
+  .kanban-card {
+    position: relative;
+  }
+  .kanban-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 6px; right: 6px;
+    height: 1px;
+    background: rgba(255,255,255,0.40);
+    border-radius: 0 0 2px 2px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ── Kanban empty state ───────────────────────────────────────────────────── */
+  .kanban-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+    gap: 6px;
+    opacity: 0.30;
+    pointer-events: none;
+  }
+  .kanban-empty-text {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
 }
 
 /* ── Wallpaper + App Root ─────────────────────────────────────────────────── */
 .app-root {
   position: relative;
   min-height: 100vh;
-  isolation: isolate;
 }
 
 .app-root::before {

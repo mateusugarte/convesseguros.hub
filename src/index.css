@@ -13,8 +13,8 @@
   --color-surface:  255 255 255;
   --color-surface2: 241 245 252;
   --color-border:   220 230 245;
-  --color-text:     10 22 40;
-  --color-muted:    90 112 153;
+  --color-text:     5 15 40;
+  --color-muted:    45 65 105;
   --color-success:  5 150 105;
   --color-warning:  217 119 6;
   --color-danger:   220 38 38;
@@ -182,8 +182,6 @@ html.dark {
   /* ── Cards ────────────────────────────────────────────────────────────────── */
   .card {
     background: var(--glass-bg);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: 16px;
     box-shadow: var(--glass-shadow), var(--glass-inset);
@@ -211,8 +209,6 @@ html.dark {
   .card-hover {
     @apply rounded-xl transition-all duration-200 cursor-pointer;
     background: var(--glass-bg);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow);
   }
@@ -318,8 +314,6 @@ html.dark {
     @apply rounded-xl p-3 space-y-2 select-none cursor-pointer
            transition-all duration-150;
     background: var(--glass-bg);
-    -webkit-backdrop-filter: blur(12px) saturate(160%);
-    backdrop-filter: blur(12px) saturate(160%);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow), var(--glass-inset);
   }
@@ -367,12 +361,6 @@ html.dark {
     border-radius: 20px;
     box-shadow: var(--glass-shadow-deep), var(--glass-inset);
   }
-  /* Nested glass — reduced blur to avoid GPU overload */
-  .glass .glass {
-    -webkit-backdrop-filter: blur(8px) saturate(140%);
-    backdrop-filter: blur(8px) saturate(140%);
-  }
-
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
     .glass, .glass-strong, .glass-panel, .glass-modal {
@@ -425,11 +413,13 @@ html.dark {
 .app-root::before {
   content: '';
   position: fixed;
-  inset: 0;
+  inset: -5%;        /* slightly oversized to hide blur edges */
   z-index: -2;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  filter: blur(var(--wallpaper-blur));
+  transform: scale(1.05);
   transition: background-image 0.4s ease;
 }
 
@@ -438,8 +428,6 @@ html.dark {
   position: fixed;
   inset: 0;
   z-index: -1;
-  backdrop-filter: blur(var(--wallpaper-blur));
-  -webkit-backdrop-filter: blur(var(--wallpaper-blur));
   transition: background 0.4s ease;
 }
 

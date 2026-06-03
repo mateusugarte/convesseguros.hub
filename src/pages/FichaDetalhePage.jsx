@@ -11,6 +11,7 @@ import SeguradoraSelect from '../components/SeguradoraSelect'
 import ModalFicha from '../components/ModalFicha'
 import ModalAssumir from '../components/ModalAssumir'
 import ModalFinalizar from '../components/ModalFinalizar'
+import SecaoDocumentos from '../components/SecaoDocumentos'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -490,6 +491,12 @@ export default function FichaDetalhePage() {
             <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-4">Histórico</p>
             <Timeline ficha={ficha} />
           </div>
+
+          {/* Documentos */}
+          <SecaoDocumentos
+            fichaId={ficha.id}
+            cpfCnpj={ficha.cpf || ficha.cnpj}
+          />
         </div>
       </div>
 

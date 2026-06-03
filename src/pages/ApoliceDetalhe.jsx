@@ -8,6 +8,7 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ArrowLeft, Save, Trash2 } from 'lucide-react'
 import SeguradoraSelect from '../components/SeguradoraSelect'
+import SecaoDocumentos from '../components/SecaoDocumentos'
 
 function fmtDt(v) {
   if (!v) return null
@@ -338,6 +339,12 @@ export default function ApoliceDetalhe() {
             <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-4">Histórico</p>
             <Timeline apolice={apolice} />
           </div>
+
+          {/* Documentos */}
+          <SecaoDocumentos
+            apoliceId={apolice.id}
+            cpfCnpj={apolice.fichas?.cpf || apolice.fichas?.cnpj}
+          />
         </div>
       </div>
 

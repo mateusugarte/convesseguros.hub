@@ -107,20 +107,29 @@ function TimeBadge({ since }) {
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 
+const MESES_ABBR_DASH = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+
 export default function Dashboard() {
   const { user } = useAuth()
   const { theme } = useTheme()
   const [finalizar, setFinalizar] = useState(null)
 
+  // Filtro de período: mês/ano — afeta KPIs, ranking imobs e distribuição de status
+  const agora = new Date()
+  const [filtroAno, setFiltroAno] = useState(agora.getFullYear())
+  const [filtroMes, setFiltroMes] = useState(agora.getMonth() + 1)
+  const inicioFiltro = new Date(filtroAno, filtroMes - 1, 1).toISOString()
+  const fimFiltro    = new Date(filtroAno, filtroMes, 0, 23, 59, 59).toISOString()
+
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['dashboard', user?.id],
+    queryKey: ['dashboard', user?.id, filtroAno, filtroMes],
     queryFn: async () => {
       const [k, em, g, ti, dist, pm, met, atv, mf] = await Promise.all([
-        fetchKPIs(),
+        fetchKPIs(inicioFiltro, fimFiltro),
         fetchEmitidas(),
         fetchFichasPorDia(30),
-        fetchTopImobiliarias(5),
-        fetchDistribuicaoStatus(),
+        fetchTopImobiliarias(5, inicioFiltro, fimFiltro),
+        fetchDistribuicaoStatus(inicioFiltro, fimFiltro),
         fetchFichasPorProdutoMes(),
         fetchMetricas(),
         fetchAtividadeRecente(10),
@@ -149,10 +158,33 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-dark-text">Dashboard</h1>
-        <p className="text-xs text-dark-muted">
-          {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
-        </p>
+        <div>
+          <h1 className="text-lg font-bold text-dark-text">Dashboard</h1>
+          <p className="text-xs text-dark-muted">
+            {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+          </p>
+        </div>
+        {/* Seletor de período — filtra KPIs, ranking imobs e distribuição de status */}
+        <div className="flex items-center gap-2">
+          <select
+            value={filtroMes}
+            onChange={e => setFiltroMes(Number(e.target.value))}
+            className="select py-1 text-xs"
+            style={{ minWidth: '80px' }}
+          >
+            {MESES_ABBR_DASH.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
+          </select>
+          <select
+            value={filtroAno}
+            onChange={e => setFiltroAno(Number(e.target.value))}
+            className="select py-1 text-xs"
+            style={{ minWidth: '70px' }}
+          >
+            {[agora.getFullYear(), agora.getFullYear()-1, agora.getFullYear()-2].map(y =>
+              <option key={y} value={y}>{y}</option>
+            )}
+          </select>
+        </div>
       </div>
 
       {/* ── KPIs ── */}

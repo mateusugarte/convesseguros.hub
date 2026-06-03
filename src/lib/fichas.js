@@ -37,7 +37,7 @@ export const STATUS_PASSADOS = ['em_analise', 'aprovado', 'recusado', 'emitido',
 
 // ── KPIs ─────────────────────────────────────────────────────────────────────
 
-export async function fetchKPIs() {
+export async function fetchKPIs(inicioFiltro, fimFiltro) {
   const hoje = new Date()
   const inicioHoje   = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).toISOString()
   const inicioSemana = (() => {
@@ -46,12 +46,19 @@ export async function fetchKPIs() {
   })()
   const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
 
+  // Aplica filtro de período quando fornecido
+  const applyRange = (q) => {
+    if (inicioFiltro) q = q.gte('created_at', inicioFiltro)
+    if (fimFiltro)    q = q.lte('created_at', fimFiltro)
+    return q
+  }
+
   const [{ count: total }, { count: hoje_ }, { count: semana }, { count: mes }, { count: emAberto }] = await Promise.all([
-    supabase.from('fichas').select('*', { count: 'exact', head: true }),
-    supabase.from('fichas').select('*', { count: 'exact', head: true }).gte('created_at', inicioHoje),
-    supabase.from('fichas').select('*', { count: 'exact', head: true }).gte('created_at', inicioSemana),
-    supabase.from('fichas').select('*', { count: 'exact', head: true }).gte('created_at', inicioMes),
-    supabase.from('fichas').select('*', { count: 'exact', head: true }).in('status', STATUS_EM_ABERTO),
+    applyRange(supabase.from('fichas').select('*', { count: 'exact', head: true })),
+    applyRange(supabase.from('fichas').select('*', { count: 'exact', head: true })).gte('created_at', inicioHoje),
+    applyRange(supabase.from('fichas').select('*', { count: 'exact', head: true })).gte('created_at', inicioSemana),
+    applyRange(supabase.from('fichas').select('*', { count: 'exact', head: true })).gte('created_at', inicioMes),
+    applyRange(supabase.from('fichas').select('*', { count: 'exact', head: true })).in('status', STATUS_EM_ABERTO),
   ])
 
   return { total, hoje: hoje_, semana, mes, emAberto }
@@ -109,10 +116,13 @@ export async function fetchFichasPorDia(dias = 30) {
   return resultado
 }
 
-export async function fetchTopImobiliarias(limite = 5) {
-  const data = await fetchAllRows(() =>
-    supabase.from('fichas').select('imobiliaria').eq('status', 'aprovado').not('imobiliaria', 'is', null)
-  )
+export async function fetchTopImobiliarias(limite = 5, inicioFiltro, fimFiltro) {
+  const data = await fetchAllRows(() => {
+    let q = supabase.from('fichas').select('imobiliaria').eq('status', 'aprovado').not('imobiliaria', 'is', null)
+    if (inicioFiltro) q = q.gte('created_at', inicioFiltro)
+    if (fimFiltro)    q = q.lte('created_at', fimFiltro)
+    return q
+  })
   const contagem = {}
   data.forEach(f => {
     const nome = normalizeImobiliaria(f.imobiliaria) || f.imobiliaria
@@ -121,10 +131,15 @@ export async function fetchTopImobiliarias(limite = 5) {
   return Object.entries(contagem).sort((a, b) => b[1] - a[1]).slice(0, limite).map(([name, total]) => ({ name, total }))
 }
 
-export async function fetchDistribuicaoStatus() {
+export async function fetchDistribuicaoStatus(inicioFiltro, fimFiltro) {
   const statuses = Object.keys(STATUS_LABELS)
   const results = await Promise.all(
-    statuses.map(s => supabase.from('fichas').select('*', { count: 'exact', head: true }).eq('status', s))
+    statuses.map(s => {
+      let q = supabase.from('fichas').select('*', { count: 'exact', head: true }).eq('status', s)
+      if (inicioFiltro) q = q.gte('created_at', inicioFiltro)
+      if (fimFiltro)    q = q.lte('created_at', fimFiltro)
+      return q
+    })
   )
   return statuses
     .map((s, i) => ({ status: s, label: STATUS_LABELS[s]?.label ?? s, value: results[i].count || 0 }))

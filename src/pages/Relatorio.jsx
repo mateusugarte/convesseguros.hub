@@ -172,7 +172,7 @@ function Metricas({ fichas }) {
     <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
       {[
         { label: 'Total no período',    val: fichas.length,         color: '#6B7280', sub: 'fichas finalizadas'    },
-        { label: 'Aprovadas',           val: totalAprovadas,        color: '#10B981', sub: 'aprovado + emitido'    },
+        { label: 'Aprovado - S/Apólice', val: totalAprovadas,        color: '#10B981', sub: 'aprovado + emitido'    },
         { label: 'Aguardando emissão',  val: pendentesEmissao,      color: '#1A3A6B', sub: 'aprovado s/ apólice'   },
         { label: 'Apólices emitidas',   val: totalEmitidas,         color: '#2B5BA8', sub: 'status emitido'        },
         { label: 'RECUPERADOS',         val: totalRecuperados,      color: '#7C3AED', sub: 'emitidas c/ n° apólice' },

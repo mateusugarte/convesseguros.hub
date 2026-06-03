@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -40,6 +40,16 @@
   --glass-blur:            blur(20px) saturate(180%);
   --glass-blur-strong:     blur(32px) saturate(200%);
 
+  /* Text contrast tokens — light */
+  --glass-text-primary:    rgba(8, 20, 50, 0.95);
+  --glass-text-secondary:  rgba(8, 20, 50, 0.72);
+  --glass-text-muted:      rgba(8, 20, 50, 0.52);
+  --accent-green:   #059669;
+  --accent-red:     #dc2626;
+  --accent-amber:   #d97706;
+  --accent-blue:    #1d4ed8;
+  --accent-cyan:    #0891b2;
+
   /* Wallpaper */
   --wallpaper-light-url:   url('https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/conves/macos-tahoe-26-5120x2880-22675.jpg');
   --wallpaper-dark-url:    url('https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/conves/macos-tahoe-26-5k-6016x6016-22672.jpg');
@@ -79,21 +89,42 @@ html.dark {
   --glass-inset:           inset 0 1px 0 rgba(100,180,255,0.20);
   --glass-blur:            blur(20px) saturate(180%);
   --glass-blur-strong:     blur(32px) saturate(200%);
+
+  /* Text contrast tokens — dark */
+  --glass-text-primary:    rgba(215, 232, 255, 0.95);
+  --glass-text-secondary:  rgba(170, 200, 255, 0.72);
+  --glass-text-muted:      rgba(130, 170, 255, 0.50);
+  --nav-text:         rgba(200, 220, 255, 0.88);
+  --nav-text-muted:   rgba(150, 180, 255, 0.50);
+  --nav-icon-opacity: 0.80;
+  --input-placeholder: rgba(150, 185, 255, 0.45);
+  --divider-color: rgba(100, 150, 255, 0.15);
 }
 
 @layer base {
   body {
     @apply text-dark-text antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'Inter', sans-serif;
     transition: color 0.3s ease;
     background: transparent;
     min-height: 100vh;
   }
 
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
-  ::-webkit-scrollbar-track { @apply bg-transparent; }
-  ::-webkit-scrollbar-thumb { @apply bg-dark-border rounded-full; }
-  ::-webkit-scrollbar-thumb:hover { background: #2B5BA8; }
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    touch-action: manipulation;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(100, 140, 220, 0.30);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 140, 220, 0.55);
+  }
 
   ::selection { background: rgba(74, 144, 217, 0.25); }
 }
@@ -254,8 +285,8 @@ html.dark {
     @apply rounded-xl p-3 space-y-2 select-none cursor-pointer
            transition-all duration-150;
     background: var(--glass-bg);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    backdrop-filter: blur(12px) saturate(160%);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow), var(--glass-inset);
   }
@@ -303,6 +334,21 @@ html.dark {
     border-radius: 20px;
     box-shadow: var(--glass-shadow-deep), var(--glass-inset);
   }
+  /* Nested glass — reduced blur to avoid GPU overload */
+  .glass .glass {
+    -webkit-backdrop-filter: blur(8px) saturate(140%);
+    backdrop-filter: blur(8px) saturate(140%);
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .glass, .glass-strong, .glass-panel, .glass-modal {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      background: var(--glass-bg-heavy);
+    }
+  }
+
   .glass-strong {
     background: var(--glass-bg-strong);
     -webkit-backdrop-filter: var(--glass-blur-strong);
@@ -442,4 +488,32 @@ html.dark .badge-blue    { background: rgba(74,144,217,0.15);  color: #4A90D9; }
 @keyframes toastProgress {
   from { width: 100%; }
   to   { width: 0%; }
+}
+
+/* ── Dark mode — nav + input visibility ─────────────────────────────────── */
+html.dark .nav-item-inactive {
+  color: rgba(200, 220, 255, 0.75) !important;
+}
+html.dark .nav-item-inactive:hover {
+  color: rgba(220, 240, 255, 0.95) !important;
+}
+html.dark .nav-item-inactive svg {
+  opacity: 0.75;
+}
+html.dark .nav-item-active {
+  color: rgba(220, 240, 255, 1.00) !important;
+}
+html.dark .nav-item-active svg {
+  opacity: 1;
+}
+html.dark nav .text-dark-muted {
+  color: rgba(150, 180, 255, 0.55) !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: rgba(150, 185, 255, 0.45) !important;
+  opacity: 1;
+}
+html.dark .border-dark-border {
+  border-color: rgba(100, 150, 255, 0.18) !important;
 }

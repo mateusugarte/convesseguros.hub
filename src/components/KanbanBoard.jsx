@@ -119,7 +119,8 @@ function KanbanCard({ ficha, onAssumir, onFinalizar, onDetalhe }) {
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className={`rounded-lg border bg-white shadow-sm select-none transition-all ${
+      style={{ background: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--glass-border)' }}
+      className={`rounded-lg shadow-sm select-none transition-all ${
         isDragging ? 'opacity-0' : 'border-gray-200 hover:shadow-md hover:border-gray-300'
       }`}
     >
@@ -306,7 +307,7 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
 
       <DragOverlay dropAnimation={null}>
         {activeFicha ? (
-          <div className="bg-white rounded-lg border border-blue-300 p-3 shadow-2xl w-48 rotate-2 opacity-95">
+          <div className="rounded-lg p-3 shadow-2xl w-48 rotate-2 opacity-95" style={{ background: 'var(--glass-bg-heavy)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--glass-border)' }}>
             <div className="flex items-center gap-1.5">
               <span>{PROD_ICONS[activeFicha.produto] ?? '📄'}</span>
               <span className="text-xs font-semibold text-gray-800 truncate">

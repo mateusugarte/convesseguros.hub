@@ -6,6 +6,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { supabase } from '../lib/supabase'
 import { fetchContagemAbertaOrcamentista, PRODUTO_LABELS } from '../lib/fichas'
 import CommandPalette from './CommandPalette'
+import { PageTransition } from './PageTransition'
 import {
   LayoutDashboard, FileText, User, FileCheck,
   Building2, BarChart2, Settings, Search,
@@ -409,7 +410,9 @@ export default function Layout() {
         {/* ── Content ── */}
         <main className="flex-1 overflow-y-auto">
           <div className="p-6 max-w-screen-2xl mx-auto">
-            <Outlet />
+            <PageTransition>
+              <Outlet />
+            </PageTransition>
           </div>
         </main>
       </div>

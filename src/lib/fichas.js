@@ -321,7 +321,7 @@ export async function fetchFichasKanban({ produto, dateFrom, dateTo }) {
   return fetchAllRows(() => {
     let q = supabase
       .from('fichas')
-      .select('id,created_at,produto,imobiliaria,nome_interessado,nome_empresa,cpf,cnpj,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,profiles!orcamentista_id(nome)')
+      .select('id,created_at,finalizada_em,produto,imobiliaria,nome_interessado,nome_empresa,cpf,cnpj,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,profiles!orcamentista_id(nome)')
       .order('created_at', { ascending: false })
     if (produto && produto !== 'todos') q = q.eq('produto', produto)
     if (dateFrom) q = q.gte('created_at', dateFrom)

@@ -89,6 +89,12 @@ function groupFichas(fichas, userId) {
     const colId = getColumnId(f, userId)
     if (cols[colId] !== undefined) cols[colId].push(f)
   })
+  // Mais recente no topo nas colunas aprovado/recusado
+  for (const colId of ['aprovado', 'recusado']) {
+    cols[colId].sort((a, b) =>
+      new Date(b.finalizada_em || b.created_at) - new Date(a.finalizada_em || a.created_at)
+    )
+  }
   return cols
 }
 

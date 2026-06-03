@@ -132,12 +132,18 @@ export default function Layout() {
 
       {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
       <aside
-        className={`fixed left-0 top-0 h-full z-40 flex flex-col bg-dark-surface border-r border-dark-border transition-all duration-300 ${
+        className={`fixed left-0 top-0 h-full z-40 flex flex-col transition-all duration-300 ${
           isMobile
             ? `w-64 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
             : sidebarOpen ? 'w-60' : 'w-16'
         }`}
-        style={{ boxShadow: 'var(--shadow-sm)' }}
+        style={{
+          background: 'var(--glass-bg-heavy)',
+          backdropFilter: 'var(--glass-blur)',
+          WebkitBackdropFilter: 'var(--glass-blur)',
+          borderRight: '1px solid var(--glass-border)',
+          boxShadow: 'var(--glass-shadow)',
+        }}
       >
         {/* Logo */}
         <div className={`flex items-center gap-3 h-16 px-4 border-b border-dark-border flex-shrink-0 ${!sidebarOpen && 'justify-center px-3'}`}>

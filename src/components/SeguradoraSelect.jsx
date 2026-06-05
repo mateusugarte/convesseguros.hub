@@ -1,36 +1,23 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import SeguradoraBadge from './SeguradoraBadge'
-import { ChevronDown, Check, Search } from 'lucide-react'
 
-// Cache módulo-level para não recarregar entre componentes
 let _cache = null
-let _promise = null
 
 async function getSeguradoras() {
   if (_cache) return _cache
-  if (!_promise) {
-    // Busca todas as seguradoras — sem filtro de ativa para não omitir nenhuma
-    _promise = supabase
-      .from('seguradoras')
-      .select('nome_canonico')
-      .neq('ativa', false)
-      .order('nome_canonico')
-      .limit(500)
-      .then(({ data }) => {
-        _cache = data?.map(s => s.nome_canonico) || []
-        return _cache
-      })
-  }
-  return _promise
+  const { data } = await supabase
+    .from('seguradoras')
+    .select('nome_canonico')
+    .neq('ativa', false)
+    .order('nome_canonico')
+    .limit(500)
+  _cache = data?.map(s => s.nome_canonico) || []
+  return _cache
 }
 
 export function invalidarCacheSeguradoras() {
   _cache = null
-  _promise = null
 }
-
-// ── Componente ────────────────────────────────────────────────────────────────
 
 export default function SeguradoraSelect({
   value,
@@ -40,138 +27,24 @@ export default function SeguradoraSelect({
   className = '',
   disabled = false,
 }) {
-  const [open,          setOpen]          = useState(false)
-  const [seguradoras,   setSeguradoras]   = useState(_cache || [])
-  const [search,        setSearch]        = useState('')
-  const [dropdownStyle, setDropdownStyle] = useState(null)
-  const wrapRef   = useRef(null)
-  const searchRef = useRef(null)
+  const [seguradoras, setSeguradoras] = useState(_cache || [])
 
   useEffect(() => {
     getSeguradoras().then(setSeguradoras)
   }, [])
 
-  // Calcula posição fixa do dropdown — escapa de stacking contexts criados por
-  // backdrop-filter nos modais, que cliparia position:absolute de filhos
-  useEffect(() => {
-    if (!open) { setDropdownStyle(null); return }
-
-    function calcPos() {
-      if (!wrapRef.current) return
-      const rect = wrapRef.current.getBoundingClientRect()
-      setDropdownStyle({ top: rect.bottom + 4, left: rect.left, width: rect.width })
-    }
-
-    calcPos()
-    window.addEventListener('resize', calcPos, { passive: true })
-    window.addEventListener('scroll', calcPos, { passive: true, capture: true })
-    return () => {
-      window.removeEventListener('resize', calcPos)
-      window.removeEventListener('scroll', calcPos, true)
-    }
-  }, [open])
-
-  // Foca o campo de busca ao abrir
-  useEffect(() => {
-    if (open) setTimeout(() => searchRef.current?.focus(), 50)
-    else setSearch('')
-  }, [open])
-
-  // Fecha ao clicar fora
-  useEffect(() => {
-    if (!open) return
-    function handler(e) {
-      if (!wrapRef.current?.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [open])
-
-  function selecionar(nome) {
-    onChange(nome)
-    setOpen(false)
-  }
-
-  const filtered = search.trim()
-    ? seguradoras.filter(n => n.toLowerCase().includes(search.toLowerCase()))
-    : seguradoras
-
   return (
-    <div ref={wrapRef} className={`relative ${className}`}>
-      {/* Trigger */}
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => setOpen(o => !o)}
-        className={`select w-full flex items-center gap-2 text-left ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-      >
-        {value ? (
-          <SeguradoraBadge nome={value} size="sm" />
-        ) : (
-          <span className="text-dark-muted text-sm">{placeholder}</span>
-        )}
-        <ChevronDown className={`w-4 h-4 ml-auto flex-shrink-0 text-dark-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
-      </button>
-
-      {/* Dropdown — position:fixed para escapar de stacking contexts (backdrop-filter, overflow) */}
-      {open && dropdownStyle && (
-        <div
-          className="glass-panel overflow-hidden animate-fade-in"
-          style={{ position: 'fixed', top: dropdownStyle.top, left: dropdownStyle.left, width: dropdownStyle.width, zIndex: 9999 }}
-        >
-
-          {/* Campo de busca incremental */}
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-dark-border">
-            <Search className="w-3.5 h-3.5 text-dark-muted flex-shrink-0" />
-            <input
-              ref={searchRef}
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar seguradora..."
-              className="flex-1 text-sm bg-transparent outline-none text-dark-text placeholder-dark-muted"
-            />
-          </div>
-
-          {/* Opção vazia */}
-          {!required && !search && (
-            <>
-              <button
-                type="button"
-                onClick={() => selecionar('')}
-                className={`w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm hover:bg-dark-surface2 transition-colors ${!value ? 'text-brand-accent' : 'text-dark-muted'}`}
-              >
-                {!value && <Check className="w-3.5 h-3.5 flex-shrink-0" />}
-                <span className={!value ? 'ml-0' : 'ml-5'}>Nenhuma</span>
-              </button>
-              <div className="border-t border-dark-border" />
-            </>
-          )}
-
-          {/* Lista de seguradoras com scroll */}
-          <div className="max-h-60 overflow-y-auto">
-            {filtered.length === 0 ? (
-              <p className="text-xs text-dark-muted text-center py-4">
-                {search ? 'Nenhuma encontrada' : 'Nenhuma seguradora cadastrada'}
-              </p>
-            ) : filtered.map(nome => (
-              <button
-                key={nome}
-                type="button"
-                onClick={() => selecionar(nome)}
-                className={`w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-dark-surface2 transition-colors ${
-                  value === nome ? 'bg-brand-accent/8' : ''
-                }`}
-              >
-                <SeguradoraBadge nome={nome} size="sm" />
-                {value === nome && (
-                  <Check className="w-3.5 h-3.5 text-brand-accent ml-auto flex-shrink-0" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+    <select
+      value={value || ''}
+      onChange={e => onChange(e.target.value)}
+      disabled={disabled}
+      required={required}
+      className={`select w-full ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
+    >
+      {!required && <option value="">{placeholder}</option>}
+      {seguradoras.map(nome => (
+        <option key={nome} value={nome}>{nome}</option>
+      ))}
+    </select>
   )
 }

@@ -134,15 +134,13 @@ export default function Layout() {
 
       {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
       <aside
-        className={`fixed left-0 top-0 h-full z-40 flex flex-col transition-all duration-300 ${
+        className={`fixed left-0 top-0 h-full z-40 flex flex-col transition-[width,transform] duration-200 ${
           isMobile
             ? `w-64 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
             : sidebarOpen ? 'w-60' : 'w-16'
         }`}
         style={{
           background: 'var(--glass-bg-heavy)',
-          backdropFilter: 'var(--glass-blur)',
-          WebkitBackdropFilter: 'var(--glass-blur)',
           borderRight: '1px solid var(--glass-border)',
           boxShadow: 'var(--glass-shadow)',
         }}
@@ -283,8 +281,6 @@ export default function Layout() {
             className="absolute -right-3 top-[72px] w-6 h-6 rounded-full flex items-center justify-center text-dark-muted hover:text-dark-text transition-all z-50"
             style={{
               background: 'var(--glass-bg-heavy)',
-              backdropFilter: 'var(--glass-blur)',
-              WebkitBackdropFilter: 'var(--glass-blur)',
               border: '1px solid var(--glass-border)',
               boxShadow: 'var(--glass-shadow)',
             }}
@@ -295,7 +291,7 @@ export default function Layout() {
       </aside>
 
       {/* ── Main area ───────────────────────────────────────────────────────── */}
-      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
+      <div className={`flex-1 flex flex-col min-w-0 transition-[margin] duration-200 ${
         isMobile ? 'ml-0' : sidebarOpen ? 'ml-60' : 'ml-16'
       }`}>
 
@@ -304,9 +300,7 @@ export default function Layout() {
           className="sticky top-0 z-30 h-16 flex items-center justify-between px-5 flex-shrink-0"
           style={{
             background: 'var(--glass-bg-strong)',
-            backdropFilter: 'var(--glass-blur-strong)',
-            WebkitBackdropFilter: 'var(--glass-blur-strong)',
-            borderBottom: '1px solid var(--glass-border-subtle)',
+            borderBottom: '1px solid var(--glass-border)',
             boxShadow: 'var(--glass-shadow)',
           }}
         >

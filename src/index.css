@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -26,19 +24,19 @@
   --shadow-sm:    0 1px 3px rgba(0,0,0,0.06);
   --shadow-lg:    0 8px 30px rgba(0,0,0,0.12);
 
-  /* Glass — light */
-  --glass-bg:              rgba(255, 255, 255, 0.35);
-  --glass-bg-hover:        rgba(255, 255, 255, 0.48);
-  --glass-bg-active:       rgba(255, 255, 255, 0.58);
-  --glass-bg-heavy:        rgba(255, 255, 255, 0.55);
-  --glass-bg-strong:       rgba(255, 255, 255, 0.50);
-  --glass-border:          rgba(255, 255, 255, 0.45);
-  --glass-border-subtle:   rgba(255, 255, 255, 0.25);
-  --glass-shadow:      0 1px 2px rgba(0,0,0,0.08), 0 8px 24px rgba(0,80,160,0.12);
-  --glass-shadow-deep: 0 2px 4px rgba(0,0,0,0.10), 0 16px 40px rgba(0,80,160,0.18);
-  --glass-inset:           inset 0 1px 0 rgba(255,255,255,0.60);
-  --glass-blur:            blur(20px) saturate(180%);
-  --glass-blur-strong:     blur(32px) saturate(200%);
+  /* Glass — light (sem wallpaper: mais opaco, blur reduzido) */
+  --glass-bg:              rgba(255, 255, 255, 0.72);
+  --glass-bg-hover:        rgba(255, 255, 255, 0.86);
+  --glass-bg-active:       rgba(255, 255, 255, 0.92);
+  --glass-bg-heavy:        rgba(255, 255, 255, 0.88);
+  --glass-bg-strong:       rgba(255, 255, 255, 0.84);
+  --glass-border:          rgba(190, 210, 240, 0.70);
+  --glass-border-subtle:   rgba(170, 195, 230, 0.45);
+  --glass-shadow:      0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(20,60,140,0.07);
+  --glass-shadow-deep: 0 2px 6px rgba(0,0,0,0.08), 0 10px 28px rgba(20,60,140,0.10);
+  --glass-inset:           inset 0 1px 0 rgba(255,255,255,0.90);
+  --glass-blur:            blur(6px) saturate(140%);
+  --glass-blur-strong:     blur(10px) saturate(150%);
 
   /* Text contrast tokens — light */
   --glass-text-primary:    rgba(8, 20, 50, 0.95);
@@ -49,13 +47,6 @@
   --accent-amber:   #d97706;
   --accent-blue:    #1d4ed8;
   --accent-cyan:    #0891b2;
-
-  /* Wallpaper */
-  --wallpaper-light-url:   url('https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/conves/macos-tahoe-26-5120x2880-22675.jpg');
-  --wallpaper-dark-url:    url('https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/conves/macos-tahoe-26-5k-6016x6016-22672.jpg');
-  --wallpaper-blur:        28px;
-  --wallpaper-dim-light:   rgba(200,225,255,0.20);
-  --wallpaper-dim-dark:    rgba(0,10,30,0.45);
 }
 
 html.dark {
@@ -76,19 +67,19 @@ html.dark {
   --shadow-sm:    0 1px 3px rgba(0,0,0,0.3);
   --shadow-lg:    0 8px 30px rgba(0,0,0,0.5);
 
-  /* Glass — dark */
-  --glass-bg:              rgba(10, 30, 60, 0.35);
-  --glass-bg-hover:        rgba(10, 30, 60, 0.50);
-  --glass-bg-active:       rgba(10, 30, 60, 0.65);
-  --glass-bg-heavy:        rgba(5, 20, 45, 0.55);
-  --glass-bg-strong:       rgba(5, 20, 45, 0.55);
-  --glass-border:          rgba(100, 160, 255, 0.25);
-  --glass-border-subtle:   rgba(100, 160, 255, 0.12);
-  --glass-shadow:      0 1px 3px rgba(0,0,0,0.30), 0 8px 24px rgba(0,0,0,0.35);
-  --glass-shadow-deep: 0 2px 6px rgba(0,0,0,0.40), 0 16px 40px rgba(0,0,0,0.50);
-  --glass-inset:           inset 0 1px 0 rgba(100,180,255,0.20);
-  --glass-blur:            blur(20px) saturate(180%);
-  --glass-blur-strong:     blur(32px) saturate(200%);
+  /* Glass — dark (sem wallpaper: mais opaco, blur reduzido) */
+  --glass-bg:              rgba(12, 22, 52, 0.78);
+  --glass-bg-hover:        rgba(14, 26, 60, 0.88);
+  --glass-bg-active:       rgba(16, 30, 66, 0.94);
+  --glass-bg-heavy:        rgba(8, 16, 44, 0.92);
+  --glass-bg-strong:       rgba(8, 16, 44, 0.88);
+  --glass-border:          rgba(80, 130, 220, 0.20);
+  --glass-border-subtle:   rgba(70, 120, 200, 0.12);
+  --glass-shadow:      0 1px 3px rgba(0,0,0,0.30), 0 4px 16px rgba(0,0,0,0.25);
+  --glass-shadow-deep: 0 2px 6px rgba(0,0,0,0.40), 0 10px 28px rgba(0,0,0,0.38);
+  --glass-inset:           inset 0 1px 0 rgba(80,160,255,0.12);
+  --glass-blur:            blur(6px) saturate(140%);
+  --glass-blur-strong:     blur(10px) saturate(150%);
 
   /* Text contrast tokens — dark */
   --glass-text-primary:    rgba(215, 232, 255, 0.95);
@@ -101,12 +92,14 @@ html.dark {
   --divider-color: rgba(100, 150, 255, 0.15);
 }
 
-/* Fallback background — prevents white flash before wallpaper loads */
+/* Base gradient background — fixed, sem image loading */
 html {
-  background: #eef3ff;
+  background: linear-gradient(160deg, #edf2ff 0%, #e6ecff 35%, #f0f5ff 65%, #edf1ff 100%);
+  background-attachment: fixed;
 }
 html.dark {
-  background: #060c1a;
+  background: linear-gradient(160deg, #05091a 0%, #080f28 45%, #050b1e 100%);
+  background-attachment: fixed;
 }
 
 @layer base {
@@ -203,7 +196,7 @@ html.dark {
   .card:hover {
     background: var(--glass-bg-hover);
     box-shadow: var(--glass-shadow-deep), var(--glass-inset);
-    transform: translateY(-2px) scale(1.005);
+    transform: translateY(-1px);
   }
   .glass {
     background: var(--glass-bg);
@@ -243,8 +236,6 @@ html.dark {
            focus:ring-2 focus:ring-brand-accent/20
            transition-all duration-150;
     background: var(--glass-bg-heavy);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
     border: 1px solid var(--glass-border);
     color: var(--glass-text-primary);
     font-size: max(14px, 16px);
@@ -262,8 +253,6 @@ html.dark {
            focus:ring-2 focus:ring-brand-accent/20
            transition-all duration-150;
     background: var(--glass-bg-heavy);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
     border: 1px solid var(--glass-border);
     color: var(--glass-text-primary);
     font-size: max(14px, 16px);
@@ -340,7 +329,7 @@ html.dark {
     background: var(--glass-bg-hover);
     border-color: var(--glass-border);
     box-shadow: var(--glass-shadow-deep), var(--glass-inset);
-    transform: translateY(-2px) scale(1.01);
+    transform: translateY(-1px);
   }
 
   /* Kanban column — responsive width via CSS custom property */
@@ -395,9 +384,7 @@ html.dark {
     box-shadow: var(--glass-shadow-deep), var(--glass-inset);
   }
   .glass-input {
-    background: rgba(255,255,255,0.15);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    background: var(--glass-bg-heavy);
     border: 1px solid var(--glass-border-subtle);
     border-radius: 10px;
     color: inherit;
@@ -409,14 +396,8 @@ html.dark {
   }
   .glass-input:focus {
     border-color: var(--glass-border);
-    background: rgba(255,255,255,0.25);
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.20);
-  }
-  html.dark .glass-input {
-    background: rgba(10,30,60,0.40);
-  }
-  html.dark .glass-input:focus {
-    background: rgba(10,30,60,0.60);
+    background: var(--glass-bg-active);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
   }
 
   /* ── Button active feedback ───────────────────────────────────────────────── */
@@ -471,47 +452,10 @@ html.dark {
   }
 }
 
-/* ── Wallpaper + App Root ─────────────────────────────────────────────────── */
+/* ── App Root ─────────────────────────────────────────────────────────────── */
 .app-root {
   position: relative;
   min-height: 100vh;
-}
-
-.app-root::before {
-  content: '';
-  position: fixed;
-  inset: -5%;        /* slightly oversized to hide blur edges */
-  z-index: -2;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  filter: blur(var(--wallpaper-blur));
-  transform: scale(1.05);
-  transition: background-image 0.4s ease;
-}
-
-.app-root::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  transition: background 0.4s ease;
-}
-
-/* Light wallpaper */
-html:not(.dark) .app-root::before {
-  background-image: var(--wallpaper-light-url);
-}
-html:not(.dark) .app-root::after {
-  background: var(--wallpaper-dim-light);
-}
-
-/* Dark wallpaper */
-html.dark .app-root::before {
-  background-image: var(--wallpaper-dark-url);
-}
-html.dark .app-root::after {
-  background: var(--wallpaper-dim-dark);
 }
 
 /* ── Kanban: webkit scrollbar customizada ──────────────────────────────────── */

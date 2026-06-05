@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchNomesImobiliariasAll } from '../lib/fichas'
@@ -6,8 +6,136 @@ import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
 import { useToast } from '../contexts/ToastContext'
 import {
   Building2, Plus, Pencil, Trash2, X, Check,
-  ChevronRight, AlertCircle, Search,
+  ChevronRight, AlertCircle, Search, ChevronDown,
 } from 'lucide-react'
+
+// ── ImobiliariaSelector ───────────────────────────────────────────────────────
+// Componente customizado para buscar e navegar rapidamente para uma imobiliária
+
+function ImobiliariaSelector({ mapeadas }) {
+  const navigate    = useNavigate()
+  const [open,      setOpen]      = useState(false)
+  const [busca,     setBusca]     = useState('')
+  const [debounced, setDebounced] = useState('')
+  const wrapRef   = useRef(null)
+  const inputRef  = useRef(null)
+  const timer     = useRef(null)
+
+  // Debounce 300ms
+  useEffect(() => {
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => setDebounced(busca), 300)
+    return () => clearTimeout(timer.current)
+  }, [busca])
+
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 50)
+    else { setBusca(''); setDebounced('') }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    function h(e) { if (!wrapRef.current?.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [open])
+
+  const filtered = debounced.trim()
+    ? mapeadas.filter(m => m.nome_canonico.toLowerCase().includes(debounced.toLowerCase()))
+    : mapeadas.slice(0, 8)
+
+  function navegar(id) {
+    setOpen(false)
+    navigate(`/imobiliarias/${id}`)
+  }
+
+  function initials(n) {
+    return (n || '').split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase() || '?'
+  }
+  function avatarColor(n) {
+    const c = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#2B5BA8']
+    let h = 0; for (let i = 0; i < (n||'').length; i++) h = n.charCodeAt(i) + ((h << 5) - h)
+    return c[Math.abs(h) % c.length]
+  }
+
+  return (
+    <div ref={wrapRef} className="relative w-full max-w-xs">
+      {/* Trigger */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-dark-border text-sm text-left transition-all hover:border-brand-accent/50"
+        style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(8px)' }}
+      >
+        <Search className="w-3.5 h-3.5 text-dark-muted flex-shrink-0" />
+        <span className="flex-1 text-dark-muted text-sm">Ir para imobiliária...</span>
+        <ChevronDown className={`w-3.5 h-3.5 text-dark-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 glass-panel overflow-hidden animate-fade-in"
+             style={{ minWidth: '280px', boxShadow: 'var(--glass-shadow-deep)' }}>
+          {/* Campo de busca */}
+          <div className="flex items-center gap-2 px-3 py-2.5 border-b border-dark-border">
+            <Search className="w-3.5 h-3.5 text-dark-muted flex-shrink-0" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              placeholder="Buscar por nome..."
+              className="flex-1 text-sm bg-transparent outline-none text-dark-text placeholder-dark-muted"
+            />
+            {busca && (
+              <button onClick={() => setBusca('')} className="text-dark-muted hover:text-dark-text transition-colors">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Lista */}
+          <div className="max-h-64 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <p className="text-xs text-dark-muted text-center py-5">Nenhuma encontrada</p>
+            ) : filtered.map(imob => {
+              const color = avatarColor(imob.nome_canonico)
+              return (
+                <button
+                  key={imob.id}
+                  onClick={() => navegar(imob.id)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-dark-surface2 transition-colors text-left"
+                >
+                  {/* Avatar com iniciais */}
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0"
+                    style={{ background: color }}
+                  >
+                    {initials(imob.nome_canonico)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-dark-text truncate">{imob.nome_canonico}</p>
+                    <p className="text-[10px] text-dark-muted">
+                      {imob.totalFichas} ficha{imob.totalFichas !== 1 ? 's' : ''} · {imob.aliases.length} variação{imob.aliases.length !== 1 ? 'ões' : ''}
+                    </p>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-dark-muted flex-shrink-0 opacity-50" />
+                </button>
+              )
+            })}
+          </div>
+
+          {!debounced && mapeadas.length > 8 && (
+            <div className="px-3 py-2 border-t border-dark-border">
+              <p className="text-[10px] text-dark-muted text-center">
+                {mapeadas.length - 8} imobiliárias — use a busca para filtrar
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ── Modal de Agrupamento / Criação / Edição ───────────────────────────────────
 
@@ -728,11 +856,16 @@ export default function Imobiliarias() {
             Mapeie variações de nomes e gerencie cadastros por imobiliária
           </p>
         </div>
-        {tab !== 'cadastros' && (
-          <button onClick={abrirNova} className="btn-primary flex items-center gap-2 text-sm">
-            <Plus className="w-4 h-4" /> Nova Imobiliária
-          </button>
-        )}
+        <div className="flex items-center gap-3 flex-wrap">
+          {mapeadas.length > 0 && (
+            <ImobiliariaSelector mapeadas={mapeadas} />
+          )}
+          {tab !== 'cadastros' && (
+            <button onClick={abrirNova} className="btn-primary flex items-center gap-2 text-sm">
+              <Plus className="w-4 h-4" /> Nova Imobiliária
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── Tabs ── */}

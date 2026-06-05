@@ -4,8 +4,45 @@ import {
   STATUS_LABELS, PRODUTO_LABELS,
 } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
-import { X, Plus, Save } from 'lucide-react'
+import { X, Plus, Save, Mail } from 'lucide-react'
 import SeguradoraSelect from './SeguradoraSelect'
+
+// ── Toggle Switch ─────────────────────────────────────────────────────────────
+
+function ToggleSwitch({ checked, onChange, label, icon: Icon }) {
+  return (
+    <label className="flex items-center gap-3 cursor-pointer select-none group">
+      <div
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className="relative w-11 h-6 rounded-full flex-shrink-0"
+        style={{
+          background:  checked ? 'rgba(43,91,168,0.90)' : 'rgba(136,153,187,0.30)',
+          boxShadow:   checked ? '0 0 8px rgba(43,91,168,0.35)' : 'none',
+          transition:  'all 0.25s ease',
+        }}
+      >
+        <div
+          className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-md"
+          style={{
+            transform:  checked ? 'translateX(20px)' : 'translateX(0)',
+            transition: 'all 0.25s ease',
+          }}
+        />
+      </div>
+      <span className="text-sm text-dark-text group-hover:text-dark-text/90 transition-colors">
+        {label}
+      </span>
+      {checked && Icon && (
+        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold badge-info animate-fade-in">
+          <Icon className="w-3 h-3" />
+          Ativo
+        </span>
+      )}
+    </label>
+  )
+}
 
 const STATUS_OPTIONS  = ['pendente','em_cotacao','em_analise','aprovado','recusado','emitido','cancelado','cpf_invalido','expirada']
 const PRODUTO_OPTIONS = ['residencial_pf','comercial_pf','pessoa_juridica']
@@ -110,6 +147,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
     seguradora:         ficha?.seguradora         ?? '',
     orcamentista_forms: ficha?.orcamentista_forms ?? '',
     retorno_enviado:    ficha?.retorno_enviado     ?? false,
+    enviar_cliente:     ficha?.enviar_cliente      ?? false,
   })
 
   const [saving,       setSaving]       = useState(false)
@@ -346,6 +384,14 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                        className="w-4 h-4 rounded accent-brand-accent" />
                 <span className="text-sm text-dark-text">Retorno enviado ao cliente</span>
               </label>
+            </div>
+            <div className="col-span-2 p-3 rounded-xl border border-dark-border bg-dark-surface2">
+              <ToggleSwitch
+                checked={form.enviar_cliente}
+                onChange={v => set('enviar_cliente', v)}
+                label="Enviar para o cliente"
+                icon={Mail}
+              />
             </div>
           </Sec>
 

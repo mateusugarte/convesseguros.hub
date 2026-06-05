@@ -136,9 +136,10 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay = fals
   return (
     <div
       className={`kanban-card
-        ${isDragOverlay ? 'scale-[1.04] rotate-1 !shadow-lg' : ''}
+        ${isDragOverlay ? 'scale-[1.03] rotate-[0.5deg] !opacity-90' : ''}
         ${isNew ? 'animate-card-new' : ''}
       `}
+      style={isDragOverlay ? { boxShadow: '0 12px 40px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15)' } : undefined}
     >
       {/* Produto badge + tempo */}
       <div className="flex items-center justify-between gap-1">
@@ -224,7 +225,11 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, isNew
       {...listeners}
       {...attributes}
       onClick={() => onDetalhe(ficha.id)}
-      style={{ opacity: isDragging ? 0.35 : 1, cursor: 'grab' }}
+      style={{
+        opacity:    isDragging ? 0.45 : 1,
+        cursor:     isDragging ? 'grabbing' : 'grab',
+        transition: isDragging ? 'none' : 'opacity 0.15s ease',
+      }}
     >
       <FichaCard
         ficha={ficha}
@@ -301,11 +306,11 @@ function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinal
 
       <div
         ref={setNodeRef}
-        className="kanban-col-body flex-1 space-y-1.5 p-1.5 rounded-b-xl border overflow-y-auto transition-colors duration-150"
+        className="kanban-col-body flex-1 space-y-1.5 p-1.5 rounded-b-xl overflow-y-auto transition-all duration-150"
         style={{
-          borderColor:     isOver ? column.color + '80' : 'rgb(var(--color-border))',
-          backgroundColor: isOver ? column.color + '08' : 'rgb(var(--color-surface2) / 0.4)',
-          boxShadow:       isOver ? `inset 0 0 0 2px ${column.color}40` : 'none',
+          border:          isOver ? `2px dashed ${column.color}90` : '1px solid rgb(var(--color-border))',
+          backgroundColor: isOver ? column.color + '0c' : 'rgb(var(--color-surface2) / 0.4)',
+          boxShadow:       isOver ? `inset 0 0 0 1px ${column.color}20, 0 0 12px ${column.color}15` : 'none',
         }}
       >
         {fichas.length === 0 ? (

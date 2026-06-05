@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -17,7 +17,7 @@ import ModalFinalizar from '../components/ModalFinalizar'
 import { DashboardSkeleton } from '../components/Skeleton'
 import {
   TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle,
-  BarChart3, Activity, Zap,
+  BarChart3, Activity, Zap, CalendarDays, ChevronDown, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 
 // ── Chart theme constants ─────────────────────────────────────────────────────
@@ -150,16 +150,106 @@ function TimeBadge({ since }) {
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 
 const MESES_ABBR_DASH = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+const LS_KEY = 'dashboard-periodo'
+
+// ── MonthYearPicker ───────────────────────────────────────────────────────────
+
+function MonthYearPicker({ ano, mes, onChange }) {
+  const [open,     setOpen]     = useState(false)
+  const [viewAno,  setViewAno]  = useState(ano)
+  const wrapRef = useRef(null)
+  const agora   = new Date()
+  const anos    = [agora.getFullYear(), agora.getFullYear() - 1, agora.getFullYear() - 2]
+
+  useEffect(() => { if (open) setViewAno(ano) }, [open, ano])
+
+  useEffect(() => {
+    if (!open) return
+    function h(e) { if (!wrapRef.current?.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [open])
+
+  function select(m) {
+    onChange(viewAno, m)
+    setOpen(false)
+  }
+
+  const label = `${MESES_ABBR_DASH[mes - 1]} ${ano}`
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-dark-border text-sm font-semibold text-dark-text hover:border-brand-accent/60 transition-all"
+        style={{ minWidth: '110px' }}
+      >
+        <CalendarDays className="w-3.5 h-3.5 text-brand-accent flex-shrink-0" />
+        <span className="flex-1 text-left">{label}</span>
+        <ChevronDown className={`w-3.5 h-3.5 text-dark-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full right-0 mt-1.5 glass-panel z-50 p-3 w-[220px] animate-fade-in"
+             style={{ boxShadow: 'var(--glass-shadow-deep)' }}>
+          {/* Year navigator */}
+          <div className="flex items-center justify-between mb-2.5">
+            <button
+              onClick={() => setViewAno(y => Math.max(anos[anos.length - 1], y - 1))}
+              disabled={viewAno <= anos[anos.length - 1]}
+              className="p-1 rounded hover:bg-dark-surface2 text-dark-muted hover:text-dark-text transition-colors disabled:opacity-30"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-sm font-bold text-dark-text">{viewAno}</span>
+            <button
+              onClick={() => setViewAno(y => Math.min(anos[0], y + 1))}
+              disabled={viewAno >= anos[0]}
+              className="p-1 rounded hover:bg-dark-surface2 text-dark-muted hover:text-dark-text transition-colors disabled:opacity-30"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Month grid */}
+          <div className="grid grid-cols-4 gap-1">
+            {MESES_ABBR_DASH.map((m, i) => {
+              const isActive = (i + 1) === mes && viewAno === ano
+              return (
+                <button
+                  key={i}
+                  onClick={() => select(i + 1)}
+                  className={`py-1.5 text-xs rounded-md font-medium transition-all ${
+                    isActive
+                      ? 'bg-brand-secondary text-white shadow-sm'
+                      : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2'
+                  }`}
+                >
+                  {m}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function Dashboard() {
   const { user } = useAuth()
   const { theme } = useTheme()
   const [finalizar, setFinalizar] = useState(null)
 
-  // Filtro de período: mês/ano — afeta KPIs, ranking imobs e distribuição de status
+  // Filtro de período — persistido em localStorage
   const agora = new Date()
-  const [filtroAno, setFiltroAno] = useState(agora.getFullYear())
-  const [filtroMes, setFiltroMes] = useState(agora.getMonth() + 1)
+  const saved = (() => { try { return JSON.parse(localStorage.getItem(LS_KEY)) } catch { return null } })()
+  const [filtroAno, setFiltroAno] = useState(saved?.ano ?? agora.getFullYear())
+  const [filtroMes, setFiltroMes] = useState(saved?.mes ?? agora.getMonth() + 1)
+
+  useEffect(() => {
+    localStorage.setItem(LS_KEY, JSON.stringify({ ano: filtroAno, mes: filtroMes }))
+  }, [filtroAno, filtroMes])
   const inicioFiltro = new Date(filtroAno, filtroMes - 1, 1).toISOString()
   const fimFiltro    = new Date(filtroAno, filtroMes, 0, 23, 59, 59).toISOString()
 
@@ -206,27 +296,12 @@ export default function Dashboard() {
             {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
           </p>
         </div>
-        {/* Seletor de período — filtra KPIs, ranking imobs e distribuição de status */}
-        <div className="flex items-center gap-2">
-          <select
-            value={filtroMes}
-            onChange={e => setFiltroMes(Number(e.target.value))}
-            className="select py-1 text-xs"
-            style={{ minWidth: '80px' }}
-          >
-            {MESES_ABBR_DASH.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
-          </select>
-          <select
-            value={filtroAno}
-            onChange={e => setFiltroAno(Number(e.target.value))}
-            className="select py-1 text-xs"
-            style={{ minWidth: '70px' }}
-          >
-            {[agora.getFullYear(), agora.getFullYear()-1, agora.getFullYear()-2].map(y =>
-              <option key={y} value={y}>{y}</option>
-            )}
-          </select>
-        </div>
+        {/* Seletor de período elegante — filtra KPIs, ranking imobs e distribuição de status */}
+        <MonthYearPicker
+          ano={filtroAno}
+          mes={filtroMes}
+          onChange={(a, m) => { setFiltroAno(a); setFiltroMes(m) }}
+        />
       </div>
 
       {/* ── KPIs ── */}

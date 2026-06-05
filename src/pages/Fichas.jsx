@@ -390,7 +390,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
 
       {/* Cards de produto */}
       <div>
-        <p className="text-sm font-semibold text-dark-text mb-3">Selecione um produto</p>
+        <p className="text-xs font-semibold text-dark-muted uppercase tracking-widest mb-4">Selecione um produto</p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {PRODUTOS.map((p, i) => {
             const PIcon = p.Icon
@@ -398,21 +398,57 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
               <button
                 key={p.key}
                 onClick={() => onSelectProduto(p.key)}
-                className="animate-slide-up group text-left rounded-2xl p-6 border transition-all duration-200 hover:scale-[1.03] hover:shadow-lg active:scale-[0.97]"
-                style={{ background: p.bg, borderColor: p.border, animationDelay: `${i * 50}ms`, animationFillMode: 'both' }}
-                onMouseEnter={e => e.currentTarget.style.boxShadow = `0 0 20px ${p.accent}30`}
-                onMouseLeave={e => e.currentTarget.style.boxShadow = ''}
+                className="animate-slide-up group text-left rounded-2xl p-5 border transition-all duration-200 active:scale-[0.97] relative overflow-hidden"
+                style={{
+                  background:   p.bg,
+                  borderColor:  p.border,
+                  animationDelay:    `${i * 50}ms`,
+                  animationFillMode: 'both',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.boxShadow = `0 4px 20px ${p.accent}25, 0 0 0 1px ${p.accent}40`
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.borderColor = p.accent + '60'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.boxShadow = ''
+                  e.currentTarget.style.transform = ''
+                  e.currentTarget.style.borderColor = p.border
+                }}
               >
-                <PIcon className="w-8 h-8 mb-3" style={{ color: p.accent }} strokeWidth={1.5} />
-                <p className="font-bold text-sm text-dark-text mb-3">{p.label}</p>
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-dark-muted">Total</span>
-                    <span className="font-mono font-semibold" style={{ color: p.accent }}>{contagem[p.key]?.total ?? '—'}</span>
+                {/* Icon */}
+                <div className="flex items-start justify-between mb-4">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ background: p.accent + '20' }}
+                  >
+                    <PIcon className="w-5 h-5" style={{ color: p.accent }} strokeWidth={1.5} />
                   </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-dark-muted">Em Aberto</span>
-                    <span className="font-mono font-semibold text-status-warning">{contagem[p.key]?.emAberto ?? '—'}</span>
+                  {/* Badge de categoria */}
+                  <span
+                    className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                    style={{ background: p.accent + '18', color: p.accent }}
+                  >
+                    {p.key === 'todos' ? 'Geral' : p.key.includes('pj') || p.key === 'pessoa_juridica' ? 'PJ' : 'PF'}
+                  </span>
+                </div>
+
+                {/* Nome do produto em destaque */}
+                <p className="font-bold text-base text-dark-text mb-3 leading-tight">{p.label}</p>
+
+                {/* Métricas */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-dark-muted">Total</span>
+                    <span className="text-sm font-bold font-mono" style={{ color: p.accent }}>
+                      {contagem[p.key]?.total ?? '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-dark-muted">Em Aberto</span>
+                    <span className="text-sm font-bold font-mono text-status-warning">
+                      {contagem[p.key]?.emAberto ?? '—'}
+                    </span>
                   </div>
                 </div>
               </button>

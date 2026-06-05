@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchFichasDoOrcamentista, fetchFichas, fetchFichaDetalhe, deletarFicha, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
@@ -6,10 +6,49 @@ import { useToast } from '../contexts/ToastContext'
 import ModalFinalizar from '../components/ModalFinalizar'
 import ModalFicha from '../components/ModalFicha'
 import DetalhesFicha from '../components/DetalhesFicha'
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, startOfDay, startOfWeek, startOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Clock, CheckCircle2, FileText, TrendingUp } from 'lucide-react'
 import { TableSkeleton } from '../components/Skeleton'
+
+// ── QuickDateFilter ───────────────────────────────────────────────────────────
+
+function QuickDateFilter({ value, onChange }) {
+  const opts = [
+    { key: 'todos',  label: 'Todos' },
+    { key: 'hoje',   label: 'Hoje' },
+    { key: 'semana', label: 'Semana' },
+    { key: 'mes',    label: 'Mês' },
+  ]
+  return (
+    <div className="flex items-center gap-1 bg-dark-surface2 border border-dark-border rounded-full p-0.5">
+      {opts.map(o => (
+        <button
+          key={o.key}
+          onClick={() => onChange(o.key)}
+          className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+            value === o.key
+              ? 'bg-brand-secondary text-white shadow-sm'
+              : 'text-dark-muted hover:text-dark-text'
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function applyDateFilter(fichas, filtro) {
+  if (filtro === 'todos') return fichas
+  const now  = new Date()
+  const from = filtro === 'hoje'
+    ? startOfDay(now)
+    : filtro === 'semana'
+    ? startOfWeek(now, { weekStartsOn: 1 })
+    : startOfMonth(now)
+  return fichas.filter(f => new Date(f.created_at) >= from)
+}
 
 function stringColor(str) {
   const c = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#2B5BA8']
@@ -32,13 +71,14 @@ export default function MinhasFichas() {
   const { user, profile } = useAuth()
   const toast = useToast()
   const agora = new Date()
-  const [tab,          setTab]          = useState('abertas')
-  const [finalizar,    setFinalizar]    = useState(null)
-  const [detalhe,      setDetalhe]      = useState(null)
-  const [editar,       setEditar]       = useState(null)
+  const [tab,           setTab]          = useState('abertas')
+  const [finalizar,     setFinalizar]    = useState(null)
+  const [detalhe,       setDetalhe]      = useState(null)
+  const [editar,        setEditar]       = useState(null)
   const [editarLoading, setEditarLoading] = useState(false)
-  const [filtroAno,    setFiltroAno]    = useState(agora.getFullYear())
-  const [filtroMes,    setFiltroMes]    = useState(agora.getMonth() + 1)
+  const [filtroAno,     setFiltroAno]    = useState(agora.getFullYear())
+  const [filtroMes,     setFiltroMes]    = useState(agora.getMonth() + 1)
+  const [filtroRapido,  setFiltroRapido] = useState('todos')
 
   const queryClient = useQueryClient()
   const avatarColor = stringColor(profile?.nome || '')
@@ -52,8 +92,9 @@ export default function MinhasFichas() {
     enabled: !!user?.id,
   })
 
-  const abertas  = fichasData?.abertas  ?? []
-  const passadas = fichasData?.passadas ?? []
+  const abertasRaw = fichasData?.abertas  ?? []
+  const passadas   = fichasData?.passadas ?? []
+  const abertas    = useMemo(() => applyDateFilter(abertasRaw, filtroRapido), [abertasRaw, filtroRapido])
 
   function refresh() {
     queryClient.invalidateQueries({ queryKey: ['minhas-fichas', user?.id] })
@@ -128,18 +169,24 @@ export default function MinhasFichas() {
 
       {/* Tabs */}
       <div className="card overflow-hidden">
-        <div className="flex border-b border-dark-border">
-          {[['abertas','Em Cotação'], ['passadas','Finalizadas']].map(([k, l]) => (
-            <button
-              key={k}
-              onClick={() => setTab(k)}
-              className={`px-5 py-3 text-sm font-medium transition-all border-b-2 -mb-px ${
-                tab === k ? 'border-brand-accent text-brand-accent' : 'border-transparent text-dark-muted hover:text-dark-text'
-              }`}
-            >
-              {l} {tab !== k && `(${k === 'abertas' ? abertas.length : passadas.length})`}
-            </button>
-          ))}
+        <div className="flex items-center justify-between border-b border-dark-border pr-4 flex-wrap gap-2">
+          <div className="flex">
+            {[['abertas','Em Cotação'], ['passadas','Finalizadas']].map(([k, l]) => (
+              <button
+                key={k}
+                onClick={() => setTab(k)}
+                className={`px-5 py-3 text-sm font-medium transition-all border-b-2 -mb-px ${
+                  tab === k ? 'border-brand-accent text-brand-accent' : 'border-transparent text-dark-muted hover:text-dark-text'
+                }`}
+              >
+                {l} {tab !== k && `(${k === 'abertas' ? abertasRaw.length : passadas.length})`}
+              </button>
+            ))}
+          </div>
+          {/* Filtro rápido — visível apenas na aba abertas */}
+          {tab === 'abertas' && (
+            <QuickDateFilter value={filtroRapido} onChange={setFiltroRapido} />
+          )}
         </div>
 
         {/* Filtro mês/ano — visível apenas na aba de fichas passadas */}

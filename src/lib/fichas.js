@@ -457,7 +457,6 @@ export async function criarFicha(dados) {
 
 export async function editarFicha(id, dados, userId) {
   let payload = { ...dados }
-  // Append edit history to raw_data
   if (userId) {
     const { data: cur } = await supabase.from('fichas').select('raw_data').eq('id', id).single()
     const raw = cur?.raw_data || {}
@@ -465,8 +464,11 @@ export async function editarFicha(id, dados, userId) {
     hist.push({ editado_em: new Date().toISOString(), editado_por: userId })
     payload.raw_data = { ...raw, _edit_history: hist }
   }
-  const { error } = await supabase.from('fichas').update(payload).eq('id', id)
-  return error
+  const { data, error } = await supabase.from('fichas').update(payload).eq('id', id).select('id')
+  if (error) return error
+  // RLS bloqueou silenciosamente (0 linhas afetadas sem erro)
+  if (!data || data.length === 0) return { message: 'Sem permissão para editar esta ficha.' }
+  return null
 }
 
 export async function deletarFicha(id) {

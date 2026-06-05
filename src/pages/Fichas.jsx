@@ -11,6 +11,7 @@ import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useToast } from '../contexts/ToastContext'
+import { supabase } from '../lib/supabase'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
@@ -714,6 +715,19 @@ export default function Fichas() {
     if (!user?.id) return
     fetchContagemAbertaOrcamentista(user.id).then(setMinhasFichasCount)
   }, [user?.id])
+
+  // Realtime — atualiza contagens de produto e "minhas fichas" automaticamente
+  useEffect(() => {
+    const refresh = () => {
+      fetchContagemProdutos().then(setContagem)
+      if (user?.id) fetchContagemAbertaOrcamentista(user.id).then(setMinhasFichasCount)
+    }
+    const ch = supabase.channel('fichas-page-contagem')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'fichas' }, refresh)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'fichas' }, refresh)
+      .subscribe()
+    return () => supabase.removeChannel(ch)
+  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Ao selecionar produto: carregar anos disponíveis e auto-selecionar o atual
   useEffect(() => {

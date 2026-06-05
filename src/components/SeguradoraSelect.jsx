@@ -40,15 +40,36 @@ export default function SeguradoraSelect({
   className = '',
   disabled = false,
 }) {
-  const [open,        setOpen]        = useState(false)
-  const [seguradoras, setSeguradoras] = useState(_cache || [])
-  const [search,      setSearch]      = useState('')
-  const wrapRef    = useRef(null)
-  const searchRef  = useRef(null)
+  const [open,          setOpen]          = useState(false)
+  const [seguradoras,   setSeguradoras]   = useState(_cache || [])
+  const [search,        setSearch]        = useState('')
+  const [dropdownStyle, setDropdownStyle] = useState(null)
+  const wrapRef   = useRef(null)
+  const searchRef = useRef(null)
 
   useEffect(() => {
     getSeguradoras().then(setSeguradoras)
   }, [])
+
+  // Calcula posição fixa do dropdown — escapa de stacking contexts criados por
+  // backdrop-filter nos modais, que cliparia position:absolute de filhos
+  useEffect(() => {
+    if (!open) { setDropdownStyle(null); return }
+
+    function calcPos() {
+      if (!wrapRef.current) return
+      const rect = wrapRef.current.getBoundingClientRect()
+      setDropdownStyle({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+    }
+
+    calcPos()
+    window.addEventListener('resize', calcPos, { passive: true })
+    window.addEventListener('scroll', calcPos, { passive: true, capture: true })
+    return () => {
+      window.removeEventListener('resize', calcPos)
+      window.removeEventListener('scroll', calcPos, true)
+    }
+  }, [open])
 
   // Foca o campo de busca ao abrir
   useEffect(() => {
@@ -92,9 +113,12 @@ export default function SeguradoraSelect({
         <ChevronDown className={`w-4 h-4 ml-auto flex-shrink-0 text-dark-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Dropdown */}
-      {open && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1 glass-panel overflow-hidden animate-fade-in">
+      {/* Dropdown — position:fixed para escapar de stacking contexts (backdrop-filter, overflow) */}
+      {open && dropdownStyle && (
+        <div
+          className="glass-panel overflow-hidden animate-fade-in"
+          style={{ position: 'fixed', top: dropdownStyle.top, left: dropdownStyle.left, width: dropdownStyle.width, zIndex: 9999 }}
+        >
 
           {/* Campo de busca incremental */}
           <div className="flex items-center gap-2 px-3 py-2 border-b border-dark-border">

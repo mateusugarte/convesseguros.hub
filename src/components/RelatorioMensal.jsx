@@ -240,7 +240,7 @@ export default function RelatorioMensal({ onClose }) {
   const imobiliarias = Object.keys(porImobiliaria).sort()
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto animate-fade-in">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto animate-fade-in">
       <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-5xl my-4">
 
         {/* Header */}

@@ -39,7 +39,7 @@ export default function CommandPalette({ open, onClose, onOpenFicha }) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/70 z-[200] flex items-start justify-center pt-24 px-4 animate-fade-in"
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200] flex items-start justify-center pt-24 px-4 animate-fade-in"
       onClick={onClose}
     >
       <div

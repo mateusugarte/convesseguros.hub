@@ -5,6 +5,7 @@ import { useToast } from '../contexts/ToastContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { supabase } from '../lib/supabase'
 import { fetchContagemAbertaOrcamentista, PRODUTO_LABELS } from '../lib/fichas'
+import { initComercialStore } from '../lib/comercial'
 import CommandPalette from './CommandPalette'
 import { PageTransition } from './PageTransition'
 import {
@@ -108,7 +109,10 @@ export default function Layout() {
   }, [])
 
   useEffect(() => {
-    if (user) fetchContagemAbertaOrcamentista(user.id).then(setAbertasCount)
+    if (user) {
+      fetchContagemAbertaOrcamentista(user.id).then(setAbertasCount)
+      initComercialStore(user.id)
+    }
   }, [user])
 
   // Realtime — new ficha toast

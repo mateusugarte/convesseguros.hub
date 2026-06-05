@@ -342,7 +342,7 @@ function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinal
 function ModalConfirmarRecusado({ onConfirmar, salvando }) {
   const [retorno, setRetorno] = useState(null)
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 animate-fade-in">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
       <div className="glass-modal w-full max-w-sm">
         <div className="px-6 py-5 space-y-4">
           <p className="font-semibold text-dark-text text-sm">Confirmar Recusa</p>
@@ -378,7 +378,7 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
   const valido = seguradora && valorParcela && numeroOrcamento.trim() && retornoEnviado !== null
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 animate-fade-in">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
       <div className="glass-modal w-full max-w-md">
         <div className="px-6 py-4 border-b border-dark-border">
           <p className="font-semibold text-dark-text">Confirmar Aprovação</p>

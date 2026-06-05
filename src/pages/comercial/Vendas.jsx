@@ -13,7 +13,7 @@ function ModalVenda({ onClose, onSave, leads }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="glass-modal w-full max-w-lg relative z-10 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
           <h2 className="font-bold text-dark-text">Registrar Venda</h2>
@@ -68,21 +68,30 @@ function ModalVenda({ onClose, onSave, leads }) {
 
 export default function Vendas() {
   const state = useComercial()
-  const [open, setOpen] = useState(false)
+  const [open,    setOpen]    = useState(false)
+  const [periodo, setPeriodo] = useState('todos')
+
+  const filteredSales = useMemo(() => {
+    if (periodo === 'todos') return state.sales
+    const inicio = periodo === '30dias'
+      ? new Date(Date.now() - 30 * 86400000)
+      : new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    return state.sales.filter(s => !s.dataEmissao || new Date(s.dataEmissao) >= inicio)
+  }, [state.sales, periodo])
 
   const stats = useMemo(() => {
-    const total = state.sales.reduce((a, s) => a + (parseFloat(s.valor) || 0), 0)
-    const comissao = state.sales.reduce((a, s) => {
+    const total = filteredSales.reduce((a, s) => a + (parseFloat(s.valor) || 0), 0)
+    const comissao = filteredSales.reduce((a, s) => {
       const v = parseFloat(s.valor) || 0
       const c = parseFloat(s.comissao) || 0
       return a + v * c / 100
     }, 0)
     const prodMap = {}
-    state.sales.forEach(s => { prodMap[s.produto] = (prodMap[s.produto] || 0) + 1 })
+    filteredSales.forEach(s => { prodMap[s.produto] = (prodMap[s.produto] || 0) + 1 })
     const topProd = Object.entries(prodMap).sort((a,b) => b[1]-a[1])[0]
     const topProdLabel = topProd ? (PRODUTOS.find(p => p.id === topProd[0])?.label || topProd[0]) : '—'
-    return { total, comissao, count: state.sales.length, topProd: topProdLabel }
-  }, [state.sales])
+    return { total, comissao, count: filteredSales.length, topProd: topProdLabel }
+  }, [filteredSales])
 
   function handleSave(form) {
     saleAdd(form)
@@ -92,14 +101,24 @@ export default function Vendas() {
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-lg font-bold text-dark-text">Área de Vendas</h1>
-          <p className="text-xs text-dark-muted mt-0.5">{state.sales.length} vendas registradas</p>
+          <p className="text-xs text-dark-muted mt-0.5">{filteredSales.length} vendas{periodo !== 'todos' ? ' no período' : ' registradas'}</p>
         </div>
-        <button onClick={() => setOpen(true)} className="btn-primary flex items-center gap-2 text-sm">
-          <Plus className="w-4 h-4" /> Nova Venda
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex bg-dark-surface2 rounded-xl p-0.5">
+            {[['todos','Todas'],['30dias','30 dias'],['mes','Este mês']].map(([v, l]) => (
+              <button key={v} onClick={() => setPeriodo(v)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${periodo === v ? 'bg-dark-glass text-dark-text shadow-sm' : 'text-dark-muted hover:text-dark-text'}`}>
+                {l}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setOpen(true)} className="btn-primary flex items-center gap-2 text-sm">
+            <Plus className="w-4 h-4" /> Nova Venda
+          </button>
+        </div>
       </div>
 
       {/* Cards */}
@@ -132,12 +151,12 @@ export default function Vendas() {
               </tr>
             </thead>
             <tbody>
-              {state.sales.length === 0 ? (
+              {filteredSales.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center text-dark-muted py-12 text-sm">Nenhuma venda registrada</td>
+                  <td colSpan={6} className="text-center text-dark-muted py-12 text-sm">Nenhuma venda {periodo !== 'todos' ? 'no período' : 'registrada'}</td>
                 </tr>
               ) : (
-                [...state.sales].reverse().map(s => {
+                [...filteredSales].reverse().map(s => {
                   const prod = PRODUTOS.find(p => p.id === s.produto)
                   const comVal = ((parseFloat(s.valor)||0) * (parseFloat(s.comissao)||0) / 100)
                   return (

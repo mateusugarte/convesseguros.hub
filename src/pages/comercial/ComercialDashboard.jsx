@@ -1,9 +1,38 @@
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useComercial, calcScore, scoreFaixa, diffDias, PIPELINE_COLS, PRODUTOS } from '../../lib/comercial'
-import { TrendingUp, Users, Target, AlertTriangle, Award, Clock, DollarSign, Zap } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, FunnelChart, Funnel, LabelList } from 'recharts'
+import { TrendingUp, Users, Target, AlertTriangle, Award, Clock, DollarSign, Zap, Calendar } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { format, parseISO, isToday, addDays, startOfDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+
+// ── Period filter ─────────────────────────────────────────────────────────────
+
+const PERIODOS = [
+  { id: 'todos',       label: 'Todos' },
+  { id: 'hoje',        label: 'Hoje' },
+  { id: '7dias',       label: '7 dias' },
+  { id: '30dias',      label: '30 dias' },
+  { id: 'personalizado', label: 'Personalizado' },
+]
+
+function usePeriodoRange(periodo) {
+  return useMemo(() => {
+    const now  = new Date()
+    const hoje = startOfDay(now)
+    if (periodo.tipo === 'hoje')   return { de: hoje, ate: now }
+    if (periodo.tipo === '7dias')  return { de: addDays(hoje, -7), ate: now }
+    if (periodo.tipo === '30dias') return { de: addDays(hoje, -30), ate: now }
+    if (periodo.tipo === 'personalizado' && periodo.de && periodo.ate)
+      return { de: new Date(periodo.de), ate: new Date(periodo.ate + 'T23:59:59') }
+    return null
+  }, [periodo])
+}
+
+function inRange(iso, range) {
+  if (!range || !iso) return true
+  const d = new Date(iso)
+  return d >= range.de && d <= range.ate
+}
 
 // ── Metric Card ───────────────────────────────────────────────────────────────
 
@@ -43,71 +72,112 @@ function AlertRow({ lead }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function ComercialDashboard() {
-  const state = useComercial()
-  const leads = state.leads
-  const sales = state.sales
-  const events = state.events
+  const state   = useComercial()
+  const leads   = state.leads
+  const sales   = state.sales
+  const events  = state.events
+
+  const [periodo, setPeriodo] = useState({ tipo: 'todos', de: '', ate: '' })
+  const range = usePeriodoRange(periodo)
+
+  const filteredLeads = useMemo(() => {
+    if (!range) return leads
+    return leads.filter(l => inRange(l.criadoEm, range))
+  }, [leads, range])
+
+  const filteredSales = useMemo(() => {
+    if (!range) return sales
+    return sales.filter(s => inRange(s.dataEmissao, range))
+  }, [sales, range])
+
+  const filteredEvents = useMemo(() => {
+    if (!range) return events
+    return events.filter(e => inRange(e.data, range))
+  }, [events, range])
 
   const stats = useMemo(() => {
-    const active = leads.filter(l => l.coluna !== 'recusou')
-    const recusou = leads.filter(l => l.coluna === 'recusou')
-    const vendas = leads.filter(l => l.coluna === 'venda')
-    const txConversao = leads.length > 0 ? Math.round((vendas.length / leads.length) * 100) : 0
+    const active    = filteredLeads.filter(l => l.coluna !== 'recusou')
+    const recusou   = filteredLeads.filter(l => l.coluna === 'recusou')
+    const vendas    = filteredLeads.filter(l => l.coluna === 'venda')
+    const txConversao = filteredLeads.length > 0 ? Math.round((vendas.length / filteredLeads.length) * 100) : 0
 
-    const totalReceita = sales.reduce((acc, s) => acc + (parseFloat(s.valor) || 0), 0)
-    const totalComissao = sales.reduce((acc, s) => {
+    const totalReceita  = filteredSales.reduce((acc, s) => acc + (parseFloat(s.valor) || 0), 0)
+    const totalComissao = filteredSales.reduce((acc, s) => {
       const v = parseFloat(s.valor) || 0
       const c = parseFloat(s.comissao) || 0
       return acc + (v * c / 100)
     }, 0)
 
-    const alertLeads = active.filter(l => l.ultimaAtividade && diffDias(l.ultimaAtividade) >= 7)
+    // alertas: sempre nos leads ativos (independente do filtro)
+    const allActive   = leads.filter(l => l.coluna !== 'recusou')
+    const alertLeads  = allActive.filter(l => l.ultimaAtividade && diffDias(l.ultimaAtividade) >= 7)
       .sort((a, b) => diffDias(b.ultimaAtividade) - diffDias(a.ultimaAtividade))
 
     const avgScore = active.length > 0 ? Math.round(active.reduce((acc, l) => acc + calcScore(l), 0) / active.length) : 0
 
-    const funnelData = PIPELINE_COLS.filter(c => c.id !== 'followup').map(c => ({
-      name: c.label,
-      value: leads.filter(l => l.coluna === c.id).length,
-      fill: c.color,
-    }))
-
     const distribuicao = PIPELINE_COLS.map(c => ({
       name: c.label.split(' ')[0],
-      qtd: leads.filter(l => l.coluna === c.id).length,
+      qtd:  filteredLeads.filter(l => l.coluna === c.id).length,
       fill: c.color,
     }))
 
-    const todayEvents = events.filter(e => {
+    const todayEvents = filteredEvents.filter(e => {
       try { return isToday(parseISO(e.data)) } catch { return false }
     })
 
-    return { active: active.length, recusou: recusou.length, vendas: vendas.length, txConversao, totalReceita, totalComissao, alertLeads, avgScore, funnelData, distribuicao, todayEvents }
-  }, [leads, sales, events])
+    return { active: active.length, recusou: recusou.length, vendas: vendas.length, txConversao, totalReceita, totalComissao, alertLeads, avgScore, distribuicao, todayEvents }
+  }, [filteredLeads, filteredSales, filteredEvents, leads])
 
   const prodStats = useMemo(() => {
     const map = {}
-    sales.forEach(s => {
-      const p = PRODUTOS.find(x => x.id === s.produto)
+    filteredSales.forEach(s => {
+      const p     = PRODUTOS.find(x => x.id === s.produto)
       const label = p ? p.label : s.produto
-      map[label] = (map[label] || 0) + 1
+      map[label]  = (map[label] || 0) + 1
     })
-    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value)
-  }, [sales])
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+  }, [filteredSales])
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <div>
-        <h1 className="text-lg font-bold text-dark-text">Dashboard Comercial</h1>
-        <p className="text-xs text-dark-muted mt-0.5">{format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}</p>
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-lg font-bold text-dark-text">Dashboard Comercial</h1>
+          <p className="text-xs text-dark-muted mt-0.5">{format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}</p>
+        </div>
+
+        {/* Filtro de período */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex bg-dark-surface2 rounded-xl p-0.5">
+            {PERIODOS.filter(p => p.id !== 'personalizado').map(p => (
+              <button key={p.id} onClick={() => setPeriodo({ tipo: p.id, de: '', ate: '' })}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${periodo.tipo === p.id ? 'bg-dark-glass text-dark-text shadow-sm' : 'text-dark-muted hover:text-dark-text'}`}>
+                {p.label}
+              </button>
+            ))}
+            <button onClick={() => setPeriodo(p => ({ ...p, tipo: 'personalizado' }))}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${periodo.tipo === 'personalizado' ? 'bg-dark-glass text-dark-text shadow-sm' : 'text-dark-muted hover:text-dark-text'}`}>
+              <Calendar className="w-3 h-3" /> Período
+            </button>
+          </div>
+          {periodo.tipo === 'personalizado' && (
+            <div className="flex items-center gap-1.5">
+              <input type="date" value={periodo.de} onChange={e => setPeriodo(p => ({ ...p, de: e.target.value }))}
+                className="input text-xs py-1.5 w-32" />
+              <span className="text-dark-muted text-xs">até</span>
+              <input type="date" value={periodo.ate} onChange={e => setPeriodo(p => ({ ...p, ate: e.target.value }))}
+                className="input text-xs py-1.5 w-32" />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Métricas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <MetricCard icon={Users}     label="Leads Ativos"     value={stats.active}    sub={`${stats.recusou} recusaram`}            color="#6366F1" />
-        <MetricCard icon={Target}    label="Conversão"        value={`${stats.txConversao}%`} sub={`${stats.vendas} vendas`}         color="#10B981" />
-        <MetricCard icon={DollarSign} label="Receita Total"  value={`R$ ${stats.totalReceita.toLocaleString('pt-BR',{minimumFractionDigits:0})}`} sub={`Comissão: R$ ${stats.totalComissao.toFixed(0)}`} color="#F59E0B" />
-        <MetricCard icon={Zap}       label="Score Médio"      value={stats.avgScore}  sub={scoreFaixa(stats.avgScore).label}        color={scoreFaixa(stats.avgScore).color} />
+        <MetricCard icon={Users}      label="Leads Ativos"    value={stats.active}    sub={`${stats.recusou} recusaram`}            color="#6366F1" />
+        <MetricCard icon={Target}     label="Conversão"       value={`${stats.txConversao}%`} sub={`${stats.vendas} vendas`}         color="#10B981" />
+        <MetricCard icon={DollarSign} label="Receita Total"   value={`R$ ${stats.totalReceita.toLocaleString('pt-BR',{minimumFractionDigits:0})}`} sub={`Comissão: R$ ${stats.totalComissao.toFixed(0)}`} color="#F59E0B" />
+        <MetricCard icon={Zap}        label="Score Médio"     value={stats.avgScore}  sub={scoreFaixa(stats.avgScore).label}        color={scoreFaixa(stats.avgScore).color} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -134,11 +204,11 @@ export default function ComercialDashboard() {
         <div className="card p-4">
           <p className="text-sm font-semibold text-dark-text mb-4">Produtos Vendidos</p>
           {prodStats.length === 0 ? (
-            <p className="text-xs text-dark-muted text-center py-8">Sem vendas registradas</p>
+            <p className="text-xs text-dark-muted text-center py-8">Sem vendas no período</p>
           ) : (
             <div className="space-y-2">
               {prodStats.map((p, i) => {
-                const pct = Math.round((p.value / sales.length) * 100)
+                const pct    = filteredSales.length > 0 ? Math.round((p.value / filteredSales.length) * 100) : 0
                 const colors = ['#6366F1','#10B981','#F59E0B','#EF4444','#8B5CF6']
                 return (
                   <div key={p.name}>

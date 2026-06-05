@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { supabase } from './supabase'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -56,29 +57,27 @@ export function calcScore(lead) {
 }
 
 export function scoreFaixa(score) {
-  if (score <= 30) return { label: 'Frio',   color: '#EF4444', bg: 'rgba(239,68,68,0.12)',   emoji: '🔴' }
-  if (score <= 60) return { label: 'Morno',  color: '#F59E0B', bg: 'rgba(245,158,11,0.12)',  emoji: '🟡' }
-  return             { label: 'Quente', color: '#10B981', bg: 'rgba(16,185,129,0.12)',  emoji: '🟢' }
+  if (score <= 30) return { label: 'Frio',   color: '#EF4444', bg: 'rgba(239,68,68,0.12)' }
+  if (score <= 60) return { label: 'Morno',  color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' }
+  return             { label: 'Quente', color: '#10B981', bg: 'rgba(16,185,129,0.12)' }
 }
 
 export function diffDias(iso) {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
 }
 
-// ── Mock fichas/apólices para importação ──────────────────────────────────────
+// ── UserId namespacing ────────────────────────────────────────────────────────
 
-export const MOCK_FICHAS_IMPORT = [
-  { id: 'f1', nome: 'Paulo Saraiva',      cpf: '123.456.789-00', telefone: '(11) 97654-3210', imobiliaria: 'Imob Capital'   },
-  { id: 'f2', nome: 'Lúcia Drummond',     cpf: '234.567.890-11', telefone: '(21) 98877-6655', imobiliaria: 'RJ Imóveis'     },
-  { id: 'f3', nome: 'Marcos Cavalcante',  cpf: '345.678.901-22', telefone: '(85) 99988-7766', imobiliaria: 'CE Prime'       },
-  { id: 'f4', nome: 'Juliana Pires',      cpf: '456.789.012-33', telefone: '(41) 97755-4433', imobiliaria: 'Curitiba Imob'  },
-]
+let _userId     = null
+let _storageKey = 'conves_comercial_v3'
 
-export const MOCK_APOLICES_IMPORT = [
-  { id: 'a1', nome: 'Rodrigo Neves',    apolice: '2024-001234', imobiliaria: 'Imob Capital', tipo: 'Locatário'   },
-  { id: 'a2', nome: 'Camila Torres',    apolice: '2024-002345', imobiliaria: 'SP Imóveis',   tipo: 'Proprietário' },
-  { id: 'a3', nome: 'Alexandre Costa',  apolice: '2024-003456', imobiliaria: 'MG Imóveis',   tipo: 'Locatário'   },
-]
+export function initComercialStore(userId) {
+  if (!userId || _userId === userId) return
+  _userId     = userId
+  _storageKey = `conves_comercial_v3_${userId}`
+  _state      = loadState()
+  notify()
+}
 
 // ── Estado inicial ────────────────────────────────────────────────────────────
 
@@ -112,34 +111,34 @@ const INITIAL_SALES = [
 ]
 
 const INITIAL_JOURNEYS = [
-  { id: 'jn1', nome: 'Jornada Seguro Fiança', tipoCliente: 'PF', perfil: 'Locatário com fiança existente', objetivo: 'Cross-sell produtos adicionais', descricao: 'Abordar clientes existentes de seguro fiança para oferecer proteção complementar', etapas: [{ id: 'ep1', nome: 'Primeiro Contato', produto: 'seguro_vida', script: 'Olá [Nome], vi que você tem conosco o seguro fiança da [Imobiliária]. Gostaria de apresentar opções complementares...', descricao: 'Apresentação inicial', prazo: 1 }, { id: 'ep2', nome: 'Envio de Proposta', produto: 'seguro_vida', script: 'Conforme conversamos, preparei proposta personalizada...', descricao: 'Enviar proposta por e-mail', prazo: 3 }, { id: 'ep3', nome: 'Follow Up', produto: 'seguro_vida', script: 'Oi [Nome], você teve chance de analisar nossa proposta?', descricao: 'Verificar interesse e tirar dúvidas', prazo: 7 }] },
-  { id: 'jn2', nome: 'Abordagem Empresarial',  tipoCliente: 'PJ', perfil: 'PME até 200 funcionários',     objetivo: 'Fechar RC + Seguro Incêndio',      descricao: 'Jornada para empresas que precisam de cobertura de responsabilidade civil e patrimônio', etapas: [{ id: 'ep1', nome: 'Diagnóstico Gratuito', produto: 'rc_empresarial', script: 'Bom dia, sou [Nome] da Conves. Realizamos diagnóstico gratuito de riscos empresariais...', descricao: 'Levantar necessidades e riscos', prazo: 1 }, { id: 'ep2', nome: 'Proposta RC', produto: 'rc_empresarial', script: 'Com base no diagnóstico, preparei proposta de RC que protege...', descricao: 'Apresentar proposta detalhada', prazo: 5 }] },
+  { id: 'jn1', nome: 'Jornada Seguro Fiança', tipoCliente: 'PF', descricao: 'Abordar clientes existentes de seguro fiança para oferecer proteção complementar', etapas: ['Primeiro Contato', 'Envio de Proposta', 'Follow Up'] },
+  { id: 'jn2', nome: 'Abordagem Empresarial',  tipoCliente: 'PJ', descricao: 'Jornada para empresas que precisam de cobertura de responsabilidade civil e patrimônio', etapas: ['Diagnóstico Gratuito', 'Proposta RC', 'Fechamento'] },
 ]
 
 const INITIAL_SCRIPTS = [
-  { id: 'sc1', titulo: 'Primeiro Contato — Indicação',  categoria: 'Script',    conteudo: 'Olá [Nome]! Meu nome é [Seu Nome] da Conves Seguros. [Indicador] me passou seu contato pois acredito que posso te ajudar com proteção financeira. Você tem 5 minutos?' },
-  { id: 'sc2', titulo: 'Objeção de Preço — Playbook',   categoria: 'Playbook',  conteudo: '1. Reconheça: "Entendo sua preocupação com o investimento"\n2. Pergunte: "Comparando com o quê?"\n3. Apresente valor: mostre coberturas e exemplos de sinistros\n4. Parcele: ofereça opções de pagamento\n5. Urgência: "Imprevistos não avisam"' },
-  { id: 'sc3', titulo: 'Benefícios Seguro de Vida',      categoria: 'Material',  conteudo: 'Coberturas:\n• Morte natural e acidental\n• Invalidez permanente total\n• Doenças graves (câncer, infarto, AVC)\n• Assistência funeral\n\nDiferenciais Conves: prazo de carência reduzido, atendimento 24h, rede nacional' },
-  { id: 'sc4', titulo: 'Treinamento — Rapport Inicial',  categoria: 'Treinamento', conteudo: 'Os primeiros 30 segundos definem o tom da conversa:\n1. Tom de voz: confiante mas amigável\n2. Espelhamento: adapte seu ritmo ao do cliente\n3. Nome: use o nome do cliente pelo menos 3x\n4. Escuta ativa: faça perguntas abertas\n5. Anotações: demonstre interesse genuíno' },
+  { id: 'sc1', titulo: 'Primeiro Contato — Indicação',  tipo: 'Abordagem',   conteudo: 'Olá [Nome]! Meu nome é [Seu Nome] da Conves Seguros. [Indicador] me passou seu contato pois acredito que posso te ajudar com proteção financeira. Você tem 5 minutos?' },
+  { id: 'sc2', titulo: 'Objeção de Preço — Playbook',   tipo: 'Objeção',     conteudo: '1. Reconheça: "Entendo sua preocupação com o investimento"\n2. Pergunte: "Comparando com o quê?"\n3. Apresente valor: mostre coberturas e exemplos de sinistros\n4. Parcele: ofereça opções de pagamento\n5. Urgência: "Imprevistos não avisam"' },
+  { id: 'sc3', titulo: 'Benefícios Seguro de Vida',      tipo: 'Material',    conteudo: 'Coberturas:\n• Morte natural e acidental\n• Invalidez permanente total\n• Doenças graves (câncer, infarto, AVC)\n• Assistência funeral\n\nDiferenciais Conves: prazo de carência reduzido, atendimento 24h, rede nacional' },
+  { id: 'sc4', titulo: 'Treinamento — Rapport Inicial',  tipo: 'Treinamento', conteudo: 'Os primeiros 30 segundos definem o tom da conversa:\n1. Tom de voz: confiante mas amigável\n2. Espelhamento: adapte seu ritmo ao do cliente\n3. Nome: use o nome do cliente pelo menos 3x\n4. Escuta ativa: faça perguntas abertas\n5. Anotações: demonstre interesse genuíno' },
 ]
 
 function createInitial() {
   return { leads: INITIAL_LEADS, events: INITIAL_EVENTS, sales: INITIAL_SALES, journeys: INITIAL_JOURNEYS, scripts: INITIAL_SCRIPTS, tags: TAGS_DEFAULT, meta: 10 }
 }
 
+// ── Reactive store ────────────────────────────────────────────────────────────
+
 function loadState() {
   try {
-    const s = localStorage.getItem('conves_comercial_v3')
+    const s = localStorage.getItem(_storageKey)
     return s ? JSON.parse(s) : createInitial()
   } catch { return createInitial() }
 }
 
-// ── Reactive store ────────────────────────────────────────────────────────────
-
 let _state     = loadState()
 let _listeners = new Set()
 
-function persist() { localStorage.setItem('conves_comercial_v3', JSON.stringify(_state)) }
+function persist() { localStorage.setItem(_storageKey, JSON.stringify(_state)) }
 function notify()  { _listeners.forEach(fn => fn()) }
 
 export function getState()  { return _state }
@@ -183,9 +182,36 @@ export const eventDelete = (id)  => setState(s => ({ ...s, events: s.events.filt
 
 export const saleAdd = (sale) => setState(s => ({ ...s, sales: [{ ...sale, id: `sv${Date.now()}` }, ...s.sales] }))
 
-export const journeyAdd    = (j) => { const novo = { ...j, id: `jn${Date.now()}`, etapas: [] }; setState(s => ({ ...s, journeys: [novo, ...s.journeys] })); return novo }
+export const journeyAdd    = (j) => { const novo = { ...j, id: `jn${Date.now()}`, etapas: j.etapas || [] }; setState(s => ({ ...s, journeys: [novo, ...s.journeys] })); return novo }
 export const journeyUpdate = (id, changes) => setState(s => ({ ...s, journeys: s.journeys.map(j => j.id === id ? { ...j, ...changes } : j) }))
 
 export const scriptAdd = (sc) => setState(s => ({ ...s, scripts: [{ ...sc, id: `sc${Date.now()}` }, ...s.scripts] }))
 export const tagAdd    = (tag) => setState(s => ({ ...s, tags: [...s.tags, { ...tag, id: `tg${Date.now()}` }] }))
 export const metaSet   = (n)   => setState(s => ({ ...s, meta: n }))
+
+// ── Supabase import helpers ───────────────────────────────────────────────────
+
+export async function fetchFichasParaImport({ search = '', status = '', produto = '' } = {}) {
+  let q = supabase
+    .from('fichas')
+    .select('id, nome_interessado, cpf, celular, imobiliaria, status, produto')
+    .order('created_at', { ascending: false })
+    .limit(200)
+  if (search.trim()) q = q.ilike('nome_interessado', `%${search}%`)
+  if (status)        q = q.eq('status', status)
+  if (produto)       q = q.eq('produto', produto)
+  const { data } = await q
+  return data || []
+}
+
+export async function fetchApolicesParaImport({ search = '', imobiliaria = '' } = {}) {
+  let q = supabase
+    .from('apolices')
+    .select('id, nome_interessado, numero_apolice, imobiliaria, status_emissao, produto, seguradora')
+    .order('created_at', { ascending: false })
+    .limit(200)
+  if (search.trim()) q = q.ilike('nome_interessado', `%${search}%`)
+  if (imobiliaria)   q = q.eq('imobiliaria', imobiliaria)
+  const { data } = await q
+  return data || []
+}

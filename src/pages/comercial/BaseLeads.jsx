@@ -8,7 +8,8 @@ function ScoreBadge({ score }) {
   const f = scoreFaixa(score)
   return (
     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ color: f.color, background: f.bg }}>
-      {f.emoji} {score}
+      <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: f.color }} />
+      {score}
     </span>
   )
 }

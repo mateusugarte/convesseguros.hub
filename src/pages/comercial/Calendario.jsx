@@ -13,13 +13,20 @@ const VIEWS = ['Mês', 'Semana', 'Dia']
 
 function corEvento(tipo) { return CORES_EVENTO[tipo] || '#6366F1' }
 
+function isoToLocal(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 // ── Evento Modal ──────────────────────────────────────────────────────────────
 
 function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
   const isEdit = !!evento?.id
   const [form, setForm] = useState(() => isEdit ? {
     nome: evento.nome || '', tipo: evento.tipo || 'Reunião',
-    data: evento.data ? evento.data.slice(0,16) : '',
+    data: isoToLocal(evento.data),
     descricao: evento.descricao || '', leadId: evento.leadId || '',
   } : {
     nome: '', tipo: 'Reunião', data: evento?.data || '',
@@ -188,7 +195,7 @@ function DayView({ date, events, onSlotClick, onEventClick }) {
   const dayEvs = events.filter(e => { try { return isSameDay(parseISO(e.data), date) } catch { return false } })
     .sort((a,b) => a.data > b.data ? 1 : -1)
 
-  function slotEvs(h) { return dayEvs.filter(e => parseISO(e.data).getHours() === h) }
+  function slotEvs(h) { return dayEvs.filter(e => { try { return parseISO(e.data).getHours() === h } catch { return false } }) }
 
   return (
     <div className="glass-panel overflow-hidden">

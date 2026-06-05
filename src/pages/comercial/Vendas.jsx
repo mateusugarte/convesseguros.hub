@@ -125,7 +125,7 @@ export default function Vendas() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { icon: DollarSign, label: 'Receita Total',   value: `R$ ${stats.total.toLocaleString('pt-BR',{minimumFractionDigits:0})}`, color: '#10B981' },
-          { icon: TrendingUp, label: 'Comissão Total',  value: `R$ ${stats.comissao.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}`, color: '#F59E0B' },
+          { icon: TrendingUp, label: 'Comissão Total',  value: `R$ ${stats.comissao.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, color: '#F59E0B' },
           { icon: Award,      label: 'Total de Vendas', value: String(stats.count), color: '#6366F1' },
           { icon: Award,      label: 'Top Produto',     value: stats.topProd, color: '#8B5CF6' },
         ].map(c => (

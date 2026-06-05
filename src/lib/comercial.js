@@ -57,9 +57,9 @@ export function calcScore(lead) {
 }
 
 export function scoreFaixa(score) {
-  if (score <= 30) return { label: 'Frio',   color: '#EF4444', bg: 'rgba(239,68,68,0.12)' }
-  if (score <= 60) return { label: 'Morno',  color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' }
-  return             { label: 'Quente', color: '#10B981', bg: 'rgba(16,185,129,0.12)' }
+  if (score <= 30) return { label: 'Frio',   color: '#EF4444', bg: 'rgba(239,68,68,0.12)',   emoji: '🧊' }
+  if (score <= 60) return { label: 'Morno',  color: '#F59E0B', bg: 'rgba(245,158,11,0.12)',  emoji: '🌡️' }
+  return             { label: 'Quente', color: '#10B981', bg: 'rgba(16,185,129,0.12)', emoji: '🔥' }
 }
 
 export function diffDias(iso) {

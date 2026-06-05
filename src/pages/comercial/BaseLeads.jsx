@@ -80,7 +80,7 @@ function SidePanel({ lead, tags, journeys, onClose, onSave }) {
             <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: f.bg }}>
               <span className="text-3xl font-black font-mono" style={{ color: f.color }}>{score}</span>
               <div>
-                <p className="font-bold text-sm" style={{ color: f.color }}>{f.label} {f.emoji}</p>
+                <p className="font-bold text-sm" style={{ color: f.color }}>{f.label}</p>
                 <p className="text-[10px] text-dark-muted">Calculado por critérios</p>
               </div>
             </div>

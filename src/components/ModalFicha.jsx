@@ -162,7 +162,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="absolute inset-0 bg-black/70" />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div className="glass-modal rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative z-10">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">

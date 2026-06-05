@@ -38,7 +38,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 animate-fade-in">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
       <div className="glass-modal w-full max-w-md">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">

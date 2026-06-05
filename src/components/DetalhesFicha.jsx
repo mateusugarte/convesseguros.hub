@@ -55,7 +55,7 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
 
   if (!ficha) {
     return (
-      <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-end animate-fade-in">
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-end animate-fade-in">
         <div className="h-full w-full max-w-[480px] bg-dark-surface border-l border-dark-border flex items-center justify-center">
           <p className="text-dark-muted text-sm">Carregando...</p>
         </div>
@@ -73,7 +73,7 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-end animate-fade-in" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-end animate-fade-in" onClick={onClose}>
       <div
         className="h-full w-full max-w-[480px] bg-dark-surface border-l border-dark-border flex flex-col animate-slide-in-r"
         onClick={e => e.stopPropagation()}

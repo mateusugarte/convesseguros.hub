@@ -421,13 +421,6 @@ export default function FichaDetalhePage() {
               <ReadField label="Orçamentista (Forms)" value={ficha.orcamentista_forms} />
               <ReadField label="Assumida por" value={ficha.profiles?.nome} />
               <ReadField label="Assumida em" value={fmtDt(ficha.assumida_em)} />
-              <div>
-                <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wider mb-1.5">Seguradora</p>
-                <SeguradoraSelect
-                  value={ficha.seguradora || ''}
-                  onChange={v => updateField('seguradora', v || null)}
-                />
-              </div>
               {/* Número do orçamento — exibido quando aprovado */}
               {(ficha.status === 'aprovado' || ficha.numero_orcamento) && (
                 <InlineField
@@ -436,12 +429,6 @@ export default function FichaDetalhePage() {
                   onSave={v => updateField('numero_orcamento', v)}
                 />
               )}
-              <InlineField
-                label="Valor da Parcela"
-                value={ficha.valor_parcela != null ? String(ficha.valor_parcela) : ''}
-                type="number"
-                onSave={v => updateField('valor_parcela', v ? parseFloat(v) : null)}
-              />
               <div className="col-span-2">
                 <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wider mb-2">Retorno enviado</p>
                 <label className="flex items-center gap-3 cursor-pointer group w-fit">
@@ -497,6 +484,24 @@ export default function FichaDetalhePage() {
             fichaId={ficha.id}
             cpfCnpj={ficha.cpf || ficha.cnpj}
           />
+
+          {/* Seguradora + Parcela */}
+          <div className="card p-4 space-y-4">
+            <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Cotação</p>
+            <div>
+              <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wider mb-1.5">Seguradora</p>
+              <SeguradoraSelect
+                value={ficha.seguradora || ''}
+                onChange={v => updateField('seguradora', v || null)}
+              />
+            </div>
+            <InlineField
+              label="Valor da Parcela"
+              value={ficha.valor_parcela != null ? String(ficha.valor_parcela) : ''}
+              type="number"
+              onSave={v => updateField('valor_parcela', v ? parseFloat(v) : null)}
+            />
+          </div>
         </div>
       </div>
 

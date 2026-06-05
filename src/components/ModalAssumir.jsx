@@ -18,7 +18,7 @@ export default function ModalAssumir({ id, onClose, onSuccess }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 animate-fade-in">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
       <div className="glass-modal w-full max-w-sm p-6 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">

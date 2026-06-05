@@ -32,6 +32,14 @@ const ApolicesLista      = lazy(() => import('./pages/ApolicesLista'))
 const ApoliceDetalhe     = lazy(() => import('./pages/ApoliceDetalhe'))
 const Seguradoras        = lazy(() => import('./pages/Seguradoras'))
 
+// Área Comercial
+const ComercialDashboard = lazy(() => import('./pages/comercial/ComercialDashboard'))
+const Pipeline           = lazy(() => import('./pages/comercial/Pipeline'))
+const BaseLeads          = lazy(() => import('./pages/comercial/BaseLeads'))
+const Vendas             = lazy(() => import('./pages/comercial/Vendas'))
+const Calendario         = lazy(() => import('./pages/comercial/Calendario'))
+const Jornadas           = lazy(() => import('./pages/comercial/Jornadas'))
+
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return (
@@ -65,6 +73,13 @@ function AppRoutes() {
           <Route path="apolices/gestao" element={<ApoicesGestao />} />
           <Route path="apolices/lista" element={<ApolicesLista />} />
           <Route path="apolices/:id" element={<ApoliceDetalhe />} />
+          {/* Área Comercial */}
+          <Route path="comercial"            element={<ComercialDashboard />} />
+          <Route path="comercial/pipeline"   element={<Pipeline />} />
+          <Route path="comercial/leads"      element={<BaseLeads />} />
+          <Route path="comercial/vendas"     element={<Vendas />} />
+          <Route path="comercial/calendario" element={<Calendario />} />
+          <Route path="comercial/jornadas"   element={<Jornadas />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

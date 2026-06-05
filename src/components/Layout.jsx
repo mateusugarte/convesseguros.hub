@@ -11,7 +11,8 @@ import {
   LayoutDashboard, FileText, User, FileCheck,
   Building2, BarChart2, Settings, Search,
   Bell, LogOut, ChevronLeft, ChevronRight, Menu,
-  Sun, Moon, Shield,
+  Sun, Moon, Shield, TrendingUp, KanbanSquare,
+  Users, ShoppingBag, Calendar, BookOpen,
 } from 'lucide-react'
 
 const LOGO = 'https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/conves/file.jpeg'
@@ -39,6 +40,22 @@ const NAV_GROUPS = [
       { to: '/imobiliarias', icon: Building2, label: 'Imobiliárias' },
       { to: '/seguradoras',  icon: Shield,    label: 'Seguradoras' },
       { to: '/relatorio',    icon: BarChart2, label: 'Relatório' },
+    ],
+  },
+  {
+    label: 'Área Comercial',
+    items: [
+      {
+        to: '/comercial', icon: TrendingUp, label: 'Comercial',
+        subitems: [
+          { to: '/comercial',            label: 'Dashboard',  end: true },
+          { to: '/comercial/pipeline',   label: 'Pipeline' },
+          { to: '/comercial/leads',      label: 'Base de Leads' },
+          { to: '/comercial/vendas',     label: 'Vendas' },
+          { to: '/comercial/calendario', label: 'Calendário' },
+          { to: '/comercial/jornadas',   label: 'Jornadas' },
+        ],
+      },
     ],
   },
   {
@@ -73,7 +90,8 @@ export default function Layout() {
   const [userMenuOpen,   setUserMenuOpen]   = useState(false)
   const [expandedItems,  setExpandedItems]  = useState(() => {
     const s = new Set()
-    if (location.pathname.startsWith('/apolices')) s.add('/apolices')
+    if (location.pathname.startsWith('/apolices'))  s.add('/apolices')
+    if (location.pathname.startsWith('/comercial')) s.add('/comercial')
     return s
   })
 

@@ -7,6 +7,7 @@ import {
 } from '../lib/fichas'
 import { supabase } from '../lib/supabase'
 import { useImobiliaria } from '../hooks/useImobiliaria'
+import ImobiliariaSelect from '../components/ImobiliariaSelect'
 import { useToast } from '../contexts/ToastContext'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -263,7 +264,7 @@ function MesPicker({ mes, mesesDisp, onMes }) {
 
 export default function Relatorio() {
   const navigate                        = useNavigate()
-  const { grupos, getAliases } = useImobiliaria()
+  const { getAliases } = useImobiliaria()
   const agora                           = new Date()
   const toast                           = useToast()
 
@@ -402,17 +403,9 @@ export default function Relatorio() {
           <MesPicker mes={mes} mesesDisp={mesesDisp} onMes={m => { setMes(m); setImobiliaria('') }} />
 
           {/* Imobiliária */}
-          <select
-            value={imobiliaria}
-            onChange={e => setImobiliaria(e.target.value)}
-            className="select text-sm py-1.5"
-            style={{ minWidth: '220px' }}
-          >
-            <option value="">Todas as imobiliárias</option>
-            {grupos.map(g => (
-              <option key={g.id} value={g.nome_canonico}>{g.nome_canonico}</option>
-            ))}
-          </select>
+          <div style={{ minWidth: '220px' }}>
+            <ImobiliariaSelect value={imobiliaria} onChange={setImobiliaria} />
+          </div>
         </div>
 
         <p className="text-xs text-dark-muted">

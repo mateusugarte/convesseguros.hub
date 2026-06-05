@@ -577,3 +577,33 @@ html:not(.dark) textarea::placeholder {
   color: rgba(8, 20, 50, 0.35) !important;
   opacity: 1;
 }
+
+/* ── glass-panel dropdown — sombra e borda aprimoradas ──────────────────── */
+.glass-panel {
+  border: 1px solid rgba(190, 210, 240, 0.55);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+html.dark .glass-panel {
+  border-color: rgba(100, 150, 255, 0.18);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.40), 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* ── Animação do dropdown select customizado (sobrescreve Tailwind fadeIn) ── */
+@keyframes dropdownOpen {
+  from { opacity: 0; transform: translateY(-4px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+.animate-fade-in {
+  animation: dropdownOpen 0.16s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Tabela — scroll horizontal no mobile ───────────────────────────────── */
+@media (max-width: 768px) {
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Tap targets mínimos para inputs e selects */
+  .input, .select {
+    min-height: 42px;
+  }
+}

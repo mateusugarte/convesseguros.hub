@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import SeguradoraSelect from '../components/SeguradoraSelect'
+import ImobiliariaSelect from '../components/ImobiliariaSelect'
 import { KanbanSkeleton } from '../components/Skeleton'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -134,9 +135,14 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome }) {
         </button>
       )}
 
-      {/* Seção expansível (M2) */}
+      {/* Seção expansível */}
       {expandido && !isDragOverlay && (
         <div className="space-y-0.5 pt-1 animate-fade-in">
+          {(apolice.fichas?.cpf || apolice.fichas?.cnpj) && (
+            <p className="text-[9px] text-dark-muted font-mono">
+              {apolice.fichas.cnpj ? 'CNPJ' : 'CPF'}: {apolice.fichas.cnpj || apolice.fichas.cpf}
+            </p>
+          )}
           {apolice.fichas?.celular && (
             <p className="text-[9px] text-dark-muted">Tel: {apolice.fichas.celular}</p>
           )}
@@ -147,7 +153,9 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome }) {
             <p className="text-[9px] text-dark-muted font-mono">CEP: {apolice.fichas.cep}</p>
           )}
           {apolice.valor_parcela && (
-            <p className="text-[9px] text-dark-muted">Parcela: R$ {parseFloat(apolice.valor_parcela).toFixed(2)}</p>
+            <p className="text-[9px] text-dark-muted">
+              Parcela: R$ {parseFloat(apolice.valor_parcela).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
           )}
         </div>
       )}
@@ -213,7 +221,7 @@ function DroppableColumn({ col, apolices, onDetalhe, resolverNome, colIndex }) {
 // ── Modal Iniciar Emissão ─────────────────────────────────────────────────────
 
 function ModalIniciarEmissao({ onClose, onCriado, toast }) {
-  const { grupos, getAliases } = useImobiliaria()
+  const { getAliases } = useImobiliaria()
   const { user } = useAuth()
   const [imobFiltro,        setImobFiltro]        = useState('')
   const [busca,             setBusca]             = useState('')
@@ -291,10 +299,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
         <div className="px-6 py-5 space-y-4">
           <div>
             <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Imobiliária</label>
-            <select value={imobFiltro} onChange={e => setImobFiltro(e.target.value)} className="select text-sm">
-              <option value="">Todas as imobiliárias</option>
-              {grupos.map(g => <option key={g.id} value={g.nome_canonico}>{g.nome_canonico}</option>)}
-            </select>
+            <ImobiliariaSelect value={imobFiltro} onChange={setImobFiltro} />
           </div>
 
           <div>
@@ -580,7 +585,7 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
 export default function ApoicesGestao() {
   const navigate                             = useNavigate()
   const toast                                = useToast()
-  const { resolverNome, grupos, getAliases } = useImobiliaria()
+  const { resolverNome, getAliases } = useImobiliaria()
 
   const [apolices,       setApolices]       = useState([])
   const [loading,        setLoading]        = useState(true)
@@ -692,11 +697,7 @@ export default function ApoicesGestao() {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          <select value={imobFiltro} onChange={e => setImobFiltro(e.target.value)}
-                  className="select text-sm py-1.5" style={{ minWidth: '180px' }}>
-            <option value="">Todas as imobiliárias</option>
-            {grupos.map(g => <option key={g.id} value={g.nome_canonico}>{g.nome_canonico}</option>)}
-          </select>
+          <ImobiliariaSelect value={imobFiltro} onChange={setImobFiltro} className="text-sm" />
           <button onClick={load} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text transition-colors">
             <RefreshCw className="w-3.5 h-3.5" /> Atualizar
           </button>

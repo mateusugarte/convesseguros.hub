@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { fetchApolicesLista, STATUS_EMISSAO_LABELS } from '../lib/apolices'
 import { supabase } from '../lib/supabase'
 import { useImobiliaria } from '../hooks/useImobiliaria'
+import ImobiliariaSelect from '../components/ImobiliariaSelect'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Search, Download, Calendar, Filter } from 'lucide-react'
@@ -62,7 +63,7 @@ const PAGE_SIZE = 50
 
 export default function ApolicesLista() {
   const navigate                          = useNavigate()
-  const { resolverNome, grupos, getAliases } = useImobiliaria()
+  const { resolverNome, getAliases } = useImobiliaria()
 
   const [apolices, setApolices] = useState([])
   const [total,    setTotal]    = useState(0)
@@ -185,11 +186,12 @@ export default function ApolicesLista() {
 
         {/* Dropdowns */}
         <div className="flex flex-wrap items-center gap-2">
-          <select value={imobFiltro} onChange={e => setImobFiltro(e.target.value)}
-                  className="select text-sm py-1.5" style={{ minWidth: '180px' }}>
-            <option value="">Imobiliária</option>
-            {grupos.map(g => <option key={g.id} value={g.nome_canonico}>{g.nome_canonico}</option>)}
-          </select>
+          <ImobiliariaSelect
+            value={imobFiltro}
+            onChange={setImobFiltro}
+            placeholder="Imobiliária"
+            className="text-sm"
+          />
 
           <select value={segFiltro} onChange={e => setSegFiltro(e.target.value)}
                   className="select text-sm py-1.5" style={{ minWidth: '140px' }}>

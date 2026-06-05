@@ -248,11 +248,17 @@ export default function ApoliceDetalhe() {
                 Dados do Locatário
               </p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                <ReadField label="Nome"     value={ficha.nome_empresa || ficha.nome_interessado} />
-                <ReadField label="CPF/CNPJ" value={ficha.cpf || ficha.cnpj} />
+                <div className="col-span-2">
+                  <ReadField label="Nome" value={ficha.nome_empresa || ficha.nome_interessado} />
+                </div>
+                <ReadField label={ficha.cnpj ? 'CNPJ' : 'CPF'} value={ficha.cpf || ficha.cnpj} />
                 <ReadField label="Celular"  value={ficha.celular} />
                 <ReadField label="Produto"  value={PRODUTO_LABELS[ficha.produto] || ficha.produto} />
+                <ReadField label="Tipo de Imóvel" value={ficha.tipo_imovel} />
+                <ReadField label="CEP"      value={ficha.cep} />
+                <ReadField label="Valor do Aluguel" value={ficha.valor_aluguel ? `R$ ${Number(ficha.valor_aluguel).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null} />
                 <ReadField label="Imobiliária" value={resolverNome(apolice.imobiliaria)} />
+                <ReadField label="Seguradora da Ficha" value={ficha.seguradora} />
                 {apolice.profiles?.nome && (
                   <ReadField label="Emissor" value={apolice.profiles.nome} />
                 )}

@@ -4,7 +4,7 @@ import {
   STATUS_LABELS, PRODUTO_LABELS,
 } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
-import { X, Plus, Save } from 'lucide-react'
+import { ArrowLeft, Plus, Save } from 'lucide-react'
 import SeguradoraSelect from './SeguradoraSelect'
 
 
@@ -193,22 +193,19 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-      <div className="glass-modal rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative z-10">
+    <div className="animate-fade-in">
+      <div className="glass-panel rounded-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-brand-secondary/20 flex items-center justify-center">
-              {isEdit ? <Save className="w-4 h-4 text-brand-accent" /> : <Plus className="w-4 h-4 text-brand-accent" />}
-            </div>
-            <h2 className="font-bold text-dark-text">
-              {isEdit ? `Editar — ${ficha.nome_empresa || ficha.nome_interessado || ''}` : 'Nova Ficha'}
-            </h2>
-          </div>
-          <button onClick={onClose} className="text-dark-muted hover:text-dark-text transition-colors">
-            <X className="w-5 h-5" />
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
+          <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
+            <ArrowLeft className="w-5 h-5" />
           </button>
+          <div className="w-9 h-9 rounded-xl bg-brand-secondary/20 flex items-center justify-center flex-shrink-0">
+            {isEdit ? <Save className="w-4 h-4 text-brand-accent" /> : <Plus className="w-4 h-4 text-brand-accent" />}
+          </div>
+          <h2 className="font-bold text-dark-text">
+            {isEdit ? `Editar — ${ficha.nome_empresa || ficha.nome_interessado || ''}` : 'Nova Ficha'}
+          </h2>
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-6">

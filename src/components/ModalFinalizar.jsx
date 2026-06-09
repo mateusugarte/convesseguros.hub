@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { finalizarFicha } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
-import { CheckCircle2, X } from 'lucide-react'
+import { CheckCircle2, ArrowLeft } from 'lucide-react'
 import SeguradoraSelect from './SeguradoraSelect'
 
 const STATUS_FINAIS = [
@@ -40,24 +40,22 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="glass-modal w-full max-w-md max-h-[90vh] overflow-y-auto">
+    <div className="animate-fade-in">
+      <div className="glass-panel rounded-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-status-success/15 flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5 text-status-success" />
-            </div>
-            <div>
-              <h2 className="font-bold text-dark-text">Finalizar Ficha</h2>
-              {ficha?.nome_interessado && (
-                <p className="text-xs text-dark-muted">{ficha.nome_interessado}</p>
-              )}
-            </div>
-          </div>
-          <button onClick={onClose} className="text-dark-muted hover:text-dark-text transition-colors">
-            <X className="w-5 h-5" />
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
+          <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
+            <ArrowLeft className="w-5 h-5" />
           </button>
+          <div className="w-9 h-9 rounded-xl bg-status-success/15 flex items-center justify-center flex-shrink-0">
+            <CheckCircle2 className="w-5 h-5 text-status-success" />
+          </div>
+          <div>
+            <h2 className="font-bold text-dark-text">Finalizar Ficha</h2>
+            {ficha?.nome_interessado && (
+              <p className="text-xs text-dark-muted">{ficha.nome_interessado}</p>
+            )}
+          </div>
         </div>
 
         <div className="px-6 py-5 space-y-4">

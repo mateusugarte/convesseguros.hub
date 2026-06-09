@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useComercial, journeyAdd, scriptAdd, tagAdd } from '../../lib/comercial'
 import { useToast } from '../../contexts/ToastContext'
-import { Plus, X, ChevronDown, ChevronRight, BookOpen, FileText, Tag, Users, Map, Layers } from 'lucide-react'
+import { Plus, ArrowLeft, ChevronDown, ChevronRight, BookOpen, FileText, Tag, Users, Map, Layers } from 'lucide-react'
 
 const TABS = ['Jornadas', 'Scripts', 'Materiais']
 
@@ -108,12 +108,13 @@ function ModalJornada({ onClose, onSave }) {
   const valido = form.nome.trim()
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="glass-modal w-full max-w-lg relative z-10">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
+    <div className="animate-fade-in">
+      <div className="glass-panel rounded-2xl overflow-hidden">
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
+          <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
           <h2 className="font-bold text-dark-text">Nova Jornada</h2>
-          <button onClick={onClose}><X className="w-5 h-5 text-dark-muted" /></button>
         </div>
         <div className="px-6 py-5 space-y-3">
           <div>
@@ -158,12 +159,13 @@ function ModalScript({ onClose, onSave }) {
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
   const valido = form.titulo.trim() && form.conteudo.trim()
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="glass-modal w-full max-w-lg relative z-10">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
+    <div className="animate-fade-in">
+      <div className="glass-panel rounded-2xl overflow-hidden">
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
+          <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
           <h2 className="font-bold text-dark-text">Novo Script</h2>
-          <button onClick={onClose}><X className="w-5 h-5 text-dark-muted" /></button>
         </div>
         <div className="px-6 py-5 space-y-3">
           <div>
@@ -211,6 +213,13 @@ export default function Jornadas() {
     catch { toast({ type: 'error', title: 'Erro ao salvar script' }) }
     setModal(null)
   }
+
+  if (modal === 'Jornadas') return (
+    <ModalJornada onClose={() => setModal(null)} onSave={handleAddJornada} />
+  )
+  if (modal === 'Scripts') return (
+    <ModalScript onClose={() => setModal(null)} onSave={f => handleAddScript({ ...f, tipo: tab === 'Materiais' ? 'Material' : f.tipo })} />
+  )
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -299,8 +308,6 @@ export default function Jornadas() {
         </div>
       )}
 
-      {modal === 'Jornadas' && <ModalJornada onClose={() => setModal(null)} onSave={handleAddJornada} />}
-      {modal === 'Scripts'  && <ModalScript  onClose={() => setModal(null)} onSave={f => handleAddScript({ ...f, tipo: tab === 'Materiais' ? 'Material' : f.tipo })} />}
     </div>
   )
 }

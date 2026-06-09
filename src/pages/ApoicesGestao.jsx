@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core'
+import { snapCenterToCursor } from '@dnd-kit/modifiers'
 import {
   fetchApolicesKanban, criarApolice, moverStatusApolice,
   buscarFichasParaEmissao,
@@ -14,7 +15,7 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   Plus, ChevronLeft, ChevronRight, RefreshCw,
-  Search, Home, Briefcase, Building, LayoutGrid, X, Check,
+  Search, Home, Briefcase, Building, LayoutGrid, X, Check, ArrowLeft,
 } from 'lucide-react'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import SeguradoraSelect from '../components/SeguradoraSelect'
@@ -288,12 +289,14 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto animate-fade-in">
-      <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-lg my-4">
+    <div className="animate-fade-in">
+      <div className="glass-panel rounded-2xl overflow-hidden">
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
+          <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
+            <ArrowLeft className="w-4 h-4" />
+          </button>
           <h2 className="font-bold text-dark-text">Iniciar Emissão</h2>
-          <button onClick={onClose} className="btn-ghost p-1.5 rounded-lg"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="px-6 py-5 space-y-4">
@@ -507,12 +510,14 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
   )
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto animate-fade-in">
-      <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-2xl my-4">
+    <div className="animate-fade-in">
+      <div className="glass-panel rounded-2xl overflow-hidden">
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
+          <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
+            <ArrowLeft className="w-4 h-4" />
+          </button>
           <h2 className="font-bold text-dark-text">Finalizar Apólice</h2>
-          <button onClick={onClose} className="btn-ghost p-1.5 rounded-lg"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="px-6 py-5 space-y-4">
@@ -672,6 +677,19 @@ export default function ApoicesGestao() {
 
   const activeCard = activeId ? apolices.find(a => a.id === activeId) : null
 
+  if (modalIniciar) return (
+    <ModalIniciarEmissao onClose={() => setModalIniciar(false)} onCriado={load} toast={toast} />
+  )
+  if (modalFinalizar) return (
+    <ModalFinalizar
+      apoliceId={modalFinalizar.id}
+      apolice={modalFinalizar.apolice}
+      onClose={handleFinalizarClose}
+      onFinalizado={handleFinalizarSuccess}
+      toast={toast}
+    />
+  )
+
   return (
     <div className="space-y-4 animate-fade-in">
 
@@ -745,7 +763,7 @@ export default function ApoicesGestao() {
                                    resolverNome={resolverNome} colIndex={i} />
                 ))}
               </div>
-              <DragOverlay dropAnimation={null}>
+              <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>
                 {activeCard && (
                   <div style={{ width: "calc(var(--kanban-col-w, 224px) - 12px)" }}>
                     <ApoliceCard apolice={activeCard} isDragOverlay resolverNome={resolverNome} />
@@ -757,19 +775,6 @@ export default function ApoicesGestao() {
         </div>
       )}
 
-      {/* ── Modais ── */}
-      {modalIniciar && (
-        <ModalIniciarEmissao onClose={() => setModalIniciar(false)} onCriado={load} toast={toast} />
-      )}
-      {modalFinalizar && (
-        <ModalFinalizar
-          apoliceId={modalFinalizar.id}
-          apolice={modalFinalizar.apolice}
-          onClose={handleFinalizarClose}
-          onFinalizado={handleFinalizarSuccess}
-          toast={toast}
-        />
-      )}
     </div>
   )
 }

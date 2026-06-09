@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useComercial, eventAdd, eventUpdate, eventDelete, TIPOS_EVENTO, CORES_EVENTO } from '../../lib/comercial'
 import { useToast } from '../../contexts/ToastContext'
-import { Plus, X, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
+import { Plus, ArrowLeft, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
 import {
   format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval,
   isSameMonth, isToday, isSameDay, addMonths, subMonths,
@@ -37,12 +37,13 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
   const valido = form.nome.trim() && form.data
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="glass-modal w-full max-w-md relative z-10">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
+    <div className="animate-fade-in">
+      <div className="glass-panel rounded-2xl overflow-hidden">
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
+          <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
           <h2 className="font-bold text-dark-text">{isEdit ? 'Editar Evento' : 'Novo Evento'}</h2>
-          <button onClick={onClose}><X className="w-5 h-5 text-dark-muted" /></button>
         </div>
         <div className="px-6 py-5 space-y-3">
           <div>
@@ -272,6 +273,16 @@ export default function Calendario() {
     setModal(null)
   }
 
+  if (modal) return (
+    <ModalEvento
+      evento={modal}
+      leads={state.leads}
+      onClose={() => setModal(null)}
+      onSave={handleSave}
+      onDelete={id => { eventDelete(id); setModal(null) }}
+    />
+  )
+
   return (
     <div className="space-y-4 animate-fade-in">
       {/* Header */}
@@ -301,15 +312,6 @@ export default function Calendario() {
       {view === 'Semana' && <WeekView  date={date} events={state.events} onSlotClick={openNew} onEventClick={setModal} />}
       {view === 'Dia'    && <DayView   date={date} events={state.events} onSlotClick={openNew} onEventClick={setModal} />}
 
-      {modal && (
-        <ModalEvento
-          evento={modal}
-          leads={state.leads}
-          onClose={() => setModal(null)}
-          onSave={handleSave}
-          onDelete={id => { eventDelete(id); setModal(null) }}
-        />
-      )}
     </div>
   )
 }

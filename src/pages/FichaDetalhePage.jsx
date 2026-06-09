@@ -252,6 +252,16 @@ export default function FichaDetalhePage() {
   const canFinalizar = isMe && ficha.status === 'em_cotacao'
   const nomePrincipal = isPJ ? (ficha.nome_empresa || ficha.nome_interessado || 'Sem nome') : (ficha.nome_interessado || 'Sem nome')
 
+  if (editar) return (
+    <ModalFicha ficha={ficha} onClose={() => setEditar(false)} onSuccess={() => { setEditar(false); load() }} />
+  )
+  if (assumir) return (
+    <ModalAssumir id={ficha.id} onClose={() => setAssumir(false)} onSuccess={() => { setAssumir(false); load() }} />
+  )
+  if (finalizar) return (
+    <ModalFinalizar ficha={ficha} onClose={() => setFinalizar(false)} onSuccess={() => { setFinalizar(false); load() }} />
+  )
+
   return (
     <div className="space-y-5 animate-fade-in">
 
@@ -505,28 +515,6 @@ export default function FichaDetalhePage() {
         </div>
       </div>
 
-      {/* Modals */}
-      {editar && (
-        <ModalFicha
-          ficha={ficha}
-          onClose={() => setEditar(false)}
-          onSuccess={() => { setEditar(false); load() }}
-        />
-      )}
-      {assumir && (
-        <ModalAssumir
-          id={ficha.id}
-          onClose={() => setAssumir(false)}
-          onSuccess={() => { setAssumir(false); load() }}
-        />
-      )}
-      {finalizar && (
-        <ModalFinalizar
-          ficha={ficha}
-          onClose={() => setFinalizar(false)}
-          onSuccess={() => { setFinalizar(false); load() }}
-        />
-      )}
     </div>
   )
 }

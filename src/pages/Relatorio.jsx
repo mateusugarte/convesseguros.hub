@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core'
+import { snapCenterToCursor } from '@dnd-kit/modifiers'
 import {
   fetchAnosRelatorio, fetchMesesRelatorio,
   fetchFichasRelatorio, PRODUTO_LABELS,
@@ -470,7 +471,7 @@ export default function Relatorio() {
                 </div>
               </div>
 
-              <DragOverlay dropAnimation={null}>
+              <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>
                 {activeFicha && (
                   <div style={{ width: 'calc(var(--kanban-col-w, 224px) - 12px)' }}>
                     <RelatorioCard ficha={activeFicha} onClick={() => {}} />

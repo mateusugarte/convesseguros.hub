@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useComercial, saleAdd, PRODUTOS } from '../../lib/comercial'
 import { useToast } from '../../contexts/ToastContext'
-import { Plus, X, TrendingUp, DollarSign, Award } from 'lucide-react'
+import { Plus, ArrowLeft, TrendingUp, DollarSign, Award } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -19,12 +19,13 @@ function ModalVenda({ onClose, onSave, leads }) {
   const leadSelecionado = leads.find(l => l.id === form.leadId)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="glass-modal w-full max-w-lg relative z-10 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
+    <div className="animate-fade-in">
+      <div className="glass-panel rounded-2xl overflow-hidden">
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
+          <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
           <h2 className="font-bold text-dark-text">Registrar Venda</h2>
-          <button onClick={onClose}><X className="w-5 h-5 text-dark-muted" /></button>
         </div>
         <div className="px-6 py-5 space-y-3">
           <div>
@@ -113,6 +114,10 @@ export default function Vendas() {
     setOpen(false)
   }
 
+  if (open) return (
+    <ModalVenda onClose={() => setOpen(false)} onSave={handleSave} leads={state.leads} />
+  )
+
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Header */}
@@ -195,7 +200,6 @@ export default function Vendas() {
         </div>
       </div>
 
-      {open && <ModalVenda onClose={() => setOpen(false)} onSave={handleSave} leads={state.leads} />}
     </div>
   )
 }

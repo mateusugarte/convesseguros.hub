@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../contexts/ToastContext'
 import SeguradoraBadge from '../components/SeguradoraBadge'
-import { Shield, Plus, Pencil, Trash2, X, Check, Search } from 'lucide-react'
+import { Shield, Plus, Pencil, Trash2, X, Check, Search, ArrowLeft } from 'lucide-react'
 
 // ── Modal Agrupar / Criar / Editar ────────────────────────────────────────────
 
@@ -81,13 +81,15 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
       : nome.trim()
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="glass-modal w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
+    <div className="animate-fade-in">
+      <div className="glass-panel rounded-2xl overflow-hidden">
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
+          <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
+            <ArrowLeft className="w-4 h-4" />
+          </button>
           <h2 className="font-bold text-dark-text text-base">
             {ehEditar ? 'Editar Seguradora' : 'Configurar Seguradora'}
           </h2>
-          <button onClick={onClose} className="btn-ghost p-1.5 rounded-lg"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="px-6 py-5 space-y-5">
@@ -463,6 +465,16 @@ export default function Seguradoras() {
     carregar()
   }
 
+  if (modal) return (
+    <ModalSeguradora
+      modal={modal}
+      cadastradas={seguradoras}
+      onClose={() => setModal(null)}
+      onSalvo={aoSalvar}
+      toast={toast}
+    />
+  )
+
   return (
     <div className="space-y-5 animate-fade-in">
 
@@ -532,15 +544,6 @@ export default function Seguradoras() {
         />
       )}
 
-      {modal && (
-        <ModalSeguradora
-          modal={modal}
-          cadastradas={seguradoras}
-          onClose={() => setModal(null)}
-          onSalvo={aoSalvar}
-          toast={toast}
-        />
-      )}
     </div>
   )
 }

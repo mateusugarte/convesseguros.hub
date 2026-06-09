@@ -814,6 +814,9 @@ export default function Fichas() {
 
   // ── View: Visão Geral (sem produto) ──
   if (!produto) {
+    if (criar) return (
+      <ModalFicha ficha={null} onClose={() => setCriar(false)} onSuccess={() => { setCriar(false); fetchContagemProdutos().then(setContagem) }} />
+    )
     return (
       <>
         <VisaoGeral
@@ -823,7 +826,6 @@ export default function Fichas() {
           onRelatorio={() => setRelatorio(true)}
           minhasFichasCount={minhasFichasCount}
         />
-        {criar && <ModalFicha ficha={null} onClose={() => setCriar(false)} onSuccess={() => { setCriar(false); fetchContagemProdutos().then(setContagem) }} />}
         {relatorio && <RelatorioMensal onClose={() => setRelatorio(false)} />}
       </>
     )
@@ -857,7 +859,16 @@ export default function Fichas() {
       viewToggle={<ViewToggle view={view} onChange={setView} />}
       selectorSlot={selectorSlot}
     >
-      {view === 'kanban' ? (
+      {/* Dedicated areas replace page content when action is active */}
+      {criar ? (
+        <ModalFicha ficha={null} onClose={() => setCriar(false)} onSuccess={onFichaSuccess} />
+      ) : editar ? (
+        <ModalFicha ficha={editar} onClose={() => setEditar(null)} onSuccess={onFichaSuccess} />
+      ) : assumir ? (
+        <ModalAssumir id={assumir} onClose={() => setAssumir(null)} onSuccess={() => { setAssumir(null); refresh() }} />
+      ) : finalizar ? (
+        <ModalFinalizar ficha={finalizar} onClose={() => setFinalizar(null)} onSuccess={() => { setFinalizar(null); refresh() }} />
+      ) : view === 'kanban' ? (
         <KanbanFichas
           produto={produto}
           externalDateFrom={dateFrom}
@@ -959,16 +970,6 @@ export default function Fichas() {
         </>
       )}
 
-      {/* Modals */}
-      {detalhe && (
-        <DetalhesFicha id={detalhe} onClose={() => setDetalhe(null)}
-          onEdit={f => { setDetalhe(null); setEditar(f) }}
-          onDelete={onDelete} />
-      )}
-      {assumir && <ModalAssumir id={assumir} onClose={() => setAssumir(null)} onSuccess={() => { setAssumir(null); refresh() }} />}
-      {finalizar && <ModalFinalizar ficha={finalizar} onClose={() => setFinalizar(null)} onSuccess={() => { setFinalizar(null); refresh() }} />}
-      {criar && <ModalFicha ficha={null} onClose={() => setCriar(false)} onSuccess={onFichaSuccess} />}
-      {editar && <ModalFicha ficha={editar} onClose={() => setEditar(null)} onSuccess={onFichaSuccess} />}
       {relatorio && <RelatorioMensal onClose={() => setRelatorio(false)} />}
     </PageShell>
   )

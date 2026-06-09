@@ -79,7 +79,7 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome }) {
     : null
 
   return (
-    <div className={`kanban-card ${isDragOverlay ? 'scale-[1.04] rotate-1 !shadow-lg' : ''}`}>
+    <div className={`kanban-card ${isDragOverlay ? '!shadow-2xl' : ''}`}>
       <div className="flex items-center justify-between gap-1">
         <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
               style={{ background: pColor + '20', color: pColor }}>

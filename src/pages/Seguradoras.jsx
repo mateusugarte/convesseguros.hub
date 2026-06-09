@@ -81,8 +81,8 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
       : nome.trim()
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="glass-modal w-full max-w-lg">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+      <div className="glass-modal w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
           <h2 className="font-bold text-dark-text text-base">
             {ehEditar ? 'Editar Seguradora' : 'Configurar Seguradora'}

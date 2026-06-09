@@ -136,7 +136,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay = fals
   return (
     <div
       className={`kanban-card
-        ${isDragOverlay ? 'scale-[1.03] rotate-[0.5deg] !opacity-90' : ''}
+        ${isDragOverlay ? '!opacity-95' : ''}
         ${isNew ? 'animate-card-new' : ''}
       `}
       style={isDragOverlay ? { boxShadow: '0 12px 40px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15)' } : undefined}

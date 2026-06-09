@@ -725,7 +725,7 @@ export default function Pipeline() {
           </div>
           <DragOverlay dropAnimation={null}>
             {activeLead ? (
-              <div style={{ transform: 'rotate(2deg)', filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.4))' }}>
+              <div style={{ filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.4))' }}>
                 <LeadCard lead={activeLead} tags={state.tags} />
               </div>
             ) : null}

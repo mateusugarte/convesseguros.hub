@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import {
   fetchFichas, fetchAnosDisponiveis, fetchMesesDisponiveis,
@@ -598,7 +598,7 @@ function TabelaPassadas({ fichas, user, navigate, onEditar, resolverNome }) {
               <td className="td font-medium text-dark-text max-w-[130px] truncate">{(resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || '—'}</td>
               <td className="td text-dark-text max-w-[130px] truncate">{nome || '—'}</td>
               <td className="td"><span className={`badge ${si.color}`}>{si.label}</span></td>
-              <td className="td"><AvatarOrcamentista nome={f.profiles?.nome || f.orcamentista_forms} /></td>
+              <td className="td"><AvatarOrcamentista nome={f.profiles?.nome} /></td>
               <td className="td text-dark-muted text-xs">{f.seguradora || '—'}</td>
               <td className="td" onClick={e => e.stopPropagation()}>
                 <button onClick={() => onEditar(f)} className="p-1.5 rounded-lg text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-colors">
@@ -699,10 +699,13 @@ export default function Fichas() {
     if (state.produto) setProduto(state.produto)
     if (state.mes)     setMes(state.mes)
     if (state.ano)     setAno(state.ano)
-    if (state.scrollY) setTimeout(() =>
-      window.scrollTo({ top: state.scrollY, behavior: 'instant' }), 150
-    )
+    let cleanup
+    if (state.scrollY) {
+      const t = setTimeout(() => window.scrollTo({ top: state.scrollY, behavior: 'instant' }), 150)
+      cleanup = () => clearTimeout(t)
+    }
     window.history.replaceState({}, document.title)
+    return cleanup
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Contagem de produtos (sempre carregado)
@@ -716,17 +719,24 @@ export default function Fichas() {
     fetchContagemAbertaOrcamentista(user.id).then(setMinhasFichasCount)
   }, [user?.id])
 
-  // Realtime — atualiza contagens de produto e "minhas fichas" automaticamente
+  // Realtime — atualiza contagens de produto e "minhas fichas" automaticamente (debounce 500ms p/ bursts)
   useEffect(() => {
-    const refresh = () => {
-      fetchContagemProdutos().then(setContagem)
-      if (user?.id) fetchContagemAbertaOrcamentista(user.id).then(setMinhasFichasCount)
+    let timer
+    const debouncedRefresh = () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        fetchContagemProdutos().then(setContagem)
+        if (user?.id) fetchContagemAbertaOrcamentista(user.id).then(setMinhasFichasCount)
+      }, 500)
     }
     const ch = supabase.channel('fichas-page-contagem')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'fichas' }, refresh)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'fichas' }, refresh)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'fichas' }, debouncedRefresh)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'fichas' }, debouncedRefresh)
       .subscribe()
-    return () => supabase.removeChannel(ch)
+    return () => {
+      supabase.removeChannel(ch)
+      clearTimeout(timer)
+    }
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Ao selecionar produto: carregar anos disponíveis e auto-selecionar o atual
@@ -793,12 +803,14 @@ export default function Fichas() {
     refresh()
   }
 
-  const minhaMetrica = tab === 'passadas_por_mim' ? {
-    aprovadas: fichas.filter(f => f.status === 'aprovado').length,
-    recusadas: fichas.filter(f => f.status === 'recusado').length,
-    emitidas:  fichas.filter(f => f.status === 'emitido').length,
-    taxa: fichas.length > 0 ? Math.round((fichas.filter(f => f.status === 'aprovado').length / fichas.length) * 100) : 0,
-  } : null
+  const minhaMetrica = useMemo(() => {
+    if (tab !== 'passadas_por_mim') return null
+    const aprovadas = fichas.filter(f => f.status === 'aprovado').length
+    const recusadas = fichas.filter(f => f.status === 'recusado').length
+    const emitidas  = fichas.filter(f => f.status === 'emitido').length
+    const taxa      = fichas.length > 0 ? Math.round((aprovadas / fichas.length) * 100) : 0
+    return { aprovadas, recusadas, emitidas, taxa }
+  }, [tab, fichas])
 
   // ── View: Visão Geral (sem produto) ──
   if (!produto) {

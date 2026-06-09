@@ -288,7 +288,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto animate-fade-in">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto animate-fade-in">
       <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-lg my-4">
 
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
@@ -507,7 +507,7 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
   )
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto animate-fade-in">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto animate-fade-in">
       <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-2xl my-4">
 
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">

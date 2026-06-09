@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useComercial, saleAdd, PRODUTOS } from '../../lib/comercial'
+import { useToast } from '../../contexts/ToastContext'
 import { Plus, X, TrendingUp, DollarSign, Award } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -7,7 +8,13 @@ import { ptBR } from 'date-fns/locale'
 function ModalVenda({ onClose, onSave, leads }) {
   const [form, setForm] = useState({ leadId: '', produto: '', valor: '', comissao: '', dataEmissao: new Date().toISOString().slice(0,10), observacoes: '' })
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
-  const valido = form.produto && form.valor && form.comissao && form.dataEmissao
+  const valorNum    = parseFloat(form.valor)   || 0
+  const comissaoNum = parseFloat(form.comissao) || 0
+  const erros = {
+    valor:    valorNum < 0 ? 'Valor não pode ser negativo' : '',
+    comissao: comissaoNum < 0 ? 'Comissão não pode ser negativa' : comissaoNum > 100 ? 'Comissão máxima é 100%' : '',
+  }
+  const valido = form.produto && form.valor && form.comissao && form.dataEmissao && !erros.valor && !erros.comissao
   const calcComissao = form.valor && form.comissao ? (parseFloat(form.valor) * parseFloat(form.comissao) / 100).toFixed(2) : '0,00'
   const leadSelecionado = leads.find(l => l.id === form.leadId)
 
@@ -37,11 +44,13 @@ function ModalVenda({ onClose, onSave, leads }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-dark-muted uppercase tracking-wider block mb-1">Valor (R$) *</label>
-              <input type="number" min="0" step="0.01" value={form.valor} onChange={e => set('valor', e.target.value)} className="input" placeholder="0,00" />
+              <input type="number" min="0" step="0.01" value={form.valor} onChange={e => set('valor', e.target.value)} className={`input ${erros.valor ? 'border-status-danger' : ''}`} placeholder="0,00" />
+              {erros.valor && <p className="text-xs text-status-danger mt-0.5">{erros.valor}</p>}
             </div>
             <div>
               <label className="text-xs font-medium text-dark-muted uppercase tracking-wider block mb-1">% Comissão *</label>
-              <input type="number" min="0" max="100" step="0.1" value={form.comissao} onChange={e => set('comissao', e.target.value)} className="input" placeholder="%" />
+              <input type="number" min="0" max="100" step="0.1" value={form.comissao} onChange={e => set('comissao', e.target.value)} className={`input ${erros.comissao ? 'border-status-danger' : ''}`} placeholder="%" />
+              {erros.comissao && <p className="text-xs text-status-danger mt-0.5">{erros.comissao}</p>}
             </div>
             <div>
               <label className="text-xs font-medium text-dark-muted uppercase tracking-wider block mb-1">Data Emissão *</label>
@@ -68,6 +77,7 @@ function ModalVenda({ onClose, onSave, leads }) {
 
 export default function Vendas() {
   const state = useComercial()
+  const toast = useToast()
   const [open,    setOpen]    = useState(false)
   const [periodo, setPeriodo] = useState('todos')
 
@@ -93,8 +103,13 @@ export default function Vendas() {
     return { total, comissao, count: filteredSales.length, topProd: topProdLabel }
   }, [filteredSales])
 
-  function handleSave(form) {
-    saleAdd(form)
+  async function handleSave(form) {
+    try {
+      await saleAdd(form)
+      toast({ type: 'success', title: 'Venda registrada!' })
+    } catch {
+      toast({ type: 'error', title: 'Erro ao registrar venda' })
+    }
     setOpen(false)
   }
 

@@ -78,10 +78,10 @@ function ResultadoFinal({ status }) {
 
 // ── Exportação CSV ────────────────────────────────────────────────────────────
 
-function exportarCSV(fichas, mes, ano) {
+function exportarCSV(fichas, mes, ano, resolverNome) {
   const headers = ['Imobiliária','Nome','Doc','Produto','Status','Enviada','Resultado','Desistiu','Orçamentista','Data']
   const rows = fichas.map(f => [
-    resolverNome(f.imobiliaria) || '',
+    (resolverNome ? resolverNome(f.imobiliaria) : null) || f.imobiliaria || '',
     nomePrincipal(f),
     f.produto === 'pessoa_juridica' ? (f.cnpj || '') : (f.cpf || ''),
     PRODUTO_LABELS[f.produto] || f.produto,
@@ -289,7 +289,7 @@ export default function RelatorioMensal({ onClose }) {
 
           {/* Exportar */}
           <button
-            onClick={() => exportarCSV(fichas, mes, ano)}
+            onClick={() => exportarCSV(fichas, mes, ano, resolverNome)}
             disabled={fichas.length === 0}
             className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors disabled:opacity-40"
           >

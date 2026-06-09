@@ -171,7 +171,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay = fals
       {/* Footer: avatar + action */}
       <div className="flex items-center justify-between pt-1 border-t border-dark-border/50">
         {(() => {
-          const nome = ficha.profiles?.nome || ficha.orcamentista_forms
+          const nome = ficha.profiles?.nome
           if (!nome) return <span className="text-[9px] text-status-warning font-medium">Livre</span>
           return (
             <div className="flex items-center gap-1 min-w-0">
@@ -343,7 +343,7 @@ function ModalConfirmarRecusado({ onConfirmar, salvando }) {
   const [retorno, setRetorno] = useState(null)
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="glass-modal w-full max-w-sm">
+      <div className="glass-modal w-full max-w-sm max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-5 space-y-4">
           <p className="font-semibold text-dark-text text-sm">Confirmar Recusa</p>
           <p className="text-xs text-dark-muted">O retorno foi enviado ao cliente?</p>
@@ -379,7 +379,7 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="glass-modal w-full max-w-md">
+      <div className="glass-modal w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-4 border-b border-dark-border">
           <p className="font-semibold text-dark-text">Confirmar Aprovação</p>
         </div>
@@ -390,7 +390,7 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
             </label>
             <SeguradoraSelect value={seguradora} onChange={setSeguradora} required />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
                 Valor Parcela (R$) <span className="text-status-danger">*</span>
@@ -460,7 +460,8 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
   const [canScrollL, setCanScrollL] = useState(false)
   const [canScrollR, setCanScrollR] = useState(false)
-  const scrollRef = useRef(null)
+  const scrollRef        = useRef(null)
+  const newIdTimeoutsRef = useRef(new Set())
 
   // A4 — Modal obrigatório ao arrastar para Recusado
   const [pendingRecusado,   setPendingRecusado]   = useState(null)  // { fichaId, fichaOriginal }
@@ -503,7 +504,11 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
         setFichas(prev => [nova, ...prev])
         setCollapsed(prev => { const next = new Set(prev); next.delete('pendente'); return next })
         setNewIds(prev => new Set([...prev, nova.id]))
-        setTimeout(() => setNewIds(prev => { const next = new Set(prev); next.delete(nova.id); return next }), 3000)
+        const t = setTimeout(() => {
+          setNewIds(prev => { const next = new Set(prev); next.delete(nova.id); return next })
+          newIdTimeoutsRef.current.delete(t)
+        }, 3000)
+        newIdTimeoutsRef.current.add(t)
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'fichas' }, p => {
         const updated = p.new
@@ -516,7 +521,11 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
         setFichas(prev => prev.filter(f => f.id !== p.old.id))
       })
       .subscribe()
-    return () => supabase.removeChannel(ch)
+    return () => {
+      supabase.removeChannel(ch)
+      newIdTimeoutsRef.current.forEach(t => clearTimeout(t))
+      newIdTimeoutsRef.current.clear()
+    }
   }, [produto])
 
   // Scroll indicators
@@ -647,16 +656,14 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     const novoStatus = COL_TO_STATUS[targetCol]
     if (!novoStatus) return
 
-    // A4 — Interceptar arrastar para Recusado
+    // Interceptar arrastar para Recusado — abre modal ANTES de mover o card
     if (targetCol === 'recusado') {
-      setFichas(prev => prev.map(f => f.id !== fichaId ? f : { ...f, status: 'recusado' }))
       setPendingRecusado({ fichaId, fichaOriginal: ficha })
       return
     }
 
-    // A5 — Interceptar arrastar para Aprovado
+    // Interceptar arrastar para Aprovado — abre modal ANTES de mover o card
     if (targetCol === 'aprovado') {
-      setFichas(prev => prev.map(f => f.id !== fichaId ? f : { ...f, status: 'aprovado' }))
       setPendingAprovado({ fichaId, fichaOriginal: ficha })
       return
     }

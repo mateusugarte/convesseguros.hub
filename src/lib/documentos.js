@@ -7,7 +7,8 @@ export async function fetchDocumentos({ fichaId, apoliceId }) {
     .order('created_at', { ascending: false })
   if (fichaId)   q = q.eq('ficha_id', fichaId)
   if (apoliceId) q = q.eq('apolice_id', apoliceId)
-  const { data } = await q
+  const { data, error } = await q
+  if (error) throw error
   return data || []
 }
 

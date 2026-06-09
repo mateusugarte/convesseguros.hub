@@ -258,7 +258,7 @@ export default function Dashboard() {
     queryFn: async () => {
       const [k, em, g, ti, dist, pm, met, atv, mf] = await Promise.all([
         fetchKPIs(inicioFiltro, fimFiltro),
-        fetchEmitidas(),
+        fetchEmitidas(inicioFiltro, fimFiltro),
         fetchFichasPorDia(30),
         fetchTopImobiliarias(5, inicioFiltro, fimFiltro),
         fetchDistribuicaoStatus(inicioFiltro, fimFiltro),

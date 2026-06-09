@@ -64,11 +64,14 @@ export async function fetchKPIs(inicioFiltro, fimFiltro) {
   return { total, hoje: hoje_, semana, mes, emAberto }
 }
 
-export async function fetchEmitidas() {
+export async function fetchEmitidas(inicio, fim) {
   const now = new Date()
-  const inicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-  const { count } = await supabase.from('fichas').select('*', { count: 'exact', head: true })
-    .eq('status', 'emitido').gte('created_at', inicio)
+  const defaultInicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  let q = supabase.from('fichas').select('*', { count: 'exact', head: true })
+    .eq('status', 'emitido')
+    .gte('created_at', inicio || defaultInicio)
+  if (fim) q = q.lte('created_at', fim)
+  const { count } = await q
   return count || 0
 }
 
@@ -321,7 +324,7 @@ export async function fetchFichasKanban({ produto, dateFrom, dateTo }) {
   return fetchAllRows(() => {
     let q = supabase
       .from('fichas')
-      .select('id,created_at,finalizada_em,produto,imobiliaria,nome_interessado,nome_empresa,cpf,cnpj,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,profiles!orcamentista_id(nome)')
+      .select('id,created_at,finalizada_em,produto,imobiliaria,nome_interessado,cpf,cnpj,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,profiles!orcamentista_id(nome)')
       .order('created_at', { ascending: false })
     if (produto && produto !== 'todos') q = q.eq('produto', produto)
     if (dateFrom) q = q.gte('created_at', dateFrom)
@@ -472,7 +475,9 @@ export async function editarFicha(id, dados, userId) {
 }
 
 export async function deletarFicha(id) {
+  const { data: fichaAntes } = await supabase.from('fichas').select('id, produto, nome_interessado, status, imobiliaria').eq('id', id).single()
   const { error } = await supabase.from('fichas').delete().eq('id', id)
+  if (!error) registrarAudit('deletar_ficha', id, fichaAntes, null)
   return error
 }
 
@@ -516,7 +521,7 @@ export async function fetchFichasRelatorio(ano, mes, imobiliarias) {
   const lista  = Array.isArray(imobiliarias) && imobiliarias.length ? imobiliarias : null
   let q = supabase
     .from('fichas')
-    .select('id, nome_interessado, nome_empresa, cpf, cnpj, imobiliaria, status, produto, created_at, retorno_enviado, orcamentista_forms, valor_aluguel, numero_apolice, data_emissao')
+    .select('id, nome_interessado, cpf, cnpj, imobiliaria, status, produto, created_at, retorno_enviado, orcamentista_forms, valor_aluguel, numero_apolice, data_emissao')
     .gte('created_at', inicio)
     .lte('created_at', fim)
     .in('status', STATUS_RELATORIO)
@@ -534,7 +539,7 @@ export async function fetchRelatorioMensal({ ano, mes, produto }) {
 
   let q = supabase
     .from('fichas')
-    .select('id, created_at, nome_interessado, nome_empresa, cpf, cnpj, imobiliaria, status, produto, retorno_enviado, assumida, orcamentista_forms')
+    .select('id, created_at, nome_interessado, cpf, cnpj, imobiliaria, status, produto, retorno_enviado, assumida, orcamentista_forms')
     .gte('created_at', inicio)
     .lte('created_at', fim)
     .order('imobiliaria', { ascending: true })

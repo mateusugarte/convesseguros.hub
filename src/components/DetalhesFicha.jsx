@@ -15,12 +15,12 @@ function fmtDt(v) {
   try { return format(parseISO(v), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) } catch { return v }
 }
 
-function Field({ label, value }) {
+function Field({ label, value, clamp = false }) {
   if (!value && value !== 0 && value !== false) return null
   return (
     <div>
       <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wider mb-0.5">{label}</p>
-      <p className="text-sm text-dark-text">{String(value)}</p>
+      <p className={`text-sm text-dark-text ${clamp ? 'line-clamp-4' : ''}`}>{String(value)}</p>
     </div>
   )
 }
@@ -158,7 +158,7 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
             <Field label="Aluguel"      value={fmtBRL(ficha.valor_aluguel)} />
             <Field label="IPTU"         value={fmtBRL(ficha.valor_iptu)} />
             <Field label="Condomínio"   value={fmtBRL(ficha.valor_condominio)} />
-            <Field label="Observações"  value={ficha.observacoes || '—'} />
+            <Field label="Observações"  value={ficha.observacoes || '—'} clamp />
           </Section>
 
           {/* Campos extras para Comercial PF e PJ */}

@@ -32,14 +32,16 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
       retorno_enviado: retorno,
       userId: user?.id,
     })
-    if (err) setError('Não foi possível finalizar a ficha.')
-    else onSuccess()
+    if (err) {
+      console.error('Erro ao finalizar ficha:', err)
+      setError(err.message || 'Não foi possível finalizar a ficha.')
+    } else onSuccess()
     setLoading(false)
   }
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="glass-modal w-full max-w-md">
+      <div className="glass-modal w-full max-w-md max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
           <div className="flex items-center gap-3">
@@ -69,7 +71,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
                 <button
                   key={s.value}
                   onClick={() => setStatus(s.value)}
-                  className={`px-3 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                  className={`px-3 py-3 rounded-xl border text-sm font-medium transition-all ${
                     status === s.value
                       ? 'border-brand-accent bg-brand-accent/10 text-dark-text'
                       : 'border-dark-border bg-dark-surface2 text-dark-muted hover:border-dark-muted'
@@ -93,7 +95,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
               type="checkbox"
               checked={retorno}
               onChange={e => setRetorno(e.target.checked)}
-              className="w-4 h-4 rounded accent-brand-accent"
+              className="w-5 h-5 rounded accent-brand-accent"
             />
             <span className="text-sm text-dark-text">Retorno enviado ao cliente</span>
           </label>

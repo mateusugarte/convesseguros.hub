@@ -117,9 +117,8 @@ function KanbanCard({ ficha, onAssumir, onFinalizar, onDetalhe }) {
   return (
     <div
       ref={setNodeRef}
-      style={style}
       {...attributes}
-      style={{ background: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--glass-border)' }}
+      style={{ background: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--glass-border)', ...style }}
       className={`rounded-lg shadow-sm select-none transition-all ${
         isDragging ? 'opacity-0' : 'border-gray-200 hover:shadow-md hover:border-gray-300'
       }`}

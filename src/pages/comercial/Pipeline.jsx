@@ -6,11 +6,19 @@ import {
   fetchFichasParaImport, fetchApolicesParaImport,
   calcScore, scoreFaixa, diffDias,
 } from '../../lib/comercial'
+import { useToast } from '../../contexts/ToastContext'
 import { Plus, X, Search, Phone, Building2, Clock, CheckCircle2, PenLine, ClipboardList, FileCheck } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+function maskPhone(v) {
+  const d = v.replace(/\D/g, '').slice(0, 11)
+  if (d.length <= 2) return `(${d}`
+  if (d.length <= 7) return `(${d.slice(0,2)}) ${d.slice(2)}`
+  return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`
+}
 
 function ScoreBadge({ score }) {
   const f = scoreFaixa(score)
@@ -255,7 +263,7 @@ function ModalVenda({ lead, onClose, onConfirm }) {
 
 // ── ModalAddLead ──────────────────────────────────────────────────────────────
 
-function ModalAddLead({ onClose, leads, tags }) {
+function ModalAddLead({ onClose, leads, tags, toast }) {
   const [step,          setStep]          = useState('escolha')
   const [fichaSearch,   setFichaSearch]   = useState('')
   const [fichaStatus,   setFichaStatus]   = useState('')
@@ -293,21 +301,30 @@ function ModalAddLead({ onClose, leads, tags }) {
 
   const jaNoComercial = nome => leads.some(l => l.nome.toLowerCase() === (nome || '').toLowerCase())
 
-  function importFicha(f) {
+  async function importFicha(f) {
     if (jaNoComercial(f.nome_interessado)) return
-    leadAdd({ nome: f.nome_interessado, telefone: f.celular || '', tipo: 'PF', origem: 'Seguro Fiança', imobiliaria: f.imobiliaria || '', nomeApolice: f.id, tipoLocatario: 'Locatário', proximaAcao: '', resumo: '', tags: [], apoliceAtiva: false })
+    try {
+      await leadAdd({ nome: f.nome_interessado, telefone: f.celular || '', tipo: 'PF', origem: 'Seguro Fiança', imobiliaria: f.imobiliaria || '', nomeApolice: f.id, tipoLocatario: 'Locatário', proximaAcao: '', resumo: '', tags: [], apoliceAtiva: false })
+      toast?.({ type: 'success', title: 'Lead importado!' })
+    } catch { toast?.({ type: 'error', title: 'Erro ao importar lead' }) }
     onClose()
   }
 
-  function importApolice(a) {
+  async function importApolice(a) {
     if (jaNoComercial(a.nome_interessado)) return
-    leadAdd({ nome: a.nome_interessado, telefone: '', tipo: 'PF', origem: 'Seguro Fiança', imobiliaria: a.imobiliaria || '', nomeApolice: a.numero_apolice || '', tipoLocatario: 'Locatário', proximaAcao: '', resumo: '', tags: [], apoliceAtiva: true })
+    try {
+      await leadAdd({ nome: a.nome_interessado, telefone: '', tipo: 'PF', origem: 'Seguro Fiança', imobiliaria: a.imobiliaria || '', nomeApolice: a.numero_apolice || '', tipoLocatario: 'Locatário', proximaAcao: '', resumo: '', tags: [], apoliceAtiva: true })
+      toast?.({ type: 'success', title: 'Lead importado!' })
+    } catch { toast?.({ type: 'error', title: 'Erro ao importar lead' }) }
     onClose()
   }
 
-  function saveManual() {
+  async function saveManual() {
     if (!form.nome.trim()) return
-    leadAdd(form)
+    try {
+      await leadAdd(form)
+      toast?.({ type: 'success', title: 'Lead criado!' })
+    } catch { toast?.({ type: 'error', title: 'Erro ao criar lead' }) }
     onClose()
   }
 
@@ -439,8 +456,8 @@ function ModalAddLead({ onClose, leads, tags }) {
                 </div>
                 <div>
                   <label className={LBL}>Telefone</label>
-                  <input value={form.telefone} onChange={e => set('telefone', e.target.value)}
-                    className="input" placeholder="(11) 99999-9999" />
+                  <input value={form.telefone} onChange={e => set('telefone', maskPhone(e.target.value))}
+                    className="input" placeholder="(11) 99999-9999" inputMode="numeric" />
                 </div>
                 <div>
                   <label className={LBL}>Tipo</label>
@@ -616,6 +633,7 @@ function ModalDetalhe({ lead, tags, journeys, onClose }) {
 
 export default function Pipeline() {
   const state  = useComercial()
+  const toast  = useToast()
   const [activeId,   setActiveId]   = useState(null)
   const [addOpen,    setAddOpen]    = useState(false)
   const [detalhe,    setDetalhe]    = useState(null)
@@ -716,10 +734,21 @@ export default function Pipeline() {
       </div>
 
       {/* Modais */}
-      {addOpen    && <ModalAddLead onClose={() => setAddOpen(false)} leads={state.leads} tags={state.tags} />}
+      {addOpen    && <ModalAddLead onClose={() => setAddOpen(false)} leads={state.leads} tags={state.tags} toast={toast} />}
       {detalhe    && <ModalDetalhe lead={detalhe} tags={state.tags} journeys={state.journeys} onClose={() => setDetalhe(null)} />}
-      {recusaLead && <ModalRecusa  lead={recusaLead} onClose={() => setRecusaLead(null)} onConfirm={motivo => { leadMover(recusaLead.id, 'recusou', { jaRecusou: true, motivoRecusa: motivo }); setRecusaLead(null) }} />}
-      {vendaLead  && <ModalVenda   lead={vendaLead}  onClose={() => setVendaLead(null)}  onConfirm={form   => { saleAdd({ ...form, leadNome: vendaLead.nome }); leadMover(vendaLead.id, 'venda', { vendaRealizada: true }); setVendaLead(null) }} />}
+      {recusaLead && <ModalRecusa  lead={recusaLead} onClose={() => setRecusaLead(null)} onConfirm={async motivo => {
+        await leadMover(recusaLead.id, 'recusou', { jaRecusou: true, motivoRecusa: motivo })
+        toast({ type: 'success', title: 'Lead movido para Recusou' })
+        setRecusaLead(null)
+      }} />}
+      {vendaLead  && <ModalVenda   lead={vendaLead}  onClose={() => setVendaLead(null)}  onConfirm={async form => {
+        try {
+          await saleAdd({ ...form, leadNome: vendaLead.nome })
+          await leadMover(vendaLead.id, 'venda', { vendaRealizada: true })
+          toast({ type: 'success', title: 'Venda registrada!' })
+        } catch { toast({ type: 'error', title: 'Erro ao registrar venda' }) }
+        setVendaLead(null)
+      }} />}
     </div>
   )
 }

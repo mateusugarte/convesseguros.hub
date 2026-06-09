@@ -19,8 +19,10 @@ export default function SecaoDocumentos({ fichaId, apoliceId, cpfCnpj }) {
     try {
       const data = await fetchDocumentos({ fichaId, apoliceId })
       setDocs(data)
-    } catch {
-      // Tabela pode não existir ainda — não travar a UI
+    } catch (err) {
+      if (err?.code !== '42P01') {
+        toast({ type: 'error', title: 'Erro ao carregar documentos', message: err?.message })
+      }
       setDocs([])
     }
     setLoading(false)

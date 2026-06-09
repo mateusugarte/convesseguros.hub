@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useComercial, journeyAdd, scriptAdd, tagAdd } from '../../lib/comercial'
+import { useToast } from '../../contexts/ToastContext'
 import { Plus, X, ChevronDown, ChevronRight, BookOpen, FileText, Tag, Users, Map, Layers } from 'lucide-react'
 
 const TABS = ['Jornadas', 'Scripts', 'Materiais']
@@ -193,14 +194,23 @@ function ModalScript({ onClose, onSave }) {
 
 export default function Jornadas() {
   const state = useComercial()
+  const toast = useToast()
   const [tab,   setTab]   = useState('Jornadas')
   const [modal, setModal] = useState(null)
 
   const materiais = state.scripts.filter(s => (s.tipo || s.categoria) === 'Material')
   const scripts   = state.scripts.filter(s => (s.tipo || s.categoria) !== 'Material')
 
-  function handleAddJornada(form) { journeyAdd({ nome: form.nome, descricao: form.descricao, etapas: form.etapas }); setModal(null) }
-  function handleAddScript(form)  { scriptAdd(form); setModal(null) }
+  async function handleAddJornada(form) {
+    try { await journeyAdd({ nome: form.nome, descricao: form.descricao, etapas: form.etapas }); toast({ type: 'success', title: 'Jornada criada!' }) }
+    catch { toast({ type: 'error', title: 'Erro ao criar jornada' }) }
+    setModal(null)
+  }
+  async function handleAddScript(form) {
+    try { await scriptAdd(form); toast({ type: 'success', title: 'Script salvo!' }) }
+    catch { toast({ type: 'error', title: 'Erro ao salvar script' }) }
+    setModal(null)
+  }
 
   return (
     <div className="space-y-4 animate-fade-in">

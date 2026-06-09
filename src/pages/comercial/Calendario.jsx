@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useComercial, eventAdd, eventUpdate, eventDelete, TIPOS_EVENTO, CORES_EVENTO } from '../../lib/comercial'
+import { useToast } from '../../contexts/ToastContext'
 import { Plus, X, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
 import {
   format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval,
@@ -233,6 +234,7 @@ function DayView({ date, events, onSlotClick, onEventClick }) {
 
 export default function Calendario() {
   const state = useComercial()
+  const toast = useToast()
   const [view, setView]   = useState('Mês')
   const [date, setDate]   = useState(new Date())
   const [modal, setModal] = useState(null)
@@ -259,9 +261,14 @@ export default function Calendario() {
     setModal({ data: format(d, "yyyy-MM-dd'T'HH:mm") })
   }
 
-  function handleSave(form) {
-    if (modal?.id) { eventUpdate(modal.id, form) }
-    else           { eventAdd(form) }
+  async function handleSave(form) {
+    try {
+      if (modal?.id) { await eventUpdate(modal.id, form) }
+      else           { await eventAdd(form) }
+      toast({ type: 'success', title: modal?.id ? 'Evento atualizado!' : 'Evento criado!' })
+    } catch {
+      toast({ type: 'error', title: 'Erro ao salvar evento' })
+    }
     setModal(null)
   }
 

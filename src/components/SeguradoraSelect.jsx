@@ -82,7 +82,7 @@ export default function SeguradoraSelect({
         type="button"
         disabled={disabled}
         onClick={toggle}
-        className={`select w-full flex items-center gap-2 text-left min-h-[38px] ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`select w-full flex items-center gap-2 text-left min-h-[44px] ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         {value ? (
           <SeguradoraBadge nome={value} size="sm" />
@@ -96,7 +96,7 @@ export default function SeguradoraSelect({
       {open && pos && createPortal(
         <div
           ref={dropdownRef}
-          style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 99999, maxHeight: '300px', overflowY: 'auto' }}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 300, maxHeight: '300px', overflowY: 'auto' }}
           className="glass-panel animate-fade-in shadow-lg"
         >
           <div>

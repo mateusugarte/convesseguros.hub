@@ -33,10 +33,10 @@ export const TAGS_DEFAULT = [
   { id: 'followup',       label: 'Follow Up',      cor: '#06B6D4' },
 ]
 
-export const ORIGENS          = ['Seguro Fiança', 'Indicação', 'Prospecção', 'Outros Produtos']
-export const MOTIVOS_RECUSA   = ['Preço', 'Concorrência', 'Sem Interesse', 'Sem Retorno', 'Outro']
-export const TIPOS_EVENTO     = ['Reunião', 'Ligação', 'Prospecção', 'Follow Up', 'Tarefa']
-export const CORES_EVENTO     = { 'Reunião': '#3B82F6', 'Ligação': '#10B981', 'Prospecção': '#8B5CF6', 'Follow Up': '#F59E0B', 'Tarefa': '#6B7280' }
+export const ORIGENS        = ['Seguro Fiança', 'Indicação', 'Prospecção', 'Outros Produtos']
+export const MOTIVOS_RECUSA = ['Preço', 'Concorrência', 'Sem Interesse', 'Sem Retorno', 'Outro']
+export const TIPOS_EVENTO   = ['Reunião', 'Ligação', 'Prospecção', 'Follow Up', 'Tarefa']
+export const CORES_EVENTO   = { 'Reunião': '#3B82F6', 'Ligação': '#10B981', 'Prospecção': '#8B5CF6', 'Follow Up': '#F59E0B', 'Tarefa': '#6B7280' }
 
 // ── Scoring ───────────────────────────────────────────────────────────────────
 
@@ -66,88 +66,190 @@ export function diffDias(iso) {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
 }
 
-// ── UserId namespacing ────────────────────────────────────────────────────────
+// ── DB row ↔ JS object mappers ─────────────────────────────────────────────────
 
-let _userId     = null
-let _storageKey = 'conves_comercial_v3'
-
-export function initComercialStore(userId) {
-  if (!userId || _userId === userId) return
-  _userId     = userId
-  _storageKey = `conves_comercial_v3_${userId}`
-  _state      = loadState()
-  notify()
+function rowToLead(r) {
+  return {
+    id:              r.id,
+    nome:            r.nome,
+    telefone:        r.telefone        || '',
+    tipo:            r.tipo            || 'PF',
+    origem:          r.origem          || '',
+    imobiliaria:     r.imobiliaria     || '',
+    nomeApolice:     r.nome_apolice    || '',
+    tipoLocatario:   r.tipo_locatario  || '',
+    coluna:          r.coluna          || 'contato',
+    tags:            r.tags            || [],
+    score:           r.score           || 0,
+    proximaAcao:     r.proxima_acao    || '',
+    resumo:          r.resumo          || '',
+    observacoes:     r.observacoes     || '',
+    ultimaAtividade: r.ultima_atividade,
+    apoliceAtiva:    r.apolice_ativa   || false,
+    jaRecusou:       r.ja_recusou      || false,
+    motivoRecusa:    r.motivo_recusa   || '',
+    propostaEnviada: r.proposta_enviada,
+    vendaRealizada:  r.venda_realizada || false,
+    historico:       r.historico       || [],
+    criadoEm:        r.criado_em,
+  }
 }
 
-// ── Estado inicial ────────────────────────────────────────────────────────────
+function leadToRow(lead, userId) {
+  return {
+    id:               lead.id,
+    user_id:          userId,
+    nome:             lead.nome,
+    telefone:         lead.telefone        || null,
+    tipo:             lead.tipo            || 'PF',
+    origem:           lead.origem          || null,
+    imobiliaria:      lead.imobiliaria     || null,
+    nome_apolice:     lead.nomeApolice     || null,
+    tipo_locatario:   lead.tipoLocatario   || null,
+    coluna:           lead.coluna          || 'contato',
+    tags:             lead.tags            || [],
+    score:            lead.score           || 0,
+    proxima_acao:     lead.proximaAcao     || null,
+    resumo:           lead.resumo          || null,
+    observacoes:      lead.observacoes     || null,
+    ultima_atividade: lead.ultimaAtividade || null,
+    apolice_ativa:    lead.apoliceAtiva    || false,
+    ja_recusou:       lead.jaRecusou       || false,
+    motivo_recusa:    lead.motivoRecusa    || null,
+    proposta_enviada: lead.propostaEnviada || null,
+    venda_realizada:  lead.vendaRealizada  || false,
+    historico:        lead.historico       || [],
+    criado_em:        lead.criadoEm        || new Date().toISOString(),
+  }
+}
 
-const d = (n) => new Date(Date.now() - n * 86400000).toISOString()
+// Maps only the changed JS fields to their DB column equivalents
+const LEAD_MAP = {
+  nomeApolice: 'nome_apolice', tipoLocatario: 'tipo_locatario',
+  proximaAcao: 'proxima_acao', ultimaAtividade: 'ultima_atividade',
+  apoliceAtiva: 'apolice_ativa', jaRecusou: 'ja_recusou',
+  motivoRecusa: 'motivo_recusa', propostaEnviada: 'proposta_enviada',
+  vendaRealizada: 'venda_realizada', criadoEm: 'criado_em',
+}
+function leadChangesToRow(changes) {
+  const row = {}
+  for (const [k, v] of Object.entries(changes)) row[LEAD_MAP[k] || k] = v
+  return row
+}
 
-const INITIAL_LEADS = [
-  { id: 'l1',  nome: 'Ana Costa',         telefone: '(11) 98765-4321', tipo: 'PF', origem: 'Seguro Fiança', imobiliaria: 'Imob São Paulo', nomeApolice: '2024-0091', tipoLocatario: 'Locatário',   coluna: 'contato',        tags: ['indicacao'],                score: 0, proximaAcao: 'Ligar amanhã cedo',              observacoes: 'Muito receptiva', resumo: 'Locatária com bom histórico, alta chance de cross-sell', ultimaAtividade: d(1),  apoliceAtiva: true,  criadoEm: d(5),  historico: [{ data: d(5), desc: 'Lead criado' }, { data: d(1), desc: 'Contato realizado por telefone' }] },
-  { id: 'l2',  nome: 'Carlos Mendes',     telefone: '(21) 99887-6543', tipo: 'PF', origem: 'Indicação',    imobiliaria: '',               nomeApolice: '',          tipoLocatario: '',             coluna: 'relacionamento', tags: ['alto_potencial'],           score: 0, proximaAcao: 'Enviar proposta de seguro de vida',              observacoes: 'Indicado pela Dra. Beatriz', resumo: 'Médico, alta renda, potencial para seguro de vida', ultimaAtividade: d(2),  apoliceAtiva: false, criadoEm: d(8),  historico: [{ data: d(8), desc: 'Lead criado via indicação' }] },
-  { id: 'l3',  nome: 'Tech Solutions LTDA', telefone: '(11) 3344-5566', tipo: 'PJ', origem: 'Prospecção', imobiliaria: '',               nomeApolice: '',          tipoLocatario: '',             coluna: 'oferta',         tags: ['empresarial', 'alto_potencial'], score: 0, proximaAcao: 'Aguardar retorno proposta RC', observacoes: '50 funcionários', resumo: 'Empresa de tecnologia, necessita RC e seguro incêndio', ultimaAtividade: d(4),  apoliceAtiva: false, criadoEm: d(12), propostaEnviada: d(3), historico: [{ data: d(12), desc: 'Lead criado' }, { data: d(3), desc: 'Proposta enviada' }] },
-  { id: 'l4',  nome: 'Maria Oliveira',    telefone: '(31) 97766-5544', tipo: 'PF', origem: 'Seguro Fiança', imobiliaria: 'MG Imóveis',   nomeApolice: '2023-0412', tipoLocatario: 'Locatário',   coluna: 'negociando',     tags: ['urgente', 'renovacao'],    score: 0, proximaAcao: 'Fechar proposta até sexta',               observacoes: 'Contrato vence em 30 dias', resumo: 'Renovação urgente, cliente fidelizada', ultimaAtividade: d(1),  apoliceAtiva: true,  criadoEm: d(10), historico: [{ data: d(10), desc: 'Lead criado' }, { data: d(1), desc: 'Em negociação de valores' }] },
-  { id: 'l5',  nome: 'Roberto Alves',     telefone: '(11) 95555-4444', tipo: 'PF', origem: 'Prospecção',   imobiliaria: '',               nomeApolice: '',          tipoLocatario: '',             coluna: 'followup',       tags: ['followup'],                score: 0, proximaAcao: 'Tentar contato novamente na 3ª feira',          observacoes: 'Pediu tempo', resumo: 'Cliente em avaliação, sem urgência aparente', ultimaAtividade: d(8),  apoliceAtiva: false, criadoEm: d(20), historico: [{ data: d(20), desc: 'Lead criado' }, { data: d(8), desc: 'Proposta recusada, segue em follow up' }] },
-  { id: 'l6',  nome: 'Silvana Ferreira',  telefone: '(41) 98866-7755', tipo: 'PF', origem: 'Indicação',    imobiliaria: '',               nomeApolice: '',          tipoLocatario: '',             coluna: 'contato',        tags: ['indicacao', 'alto_potencial'], score: 0, proximaAcao: 'Agendar reunião inicial',            observacoes: 'Indicada pela Maria', resumo: 'Médica, renda elevada, potencial premium', ultimaAtividade: d(0),  apoliceAtiva: false, criadoEm: d(2),  historico: [{ data: d(2), desc: 'Lead criado via indicação' }] },
-  { id: 'l7',  nome: 'Grupo Rio Comércio', telefone: '(21) 3322-1100', tipo: 'PJ', origem: 'Outros Produtos', imobiliaria: '',            nomeApolice: '',          tipoLocatario: '',             coluna: 'recusou',        tags: ['empresarial'],             score: 0, proximaAcao: '',                                               observacoes: 'Optou pela concorrência', resumo: 'Grande empresa, perdida por preço', ultimaAtividade: d(15), apoliceAtiva: false, criadoEm: d(30), jaRecusou: true, motivoRecusa: 'Concorrência', historico: [{ data: d(30), desc: 'Lead criado' }, { data: d(15), desc: 'Recusou — Concorrência' }] },
-  { id: 'l8',  nome: 'Fernando Lima',     telefone: '(85) 99944-3322', tipo: 'PF', origem: 'Seguro Fiança', imobiliaria: 'Imob Fortaleza', nomeApolice: '2022-1100', tipoLocatario: 'Locatário',  coluna: 'relacionamento', tags: ['renovacao'],               score: 0, proximaAcao: 'Reativar contato com nova proposta',             observacoes: 'Locatário há 3 anos', resumo: 'Cliente fiel, parado há 11 dias', ultimaAtividade: d(11), apoliceAtiva: true,  criadoEm: d(25), historico: [{ data: d(25), desc: 'Lead criado' }] },
-  { id: 'l9',  nome: 'Beatriz Santos',    telefone: '(48) 98777-6655', tipo: 'PF', origem: 'Indicação',    imobiliaria: '',               nomeApolice: '',          tipoLocatario: '',             coluna: 'oferta',         tags: ['indicacao'],               score: 0, proximaAcao: 'Ligar para saber decisão',               observacoes: 'Quer plano para família', resumo: 'Família de 4 pessoas, busca plano saúde', ultimaAtividade: d(6),  apoliceAtiva: false, criadoEm: d(14), propostaEnviada: d(4), historico: [{ data: d(14), desc: 'Lead criado' }, { data: d(4), desc: 'Proposta enviada' }] },
-  { id: 'l10', nome: 'Construtora Norte', telefone: '(92) 3355-7788', tipo: 'PJ', origem: 'Prospecção',   imobiliaria: '',               nomeApolice: '',          tipoLocatario: '',             coluna: 'venda',          tags: ['empresarial', 'alto_potencial'], score: 0, proximaAcao: 'Oferecer seguro incêndio', observacoes: 'Fechou RC completo', resumo: 'Construtora de médio porte, 120 funcionários', ultimaAtividade: d(0),  apoliceAtiva: false, criadoEm: d(18), vendaRealizada: true, historico: [{ data: d(18), desc: 'Lead criado' }, { data: d(0), desc: 'Venda realizada — RC Empresarial' }] },
-]
+function rowToSale(r) {
+  return {
+    id:              r.id,
+    leadId:          r.lead_id,
+    leadNome:        r.lead_nome        || '',
+    produto:         r.produto          || '',
+    valor:           r.valor            || 0,
+    comissao:        r.comissao         || 0,
+    dataEmissao:     r.data_emissao,
+    proximoProduto:  r.proximo_produto  || '',
+    observacoes:     r.observacoes      || '',
+    criadoEm:        r.criado_em,
+  }
+}
 
-const INITIAL_EVENTS = [
-  { id: 'ev1', nome: 'Reunião — Ana Costa',       data: new Date(new Date().setHours(10, 0, 0, 0)).toISOString(), tipo: 'Reunião',    descricao: 'Apresentar proposta seguro de vida', leadId: 'l1', auto: false },
-  { id: 'ev2', nome: 'Ligação — Carlos Mendes',   data: new Date(new Date().setHours(14,30, 0, 0)).toISOString(), tipo: 'Ligação',    descricao: 'Follow up da proposta', leadId: 'l2', auto: false },
-  { id: 'ev3', nome: 'Follow Up — Tech Solutions', data: new Date(Date.now() + 1*86400000).toISOString(),          tipo: 'Follow Up',  descricao: 'Auto: acompanhar proposta RC', leadId: 'l3', auto: true  },
-  { id: 'ev4', nome: 'Reunião — Maria Oliveira',   data: new Date(Date.now() + 2*86400000).toISOString(),          tipo: 'Reunião',    descricao: 'Fechar renovação seguro fiança', leadId: 'l4', auto: false },
-  { id: 'ev5', nome: 'Prospecção — Zona Sul',      data: new Date(Date.now() + 3*86400000).toISOString(),          tipo: 'Prospecção', descricao: 'Visitar imobiliárias região sul', leadId: null, auto: false },
-]
+function saleToRow(sale, userId) {
+  return {
+    id:              sale.id,
+    user_id:         userId,
+    lead_id:         sale.leadId        || null,
+    lead_nome:       sale.leadNome      || null,
+    produto:         sale.produto       || null,
+    valor:           sale.valor         || 0,
+    comissao:        sale.comissao      || 0,
+    data_emissao:    sale.dataEmissao   || new Date().toISOString(),
+    proximo_produto: sale.proximoProduto || null,
+    observacoes:     sale.observacoes   || null,
+    criado_em:       sale.criadoEm      || new Date().toISOString(),
+  }
+}
 
-const INITIAL_SALES = [
-  { id: 'sv1', leadId: 'l10', leadNome: 'Construtora Norte', produto: 'rc_empresarial', valor: 8500, comissao: 12, dataEmissao: d(0),  proximoProduto: 'seguro_incendio', observacoes: 'Pacote empresarial' },
-  { id: 'sv2', leadId: 'l4',  leadNome: 'Maria Oliveira',    produto: 'seguro_vida',    valor: 1200, comissao: 15, dataEmissao: d(5),  proximoProduto: 'plano_saude',     observacoes: '' },
-  { id: 'sv3', leadId: 'l2',  leadNome: 'Carlos Mendes',     produto: 'seguro_auto',    valor: 2400, comissao: 10, dataEmissao: d(10), proximoProduto: null,              observacoes: 'Cliente satisfeito' },
-]
+function rowToEvent(r) {
+  return {
+    id:        r.id,
+    leadId:    r.lead_id,
+    nome:      r.nome,
+    data:      r.data,
+    tipo:      r.tipo       || '',
+    descricao: r.descricao  || '',
+    auto:      r.auto       || false,
+    criadoEm:  r.criado_em,
+  }
+}
 
-const INITIAL_JOURNEYS = [
-  { id: 'jn1', nome: 'Jornada Seguro Fiança', tipoCliente: 'PF', descricao: 'Abordar clientes existentes de seguro fiança para oferecer proteção complementar', etapas: ['Primeiro Contato', 'Envio de Proposta', 'Follow Up'] },
-  { id: 'jn2', nome: 'Abordagem Empresarial',  tipoCliente: 'PJ', descricao: 'Jornada para empresas que precisam de cobertura de responsabilidade civil e patrimônio', etapas: ['Diagnóstico Gratuito', 'Proposta RC', 'Fechamento'] },
-]
+function eventToRow(ev, userId) {
+  return {
+    id:        ev.id,
+    user_id:   userId,
+    lead_id:   ev.leadId   || null,
+    nome:      ev.nome,
+    data:      ev.data,
+    tipo:      ev.tipo     || null,
+    descricao: ev.descricao || null,
+    auto:      ev.auto     || false,
+    criado_em: ev.criadoEm || new Date().toISOString(),
+  }
+}
 
-const INITIAL_SCRIPTS = [
-  { id: 'sc1', titulo: 'Primeiro Contato — Indicação',  tipo: 'Abordagem',   conteudo: 'Olá [Nome]! Meu nome é [Seu Nome] da Conves Seguros. [Indicador] me passou seu contato pois acredito que posso te ajudar com proteção financeira. Você tem 5 minutos?' },
-  { id: 'sc2', titulo: 'Objeção de Preço — Playbook',   tipo: 'Objeção',     conteudo: '1. Reconheça: "Entendo sua preocupação com o investimento"\n2. Pergunte: "Comparando com o quê?"\n3. Apresente valor: mostre coberturas e exemplos de sinistros\n4. Parcele: ofereça opções de pagamento\n5. Urgência: "Imprevistos não avisam"' },
-  { id: 'sc3', titulo: 'Benefícios Seguro de Vida',      tipo: 'Material',    conteudo: 'Coberturas:\n• Morte natural e acidental\n• Invalidez permanente total\n• Doenças graves (câncer, infarto, AVC)\n• Assistência funeral\n\nDiferenciais Conves: prazo de carência reduzido, atendimento 24h, rede nacional' },
-  { id: 'sc4', titulo: 'Treinamento — Rapport Inicial',  tipo: 'Treinamento', conteudo: 'Os primeiros 30 segundos definem o tom da conversa:\n1. Tom de voz: confiante mas amigável\n2. Espelhamento: adapte seu ritmo ao do cliente\n3. Nome: use o nome do cliente pelo menos 3x\n4. Escuta ativa: faça perguntas abertas\n5. Anotações: demonstre interesse genuíno' },
-]
+function eventChangesToRow(changes) {
+  const m = { leadId: 'lead_id', criadoEm: 'criado_em' }
+  const row = {}
+  for (const [k, v] of Object.entries(changes)) row[m[k] || k] = v
+  return row
+}
 
-function createInitial() {
-  return { leads: INITIAL_LEADS, events: INITIAL_EVENTS, sales: INITIAL_SALES, journeys: INITIAL_JOURNEYS, scripts: INITIAL_SCRIPTS, tags: TAGS_DEFAULT, meta: 10 }
+function rowToJourney(r) {
+  return {
+    id:          r.id,
+    nome:        r.nome,
+    tipoCliente: r.tipo_cliente || '',
+    descricao:   r.descricao   || '',
+    etapas:      r.etapas      || [],
+    criadoEm:    r.criado_em,
+  }
+}
+
+function journeyToRow(j, userId) {
+  return {
+    id:           j.id,
+    user_id:      userId,
+    nome:         j.nome,
+    tipo_cliente: j.tipoCliente || null,
+    descricao:    j.descricao   || null,
+    etapas:       j.etapas      || [],
+    criado_em:    j.criadoEm    || new Date().toISOString(),
+  }
+}
+
+function rowToScript(r) {
+  return { id: r.id, titulo: r.titulo, tipo: r.tipo || '', conteudo: r.conteudo || '', criadoEm: r.criado_em }
+}
+
+function scriptToRow(sc, userId) {
+  return {
+    id:        sc.id,
+    user_id:   userId,
+    titulo:    sc.titulo,
+    tipo:      sc.tipo     || null,
+    conteudo:  sc.conteudo || null,
+    criado_em: sc.criadoEm || new Date().toISOString(),
+  }
 }
 
 // ── Reactive store ────────────────────────────────────────────────────────────
 
-function loadState() {
-  try {
-    const s = localStorage.getItem(_storageKey)
-    return s ? JSON.parse(s) : createInitial()
-  } catch { return createInitial() }
-}
-
-let _state     = loadState()
+let _userId   = null
+let _loaded   = false
+let _state    = { leads: [], events: [], sales: [], journeys: [], scripts: [], tags: TAGS_DEFAULT, meta: 10 }
 let _listeners = new Set()
 
-function persist() { localStorage.setItem(_storageKey, JSON.stringify(_state)) }
 function notify()  { _listeners.forEach(fn => fn()) }
-
-export function getState()  { return _state }
-
-export function setState(updater) {
-  _state = updater(_state)
-  persist()
-  notify()
-}
+export function getState() { return _state }
+export function setState(updater) { _state = updater(_state); notify() }
 
 export function useComercial() {
   const [, tick] = useState(0)
@@ -159,35 +261,178 @@ export function useComercial() {
   return _state
 }
 
-// ── CRUD helpers ──────────────────────────────────────────────────────────────
+export async function initComercialStore(userId) {
+  if (!userId) return
+  if (_userId === userId && _loaded) return
+  _userId = userId
 
-export const leadAdd = (lead) => {
-  const novo = { ...lead, id: `l${Date.now()}`, score: 0, coluna: lead.coluna || 'contato', criadoEm: new Date().toISOString(), ultimaAtividade: new Date().toISOString(), historico: [{ data: new Date().toISOString(), desc: 'Lead criado' }] }
+  try {
+    const [leadsRes, salesRes, eventsRes, journeysRes, scriptsRes] = await Promise.all([
+      supabase.from('comercial_leads').select('*').eq('user_id', userId).order('criado_em', { ascending: false }),
+      supabase.from('comercial_vendas').select('*').eq('user_id', userId).order('criado_em', { ascending: false }),
+      supabase.from('comercial_eventos').select('*').eq('user_id', userId).order('data', { ascending: true }),
+      supabase.from('comercial_jornadas').select('*').eq('user_id', userId).order('criado_em', { ascending: false }),
+      supabase.from('comercial_scripts').select('*').eq('user_id', userId).order('criado_em', { ascending: false }),
+    ])
+
+    const meta = (() => { try { return JSON.parse(localStorage.getItem(`comercial_meta_${userId}`)) || 10 } catch { return 10 } })()
+
+    _state = {
+      leads:    (leadsRes.data    || []).map(rowToLead),
+      sales:    (salesRes.data    || []).map(rowToSale),
+      events:   (eventsRes.data   || []).map(rowToEvent),
+      journeys: (journeysRes.data || []).map(rowToJourney),
+      scripts:  (scriptsRes.data  || []).map(rowToScript),
+      tags:     TAGS_DEFAULT,
+      meta,
+    }
+    _loaded = true
+  } catch (err) {
+    console.error('initComercialStore:', err)
+    _state = { leads: [], events: [], sales: [], journeys: [], scripts: [], tags: TAGS_DEFAULT, meta: 10 }
+  }
+  notify()
+}
+
+// ── CRUD: Leads ───────────────────────────────────────────────────────────────
+
+export const leadAdd = async (lead) => {
+  const now  = new Date().toISOString()
+  const novo = {
+    ...lead,
+    id:              crypto.randomUUID(),
+    score:           0,
+    coluna:          lead.coluna || 'contato',
+    criadoEm:        now,
+    ultimaAtividade: now,
+    historico:       [{ data: now, desc: 'Lead criado' }],
+  }
   setState(s => ({ ...s, leads: [novo, ...s.leads] }))
+  const { error } = await supabase.from('comercial_leads').insert(leadToRow(novo, _userId))
+  if (error) {
+    console.error('leadAdd:', error)
+    setState(s => ({ ...s, leads: s.leads.filter(l => l.id !== novo.id) }))
+    throw error
+  }
   return novo
 }
 
-export const leadUpdate = (id, changes) =>
-  setState(s => ({ ...s, leads: s.leads.map(l => l.id === id ? { ...l, ...changes, ultimaAtividade: new Date().toISOString() } : l) }))
+export const leadUpdate = async (id, changes) => {
+  const now = new Date().toISOString()
+  setState(s => ({ ...s, leads: s.leads.map(l => l.id === id ? { ...l, ...changes, ultimaAtividade: now } : l) }))
+  const { error } = await supabase.from('comercial_leads')
+    .update({ ...leadChangesToRow(changes), ultima_atividade: now })
+    .eq('id', id)
+  if (error) console.error('leadUpdate:', error)
+}
 
-export const leadMover = (id, coluna, extra = {}) =>
-  setState(s => ({ ...s, leads: s.leads.map(l => l.id === id
-    ? { ...l, coluna, ultimaAtividade: new Date().toISOString(), historico: [...(l.historico || []), { data: new Date().toISOString(), desc: `Movido para ${PIPELINE_COLS.find(c => c.id === coluna)?.label || coluna}` }], ...extra }
-    : l
-  )}))
+export const leadMover = async (id, coluna, extra = {}) => {
+  const now     = new Date().toISOString()
+  const colLabel = PIPELINE_COLS.find(c => c.id === coluna)?.label || coluna
+  const lead    = _state.leads.find(l => l.id === id)
+  const newHist = [...(lead?.historico || []), { data: now, desc: `Movido para ${colLabel}` }]
+  setState(s => ({
+    ...s,
+    leads: s.leads.map(l => l.id === id
+      ? { ...l, coluna, ultimaAtividade: now, historico: newHist, ...extra }
+      : l
+    ),
+  }))
+  const { error } = await supabase.from('comercial_leads')
+    .update({ coluna, ultima_atividade: now, historico: newHist, ...leadChangesToRow(extra) })
+    .eq('id', id)
+  if (error) console.error('leadMover:', error)
+}
 
-export const eventAdd    = (ev)  => setState(s => ({ ...s, events: [...s.events, { ...ev, id: `ev${Date.now()}` }] }))
-export const eventUpdate = (id, changes) => setState(s => ({ ...s, events: s.events.map(e => e.id === id ? { ...e, ...changes } : e) }))
-export const eventDelete = (id)  => setState(s => ({ ...s, events: s.events.filter(e => e.id !== id) }))
+// ── CRUD: Vendas ──────────────────────────────────────────────────────────────
 
-export const saleAdd = (sale) => setState(s => ({ ...s, sales: [{ ...sale, id: `sv${Date.now()}` }, ...s.sales] }))
+export const saleAdd = async (sale) => {
+  const now  = new Date().toISOString()
+  const novo = { ...sale, id: crypto.randomUUID(), criadoEm: now }
+  setState(s => ({ ...s, sales: [novo, ...s.sales] }))
+  const { error } = await supabase.from('comercial_vendas').insert(saleToRow(novo, _userId))
+  if (error) {
+    console.error('saleAdd:', error)
+    setState(s => ({ ...s, sales: s.sales.filter(v => v.id !== novo.id) }))
+    throw error
+  }
+  return novo
+}
 
-export const journeyAdd    = (j) => { const novo = { ...j, id: `jn${Date.now()}`, etapas: j.etapas || [] }; setState(s => ({ ...s, journeys: [novo, ...s.journeys] })); return novo }
-export const journeyUpdate = (id, changes) => setState(s => ({ ...s, journeys: s.journeys.map(j => j.id === id ? { ...j, ...changes } : j) }))
+// ── CRUD: Eventos ─────────────────────────────────────────────────────────────
 
-export const scriptAdd = (sc) => setState(s => ({ ...s, scripts: [{ ...sc, id: `sc${Date.now()}` }, ...s.scripts] }))
-export const tagAdd    = (tag) => setState(s => ({ ...s, tags: [...s.tags, { ...tag, id: `tg${Date.now()}` }] }))
-export const metaSet   = (n)   => setState(s => ({ ...s, meta: n }))
+export const eventAdd = async (ev) => {
+  const novo = { ...ev, id: crypto.randomUUID(), criadoEm: new Date().toISOString() }
+  setState(s => ({ ...s, events: [...s.events, novo] }))
+  const { error } = await supabase.from('comercial_eventos').insert(eventToRow(novo, _userId))
+  if (error) {
+    console.error('eventAdd:', error)
+    setState(s => ({ ...s, events: s.events.filter(e => e.id !== novo.id) }))
+    throw error
+  }
+  return novo
+}
+
+export const eventUpdate = async (id, changes) => {
+  setState(s => ({ ...s, events: s.events.map(e => e.id === id ? { ...e, ...changes } : e) }))
+  const { error } = await supabase.from('comercial_eventos').update(eventChangesToRow(changes)).eq('id', id)
+  if (error) console.error('eventUpdate:', error)
+}
+
+export const eventDelete = async (id) => {
+  setState(s => ({ ...s, events: s.events.filter(e => e.id !== id) }))
+  const { error } = await supabase.from('comercial_eventos').delete().eq('id', id)
+  if (error) console.error('eventDelete:', error)
+}
+
+// ── CRUD: Jornadas ────────────────────────────────────────────────────────────
+
+export const journeyAdd = async (j) => {
+  const novo = { ...j, id: crypto.randomUUID(), etapas: j.etapas || [], criadoEm: new Date().toISOString() }
+  setState(s => ({ ...s, journeys: [novo, ...s.journeys] }))
+  const { error } = await supabase.from('comercial_jornadas').insert(journeyToRow(novo, _userId))
+  if (error) {
+    console.error('journeyAdd:', error)
+    setState(s => ({ ...s, journeys: s.journeys.filter(x => x.id !== novo.id) }))
+    throw error
+  }
+  return novo
+}
+
+export const journeyUpdate = async (id, changes) => {
+  setState(s => ({ ...s, journeys: s.journeys.map(j => j.id === id ? { ...j, ...changes } : j) }))
+  const row = {}
+  if ('nome'        in changes) row.nome        = changes.nome
+  if ('descricao'   in changes) row.descricao   = changes.descricao
+  if ('etapas'      in changes) row.etapas      = changes.etapas
+  if ('tipoCliente' in changes) row.tipo_cliente = changes.tipoCliente
+  const { error } = await supabase.from('comercial_jornadas').update(row).eq('id', id)
+  if (error) console.error('journeyUpdate:', error)
+}
+
+// ── CRUD: Scripts ─────────────────────────────────────────────────────────────
+
+export const scriptAdd = async (sc) => {
+  const novo = { ...sc, id: crypto.randomUUID(), criadoEm: new Date().toISOString() }
+  setState(s => ({ ...s, scripts: [novo, ...s.scripts] }))
+  const { error } = await supabase.from('comercial_scripts').insert(scriptToRow(novo, _userId))
+  if (error) {
+    console.error('scriptAdd:', error)
+    setState(s => ({ ...s, scripts: s.scripts.filter(x => x.id !== novo.id) }))
+    throw error
+  }
+  return novo
+}
+
+// ── Tags e Meta (sem persistência no banco — preferências locais) ─────────────
+
+export const tagAdd = (tag) =>
+  setState(s => ({ ...s, tags: [...s.tags, { ...tag, id: `tg${Date.now()}` }] }))
+
+export const metaSet = (n) => {
+  setState(s => ({ ...s, meta: n }))
+  if (_userId) localStorage.setItem(`comercial_meta_${_userId}`, JSON.stringify(n))
+}
 
 // ── Supabase import helpers ───────────────────────────────────────────────────
 

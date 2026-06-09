@@ -74,7 +74,7 @@ function Sec({ title, children }) {
   return (
     <div>
       <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-3 pb-2 border-b border-dark-border">{title}</p>
-      <div className="grid grid-cols-2 gap-4">{children}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{children}</div>
     </div>
   )
 }
@@ -117,6 +117,38 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
   const [error,        setError]        = useState(null)
   const [imobiliarias, setImobiliarias] = useState([])
   const [profiles,     setProfiles]     = useState([])
+
+  // Resetar form quando a ficha muda (abre ficha diferente sem desmontar o modal)
+  useEffect(() => {
+    setForm({
+      produto:            ficha?.produto            ?? 'residencial_pf',
+      nome_interessado:   ficha?.nome_interessado   ?? '',
+      nome_empresa:       ficha?.nome_empresa       ?? '',
+      cpf:                ficha?.cpf                ?? '',
+      cnpj:               ficha?.cnpj               ?? '',
+      cpf_socios:         ficha?.cpf_socios         ?? '',
+      celular:            ficha?.celular            ?? '',
+      email:              ficha?.email              ?? '',
+      cep:                ficha?.cep                ?? '',
+      imobiliaria:        ficha?.imobiliaria        ?? '',
+      tipo_imovel:        ficha?.tipo_imovel        ?? '',
+      valor_aluguel:      ficha?.valor_aluguel      ?? '',
+      valor_iptu:         ficha?.valor_iptu         ?? '',
+      valor_condominio:   ficha?.valor_condominio   ?? '',
+      observacoes:        ficha?.observacoes        ?? '',
+      atividade:          ficha?.atividade          ?? '',
+      opcao_tributaria:   ficha?.opcao_tributaria   ?? '',
+      total_rendimentos:  ficha?.total_rendimentos  ?? '',
+      capital_social:     ficha?.capital_social     ?? '',
+      motivo_locacao:     ficha?.motivo_locacao     ?? '',
+      vigencia:           ficha?.vigencia           ?? '',
+      status:             ficha?.status             ?? 'pendente',
+      seguradora:         ficha?.seguradora         ?? '',
+      orcamentista_forms: ficha?.orcamentista_forms ?? '',
+      retorno_enviado:    ficha?.retorno_enviado     ?? false,
+    })
+    setError(null)
+  }, [ficha?.id])
 
   useEffect(() => {
     fetchImobiliariasDistintas().then(setImobiliarias)

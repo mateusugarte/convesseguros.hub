@@ -425,7 +425,7 @@ export default function Layout() {
 
         {/* ── Content ── */}
         <main className="flex-1 overflow-y-auto">
-          <div className="p-6 max-w-screen-2xl mx-auto">
+          <div className="p-6 pb-20 max-w-screen-2xl mx-auto">
             <PageTransition>
               <Outlet />
             </PageTransition>

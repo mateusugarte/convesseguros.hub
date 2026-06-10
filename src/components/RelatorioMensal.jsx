@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { fetchRelatorioMensal, PRODUTO_LABELS } from '../lib/fichas'
 import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
 import { useImobiliaria } from '../hooks/useImobiliaria'
-import { ChevronLeft, ChevronRight, Download, X, FileText } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, X, FileText, CheckCircle2, XCircle, MinusCircle, AlertTriangle, Clock } from 'lucide-react'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -62,17 +62,17 @@ function ProdutoBadge({ produto }) {
 
 // ── Indicadores booleanos ────────────────────────────────────────────────────
 
-function Sim() { return <span className="text-status-success font-medium">✅ Sim</span> }
-function Nao() { return <span className="text-status-danger font-medium">❌ Não</span> }
+function Sim() { return <span className="inline-flex items-center gap-1 text-status-success font-medium"><CheckCircle2 className="w-3.5 h-3.5" /> Sim</span> }
+function Nao() { return <span className="inline-flex items-center gap-1 text-status-danger font-medium"><XCircle className="w-3.5 h-3.5" /> Não</span> }
 function Dash() { return <span className="text-dark-muted">—</span> }
 
 function ResultadoFinal({ status }) {
-  if (status === 'emitido')    return <span className="text-brand-accent font-medium">✅ Emitida</span>
-  if (status === 'expirada')   return <span className="text-dark-muted font-medium">⏰ Expirada</span>
-  if (status === 'recusado')   return <span className="text-status-danger font-medium">❌ Recusada</span>
-  if (status === 'aprovado')   return <span className="text-status-success font-medium">✅ Aprovada</span>
-  if (status === 'cancelado')  return <span className="text-dark-muted font-medium">🚫 Cancelada</span>
-  if (status === 'cpf_invalido') return <span className="text-status-warning font-medium">⚠️ CPF Inv.</span>
+  if (status === 'emitido')      return <span className="inline-flex items-center gap-1 text-brand-accent font-medium"><CheckCircle2 className="w-3.5 h-3.5" /> Emitida</span>
+  if (status === 'expirada')     return <span className="inline-flex items-center gap-1 text-dark-muted font-medium"><Clock className="w-3.5 h-3.5" /> Expirada</span>
+  if (status === 'recusado')     return <span className="inline-flex items-center gap-1 text-status-danger font-medium"><XCircle className="w-3.5 h-3.5" /> Recusada</span>
+  if (status === 'aprovado')     return <span className="inline-flex items-center gap-1 text-status-success font-medium"><CheckCircle2 className="w-3.5 h-3.5" /> Aprovada</span>
+  if (status === 'cancelado')    return <span className="inline-flex items-center gap-1 text-dark-muted font-medium"><MinusCircle className="w-3.5 h-3.5" /> Cancelada</span>
+  if (status === 'cpf_invalido') return <span className="inline-flex items-center gap-1 text-status-warning font-medium"><AlertTriangle className="w-3.5 h-3.5" /> CPF Inv.</span>
   return <Dash />
 }
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 import SeguradoraBadge from './SeguradoraBadge'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Check } from 'lucide-react'
 
 let _cache = null
 
@@ -121,7 +121,7 @@ export default function SeguradoraSelect({
                 >
                   <SeguradoraBadge nome={nome} size="sm" />
                   {value === nome && (
-                    <span className="ml-auto text-brand-accent text-xs font-bold">✓</span>
+                    <Check className="ml-auto w-3.5 h-3.5 text-brand-accent" />
                   )}
                 </button>
               ))

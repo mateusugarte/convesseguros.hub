@@ -81,7 +81,7 @@ function ScriptCard({ script }) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-dark-text text-sm truncate">{script.titulo}</p>
-          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: '#6366F120', color: '#6366F1' }}>{tipo}</span>
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-500">{tipo}</span>
         </div>
         {open ? <ChevronDown className="w-4 h-4 text-dark-muted" /> : <ChevronRight className="w-4 h-4 text-dark-muted" />}
       </button>

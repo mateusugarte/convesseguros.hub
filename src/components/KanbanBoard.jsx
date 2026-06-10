@@ -6,6 +6,7 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { STATUS_LABELS, PRODUTO_LABELS, marcarRetornoEnviado } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
+import { Home, Building2, Briefcase, FileText as FileTextIcon } from 'lucide-react'
 
 const COLS = [
   {
@@ -90,10 +91,14 @@ const COLS = [
 // Columns that are considered "finalizadas" for drag-drop purposes
 const PASSADAS_COLS = ['em_analise', 'aprovados', 'recusados', 'finalizadas']
 
-const PROD_ICONS = {
-  residencial_pf:  '🏠',
-  comercial_pf:    '🏢',
-  pessoa_juridica: '🏛️',
+const PROD_ICON_MAP = {
+  residencial_pf:  Home,
+  comercial_pf:    Building2,
+  pessoa_juridica: Briefcase,
+}
+function ProdIcon({ produto, className = 'w-4 h-4' }) {
+  const Icon = PROD_ICON_MAP[produto] ?? FileTextIcon
+  return <Icon className={className} />
 }
 
 function getCol(ficha) {
@@ -130,7 +135,7 @@ function KanbanCard({ ficha, onAssumir, onFinalizar, onDetalhe }) {
       >
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-base flex-shrink-0">{PROD_ICONS[ficha.produto] ?? '📄'}</span>
+            <ProdIcon produto={ficha.produto} className="w-4 h-4 flex-shrink-0 text-dark-muted" />
             <span className="text-xs font-semibold text-gray-800 truncate">
               {ficha.nome_interessado || 'Sem nome'}
             </span>
@@ -308,7 +313,7 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
         {activeFicha ? (
           <div className="rounded-lg p-3 shadow-2xl w-48 rotate-2 opacity-95" style={{ background: 'var(--glass-bg-heavy)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--glass-border)' }}>
             <div className="flex items-center gap-1.5">
-              <span>{PROD_ICONS[activeFicha.produto] ?? '📄'}</span>
+              <ProdIcon produto={activeFicha.produto} className="w-4 h-4 text-dark-muted" />
               <span className="text-xs font-semibold text-gray-800 truncate">
                 {activeFicha.nome_interessado || 'Sem nome'}
               </span>

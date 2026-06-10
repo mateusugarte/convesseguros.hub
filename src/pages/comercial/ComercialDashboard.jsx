@@ -266,7 +266,7 @@ export default function ComercialDashboard() {
                       <p className="text-xs font-semibold text-dark-text">{e.nome}</p>
                       {e.descricao && <p className="text-[10px] text-dark-muted">{e.descricao}</p>}
                     </div>
-                    <span className="ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded" style={{ background: '#6366F120', color: '#6366F1' }}>{e.tipo}</span>
+                    <span className="ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-500">{e.tipo}</span>
                   </div>
                 )
               })}

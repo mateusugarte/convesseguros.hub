@@ -38,6 +38,9 @@
   --glass-blur:            blur(6px) saturate(140%);
   --glass-blur-strong:     blur(10px) saturate(150%);
 
+  /* Sidebar — light mode: azul-marinho profundo (igual ao dark) */
+  --sidebar-bg: #0f172a;
+
   /* Text contrast tokens — light */
   --glass-text-primary:    rgba(8, 20, 50, 0.95);
   --glass-text-secondary:  rgba(8, 20, 50, 0.72);
@@ -80,6 +83,7 @@ html.dark {
   --glass-inset:           inset 0 1px 0 rgba(80,160,255,0.12);
   --glass-blur:            blur(6px) saturate(140%);
   --glass-blur-strong:     blur(10px) saturate(150%);
+  --sidebar-bg: #0f172a;
 
   /* Text contrast tokens — dark */
   --glass-text-primary:    rgba(215, 232, 255, 0.95);

@@ -35,6 +35,14 @@ export default {
           800: '#1e40af',
           900: '#1e3a8a',
         },
+        violet: {
+          500: '#8B5CF6',
+        },
+      },
+      zIndex: {
+        dropdown: '300',
+        modal:    '400',
+        toast:    '500',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

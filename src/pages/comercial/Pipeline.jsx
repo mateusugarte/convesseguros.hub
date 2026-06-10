@@ -55,8 +55,7 @@ function LeadCard({ lead, tags = [], ghost = false }) {
         </div>
       )}
       {lead.origem && (
-        <span className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full mb-1.5"
-          style={{ background: '#6366F115', color: '#6366F1' }}>{lead.origem}</span>
+        <span className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full mb-1.5 bg-violet-500/10 text-violet-500">{lead.origem}</span>
       )}
       {leadTags.length > 0 && (
         <div className="flex gap-1 flex-wrap mb-1.5">

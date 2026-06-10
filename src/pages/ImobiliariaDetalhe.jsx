@@ -334,9 +334,9 @@ export default function ImobiliariaDetalhe() {
                       const err = await deletarCodigo(c.id)
                       if (!err) setCodigos(prev => prev.filter(x => x.id !== c.id))
                     }}
-                    className="text-status-danger/60 hover:text-status-danger transition-colors text-xs flex-shrink-0"
+                    className="text-status-danger/60 hover:text-status-danger transition-colors flex-shrink-0"
                   >
-                    ✕
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}

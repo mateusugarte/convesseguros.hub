@@ -1,20 +1,16 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { useTheme } from '../contexts/ThemeContext'
-import { Eye, EyeOff, Lock, Mail, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff, Lock, Mail, AlertCircle, Loader2, ShieldCheck } from 'lucide-react'
 
 const LOGO = 'https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/conves/file.jpeg'
 
 export default function Login() {
   const { signIn } = useAuth()
-  const { theme }  = useTheme()
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
   const [showPwd,  setShowPwd]  = useState(false)
   const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
-
-  const isDark = theme === 'dark'
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -26,55 +22,93 @@ export default function Login() {
   }
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-300"
-      style={{
-        background: isDark
-          ? 'linear-gradient(135deg, #0A0F1E 0%, #0f1a35 50%, #0A0F1E 100%)'
-          : 'linear-gradient(135deg, #F0F4FF 0%, #E0EAFF 50%, #F0F4FF 100%)',
-      }}
-    >
-      {/* Dot grid */}
+    <div className="min-h-screen flex">
+
+      {/* ── Painel esquerdo — identidade ─────────────────────────────────── */}
       <div
-        className="absolute inset-0 opacity-30"
-        style={{
-          backgroundImage: `radial-gradient(circle, ${isDark ? 'rgba(74,144,217,0.4)' : 'rgba(43,91,168,0.25)'} 1px, transparent 1px)`,
-          backgroundSize: '36px 36px',
-        }}
-      />
-
-      {/* Glow blobs */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full opacity-10 blur-3xl pointer-events-none"
-           style={{ background: 'radial-gradient(circle, #2B5BA8, transparent)' }} />
-      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full opacity-10 blur-3xl pointer-events-none"
-           style={{ background: 'radial-gradient(circle, #4A90D9, transparent)' }} />
-
-      {/* Card */}
-      <div className="relative z-10 w-full max-w-sm animate-fade-in">
+        className="hidden lg:flex flex-col justify-between p-12 w-[42%] flex-shrink-0 relative overflow-hidden"
+        style={{ background: '#0f172a' }}
+      >
+        {/* Grid pattern */}
         <div
-          className="rounded-2xl border border-dark-border/60 p-8 space-y-6 shadow-2xl transition-colors duration-300"
+          className="absolute inset-0 opacity-[0.04]"
           style={{
-            background:    isDark ? 'rgba(17,24,39,0.85)' : 'rgba(255,255,255,0.85)',
-            backdropFilter: 'blur(20px)',
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.8) 1px, transparent 1px)',
+            backgroundSize: '48px 48px',
           }}
-        >
-          {/* Logo + title */}
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-28 h-28 rounded-2xl overflow-hidden border border-dark-border/60 shadow-glow">
+        />
+        {/* Glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(74,144,217,0.12), transparent 70%)' }} />
+
+        {/* Logo */}
+        <div className="relative flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl overflow-hidden ring-1 ring-white/10">
+            <img src={LOGO} alt="Conves" className="w-full h-full object-cover" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white">Conves</p>
+            <p className="text-[10px] text-white/40">Corretora de Seguros</p>
+          </div>
+        </div>
+
+        {/* Headline */}
+        <div className="relative space-y-4">
+          <h1 className="text-3xl font-bold text-white leading-tight">
+            Gestão de fichas<br />
+            <span className="text-brand-accent">simplificada</span>
+          </h1>
+          <p className="text-sm text-white/50 leading-relaxed max-w-xs">
+            Substitui planilhas por um sistema estruturado. Acompanhe cotações, emissões e a jornada de cada cliente.
+          </p>
+
+          {/* Feature list */}
+          <div className="space-y-2.5 pt-2">
+            {[
+              'Pipeline comercial com Kanban',
+              'Gestão de apólices em tempo real',
+              'Relatórios e métricas por período',
+            ].map(f => (
+              <div key={f} className="flex items-center gap-2.5">
+                <div className="w-5 h-5 rounded-full bg-brand-accent/15 flex items-center justify-center flex-shrink-0">
+                  <ShieldCheck className="w-3 h-3 text-brand-accent" />
+                </div>
+                <span className="text-xs text-white/60">{f}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <p className="relative text-[10px] text-white/20">
+          Acesso restrito — Conves Corretora © {new Date().getFullYear()}
+        </p>
+      </div>
+
+      {/* ── Painel direito — formulário ──────────────────────────────────── */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-dark-bg">
+        <div className="w-full max-w-sm animate-fade-in">
+
+          {/* Mobile logo */}
+          <div className="lg:hidden flex items-center gap-3 mb-8">
+            <div className="w-9 h-9 rounded-xl overflow-hidden ring-1 ring-dark-border">
               <img src={LOGO} alt="Conves" className="w-full h-full object-cover" />
             </div>
-            <div className="text-center">
-              <h1 className="text-xl font-bold text-dark-text">Conves Seguros</h1>
-              <p className="text-sm text-dark-muted mt-0.5">Sistema de Gestão de Fichas</p>
+            <div>
+              <p className="text-sm font-bold text-dark-text">Conves</p>
+              <p className="text-[10px] text-dark-muted">Sistema de Fichas</p>
             </div>
           </div>
 
-          {/* Form */}
+          <h2 className="text-xl font-bold text-dark-text mb-1">Entrar</h2>
+          <p className="text-sm text-dark-muted mb-7">Use suas credenciais de acesso</p>
+
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-dark-muted mb-1.5 uppercase tracking-wider">Email</label>
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-dark-muted uppercase tracking-wider">Email</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted pointer-events-none" />
                 <input
                   type="email"
                   value={email}
@@ -82,14 +116,16 @@ export default function Login() {
                   required
                   placeholder="seu@email.com"
                   className="input pl-9"
+                  autoComplete="email"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-dark-muted mb-1.5 uppercase tracking-wider">Senha</label>
+            {/* Senha */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-dark-muted uppercase tracking-wider">Senha</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted pointer-events-none" />
                 <input
                   type={showPwd ? 'text' : 'password'}
                   value={password}
@@ -97,17 +133,20 @@ export default function Login() {
                   required
                   placeholder="••••••••"
                   className="input pl-9 pr-10"
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPwd(s => !s)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark-text transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark-text transition-colors cursor-pointer"
+                  tabIndex={-1}
                 >
                   {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
+            {/* Erro */}
             {error && (
               <div className="flex items-center gap-2 text-sm text-status-danger bg-status-danger/10 border border-status-danger/20 rounded-lg px-3 py-2">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -115,28 +154,25 @@ export default function Login() {
               </div>
             )}
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 rounded-lg font-semibold text-sm text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-              style={{ background: loading ? 'rgba(43,91,168,0.5)' : 'linear-gradient(135deg, #2B5BA8, #4A90D9)' }}
+              className="btn-primary w-full py-2.5 mt-1 cursor-pointer"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                  </svg>
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   Entrando...
                 </span>
               ) : 'Entrar'}
             </button>
           </form>
-        </div>
 
-        <p className="text-center text-dark-muted/50 text-xs mt-5">
-          Acesso restrito — contate o administrador
-        </p>
+          <p className="text-center text-dark-muted/40 text-[11px] mt-8">
+            Contate o administrador para recuperar seu acesso
+          </p>
+        </div>
       </div>
     </div>
   )

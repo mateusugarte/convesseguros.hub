@@ -123,7 +123,7 @@ export default function ImobiliariaSelect({
       {/* Dropdown — position:fixed para escapar de stacking contexts */}
       {open && dropdownStyle && (
         <div
-          className="glass-panel overflow-hidden animate-fade-in"
+          className="glass-panel animate-fade-in"
           style={{
             position: 'fixed',
             top:      dropdownStyle.top,

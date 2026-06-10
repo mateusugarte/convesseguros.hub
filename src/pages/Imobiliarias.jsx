@@ -690,7 +690,7 @@ function TabCadastros({ mapeadas, seguradoras, vinculacoes, onToggleSeguradora, 
                               : 'bg-dark-surface2 text-dark-muted border-dark-border hover:border-dark-muted'
                           }`}
                         >
-                          {ativa ? <span className="mr-1">✓</span> : null}
+                          {ativa ? <Check className="w-3.5 h-3.5 mr-1" /> : null}
                           {seg.nome_canonico}
                         </button>
                       )

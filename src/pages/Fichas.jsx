@@ -859,15 +859,19 @@ export default function Fichas() {
       viewToggle={<ViewToggle view={view} onChange={setView} />}
       selectorSlot={selectorSlot}
     >
-      {/* Dedicated areas replace page content when action is active */}
+      {/* ModalAssumir e ModalFinalizar são overlays — renderizam sobre o board */}
+      {assumir && (
+        <ModalAssumir id={assumir} onClose={() => setAssumir(null)} onSuccess={() => { setAssumir(null); refresh() }} />
+      )}
+      {finalizar && (
+        <ModalFinalizar ficha={finalizar} onClose={() => setFinalizar(null)} onSuccess={() => { setFinalizar(null); refresh() }} />
+      )}
+
+      {/* Page-replacing areas for create/edit */}
       {criar ? (
         <ModalFicha ficha={null} onClose={() => setCriar(false)} onSuccess={onFichaSuccess} />
       ) : editar ? (
         <ModalFicha ficha={editar} onClose={() => setEditar(null)} onSuccess={onFichaSuccess} />
-      ) : assumir ? (
-        <ModalAssumir id={assumir} onClose={() => setAssumir(null)} onSuccess={() => { setAssumir(null); refresh() }} />
-      ) : finalizar ? (
-        <ModalFinalizar ficha={finalizar} onClose={() => setFinalizar(null)} onSuccess={() => { setFinalizar(null); refresh() }} />
       ) : view === 'kanban' ? (
         <KanbanFichas
           produto={produto}

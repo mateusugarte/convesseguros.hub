@@ -96,7 +96,7 @@ export default function SeguradoraSelect({
       {open && pos && createPortal(
         <div
           ref={dropdownRef}
-          style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 300, maxHeight: '300px', overflowY: 'auto' }}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 450, maxHeight: '300px', overflowY: 'auto' }}
           className="glass-panel animate-fade-in shadow-lg"
         >
           <div>

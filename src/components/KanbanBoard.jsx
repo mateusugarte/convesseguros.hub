@@ -6,89 +6,21 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { STATUS_LABELS, PRODUTO_LABELS, marcarRetornoEnviado } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
-import { Home, Building2, Briefcase, FileText as FileTextIcon } from 'lucide-react'
+import {
+  Home, Building2, Briefcase, FileText as FileTextIcon,
+  Clock, User, ClipboardList, CheckCircle2, XCircle, Check, Send,
+} from 'lucide-react'
 
 const COLS = [
-  {
-    id: 'pendentes',
-    label: 'Pendentes',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    headerBg: 'bg-amber-50', headerBorder: 'border-amber-200', titleColor: 'text-amber-800',
-    badgeClass: 'bg-amber-100 text-amber-700', bodyBorder: 'border-amber-100', hoverBg: 'bg-amber-50/60',
-  },
-  {
-    id: 'assumidas',
-    label: 'Em Cotação',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-      </svg>
-    ),
-    headerBg: 'bg-blue-50', headerBorder: 'border-blue-200', titleColor: 'text-blue-800',
-    badgeClass: 'bg-blue-100 text-blue-700', bodyBorder: 'border-blue-100', hoverBg: 'bg-blue-50/60',
-  },
-  {
-    id: 'em_analise',
-    label: 'Em Análise',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-      </svg>
-    ),
-    headerBg: 'bg-purple-50', headerBorder: 'border-purple-200', titleColor: 'text-purple-800',
-    badgeClass: 'bg-purple-100 text-purple-700', bodyBorder: 'border-purple-100', hoverBg: 'bg-purple-50/60',
-  },
-  {
-    id: 'aprovados',
-    label: 'Aprovados',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    headerBg: 'bg-green-50', headerBorder: 'border-green-200', titleColor: 'text-green-800',
-    badgeClass: 'bg-green-100 text-green-700', bodyBorder: 'border-green-100', hoverBg: 'bg-green-50/60',
-  },
-  {
-    id: 'recusados',
-    label: 'Recusados',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    headerBg: 'bg-red-50', headerBorder: 'border-red-200', titleColor: 'text-red-800',
-    badgeClass: 'bg-red-100 text-red-700', bodyBorder: 'border-red-100', hoverBg: 'bg-red-50/60',
-  },
-  {
-    id: 'finalizadas',
-    label: 'Finalizadas',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-      </svg>
-    ),
-    headerBg: 'bg-gray-50', headerBorder: 'border-gray-200', titleColor: 'text-gray-700',
-    badgeClass: 'bg-gray-200 text-gray-600', bodyBorder: 'border-gray-100', hoverBg: 'bg-gray-100/60',
-  },
-  {
-    id: 'enviadas',
-    label: 'Retorno Enviado',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-      </svg>
-    ),
-    headerBg: 'bg-emerald-50', headerBorder: 'border-emerald-200', titleColor: 'text-emerald-800',
-    badgeClass: 'bg-emerald-100 text-emerald-700', bodyBorder: 'border-emerald-100', hoverBg: 'bg-emerald-50/60',
-  },
+  { id: 'pendentes',  label: 'Pendentes',       Icon: Clock,         color: '#F59E0B' },
+  { id: 'assumidas',  label: 'Em Cotação',       Icon: User,          color: '#3B82F6' },
+  { id: 'em_analise', label: 'Em Análise',       Icon: ClipboardList, color: '#8B5CF6' },
+  { id: 'aprovados',  label: 'Aprovados',        Icon: CheckCircle2,  color: '#10B981' },
+  { id: 'recusados',  label: 'Recusados',        Icon: XCircle,       color: '#EF4444' },
+  { id: 'finalizadas',label: 'Finalizadas',      Icon: Check,         color: '#6B7280' },
+  { id: 'enviadas',   label: 'Retorno Enviado',  Icon: Send,          color: '#2B5BA8' },
 ]
 
-// Columns that are considered "finalizadas" for drag-drop purposes
 const PASSADAS_COLS = ['em_analise', 'aprovados', 'recusados', 'finalizadas']
 
 const PROD_ICON_MAP = {
@@ -111,22 +43,34 @@ function getCol(ficha) {
   return 'pendentes'
 }
 
+function timeBadgeCls(dateStr) {
+  const h = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60))
+  if (h < 4)  return 'badge-success'
+  if (h < 24) return 'badge-warning'
+  return 'badge-danger'
+}
+function timeSince(dateStr) {
+  const h = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60))
+  if (h < 1) return '<1h'
+  if (h < 24) return `${h}h`
+  return `${Math.floor(h / 24)}d`
+}
+
 function KanbanCard({ ficha, onAssumir, onFinalizar, onDetalhe }) {
   const { user } = useAuth()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: ficha.id })
-  const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined
-  const statusInfo = STATUS_LABELS[ficha.status] ?? { label: ficha.status, color: 'bg-gray-100 text-gray-600' }
+  const style     = transform ? { transform: CSS.Translate.toString(transform) } : undefined
+  const statusInfo = STATUS_LABELS[ficha.status] ?? { label: ficha.status, color: '' }
   const isMinhaFicha = ficha.orcamentista_id === user?.id
-  const canAssumir = !ficha.assumida && ficha.status === 'pendente'
+  const canAssumir   = !ficha.assumida && ficha.status === 'pendente'
+  const since        = ficha.created_at
 
   return (
     <div
       ref={setNodeRef}
       {...attributes}
-      style={{ background: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--glass-border)', ...style }}
-      className={`rounded-lg shadow-sm select-none transition-all ${
-        isDragging ? 'opacity-0' : 'border-gray-200 hover:shadow-md hover:border-gray-300'
-      }`}
+      style={style}
+      className={`kanban-card select-none ${isDragging ? 'opacity-0' : ''}`}
     >
       <div
         {...listeners}
@@ -136,7 +80,7 @@ function KanbanCard({ ficha, onAssumir, onFinalizar, onDetalhe }) {
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-1.5 min-w-0">
             <ProdIcon produto={ficha.produto} className="w-4 h-4 flex-shrink-0 text-dark-muted" />
-            <span className="text-xs font-semibold text-gray-800 truncate">
+            <span className="text-xs font-semibold text-dark-text truncate">
               {ficha.nome_interessado || 'Sem nome'}
             </span>
           </div>
@@ -147,35 +91,29 @@ function KanbanCard({ ficha, onAssumir, onFinalizar, onDetalhe }) {
 
         {ficha.imobiliaria && (
           <div className="flex items-center gap-1 mb-1.5">
-            <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-            <span className="text-xs text-gray-500 truncate">{ficha.imobiliaria}</span>
+            <Building2 className="w-3 h-3 text-dark-muted/50 flex-shrink-0" />
+            <span className="text-xs text-dark-muted truncate">{ficha.imobiliaria}</span>
           </div>
         )}
 
         {ficha.profiles?.nome && (
           <div className="flex items-center gap-1 mb-1.5">
-            <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            <span className="text-xs text-gray-400 truncate">{ficha.profiles.nome}</span>
+            <User className="w-3 h-3 text-dark-muted/50 flex-shrink-0" />
+            <span className="text-xs text-dark-muted truncate">{ficha.profiles.nome}</span>
           </div>
         )}
 
         <div className="flex items-center gap-1 mt-1">
-          <svg className="w-3 h-3 text-gray-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <span className="text-[10px] text-gray-400">
-            {format(parseISO(ficha.created_at), "dd/MM/yy", { locale: ptBR })}
+          <Clock className="w-3 h-3 text-dark-muted/40 flex-shrink-0" />
+          <span className="text-[10px] text-dark-muted">
+            {format(parseISO(ficha.created_at), 'dd/MM/yy', { locale: ptBR })}
+          </span>
+          <span className={`badge text-[9px] font-mono ml-1 ${timeBadgeCls(since)}`}>
+            {timeSince(since)}
           </span>
           {ficha.retorno_enviado && (
-            <span className="ml-auto text-[10px] text-emerald-600 font-medium flex items-center gap-0.5">
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              Enviado
+            <span className="ml-auto text-[10px] text-status-success font-medium flex items-center gap-0.5">
+              <Check className="w-3 h-3" /> Enviado
             </span>
           )}
         </div>
@@ -190,7 +128,7 @@ function KanbanCard({ ficha, onAssumir, onFinalizar, onDetalhe }) {
           {canAssumir && (
             <button
               onClick={() => onAssumir(ficha.id)}
-              className="text-[11px] px-2.5 py-1 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
+              className="text-[11px] px-2.5 py-1 rounded-md bg-brand-secondary/20 text-brand-accent border border-brand-accent/20 hover:bg-brand-secondary/40 transition-colors font-medium"
             >
               Assumir
             </button>
@@ -198,7 +136,7 @@ function KanbanCard({ ficha, onAssumir, onFinalizar, onDetalhe }) {
           {isMinhaFicha && ficha.status === 'em_cotacao' && (
             <button
               onClick={() => onFinalizar(ficha)}
-              className="text-[11px] px-2.5 py-1 rounded-md bg-primary-600 text-white hover:bg-primary-700 transition-colors font-medium"
+              className="text-[11px] px-2.5 py-1 rounded-md bg-status-success/15 text-status-success border border-status-success/20 hover:bg-status-success/25 transition-colors font-medium"
             >
               Finalizar
             </button>
@@ -211,31 +149,39 @@ function KanbanCard({ ficha, onAssumir, onFinalizar, onDetalhe }) {
 
 function DroppableColumn({ col, fichas, onAssumir, onFinalizar, onDetalhe }) {
   const { isOver, setNodeRef } = useDroppable({ id: col.id })
+  const ColIcon = col.Icon
 
   return (
     <div className="flex flex-col min-w-[190px]">
-      <div className={`rounded-t-xl border-x border-t ${col.headerBorder} ${col.headerBg} px-3 py-2.5 flex items-center justify-between`}>
-        <div className={`flex items-center gap-1.5 ${col.titleColor}`}>
-          {col.icon}
-          <span className="text-xs font-semibold">{col.label}</span>
+      <div
+        className="flex items-center justify-between px-3 py-2.5 rounded-t-xl border border-b-0 transition-colors"
+        style={{ background: col.color + '18', borderColor: col.color + '50' }}
+      >
+        <div className="flex items-center gap-1.5">
+          <ColIcon className="w-4 h-4" style={{ color: col.color }} />
+          <span className="text-xs font-semibold" style={{ color: col.color }}>{col.label}</span>
         </div>
-        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${col.badgeClass}`}>
+        <span
+          className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded"
+          style={{ background: col.color + '25', color: col.color }}
+        >
           {fichas.length}
         </span>
       </div>
 
       <div
         ref={setNodeRef}
-        className={`flex-1 min-h-[380px] rounded-b-xl border ${col.bodyBorder} p-2 space-y-2 transition-colors duration-150 ${
-          isOver ? col.hoverBg + ' ring-2 ring-inset ring-blue-300' : 'bg-gray-50/40'
-        }`}
+        className="flex-1 min-h-[380px] rounded-b-xl p-2 space-y-2 transition-colors duration-150"
+        style={{
+          border:          isOver ? `2px dashed ${col.color}90` : '1px solid rgb(var(--color-border))',
+          backgroundColor: isOver ? col.color + '0c' : 'rgb(var(--color-surface2) / 0.4)',
+          boxShadow:       isOver ? `inset 0 0 0 1px ${col.color}20` : 'none',
+        }}
       >
         {fichas.length === 0 ? (
-          <div className="h-24 flex flex-col items-center justify-center text-gray-300 gap-1">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span className="text-[11px]">Vazio</span>
+          <div className="kanban-empty">
+            <FileTextIcon className="w-5 h-5 kanban-empty-icon" />
+            <span className="kanban-empty-text">Vazia</span>
           </div>
         ) : (
           fichas.map(f => (
@@ -311,15 +257,18 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
 
       <DragOverlay dropAnimation={null}>
         {activeFicha ? (
-          <div className="rounded-lg p-3 shadow-2xl w-48 rotate-2 opacity-95" style={{ background: 'var(--glass-bg-heavy)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--glass-border)' }}>
+          <div
+            className="rounded-lg p-3 shadow-2xl w-48 rotate-2 opacity-95 cursor-grabbing"
+            style={{ background: 'var(--glass-bg-heavy)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--glass-border)' }}
+          >
             <div className="flex items-center gap-1.5">
               <ProdIcon produto={activeFicha.produto} className="w-4 h-4 text-dark-muted" />
-              <span className="text-xs font-semibold text-gray-800 truncate">
+              <span className="text-xs font-semibold text-dark-text truncate">
                 {activeFicha.nome_interessado || 'Sem nome'}
               </span>
             </div>
             {activeFicha.imobiliaria && (
-              <p className="text-xs text-gray-400 mt-1 truncate">{activeFicha.imobiliaria}</p>
+              <p className="text-xs text-dark-muted mt-1 truncate">{activeFicha.imobiliaria}</p>
             )}
           </div>
         ) : null}

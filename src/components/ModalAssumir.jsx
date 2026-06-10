@@ -18,8 +18,9 @@ export default function ModalAssumir({ id, onClose, onSuccess }) {
   }
 
   return (
-    <div className="animate-fade-in">
-      <div className="glass-panel rounded-2xl p-6 space-y-5">
+    <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={!loading ? onClose : undefined} />
+      <div className="relative glass-modal rounded-2xl p-6 space-y-5 w-full max-w-sm animate-fade-in">
         {/* Header */}
         <div className="flex items-center gap-3">
           <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
@@ -54,3 +55,4 @@ export default function ModalAssumir({ id, onClose, onSuccess }) {
     </div>
   )
 }
+

@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useComercial, eventAdd, eventUpdate, eventDelete, TIPOS_EVENTO, CORES_EVENTO } from '../../lib/comercial'
+import { Select } from '../../components/ui/Select'
 import { useToast } from '../../contexts/ToastContext'
 import {
   Plus, ChevronLeft, ChevronRight, Trash2, MoreHorizontal,
@@ -356,9 +357,11 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Tipo</label>
-              <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className="select w-full text-sm">
-                {TIPOS_EVENTO.map(t => <option key={t}>{t}</option>)}
-              </select>
+              <Select
+                value={form.tipo}
+                onChange={v => set('tipo', v)}
+                options={TIPOS_EVENTO.map(t => ({ value: t, label: t }))}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">
@@ -371,10 +374,15 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
 
           <div>
             <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Lead Vinculado</label>
-            <select value={form.leadId} onChange={e => set('leadId', e.target.value)} className="select w-full text-sm">
-              <option value="">Nenhum</option>
-              {(leads || []).map(l => <option key={l.id} value={l.id}>{l.nome}</option>)}
-            </select>
+            <Select
+              value={form.leadId}
+              onChange={v => set('leadId', v)}
+              placeholder="Nenhum"
+              options={[
+                { value: '', label: 'Nenhum' },
+                ...(leads || []).map(l => ({ value: l.id, label: l.nome })),
+              ]}
+            />
           </div>
 
           <div>

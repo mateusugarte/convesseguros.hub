@@ -8,6 +8,7 @@ import {
 } from '../lib/fichas'
 import { supabase } from '../lib/supabase'
 import { useImobiliaria } from '../hooks/useImobiliaria'
+import { Select } from '../components/ui/Select'
 import ImobiliariaSelect from '../components/ImobiliariaSelect'
 import { useToast } from '../contexts/ToastContext'
 import { format, parseISO } from 'date-fns'
@@ -391,14 +392,12 @@ export default function Relatorio() {
       <div className="card px-4 py-4 space-y-3">
         <div className="flex flex-wrap items-center gap-4">
           {/* Ano */}
-          <select
-            value={ano}
-            onChange={e => { setAno(Number(e.target.value)); setImobiliaria('') }}
-            className="select text-sm py-1.5 w-auto pr-8"
-            style={{ minWidth: '90px' }}
-          >
-            {anos.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
+          <Select
+            value={String(ano)}
+            onChange={v => { setAno(Number(v)); setImobiliaria('') }}
+            options={anos.map(a => ({ value: String(a), label: String(a) }))}
+            className="w-24"
+          />
 
           {/* Meses */}
           <MesPicker mes={mes} mesesDisp={mesesDisp} onMes={m => { setMes(m); setImobiliaria('') }} />

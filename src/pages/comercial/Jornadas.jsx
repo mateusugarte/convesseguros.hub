@@ -12,6 +12,7 @@ import {
   Pencil, Copy, Play, Pause, X, Zap, GitBranch, Clock,
   Mail, Phone, MoveRight, UserCheck, CheckSquare, CircleDot, Save,
 } from 'lucide-react'
+import { Select } from '../../components/ui/Select'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -216,10 +217,12 @@ function PainelConfig({ node, onUpdate, onClose, onDelete }) {
         {tipo === 'action_mover' && (
           <div>
             <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Coluna destino</label>
-            <select value={config.coluna || ''} onChange={e => set('coluna', e.target.value)} className="select w-full text-sm">
-              <option value="">Selecionar...</option>
-              {PIPELINE_COLS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-            </select>
+            <Select
+              value={config.coluna || ''}
+              onChange={v => set('coluna', v)}
+              placeholder="Selecionar..."
+              options={[{ value: '', label: 'Selecionar...' }, ...PIPELINE_COLS.map(c => ({ value: c.id, label: c.label }))]}
+            />
           </div>
         )}
 
@@ -238,11 +241,15 @@ function PainelConfig({ node, onUpdate, onClose, onDelete }) {
             </div>
             <div className="flex-1">
               <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Unidade</label>
-              <select value={config.unidade || 'dias'} onChange={e => set('unidade', e.target.value)} className="select w-full text-sm">
-                <option value="horas">Horas</option>
-                <option value="dias">Dias</option>
-                <option value="semanas">Semanas</option>
-              </select>
+              <Select
+                value={config.unidade || 'dias'}
+                onChange={v => set('unidade', v)}
+                options={[
+                  { value: 'horas', label: 'Horas' },
+                  { value: 'dias', label: 'Dias' },
+                  { value: 'semanas', label: 'Semanas' },
+                ]}
+              />
             </div>
           </div>
         )}
@@ -252,23 +259,33 @@ function PainelConfig({ node, onUpdate, onClose, onDelete }) {
           <>
             <div>
               <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Campo</label>
-              <select value={config.campo || ''} onChange={e => set('campo', e.target.value)} className="select w-full text-sm">
-                <option value="">Selecionar...</option>
-                <option value="score">Score do lead</option>
-                <option value="coluna">Estágio</option>
-                <option value="origem">Origem</option>
-                <option value="tipoCliente">Tipo cliente</option>
-              </select>
+              <Select
+                value={config.campo || ''}
+                onChange={v => set('campo', v)}
+                placeholder="Selecionar..."
+                options={[
+                  { value: '', label: 'Selecionar...' },
+                  { value: 'score', label: 'Score do lead' },
+                  { value: 'coluna', label: 'Estágio' },
+                  { value: 'origem', label: 'Origem' },
+                  { value: 'tipoCliente', label: 'Tipo cliente' },
+                ]}
+              />
             </div>
             <div>
               <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Operador</label>
-              <select value={config.operador || ''} onChange={e => set('operador', e.target.value)} className="select w-full text-sm">
-                <option value="">Selecionar...</option>
-                <option value="eq">É igual a</option>
-                <option value="gt">Maior que</option>
-                <option value="lt">Menor que</option>
-                <option value="contains">Contém</option>
-              </select>
+              <Select
+                value={config.operador || ''}
+                onChange={v => set('operador', v)}
+                placeholder="Selecionar..."
+                options={[
+                  { value: '', label: 'Selecionar...' },
+                  { value: 'eq', label: 'É igual a' },
+                  { value: 'gt', label: 'Maior que' },
+                  { value: 'lt', label: 'Menor que' },
+                  { value: 'contains', label: 'Contém' },
+                ]}
+              />
             </div>
             <ConfigField label="Valor" value={config.valor || ''} onChange={v => set('valor', v)} />
           </>
@@ -718,9 +735,11 @@ function ModalScript({ onClose, onSave }) {
           </div>
           <div>
             <label className="text-xs font-medium text-dark-muted uppercase tracking-wider block mb-1">Tipo</label>
-            <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className="select w-full">
-              {['Abordagem', 'Follow Up', 'Proposta', 'Fechamento', 'Objeção'].map(t => <option key={t}>{t}</option>)}
-            </select>
+            <Select
+              value={form.tipo}
+              onChange={v => set('tipo', v)}
+              options={['Abordagem', 'Follow Up', 'Proposta', 'Fechamento', 'Objeção']}
+            />
           </div>
           <div>
             <label className="text-xs font-medium text-dark-muted uppercase tracking-wider block mb-1">Conteúdo *</label>

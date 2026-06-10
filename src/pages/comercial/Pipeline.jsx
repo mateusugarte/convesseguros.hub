@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, useDraggable } from '@dnd-kit/core'
+import { snapCenterToCursor } from '@dnd-kit/modifiers'
 import {
   useComercial, leadAdd, leadMover, leadUpdate, saleAdd, eventAdd,
   PIPELINE_COLS, PRODUTOS, ORIGENS, MOTIVOS_RECUSA, TAGS_DEFAULT,
@@ -9,6 +10,7 @@ import {
 } from '../../lib/comercial'
 import { useToast } from '../../contexts/ToastContext'
 import { Plus, X, Search, Building2, Clock, CheckCircle2, PenLine, ClipboardList, FileCheck, Check } from 'lucide-react'
+import { Select } from '../../components/ui/Select'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -255,10 +257,12 @@ function ModalVenda({ lead, onClose, onConfirm }) {
       <div className="px-6 py-5 space-y-3">
         <div>
           <label className={LBL}>Produto *</label>
-          <select value={form.produto} onChange={e => set('produto', e.target.value)} className="select w-full">
-            <option value="">Selecionar...</option>
-            {PRODUTOS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-          </select>
+          <Select
+            value={form.produto}
+            onChange={v => set('produto', v)}
+            placeholder="Selecionar..."
+            options={PRODUTOS.map(p => ({ value: p.id, label: p.label }))}
+          />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -282,10 +286,12 @@ function ModalVenda({ lead, onClose, onConfirm }) {
         </div>
         <div>
           <label className={LBL}>Próximo Produto</label>
-          <select value={form.proximoProduto} onChange={e => set('proximoProduto', e.target.value)} className="select w-full">
-            <option value="">Nenhum</option>
-            {PRODUTOS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-          </select>
+          <Select
+            value={form.proximoProduto}
+            onChange={v => set('proximoProduto', v)}
+            placeholder="Nenhum"
+            options={[{ value: '', label: 'Nenhum' }, ...PRODUTOS.map(p => ({ value: p.id, label: p.label }))]}
+          />
         </div>
         <div>
           <label className={LBL}>Observações</label>
@@ -422,12 +428,17 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
                   <input value={fichaSearch} onChange={e => setFichaSearch(e.target.value)}
                     placeholder="Buscar por nome..." className="input pl-8 text-sm py-1.5 w-full" autoFocus />
                 </div>
-                <select value={fichaStatus} onChange={e => setFichaStatus(e.target.value)} className="select text-sm py-1.5 w-36">
-                  <option value="">Todos os status</option>
-                  {['pendente','em_cotacao','aprovado','recusado','emitido','cancelado','cpf_invalido','em_analise'].map(s => (
-                    <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
-                  ))}
-                </select>
+                <Select
+                  value={fichaStatus}
+                  onChange={setFichaStatus}
+                  placeholder="Todos os status"
+                  className="w-36"
+                  options={[
+                    { value: '', label: 'Todos os status' },
+                    ...['pendente','em_cotacao','aprovado','recusado','emitido','cancelado','cpf_invalido','em_analise']
+                      .map(s => ({ value: s, label: s.replace(/_/g, ' ') }))
+                  ]}
+                />
               </div>
               {loadingFichas ? (
                 <div className="text-center py-10 text-dark-muted text-sm">Carregando fichas...</div>
@@ -503,16 +514,19 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
                 </div>
                 <div>
                   <label className={LBL}>Tipo</label>
-                  <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className="select w-full">
-                    <option value="PF">Pessoa Física</option>
-                    <option value="PJ">Pessoa Jurídica</option>
-                  </select>
+                  <Select
+                    value={form.tipo}
+                    onChange={v => set('tipo', v)}
+                    options={[{ value: 'PF', label: 'Pessoa Física' }, { value: 'PJ', label: 'Pessoa Jurídica' }]}
+                  />
                 </div>
                 <div>
                   <label className={LBL}>Origem</label>
-                  <select value={form.origem} onChange={e => set('origem', e.target.value)} className="select w-full">
-                    {ORIGENS.map(o => <option key={o}>{o}</option>)}
-                  </select>
+                  <Select
+                    value={form.origem}
+                    onChange={v => set('origem', v)}
+                    options={ORIGENS.map(o => ({ value: o, label: o }))}
+                  />
                 </div>
                 <div>
                   <label className={LBL}>Imobiliária</label>
@@ -527,12 +541,17 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
                     </div>
                     <div>
                       <label className={LBL}>Tipo Locatário</label>
-                      <select value={form.tipoLocatario} onChange={e => set('tipoLocatario', e.target.value)} className="select w-full">
-                        <option value="">—</option>
-                        <option value="Locatário">Locatário</option>
-                        <option value="Fiador">Fiador</option>
-                        <option value="Imobiliária">Imobiliária</option>
-                      </select>
+                      <Select
+                        value={form.tipoLocatario}
+                        onChange={v => set('tipoLocatario', v)}
+                        placeholder="—"
+                        options={[
+                          { value: '', label: '—' },
+                          { value: 'Locatário', label: 'Locatário' },
+                          { value: 'Fiador', label: 'Fiador' },
+                          { value: 'Imobiliária', label: 'Imobiliária' },
+                        ]}
+                      />
                     </div>
                   </>
                 )}
@@ -702,7 +721,7 @@ export default function Pipeline() {
               />
             ))}
           </div>
-          <DragOverlay dropAnimation={null}>
+          <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>
             {activeLead ? (
               <div style={{ filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.4))' }}>
                 <LeadCard

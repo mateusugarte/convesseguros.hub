@@ -9,6 +9,7 @@ import DetalhesFicha from '../components/DetalhesFicha'
 import { format, parseISO, startOfDay, startOfWeek, startOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Clock, CheckCircle2, FileText, TrendingUp } from 'lucide-react'
+import { Select } from '../components/ui/Select'
 import { TableSkeleton } from '../components/Skeleton'
 
 // ── QuickDateFilter ───────────────────────────────────────────────────────────
@@ -193,12 +194,18 @@ export default function MinhasFichas() {
         {tab === 'passadas' && (
           <div className="flex items-center gap-2 px-4 pt-3 mb-1">
             <span className="text-xs text-dark-muted">Período:</span>
-            <select value={filtroMes} onChange={e => setFiltroMes(Number(e.target.value))} className="select py-1 text-xs" style={{ minWidth: '76px' }}>
-              {MESES_PASSADAS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
-            </select>
-            <select value={filtroAno} onChange={e => setFiltroAno(Number(e.target.value))} className="select py-1 text-xs" style={{ minWidth: '70px' }}>
-              {[agora.getFullYear(), agora.getFullYear()-1].map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
+            <Select
+              value={String(filtroMes)}
+              onChange={v => setFiltroMes(Number(v))}
+              options={MESES_PASSADAS.map((m, i) => ({ value: String(i+1), label: m }))}
+              className="w-20"
+            />
+            <Select
+              value={String(filtroAno)}
+              onChange={v => setFiltroAno(Number(v))}
+              options={[agora.getFullYear(), agora.getFullYear()-1].map(y => ({ value: String(y), label: String(y) }))}
+              className="w-[74px]"
+            />
           </div>
         )}
 

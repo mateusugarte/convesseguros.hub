@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../contexts/ToastContext'
 import { ArrowLeft, Pencil, X, Check, Plus } from 'lucide-react'
+import { Select } from '../components/ui/Select'
 import { fetchCodigos, fetchSeguradoras, upsertCodigo, deletarCodigo } from '../lib/imobiliariasCodigos'
 
 // ── Campo editável inline ─────────────────────────────────────────────────────
@@ -342,14 +343,15 @@ export default function ImobiliariaDetalhe() {
               ))}
             </div>
             <div className="flex flex-col gap-2">
-              <select
+              <Select
                 value={novoCodigo.seguradora_id}
-                onChange={e => setNovoCodigo(p => ({ ...p, seguradora_id: e.target.value }))}
-                className="select text-sm w-full"
-              >
-                <option value="">Seguradora...</option>
-                {seguradoras.map(s => <option key={s.id} value={s.id}>{s.nome_canonico}</option>)}
-              </select>
+                onChange={v => setNovoCodigo(p => ({ ...p, seguradora_id: v }))}
+                placeholder="Seguradora..."
+                options={[
+                  { value: '', label: 'Seguradora...' },
+                  ...seguradoras.map(s => ({ value: s.id, label: s.nome_canonico })),
+                ]}
+              />
               <div className="flex gap-2">
                 <input
                   value={novoCodigo.codigo}

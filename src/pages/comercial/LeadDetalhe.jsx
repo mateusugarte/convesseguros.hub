@@ -6,6 +6,7 @@ import {
   fetchFichasParaImport,
 } from '../../lib/comercial'
 import { useToast } from '../../contexts/ToastContext'
+import { Select } from '../../components/ui/Select'
 import {
   ArrowLeft, MessageCircle, ChevronDown, Check, Flame, Sun, Snowflake,
   Building2, Clock, Plus, Trash2, PhoneCall, Users, FileText, ArrowRight,
@@ -104,10 +105,12 @@ function ModalEditLead({ lead, onClose, toast }) {
             </div>
             <div>
               <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Origem</label>
-              <select value={form.origem} onChange={e => set('origem', e.target.value)} className="select text-sm w-full">
-                <option value="">Selecionar</option>
-                {ORIGENS.map(o => <option key={o}>{o}</option>)}
-              </select>
+              <Select
+                value={form.origem}
+                onChange={v => set('origem', v)}
+                placeholder="Selecionar"
+                options={[{ value: '', label: 'Selecionar' }, ...ORIGENS.map(o => ({ value: o, label: o }))]}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Imobiliária</label>
@@ -347,9 +350,11 @@ function TabTimeline({ lead, events, toast }) {
       <div className="card p-4 space-y-3">
         <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Registrar Atividade</p>
         <div className="grid grid-cols-2 gap-2">
-          <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className="select text-sm">
-            {TIPOS_EVENTO.map(t => <option key={t}>{t}</option>)}
-          </select>
+          <Select
+            value={form.tipo}
+            onChange={v => set('tipo', v)}
+            options={TIPOS_EVENTO.map(t => ({ value: t, label: t }))}
+          />
           <input type="datetime-local" value={form.data} onChange={e => set('data', e.target.value)} className="input text-sm" />
         </div>
         <textarea value={form.descricao} onChange={e => set('descricao', e.target.value)}

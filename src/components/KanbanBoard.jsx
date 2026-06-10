@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { snapCenterToCursor } from '@dnd-kit/modifiers'
 import { useDroppable, useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { format, parseISO } from 'date-fns'
@@ -255,7 +256,7 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
         </div>
       </div>
 
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>
         {activeFicha ? (
           <div
             className="rounded-lg p-3 shadow-2xl w-48 rotate-2 opacity-95 cursor-grabbing"

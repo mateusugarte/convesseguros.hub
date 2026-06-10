@@ -6,6 +6,7 @@ import {
 import { useAuth } from '../contexts/AuthContext'
 import { ArrowLeft, Plus, Save } from 'lucide-react'
 import SeguradoraSelect from './SeguradoraSelect'
+import { Select } from './ui/Select'
 
 
 const STATUS_OPTIONS  = ['pendente','em_cotacao','em_analise','aprovado','recusado','emitido','cancelado','cpf_invalido','expirada']
@@ -183,12 +184,12 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
       cpf_socios:       isPJ ? form.cpf_socios || null : null,
     }
 
-    const err = isEdit
-      ? await editarFicha(ficha.id, dados, user?.id)
-      : (await criarFicha(dados)).error
+    const editResult   = isEdit  ? await editarFicha(ficha.id, dados, user?.id) : null
+    const createResult = !isEdit ? await criarFicha(dados) : null
+    const err = editResult ?? createResult?.error ?? null
 
     setSaving(false)
-    if (err) { setError(err.message); return }
+    if (err) { setError(typeof err === 'string' ? err : err.message); return }
     onSuccess()
   }
 
@@ -213,9 +214,11 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
           {/* ── Identificação ── */}
           <Sec title="Identificação">
             <Field label="Produto">
-              <select value={form.produto} onChange={e => set('produto', e.target.value)} className="select">
-                {PRODUTO_OPTIONS.map(p => <option key={p} value={p}>{PRODUTO_LABELS[p]}</option>)}
-              </select>
+              <Select
+                value={form.produto}
+                onChange={v => set('produto', v)}
+                options={PRODUTO_OPTIONS.map(p => ({ value: p, label: PRODUTO_LABELS[p] }))}
+              />
             </Field>
             <Field label="Imobiliária">
               <input
@@ -312,10 +315,12 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
               <input type="text" value={form.valor_condominio} onChange={e => set('valor_condominio', e.target.value)} className="input" placeholder="Ex: 300,00" />
             </Field>
             <Field label="Orçamentista">
-              <select value={form.orcamentista_forms} onChange={e => set('orcamentista_forms', e.target.value)} className="select">
-                <option value="">Selecionar orçamentista...</option>
-                {profiles.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
-              </select>
+              <Select
+                value={form.orcamentista_forms}
+                onChange={v => set('orcamentista_forms', v)}
+                placeholder="Selecionar orçamentista..."
+                options={profiles.map(p => ({ value: p.nome, label: p.nome }))}
+              />
             </Field>
             <Field label="Observações" span2>
               <textarea value={form.observacoes} onChange={e => set('observacoes', e.target.value)} rows={2} className="input resize-none" />
@@ -342,13 +347,12 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
               </Field>
               {isPJ && (
                 <Field label="Opção Tributária">
-                  <select value={form.opcao_tributaria} onChange={e => set('opcao_tributaria', e.target.value)} className="select">
-                    <option value="">Selecionar...</option>
-                    <option>Simples Nacional</option>
-                    <option>Lucro Presumido</option>
-                    <option>Lucro Real</option>
-                    <option>MEI</option>
-                  </select>
+                  <Select
+                    value={form.opcao_tributaria}
+                    onChange={v => set('opcao_tributaria', v)}
+                    placeholder="Selecionar..."
+                    options={['Simples Nacional','Lucro Presumido','Lucro Real','MEI']}
+                  />
                 </Field>
               )}
             </Sec>
@@ -357,9 +361,11 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
           {/* ── Controle Interno ── */}
           <Sec title="Controle Interno">
             <Field label="Status">
-              <select value={form.status} onChange={e => set('status', e.target.value)} className="select">
-                {STATUS_OPTIONS.map(s => <option key={s} value={s}>{STATUS_LABELS[s]?.label ?? s}</option>)}
-              </select>
+              <Select
+                value={form.status}
+                onChange={v => set('status', v)}
+                options={STATUS_OPTIONS.map(s => ({ value: s, label: STATUS_LABELS[s]?.label ?? s }))}
+              />
             </Field>
             <Field label="Seguradora">
               <SeguradoraSelect

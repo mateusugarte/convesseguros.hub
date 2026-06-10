@@ -7,6 +7,7 @@ import ImobiliariaSelect from '../components/ImobiliariaSelect'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Search, Download, Calendar, Filter } from 'lucide-react'
+import { Select } from '../components/ui/Select'
 
 const FILTROS_PERIODO = [
   { key: 'hoje',        label: 'Hoje' },
@@ -193,17 +194,24 @@ export default function ApolicesLista() {
             className="text-sm"
           />
 
-          <select value={segFiltro} onChange={e => setSegFiltro(e.target.value)}
-                  className="select text-sm py-1.5" style={{ minWidth: '140px' }}>
-            <option value="">Seguradora</option>
-            {segsOpcoes.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
+          <Select
+            value={segFiltro}
+            onChange={setSegFiltro}
+            placeholder="Seguradora"
+            className="w-36"
+            options={[{ value: '', label: 'Seguradora' }, ...segsOpcoes.map(s => ({ value: s, label: s }))]}
+          />
 
-          <select value={statusFiltro} onChange={e => setStatusFiltro(e.target.value)}
-                  className="select text-sm py-1.5" style={{ minWidth: '140px' }}>
-            <option value="">Status</option>
-            {Object.entries(STATUS_EMISSAO_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-          </select>
+          <Select
+            value={statusFiltro}
+            onChange={setStatusFiltro}
+            placeholder="Status"
+            className="w-36"
+            options={[
+              { value: '', label: 'Status' },
+              ...Object.entries(STATUS_EMISSAO_LABELS).map(([k, v]) => ({ value: k, label: v.label })),
+            ]}
+          />
 
           <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2">
             <Search className="w-4 h-4 text-dark-muted flex-shrink-0" />

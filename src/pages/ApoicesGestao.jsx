@@ -8,6 +8,7 @@ import {
   STATUS_EMISSAO_LABELS, SEGURADORAS_APOLICE, FORMA_PAGAMENTO_LABELS,
 } from '../lib/apolices'
 import { useImobiliaria } from '../hooks/useImobiliaria'
+import { Select } from '../components/ui/Select'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { PRODUTO_LABELS } from '../lib/fichas'
@@ -560,12 +561,17 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
             </div>
             <div>
               <LabelReq>Forma de Pagamento</LabelReq>
-              <select value={formaPagamento} onChange={e => setFormaPagamento(e.target.value)} className="select">
-                <option value="">Selecione...</option>
-                <option value="fatura_sem_entrada">Fatura sem entrada</option>
-                <option value="fatura_com_entrada">Fatura com entrada</option>
-                <option value="cartao_credito">Cartão de crédito</option>
-              </select>
+              <Select
+                value={formaPagamento}
+                onChange={setFormaPagamento}
+                placeholder="Selecione..."
+                options={[
+                  { value: '', label: 'Selecione...' },
+                  { value: 'fatura_sem_entrada', label: 'Fatura sem entrada' },
+                  { value: 'fatura_com_entrada', label: 'Fatura com entrada' },
+                  { value: 'cartao_credito', label: 'Cartão de crédito' },
+                ]}
+              />
             </div>
             <div>
               <LabelReq>Seguradora</LabelReq>

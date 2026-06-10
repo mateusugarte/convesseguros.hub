@@ -8,6 +8,7 @@ import {
 } from '../lib/fichas'
 import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
 import { useImobiliaria } from '../hooks/useImobiliaria'
+import { Select } from '../components/ui/Select'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useToast } from '../contexts/ToastContext'
@@ -275,12 +276,18 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
         <div className="flex items-center gap-2 flex-wrap justify-end">
           {/* Seletor mês/ano para os KPIs */}
           <div className="flex items-center gap-2">
-            <select value={filtroMes} onChange={e => setFiltroMes(Number(e.target.value))} className="select py-1 text-xs" style={{ minWidth: '76px' }}>
-              {MESES_ABBR.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
-            </select>
-            <select value={filtroAno} onChange={e => setFiltroAno(Number(e.target.value))} className="select py-1 text-xs" style={{ minWidth: '70px' }}>
-              {[now.getFullYear(), now.getFullYear()-1, now.getFullYear()-2].map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
+            <Select
+              value={String(filtroMes)}
+              onChange={v => setFiltroMes(Number(v))}
+              options={MESES_ABBR.map((m, i) => ({ value: String(i+1), label: m }))}
+              className="w-20"
+            />
+            <Select
+              value={String(filtroAno)}
+              onChange={v => setFiltroAno(Number(v))}
+              options={[now.getFullYear(), now.getFullYear()-1, now.getFullYear()-2].map(y => ({ value: String(y), label: String(y) }))}
+              className="w-[74px]"
+            />
           </div>
           <Link to="/minhas-fichas"
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors">
@@ -470,14 +477,12 @@ function MesAnoSelector({ ano, anos, mes, mesesComFichas, onAnoChange, onMesChan
   return (
     <div className="flex flex-wrap items-center gap-3">
       {/* Dropdown de ano */}
-      <select
-        value={ano}
-        onChange={e => onAnoChange(Number(e.target.value))}
-        className="select text-sm py-1.5 w-auto pr-8"
-        style={{ minWidth: '90px' }}
-      >
-        {anos.map(a => <option key={a} value={a}>{a}</option>)}
-      </select>
+      <Select
+        value={String(ano)}
+        onChange={v => onAnoChange(Number(v))}
+        options={anos.map(a => ({ value: String(a), label: String(a) }))}
+        className="w-24"
+      />
 
       {/* Pills de mês */}
       <div className="flex items-center gap-1 flex-wrap">

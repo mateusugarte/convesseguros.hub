@@ -5,7 +5,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ToastProvider } from './contexts/ToastContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import Layout from './components/Layout'
-import { PageSkeleton } from './components/Skeleton'
+import { PageLoader } from './components/ui/PageLoader'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,21 +43,14 @@ const Jornadas           = lazy(() => import('./pages/comercial/Jornadas'))
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
-  if (loading) return (
-    <div className="flex h-screen items-center justify-center">
-      <svg className="w-6 h-6 animate-spin text-brand-accent" fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-      </svg>
-    </div>
-  )
+  if (loading) return <PageLoader />
   return user ? children : <Navigate to="/login" replace />
 }
 
 function AppRoutes() {
   const { user } = useAuth()
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/" replace /> : <LazyLogin />} />
         <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>

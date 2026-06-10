@@ -11,7 +11,7 @@ export default {
           accent:    '#4A90D9',
           gold:      '#C9A84C',
         },
-        // These colors respond to the theme via CSS variables in index.css
+        // These colors respond to the theme via CSS variables in tokens.css
         dark: {
           bg:       'rgb(var(--color-bg) / <alpha-value>)',
           surface:  'rgb(var(--color-surface) / <alpha-value>)',
@@ -25,6 +25,10 @@ export default {
           warning: 'rgb(var(--color-warning) / <alpha-value>)',
           danger:  'rgb(var(--color-danger) / <alpha-value>)',
           info:    'rgb(var(--color-info) / <alpha-value>)',
+        },
+        token: {
+          primary:       'rgb(var(--color-primary) / <alpha-value>)',
+          'primary-hover': 'rgb(var(--color-primary-hover) / <alpha-value>)',
         },
         primary: {
           50:  '#eff6ff',

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, useDraggable } from '@dnd-kit/core'
 import {
   useComercial, leadAdd, leadMover, leadUpdate, saleAdd, eventAdd,
@@ -7,9 +8,7 @@ import {
   calcScore, scoreFaixa, diffDias,
 } from '../../lib/comercial'
 import { useToast } from '../../contexts/ToastContext'
-import { Plus, X, Search, Phone, Building2, Clock, CheckCircle2, PenLine, ClipboardList, FileCheck } from 'lucide-react'
-import { format, parseISO } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { Plus, X, Search, Building2, Clock, CheckCircle2, PenLine, ClipboardList, FileCheck, Check } from 'lucide-react'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -33,62 +32,105 @@ function ScoreBadge({ score }) {
 
 // ── LeadCard ──────────────────────────────────────────────────────────────────
 
-function LeadCard({ lead, tags = [], ghost = false }) {
-  const score = calcScore(lead)
-  const dias  = lead.ultimaAtividade ? diffDias(lead.ultimaAtividade) : null
+const AVATAR_COLORS = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#2B5BA8','#EC4899','#06B6D4','#EF4444']
+
+function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSelect }) {
+  const score    = calcScore(lead)
+  const dias     = lead.ultimaAtividade ? diffDias(lead.ultimaAtividade) : null
   const leadTags = (lead.tags || []).map(tid => tags.find(t => t.id === tid)).filter(Boolean)
-  const borderColor = dias !== null && dias >= 10 ? 'border-l-status-error' : dias !== null && dias >= 5 ? 'border-l-status-warning' : 'border-l-transparent'
+  const isUrgent = dias !== null && dias >= 10
+  const isWarn   = dias !== null && dias >= 5
+
+  const initials    = (lead.nome || '?').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+  const avatarColor = AVATAR_COLORS[(lead.nome || '').charCodeAt(0) % AVATAR_COLORS.length]
 
   return (
-    <div className={`w-52 flex-shrink-0 rounded-xl border border-dark-border p-3 select-none transition-all duration-150
-      ${ghost ? 'opacity-30' : 'hover:border-brand-accent/30 hover:shadow-md'}
-      border-l-2 ${borderColor}`}
-      style={{ background: 'var(--glass-bg-heavy)', backdropFilter: 'blur(4px)' }}>
-      <div className="flex items-start justify-between gap-1.5 mb-2">
-        <p className="font-semibold text-dark-text text-xs leading-snug line-clamp-2 flex-1">{lead.nome}</p>
-        <ScoreBadge score={score} />
-      </div>
-      {lead.imobiliaria && (
-        <div className="flex items-center gap-1 mb-1.5">
-          <Building2 className="w-3 h-3 text-dark-muted flex-shrink-0" />
-          <span className="text-[10px] text-dark-muted truncate">{lead.imobiliaria}</span>
+    <div className={`group relative rounded-xl border transition-all duration-150 select-none overflow-hidden
+      ${ghost ? 'opacity-30' : 'hover:border-brand-accent/40 hover:shadow-md'}
+      ${selected ? 'border-brand-accent ring-1 ring-brand-accent/20' : 'border-dark-border'}
+      bg-dark-surface`}>
+      {/* Left color bar */}
+      <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: col?.color || 'transparent' }} />
+
+      <div className="pl-4 pr-3 py-3">
+        {/* Row 1: avatar/select + nome + score */}
+        <div className="flex items-start gap-2 mb-2">
+          <div className="relative flex-shrink-0 cursor-pointer"
+            onClick={e => { e.stopPropagation(); onSelect?.() }}>
+            {selected ? (
+              <div className="w-7 h-7 rounded-full bg-brand-accent flex items-center justify-center">
+                <Check className="w-3.5 h-3.5 text-white" />
+              </div>
+            ) : (
+              <>
+                <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-white text-[11px]"
+                  style={{ background: avatarColor }}>
+                  {initials}
+                </div>
+                <div className="absolute inset-0 rounded-full bg-dark-bg/70 flex items-center justify-center
+                  opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="w-3.5 h-3.5 rounded border-2 border-white/60" />
+                </div>
+              </>
+            )}
+          </div>
+          <p className="font-semibold text-dark-text text-xs leading-snug line-clamp-2 flex-1 pt-0.5">{lead.nome}</p>
+          <ScoreBadge score={score} />
         </div>
-      )}
-      {lead.origem && (
-        <span className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full mb-1.5 bg-violet-500/10 text-violet-500">{lead.origem}</span>
-      )}
-      {leadTags.length > 0 && (
-        <div className="flex gap-1 flex-wrap mb-1.5">
-          {leadTags.slice(0, 2).map(t => (
-            <span key={t.id} className="text-[9px] font-semibold px-1.5 py-0.5 rounded"
-              style={{ color: t.cor, background: t.cor + '22' }}>{t.label}</span>
-          ))}
-        </div>
-      )}
-      {lead.proximaAcao && (
-        <p className="text-[10px] text-brand-accent truncate">{lead.proximaAcao}</p>
-      )}
-      {dias !== null && (
-        <div className="flex items-center gap-1 mt-1.5">
-          <Clock className={`w-3 h-3 flex-shrink-0 ${dias >= 10 ? 'text-status-error' : dias >= 5 ? 'text-status-warning' : 'text-dark-muted'}`} />
-          <span className={`text-[10px] ${dias >= 10 ? 'text-status-error font-semibold' : dias >= 5 ? 'text-status-warning' : 'text-dark-muted'}`}>
-            {dias === 0 ? 'Hoje' : `${dias}d`}
+
+        {lead.imobiliaria && (
+          <div className="flex items-center gap-1 mb-1.5">
+            <Building2 className="w-3 h-3 text-dark-muted flex-shrink-0" />
+            <span className="text-[10px] text-dark-muted truncate">{lead.imobiliaria}</span>
+          </div>
+        )}
+
+        {lead.origem && (
+          <span className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full mb-1.5"
+            style={{ background: 'rgba(99,102,241,0.12)', color: '#818cf8' }}>
+            {lead.origem}
           </span>
-        </div>
-      )}
+        )}
+
+        {leadTags.length > 0 && (
+          <div className="flex gap-1 flex-wrap mb-1.5">
+            {leadTags.slice(0, 2).map(t => (
+              <span key={t.id} className="text-[9px] font-semibold px-1.5 py-0.5 rounded"
+                style={{ color: t.cor, background: t.cor + '22' }}>{t.label}</span>
+            ))}
+          </div>
+        )}
+
+        {lead.proximaAcao && (
+          <p className="text-[10px] text-brand-accent truncate mb-1">{lead.proximaAcao}</p>
+        )}
+
+        {dias !== null && (
+          <div className={`flex items-center gap-1 mt-1.5 px-2 py-1 rounded-md w-fit
+            ${isUrgent ? 'bg-status-error/10' : isWarn ? 'bg-status-warning/10' : 'bg-dark-surface2'}`}>
+            <Clock className={`w-3 h-3 flex-shrink-0 ${isUrgent ? 'text-status-error' : isWarn ? 'text-status-warning' : 'text-dark-muted'}`} />
+            <span className={`text-[10px] font-medium
+              ${isUrgent ? 'text-status-error font-semibold' : isWarn ? 'text-status-warning' : 'text-dark-muted'}`}>
+              {dias === 0 ? 'Hoje' : `${dias}d`}
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
 // ── DraggableCard ─────────────────────────────────────────────────────────────
 
-function DraggableCard({ lead, tags, activeId, onClick }) {
+function DraggableCard({ lead, col, tags, activeId, onClick, selected, onSelect }) {
   const { setNodeRef, attributes, listeners, isDragging } = useDraggable({ id: lead.id })
   return (
     <div ref={setNodeRef} {...attributes} {...listeners}
+      className={isDragging ? 'opacity-50' : ''}
       style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none' }}
-      onClick={e => { if (!isDragging) { e.stopPropagation(); onClick(lead) } }}>
-      <LeadCard lead={lead} tags={tags} ghost={activeId === lead.id && !isDragging} />
+      onClick={e => { if (!isDragging) { e.stopPropagation(); onClick(lead.id) } }}>
+      <LeadCard lead={lead} col={col} tags={tags} ghost={activeId === lead.id && !isDragging}
+        selected={selected} onSelect={onSelect} />
     </div>
   )
 }
@@ -98,41 +140,42 @@ function DraggableCard({ lead, tags, activeId, onClick }) {
 function DroppableLane({ colId, children }) {
   const { setNodeRef, isOver } = useDroppable({ id: colId })
   return (
-    <div ref={setNodeRef} className={`flex-1 overflow-x-auto transition-colors duration-150 ${isOver ? 'bg-brand-accent/5' : ''}`}>
+    <div ref={setNodeRef}
+      className={`flex-1 flex flex-col min-h-0 rounded-b-xl border border-t-0 overflow-hidden transition-colors duration-150
+        ${isOver ? 'border-brand-accent/60 bg-brand-accent/5' : 'border-dark-border'}`}>
       {children}
     </div>
   )
 }
 
-// ── SwimLane ──────────────────────────────────────────────────────────────────
+// ── SwimLane (vertical column) ────────────────────────────────────────────────
 
-function SwimLane({ col, leads, tags, activeId, onCardClick }) {
+function SwimLane({ col, leads, tags, activeId, onCardClick, selectedIds, onSelect }) {
   return (
-    <div className="flex border-b border-dark-border last:border-b-0" style={{ minHeight: '88px' }}>
-      {/* Label */}
-      <div className="w-44 flex-shrink-0 flex flex-col justify-center gap-1.5 px-4 border-r border-dark-border"
+    <div className="w-[280px] flex-shrink-0 flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2.5 rounded-t-xl border border-b-0 border-dark-border flex-shrink-0"
         style={{ background: 'var(--glass-bg)' }}>
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: col.color }} />
-          <span className="text-xs font-bold text-dark-text leading-tight">{col.label}</span>
+          <span className="text-sm font-bold text-dark-text">{col.label}</span>
         </div>
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full w-fit"
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
           style={{ color: col.color, background: col.color + '22' }}>
-          {leads.length} {leads.length === 1 ? 'lead' : 'leads'}
+          {leads.length}
         </span>
       </div>
 
-      {/* Cards */}
       <DroppableLane colId={col.id}>
-        <div className="flex items-start gap-3 px-4 py-3" style={{ minWidth: 'max-content', minHeight: '88px' }}>
+        <div className="flex flex-col gap-2 p-2 overflow-y-auto flex-1">
           {leads.length === 0 ? (
-            <div className="flex items-center justify-center w-44 rounded-xl border-2 border-dashed border-dark-border/50 text-[11px] text-dark-muted"
-              style={{ minHeight: '62px' }}>
-              Arrastar para cá
+            <div className="flex items-center justify-center h-20 rounded-lg border-2 border-dashed border-dark-border/40 text-[11px] text-dark-muted">
+              Soltar aqui
             </div>
           ) : (
             leads.map(lead => (
-              <DraggableCard key={lead.id} lead={lead} tags={tags} activeId={activeId} onClick={onCardClick} />
+              <DraggableCard key={lead.id} lead={lead} col={col} tags={tags} activeId={activeId}
+                selected={selectedIds.has(lead.id)} onSelect={() => onSelect(lead.id)} onClick={onCardClick} />
             ))
           )}
         </div>
@@ -145,7 +188,7 @@ function SwimLane({ col, leads, tags, activeId, onCardClick }) {
 
 function Modal({ title, onClose, children, maxWidth = 'max-w-lg' }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+    <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 animate-fade-in">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className={`glass-modal w-full ${maxWidth} relative z-10 max-h-[90vh] overflow-y-auto`}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border flex-shrink-0">
@@ -328,7 +371,7 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+    <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 animate-fade-in">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="glass-modal w-full max-w-2xl relative z-10 max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border flex-shrink-0">
@@ -531,117 +574,42 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
   )
 }
 
-// ── ModalDetalhe ──────────────────────────────────────────────────────────────
+// ── SelectionBar ──────────────────────────────────────────────────────────────
 
-function ModalDetalhe({ lead, tags, journeys, onClose }) {
-  const score = calcScore(lead)
-  const f = scoreFaixa(score)
-  const [form, setForm] = useState({
-    proximaAcao: lead.proximaAcao || '',
-    observacoes: lead.observacoes || '',
-    resumo:      lead.resumo      || '',
-    tags:        lead.tags        || [],
-    jornadaId:   lead.jornadaId   || '',
-  })
-  const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
-  const toggleTag = tid => set('tags', form.tags.includes(tid) ? form.tags.filter(t => t !== tid) : [...form.tags, tid])
-
+function SelectionBar({ count, onMover, onArquivar, onClear }) {
+  if (count === 0) return null
   return (
-    <Modal title={lead.nome} onClose={onClose}>
-      <div className="px-6 py-5 space-y-4">
-        {/* Score */}
-        <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: f.bg }}>
-          <span className="text-3xl font-black font-mono" style={{ color: f.color }}>{score}</span>
-          <div>
-            <p className="font-bold text-sm" style={{ color: f.color }}>{f.label} {f.emoji}</p>
-            <p className="text-[10px] text-dark-muted">Score calculado por critérios</p>
-          </div>
-        </div>
-        {/* Info */}
-        <div className="space-y-1.5">
-          {lead.telefone && (
-            <div className="flex items-center gap-2 text-sm">
-              <Phone className="w-3.5 h-3.5 text-dark-muted flex-shrink-0" />
-              <span className="font-mono text-dark-text">{lead.telefone}</span>
-            </div>
-          )}
-          {lead.imobiliaria && (
-            <div className="flex items-center gap-2 text-sm">
-              <Building2 className="w-3.5 h-3.5 text-dark-muted flex-shrink-0" />
-              <span className="text-dark-text">{lead.imobiliaria}</span>
-            </div>
-          )}
-        </div>
-        {/* Tags */}
-        <div>
-          <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-2">Etiquetas</p>
-          <div className="flex flex-wrap gap-1.5">
-            {tags.map(t => (
-              <button key={t.id} onClick={() => toggleTag(t.id)}
-                className="px-2 py-1 rounded text-xs font-medium border transition-all"
-                style={form.tags.includes(t.id)
-                  ? { borderColor: t.cor, background: t.cor + '22', color: t.cor }
-                  : { borderColor: 'var(--glass-border)', color: 'var(--glass-text-muted)' }}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Próxima Ação</label>
-          <input value={form.proximaAcao} onChange={e => set('proximaAcao', e.target.value)} className="input text-sm" />
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Observações</label>
-          <textarea value={form.observacoes} onChange={e => set('observacoes', e.target.value)} rows={2} className="input text-sm resize-none" />
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Jornada</label>
-          <select value={form.jornadaId} onChange={e => set('jornadaId', e.target.value)} className="select w-full text-sm">
-            <option value="">Nenhuma</option>
-            {journeys.map(j => <option key={j.id} value={j.id}>{j.nome}</option>)}
-          </select>
-        </div>
-        {/* Histórico */}
-        {(lead.historico || []).length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-2">Histórico</p>
-            <div className="space-y-1.5 max-h-36 overflow-y-auto">
-              {[...(lead.historico || [])].reverse().map((h, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-brand-accent mt-1.5 flex-shrink-0" />
-                  <span className="text-dark-muted font-mono whitespace-nowrap">
-                    {(() => { try { return format(parseISO(h.data), 'dd/MM HH:mm') } catch { return '—' } })()}
-                  </span>
-                  <span className="text-dark-text">{h.desc}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        <div className="flex gap-3 pt-2">
-          <button onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
-          <button onClick={() => { leadUpdate(lead.id, form); onClose() }} className="btn-primary flex-1">Salvar</button>
-        </div>
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[400] animate-fade-in pointer-events-none">
+      <div className="glass-modal px-4 py-3 flex items-center gap-3 rounded-2xl pointer-events-auto">
+        <span className="text-sm font-bold text-dark-text">{count} selecionado{count > 1 ? 's' : ''}</span>
+        <div className="w-px h-4 bg-dark-border" />
+        <button onClick={onMover} className="btn-secondary text-xs px-3 py-1.5">Mover coluna</button>
+        <button onClick={onArquivar}
+          className="text-xs px-3 py-1.5 rounded-lg font-medium text-status-error hover:bg-status-error/10 transition-colors">
+          Arquivar
+        </button>
+        <button onClick={onClear} className="text-dark-muted hover:text-dark-text transition-colors ml-1">
+          <X className="w-4 h-4" />
+        </button>
       </div>
-    </Modal>
+    </div>
   )
 }
 
 // ── Pipeline ──────────────────────────────────────────────────────────────────
 
 export default function Pipeline() {
-  const state  = useComercial()
-  const toast  = useToast()
-  const [activeId,   setActiveId]   = useState(null)
-  const [addOpen,    setAddOpen]    = useState(false)
-  const [detalhe,    setDetalhe]    = useState(null)
-  const [recusaLead, setRecusaLead] = useState(null)
-  const [vendaLead,  setVendaLead]  = useState(null)
-  const [search,     setSearch]     = useState('')
+  const state      = useComercial()
+  const toast      = useToast()
+  const navigate   = useNavigate()
+  const [activeId,    setActiveId]    = useState(null)
+  const [addOpen,     setAddOpen]     = useState(false)
+  const [recusaLead,  setRecusaLead]  = useState(null)
+  const [vendaLead,   setVendaLead]   = useState(null)
+  const [search,      setSearch]      = useState('')
+  const [selectedIds, setSelectedIds] = useState(new Set())
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
-
+  const sensors    = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
   const activeLead = activeId ? state.leads.find(l => l.id === activeId) : null
 
   const filtered = useMemo(() => {
@@ -653,6 +621,15 @@ export default function Pipeline() {
       (l.imobiliaria || '').toLowerCase().includes(q)
     )
   }, [state.leads, search])
+
+  function toggleSelect(id) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   function handleDragEnd({ active, over }) {
     setActiveId(null)
@@ -703,14 +680,13 @@ export default function Pipeline() {
         </button>
       </div>
 
-      {/* Board — swimlane horizontal */}
-      <div className="flex-1 min-h-0 rounded-2xl border border-dark-border overflow-hidden flex flex-col"
-        style={{ background: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)' }}>
+      {/* Board — kanban vertical columns */}
+      <div className="flex-1 min-h-0">
         <DndContext
           sensors={sensors}
           onDragStart={({ active }) => setActiveId(active.id)}
           onDragEnd={handleDragEnd}>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex gap-3 overflow-x-auto pb-4 h-full">
             {PIPELINE_COLS.map(col => (
               <SwimLane
                 key={col.id}
@@ -718,14 +694,20 @@ export default function Pipeline() {
                 leads={filtered.filter(l => l.coluna === col.id)}
                 tags={state.tags}
                 activeId={activeId}
-                onCardClick={setDetalhe}
+                onCardClick={id => navigate('/comercial/leads/' + id)}
+                selectedIds={selectedIds}
+                onSelect={toggleSelect}
               />
             ))}
           </div>
           <DragOverlay dropAnimation={null}>
             {activeLead ? (
               <div style={{ filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.4))' }}>
-                <LeadCard lead={activeLead} tags={state.tags} />
+                <LeadCard
+                  lead={activeLead}
+                  col={PIPELINE_COLS.find(c => c.id === activeLead.coluna)}
+                  tags={state.tags}
+                />
               </div>
             ) : null}
           </DragOverlay>
@@ -734,7 +716,6 @@ export default function Pipeline() {
 
       {/* Modais */}
       {addOpen    && <ModalAddLead onClose={() => setAddOpen(false)} leads={state.leads} tags={state.tags} toast={toast} />}
-      {detalhe    && <ModalDetalhe lead={detalhe} tags={state.tags} journeys={state.journeys} onClose={() => setDetalhe(null)} />}
       {recusaLead && <ModalRecusa  lead={recusaLead} onClose={() => setRecusaLead(null)} onConfirm={async motivo => {
         await leadMover(recusaLead.id, 'recusou', { jaRecusou: true, motivoRecusa: motivo })
         toast({ type: 'success', title: 'Lead movido para Recusou' })
@@ -748,6 +729,13 @@ export default function Pipeline() {
         } catch { toast({ type: 'error', title: 'Erro ao registrar venda' }) }
         setVendaLead(null)
       }} />}
+
+      <SelectionBar
+        count={selectedIds.size}
+        onClear={() => setSelectedIds(new Set())}
+        onMover={() => setSelectedIds(new Set())}
+        onArquivar={() => setSelectedIds(new Set())}
+      />
     </div>
   )
 }

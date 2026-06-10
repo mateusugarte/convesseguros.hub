@@ -653,6 +653,8 @@ export default function Pipeline() {
         })
       }
       leadMover(lead.id, over.id)
+      const now = new Date().toISOString()
+      leadUpdate(lead.id, { score: calcScore({ ...lead, coluna: over.id, ultimaAtividade: now }) })
     }
   }
 

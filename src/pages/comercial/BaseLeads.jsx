@@ -1,289 +1,644 @@
-import { useState, useMemo } from 'react'
-import { useComercial, leadUpdate, calcScore, scoreFaixa, diffDias, PIPELINE_COLS, PRODUTOS, ORIGENS, TAGS_DEFAULT } from '../../lib/comercial'
-import { Search, Filter, X, ChevronDown, Phone, Building2, Clock, Tag, ArrowUpDown } from 'lucide-react'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import {
+  useComercial, leadMover, calcScore, scoreFaixa, PIPELINE_COLS, ORIGENS,
+} from '../../lib/comercial'
+import { useToast } from '../../contexts/ToastContext'
+import {
+  Search, SlidersHorizontal, X, ChevronDown,
+  ChevronRight, SearchX, Download, ArrowUpDown, ArrowUp, ArrowDown,
+  Check, Building2, Calendar,
+} from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
-function ScoreBadge({ score }) {
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const AVATAR_COLORS = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#2B5BA8','#EC4899','#06B6D4','#EF4444']
+function avatarColor(name) { return AVATAR_COLORS[(name || '').charCodeAt(0) % AVATAR_COLORS.length] }
+function initials(name) { return (name || '?').split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase() }
+
+const ORIGEM_COLORS = {
+  'Seguro Fiança':   '#3B82F6',
+  'Indicação':       '#10B981',
+  'Prospecção':      '#8B5CF6',
+  'Outros Produtos': '#F59E0B',
+}
+
+function fmtDate(iso) {
+  try { return format(parseISO(iso), 'dd/MM/yyyy', { locale: ptBR }) } catch { return '—' }
+}
+
+function useDebounce(value, ms) {
+  const [dv, setDv] = useState(value)
+  useEffect(() => {
+    const t = setTimeout(() => setDv(value), ms)
+    return () => clearTimeout(t)
+  }, [value, ms])
+  return dv
+}
+
+const PAGE_SIZES = [20, 50, 100]
+
+// ── Badges ────────────────────────────────────────────────────────────────────
+
+function TemperaturaBadge({ score }) {
   const f = scoreFaixa(score)
   return (
-    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ color: f.color, background: f.bg }}>
-      <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: f.color }} />
-      {score}
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap"
+      style={{ color: f.color, background: f.bg }}>
+      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: f.color }} />
+      {f.label}
     </span>
   )
 }
 
-function ColTag({ colId }) {
+function EstagioBadge({ colId }) {
   const col = PIPELINE_COLS.find(c => c.id === colId)
   if (!col) return null
   return (
-    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ color: col.color, background: col.color + '22' }}>
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap"
+      style={{ color: col.color, background: col.color + '22' }}>
       {col.label}
     </span>
   )
 }
 
-// ── Side Panel ────────────────────────────────────────────────────────────────
+function OrigemBadge({ origem }) {
+  const color = ORIGEM_COLORS[origem] || '#6B7280'
+  if (!origem) return <span className="text-dark-muted text-xs">—</span>
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap"
+      style={{ color, background: color + '22' }}>
+      {origem}
+    </span>
+  )
+}
 
-function SidePanel({ lead, tags, journeys, onClose, onSave }) {
-  const score = calcScore(lead)
-  const f     = scoreFaixa(score)
-  const [form, setForm] = useState({ proximaAcao: lead.proximaAcao || '', observacoes: lead.observacoes || '', resumo: lead.resumo || '', tags: lead.tags || [], jornadaId: lead.jornadaId || '' })
-  const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
-  const toggleTag = (tid) => set('tags', form.tags.includes(tid) ? form.tags.filter(t => t !== tid) : [...form.tags, tid])
+// ── FilterPanel ───────────────────────────────────────────────────────────────
+
+function FilterPanel({ filters, onChange, onApply, onReset }) {
+  const toggle = (key, val) => {
+    const cur = filters[key] || []
+    onChange(key, cur.includes(val) ? cur.filter(v => v !== val) : [...cur, val])
+  }
+  const toggleTemp = (val) => {
+    const cur = filters.temp || []
+    onChange('temp', cur.includes(val) ? cur.filter(v => v !== val) : [...cur, val])
+  }
 
   return (
-    <div className="fixed inset-y-0 right-0 z-40 flex animate-fade-in">
-      {/* Backdrop */}
-      <div className="flex-1 cursor-pointer" onClick={onClose} />
-      {/* Panel */}
-      <div className="w-80 glass-modal flex flex-col overflow-y-auto h-full shadow-2xl">
-        {/* Header */}
-        <div className="flex items-start justify-between px-5 py-4 border-b border-dark-border flex-shrink-0">
-          <div>
-            <p className="font-bold text-dark-text">{lead.nome}</p>
-            <div className="flex items-center gap-2 mt-1">
-              <ColTag colId={lead.coluna} />
-              <ScoreBadge score={score} />
-            </div>
-          </div>
-          <button onClick={onClose} className="text-dark-muted hover:text-dark-text ml-2"><X className="w-4 h-4" /></button>
-        </div>
-
-        {/* Dados */}
-        <div className="px-5 py-4 space-y-4 flex-1">
-          <div className="space-y-2 text-sm">
-            {lead.telefone && (
-              <div className="flex items-center gap-2 text-dark-muted">
-                <Phone className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="font-mono text-dark-text">{lead.telefone}</span>
-              </div>
-            )}
-            {lead.imobiliaria && (
-              <div className="flex items-center gap-2 text-dark-muted">
-                <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="text-dark-text">{lead.imobiliaria}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2 text-dark-muted">
-              <Clock className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="text-dark-text">{lead.ultimaAtividade ? `${diffDias(lead.ultimaAtividade)}d sem atividade` : 'Novo'}</span>
-            </div>
-          </div>
-
-          <div className="h-px bg-dark-border" />
-
-          {/* Score breakdown */}
-          <div>
-            <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-2">Score</p>
-            <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: f.bg }}>
-              <span className="text-3xl font-black font-mono" style={{ color: f.color }}>{score}</span>
-              <div>
-                <p className="font-bold text-sm" style={{ color: f.color }}>{f.label}</p>
-                <p className="text-[10px] text-dark-muted">Calculado por critérios</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Tags */}
-          <div>
-            <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-2">Etiquetas</p>
-            <div className="flex flex-wrap gap-1.5">
-              {tags.map(t => (
-                <button key={t.id} onClick={() => toggleTag(t.id)}
-                  className="px-2 py-1 rounded text-xs font-medium border transition-all"
-                  style={form.tags.includes(t.id) ? { borderColor: t.cor, background: t.cor + '22', color: t.cor } : { borderColor: 'var(--glass-border)', color: 'var(--glass-text-muted)' }}>
-                  {t.label}
+    <div className="glass-panel p-4 space-y-4 animate-fade-in">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Estágio */}
+        <div>
+          <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-2">Estágio</p>
+          <div className="flex flex-wrap gap-1.5">
+            {PIPELINE_COLS.map(col => {
+              const active = (filters.cols || []).includes(col.id)
+              return (
+                <button key={col.id} onClick={() => toggle('cols', col.id)}
+                  className="px-2 py-1 rounded-lg text-[11px] font-medium border transition-all"
+                  style={active
+                    ? { borderColor: col.color, background: col.color + '22', color: col.color }
+                    : { borderColor: 'var(--glass-border)', color: 'var(--glass-text-muted)' }}>
+                  {col.label}
                 </button>
-              ))}
-            </div>
+              )
+            })}
           </div>
-
-          <div>
-            <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Próxima Ação</label>
-            <input value={form.proximaAcao} onChange={e => set('proximaAcao', e.target.value)} className="input text-sm" placeholder="Ex: Ligar amanhã" />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Observações</label>
-            <textarea value={form.observacoes} onChange={e => set('observacoes', e.target.value)} rows={3} className="input text-sm resize-none" />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Jornada</label>
-            <select value={form.jornadaId} onChange={e => set('jornadaId', e.target.value)} className="select w-full text-sm">
-              <option value="">Nenhuma</option>
-              {journeys.map(j => <option key={j.id} value={j.id}>{j.nome}</option>)}
-            </select>
-          </div>
-
-          {/* Histórico */}
-          {(lead.historico || []).length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-2">Histórico</p>
-              <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                {(lead.historico || []).slice().reverse().map((h, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs">
-                    <div className="w-1.5 h-1.5 rounded-full bg-brand-accent mt-1.5 flex-shrink-0" />
-                    <span className="text-dark-muted font-mono whitespace-nowrap">{format(parseISO(h.data), 'dd/MM HH:mm')}</span>
-                    <span className="text-dark-text">{h.desc}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
-
-        {/* Footer */}
-        <div className="px-5 py-4 border-t border-dark-border flex-shrink-0">
-          <button onClick={() => onSave(lead.id, form)} className="btn-primary w-full text-sm">Salvar Alterações</button>
+        {/* Origem */}
+        <div>
+          <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-2">Origem</p>
+          <div className="flex flex-wrap gap-1.5">
+            {ORIGENS.map(o => {
+              const active = (filters.origens || []).includes(o)
+              const color  = ORIGEM_COLORS[o] || '#6B7280'
+              return (
+                <button key={o} onClick={() => toggle('origens', o)}
+                  className="px-2 py-1 rounded-lg text-[11px] font-medium border transition-all"
+                  style={active
+                    ? { borderColor: color, background: color + '22', color }
+                    : { borderColor: 'var(--glass-border)', color: 'var(--glass-text-muted)' }}>
+                  {o}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+        {/* Temperatura */}
+        <div>
+          <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-2">Temperatura</p>
+          <div className="flex gap-1.5">
+            {[{ id: 'Quente', color: '#EF4444' }, { id: 'Morno', color: '#F59E0B' }, { id: 'Frio', color: '#4A90D9' }].map(({ id, color }) => {
+              const active = (filters.temp || []).includes(id)
+              return (
+                <button key={id} onClick={() => toggleTemp(id)}
+                  className="px-2 py-1 rounded-lg text-[11px] font-medium border transition-all"
+                  style={active
+                    ? { borderColor: color, background: color + '22', color }
+                    : { borderColor: 'var(--glass-border)', color: 'var(--glass-text-muted)' }}>
+                  {id}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+        {/* Período */}
+        <div>
+          <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-2">Período</p>
+          <div className="space-y-1.5">
+            <input type="date" value={filters.from || ''} onChange={e => onChange('from', e.target.value)} className="input text-xs py-1.5 w-full" />
+            <input type="date" value={filters.to   || ''} onChange={e => onChange('to',   e.target.value)} className="input text-xs py-1.5 w-full" />
+          </div>
         </div>
       </div>
+      <div className="flex gap-2 justify-end pt-1">
+        <button onClick={onReset}  className="btn-secondary text-sm">Limpar</button>
+        <button onClick={onApply}  className="btn-primary text-sm">Aplicar</button>
+      </div>
+    </div>
+  )
+}
+
+// ── SortIcon ──────────────────────────────────────────────────────────────────
+
+function SortIcon({ col, sort, dir }) {
+  if (sort !== col) return <ArrowUpDown className="w-3 h-3 opacity-40" />
+  return dir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+}
+
+// ── MoverDropdown ─────────────────────────────────────────────────────────────
+
+function MoverDropdown({ onSelect, onClose }) {
+  const ref = useRef(null)
+  useEffect(() => {
+    function h(e) { if (ref.current && !ref.current.contains(e.target)) onClose() }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [onClose])
+  return (
+    <div ref={ref} className="absolute bottom-full mb-1 left-0 w-44 glass-modal rounded-xl shadow-xl z-[300] py-1 overflow-hidden">
+      {PIPELINE_COLS.map(col => (
+        <button key={col.id} onClick={() => onSelect(col.id)}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-dark-text hover:bg-dark-surface2 text-left transition-colors">
+          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: col.color }} />
+          {col.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ── FloatingBar ───────────────────────────────────────────────────────────────
+
+function FloatingBar({ count, leads, selectedIds, onDeselect, toast }) {
+  const [moverOpen, setMoverOpen] = useState(false)
+
+  async function handleMover(colId) {
+    setMoverOpen(false)
+    const ids = Array.from(selectedIds)
+    await Promise.allSettled(ids.map(id => leadMover(id, colId)))
+    toast({ type: 'success', title: `${ids.length} lead(s) movido(s)` })
+    onDeselect()
+  }
+
+  function handleExportCSV() {
+    const header = ['Nome','Imobiliária','Origem','Estágio','Criado em','Apólice']
+    const rows = leads.filter(l => selectedIds.has(l.id)).map(l => {
+      const col = PIPELINE_COLS.find(c => c.id === l.coluna)
+      return [l.nome, l.imobiliaria || '', l.origem || '', col?.label || '', l.criadoEm ? fmtDate(l.criadoEm) : '', l.apoliceAtiva ? 'Sim' : 'Não']
+        .map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')
+    })
+    const csv  = [header.join(','), ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href = url; a.download = 'leads.csv'; a.click()
+    URL.revokeObjectURL(url)
+    toast({ type: 'success', title: 'CSV exportado' })
+  }
+
+  return (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[400]
+      glass-modal rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3 animate-fade-in border border-dark-border">
+      <span className="text-sm font-semibold text-dark-text whitespace-nowrap">{count} selecionado{count !== 1 ? 's' : ''}</span>
+      <div className="w-px h-4 bg-dark-border" />
+      <div className="relative">
+        <button onClick={() => setMoverOpen(o => !o)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dark-surface2 text-sm text-dark-text hover:bg-dark-surface3 transition-colors">
+          Mover <ChevronDown className="w-3.5 h-3.5" />
+        </button>
+        {moverOpen && <MoverDropdown onSelect={handleMover} onClose={() => setMoverOpen(false)} />}
+      </div>
+      <button onClick={handleExportCSV}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dark-surface2 text-sm text-dark-text hover:bg-dark-surface3 transition-colors">
+        <Download className="w-3.5 h-3.5" /> CSV
+      </button>
+      <button onClick={onDeselect} className="text-dark-muted hover:text-dark-text transition-colors">
+        <X className="w-4 h-4" />
+      </button>
     </div>
   )
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-const SORT_OPTS = [
-  { id: 'score_desc',    label: 'Score ↓' },
-  { id: 'score_asc',     label: 'Score ↑' },
-  { id: 'nome',          label: 'Nome A–Z' },
-  { id: 'atividade',     label: 'Última Atividade' },
-]
-
 export default function BaseLeads() {
   const state    = useComercial()
-  const [search, setSearch]   = useState('')
-  const [colFil, setColFil]   = useState('')
-  const [origemFil, setOrigemFil] = useState('')
-  const [sortBy, setSortBy]   = useState('score_desc')
-  const [panel, setPanel]     = useState(null)
+  const navigate = useNavigate()
+  const toast    = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const filtered = useMemo(() => {
-    let rows = [...state.leads]
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      rows = rows.filter(l => l.nome.toLowerCase().includes(q) || (l.telefone || '').includes(q) || (l.imobiliaria || '').toLowerCase().includes(q))
-    }
-    if (colFil)     rows = rows.filter(l => l.coluna === colFil)
-    if (origemFil)  rows = rows.filter(l => l.origem === origemFil)
+  // URL state
+  const q          = searchParams.get('q')       || ''
+  const sort       = searchParams.get('sort')    || 'temperatura'
+  const dir        = searchParams.get('dir')     || 'desc'
+  const page       = parseInt(searchParams.get('page') || '0', 10)
+  const pageSize   = parseInt(searchParams.get('size') || '20', 10)
+  const filterCols    = searchParams.get('cols')?.split(',').filter(Boolean)    || []
+  const filterOrigens = searchParams.get('origens')?.split(',').filter(Boolean) || []
+  const filterTemp    = searchParams.get('temp')?.split(',').filter(Boolean)    || []
+  const filterFrom    = searchParams.get('from') || ''
+  const filterTo      = searchParams.get('to')   || ''
 
-    rows.sort((a, b) => {
-      if (sortBy === 'score_desc') return calcScore(b) - calcScore(a)
-      if (sortBy === 'score_asc')  return calcScore(a) - calcScore(b)
-      if (sortBy === 'nome')       return a.nome.localeCompare(b.nome)
-      if (sortBy === 'atividade')  return (b.ultimaAtividade || '') > (a.ultimaAtividade || '') ? 1 : -1
-      return 0
-    })
-    return rows
-  }, [state.leads, search, colFil, origemFil, sortBy])
+  const [searchInput,    setSearchInput]    = useState(q)
+  const [showFilter,     setShowFilter]     = useState(false)
+  const [pendingFilters, setPendingFilters] = useState({ cols: filterCols, origens: filterOrigens, temp: filterTemp, from: filterFrom, to: filterTo })
+  const [selectedIds,    setSelectedIds]    = useState(new Set())
 
-  function handleSave(id, changes) {
-    leadUpdate(id, changes)
-    setPanel(null)
+  const debouncedQ = useDebounce(searchInput, 300)
+
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams)
+    if (debouncedQ) next.set('q', debouncedQ); else next.delete('q')
+    next.set('page', '0')
+    setSearchParams(next, { replace: true })
+  }, [debouncedQ]) // eslint-disable-line
+
+  function applyFilters() {
+    const next = new URLSearchParams(searchParams)
+    const f = pendingFilters
+    if (f.cols.length)    next.set('cols',    f.cols.join(','));    else next.delete('cols')
+    if (f.origens.length) next.set('origens', f.origens.join(',')); else next.delete('origens')
+    if (f.temp.length)    next.set('temp',    f.temp.join(','));    else next.delete('temp')
+    if (f.from) next.set('from', f.from); else next.delete('from')
+    if (f.to)   next.set('to',   f.to);   else next.delete('to')
+    next.set('page', '0')
+    setSearchParams(next, { replace: true })
+    setShowFilter(false)
   }
 
-  const hasFilters = colFil || origemFil || search
+  function resetFilters() {
+    setPendingFilters({ cols: [], origens: [], temp: [], from: '', to: '' })
+  }
+
+  function clearAllFilters() {
+    const next = new URLSearchParams()
+    if (q)                  next.set('q',    q)
+    if (sort !== 'temperatura') next.set('sort', sort)
+    if (dir !== 'desc')     next.set('dir',  dir)
+    next.set('size', String(pageSize))
+    setSearchParams(next, { replace: true })
+    resetFilters()
+    setShowFilter(false)
+  }
+
+  function toggleSort(col) {
+    const next = new URLSearchParams(searchParams)
+    if (sort === col) next.set('dir', dir === 'asc' ? 'desc' : 'asc')
+    else { next.set('sort', col); next.set('dir', 'desc') }
+    next.set('page', '0')
+    setSearchParams(next, { replace: true })
+  }
+
+  function setPage(p) {
+    const next = new URLSearchParams(searchParams)
+    next.set('page', String(p))
+    setSearchParams(next, { replace: true })
+  }
+
+  function setSize(s) {
+    const next = new URLSearchParams(searchParams)
+    next.set('size', String(s)); next.set('page', '0')
+    setSearchParams(next, { replace: true })
+  }
+
+  // Filtering + sorting
+  const filtered = useMemo(() => {
+    let rows = [...(state.leads || [])]
+
+    if (q) {
+      const lq = q.toLowerCase()
+      rows = rows.filter(l =>
+        l.nome?.toLowerCase().includes(lq) ||
+        (l.telefone || '').includes(lq) ||
+        (l.imobiliaria || '').toLowerCase().includes(lq)
+      )
+    }
+    if (filterCols.length)    rows = rows.filter(l => filterCols.includes(l.coluna))
+    if (filterOrigens.length) rows = rows.filter(l => filterOrigens.includes(l.origem))
+    if (filterTemp.length) {
+      rows = rows.filter(l => {
+        const s   = calcScore(l)
+        const lbl = s > 60 ? 'Quente' : s > 30 ? 'Morno' : 'Frio'
+        return filterTemp.includes(lbl)
+      })
+    }
+    if (filterFrom) rows = rows.filter(l => l.criadoEm && l.criadoEm >= filterFrom)
+    if (filterTo)   rows = rows.filter(l => l.criadoEm && l.criadoEm <= filterTo + 'T23:59:59')
+
+    rows.sort((a, b) => {
+      if (sort === 'nome') {
+        const va = a.nome?.toLowerCase() || '', vb = b.nome?.toLowerCase() || ''
+        return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va)
+      }
+      if (sort === 'criadoEm') {
+        const va = a.criadoEm || '', vb = b.criadoEm || ''
+        return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va)
+      }
+      const va = calcScore(a), vb = calcScore(b)
+      return dir === 'asc' ? va - vb : vb - va
+    })
+    return rows
+  }, [state.leads, q, filterCols, filterOrigens, filterTemp, filterFrom, filterTo, sort, dir])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const safePage   = Math.min(page, totalPages - 1)
+  const pageRows   = filtered.slice(safePage * pageSize, (safePage + 1) * pageSize)
+
+  const allOnPageSelected = pageRows.length > 0 && pageRows.every(l => selectedIds.has(l.id))
+  const someSelected      = pageRows.some(l => selectedIds.has(l.id))
+
+  function toggleAll() {
+    if (allOnPageSelected) setSelectedIds(prev => { const n = new Set(prev); pageRows.forEach(l => n.delete(l.id)); return n })
+    else                   setSelectedIds(prev => { const n = new Set(prev); pageRows.forEach(l => n.add(l.id)); return n })
+  }
+
+  function toggleOne(id) {
+    setSelectedIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  }
+
+  const activeChips = [
+    ...filterCols.map(id => ({ key: 'cols', val: id, label: PIPELINE_COLS.find(c => c.id === id)?.label || id })),
+    ...filterOrigens.map(o => ({ key: 'origens', val: o, label: o })),
+    ...filterTemp.map(t => ({ key: 'temp', val: t, label: t })),
+    ...(filterFrom ? [{ key: 'from', val: filterFrom, label: `De ${fmtDate(filterFrom)}` }] : []),
+    ...(filterTo   ? [{ key: 'to',   val: filterTo,   label: `Até ${fmtDate(filterTo)}`  }] : []),
+  ]
+
+  function removeChip(chip) {
+    const next = new URLSearchParams(searchParams)
+    if (chip.key === 'from' || chip.key === 'to') {
+      next.delete(chip.key)
+    } else {
+      const cur = (next.get(chip.key) || '').split(',').filter(Boolean).filter(v => v !== chip.val)
+      if (cur.length) next.set(chip.key, cur.join(',')); else next.delete(chip.key)
+    }
+    next.set('page', '0')
+    setSearchParams(next, { replace: true })
+    setPendingFilters(p => chip.key === 'from' || chip.key === 'to' ? { ...p, [chip.key]: '' } : { ...p, [chip.key]: (p[chip.key] || []).filter(v => v !== chip.val) })
+  }
+
+  const hasFilters = activeChips.length > 0
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-3 animate-fade-in pb-16">
+
+      {/* ── Barra nível 1 ──────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-3 flex-wrap">
         <div>
           <h1 className="text-lg font-bold text-dark-text">Base de Leads</h1>
-          <p className="text-xs text-dark-muted mt-0.5">{filtered.length} de {state.leads.length} leads</p>
+          <p className="text-xs text-dark-muted">{filtered.length} de {(state.leads || []).length} contatos</p>
         </div>
-      </div>
 
-      {/* Filters */}
-      <div className="glass-panel p-3 flex items-center gap-2 flex-wrap">
-        <div className="relative flex-1 min-w-[180px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-dark-muted" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome, telefone, imobiliária..." className="input pl-8 text-sm py-1.5 w-full" />
-        </div>
-        <select value={colFil} onChange={e => setColFil(e.target.value)} className="select text-sm py-1.5">
-          <option value="">Todas as colunas</option>
-          {PIPELINE_COLS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-        </select>
-        <select value={origemFil} onChange={e => setOrigemFil(e.target.value)} className="select text-sm py-1.5">
-          <option value="">Todas as origens</option>
-          {['Seguro Fiança','Indicação','Prospecção','Outros Produtos'].map(o => <option key={o}>{o}</option>)}
-        </select>
-        <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="select text-sm py-1.5">
-          {SORT_OPTS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-        </select>
-        {hasFilters && (
-          <button onClick={() => { setSearch(''); setColFil(''); setOrigemFil('') }} className="text-xs text-dark-muted hover:text-dark-text flex items-center gap-1">
-            <X className="w-3.5 h-3.5" /> Limpar
-          </button>
+        {(state.leads || []).length > 500 && (
+          <span className="text-xs text-status-warning bg-status-warning/10 border border-status-warning/20 px-2 py-1 rounded-lg">
+            +500 leads — desempenho pode variar
+          </span>
         )}
+
+        <div className="relative flex-1 min-w-[200px] max-w-sm ml-auto">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-dark-muted pointer-events-none" />
+          <input
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+            placeholder="Buscar por nome, telefone, imobiliária..."
+            className="input pl-8 pr-8 text-sm py-2 w-full"
+          />
+          {searchInput && (
+            <button onClick={() => setSearchInput('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark-text">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        <button onClick={() => setShowFilter(o => !o)}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm transition-colors
+            ${showFilter || hasFilters
+              ? 'border-brand-accent text-brand-accent bg-brand-accent/10'
+              : 'border-dark-border text-dark-muted hover:text-dark-text hover:border-dark-text/40'}`}>
+          <SlidersHorizontal className="w-3.5 h-3.5" />
+          Filtros
+          {hasFilters && (
+            <span className="ml-0.5 w-4 h-4 rounded-full bg-brand-accent text-white text-[10px] flex items-center justify-center font-bold">
+              {activeChips.length}
+            </span>
+          )}
+        </button>
       </div>
 
-      {/* Table */}
+      {/* ── Barra nível 2 — chips ──────────────────────────────────────────── */}
+      {hasFilters && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {activeChips.map((chip, i) => (
+            <button key={i} onClick={() => removeChip(chip)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium
+                bg-brand-accent/10 text-brand-accent border border-brand-accent/30 hover:bg-brand-accent/20 transition-colors">
+              {chip.label} <X className="w-3 h-3" />
+            </button>
+          ))}
+          <button onClick={clearAllFilters} className="text-xs text-dark-muted hover:text-dark-text transition-colors flex items-center gap-1">
+            <X className="w-3 h-3" /> Limpar tudo
+          </button>
+        </div>
+      )}
+
+      {/* ── Painel de filtros ──────────────────────────────────────────────── */}
+      {showFilter && (
+        <FilterPanel
+          filters={pendingFilters}
+          onChange={(k, v) => setPendingFilters(p => ({ ...p, [k]: v }))}
+          onApply={applyFilters}
+          onReset={resetFilters}
+        />
+      )}
+
+      {/* ── Tabela ─────────────────────────────────────────────────────────── */}
       <div className="glass-panel overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-dark-border">
-                {['Nome','Etapa','Score','Origem','Imobiliária','Última Atividade','Próxima Ação'].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-dark-muted uppercase tracking-wider whitespace-nowrap">{h}</th>
-                ))}
+                <th className="w-10 px-3 py-3">
+                  <button onClick={toggleAll}
+                    className={`w-4 h-4 rounded border flex items-center justify-center transition-colors
+                      ${allOnPageSelected ? 'bg-brand-accent border-brand-accent'
+                        : someSelected    ? 'bg-brand-accent/40 border-brand-accent'
+                        : 'border-dark-border hover:border-brand-accent/60'}`}>
+                    {(allOnPageSelected || someSelected) && <Check className="w-2.5 h-2.5 text-white" />}
+                  </button>
+                </th>
+                <th className="text-left px-3 py-3">
+                  <button onClick={() => toggleSort('nome')} className="flex items-center gap-1 text-xs font-semibold text-dark-muted uppercase tracking-wider hover:text-dark-text transition-colors">
+                    Lead <SortIcon col="nome" sort={sort} dir={dir} />
+                  </button>
+                </th>
+                <th className="text-left px-3 py-3 text-xs font-semibold text-dark-muted uppercase tracking-wider whitespace-nowrap">Imobiliária</th>
+                <th className="text-left px-3 py-3">
+                  <button onClick={() => toggleSort('temperatura')} className="flex items-center gap-1 text-xs font-semibold text-dark-muted uppercase tracking-wider hover:text-dark-text transition-colors">
+                    Temp. <SortIcon col="temperatura" sort={sort} dir={dir} />
+                  </button>
+                </th>
+                <th className="text-left px-3 py-3 text-xs font-semibold text-dark-muted uppercase tracking-wider">Origem</th>
+                <th className="text-left px-3 py-3">
+                  <button onClick={() => toggleSort('criadoEm')} className="flex items-center gap-1 text-xs font-semibold text-dark-muted uppercase tracking-wider hover:text-dark-text transition-colors whitespace-nowrap">
+                    Criado <SortIcon col="criadoEm" sort={sort} dir={dir} />
+                  </button>
+                </th>
+                <th className="text-left px-3 py-3 text-xs font-semibold text-dark-muted uppercase tracking-wider">Estágio</th>
+                <th className="text-left px-3 py-3 text-xs font-semibold text-dark-muted uppercase tracking-wider">Apólice</th>
+                <th className="w-8" />
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {pageRows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center text-dark-muted text-sm py-12">Nenhum lead encontrado</td>
+                  <td colSpan={9}>
+                    <div className="flex flex-col items-center justify-center py-16 gap-3">
+                      <SearchX className="w-10 h-10 text-dark-muted opacity-40" />
+                      <p className="text-dark-muted text-sm">Nenhum lead encontrado</p>
+                      {hasFilters && (
+                        <button onClick={clearAllFilters} className="btn-secondary text-xs">Limpar filtros</button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
-              ) : (
-                filtered.map(lead => {
-                  const score = calcScore(lead)
-                  const dias  = lead.ultimaAtividade ? diffDias(lead.ultimaAtividade) : null
-                  const leadTags = (lead.tags || []).map(tid => state.tags.find(t => t.id === tid)).filter(Boolean)
-                  return (
-                    <tr key={lead.id} onClick={() => setPanel(lead)}
-                      className="border-b border-dark-border/50 hover:bg-dark-surface2 cursor-pointer transition-colors">
-                      <td className="px-4 py-3">
-                        <p className="font-semibold text-dark-text">{lead.nome}</p>
-                        {leadTags.length > 0 && (
-                          <div className="flex gap-1 mt-1 flex-wrap">
-                            {leadTags.slice(0,2).map(t => (
-                              <span key={t.id} className="px-1.5 py-0.5 rounded text-[9px] font-semibold" style={{ color: t.cor, background: t.cor + '22' }}>{t.label}</span>
-                            ))}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3"><ColTag colId={lead.coluna} /></td>
-                      <td className="px-4 py-3"><ScoreBadge score={score} /></td>
-                      <td className="px-4 py-3 text-dark-muted text-xs">{lead.origem}</td>
-                      <td className="px-4 py-3 text-dark-muted text-xs">{lead.imobiliaria || '—'}</td>
-                      <td className="px-4 py-3">
-                        {dias === null ? (
-                          <span className="text-xs text-dark-muted">—</span>
-                        ) : (
-                          <span className={`text-xs font-medium ${dias >= 10 ? 'text-status-error' : dias >= 5 ? 'text-status-warning' : 'text-dark-muted'}`}>
-                            {dias === 0 ? 'Hoje' : `${dias}d atrás`}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-brand-accent max-w-[160px] truncate">{lead.proximaAcao || '—'}</td>
-                    </tr>
-                  )
-                })
-              )}
+              ) : pageRows.map(lead => {
+                const score    = calcScore(lead)
+                const selected = selectedIds.has(lead.id)
+                const aColor   = avatarColor(lead.nome)
+                return (
+                  <tr key={lead.id}
+                    className={`border-b border-dark-border/50 transition-colors cursor-pointer
+                      ${selected ? 'bg-brand-accent/5' : 'hover:bg-dark-surface2'}`}>
+                    <td className="px-3 py-3.5" onClick={e => { e.stopPropagation(); toggleOne(lead.id) }}>
+                      <button
+                        className={`w-4 h-4 rounded border flex items-center justify-center transition-colors
+                          ${selected ? 'bg-brand-accent border-brand-accent' : 'border-dark-border hover:border-brand-accent/60'}`}>
+                        {selected && <Check className="w-2.5 h-2.5 text-white" />}
+                      </button>
+                    </td>
+                    <td className="px-3 py-3.5" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-white text-xs flex-shrink-0"
+                          style={{ background: aColor }}>
+                          {initials(lead.nome)}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-dark-text leading-tight">{lead.nome}</p>
+                          {lead.telefone && <p className="text-[11px] text-dark-muted font-mono">{lead.telefone}</p>}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3.5" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>
+                      {lead.imobiliaria
+                        ? <div className="flex items-center gap-1 text-xs text-dark-muted"><Building2 className="w-3 h-3 flex-shrink-0" />{lead.imobiliaria}</div>
+                        : <span className="text-dark-muted text-xs">—</span>}
+                    </td>
+                    <td className="px-3 py-3.5" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>
+                      <TemperaturaBadge score={score} />
+                    </td>
+                    <td className="px-3 py-3.5" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>
+                      <OrigemBadge origem={lead.origem} />
+                    </td>
+                    <td className="px-3 py-3.5 text-xs text-dark-muted whitespace-nowrap" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>
+                      {lead.criadoEm
+                        ? <div className="flex items-center gap-1"><Calendar className="w-3 h-3 flex-shrink-0" />{fmtDate(lead.criadoEm)}</div>
+                        : '—'}
+                    </td>
+                    <td className="px-3 py-3.5" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>
+                      <EstagioBadge colId={lead.coluna} />
+                    </td>
+                    <td className="px-3 py-3.5" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>
+                      {lead.apoliceAtiva
+                        ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-500/15 text-green-400">Ativa</span>
+                        : <span className="text-dark-muted text-xs">—</span>}
+                    </td>
+                    <td className="px-2 py-3.5" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>
+                      <ChevronRight className="w-4 h-4 text-dark-muted opacity-40" />
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
+
+        {/* ── Paginação ──────────────────────────────────────────────────── */}
+        {filtered.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-dark-border flex-wrap gap-3">
+            <div className="flex items-center gap-2 text-xs text-dark-muted">
+              <span>Por página:</span>
+              {PAGE_SIZES.map(s => (
+                <button key={s} onClick={() => setSize(s)}
+                  className={`px-2 py-0.5 rounded-lg transition-colors font-medium
+                    ${pageSize === s ? 'bg-brand-accent/15 text-brand-accent' : 'hover:bg-dark-surface2 text-dark-muted'}`}>
+                  {s}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-dark-muted">
+              {safePage * pageSize + 1}–{Math.min((safePage + 1) * pageSize, filtered.length)} de {filtered.length}
+            </p>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setPage(Math.max(0, safePage - 1))} disabled={safePage === 0}
+                className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-dark-border text-dark-muted disabled:opacity-40 hover:text-dark-text hover:border-dark-text/40 transition-colors disabled:cursor-not-allowed">
+                Anterior
+              </button>
+              {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                let p
+                if (totalPages <= 7)          p = i
+                else if (safePage < 4)        p = i
+                else if (safePage > totalPages - 5) p = totalPages - 7 + i
+                else                          p = safePage - 3 + i
+                return (
+                  <button key={p} onClick={() => setPage(p)}
+                    className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors
+                      ${p === safePage ? 'bg-brand-accent text-white' : 'text-dark-muted hover:bg-dark-surface2'}`}>
+                    {p + 1}
+                  </button>
+                )
+              })}
+              <button onClick={() => setPage(Math.min(totalPages - 1, safePage + 1))} disabled={safePage >= totalPages - 1}
+                className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-dark-border text-dark-muted disabled:opacity-40 hover:text-dark-text hover:border-dark-text/40 transition-colors disabled:cursor-not-allowed">
+                Próxima
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Side Panel */}
-      {panel && (
-        <SidePanel
-          lead={panel}
-          tags={state.tags}
-          journeys={state.journeys}
-          onClose={() => setPanel(null)}
-          onSave={handleSave}
+      {/* ── Floating bar ───────────────────────────────────────────────────── */}
+      {selectedIds.size > 0 && (
+        <FloatingBar
+          count={selectedIds.size}
+          leads={filtered}
+          selectedIds={selectedIds}
+          onDeselect={() => setSelectedIds(new Set())}
+          toast={toast}
         />
       )}
     </div>

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   useComercial, leadUpdate, leadMover, eventAdd, eventUpdate, eventDelete,
-  PIPELINE_COLS, TIPOS_EVENTO, calcScore, scoreFaixa, diffDias,
+  PIPELINE_COLS, TIPOS_EVENTO, ORIGENS, calcScore, scoreFaixa, diffDias,
   fetchFichasParaImport,
 } from '../../lib/comercial'
 import { useToast } from '../../contexts/ToastContext'
@@ -10,7 +10,7 @@ import {
   ArrowLeft, MessageCircle, ChevronDown, Check, Flame, Sun, Snowflake,
   Building2, Clock, Plus, Trash2, PhoneCall, Users, FileText, ArrowRight,
   CheckSquare, Square, Loader2, ExternalLink, Tag, Calendar, AlertCircle,
-  MoreHorizontal,
+  MoreHorizontal, Pencil, X,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -47,6 +47,96 @@ const SCORE_CONVES = [
   { id: 'C', label: 'C', desc: 'Média prioridade — semana atual', color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
   { id: 'D', label: 'D', desc: 'Baixa prioridade — mês atual', color: '#6B7280', bg: 'rgba(107,114,128,0.1)' },
 ]
+
+// ── ModalEditLead ─────────────────────────────────────────────────────────────
+
+function ModalEditLead({ lead, onClose, toast }) {
+  const [form, setForm] = useState({
+    nome:          lead.nome          || '',
+    telefone:      lead.telefone      || '',
+    tipo:          lead.tipo          || 'PF',
+    origem:        lead.origem        || '',
+    imobiliaria:   lead.imobiliaria   || '',
+    nomeApolice:   lead.nomeApolice   || '',
+    tipoLocatario: lead.tipoLocatario || '',
+    proximaAcao:   lead.proximaAcao   || '',
+  })
+  const [saving, setSaving] = useState(false)
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
+
+  async function handleSave() {
+    setSaving(true)
+    await leadUpdate(lead.id, form)
+    toast({ type: 'success', title: 'Lead atualizado' })
+    setSaving(false)
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative glass-modal rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border">
+          <h2 className="font-bold text-dark-text">Editar Lead</h2>
+          <button onClick={onClose} className="text-dark-muted hover:text-dark-text"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="px-5 py-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Nome</label>
+              <input value={form.nome} onChange={e => set('nome', e.target.value)} className="input text-sm w-full" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Telefone</label>
+              <input value={form.telefone} onChange={e => set('telefone', e.target.value)} className="input text-sm w-full" placeholder="(99) 99999-9999" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Tipo</label>
+              <div className="flex gap-2">
+                {['PF','PJ'].map(t => (
+                  <button key={t} onClick={() => set('tipo', t)}
+                    className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all
+                      ${form.tipo === t ? 'border-brand-accent bg-brand-accent/10 text-brand-accent' : 'border-dark-border text-dark-muted hover:border-dark-text/40'}`}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Origem</label>
+              <select value={form.origem} onChange={e => set('origem', e.target.value)} className="select text-sm w-full">
+                <option value="">Selecionar</option>
+                {ORIGENS.map(o => <option key={o}>{o}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Imobiliária</label>
+              <input value={form.imobiliaria} onChange={e => set('imobiliaria', e.target.value)} className="input text-sm w-full" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Nome Apólice</label>
+              <input value={form.nomeApolice} onChange={e => set('nomeApolice', e.target.value)} className="input text-sm w-full" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Tipo Locatário</label>
+              <input value={form.tipoLocatario} onChange={e => set('tipoLocatario', e.target.value)} className="input text-sm w-full" />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Próxima Ação</label>
+              <input value={form.proximaAcao} onChange={e => set('proximaAcao', e.target.value)} className="input text-sm w-full" placeholder="Ex: Ligar amanhã" />
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-2 px-5 py-4 border-t border-dark-border">
+          <button onClick={onClose} className="btn-secondary flex-1 text-sm">Cancelar</button>
+          <button onClick={handleSave} disabled={saving} className="btn-primary flex-1 text-sm">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Salvar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ── PipelineFunnel ────────────────────────────────────────────────────────────
 
@@ -622,6 +712,7 @@ export default function LeadDetalhe() {
   const state                           = useComercial()
   const toast                           = useToast()
   const [moveOpen, setMoveOpen]         = useState(false)
+  const [editOpen, setEditOpen]         = useState(false)
   const moveRef                         = useRef(null)
 
   const lead   = state.leads?.find(l => l.id === id)
@@ -711,6 +802,10 @@ export default function LeadDetalhe() {
 
           {/* Actions */}
           <div className="flex items-center gap-2 flex-shrink-0">
+            <button onClick={() => setEditOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-sm text-dark-muted hover:text-dark-text hover:border-dark-text/40 transition-colors">
+              <Pencil className="w-4 h-4" /> Editar
+            </button>
             {lead.telefone && (
               <a href={`https://wa.me/55${lead.telefone.replace(/\D/g, '')}`}
                 target="_blank" rel="noreferrer"
@@ -789,6 +884,10 @@ export default function LeadDetalhe() {
           <CardResumo       lead={lead} events={events} />
         </div>
       </div>
+
+      {editOpen && (
+        <ModalEditLead lead={lead} onClose={() => setEditOpen(false)} toast={toast} />
+      )}
     </div>
   )
 }

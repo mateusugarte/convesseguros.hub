@@ -36,6 +36,7 @@ const Seguradoras        = lazy(() => import('./pages/Seguradoras'))
 const ComercialDashboard = lazy(() => import('./pages/comercial/ComercialDashboard'))
 const Pipeline           = lazy(() => import('./pages/comercial/Pipeline'))
 const BaseLeads          = lazy(() => import('./pages/comercial/BaseLeads'))
+const LeadDetalhe        = lazy(() => import('./pages/comercial/LeadDetalhe'))
 const Vendas             = lazy(() => import('./pages/comercial/Vendas'))
 const Calendario         = lazy(() => import('./pages/comercial/Calendario'))
 const Jornadas           = lazy(() => import('./pages/comercial/Jornadas'))
@@ -77,6 +78,7 @@ function AppRoutes() {
           <Route path="comercial"            element={<ComercialDashboard />} />
           <Route path="comercial/pipeline"   element={<Pipeline />} />
           <Route path="comercial/leads"      element={<BaseLeads />} />
+          <Route path="comercial/leads/:id"  element={<LeadDetalhe />} />
           <Route path="comercial/vendas"     element={<Vendas />} />
           <Route path="comercial/calendario" element={<Calendario />} />
           <Route path="comercial/jornadas"   element={<Jornadas />} />

@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
-  useDraggable, useDroppable, closestCenter,
+  useDraggable, useDroppable, rectIntersection,
 } from '@dnd-kit/core'
 import { snapCenterToCursor } from '@dnd-kit/modifiers'
-import { fetchFichasKanban, assumirFicha, moverFichaStatus, PRODUTO_LABELS } from '../lib/fichas'
+import { fetchFichasKanban, assumirFicha, moverFichaStatus } from '../lib/fichas'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -13,7 +13,7 @@ import { supabase } from '../lib/supabase'
 import ModalFinalizar from './ModalFinalizar'
 import {
   Home, Briefcase, Building, LayoutGrid, RefreshCw,
-  ChevronLeft, ChevronRight, Calendar, GripVertical,
+  ChevronLeft, ChevronRight, Calendar,
   ChevronsLeft, ArrowRight, CheckCircle, Clock,
 } from 'lucide-react'
 import SeguradoraBadge from './SeguradoraBadge'
@@ -21,7 +21,7 @@ import SeguradoraSelect from './SeguradoraSelect'
 import { KanbanSkeleton } from './Skeleton'
 import { DatePicker } from './ui/DatePicker'
 
-// ── Column config ─────────────────────────────────────────────────────────────
+// ── Colunas ───────────────────────────────────────────────────────────────────
 
 const COLUMNS = [
   { id: 'pendente',   label: 'Pendentes',     color: '#3B82F6' },
@@ -52,13 +52,6 @@ const PERIODOS = [
 ]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function arrayMove(arr, from, to) {
-  const next = [...arr]
-  const [item] = next.splice(from, 1)
-  next.splice(to, 0, item)
-  return next
-}
 
 function getPeriodDates(periodo, customFrom, customTo) {
   const now = new Date()
@@ -125,24 +118,9 @@ function nomePrincipal(ficha) {
   return ficha.nome_interessado || '—'
 }
 
-function readColOrder(key) {
-  try {
-    const saved = localStorage.getItem(key)
-    if (!saved) return null
-    const parsed = JSON.parse(saved)
-    if (Array.isArray(parsed) && COLUMNS.every(c => parsed.includes(c.id)) && parsed.length === COLUMNS.length)
-      return parsed
-  } catch {}
-  return null
-}
+// ── FichaCard (visual puro, sem lógica de drag) ───────────────────────────────
 
-// ── FichaCard ─────────────────────────────────────────────────────────────────
-
-function FichaCard({
-  ficha, userId, onAssumir, onFinalizar, onToggleRetorno,
-  isDragOverlay = false, isNew = false,
-  resolverNome, dragListeners, dragAttributes,
-}) {
+function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isDragOverlay, isNew, resolverNome }) {
   const ProdIcon  = PRODUTO_ICON[ficha.produto] || LayoutGrid
   const prodColor = PRODUTO_COLOR[ficha.produto] || '#4A90D9'
   const since     = ficha.assumida_em || ficha.created_at
@@ -151,20 +129,8 @@ function FichaCard({
 
   return (
     <div className={`kanban-card${isNew ? ' animate-card-new' : ''}${isDragOverlay ? ' kanban-card-dragging' : ''}`}>
-      {!isDragOverlay && (
-        <button
-          {...dragListeners}
-          {...dragAttributes}
-          className="kanban-grip"
-          onPointerDown={e => e.stopPropagation()}
-          tabIndex={-1}
-          aria-label="Arrastar"
-        >
-          <GripVertical className="w-3.5 h-3.5" />
-        </button>
-      )}
-
       <div className="kanban-card-body">
+        {/* Linha topo: produto + tempo */}
         <div className="flex items-center justify-between gap-1 mb-1.5">
           <span
             className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-[3px] rounded-full uppercase tracking-wide select-none"
@@ -178,20 +144,24 @@ function FichaCard({
           </span>
         </div>
 
+        {/* Nome */}
         <p className="text-[12.5px] font-semibold text-dark-text leading-snug truncate mb-0.5">
           {nomePrincipal(ficha)}
         </p>
 
+        {/* Imobiliária */}
         <p className="text-[10px] text-dark-muted truncate leading-none mb-1.5">
           {(resolverNome ? resolverNome(ficha.imobiliaria) : ficha.imobiliaria) || '—'}
         </p>
 
+        {/* Seguradora */}
         {ficha.seguradora && (
           <div className="mb-1.5">
             <SeguradoraBadge nome={ficha.seguradora} size="xs" />
           </div>
         )}
 
+        {/* Rodapé: orçamentista + ações */}
         <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-dark-border/40 mt-auto">
           {nome ? (
             <div className="flex items-center gap-1.5 min-w-0">
@@ -214,7 +184,7 @@ function FichaCard({
             {ficha.status === 'pendente' && !ficha.assumida && (
               <button
                 onPointerDown={e => e.stopPropagation()}
-                onClick={e => { e.stopPropagation(); onAssumir(ficha.id) }}
+                onClick={e => { e.stopPropagation(); onAssumir?.(ficha.id) }}
                 className="kanban-action-btn kanban-action-assume"
               >
                 Assumir
@@ -223,7 +193,7 @@ function FichaCard({
             {ficha.status === 'em_cotacao' && ficha.orcamentista_id === userId && (
               <button
                 onPointerDown={e => e.stopPropagation()}
-                onClick={e => { e.stopPropagation(); onFinalizar(ficha, null) }}
+                onClick={e => { e.stopPropagation(); onFinalizar?.(ficha, null) }}
                 className="kanban-action-btn kanban-action-finish"
               >
                 Finalizar
@@ -232,14 +202,15 @@ function FichaCard({
           </div>
         </div>
 
+        {/* Botão retorno — visível em todos exceto pendente */}
         {showRetorno && !isDragOverlay && (
           <button
             onPointerDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onToggleRetorno?.(ficha) }}
             className={`w-full flex items-center justify-center gap-1.5 text-[9px] font-semibold px-2 py-1 rounded-lg border transition-all mt-1.5 ${
               ficha.retorno_enviado
-                ? 'bg-status-success/10 text-status-success border-status-success/25 hover:bg-status-success/20'
-                : 'bg-status-warning/10 text-status-warning border-status-warning/25 hover:bg-status-warning/20'
+                ? 'bg-status-success/10 text-status-success border-status-success/25 hover:bg-status-success/18'
+                : 'bg-status-warning/10 text-status-warning border-status-warning/25 hover:bg-status-warning/18'
             }`}
           >
             {ficha.retorno_enviado
@@ -254,19 +225,23 @@ function FichaCard({
 }
 
 // ── DraggableCard ─────────────────────────────────────────────────────────────
-// setNodeRef e listeners ficam no MESMO nó — elimina o desvio do DragOverlay
+// ref e listeners no MESMO elemento → DragOverlay sempre alinhado ao cursor
 
 function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onToggleRetorno, isNew, resolverNome }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: ficha.id,
-    data: { type: 'card' },
-  })
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ficha.id })
 
   return (
     <div
       ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      style={{
+        opacity:    isDragging ? 0.3 : 1,
+        cursor:     'grab',
+        transition: isDragging ? 'none' : 'opacity 0.15s ease',
+        touchAction: 'none',
+      }}
       onClick={() => !isDragging && onDetalhe(ficha.id)}
-      style={{ opacity: isDragging ? 0.25 : 1, transition: isDragging ? 'none' : 'opacity 0.2s ease' }}
     >
       <FichaCard
         ficha={ficha}
@@ -276,34 +251,31 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onTog
         onToggleRetorno={onToggleRetorno}
         isNew={isNew}
         resolverNome={resolverNome}
-        dragListeners={listeners}
-        dragAttributes={attributes}
       />
     </div>
   )
 }
 
 // ── DroppableColumn ───────────────────────────────────────────────────────────
-// Ref de drop fica SEPARADA do ref de drag da coluna — evita conflito de medição
 
 function DroppableColumn({
   column, fichas, userId, onDetalhe, onAssumir, onFinalizar, onToggleRetorno,
   collapsed, onToggleCollapse, newIds, colIndex, resolverNome,
 }) {
-  const { isOver, setNodeRef: setDropRef } = useDroppable({ id: column.id })
-  const {
-    attributes: colAttrs, listeners: colListeners,
-    setNodeRef: setColDragRef, isDragging: isColDragging,
-  } = useDraggable({ id: 'col::' + column.id, data: { type: 'column', colId: column.id } })
+  const { isOver, setNodeRef } = useDroppable({ id: column.id })
 
-  const animStyle = { animationDelay: `${colIndex * 28}ms`, animationFillMode: 'both', scrollSnapAlign: 'start' }
+  const animStyle = {
+    animationDelay: `${colIndex * 28}ms`,
+    animationFillMode: 'both',
+    scrollSnapAlign: 'start',
+  }
 
   if (collapsed) {
     return (
       <div
-        ref={setColDragRef}
+        ref={setNodeRef}
         className="animate-fade-in flex flex-col flex-shrink-0"
-        style={{ width: '52px', ...animStyle, opacity: isColDragging ? 0.25 : 1, transition: 'opacity 0.2s' }}
+        style={{ width: '52px', ...animStyle }}
       >
         <button
           onClick={onToggleCollapse}
@@ -320,9 +292,7 @@ function DroppableColumn({
           </span>
           <ArrowRight className="w-3 h-3 opacity-40" style={{ color: column.color }} />
         </button>
-        {/* Drop zone separado do drag ref da coluna */}
         <div
-          ref={setDropRef}
           className="flex-1 rounded-b-xl border transition-colors duration-150"
           style={{
             minHeight: '60px',
@@ -336,44 +306,21 @@ function DroppableColumn({
   }
 
   return (
-    <div
-      ref={setColDragRef}
-      className="kanban-col animate-fade-in flex flex-col"
-      style={{
-        ...animStyle,
-        opacity:    isColDragging ? 0.25 : 1,
-        transition: 'opacity 0.2s ease',
-      }}
-    >
-      {/* Column header */}
+    <div className="kanban-col animate-fade-in flex flex-col" style={animStyle}>
+      {/* Header */}
       <div
         className="kanban-col-header"
         style={{ background: column.color + '12', borderColor: column.color + '40' }}
       >
-        {/* Column drag handle */}
-        <button
-          {...colListeners}
-          {...colAttrs}
-          className="kanban-col-drag-handle"
-          tabIndex={-1}
-          aria-label={`Arrastar coluna ${column.label}`}
-        >
-          <GripVertical className="w-3 h-3" />
-        </button>
-
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
           <div
             className="w-2 h-2 rounded-full flex-shrink-0"
             style={{ background: column.color, boxShadow: `0 0 6px ${column.color}90` }}
           />
-          <span
-            className="text-[11px] font-bold tracking-wide truncate"
-            style={{ color: column.color }}
-          >
+          <span className="text-[11px] font-bold tracking-wide truncate" style={{ color: column.color }}>
             {column.label}
           </span>
         </div>
-
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <span
             className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md"
@@ -392,23 +339,17 @@ function DroppableColumn({
         </div>
       </div>
 
-      {/* Column body — ref de drop SEPARADA do ref de drag */}
+      {/* Body — zona de drop */}
       <div
-        ref={setDropRef}
+        ref={setNodeRef}
         className="kanban-col-body flex-1 p-1.5 space-y-1.5 overflow-y-auto"
         style={{
-          border:          isOver
-            ? `1.5px dashed ${column.color}70`
-            : '1px solid rgb(var(--color-border))',
+          border:          isOver ? `1.5px dashed ${column.color}70` : '1px solid rgb(var(--color-border))',
           borderTop:       'none',
           borderRadius:    '0 0 12px 12px',
-          backgroundColor: isOver
-            ? column.color + '0a'
-            : 'rgb(var(--color-surface2) / 0.35)',
-          boxShadow:       isOver
-            ? `inset 0 0 0 1px ${column.color}20, 0 0 20px ${column.color}10`
-            : 'none',
-          transition: 'border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease',
+          backgroundColor: isOver ? column.color + '0a' : 'rgb(var(--color-surface2) / 0.35)',
+          boxShadow:       isOver ? `inset 0 0 0 1px ${column.color}20, 0 0 20px ${column.color}10` : 'none',
+          transition:      'border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease',
         }}
       >
         {fichas.length === 0 ? (
@@ -436,47 +377,6 @@ function DroppableColumn({
   )
 }
 
-// ── Column ghost for DragOverlay ──────────────────────────────────────────────
-
-function ColGhost({ column, fichas }) {
-  return (
-    <div
-      className="kanban-col flex flex-col"
-      style={{ transform: 'rotate(2deg)', opacity: 0.9, filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.4))' }}
-    >
-      <div
-        className="kanban-col-header"
-        style={{ background: column.color + '20', borderColor: column.color + '60' }}
-      >
-        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: column.color, boxShadow: `0 0 6px ${column.color}` }} />
-          <span className="text-[11px] font-bold tracking-wide" style={{ color: column.color }}>{column.label}</span>
-        </div>
-        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md" style={{ background: column.color + '30', color: column.color }}>
-          {fichas.length}
-        </span>
-      </div>
-      <div
-        className="flex-1 p-1.5 space-y-1 rounded-b-xl border border-t-0"
-        style={{ background: column.color + '06', borderColor: column.color + '30', minHeight: '80px' }}
-      >
-        {fichas.slice(0, 4).map(f => (
-          <div
-            key={f.id}
-            className="text-[10px] text-dark-muted truncate py-1 px-2 rounded-lg"
-            style={{ background: 'rgb(var(--color-surface2) / 0.6)' }}
-          >
-            {nomePrincipal(f)}
-          </div>
-        ))}
-        {fichas.length > 4 && (
-          <div className="text-[9px] text-dark-muted text-center py-0.5">+{fichas.length - 4} mais</div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ── ModalConfirmarRecusado ────────────────────────────────────────────────────
 
 function ModalConfirmarRecusado({ onConfirmar, salvando }) {
@@ -497,8 +397,11 @@ function ModalConfirmarRecusado({ onConfirmar, salvando }) {
         </div>
       </div>
       <div className="flex justify-end px-6 pb-5">
-        <button onClick={() => retorno !== null && onConfirmar(retorno)}
-          disabled={retorno === null || salvando} className="btn-primary text-sm">
+        <button
+          onClick={() => retorno !== null && onConfirmar(retorno)}
+          disabled={retorno === null || salvando}
+          className="btn-primary text-sm"
+        >
           {salvando ? 'Salvando...' : 'Confirmar'}
         </button>
       </div>
@@ -532,15 +435,20 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
             <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
               Valor Parcela (R$) <span className="text-status-danger">*</span>
             </label>
-            <input type="number" step="0.01" min="0" value={valorParcela}
-              onChange={e => setValorParcela(e.target.value)} placeholder="0,00" className="input text-sm" />
+            <input
+              type="number" step="0.01" min="0"
+              value={valorParcela} onChange={e => setValorParcela(e.target.value)}
+              placeholder="0,00" className="input text-sm"
+            />
           </div>
           <div>
             <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
               N° Orçamento <span className="text-status-danger">*</span>
             </label>
-            <input value={numeroOrcamento} onChange={e => setNumeroOrcamento(e.target.value)}
-              placeholder="Ex: 12345" className="input text-sm" />
+            <input
+              value={numeroOrcamento} onChange={e => setNumeroOrcamento(e.target.value)}
+              placeholder="Ex: 12345" className="input text-sm"
+            />
           </div>
         </div>
         <div>
@@ -561,8 +469,15 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
       <div className="flex justify-end gap-3 px-6 pb-5">
         <button onClick={onCancelar} className="btn-secondary text-sm">Cancelar</button>
         <button
-          onClick={() => valido && onConfirmar({ seguradora, valorParcela: parseFloat(valorParcela), numeroOrcamento: numeroOrcamento.trim(), retornoEnviado })}
-          disabled={!valido || salvando} className="btn-primary text-sm">
+          onClick={() => valido && onConfirmar({
+            seguradora,
+            valorParcela: parseFloat(valorParcela),
+            numeroOrcamento: numeroOrcamento.trim(),
+            retornoEnviado,
+          })}
+          disabled={!valido || salvando}
+          className="btn-primary text-sm"
+        >
           {salvando ? 'Salvando...' : 'Confirmar Aprovação'}
         </button>
       </div>
@@ -570,7 +485,7 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
   )
 }
 
-// ── Main KanbanFichas ─────────────────────────────────────────────────────────
+// ── KanbanFichas ──────────────────────────────────────────────────────────────
 
 export default function KanbanFichas({ produto, externalDateFrom, externalDateTo, contextState }) {
   const { user }         = useAuth()
@@ -579,7 +494,6 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   const { resolverNome } = useImobiliaria()
 
   const useExternal = !!(externalDateFrom || externalDateTo)
-  const storageKey  = `kanban-col-order-${produto || 'all'}`
 
   const [fichas,   setFichas]   = useState([])
   const [loading,  setLoading]  = useState(true)
@@ -587,32 +501,25 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   const [finalizar,              setFinalizar]              = useState(null)
   const [finalizarDefaultStatus, setFinalizarDefaultStatus] = useState(null)
 
-  const [periodo,    setPeriodo]    = useState('hoje')
+  const [periodo,   setPeriodo]   = useState('hoje')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo,   setCustomTo]   = useState('')
   const [collapsed,  setCollapsed]  = useState(new Set())
   const [newIds,     setNewIds]     = useState(new Set())
-  const [colOrder,   setColOrder]   = useState(() => readColOrder(storageKey) || COLUMNS.map(c => c.id))
 
   const [canScrollL, setCanScrollL] = useState(false)
   const [canScrollR, setCanScrollR] = useState(false)
   const scrollRef        = useRef(null)
   const newIdTimeoutsRef = useRef(new Set())
 
-  const [pendingRecusado,   setPendingRecusado]   = useState(null)
-  const [salvandoRecusado,  setSalvandoRecusado]  = useState(false)
-  const [pendingAprovado,   setPendingAprovado]   = useState(null)
-  const [salvandoAprovado,  setSalvandoAprovado]  = useState(false)
+  const [pendingRecusado,  setPendingRecusado]  = useState(null)
+  const [salvandoRecusado, setSalvandoRecusado] = useState(false)
+  const [pendingAprovado,  setPendingAprovado]  = useState(null)
+  const [salvandoAprovado, setSalvandoAprovado] = useState(false)
 
-  // activationConstraint.distance: requer 8px de movimento antes de iniciar drag
-  // isso evita conflito com clicks em botões internos do card
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
-
-  useEffect(() => {
-    try { localStorage.setItem(storageKey, JSON.stringify(colOrder)) } catch {}
-  }, [colOrder, storageKey])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -625,11 +532,8 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     }
     const data = await fetchFichasKanban({ produto, dateFrom, dateTo })
     setFichas(data)
-
     const cols = groupFichas(data, user?.id)
-    const emptyCols = COLUMNS.filter(c => cols[c.id].length === 0).map(c => c.id)
-    setCollapsed(new Set(emptyCols))
-
+    setCollapsed(new Set(COLUMNS.filter(c => cols[c.id].length === 0).map(c => c.id)))
     setLoading(false)
   }, [produto, periodo, customFrom, customTo, user?.id, useExternal, externalDateFrom, externalDateTo])
 
@@ -688,11 +592,8 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     scrollRef.current?.scrollBy({ left: dir === 'left' ? -220 : 220, behavior: 'smooth' })
   }
 
-  const cols        = groupFichas(fichas, user?.id)
-  const isColDrag   = activeId?.startsWith?.('col::')
-  const activeColId = isColDrag ? activeId.replace('col::', '') : null
-  const activeCol   = activeColId ? COLUMNS.find(c => c.id === activeColId) : null
-  const activeCard  = !isColDrag && activeId ? fichas.find(f => f.id === activeId) : null
+  const cols       = groupFichas(fichas, user?.id)
+  const activeCard = activeId ? fichas.find(f => f.id === activeId) : null
 
   async function handleAssumir(fichaId) {
     const fichaOriginal = fichas.find(f => f.id === fichaId)
@@ -721,10 +622,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   async function handleToggleRetorno(ficha) {
     const novoValor = !ficha.retorno_enviado
     setFichas(prev => prev.map(f => f.id === ficha.id ? { ...f, retorno_enviado: novoValor } : f))
-    const { error } = await supabase
-      .from('fichas')
-      .update({ retorno_enviado: novoValor })
-      .eq('id', ficha.id)
+    const { error } = await supabase.from('fichas').update({ retorno_enviado: novoValor }).eq('id', ficha.id)
     if (error) {
       setFichas(prev => prev.map(f => f.id === ficha.id ? ficha : f))
       toast({ type: 'error', title: 'Erro ao atualizar retorno' })
@@ -787,21 +685,6 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     setActiveId(null)
     if (!over) return
 
-    // ── Column reorder ──────────────────────────────────────────────────────
-    if (active.data.current?.type === 'column') {
-      const fromColId = active.data.current.colId
-      const toColId   = over.id
-      if (fromColId !== toColId && COLUMNS.some(c => c.id === toColId)) {
-        setColOrder(prev => {
-          const fi = prev.indexOf(fromColId)
-          const ti = prev.indexOf(toColId)
-          return fi !== -1 && ti !== -1 ? arrayMove(prev, fi, ti) : prev
-        })
-      }
-      return
-    }
-
-    // ── Card move ───────────────────────────────────────────────────────────
     const fichaId   = active.id
     const targetCol = over.id
     const ficha     = fichas.find(f => f.id === fichaId)
@@ -813,10 +696,13 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     const novoStatus = COL_TO_STATUS[targetCol]
     if (!novoStatus) return
 
+    // Drag para recusado → pede confirmação
     if (targetCol === 'recusado') {
       setPendingRecusado({ fichaId, fichaOriginal: ficha })
       return
     }
+
+    // Drag para aprovado → pede seguradora, parcela, orçamento
     if (targetCol === 'aprovado') {
       setPendingAprovado({ fichaId, fichaOriginal: ficha })
       return
@@ -866,7 +752,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
   return (
     <div className="space-y-3">
-      {/* Period filter bar */}
+      {/* Filtro de período */}
       {!useExternal && (
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-0.5 bg-dark-surface2/60 border border-dark-border rounded-lg p-0.5">
@@ -884,7 +770,6 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
               </button>
             ))}
           </div>
-
           {periodo === 'custom' && (
             <div className="flex items-center gap-1.5 text-xs text-dark-muted">
               <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
@@ -893,7 +778,6 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
               <DatePicker value={customTo} onChange={v => setCustomTo(v)} />
             </div>
           )}
-
           <div className="ml-auto flex items-center gap-2 text-xs text-dark-muted">
             <span>{fichas.length} ficha{fichas.length !== 1 ? 's' : ''}</span>
             <button onClick={load} className="flex items-center gap-1 hover:text-dark-text transition-colors">
@@ -912,7 +796,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
         </div>
       )}
 
-      {/* Modals inline */}
+      {/* Modais inline */}
       {(finalizar || pendingRecusado || pendingAprovado) ? (
         <>
           {finalizar && (
@@ -932,13 +816,14 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
         </>
       ) : (
         <div className="relative">
+          {/* Sombras de scroll */}
           {canScrollL && (
             <div className="absolute left-0 top-0 bottom-4 w-14 z-10 pointer-events-none"
-                 style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }} />
+              style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }} />
           )}
           {canScrollR && (
             <div className="absolute right-0 top-0 bottom-4 w-14 z-10 pointer-events-none"
-                 style={{ background: 'linear-gradient(to left, rgb(var(--color-bg)), transparent)' }} />
+              style={{ background: 'linear-gradient(to left, rgb(var(--color-bg)), transparent)' }} />
           )}
           {canScrollL && (
             <button onClick={() => scrollBy('left')}
@@ -956,51 +841,37 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
           <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
             <DndContext
               sensors={sensors}
-              collisionDetection={closestCenter}
+              collisionDetection={rectIntersection}
               onDragStart={({ active }) => setActiveId(active.id)}
               onDragEnd={handleDragEnd}
               onDragCancel={() => setActiveId(null)}
             >
               <div className="flex gap-2 min-w-max px-0.5">
-                {colOrder.map((colId, i) => {
-                  const column = COLUMNS.find(c => c.id === colId)
-                  if (!column) return null
-                  return (
-                    <DroppableColumn
-                      key={colId}
-                      column={column}
-                      fichas={cols[colId] || []}
-                      userId={user?.id}
-                      onDetalhe={handleDetalhe}
-                      onAssumir={handleAssumir}
-                      onFinalizar={handleFinalizar}
-                      onToggleRetorno={handleToggleRetorno}
-                      collapsed={collapsed.has(colId)}
-                      onToggleCollapse={() => toggleCollapse(colId)}
-                      newIds={newIds}
-                      colIndex={i}
-                      resolverNome={resolverNome}
-                    />
-                  )
-                })}
+                {COLUMNS.map((column, i) => (
+                  <DroppableColumn
+                    key={column.id}
+                    column={column}
+                    fichas={cols[column.id] || []}
+                    userId={user?.id}
+                    onDetalhe={handleDetalhe}
+                    onAssumir={handleAssumir}
+                    onFinalizar={handleFinalizar}
+                    onToggleRetorno={handleToggleRetorno}
+                    collapsed={collapsed.has(column.id)}
+                    onToggleCollapse={() => toggleCollapse(column.id)}
+                    newIds={newIds}
+                    colIndex={i}
+                    resolverNome={resolverNome}
+                  />
+                ))}
               </div>
 
-              {/* snapCenterToCursor: overlay sempre centrado no cursor — elimina desvio */}
               <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>
-                {activeCol && cols[activeColId] ? (
-                  <ColGhost column={activeCol} fichas={cols[activeColId]} />
-                ) : activeCard ? (
-                  <div style={{ width: 'calc(var(--kanban-col-w, 232px) - 12px)' }}>
-                    <FichaCard
-                      ficha={activeCard}
-                      userId={user?.id}
-                      onAssumir={() => {}}
-                      onFinalizar={() => {}}
-                      isDragOverlay
-                      resolverNome={resolverNome}
-                    />
+                {activeCard && (
+                  <div style={{ width: 'calc(var(--kanban-col-w, 232px) - 12px)', cursor: 'grabbing' }}>
+                    <FichaCard ficha={activeCard} isDragOverlay resolverNome={resolverNome} />
                   </div>
-                ) : null}
+                )}
               </DragOverlay>
             </DndContext>
           </div>

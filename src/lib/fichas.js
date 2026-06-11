@@ -254,24 +254,33 @@ export async function fetchContagemAbertaOrcamentista(orcamentistaId) {
 export async function fetchFichas({ produto, ano, mes, tipo, search, imobiliaria, orcamentistaId, semSeguradora, page = 0, pageSize = 30 }) {
   let q = supabase
     .from('fichas')
-    .select('id,created_at,produto,imobiliaria,nome_interessado,cpf,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,profiles!orcamentista_id(nome)', { count: 'exact' })
+    .select('id,created_at,produto,imobiliaria,nome_interessado,nome_empresa,cpf,cnpj,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,profiles!orcamentista_id(nome)', { count: 'exact' })
     .order('created_at', { ascending: false })
 
   if (produto && produto !== 'todos') q = q.eq('produto', produto)
 
-  if (search?.trim()) {
-    const s = search.trim()
-    q = q.or(`nome_interessado.ilike.%${s}%,cpf.ilike.%${s}%,imobiliaria.ilike.%${s}%`)
-  } else if (imobiliaria) {
-    q = q.ilike('imobiliaria', `%${imobiliaria}%`)
-  }
+  const term = search?.trim()
+  if (term) {
+    // Busca em todos os campos relevantes; sem filtro de data para encontrar em qualquer período
+    q = q.or(
+      `nome_interessado.ilike.%${term}%,` +
+      `nome_empresa.ilike.%${term}%,` +
+      `cpf.ilike.%${term}%,` +
+      `cnpj.ilike.%${term}%,` +
+      `imobiliaria.ilike.%${term}%,` +
+      `seguradora.ilike.%${term}%`
+    )
+  } else {
+    // Filtro de imobiliária e data só quando não há busca ativa
+    if (imobiliaria) q = q.ilike('imobiliaria', `%${imobiliaria}%`)
 
-  if (ano && mes && mes !== -1) {
-    q = q.gte('created_at', new Date(ano, mes - 1, 1).toISOString())
-         .lte('created_at', new Date(ano, mes, 0, 23, 59, 59).toISOString())
-  } else if (ano) {
-    q = q.gte('created_at', new Date(ano, 0, 1).toISOString())
-         .lte('created_at', new Date(ano, 11, 31, 23, 59, 59).toISOString())
+    if (ano && mes && mes !== -1) {
+      q = q.gte('created_at', new Date(ano, mes - 1, 1).toISOString())
+           .lte('created_at', new Date(ano, mes, 0, 23, 59, 59).toISOString())
+    } else if (ano) {
+      q = q.gte('created_at', new Date(ano, 0, 1).toISOString())
+           .lte('created_at', new Date(ano, 11, 31, 23, 59, 59).toISOString())
+    }
   }
 
   if (tipo === 'passadas') {

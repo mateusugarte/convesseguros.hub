@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
-  useDraggable, useDroppable, pointerWithin,
+  useDraggable, useDroppable, closestCenter,
 } from '@dnd-kit/core'
+import { snapCenterToCursor } from '@dnd-kit/modifiers'
 import { fetchFichasKanban, assumirFicha, moverFichaStatus, PRODUTO_LABELS } from '../lib/fichas'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useAuth } from '../contexts/AuthContext'
@@ -13,7 +14,7 @@ import ModalFinalizar from './ModalFinalizar'
 import {
   Home, Briefcase, Building, LayoutGrid, RefreshCw,
   ChevronLeft, ChevronRight, Calendar, GripVertical,
-  ChevronsLeft, ArrowRight,
+  ChevronsLeft, ArrowRight, CheckCircle, Clock,
 } from 'lucide-react'
 import SeguradoraBadge from './SeguradoraBadge'
 import SeguradoraSelect from './SeguradoraSelect'
@@ -49,8 +50,6 @@ const PERIODOS = [
   { key: 'mes',    label: 'Mês' },
   { key: 'custom', label: 'Personalizado' },
 ]
-
-const DROP_ANIMATION = { duration: 180, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -140,7 +139,7 @@ function readColOrder(key) {
 // ── FichaCard ─────────────────────────────────────────────────────────────────
 
 function FichaCard({
-  ficha, userId, onAssumir, onFinalizar,
+  ficha, userId, onAssumir, onFinalizar, onToggleRetorno,
   isDragOverlay = false, isNew = false,
   resolverNome, dragListeners, dragAttributes,
 }) {
@@ -148,6 +147,7 @@ function FichaCard({
   const prodColor = PRODUTO_COLOR[ficha.produto] || '#4A90D9'
   const since     = ficha.assumida_em || ficha.created_at
   const nome      = ficha.profiles?.nome
+  const showRetorno = ficha.status !== 'pendente'
 
   return (
     <div className={`kanban-card${isNew ? ' animate-card-new' : ''}${isDragOverlay ? ' kanban-card-dragging' : ''}`}>
@@ -156,7 +156,7 @@ function FichaCard({
           {...dragListeners}
           {...dragAttributes}
           className="kanban-grip"
-          onClick={e => e.stopPropagation()}
+          onPointerDown={e => e.stopPropagation()}
           tabIndex={-1}
           aria-label="Arrastar"
         >
@@ -231,14 +231,32 @@ function FichaCard({
             )}
           </div>
         </div>
+
+        {showRetorno && !isDragOverlay && (
+          <button
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); onToggleRetorno?.(ficha) }}
+            className={`w-full flex items-center justify-center gap-1.5 text-[9px] font-semibold px-2 py-1 rounded-lg border transition-all mt-1.5 ${
+              ficha.retorno_enviado
+                ? 'bg-status-success/10 text-status-success border-status-success/25 hover:bg-status-success/20'
+                : 'bg-status-warning/10 text-status-warning border-status-warning/25 hover:bg-status-warning/20'
+            }`}
+          >
+            {ficha.retorno_enviado
+              ? <><CheckCircle className="w-2.5 h-2.5" /> Retorno enviado</>
+              : <><Clock className="w-2.5 h-2.5" /> Retorno pendente</>
+            }
+          </button>
+        )}
       </div>
     </div>
   )
 }
 
 // ── DraggableCard ─────────────────────────────────────────────────────────────
+// setNodeRef e listeners ficam no MESMO nó — elimina o desvio do DragOverlay
 
-function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, isNew, resolverNome }) {
+function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onToggleRetorno, isNew, resolverNome }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: ficha.id,
     data: { type: 'card' },
@@ -255,6 +273,7 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, isNew
         userId={userId}
         onAssumir={onAssumir}
         onFinalizar={onFinalizar}
+        onToggleRetorno={onToggleRetorno}
         isNew={isNew}
         resolverNome={resolverNome}
         dragListeners={listeners}
@@ -265,28 +284,24 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, isNew
 }
 
 // ── DroppableColumn ───────────────────────────────────────────────────────────
+// Ref de drop fica SEPARADA do ref de drag da coluna — evita conflito de medição
 
 function DroppableColumn({
-  column, fichas, userId, onDetalhe, onAssumir, onFinalizar,
+  column, fichas, userId, onDetalhe, onAssumir, onFinalizar, onToggleRetorno,
   collapsed, onToggleCollapse, newIds, colIndex, resolverNome,
 }) {
   const { isOver, setNodeRef: setDropRef } = useDroppable({ id: column.id })
   const {
     attributes: colAttrs, listeners: colListeners,
-    setNodeRef: setDragRef, isDragging: isColDragging,
+    setNodeRef: setColDragRef, isDragging: isColDragging,
   } = useDraggable({ id: 'col::' + column.id, data: { type: 'column', colId: column.id } })
-
-  const combinedRef = useCallback(
-    (node) => { setDragRef(node); setDropRef(node) },
-    [setDragRef, setDropRef],
-  )
 
   const animStyle = { animationDelay: `${colIndex * 28}ms`, animationFillMode: 'both', scrollSnapAlign: 'start' }
 
   if (collapsed) {
     return (
       <div
-        ref={combinedRef}
+        ref={setColDragRef}
         className="animate-fade-in flex flex-col flex-shrink-0"
         style={{ width: '52px', ...animStyle, opacity: isColDragging ? 0.25 : 1, transition: 'opacity 0.2s' }}
       >
@@ -305,7 +320,9 @@ function DroppableColumn({
           </span>
           <ArrowRight className="w-3 h-3 opacity-40" style={{ color: column.color }} />
         </button>
+        {/* Drop zone separado do drag ref da coluna */}
         <div
+          ref={setDropRef}
           className="flex-1 rounded-b-xl border transition-colors duration-150"
           style={{
             minHeight: '60px',
@@ -320,7 +337,7 @@ function DroppableColumn({
 
   return (
     <div
-      ref={combinedRef}
+      ref={setColDragRef}
       className="kanban-col animate-fade-in flex flex-col"
       style={{
         ...animStyle,
@@ -338,7 +355,6 @@ function DroppableColumn({
           {...colListeners}
           {...colAttrs}
           className="kanban-col-drag-handle"
-          onClick={e => e.stopPropagation()}
           tabIndex={-1}
           aria-label={`Arrastar coluna ${column.label}`}
         >
@@ -376,8 +392,9 @@ function DroppableColumn({
         </div>
       </div>
 
-      {/* Column body */}
+      {/* Column body — ref de drop SEPARADA do ref de drag */}
       <div
+        ref={setDropRef}
         className="kanban-col-body flex-1 p-1.5 space-y-1.5 overflow-y-auto"
         style={{
           border:          isOver
@@ -409,6 +426,7 @@ function DroppableColumn({
             onDetalhe={onDetalhe}
             onAssumir={onAssumir}
             onFinalizar={onFinalizar}
+            onToggleRetorno={onToggleRetorno}
             isNew={newIds?.has(f.id)}
             resolverNome={resolverNome}
           />
@@ -586,11 +604,12 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   const [pendingAprovado,   setPendingAprovado]   = useState(null)
   const [salvandoAprovado,  setSalvandoAprovado]  = useState(false)
 
+  // activationConstraint.distance: requer 8px de movimento antes de iniciar drag
+  // isso evita conflito com clicks em botões internos do card
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   )
 
-  // Persist column order
   useEffect(() => {
     try { localStorage.setItem(storageKey, JSON.stringify(colOrder)) } catch {}
   }, [colOrder, storageKey])
@@ -669,8 +688,8 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     scrollRef.current?.scrollBy({ left: dir === 'left' ? -220 : 220, behavior: 'smooth' })
   }
 
-  const cols       = groupFichas(fichas, user?.id)
-  const isColDrag  = activeId?.startsWith?.('col::')
+  const cols        = groupFichas(fichas, user?.id)
+  const isColDrag   = activeId?.startsWith?.('col::')
   const activeColId = isColDrag ? activeId.replace('col::', '') : null
   const activeCol   = activeColId ? COLUMNS.find(c => c.id === activeColId) : null
   const activeCard  = !isColDrag && activeId ? fichas.find(f => f.id === activeId) : null
@@ -697,6 +716,19 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   function handleFinalizar(ficha, defaultStatus) {
     setFinalizar(ficha)
     setFinalizarDefaultStatus(defaultStatus || null)
+  }
+
+  async function handleToggleRetorno(ficha) {
+    const novoValor = !ficha.retorno_enviado
+    setFichas(prev => prev.map(f => f.id === ficha.id ? { ...f, retorno_enviado: novoValor } : f))
+    const { error } = await supabase
+      .from('fichas')
+      .update({ retorno_enviado: novoValor })
+      .eq('id', ficha.id)
+    if (error) {
+      setFichas(prev => prev.map(f => f.id === ficha.id ? ficha : f))
+      toast({ type: 'error', title: 'Erro ao atualizar retorno' })
+    }
   }
 
   async function handleConfirmarRecusado(retornoEnviado) {
@@ -924,7 +956,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
           <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
             <DndContext
               sensors={sensors}
-              collisionDetection={pointerWithin}
+              collisionDetection={closestCenter}
               onDragStart={({ active }) => setActiveId(active.id)}
               onDragEnd={handleDragEnd}
               onDragCancel={() => setActiveId(null)}
@@ -942,6 +974,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
                       onDetalhe={handleDetalhe}
                       onAssumir={handleAssumir}
                       onFinalizar={handleFinalizar}
+                      onToggleRetorno={handleToggleRetorno}
                       collapsed={collapsed.has(colId)}
                       onToggleCollapse={() => toggleCollapse(colId)}
                       newIds={newIds}
@@ -952,7 +985,8 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
                 })}
               </div>
 
-              <DragOverlay dropAnimation={DROP_ANIMATION}>
+              {/* snapCenterToCursor: overlay sempre centrado no cursor — elimina desvio */}
+              <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>
                 {activeCol && cols[activeColId] ? (
                   <ColGhost column={activeCol} fichas={cols[activeColId]} />
                 ) : activeCard ? (

@@ -679,15 +679,22 @@ export default function Fichas() {
   const [anos,            setAnos]            = useState([agora.getFullYear()])
   const [mesesComFichas,  setMesesComFichas]  = useState([agora.getMonth() + 1])
 
-  const [tab,           setTab]           = useState('abertas')
-  const [search,        setSearch]        = useState('')
-  const [semSeguradora, setSemSeguradora] = useState(false)
-  const [page,          setPage]          = useState(0)
-  const [fichas,        setFichas]        = useState([])
-  const [total,         setTotal]         = useState(0)
-  const [loading,       setLoading]       = useState(false)
+  const [tab,            setTab]            = useState('abertas')
+  const [search,         setSearch]         = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [semSeguradora,  setSemSeguradora]  = useState(false)
+  const [page,           setPage]           = useState(0)
+  const [fichas,         setFichas]         = useState([])
+  const [total,          setTotal]          = useState(0)
+  const [loading,        setLoading]        = useState(false)
 
   const PAGE_SIZE = 30
+
+  // Debounce: dispara query 400ms após o usuário parar de digitar
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 400)
+    return () => clearTimeout(t)
+  }, [search])
 
   const [detalhe,          setDetalhe]          = useState(null)
   const [assumir,          setAssumir]          = useState(null)
@@ -775,7 +782,7 @@ export default function Fichas() {
       produto: produto === 'todos' ? undefined : produto,
       ano, mes,
       tipo: tab,
-      search,
+      search: debouncedSearch,
       orcamentistaId: tab === 'passadas_por_mim' ? user?.id : undefined,
       semSeguradora: (tab === 'passadas' || tab === 'passadas_por_mim') ? semSeguradora : false,
       page, pageSize: PAGE_SIZE,
@@ -783,11 +790,11 @@ export default function Fichas() {
     setFichas(data)
     setTotal(count)
     setLoading(false)
-  }, [produto, ano, mes, tab, search, semSeguradora, page, user, view])
+  }, [produto, ano, mes, tab, debouncedSearch, semSeguradora, page, user, view])
 
   useEffect(() => { loadFichas() }, [loadFichas])
 
-  function changeTab(t) { setTab(t); setPage(0); setSearch(''); setSemSeguradora(false) }
+  function changeTab(t) { setTab(t); setPage(0); setSearch(''); setDebouncedSearch(''); setSemSeguradora(false) }
 
   function changeProduto(p) {
     setProduto(p)
@@ -919,15 +926,37 @@ export default function Fichas() {
           )}
 
           <div className="flex flex-wrap items-center gap-3 mb-4">
-            <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2">
-              <Search className="w-4 h-4 text-dark-muted flex-shrink-0" />
-              <input
-                type="text"
-                placeholder="Nome, CPF ou imobiliária..."
-                value={search}
-                onChange={e => { setSearch(e.target.value); setPage(0) }}
-                className="text-sm flex-1 outline-none bg-transparent text-dark-text placeholder-dark-muted"
-              />
+            <div className="flex flex-col gap-1 flex-1 min-w-[200px] max-w-sm">
+              <div className={`flex items-center gap-2 bg-dark-surface2 border rounded-lg px-3 py-2 transition-colors ${
+                search ? 'border-brand-accent/50' : 'border-dark-border'
+              }`}>
+                {search && search !== debouncedSearch ? (
+                  <svg className="w-4 h-4 animate-spin text-brand-accent flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                ) : (
+                  <Search className="w-4 h-4 text-dark-muted flex-shrink-0" />
+                )}
+                <input
+                  type="text"
+                  placeholder="Nome, CPF, CNPJ, imobiliária ou seguradora..."
+                  value={search}
+                  onChange={e => { setSearch(e.target.value); setPage(0) }}
+                  className="text-sm flex-1 outline-none bg-transparent text-dark-text placeholder-dark-muted"
+                />
+                {search && (
+                  <button
+                    onClick={() => { setSearch(''); setDebouncedSearch(''); setPage(0) }}
+                    className="text-dark-muted hover:text-dark-text transition-colors flex-shrink-0 text-xs"
+                  >✕</button>
+                )}
+              </div>
+              {debouncedSearch && (
+                <span className="text-[10px] text-brand-accent/70 pl-1">
+                  Buscando em todos os períodos · {total} resultado{total !== 1 ? 's' : ''}
+                </span>
+              )}
             </div>
             {(tab === 'passadas' || tab === 'passadas_por_mim') && (
               <button
@@ -942,7 +971,7 @@ export default function Fichas() {
                 Sem seguradora
               </button>
             )}
-            <span className="text-xs text-dark-muted ml-auto">{total} ficha{total !== 1 ? 's' : ''}</span>
+            {!debouncedSearch && <span className="text-xs text-dark-muted ml-auto">{total} ficha{total !== 1 ? 's' : ''}</span>}
             <button
               onClick={() => exportCSV(fichas, `conves-fichas-${produto}-${ano}-${mes}.csv`, resolverNome)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"

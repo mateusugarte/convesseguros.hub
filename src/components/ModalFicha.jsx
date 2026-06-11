@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import {
-  criarFicha, editarFicha, fetchImobiliariasDistintas, fetchProfiles,
+  criarFicha, editarFicha, fetchProfiles,
   STATUS_LABELS, PRODUTO_LABELS,
 } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { ArrowLeft, Plus, Save } from 'lucide-react'
 import SeguradoraSelect from './SeguradoraSelect'
+import ImobiliariaSelect from './ImobiliariaSelect'
 import { Select } from './ui/Select'
 
 
@@ -114,10 +115,9 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
     retorno_enviado:    ficha?.retorno_enviado     ?? false,
   })
 
-  const [saving,       setSaving]       = useState(false)
-  const [error,        setError]        = useState(null)
-  const [imobiliarias, setImobiliarias] = useState([])
-  const [profiles,     setProfiles]     = useState([])
+  const [saving,   setSaving] = useState(false)
+  const [error,    setError]  = useState(null)
+  const [profiles, setProfiles] = useState([])
 
   // Resetar form quando a ficha muda (abre ficha diferente sem desmontar o modal)
   useEffect(() => {
@@ -152,7 +152,6 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
   }, [ficha?.id])
 
   useEffect(() => {
-    fetchImobiliariasDistintas().then(setImobiliarias)
     fetchProfiles().then(setProfiles)
   }, [])
 
@@ -185,7 +184,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
     }
 
     const editResult   = isEdit  ? await editarFicha(ficha.id, dados, user?.id) : null
-    const createResult = !isEdit ? await criarFicha(dados) : null
+    const createResult = !isEdit ? await criarFicha({ ...dados, orcamentista_id: user?.id || null }) : null
     const err = editResult ?? createResult?.error ?? null
 
     setSaving(false)
@@ -221,18 +220,12 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
               />
             </Field>
             <Field label="Imobiliária">
-              <input
-                type="text"
-                list="imob-list"
+              <ImobiliariaSelect
                 value={form.imobiliaria}
-                onChange={e => set('imobiliaria', e.target.value)}
+                onChange={v => set('imobiliaria', v)}
                 placeholder="Selecione ou digite..."
-                className="input"
-                autoComplete="off"
+                showAll={false}
               />
-              <datalist id="imob-list">
-                {imobiliarias.map(i => <option key={i} value={i} />)}
-              </datalist>
             </Field>
 
             {/* Nome: empresa para PJ, interessado para PF */}

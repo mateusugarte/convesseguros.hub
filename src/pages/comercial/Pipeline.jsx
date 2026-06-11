@@ -87,6 +87,13 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
           </div>
         )}
 
+        {lead.nomeApolice && (
+          <div className="flex items-center gap-1 mb-1.5">
+            <FileCheck className="w-3 h-3 text-brand-accent/60 flex-shrink-0" />
+            <span className="text-[10px] font-mono text-brand-accent/70 truncate">Orç: {lead.nomeApolice}</span>
+          </div>
+        )}
+
         {lead.origem && (
           <span className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full mb-1.5"
             style={{ background: 'rgba(99,102,241,0.12)', color: '#818cf8' }}>

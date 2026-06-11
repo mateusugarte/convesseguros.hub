@@ -659,19 +659,22 @@ function EditorInner({ journey, onBack, toast }) {
             {addMenuOpen && (
               <div style={{ position: 'absolute', bottom: 48, right: 0, width: 210, background: 'var(--dark-surface)', border: '1px solid var(--dark-border)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
                 {addMenuGroup === null ? (
-                  NODE_GROUPS.map(group => (
-                    <button key={group.label} onClick={() => setAddMenuGroup(group.label)}
-                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-                      className="hover:bg-dark-surface2 transition-colors">
-                      <span style={{ width: 28, height: 28, borderRadius: 6, background: group.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <group.items[0].Icon style={{ color: group.color, width: 14, height: 14 }} />
-                      </span>
-                      <div>
-                        <p style={{ color: group.color, fontWeight: 700, fontSize: 11, margin: 0 }}>{group.label}</p>
-                        <p style={{ color: 'var(--dark-muted)', fontSize: 10, margin: 0 }}>{group.items.length} tipos</p>
-                      </div>
-                    </button>
-                  ))
+                  NODE_GROUPS.map(group => {
+                    const GroupIcon = group.items[0].Icon
+                    return (
+                      <button key={group.label} onClick={() => setAddMenuGroup(group.label)}
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                        className="hover:bg-dark-surface2 transition-colors">
+                        <span style={{ width: 28, height: 28, borderRadius: 6, background: group.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <GroupIcon style={{ color: group.color, width: 14, height: 14 }} />
+                        </span>
+                        <div>
+                          <p style={{ color: group.color, fontWeight: 700, fontSize: 11, margin: 0 }}>{group.label}</p>
+                          <p style={{ color: 'var(--dark-muted)', fontSize: 10, margin: 0 }}>{group.items.length} tipos</p>
+                        </div>
+                      </button>
+                    )
+                  })
                 ) : (
                   <>
                     <div style={{ padding: '6px 12px', borderBottom: '1px solid var(--dark-border)' }}>

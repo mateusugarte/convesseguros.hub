@@ -1100,6 +1100,7 @@ export default function LeadDetalhe() {
           {activeTab === 'timeline' && <TabTimeline  lead={lead} events={events} toast={toast} />}
           {activeTab === 'notas'    && <TabNotas     lead={lead} events={events} toast={toast} />}
           {activeTab === 'tarefas'  && <TabTarefas   lead={lead} events={events} toast={toast} />}
+          {activeTab === 'jornada'  && <TabJornada   lead={lead} journeys={state.journeys} events={events} toast={toast} />}
           {activeTab === 'qualif'   && <TabQualificacao lead={lead} tags={tags} toast={toast} />}
           {activeTab === 'apolices' && <TabApolices  lead={lead} navigate={navigate} toast={toast} />}
         </div>

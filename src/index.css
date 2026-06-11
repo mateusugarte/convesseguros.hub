@@ -264,28 +264,150 @@ html.dark {
   }
 
   /* ── Kanban ───────────────────────────────────────────────────────────────── */
+
+  /* Card — layout flex horizontal: grip | body */
   .kanban-card {
-    @apply rounded-xl p-3 space-y-2 select-none cursor-pointer
-           transition-all duration-200;
-    background: var(--glass-bg);
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 9px 9px 9px 6px;
+    border-radius: 12px;
     border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
     box-shadow: var(--glass-shadow), var(--glass-inset);
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, transform 0.12s ease;
     animation: cardEnter 0.22s ease-out both;
+  }
+  .kanban-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 8px; right: 8px;
+    height: 1px;
+    background: rgba(255,255,255,0.35);
+    border-radius: 0 0 2px 2px;
+    pointer-events: none;
   }
   .kanban-card:hover {
     background: var(--glass-bg-hover);
-    border-color: rgba(74,144,217,0.32);
-    box-shadow: 0 8px 32px rgba(26,58,107,0.30), 0 2px 8px rgba(0,0,0,0.14), var(--glass-inset);
-    transform: translateY(-3px);
+    border-color: rgba(74,144,217,0.28);
+    box-shadow: 0 6px 24px rgba(26,58,107,0.22), 0 2px 6px rgba(0,0,0,0.12), var(--glass-inset);
+    transform: translateY(-2px);
+  }
+  .kanban-card:hover .kanban-grip {
+    opacity: 1;
   }
   .kanban-card:active {
-    transform: scale(0.98) translateY(0);
+    transform: scale(0.985) translateY(0);
     transition-duration: 60ms;
+  }
+  .kanban-card-dragging {
+    box-shadow: 0 16px 48px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.18), var(--glass-inset) !important;
+    border-color: rgba(74,144,217,0.50) !important;
+    background: var(--glass-bg-active) !important;
+    transform: rotate(1.5deg) !important;
+  }
+
+  /* Grip handle — drag trigger, hidden until card hover */
+  .kanban-grip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    min-height: 32px;
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: var(--glass-text-muted);
+    opacity: 0;
+    cursor: grab;
+    transition: opacity 0.15s ease, color 0.15s ease;
+    padding: 0;
+    border-radius: 4px;
+  }
+  .kanban-grip:hover {
+    color: var(--glass-text-primary);
+    background: var(--glass-bg-hover);
+  }
+  .kanban-grip:active {
+    cursor: grabbing;
+  }
+
+  /* Card body — fills the remaining space */
+  .kanban-card-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Column header */
+  .kanban-col-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 12px 12px 0 0;
+    border: 1px solid transparent;
+    border-bottom: none;
+  }
+
+  /* Collapse button */
+  .kanban-col-collapse {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: transparent;
+    border-radius: 5px;
+    cursor: pointer;
+    opacity: 0.35;
+    transition: opacity 0.15s ease, background 0.15s ease;
+    padding: 0;
+  }
+  .kanban-col-collapse:hover {
+    opacity: 0.80;
+    background: rgba(255,255,255,0.06);
+  }
+
+  /* Action buttons inside cards */
+  .kanban-action-btn {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+  .kanban-action-assume {
+    background: rgba(74,144,217,0.14);
+    color: rgb(74,144,217);
+    border-color: rgba(74,144,217,0.25);
+  }
+  .kanban-action-assume:hover {
+    background: rgba(74,144,217,0.26);
+    border-color: rgba(74,144,217,0.40);
+  }
+  .kanban-action-finish {
+    background: rgba(16,185,129,0.12);
+    color: rgb(16,185,129);
+    border-color: rgba(16,185,129,0.22);
+  }
+  .kanban-action-finish:hover {
+    background: rgba(16,185,129,0.22);
+    border-color: rgba(16,185,129,0.38);
   }
 
   /* Kanban column — responsive width via CSS custom property */
   .kanban-col {
-    width: var(--kanban-col-w, 224px);
+    width: var(--kanban-col-w, 232px);
     flex-shrink: 0;
   }
 

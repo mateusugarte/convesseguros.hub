@@ -8,7 +8,11 @@ import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { supabase } from '../lib/supabase'
 import ModalFinalizar from './ModalFinalizar'
-import { Home, Briefcase, Building, LayoutGrid, RefreshCw, ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
+import {
+  Home, Briefcase, Building, LayoutGrid, RefreshCw,
+  ChevronLeft, ChevronRight, Calendar, GripVertical,
+  ChevronsLeft, ArrowRight,
+} from 'lucide-react'
 import SeguradoraBadge from './SeguradoraBadge'
 import SeguradoraSelect from './SeguradoraSelect'
 import { KanbanSkeleton } from './Skeleton'
@@ -29,8 +33,8 @@ const COLUMNS = [
 
 const COL_TO_STATUS = {
   pendente: 'pendente', assumidas: 'em_cotacao', minhas: 'em_cotacao',
-  em_analise: 'em_analise', aprovado: 'aprovado', recusado: 'recusado', emitido: 'emitido',
-  expirada: 'expirada',
+  em_analise: 'em_analise', aprovado: 'aprovado', recusado: 'recusado',
+  emitido: 'emitido', expirada: 'expirada',
 }
 
 const PRODUTO_ICON = {
@@ -90,7 +94,6 @@ function groupFichas(fichas, userId) {
     const colId = getColumnId(f, userId)
     if (cols[colId] !== undefined) cols[colId].push(f)
   })
-  // Mais recente no topo nas colunas aprovado/recusado
   for (const colId of ['aprovado', 'recusado']) {
     cols[colId].sort((a, b) =>
       new Date(b.finalizada_em || b.created_at) - new Date(a.finalizada_em || a.created_at)
@@ -118,9 +121,9 @@ function stringColor(str) {
   let h = 0; for (let i = 0; i < (str||'').length; i++) h = str.charCodeAt(i) + ((h << 5) - h)
   return c[Math.abs(h) % c.length]
 }
-function initials(n) { return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || '?' }
-
-// Nome principal por produto (PJ usa nome_empresa)
+function initials(n) {
+  return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || '?'
+}
 function nomePrincipal(ficha) {
   if (ficha.produto === 'pessoa_juridica') return ficha.nome_empresa || ficha.nome_interessado || '—'
   return ficha.nome_interessado || '—'
@@ -128,87 +131,109 @@ function nomePrincipal(ficha) {
 
 // ── FichaCard ─────────────────────────────────────────────────────────────────
 
-function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay = false, isNew = false, resolverNome }) {
+function FichaCard({
+  ficha, userId, onAssumir, onFinalizar,
+  isDragOverlay = false, isNew = false,
+  resolverNome, dragListeners, dragAttributes,
+}) {
   const ProdIcon  = PRODUTO_ICON[ficha.produto] || LayoutGrid
   const prodColor = PRODUTO_COLOR[ficha.produto] || '#4A90D9'
   const since     = ficha.assumida_em || ficha.created_at
+  const nome      = ficha.profiles?.nome
 
   return (
     <div
-      className={`kanban-card
-        ${isDragOverlay ? '!opacity-95' : ''}
-        ${isNew ? 'animate-card-new' : ''}
-      `}
-      style={isDragOverlay ? { boxShadow: '0 12px 40px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15)' } : undefined}
+      className={`kanban-card${isNew ? ' animate-card-new' : ''}${isDragOverlay ? ' kanban-card-dragging' : ''}`}
     >
-      {/* Produto badge + tempo */}
-      <div className="flex items-center justify-between gap-1">
-        <span
-          className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-          style={{ background: prodColor + '20', color: prodColor }}
+      {/* Grip handle — só no drag, não no overlay */}
+      {!isDragOverlay && (
+        <button
+          {...dragListeners}
+          {...dragAttributes}
+          className="kanban-grip"
+          onPointerDown={e => e.stopPropagation()}
+          tabIndex={-1}
+          aria-label="Arrastar"
         >
-          <ProdIcon className="w-2.5 h-2.5" strokeWidth={2} />
-          {PRODUTO_ABBR[ficha.produto] || ''}
-        </span>
-        <span className={`badge text-[9px] font-mono ${timeBadgeCls(since)}`}>{timeSince(since)}</span>
-      </div>
-
-      {/* Nome (PJ: nome_empresa) */}
-      <p className="text-[11px] font-semibold text-dark-text leading-tight truncate">
-        {nomePrincipal(ficha)}
-      </p>
-
-      {/* Imobiliária */}
-      <p className="text-[10px] text-dark-muted truncate">
-        {(resolverNome ? resolverNome(ficha.imobiliaria) : ficha.imobiliaria) || '—'}
-      </p>
-
-      {/* Seguradora — visível quando definida */}
-      {ficha.seguradora && (
-        <SeguradoraBadge nome={ficha.seguradora} size="xs" />
+          <GripVertical className="w-3.5 h-3.5" />
+        </button>
       )}
 
-      {/* Footer: avatar + action */}
-      <div className="flex items-center justify-between pt-1 border-t border-dark-border/50">
-        {(() => {
-          const nome = ficha.profiles?.nome
-          if (!nome) return <span className="text-[9px] text-status-warning font-medium">Livre</span>
-          return (
-            <div className="flex items-center gap-1 min-w-0">
+      {/* Card body */}
+      <div className="kanban-card-body">
+
+        {/* Row 1: produto badge + tempo */}
+        <div className="flex items-center justify-between gap-1 mb-1.5">
+          <span
+            className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-[3px] rounded-full uppercase tracking-wide select-none"
+            style={{ background: prodColor + '20', color: prodColor }}
+          >
+            <ProdIcon className="w-2.5 h-2.5" strokeWidth={2.5} />
+            {PRODUTO_ABBR[ficha.produto] || ''}
+          </span>
+          <span className={`badge text-[9px] font-mono select-none ${timeBadgeCls(since)}`}>
+            {timeSince(since)}
+          </span>
+        </div>
+
+        {/* Row 2: nome */}
+        <p className="text-[12.5px] font-semibold text-dark-text leading-snug truncate mb-0.5">
+          {nomePrincipal(ficha)}
+        </p>
+
+        {/* Row 3: imobiliária */}
+        <p className="text-[10px] text-dark-muted truncate leading-none mb-1.5">
+          {(resolverNome ? resolverNome(ficha.imobiliaria) : ficha.imobiliaria) || '—'}
+        </p>
+
+        {/* Row 4: seguradora (se definida) */}
+        {ficha.seguradora && (
+          <div className="mb-1.5">
+            <SeguradoraBadge nome={ficha.seguradora} size="xs" />
+          </div>
+        )}
+
+        {/* Footer: orcamentista + ação */}
+        <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-dark-border/40 mt-auto">
+          {nome ? (
+            <div className="flex items-center gap-1.5 min-w-0">
               <div
-                className="w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold text-white flex-shrink-0"
+                className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0"
                 style={{ background: stringColor(nome) }}
                 title={nome}
               >
                 {initials(nome)}
               </div>
-              <span className="text-[9px] text-dark-muted truncate max-w-[65px]">
+              <span className="text-[10px] text-dark-muted font-medium truncate max-w-[72px]">
                 {nome.split(' ')[0]}
               </span>
             </div>
-          )
-        })()}
+          ) : (
+            <span className="text-[9px] text-status-warning font-semibold tracking-wide uppercase">Livre</span>
+          )}
 
-        <div>
-          {ficha.status === 'pendente' && !ficha.assumida && (
-            <button
-              onPointerDown={e => e.stopPropagation()}
-              onClick={e => { e.stopPropagation(); onAssumir(ficha.id) }}
-              className="text-[9px] px-1.5 py-0.5 rounded bg-brand-secondary/20 text-brand-accent border border-brand-accent/20 hover:bg-brand-secondary/40 transition-colors font-medium"
-            >
-              Assumir
-            </button>
-          )}
-          {ficha.status === 'em_cotacao' && ficha.orcamentista_id === userId && (
-            <button
-              onPointerDown={e => e.stopPropagation()}
-              onClick={e => { e.stopPropagation(); onFinalizar(ficha, null) }}
-              className="text-[9px] px-1.5 py-0.5 rounded bg-status-success/15 text-status-success border border-status-success/20 hover:bg-status-success/25 transition-colors font-medium"
-            >
-              Finalizar
-            </button>
-          )}
+          <div className="flex-shrink-0">
+            {ficha.status === 'pendente' && !ficha.assumida && (
+              <button
+                onPointerDown={e => e.stopPropagation()}
+                onClick={e => { e.stopPropagation(); onAssumir(ficha.id) }}
+                className="kanban-action-btn kanban-action-assume"
+              >
+                Assumir
+              </button>
+            )}
+            {ficha.status === 'em_cotacao' && ficha.orcamentista_id === userId && (
+              <button
+                onPointerDown={e => e.stopPropagation()}
+                onClick={e => { e.stopPropagation(); onFinalizar(ficha, null) }}
+                className="kanban-action-btn kanban-action-finish"
+              >
+                Finalizar
+              </button>
+            )}
+          </div>
         </div>
+
       </div>
     </div>
   )
@@ -222,12 +247,9 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, isNew
   return (
     <div
       ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      onClick={() => onDetalhe(ficha.id)}
+      onClick={() => !isDragging && onDetalhe(ficha.id)}
       style={{
-        opacity:    isDragging ? 0.45 : 1,
-        cursor:     isDragging ? 'grabbing' : 'grab',
+        opacity:    isDragging ? 0.35 : 1,
         transition: isDragging ? 'none' : 'opacity 0.15s ease',
       }}
     >
@@ -238,6 +260,8 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, isNew
         onFinalizar={onFinalizar}
         isNew={isNew}
         resolverNome={resolverNome}
+        dragListeners={listeners}
+        dragAttributes={attributes}
       />
     </div>
   )
@@ -245,31 +269,39 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, isNew
 
 // ── DroppableColumn ───────────────────────────────────────────────────────────
 
-function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinalizar, collapsed, onToggleCollapse, newIds, colIndex, resolverNome }) {
+function DroppableColumn({
+  column, fichas, userId, onDetalhe, onAssumir, onFinalizar,
+  collapsed, onToggleCollapse, newIds, colIndex, resolverNome,
+}) {
   const { isOver, setNodeRef } = useDroppable({ id: column.id })
-
-  const animStyle = { animationDelay: `${colIndex * 30}ms`, animationFillMode: 'both', scrollSnapAlign: 'start' }
+  const animStyle = { animationDelay: `${colIndex * 28}ms`, animationFillMode: 'both', scrollSnapAlign: 'start' }
 
   if (collapsed) {
     return (
-      <div className="animate-fade-in flex flex-col flex-shrink-0" style={{ width: '44px', ...animStyle }}>
+      <div className="animate-fade-in flex flex-col flex-shrink-0" style={{ width: '48px', ...animStyle }}>
         <button
           onClick={onToggleCollapse}
-          className="flex flex-col items-center gap-1.5 px-1.5 py-2.5 rounded-t-xl border border-b-0 hover:opacity-80 transition-opacity"
-          style={{ background: column.color + '18', borderColor: column.color + '50' }}
           title={`${column.label} (${fichas.length}) — expandir`}
+          className="flex flex-col items-center gap-1.5 py-3 px-1.5 rounded-t-xl border border-b-0 hover:opacity-80 transition-opacity"
+          style={{ background: column.color + '14', borderColor: column.color + '45' }}
         >
-          <div className="w-2 h-2 rounded-full" style={{ background: column.color }} />
-          <span className="text-[10px] font-mono font-bold" style={{ color: column.color }}>{fichas.length}</span>
+          <div
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ background: column.color, boxShadow: `0 0 5px ${column.color}80` }}
+          />
+          <span className="text-[10px] font-mono font-bold" style={{ color: column.color }}>
+            {fichas.length}
+          </span>
+          <ArrowRight className="w-3 h-3 opacity-40" style={{ color: column.color }} />
         </button>
         <div
           ref={setNodeRef}
           className="flex-1 rounded-b-xl border transition-colors duration-150"
           style={{
             minHeight: '60px',
-            borderColor:     isOver ? column.color + '80' : 'rgb(var(--color-border))',
-            backgroundColor: isOver ? column.color + '15' : 'rgb(var(--color-surface2) / 0.3)',
-            boxShadow:       isOver ? `inset 0 0 0 2px ${column.color}40` : 'none',
+            borderColor:     isOver ? column.color + '70' : 'rgb(var(--color-border))',
+            backgroundColor: isOver ? column.color + '12' : 'rgb(var(--color-surface2) / 0.3)',
+            boxShadow:       isOver ? `inset 0 0 0 1.5px ${column.color}40` : 'none',
           }}
         />
       </div>
@@ -277,45 +309,68 @@ function DroppableColumn({ column, fichas, userId, onDetalhe, onAssumir, onFinal
   }
 
   return (
-    <div className="kanban-col animate-fade-in flex flex-col flex-shrink-0" style={{ ...animStyle }}>
+    <div className="kanban-col animate-fade-in flex flex-col" style={animStyle}>
+
+      {/* Column header */}
       <div
-        className="flex items-center justify-between px-2.5 py-2 rounded-t-xl border border-b-0 transition-colors"
-        style={{ background: column.color + '18', borderColor: column.color + '50' }}
+        className="kanban-col-header"
+        style={{
+          background:   column.color + '12',
+          borderColor:  column.color + '40',
+        }}
       >
-        <div className="flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 rounded-full" style={{ background: column.color }} />
-          <span className="text-[11px] font-semibold" style={{ color: column.color }}>{column.label}</span>
-        </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ background: column.color, boxShadow: `0 0 6px ${column.color}90` }}
+          />
           <span
-            className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded"
-            style={{ background: column.color + '25', color: column.color }}
+            className="text-[11px] font-bold tracking-wide truncate"
+            style={{ color: column.color }}
+          >
+            {column.label}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <span
+            className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md"
+            style={{ background: column.color + '22', color: column.color }}
           >
             {fichas.length}
           </span>
           <button
             onClick={onToggleCollapse}
-            className="opacity-40 hover:opacity-80 transition-opacity p-0.5 rounded text-xs"
-            style={{ color: column.color }}
             title="Colapsar coluna"
+            className="kanban-col-collapse"
+            style={{ color: column.color }}
           >
-            ‹
+            <ChevronsLeft className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
+      {/* Column body */}
       <div
         ref={setNodeRef}
-        className="kanban-col-body flex-1 space-y-1.5 p-1.5 rounded-b-xl overflow-y-auto transition-all duration-150"
+        className="kanban-col-body flex-1 p-1.5 space-y-1.5 overflow-y-auto"
         style={{
-          border:          isOver ? `2px dashed ${column.color}90` : '1px solid rgb(var(--color-border))',
-          backgroundColor: isOver ? column.color + '0c' : 'rgb(var(--color-surface2) / 0.4)',
-          boxShadow:       isOver ? `inset 0 0 0 1px ${column.color}20, 0 0 12px ${column.color}15` : 'none',
+          border:          isOver
+            ? `1.5px dashed ${column.color}70`
+            : '1px solid rgb(var(--color-border))',
+          borderTop:       'none',
+          borderRadius:    '0 0 12px 12px',
+          backgroundColor: isOver
+            ? column.color + '08'
+            : 'rgb(var(--color-surface2) / 0.35)',
+          boxShadow:       isOver
+            ? `inset 0 0 0 1px ${column.color}18, 0 0 14px ${column.color}12`
+            : 'none',
+          transition: 'border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease',
         }}
       >
         {fichas.length === 0 ? (
           <div className="kanban-empty">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="kanban-empty-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="kanban-empty-icon">
               <rect x="3" y="3" width="18" height="18" rx="3" strokeDasharray="4 2"/>
             </svg>
             <span className="kanban-empty-text">Vazia</span>
@@ -420,7 +475,8 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
       </div>
       <div className="flex justify-end gap-3 px-6 pb-5">
         <button onClick={onCancelar} className="btn-secondary text-sm">Cancelar</button>
-        <button onClick={() => valido && onConfirmar({ seguradora, valorParcela: parseFloat(valorParcela), numeroOrcamento: numeroOrcamento.trim(), retornoEnviado })}
+        <button
+          onClick={() => valido && onConfirmar({ seguradora, valorParcela: parseFloat(valorParcela), numeroOrcamento: numeroOrcamento.trim(), retornoEnviado })}
           disabled={!valido || salvando} className="btn-primary text-sm">
           {salvando ? 'Salvando...' : 'Confirmar Aprovação'}
         </button>
@@ -432,12 +488,11 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
 // ── Main KanbanFichas ─────────────────────────────────────────────────────────
 
 export default function KanbanFichas({ produto, externalDateFrom, externalDateTo, contextState }) {
-  const { user }       = useAuth()
-  const toast          = useToast()
-  const navigate       = useNavigate()
+  const { user }         = useAuth()
+  const toast            = useToast()
+  const navigate         = useNavigate()
   const { resolverNome } = useImobiliaria()
 
-  // Quando datas externas são fornecidas (via seletor de mês/ano na página), ignorar período interno
   const useExternal = !!(externalDateFrom || externalDateTo)
 
   const [fichas,   setFichas]   = useState([])
@@ -457,11 +512,9 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   const scrollRef        = useRef(null)
   const newIdTimeoutsRef = useRef(new Set())
 
-  // A4 — Modal obrigatório ao arrastar para Recusado
-  const [pendingRecusado,   setPendingRecusado]   = useState(null)  // { fichaId, fichaOriginal }
+  const [pendingRecusado,   setPendingRecusado]   = useState(null)
   const [salvandoRecusado,  setSalvandoRecusado]  = useState(false)
-  // A5 — Modal obrigatório ao arrastar para Aprovado
-  const [pendingAprovado,   setPendingAprovado]   = useState(null)  // { fichaId, fichaOriginal }
+  const [pendingAprovado,   setPendingAprovado]   = useState(null)
   const [salvandoAprovado,  setSalvandoAprovado]  = useState(false)
 
   const sensors = useSensors(
@@ -489,7 +542,6 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
   useEffect(() => { load() }, [load])
 
-  // Realtime: INSERT, UPDATE, DELETE
   useEffect(() => {
     const ch = supabase.channel('kanban-fichas-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'fichas' }, p => {
@@ -522,7 +574,6 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     }
   }, [produto])
 
-  // Scroll indicators
   function updateScrollState() {
     const el = scrollRef.current
     if (!el) return
@@ -547,26 +598,18 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   const cols       = groupFichas(fichas, user?.id)
   const activeCard = activeId ? fichas.find(f => f.id === activeId) : null
 
-  // Assumir com update otimista
   async function handleAssumir(fichaId) {
     const fichaOriginal = fichas.find(f => f.id === fichaId)
     if (!fichaOriginal) return
-
-    // Otimista: mover para "minhas" imediatamente
     setFichas(prev => prev.map(f =>
       f.id !== fichaId ? f : {
-        ...f,
-        assumida: true,
-        orcamentista_id: user?.id,
-        status: 'em_cotacao',
-        assumida_em: new Date().toISOString(),
+        ...f, assumida: true, orcamentista_id: user?.id,
+        status: 'em_cotacao', assumida_em: new Date().toISOString(),
       }
     ))
     setCollapsed(prev => { const next = new Set(prev); next.delete('minhas'); return next })
-
     const err = await assumirFicha(fichaId, user.id)
     if (err) {
-      // Reverter
       setFichas(prev => prev.map(f => f.id === fichaId ? fichaOriginal : f))
       toast({ type: 'error', title: 'Erro ao assumir ficha' })
     } else {
@@ -579,7 +622,6 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     setFinalizarDefaultStatus(defaultStatus || null)
   }
 
-  // A4 — Confirmar recusa com dados extras
   async function handleConfirmarRecusado(retornoEnviado) {
     if (!pendingRecusado) return
     setSalvandoRecusado(true)
@@ -598,7 +640,6 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     setPendingRecusado(null)
   }
 
-  // A5 — Confirmar aprovação com dados extras
   async function handleConfirmarAprovado({ seguradora, valorParcela, numeroOrcamento, retornoEnviado }) {
     if (!pendingAprovado) return
     setSalvandoAprovado(true)
@@ -621,14 +662,12 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     setPendingAprovado(null)
   }
 
-  // A5 — Cancelar aprovação (rollback)
   function handleCancelarAprovado() {
     if (!pendingAprovado) return
     setFichas(prev => prev.map(f => f.id === pendingAprovado.fichaId ? pendingAprovado.fichaOriginal : f))
     setPendingAprovado(null)
   }
 
-  // Abrir detalhe — navega para página dedicada
   function handleDetalhe(fichaId) {
     navigate(`/fichas/${fichaId}`, {
       state: { from: '/fichas', scrollY: window.scrollY, ...contextState },
@@ -650,13 +689,10 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     const novoStatus = COL_TO_STATUS[targetCol]
     if (!novoStatus) return
 
-    // Interceptar arrastar para Recusado — abre modal ANTES de mover o card
     if (targetCol === 'recusado') {
       setPendingRecusado({ fichaId, fichaOriginal: ficha })
       return
     }
-
-    // Interceptar arrastar para Aprovado — abre modal ANTES de mover o card
     if (targetCol === 'aprovado') {
       setPendingAprovado({ fichaId, fichaOriginal: ficha })
       return
@@ -706,10 +742,10 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
   return (
     <div className="space-y-3">
-      {/* Period filter bar — oculto quando datas externas são fornecidas */}
+      {/* Period filter bar */}
       {!useExternal && (
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 bg-dark-surface2 border border-dark-border rounded-lg p-0.5">
+          <div className="flex items-center gap-0.5 bg-dark-surface2/60 border border-dark-border rounded-lg p-0.5">
             {PERIODOS.map(p => (
               <button
                 key={p.key}
@@ -743,7 +779,6 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
         </div>
       )}
 
-      {/* Contagem quando usando datas externas */}
       {useExternal && (
         <div className="flex items-center justify-between text-xs text-dark-muted">
           <span>{fichas.length} ficha{fichas.length !== 1 ? 's' : ''} neste período</span>
@@ -753,8 +788,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
         </div>
       )}
 
-      {/* Kanban board */}
-      {/* Inline dedicated areas — shown instead of board when action is pending */}
+      {/* Modals inline */}
       {(finalizar || pendingRecusado || pendingAprovado) ? (
         <>
           {finalizar && (
@@ -774,23 +808,24 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
         </>
       ) : (
         <div className="relative">
+          {/* Scroll fade gradients */}
           {canScrollL && (
-            <div className="absolute left-0 top-0 bottom-4 w-16 z-10 pointer-events-none"
+            <div className="absolute left-0 top-0 bottom-4 w-14 z-10 pointer-events-none"
                  style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }} />
           )}
           {canScrollR && (
-            <div className="absolute right-0 top-0 bottom-4 w-16 z-10 pointer-events-none"
+            <div className="absolute right-0 top-0 bottom-4 w-14 z-10 pointer-events-none"
                  style={{ background: 'linear-gradient(to left, rgb(var(--color-bg)), transparent)' }} />
           )}
           {canScrollL && (
             <button onClick={() => scrollBy('left')}
-                    className="absolute left-0.5 top-[60px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-md flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-all">
+              className="absolute left-0.5 top-[54px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-lg flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-all">
               <ChevronLeft className="w-4 h-4" />
             </button>
           )}
           {canScrollR && (
             <button onClick={() => scrollBy('right')}
-                    className="absolute right-0.5 top-[60px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-md flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-all">
+              className="absolute right-0.5 top-[54px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-lg flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-all">
               <ChevronRight className="w-4 h-4" />
             </button>
           )}
@@ -823,8 +858,15 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
               <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>
                 {activeCard && (
-                  <div style={{ width: 'calc(var(--kanban-col-w, 224px) - 12px)' }}>
-                    <FichaCard ficha={activeCard} userId={user?.id} onAssumir={() => {}} onFinalizar={() => {}} isDragOverlay resolverNome={resolverNome} />
+                  <div style={{ width: 'calc(var(--kanban-col-w, 232px) - 12px)' }}>
+                    <FichaCard
+                      ficha={activeCard}
+                      userId={user?.id}
+                      onAssumir={() => {}}
+                      onFinalizar={() => {}}
+                      isDragOverlay
+                      resolverNome={resolverNome}
+                    />
                   </div>
                 )}
               </DragOverlay>

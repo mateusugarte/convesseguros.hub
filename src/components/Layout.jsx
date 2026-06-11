@@ -192,8 +192,8 @@ export default function Layout() {
           </div>
           {(sidebarOpen || isMobile) && (
             <div className="min-w-0">
-              <p className="text-sm font-bold text-white leading-none">Conves</p>
-              <p className="text-[10px] text-white/40 mt-0.5 truncate">Sistema de Fichas</p>
+              <p className="text-sm font-bold text-white leading-none" style={{ fontFamily: 'var(--font-heading)' }}>Conves</p>
+              <p className="text-[10px] text-white/40 mt-0.5 truncate tracking-wide">Sistema de Fichas</p>
             </div>
           )}
         </div>
@@ -286,7 +286,7 @@ export default function Layout() {
                       `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer min-h-[40px]
                         ${isActive
                           ? 'bg-white/10 text-white'
-                          : 'text-white/50 hover:text-white/80 hover:bg-white/[0.06]'
+                          : 'text-white/50 hover:text-white/80 hover:bg-white/[0.06] hover:translate-x-0.5'
                         }
                         ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}
                       `
@@ -344,7 +344,7 @@ export default function Layout() {
       <div className={`flex-1 flex flex-col min-w-0 transition-[margin] duration-200 ${contentMargin}`}>
 
         {/* ── Topbar ── */}
-        <header className="sticky top-0 z-[300] h-16 flex items-center justify-between px-5 flex-shrink-0 bg-dark-surface border-b border-dark-border">
+        <header className="sticky top-0 z-[300] h-16 flex items-center justify-between px-5 flex-shrink-0 topbar-glass">
 
           <div className="flex items-center gap-3">
             {/* Hamburger */}

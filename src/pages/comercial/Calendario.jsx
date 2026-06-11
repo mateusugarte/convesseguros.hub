@@ -334,7 +334,7 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
 
   return (
     <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="modal-backdrop" onClick={onClose} />
       <div className="relative glass-modal rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border">

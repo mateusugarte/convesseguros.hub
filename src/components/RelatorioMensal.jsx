@@ -240,8 +240,9 @@ export default function RelatorioMensal({ onClose }) {
   const imobiliarias = Object.keys(porImobiliaria).sort()
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto animate-fade-in">
-      <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl w-full max-w-5xl my-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto animate-fade-in">
+      <div className="modal-backdrop" onClick={onClose} />
+      <div className="glass-modal border border-dark-border w-full max-w-5xl my-4 relative z-10">
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">

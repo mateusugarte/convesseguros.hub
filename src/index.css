@@ -16,10 +16,14 @@ html.dark {
 @layer base {
   body {
     @apply text-dark-text antialiased;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'Inter', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
     transition: color 0.3s ease;
     background: transparent;
     min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, .font-heading {
+    font-family: var(--font-heading, 'Plus Jakarta Sans', system-ui, sans-serif);
   }
 
   * {
@@ -46,17 +50,20 @@ html.dark {
   /* ── Buttons ──────────────────────────────────────────────────────────────── */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2
-           text-white font-medium text-sm
+           text-white font-semibold text-sm
            px-4 py-2 rounded-lg
            transition-all duration-150
            disabled:opacity-40 disabled:cursor-not-allowed
            focus:outline-none focus:ring-2 focus:ring-brand-accent/40;
-    background: linear-gradient(135deg, #2B5BA8 0%, #1A3A6B 100%);
-    box-shadow: 0 2px 8px rgba(43,91,168,0.30), inset 0 1px 0 rgba(255,255,255,0.10);
+    font-family: var(--font-heading);
+    background: linear-gradient(135deg, #3A6BC0 0%, #1E4A8C 100%);
+    box-shadow: 0 2px 8px rgba(43,91,168,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+    letter-spacing: 0.01em;
   }
   .btn-primary:hover:not(:disabled) {
-    background: linear-gradient(135deg, #3A6BC0 0%, #2B5BA8 100%);
-    box-shadow: 0 4px 12px rgba(43,91,168,0.40), inset 0 1px 0 rgba(255,255,255,0.12);
+    background: linear-gradient(135deg, #4A7BD0 0%, #2B5BA8 100%);
+    box-shadow: 0 4px 16px rgba(43,91,168,0.45), inset 0 1px 0 rgba(255,255,255,0.18);
+    transform: translateY(-1px);
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2
@@ -206,6 +213,7 @@ html.dark {
   .nav-item-inactive:hover {
     @apply text-dark-text;
     background: var(--glass-bg-hover);
+    transform: translateX(2px);
   }
   .nav-item-disabled {
     @apply text-dark-muted/40 cursor-not-allowed;
@@ -222,7 +230,9 @@ html.dark {
     @apply bg-dark-surface2/50;
   }
   .th {
-    @apply px-4 py-3 text-left text-[11px] font-semibold text-dark-muted uppercase tracking-wider;
+    @apply px-4 py-3 text-left text-[11px] font-semibold text-dark-muted uppercase;
+    font-family: var(--font-heading);
+    letter-spacing: 0.08em;
   }
   .td {
     @apply px-4 py-3 text-sm border-b border-dark-border/60;
@@ -231,16 +241,21 @@ html.dark {
   /* ── Kanban ───────────────────────────────────────────────────────────────── */
   .kanban-card {
     @apply rounded-xl p-3 space-y-2 select-none cursor-pointer
-           transition-all duration-150;
+           transition-all duration-200;
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow), var(--glass-inset);
+    animation: cardEnter 0.22s ease-out both;
   }
   .kanban-card:hover {
     background: var(--glass-bg-hover);
-    border-color: var(--glass-border);
-    box-shadow: var(--glass-shadow-deep), var(--glass-inset);
-    transform: translateY(-1px);
+    border-color: rgba(43,91,168,0.35);
+    box-shadow: var(--shadow-float, var(--glass-shadow-deep)), var(--glass-inset);
+    transform: translateY(-2px);
+  }
+  .kanban-card:active {
+    transform: scale(0.98) translateY(0);
+    transition-duration: 60ms;
   }
 
   /* Kanban column — responsive width via CSS custom property */
@@ -272,11 +287,26 @@ html.dark {
   }
   .glass-modal {
     background: var(--glass-bg-heavy);
-    -webkit-backdrop-filter: var(--glass-blur-strong);
-    backdrop-filter: var(--glass-blur-strong);
+    -webkit-backdrop-filter: var(--glass-blur-ultra, blur(24px) saturate(200%));
+    backdrop-filter: var(--glass-blur-ultra, blur(24px) saturate(200%));
     border: 1px solid var(--glass-border);
     border-radius: 20px;
-    box-shadow: var(--glass-shadow-deep), var(--glass-inset);
+    box-shadow: var(--glass-shadow-deep), var(--glass-inset), 0 0 0 1px rgba(255,255,255,0.05);
+  }
+
+  /* ── Modal backdrop — replaces bg-black/40 backdrop-blur-sm ─────────────── */
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: var(--modal-backdrop-tint, rgba(0,0,0,0.04));
+    -webkit-backdrop-filter: var(--modal-backdrop-blur, blur(24px) saturate(200%));
+    backdrop-filter: var(--modal-backdrop-blur, blur(24px) saturate(200%));
+    transition: opacity 220ms ease;
+  }
+
+  /* ── Page content animation ──────────────────────────────────────────────── */
+  .page-content {
+    animation: pageEnterKf 0.30s ease-out both;
   }
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
@@ -328,6 +358,7 @@ html.dark {
   .stagger-3 { animation-delay: 120ms; animation-fill-mode: both; }
   .stagger-4 { animation-delay: 160ms; animation-fill-mode: both; }
   .stagger-5 { animation-delay: 200ms; animation-fill-mode: both; }
+
 
   /* ── Kanban card top reflection ───────────────────────────────────────────── */
   .kanban-card {
@@ -426,6 +457,31 @@ html.dark .badge-blue    { background: rgba(74,144,217,0.15);  color: #4A90D9; }
   0%   { box-shadow: 0 0 0 3px rgba(16,185,129,0.6); border-color: #10B981; }
   60%  { box-shadow: 0 0 0 2px rgba(16,185,129,0.2); }
   100% { box-shadow: none; }
+}
+
+@keyframes modalContentIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes cardEnter {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes staggerRow {
+  from { opacity: 0; transform: translateX(-5px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pageEnterKf {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(43,91,168,0); }
+  50%      { box-shadow: 0 0 0 4px rgba(43,91,168,0.15); }
 }
 
 @keyframes toastProgress {
@@ -532,4 +588,47 @@ html.dark .glass-panel {
   .input, .select {
     min-height: 42px;
   }
+}
+
+/* ── Kanban card stagger automático por posição ──────────────────────────── */
+.kanban-col-body .kanban-card:nth-child(1)  { animation-delay: 0ms; }
+.kanban-col-body .kanban-card:nth-child(2)  { animation-delay: 40ms; }
+.kanban-col-body .kanban-card:nth-child(3)  { animation-delay: 80ms; }
+.kanban-col-body .kanban-card:nth-child(4)  { animation-delay: 120ms; }
+.kanban-col-body .kanban-card:nth-child(5)  { animation-delay: 160ms; }
+.kanban-col-body .kanban-card:nth-child(6)  { animation-delay: 200ms; }
+.kanban-col-body .kanban-card:nth-child(7)  { animation-delay: 230ms; }
+.kanban-col-body .kanban-card:nth-child(n+8) { animation-delay: 250ms; }
+
+/* ── Table rows stagger automático ──────────────────────────────────────── */
+tbody .table-row {
+  animation: staggerRow 0.18s ease-out both;
+}
+tbody .table-row:nth-child(1)  { animation-delay: 0ms; }
+tbody .table-row:nth-child(2)  { animation-delay: 30ms; }
+tbody .table-row:nth-child(3)  { animation-delay: 60ms; }
+tbody .table-row:nth-child(4)  { animation-delay: 90ms; }
+tbody .table-row:nth-child(5)  { animation-delay: 120ms; }
+tbody .table-row:nth-child(6)  { animation-delay: 150ms; }
+tbody .table-row:nth-child(7)  { animation-delay: 180ms; }
+tbody .table-row:nth-child(8)  { animation-delay: 210ms; }
+tbody .table-row:nth-child(n+9) { animation-delay: 240ms; }
+
+/* ── Reduced motion — desativar todas as animações personalizadas ─────────── */
+@media (prefers-reduced-motion: reduce) {
+  .kanban-card,
+  .modal-backdrop,
+  tbody .table-row,
+  .page-content {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ── Topbar glass refinado ───────────────────────────────────────────────── */
+.topbar-glass {
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  backdrop-filter: blur(12px) saturate(180%);
+  background: rgb(var(--color-surface) / 0.85);
+  border-bottom: 1px solid rgb(var(--color-border));
 }

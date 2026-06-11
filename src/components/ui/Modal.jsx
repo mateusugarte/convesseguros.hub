@@ -36,13 +36,10 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' 
       className="fixed inset-0 flex items-center justify-center p-4"
       style={{ zIndex: 400 }}
     >
-      {/* Backdrop */}
+      {/* Backdrop — blur forte sem overlay preta */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        style={{
-          opacity: visible ? 1 : 0,
-          transition: 'opacity 200ms ease',
-        }}
+        className="modal-backdrop"
+        style={{ opacity: visible ? 1 : 0 }}
         onClick={handleClose}
       />
 
@@ -51,19 +48,19 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' 
         className={`relative glass-modal w-full ${maxWidth} max-h-[90vh] flex flex-col`}
         style={{
           opacity: visible ? 1 : 0,
-          transform: visible ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(6px)',
+          transform: visible ? 'scale(1) translateY(0)' : 'scale(0.96) translateY(20px)',
           transition: visible
-            ? 'opacity 200ms cubic-bezier(0.16,1,0.3,1), transform 200ms cubic-bezier(0.16,1,0.3,1)'
-            : 'opacity 150ms ease-in, transform 150ms ease-in',
+            ? 'opacity 280ms cubic-bezier(0.16,1,0.3,1), transform 280ms cubic-bezier(0.16,1,0.3,1)'
+            : 'opacity 160ms ease-in, transform 160ms ease-in',
         }}
       >
         {/* Header */}
         {title && (
           <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border flex-shrink-0">
-            <h2 className="text-sm font-semibold text-dark-text">{title}</h2>
+            <h2 className="font-heading text-base font-semibold text-dark-text" style={{ fontFamily: 'var(--font-heading)' }}>{title}</h2>
             <button
               onClick={handleClose}
-              className="btn-ghost p-1.5 -mr-1 cursor-pointer"
+              className="btn-ghost p-1.5 -mr-1 cursor-pointer rounded-lg transition-all hover:rotate-90 hover:scale-110 duration-200"
               aria-label="Fechar"
             >
               <X className="w-4 h-4" />

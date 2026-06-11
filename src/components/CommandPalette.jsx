@@ -39,11 +39,11 @@ export default function CommandPalette({ open, onClose, onOpenFicha }) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[45] flex items-start justify-center pt-24 px-4 animate-fade-in"
-      onClick={onClose}
+      className="fixed inset-0 z-[45] flex items-start justify-center pt-24 px-4 animate-fade-in"
     >
+      <div className="modal-backdrop" onClick={onClose} />
       <div
-        className="glass-modal w-full max-w-xl overflow-hidden"
+        className="glass-modal w-full max-w-xl overflow-hidden relative z-10"
         onClick={e => e.stopPropagation()}
       >
         {/* Input */}

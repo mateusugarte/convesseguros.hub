@@ -670,7 +670,7 @@ function ModalJornada({ onClose, onSave }) {
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
   return (
     <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="modal-backdrop" onClick={onClose} />
       <div className="relative glass-modal rounded-2xl w-full max-w-md overflow-hidden">
         <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
           <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all">
@@ -720,7 +720,7 @@ function ModalScript({ onClose, onSave }) {
   const valido = form.titulo.trim() && form.conteudo.trim()
   return (
     <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="modal-backdrop" onClick={onClose} />
       <div className="relative glass-modal rounded-2xl w-full max-w-md overflow-hidden">
         <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
           <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all">

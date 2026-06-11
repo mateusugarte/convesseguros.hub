@@ -191,11 +191,12 @@ function SwimLane({ col, leads, tags, activeId, onCardClick, selectedIds, onSele
 function Modal({ title, onClose, children, maxWidth = 'max-w-lg' }) {
   return (
     <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 animate-fade-in">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className={`glass-modal w-full ${maxWidth} relative z-10 max-h-[90vh] overflow-y-auto`}>
+      <div className="modal-backdrop" onClick={onClose} />
+      <div className={`glass-modal w-full ${maxWidth} relative z-10 max-h-[90vh] overflow-y-auto`}
+        style={{ animation: 'modalContentIn 0.28s cubic-bezier(0.16,1,0.3,1) both' }}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border flex-shrink-0">
-          <h2 className="font-bold text-dark-text">{title}</h2>
-          <button onClick={onClose}><X className="w-5 h-5 text-dark-muted" /></button>
+          <h2 className="font-bold text-dark-text" style={{ fontFamily: 'var(--font-heading)' }}>{title}</h2>
+          <button onClick={onClose} className="btn-ghost p-1.5 rounded-lg transition-all hover:rotate-90 hover:scale-110 duration-200"><X className="w-5 h-5 text-dark-muted" /></button>
         </div>
         {children}
       </div>
@@ -378,8 +379,9 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
 
   return (
     <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 animate-fade-in">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="glass-modal w-full max-w-2xl relative z-10 max-h-[90vh] flex flex-col">
+      <div className="modal-backdrop" onClick={onClose} />
+      <div className="glass-modal w-full max-w-2xl relative z-10 max-h-[90vh] flex flex-col"
+        style={{ animation: 'modalContentIn 0.28s cubic-bezier(0.16,1,0.3,1) both' }}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border flex-shrink-0">
           <div className="flex items-center gap-3">
             {step !== 'escolha' && (

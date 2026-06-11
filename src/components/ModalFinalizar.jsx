@@ -41,7 +41,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
 
   return (
     <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 animate-fade-in">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={!loading ? onClose : undefined} />
+      <div className="modal-backdrop" onClick={!loading ? onClose : undefined} />
       <div className="relative glass-modal rounded-2xl overflow-hidden w-full max-w-md max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">

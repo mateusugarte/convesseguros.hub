@@ -75,7 +75,7 @@ function ModalEditLead({ lead, onClose, toast }) {
 
   return (
     <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="modal-backdrop" onClick={onClose} />
       <div className="relative glass-modal rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border">
           <h2 className="font-bold text-dark-text">Editar Lead</h2>

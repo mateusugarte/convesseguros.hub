@@ -13,11 +13,10 @@ import { DatePicker } from '../components/ui/DatePicker'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { PRODUTO_LABELS } from '../lib/fichas'
-import { format, parseISO } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import {
   Plus, ChevronLeft, ChevronRight, RefreshCw,
   Search, Home, Briefcase, Building, LayoutGrid, X, Check, ArrowLeft,
+  GripVertical, ChevronsLeft,
 } from 'lucide-react'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import SeguradoraSelect from '../components/SeguradoraSelect'
@@ -33,8 +32,30 @@ const COLUNAS = [
   { id: 'enviada',              label: 'Apólice Enviada',      color: '#10B981' },
 ]
 
-const PRODUTO_ICON = { residencial_pf: Home, comercial_pf: Briefcase, pessoa_juridica: Building }
+const PRODUTO_ICON  = { residencial_pf: Home, comercial_pf: Briefcase, pessoa_juridica: Building }
 const PRODUTO_COLOR = { residencial_pf: '#4A90D9', comercial_pf: '#10B981', pessoa_juridica: '#8B5CF6' }
+const PRODUTO_ABBR  = { residencial_pf: 'Res. PF', comercial_pf: 'Com. PF', pessoa_juridica: 'PJ' }
+
+function timeSince(dateStr) {
+  const h = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60))
+  if (h < 1) return '<1h'
+  if (h < 24) return `${h}h`
+  return `${Math.floor(h / 24)}d`
+}
+function timeBadgeCls(dateStr) {
+  const h = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60))
+  if (h < 4) return 'badge-success'
+  if (h < 24) return 'badge-warning'
+  return 'badge-danger'
+}
+function stringColor(str) {
+  const c = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#2B5BA8']
+  let h = 0; for (let i = 0; i < (str||'').length; i++) h = str.charCodeAt(i) + ((h << 5) - h)
+  return c[Math.abs(h) % c.length]
+}
+function initials(n) {
+  return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || '?'
+}
 
 function getPeriodDates(filtro) {
   const now = new Date()
@@ -70,98 +91,125 @@ function produtoApolice(apolice) {
 
 // ── Card ──────────────────────────────────────────────────────────────────────
 
-function ApoliceCard({ apolice, isDragOverlay = false, resolverNome }) {
+function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, dragListeners, dragAttributes }) {
   const [expandido, setExpandido] = useState(false)
 
   const prod     = produtoApolice(apolice)
   const ProdIcon = PRODUTO_ICON[prod] || LayoutGrid
   const pColor   = PRODUTO_COLOR[prod] || '#6B7280'
-
-  const dataTransm = apolice.data_transmissao
-    ? (() => { try { return format(parseISO(apolice.data_transmissao), 'dd/MM/yyyy', { locale: ptBR }) } catch { return null } })()
-    : null
+  const emissor  = apolice.profiles?.nome
 
   return (
-    <div className={`kanban-card ${isDragOverlay ? '!shadow-2xl' : ''}`}>
-      <div className="flex items-center justify-between gap-1">
-        <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-              style={{ background: pColor + '20', color: pColor }}>
-          <ProdIcon className="w-2.5 h-2.5" strokeWidth={2} />
-          {PRODUTO_LABELS[prod] || prod || '—'}
-        </span>
-        <span className="text-[10px] text-dark-muted font-mono">
-          {apolice.created_at ? (() => { try { return format(parseISO(apolice.created_at), 'dd/MM', { locale: ptBR }) } catch { return '' } })() : ''}
-        </span>
-      </div>
-
-      <p className="text-[11px] font-semibold text-dark-text leading-tight truncate">
-        {nomeApolice(apolice)}
-      </p>
-
-      <p className="text-[10px] text-dark-muted truncate">
-        {resolverNome ? resolverNome(apolice.imobiliaria) : (apolice.imobiliaria || '—')}
-      </p>
-
-      {apolice.numero_apolice && (
-        <p className="text-[10px] font-mono" style={{ color: '#2B5BA8' }}>
-          Apólice: {apolice.numero_apolice}
-        </p>
-      )}
-
-      <div className="flex items-center justify-between pt-1 border-t border-dark-border/50 gap-1">
-        {apolice.seguradora
-          ? <SeguradoraBadge nome={apolice.seguradora} size="xs" />
-          : <span />
-        }
-        {dataTransm && (
-          <span className="text-[9px] text-status-success font-mono flex-shrink-0">
-            {dataTransm}
-          </span>
-        )}
-      </div>
-
-      {/* Emissor */}
-      {apolice.profiles?.nome && (
-        <p className="text-[9px] text-dark-muted truncate">
-          Emissor: {apolice.profiles.nome.split(' ')[0]}
-        </p>
-      )}
-
-      {/* Botão expandir (M2) */}
+    <div className={`kanban-card${isDragOverlay ? ' kanban-card-dragging' : ''}`}>
+      {/* Grip handle */}
       {!isDragOverlay && (
         <button
-          onPointerDown={e => e.stopPropagation()}
-          onClick={e => { e.stopPropagation(); setExpandido(v => !v) }}
-          className="w-full text-[9px] text-dark-muted hover:text-dark-text transition-colors pt-1 border-t border-dark-border/50 flex items-center justify-center gap-1"
+          {...dragListeners}
+          {...dragAttributes}
+          className="kanban-grip"
+          onClick={e => e.stopPropagation()}
+          tabIndex={-1}
+          aria-label="Arrastar"
         >
-          {expandido ? '▲ Menos' : '▼ Detalhes'}
+          <GripVertical className="w-3.5 h-3.5" />
         </button>
       )}
 
-      {/* Seção expansível */}
-      {expandido && !isDragOverlay && (
-        <div className="space-y-0.5 pt-1 animate-fade-in">
-          {(apolice.fichas?.cpf || apolice.fichas?.cnpj) && (
-            <p className="text-[9px] text-dark-muted font-mono">
-              {apolice.fichas.cnpj ? 'CNPJ' : 'CPF'}: {apolice.fichas.cnpj || apolice.fichas.cpf}
-            </p>
+      <div className="kanban-card-body" onClick={() => !isDragOverlay && onDetalhe?.(apolice.id)}>
+        {/* Row 1: produto + tempo */}
+        <div className="flex items-center justify-between gap-1 mb-1.5">
+          <span
+            className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-[3px] rounded-full uppercase tracking-wide select-none"
+            style={{ background: pColor + '20', color: pColor }}
+          >
+            <ProdIcon className="w-2.5 h-2.5" strokeWidth={2.5} />
+            {PRODUTO_ABBR[prod] || ''}
+          </span>
+          <span className={`badge text-[9px] font-mono select-none ${timeBadgeCls(apolice.created_at)}`}>
+            {timeSince(apolice.created_at)}
+          </span>
+        </div>
+
+        {/* Nome */}
+        <p className="text-[12.5px] font-semibold text-dark-text leading-snug truncate mb-0.5">
+          {nomeApolice(apolice)}
+        </p>
+
+        {/* Imobiliária */}
+        <p className="text-[10px] text-dark-muted truncate leading-none mb-1.5">
+          {resolverNome ? resolverNome(apolice.imobiliaria) : (apolice.imobiliaria || '—')}
+        </p>
+
+        {/* Número apólice */}
+        {apolice.numero_apolice && (
+          <p className="text-[10px] font-mono mb-1.5" style={{ color: '#2B5BA8' }}>
+            {apolice.numero_apolice}
+          </p>
+        )}
+
+        {/* Seguradora */}
+        {apolice.seguradora && (
+          <div className="mb-1.5">
+            <SeguradoraBadge nome={apolice.seguradora} size="xs" />
+          </div>
+        )}
+
+        {/* Footer: emissor */}
+        <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-dark-border/40 mt-auto">
+          {emissor ? (
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div
+                className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0"
+                style={{ background: stringColor(emissor) }}
+                title={emissor}
+              >
+                {initials(emissor)}
+              </div>
+              <span className="text-[10px] text-dark-muted font-medium truncate max-w-[72px]">
+                {emissor.split(' ')[0]}
+              </span>
+            </div>
+          ) : (
+            <span className="text-[9px] text-status-warning font-semibold tracking-wide uppercase">Livre</span>
           )}
-          {apolice.fichas?.celular && (
-            <p className="text-[9px] text-dark-muted">Tel: {apolice.fichas.celular}</p>
-          )}
-          {apolice.fichas?.tipo_imovel && (
-            <p className="text-[9px] text-dark-muted">Imóvel: {apolice.fichas.tipo_imovel}</p>
-          )}
-          {apolice.fichas?.cep && (
-            <p className="text-[9px] text-dark-muted font-mono">CEP: {apolice.fichas.cep}</p>
-          )}
-          {apolice.valor_parcela && (
-            <p className="text-[9px] text-dark-muted">
-              Parcela: R$ {parseFloat(apolice.valor_parcela).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
+
+          {/* Botão expandir */}
+          {!isDragOverlay && (
+            <button
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); setExpandido(v => !v) }}
+              className="text-[9px] text-dark-muted hover:text-dark-text transition-colors px-1.5 py-0.5 rounded-md hover:bg-dark-surface2"
+            >
+              {expandido ? '▲' : '▼ Detalhes'}
+            </button>
           )}
         </div>
-      )}
+
+        {/* Seção expansível */}
+        {expandido && !isDragOverlay && (
+          <div className="space-y-0.5 pt-1.5 mt-1.5 border-t border-dark-border/40 animate-fade-in">
+            {(apolice.fichas?.cpf || apolice.fichas?.cnpj) && (
+              <p className="text-[9px] text-dark-muted font-mono">
+                {apolice.fichas.cnpj ? 'CNPJ' : 'CPF'}: {apolice.fichas.cnpj || apolice.fichas.cpf}
+              </p>
+            )}
+            {apolice.fichas?.celular && (
+              <p className="text-[9px] text-dark-muted">Tel: {apolice.fichas.celular}</p>
+            )}
+            {apolice.fichas?.tipo_imovel && (
+              <p className="text-[9px] text-dark-muted">Imóvel: {apolice.fichas.tipo_imovel}</p>
+            )}
+            {apolice.fichas?.cep && (
+              <p className="text-[9px] text-dark-muted font-mono">CEP: {apolice.fichas.cep}</p>
+            )}
+            {apolice.valor_parcela && (
+              <p className="text-[9px] text-dark-muted">
+                Parcela: R$ {parseFloat(apolice.valor_parcela).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -171,46 +219,87 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome }) {
 function DraggableCard({ apolice, onDetalhe, resolverNome }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: apolice.id })
   return (
-    <div ref={setNodeRef} {...listeners} {...attributes}
-         onClick={() => onDetalhe(apolice.id)}
-         style={{ opacity: isDragging ? 0.35 : 1, cursor: 'grab' }}>
-      <ApoliceCard apolice={apolice} resolverNome={resolverNome} />
+    <div
+      ref={setNodeRef}
+      style={{ opacity: isDragging ? 0.35 : 1, transition: isDragging ? 'none' : 'opacity 0.15s ease' }}
+    >
+      <ApoliceCard
+        apolice={apolice}
+        onDetalhe={onDetalhe}
+        resolverNome={resolverNome}
+        dragListeners={listeners}
+        dragAttributes={attributes}
+      />
     </div>
   )
 }
 
 // ── Column ────────────────────────────────────────────────────────────────────
 
-function DroppableColumn({ col, apolices, onDetalhe, resolverNome, colIndex }) {
+function DroppableColumn({ col, apolices, onDetalhe, resolverNome, colIndex, collapsed, onToggleCollapse }) {
   const { isOver, setNodeRef } = useDroppable({ id: col.id })
   const anim = { animationDelay: `${colIndex * 30}ms`, animationFillMode: 'both', scrollSnapAlign: 'start' }
 
+  if (collapsed) {
+    return (
+      <div className="animate-fade-in flex flex-col flex-shrink-0" style={{ width: '48px', ...anim }}>
+        <button
+          onClick={onToggleCollapse}
+          title={`${col.label} (${apolices.length})`}
+          className="flex flex-col items-center gap-1.5 py-3 px-1.5 rounded-t-xl border border-b-0 hover:opacity-80 transition-opacity"
+          style={{ background: col.color + '14', borderColor: col.color + '45' }}
+        >
+          <div className="w-1.5 h-1.5 rounded-full" style={{ background: col.color, boxShadow: `0 0 5px ${col.color}80` }} />
+          <span className="text-[10px] font-mono font-bold" style={{ color: col.color }}>{apolices.length}</span>
+        </button>
+        <div
+          ref={setNodeRef}
+          className="flex-1 rounded-b-xl border"
+          style={{
+            minHeight: '60px',
+            borderColor: isOver ? col.color + '70' : 'rgb(var(--color-border))',
+            backgroundColor: isOver ? col.color + '12' : 'rgb(var(--color-surface2) / 0.3)',
+          }}
+        />
+      </div>
+    )
+  }
+
   return (
-    <div className="kanban-col animate-fade-in flex flex-col flex-shrink-0" style={anim}>
-      <div className="flex items-center justify-between px-2.5 py-2 rounded-t-xl border border-b-0 transition-colors"
-           style={{ background: col.color + '18', borderColor: col.color + '50' }}>
-        <div className="flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 rounded-full" style={{ background: col.color }} />
-          <span className="text-[11px] font-semibold" style={{ color: col.color }}>{col.label}</span>
+    <div className="kanban-col animate-fade-in flex flex-col" style={anim}>
+      <div
+        className="kanban-col-header"
+        style={{ background: col.color + '12', borderColor: col.color + '40' }}
+      >
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: col.color, boxShadow: `0 0 6px ${col.color}90` }} />
+          <span className="text-[11px] font-bold tracking-wide truncate" style={{ color: col.color }}>{col.label}</span>
         </div>
-        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded"
-              style={{ background: col.color + '25', color: col.color }}>
-          {apolices.length}
-        </span>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md" style={{ background: col.color + '22', color: col.color }}>
+            {apolices.length}
+          </span>
+          <button onClick={onToggleCollapse} className="kanban-col-collapse" style={{ color: col.color }} title="Colapsar">
+            <ChevronsLeft className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
-      <div ref={setNodeRef}
-           className="kanban-col-body flex-1 space-y-1.5 p-1.5 rounded-b-xl border overflow-y-auto transition-colors duration-150"
-           style={{
-             borderColor:     isOver ? col.color + '80' : 'rgb(var(--color-border))',
-             backgroundColor: isOver ? col.color + '08' : 'rgb(var(--color-surface2) / 0.4)',
-             boxShadow:       isOver ? `inset 0 0 0 2px ${col.color}40` : 'none',
-           }}>
+      <div
+        ref={setNodeRef}
+        className="kanban-col-body flex-1 p-1.5 space-y-1.5 overflow-y-auto"
+        style={{
+          border:          isOver ? `1.5px dashed ${col.color}70` : '1px solid rgb(var(--color-border))',
+          borderTop:       'none',
+          borderRadius:    '0 0 12px 12px',
+          backgroundColor: isOver ? col.color + '08' : 'rgb(var(--color-surface2) / 0.35)',
+          boxShadow:       isOver ? `inset 0 0 0 1px ${col.color}18` : 'none',
+          transition:      'border-color 0.15s ease, background 0.15s ease',
+        }}
+      >
         {apolices.length === 0 ? (
           <div className="kanban-empty">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="kanban-empty-icon">
-              <rect x="3" y="3" width="18" height="18" rx="3" strokeDasharray="4 2"/>
-            </svg>
+            <LayoutGrid className="w-5 h-5 kanban-empty-icon" />
             <span className="kanban-empty-text">Vazia</span>
           </div>
         ) : apolices.map(a => (
@@ -607,6 +696,7 @@ export default function ApoicesGestao() {
   const [modalIniciar,   setModalIniciar]   = useState(false)
   const [modalFinalizar, setModalFinalizar] = useState(null) // { id, apolice }
   const [pendingMove,    setPendingMove]    = useState(null) // { id, fromStatus }
+  const [collapsed,      setCollapsed]      = useState(new Set())
 
   const scrollRef    = useRef(null)
   const [canScrollL, setCanScrollL] = useState(false)
@@ -680,6 +770,15 @@ export default function ApoicesGestao() {
     // Rollback: não mover
     setPendingMove(null)
     setModalFinalizar(null)
+  }
+
+  function toggleCollapse(colId) {
+    setCollapsed(prev => {
+      const next = new Set(prev)
+      if (next.has(colId)) next.delete(colId)
+      else next.add(colId)
+      return next
+    })
   }
 
   const activeCard = activeId ? apolices.find(a => a.id === activeId) : null
@@ -765,9 +864,16 @@ export default function ApoicesGestao() {
                         onDragCancel={() => setActiveId(null)}>
               <div className="flex gap-2 min-w-max px-0.5">
                 {COLUNAS.map((col, i) => (
-                  <DroppableColumn key={col.id} col={col} apolices={groups[col.id] || []}
-                                   onDetalhe={id => navigate(`/apolices/${id}`)}
-                                   resolverNome={resolverNome} colIndex={i} />
+                  <DroppableColumn
+                    key={col.id}
+                    col={col}
+                    apolices={groups[col.id] || []}
+                    onDetalhe={id => navigate(`/apolices/${id}`)}
+                    resolverNome={resolverNome}
+                    colIndex={i}
+                    collapsed={collapsed.has(col.id)}
+                    onToggleCollapse={() => toggleCollapse(col.id)}
+                  />
                 ))}
               </div>
               <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>

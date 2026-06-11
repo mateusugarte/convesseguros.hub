@@ -151,7 +151,7 @@ function FichaCard({
           {...dragListeners}
           {...dragAttributes}
           className="kanban-grip"
-          onPointerDown={e => e.stopPropagation()}
+          onClick={e => e.stopPropagation()}
           tabIndex={-1}
           aria-label="Arrastar"
         >

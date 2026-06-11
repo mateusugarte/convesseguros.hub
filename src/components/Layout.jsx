@@ -63,7 +63,7 @@ const NAV_GROUPS = [
   },
   {
     items: [
-      { to: '/configuracoes', icon: Settings, label: 'Configurações', soon: true },
+      { to: '/configuracoes', icon: Settings, label: 'Configurações' },
     ],
   },
 ]
@@ -100,7 +100,7 @@ export default function Layout() {
     return s
   })
 
-  const avatarColor = stringColor(profile?.nome || '')
+  const avatarColor = profile?.avatar_url || stringColor(profile?.nome || '')
 
   // Persist sidebar state
   useEffect(() => {

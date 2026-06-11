@@ -1,90 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, ChevronDown, Calendar } from 'lucide-react'
 import {
-  format, isValid, isSameDay, isToday, isSameMonth,
-  startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek,
-  addMonths, subMonths, parseISO,
+  format, parse, isValid, addMonths, subMonths,
+  startOfMonth, endOfMonth, startOfWeek, endOfWeek,
+  addDays, isSameDay, isSameMonth, isToday,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-
-const DIAS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
-
-function parseDate(value) {
-  if (!value) return null
-  const d = parseISO(value)
-  return isValid(d) ? d : null
-}
-
-function MonthGrid({ monthDate, selected, onSelect }) {
-  const start = startOfWeek(startOfMonth(monthDate), { weekStartsOn: 0 })
-  const end   = endOfWeek(endOfMonth(monthDate),     { weekStartsOn: 0 })
-  const days  = eachDayOfInterval({ start, end })
-
-  return (
-    <div style={{ width: 182 }}>
-      <p style={{
-        textAlign: 'center', fontSize: 11, fontWeight: 700,
-        color: 'var(--glass-text-primary)', marginBottom: 8,
-        textTransform: 'capitalize', letterSpacing: '0.03em',
-      }}>
-        {format(monthDate, 'MMMM yyyy', { locale: ptBR })}
-      </p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
-        {DIAS.map((d, i) => (
-          <div key={i} style={{
-            textAlign: 'center', fontSize: 9, fontWeight: 700,
-            color: 'var(--glass-text-muted)', padding: '3px 0',
-            letterSpacing: '0.08em',
-          }}>
-            {d}
-          </div>
-        ))}
-        {days.map((day, i) => {
-          const inMonth = isSameMonth(day, monthDate)
-          const isSel   = selected && isSameDay(day, selected)
-          const isNow   = isToday(day)
-          return (
-            <button
-              key={i}
-              type="button"
-              onClick={() => onSelect(day)}
-              style={{
-                width: '100%',
-                aspectRatio: '1',
-                borderRadius: 7,
-                fontSize: 11,
-                fontWeight:  isSel ? 700 : isNow ? 600 : 400,
-                border:      isSel ? 'none' : isNow ? '1.5px solid rgba(74,144,217,0.55)' : '1.5px solid transparent',
-                background:  isSel ? 'rgb(74,144,217)' : 'transparent',
-                color:       isSel ? '#fff'
-                           : !inMonth ? 'var(--glass-text-muted)'
-                           : isNow ? 'rgb(74,144,217)'
-                           : 'var(--glass-text-primary)',
-                opacity:     !inMonth ? 0.3 : 1,
-                cursor:      'pointer',
-                transition:  'background 0.1s ease, color 0.1s ease',
-              }}
-              onMouseEnter={e => { if (!isSel) { e.currentTarget.style.background = 'var(--glass-bg-hover)' } }}
-              onMouseLeave={e => { if (!isSel) { e.currentTarget.style.background = 'transparent' } }}
-            >
-              {format(day, 'd')}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
+import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react'
 
 /**
- * DatePicker — dropdown calendar com 2 meses, posicionado via fixed (escapa stacking contexts).
- *
- * Props:
- *   value        — string YYYY-MM-DD
- *   onChange     — (value: string) => void  ('' para limpar)
- *   placeholder  — texto quando vazio
- *   disabled     — boolean
- *   className    — classes no wrapper
+ * DatePicker — calendar-style single date picker.
+ * value: string 'YYYY-MM-DD' | onChange: (string) => void
  */
 export function DatePicker({
   value,
@@ -92,27 +17,32 @@ export function DatePicker({
   placeholder = 'Selecionar data',
   disabled    = false,
   className   = '',
+  clearable   = true,
 }) {
-  const [open,     setOpen]     = useState(false)
-  const [pos,      setPos]      = useState(null)
-  const [viewDate, setViewDate] = useState(() => parseDate(value) || new Date())
+  const [open,        setOpen]        = useState(false)
+  const [pos,         setPos]         = useState(null)
+  const [currentDate, setCurrentDate] = useState(() => {
+    if (value) { try { const d = parse(value, 'yyyy-MM-dd', new Date()); if (isValid(d)) return d } catch {} }
+    return new Date()
+  })
   const wrapRef = useRef(null)
 
-  const selected = parseDate(value)
+  const selected = value
+    ? (() => { try { const d = parse(value, 'yyyy-MM-dd', new Date()); return isValid(d) ? d : null } catch { return null } })()
+    : null
 
   const calcPos = useCallback(() => {
     if (!wrapRef.current) return
-    const rect     = wrapRef.current.getBoundingClientRect()
-    const dropW    = 420
-    const dropH    = 300
-    const spaceBelow = window.innerHeight - rect.bottom - 8
-    const spaceAbove = rect.top - 8
-    const above    = spaceBelow < dropH && spaceAbove > spaceBelow
-    const rawLeft  = rect.left
-    const left     = Math.max(8, Math.min(rawLeft, window.innerWidth - dropW - 8))
+    const rect  = wrapRef.current.getBoundingClientRect()
+    const dropH = 310
+    const below = window.innerHeight - rect.bottom - 8
+    const above = rect.top - 8
+    const flipUp = below < dropH && above > below
+    const dropW = 280
+    const left  = Math.max(8, Math.min(rect.left, window.innerWidth - dropW - 8))
     setPos({
-      left,
-      ...(above
+      left, width: dropW,
+      ...(flipUp
         ? { bottom: window.innerHeight - rect.top + 4, top: 'auto' }
         : { top: rect.bottom + 4, bottom: 'auto' }),
     })
@@ -140,28 +70,36 @@ export function DatePicker({
   }, [open])
 
   useEffect(() => {
-    const d = parseDate(value)
-    if (d) setViewDate(d)
+    if (value) {
+      try { const d = parse(value, 'yyyy-MM-dd', new Date()); if (isValid(d)) setCurrentDate(d) } catch {}
+    }
   }, [value])
 
-  function handleSelect(day) {
-    onChange(format(day, 'yyyy-MM-dd'))
-    setOpen(false)
+  function selectDay(day) { onChange(format(day, 'yyyy-MM-dd')); setOpen(false) }
+
+  function buildCalendarDays() {
+    const start = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 0 })
+    const end   = endOfWeek(endOfMonth(currentDate),   { weekStartsOn: 0 })
+    const days  = []
+    let d = start
+    while (d <= end) { days.push(d); d = addDays(d, 1) }
+    return days
   }
 
-  const displayValue = selected ? format(selected, "d 'de' MMM yyyy", { locale: ptBR }) : null
+  const days = buildCalendarDays()
 
   return (
     <div ref={wrapRef} className={`relative ${className}`}>
+
+      {/* Trigger */}
       <button
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setOpen(o => !o)}
-        className="select w-full flex items-center gap-2 text-left"
+        className="dp-trigger w-full"
         style={{
-          opacity:    disabled ? 0.45 : 1,
-          cursor:     disabled ? 'not-allowed' : 'pointer',
-          transition: 'border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease',
+          opacity: disabled ? 0.45 : 1,
+          cursor:  disabled ? 'not-allowed' : 'pointer',
           ...(open ? {
             borderColor: 'rgba(74,144,217,0.65)',
             boxShadow:   '0 0 0 3px rgba(74,144,217,0.18)',
@@ -181,111 +119,139 @@ export function DatePicker({
           }
         }}
       >
-        <Calendar style={{ width: 13, height: 13, color: 'var(--glass-text-muted)', flexShrink: 0 }} />
+        <Calendar
+          className="w-3.5 h-3.5 flex-shrink-0"
+          style={{ color: selected ? 'rgb(74,144,217)' : 'var(--glass-text-muted)' }}
+        />
         <span
-          className="flex-1 truncate text-sm leading-none"
-          style={{ color: displayValue ? 'var(--glass-text-primary)' : 'var(--glass-text-muted)' }}
+          className="flex-1 text-left text-sm truncate"
+          style={{ color: selected ? 'var(--glass-text-primary)' : 'var(--glass-text-muted)' }}
         >
-          {displayValue || placeholder}
+          {selected
+            ? format(selected, "dd 'de' MMM, yyyy", { locale: ptBR })
+            : placeholder}
         </span>
-        <ChevronDown style={{
-          width: 14, height: 14, color: 'var(--glass-text-muted)', flexShrink: 0,
-          transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-          transition: 'transform 0.2s var(--ease-smooth)',
-        }} />
+        {clearable && selected && (
+          <span
+            role="button"
+            tabIndex={-1}
+            onPointerDown={e => { e.stopPropagation(); e.preventDefault() }}
+            onClick={e => { e.stopPropagation(); onChange('') }}
+            className="flex-shrink-0 p-0.5 rounded text-dark-muted hover:text-dark-text transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </span>
+        )}
       </button>
 
+      {/* Calendar popup */}
       {open && pos && (
-        <div style={{
-          position: 'fixed',
-          zIndex:   9999,
-          left:     pos.left,
-          ...(pos.top !== 'auto' ? { top: pos.top } : { bottom: pos.bottom }),
-        }}>
+        <div
+          style={{
+            position: 'fixed',
+            zIndex:   9999,
+            left:     pos.left,
+            width:    pos.width,
+            ...(pos.top !== 'auto' ? { top: pos.top } : { bottom: pos.bottom }),
+          }}
+        >
           <div
-            className="select-dropdown-panel"
+            className="animate-fade-in"
             style={{
               background:           'var(--glass-bg-heavy)',
               backdropFilter:       'var(--glass-blur-strong)',
               WebkitBackdropFilter: 'var(--glass-blur-strong)',
               border:               '1px solid var(--glass-border)',
-              borderRadius:         16,
-              boxShadow:            'var(--shadow-float)',
-              padding:              '16px',
-              userSelect:           'none',
-              width:                420,
+              borderRadius:         14,
+              boxShadow:            '0 24px 64px rgba(0,0,0,0.32), 0 8px 24px rgba(20,60,140,0.16)',
+              padding:              '14px',
             }}
           >
-            {/* Navigation */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            {/* Month nav */}
+            <div className="flex items-center justify-between mb-3">
               <button
                 type="button"
-                onClick={() => setViewDate(d => subMonths(d, 1))}
-                style={{
-                  width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'transparent', border: '1px solid var(--glass-border)',
-                  color: 'var(--glass-text-muted)', cursor: 'pointer', transition: 'background 0.1s ease',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--glass-bg-hover)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                onClick={() => setCurrentDate(d => subMonths(d, 1))}
+                className="dp-nav-btn"
               >
-                <ChevronLeft style={{ width: 13, height: 13 }} />
+                <ChevronLeft className="w-4 h-4" />
               </button>
-
+              <span style={{
+                fontSize: 13, fontWeight: 600,
+                color: 'var(--glass-text-primary)',
+                textTransform: 'capitalize',
+              }}>
+                {format(currentDate, 'MMMM yyyy', { locale: ptBR })}
+              </span>
               <button
                 type="button"
-                onClick={() => setViewDate(new Date())}
-                style={{
-                  fontSize: 10, fontWeight: 700, color: 'var(--glass-text-muted)',
-                  background: 'transparent', border: 'none', cursor: 'pointer',
-                  letterSpacing: '0.08em', textTransform: 'uppercase',
-                  padding: '4px 8px', borderRadius: 6,
-                  transition: 'color 0.1s ease',
-                }}
-                onMouseEnter={e => e.currentTarget.style.color = 'rgb(74,144,217)'}
-                onMouseLeave={e => e.currentTarget.style.color = 'var(--glass-text-muted)'}
+                onClick={() => setCurrentDate(d => addMonths(d, 1))}
+                className="dp-nav-btn"
               >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Week headers */}
+            <div className="grid grid-cols-7 mb-1.5">
+              {['D','S','T','Q','Q','S','S'].map((d, i) => (
+                <div key={i} style={{
+                  textAlign: 'center', fontSize: 9, fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  color: 'var(--glass-text-muted)',
+                  paddingBottom: 5,
+                }}>
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Day grid */}
+            <div className="grid grid-cols-7 gap-y-0.5">
+              {days.map((day, i) => {
+                const inMonth = isSameMonth(day, currentDate)
+                const isSel   = selected && isSameDay(day, selected)
+                const isNow   = isToday(day)
+
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => selectDay(day)}
+                    className="dp-day"
+                    style={{
+                      opacity:    inMonth ? 1 : 0.25,
+                      background: isSel
+                        ? 'rgb(74,144,217)'
+                        : isNow ? 'rgba(74,144,217,0.12)' : 'transparent',
+                      color: isSel ? '#fff'
+                        : isNow ? 'rgb(74,144,217)'
+                        : 'var(--glass-text-primary)',
+                      fontWeight:  isSel ? 700 : isNow ? 600 : 400,
+                      borderRadius: 7,
+                      border: isNow && !isSel
+                        ? '1px solid rgba(74,144,217,0.40)'
+                        : '1px solid transparent',
+                    }}
+                  >
+                    {format(day, 'd')}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Footer shortcuts */}
+            <div className="mt-3 pt-2.5 flex items-center justify-between"
+              style={{ borderTop: '1px solid var(--glass-border)' }}>
+              <button type="button" onClick={() => selectDay(new Date())} className="dp-footer-btn dp-footer-primary">
                 Hoje
               </button>
-
-              <button
-                type="button"
-                onClick={() => setViewDate(d => addMonths(d, 1))}
-                style={{
-                  width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'transparent', border: '1px solid var(--glass-border)',
-                  color: 'var(--glass-text-muted)', cursor: 'pointer', transition: 'background 0.1s ease',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--glass-bg-hover)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <ChevronRight style={{ width: 13, height: 13 }} />
-              </button>
-            </div>
-
-            {/* Two months side by side */}
-            <div style={{ display: 'flex', gap: 20 }}>
-              <MonthGrid monthDate={viewDate}             selected={selected} onSelect={handleSelect} />
-              <MonthGrid monthDate={addMonths(viewDate, 1)} selected={selected} onSelect={handleSelect} />
-            </div>
-
-            {/* Clear */}
-            {selected && (
-              <div style={{ marginTop: 12, borderTop: '1px solid var(--glass-border)', paddingTop: 10, textAlign: 'center' }}>
-                <button
-                  type="button"
-                  onClick={() => { onChange(''); setOpen(false) }}
-                  style={{
-                    fontSize: 11, color: 'var(--glass-text-muted)', background: 'transparent',
-                    border: 'none', cursor: 'pointer', transition: 'color 0.1s ease',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.color = 'var(--glass-text-primary)'}
-                  onMouseLeave={e => e.currentTarget.style.color = 'var(--glass-text-muted)'}
-                >
-                  Limpar data
+              {selected && clearable && (
+                <button type="button" onClick={() => { onChange(''); setOpen(false) }} className="dp-footer-btn">
+                  Limpar
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}

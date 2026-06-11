@@ -263,6 +263,112 @@ html.dark {
     @apply px-4 py-3 text-sm border-b border-dark-border/60;
   }
 
+  /* ── WorkspacesSelect ────────────────────────────────────────────────────── */
+  .ws-trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    box-shadow: var(--glass-shadow), var(--glass-inset);
+    color: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    min-height: 38px;
+  }
+
+  /* Avatar circle — trigger */
+  .ws-avatar {
+    width: 24px; height: 24px;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; color: #fff;
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+  }
+  .ws-avatar-empty {
+    width: 24px; height: 24px;
+    border-radius: 7px;
+    background: var(--glass-bg-hover);
+    border: 1px dashed var(--glass-border);
+    flex-shrink: 0;
+  }
+  .ws-avatar-icon {
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; color: var(--glass-text-muted);
+  }
+
+  /* Avatar circle — dropdown item */
+  .ws-avatar-sm {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #fff;
+    flex-shrink: 0;
+  }
+  .ws-avatar-icon-sm {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; color: var(--glass-text-muted);
+  }
+
+  /* ── DatePicker ──────────────────────────────────────────────────────────── */
+  .dp-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    box-shadow: var(--glass-shadow), var(--glass-inset);
+    color: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    min-height: 38px;
+  }
+
+  .dp-nav-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    color: var(--glass-text-muted);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .dp-nav-btn:hover {
+    background: var(--glass-bg-hover);
+    color: var(--glass-text-primary);
+    border-color: rgba(74,144,217,0.35);
+  }
+
+  .dp-day {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; aspect-ratio: 1;
+    font-size: 12px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.1s ease, color 0.1s ease;
+    padding: 0;
+  }
+  .dp-day:hover {
+    background: var(--glass-bg-hover) !important;
+  }
+
+  .dp-footer-btn {
+    font-size: 11px; font-weight: 500;
+    color: var(--glass-text-muted);
+    background: none; border: none; cursor: pointer;
+    padding: 3px 8px; border-radius: 5px;
+    transition: background 0.12s, color 0.12s;
+  }
+  .dp-footer-btn:hover { background: var(--glass-bg-hover); color: var(--glass-text-primary); }
+  .dp-footer-primary { color: rgb(74,144,217) !important; }
+  .dp-footer-primary:hover { background: rgba(74,144,217,0.10) !important; }
+
   /* ── Kanban ───────────────────────────────────────────────────────────────── */
 
   /* Card — layout flex horizontal: grip | body */

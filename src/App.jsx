@@ -40,6 +40,7 @@ const LeadDetalhe        = lazy(() => import('./pages/comercial/LeadDetalhe'))
 const Vendas             = lazy(() => import('./pages/comercial/Vendas'))
 const Calendario         = lazy(() => import('./pages/comercial/Calendario'))
 const Jornadas           = lazy(() => import('./pages/comercial/Jornadas'))
+const Configuracoes      = lazy(() => import('./pages/Configuracoes'))
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -75,6 +76,7 @@ function AppRoutes() {
           <Route path="comercial/vendas"     element={<Vendas />} />
           <Route path="comercial/calendario" element={<Calendario />} />
           <Route path="comercial/jornadas"   element={<Jornadas />} />
+          <Route path="configuracoes"        element={<Configuracoes />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

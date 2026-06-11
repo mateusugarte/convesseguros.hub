@@ -838,14 +838,14 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
             </button>
           )}
 
-          <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={rectIntersection}
-              onDragStart={({ active }) => setActiveId(active.id)}
-              onDragEnd={handleDragEnd}
-              onDragCancel={() => setActiveId(null)}
-            >
+          <DndContext
+            sensors={sensors}
+            collisionDetection={rectIntersection}
+            onDragStart={({ active }) => setActiveId(active.id)}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => setActiveId(null)}
+          >
+            <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
               <div className="flex gap-2 min-w-max px-0.5">
                 {COLUMNS.map((column, i) => (
                   <DroppableColumn
@@ -865,16 +865,16 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
                   />
                 ))}
               </div>
+            </div>
 
-              <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>
-                {activeCard && (
-                  <div style={{ width: 'calc(var(--kanban-col-w, 232px) - 12px)', cursor: 'grabbing' }}>
-                    <FichaCard ficha={activeCard} isDragOverlay resolverNome={resolverNome} />
-                  </div>
-                )}
-              </DragOverlay>
-            </DndContext>
-          </div>
+            <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>
+              {activeCard && (
+                <div style={{ width: 'calc(var(--kanban-col-w, 232px) - 12px)', cursor: 'grabbing' }}>
+                  <FichaCard ficha={activeCard} isDragOverlay resolverNome={resolverNome} />
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
         </div>
       )}
     </div>

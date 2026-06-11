@@ -199,7 +199,8 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
           return
         }
         const payload = aliasesModal.map(v => ({ imobiliaria_id: imobSelecionada, alias: v.trim() }))
-        const { error } = await supabase.from('imobiliaria_aliases').insert(payload)
+        const { error } = await supabase.from('imobiliaria_aliases')
+          .upsert(payload, { onConflict: 'alias' })
         if (error) throw error
 
       } else {
@@ -223,7 +224,8 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
 
         if (aliasesModal.length > 0) {
           const payload = aliasesModal.map(v => ({ imobiliaria_id: imobId, alias: v.trim() }))
-          const { error } = await supabase.from('imobiliaria_aliases').insert(payload)
+          const { error } = await supabase.from('imobiliaria_aliases')
+            .upsert(payload, { onConflict: 'alias' })
           if (error) throw error
         }
       }

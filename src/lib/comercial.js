@@ -90,8 +90,10 @@ function rowToLead(r) {
     motivoRecusa:    r.motivo_recusa   || '',
     propostaEnviada: r.proposta_enviada,
     vendaRealizada:  r.venda_realizada || false,
-    historico:       r.historico       || [],
-    criadoEm:        r.criado_em,
+    historico:            r.historico              || [],
+    criadoEm:             r.criado_em,
+    jornada_id:           r.jornada_id             || null,
+    jornada_etapa_atual:  r.jornada_etapa_atual     || null,
   }
 }
 
@@ -408,6 +410,12 @@ export const journeyUpdate = async (id, changes) => {
   if ('tipoCliente' in changes) row.tipo_cliente = changes.tipoCliente
   const { error } = await supabase.from('comercial_jornadas').update(row).eq('id', id)
   if (error) console.error('journeyUpdate:', error)
+}
+
+export const journeyDelete = async (id) => {
+  setState(s => ({ ...s, journeys: s.journeys.filter(j => j.id !== id) }))
+  const { error } = await supabase.from('comercial_jornadas').delete().eq('id', id)
+  if (error) console.error('journeyDelete:', error)
 }
 
 // ── CRUD: Scripts ─────────────────────────────────────────────────────────────

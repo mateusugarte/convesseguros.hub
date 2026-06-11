@@ -15,6 +15,8 @@ import {
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import ReactFlow, { Background, Controls, Handle, Position, ReactFlowProvider } from 'reactflow'
+import 'reactflow/dist/style.css'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -700,12 +702,232 @@ function TabApolices({ lead, navigate, toast }) {
   )
 }
 
+// ── Aba Jornada ───────────────────────────────────────────────────────────────
+
+function ReadOnlyWorkflowNode({ data }) {
+  const { label, color = '#6366f1', tipo, category, highlighted } = data
+  const isTrigger  = category === 'trigger'
+  const isFim      = tipo === 'control_fim'
+  const isCondition = tipo === 'control_condicao'
+  return (
+    <div
+      style={{ borderColor: highlighted ? '#4A90D9' : color, minWidth: 140, boxShadow: highlighted ? '0 0 0 3px #4A90D9' : undefined }}
+      className="rounded-xl border-2 overflow-hidden"
+    >
+      {!isTrigger && (
+        <Handle type="target" position={Position.Top}
+          style={{ background: color, width: 10, height: 10, border: '2px solid #0f172a', top: -6 }} />
+      )}
+      <div style={{ background: color + '18', borderBottom: `1px solid ${color}22` }}
+        className="flex items-center gap-2 px-3 py-2">
+        <span style={{ color }} className="text-xs font-bold leading-none">{label}</span>
+      </div>
+      <div className="px-3 py-1.5 bg-dark-surface" style={{ minHeight: 24 }}>
+        {highlighted && <span className="text-[10px] font-semibold" style={{ color: '#4A90D9' }}>Etapa atual</span>}
+      </div>
+      {!isFim && !isCondition && (
+        <Handle type="source" position={Position.Bottom}
+          style={{ background: color, width: 10, height: 10, border: '2px solid #0f172a', bottom: -6 }} />
+      )}
+      {isCondition && (
+        <>
+          <Handle id="yes" type="source" position={Position.Bottom}
+            style={{ background: '#10B981', width: 10, height: 10, border: '2px solid #0f172a', bottom: -6, left: '30%' }} />
+          <Handle id="no" type="source" position={Position.Bottom}
+            style={{ background: '#EF4444', width: 10, height: 10, border: '2px solid #0f172a', bottom: -6, left: '70%' }} />
+        </>
+      )}
+    </div>
+  )
+}
+const readOnlyNodeTypes = { workflowNode: ReadOnlyWorkflowNode }
+
+function TabJornada({ lead, journeys, events, toast }) {
+  const [jornadaSelecionada, setJornadaSelecionada] = useState('')
+  const [salvando,     setSalvando]     = useState(false)
+  const [modalAvancar, setModalAvancar] = useState(false)
+
+  const jornada = lead.jornada_id ? journeys.find(j => j.id === lead.jornada_id) : null
+
+  async function handleAplicar() {
+    if (!jornadaSelecionada) return
+    setSalvando(true)
+    try {
+      await leadUpdate(lead.id, { jornada_id: jornadaSelecionada, jornada_etapa_atual: null })
+      toast({ type: 'success', title: 'Jornada aplicada!' })
+    } catch { toast({ type: 'error', title: 'Erro ao aplicar jornada' }) }
+    setSalvando(false)
+  }
+
+  async function handleRemover() {
+    await leadUpdate(lead.id, { jornada_id: null, jornada_etapa_atual: null })
+    toast({ type: 'success', title: 'Jornada removida' })
+  }
+
+  async function handleAvancar(novoNode) {
+    try {
+      await leadUpdate(lead.id, { jornada_etapa_atual: novoNode.id })
+      await eventAdd({
+        tipo: 'Nota',
+        nome: 'Jornada: avançou para ' + (novoNode.data?.label || novoNode.id),
+        leadId: lead.id,
+        data: new Date().toISOString(),
+        auto: true,
+      })
+      toast({ type: 'success', title: 'Etapa avançada' })
+    } catch { toast({ type: 'error', title: 'Erro ao avançar etapa' }) }
+    setModalAvancar(false)
+  }
+
+  if (!lead.jornada_id) {
+    return (
+      <div className="card p-4 space-y-3">
+        <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Aplicar Jornada</p>
+        <p className="text-sm text-dark-muted">Escolha uma jornada para acompanhar a evolução deste lead.</p>
+        <Select
+          value={jornadaSelecionada}
+          onChange={setJornadaSelecionada}
+          placeholder="Selecionar jornada..."
+          options={[{ value: '', label: 'Selecionar...' }, ...journeys.map(j => ({ value: j.id, label: j.nome }))]}
+        />
+        <button onClick={handleAplicar} disabled={!jornadaSelecionada || salvando}
+          className="btn-primary text-sm w-full flex items-center justify-center gap-2">
+          {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+          Aplicar Jornada
+        </button>
+      </div>
+    )
+  }
+
+  if (!jornada) {
+    return (
+      <div className="card p-4 space-y-3">
+        <p className="text-sm text-dark-muted">Jornada não encontrada ou foi excluída.</p>
+        <button onClick={handleRemover} className="btn-secondary text-xs text-status-error">Desvincular jornada</button>
+      </div>
+    )
+  }
+
+  const etapasData = jornada.etapas || {}
+  const rawNodes   = Array.isArray(etapasData) ? [] : (etapasData.nodes || [])
+  const rawEdges   = Array.isArray(etapasData) ? [] : (etapasData.edges || [])
+
+  const nodesComDestaque = rawNodes.map(n => ({
+    ...n,
+    type: 'workflowNode',
+    data: { ...n.data, highlighted: n.id === lead.jornada_etapa_atual },
+  }))
+
+  const etapaAtualNode = rawNodes.find(n => n.id === lead.jornada_etapa_atual)
+
+  function getNextNodes() {
+    if (!lead.jornada_etapa_atual) {
+      const targetIds = new Set(rawEdges.map(e => e.target))
+      return rawNodes.filter(n => !targetIds.has(n.id))
+    }
+    const nextIds = rawEdges.filter(e => e.source === lead.jornada_etapa_atual).map(e => e.target)
+    return rawNodes.filter(n => nextIds.includes(n.id))
+  }
+
+  const nextNodes       = getNextNodes()
+  const jornadaEvents   = (events || []).filter(e => e.auto === true && (e.nome || '').startsWith('Jornada:'))
+
+  return (
+    <div className="space-y-4">
+      <div className="card p-3 space-y-2">
+        <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">{jornada.nome}</p>
+        {rawNodes.length > 0 ? (
+          <div style={{ height: 320, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--dark-border)' }}>
+            <ReactFlowProvider>
+              <ReactFlow
+                nodes={nodesComDestaque}
+                edges={rawEdges}
+                nodeTypes={readOnlyNodeTypes}
+                fitView
+                nodesDraggable={false}
+                nodesConnectable={false}
+                elementsSelectable={false}
+                zoomOnScroll={false}
+                panOnDrag
+              >
+                <Background color="#334155" gap={20} size={1} />
+                <Controls showInteractive={false} />
+              </ReactFlow>
+            </ReactFlowProvider>
+          </div>
+        ) : (
+          <p className="text-sm text-dark-muted/60 italic text-center py-8">Jornada sem nós configurados</p>
+        )}
+      </div>
+
+      <div className="card p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Etapa atual</p>
+            <p className="text-sm text-dark-text mt-0.5">
+              {etapaAtualNode ? (etapaAtualNode.data?.label || 'Etapa sem nome') : 'Nenhuma etapa iniciada'}
+            </p>
+          </div>
+          <button onClick={() => setModalAvancar(true)}
+            className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5">
+            <ArrowRight className="w-3.5 h-3.5" />
+            Avançar Etapa
+          </button>
+        </div>
+      </div>
+
+      {jornadaEvents.length > 0 && (
+        <div className="card p-4 space-y-2">
+          <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Histórico</p>
+          {[...jornadaEvents].reverse().map(ev => (
+            <div key={ev.id} className="flex items-start gap-2 text-xs text-dark-muted">
+              <span className="text-dark-muted/40 flex-shrink-0 mt-0.5">{fmtDateShort(ev.data || ev.criadoEm)}</span>
+              <span>{ev.nome}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="text-center pt-1">
+        <button onClick={handleRemover} className="text-xs text-status-error hover:underline">
+          Remover jornada deste lead
+        </button>
+      </div>
+
+      {modalAvancar && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+          <div className="modal-backdrop" onClick={() => setModalAvancar(false)} />
+          <div className="relative glass-modal rounded-2xl w-full max-w-sm overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border">
+              <h2 className="font-bold text-dark-text text-sm">Avançar Etapa</h2>
+              <button onClick={() => setModalAvancar(false)} className="text-dark-muted hover:text-dark-text">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-2">
+              {nextNodes.length === 0 ? (
+                <p className="text-sm text-dark-muted">Nenhuma próxima etapa disponível.</p>
+              ) : nextNodes.map(n => (
+                <button key={n.id} onClick={() => handleAvancar(n)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-dark-border hover:bg-dark-surface2 transition-colors text-left">
+                  <span className="text-sm font-semibold text-dark-text">{n.data?.label || n.id}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── LeadDetalhe ───────────────────────────────────────────────────────────────
 
 const TABS = [
   { id: 'timeline', label: 'Linha do Tempo' },
   { id: 'notas',    label: 'Notas' },
   { id: 'tarefas',  label: 'Tarefas' },
+  { id: 'jornada',  label: 'Jornada' },
   { id: 'qualif',   label: 'Qualificação' },
   { id: 'apolices', label: 'Apólices' },
 ]

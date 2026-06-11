@@ -1,23 +1,28 @@
-﻿import { useState, useCallback, useRef, useMemo } from 'react'
+﻿import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import ReactFlow, {
   Background, Controls, MiniMap,
   addEdge, useNodesState, useEdgesState,
   Handle, Position, ReactFlowProvider,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { useComercial, journeyAdd, journeyUpdate, scriptAdd, PIPELINE_COLS } from '../../lib/comercial'
+import { useComercial, journeyAdd, journeyUpdate, journeyDelete, scriptAdd, PIPELINE_COLS } from '../../lib/comercial'
 import { useToast } from '../../contexts/ToastContext'
 import {
   Plus, ArrowLeft, FileText, Tag, Users, Map, Layers,
   Pencil, Copy, Play, Pause, X, Zap, GitBranch, Clock,
-  Mail, Phone, MoveRight, UserCheck, CheckSquare, CircleDot, Save,
+  Mail, Phone, MoveRight, UserCheck, CheckSquare, CircleDot, Save, Trash2,
+  MapPin, UserPlus, RefreshCw, Heart, Car, Truck, Shield, Smartphone, Package, Flame, PhoneCall,
 } from 'lucide-react'
 import { Select } from '../../components/ui/Select'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const isWorkflow = j => j.etapas && !Array.isArray(j.etapas) && j.etapas._type === 'workflow'
-const getWorkflowData = j => isWorkflow(j) ? j.etapas : { _type: 'workflow', status: 'rascunho', nodes: [], edges: [] }
+const isWorkflow = j => j.etapas && typeof j.etapas === 'object' && !Array.isArray(j.etapas)
+const getWorkflowData = j => {
+  if (!j.etapas) return { status: 'rascunho', nodes: [], edges: [] }
+  if (j.etapas._type === 'workflow') return j.etapas  // compatibilidade legada
+  return j.etapas
+}
 const getStatus = j => getWorkflowData(j).status || 'rascunho'
 
 const STATUS_CONFIG = {
@@ -43,21 +48,47 @@ const NODE_GROUPS = [
   {
     label: 'Gatilhos', category: 'trigger', color: '#F59E0B',
     items: [
-      { tipo: 'trigger_ficha',    label: 'Ficha Aprovada',    Icon: CheckSquare },
-      { tipo: 'trigger_criado',   label: 'Lead Criado',       Icon: Plus },
-      { tipo: 'trigger_movido',   label: 'Lead Movido',       Icon: MoveRight },
-      { tipo: 'trigger_renovacao',label: 'Renovação Próxima', Icon: Clock },
-      { tipo: 'trigger_manual',   label: 'Manual',            Icon: Play },
+      { tipo: 'trigger_ficha',     label: 'Ficha Aprovada',    Icon: CheckSquare },
+      { tipo: 'trigger_criado',    label: 'Lead Criado',       Icon: UserPlus },
+      { tipo: 'trigger_movido',    label: 'Lead Movido',       Icon: MoveRight },
+      { tipo: 'trigger_renovacao', label: 'Renovação Próxima', Icon: RefreshCw },
+      { tipo: 'trigger_manual',    label: 'Manual',            Icon: Play },
     ],
   },
   {
-    label: 'Ações', category: 'action', color: '#3B82F6',
+    label: 'Etapas', category: 'stage', color: '#6B7280',
     items: [
-      { tipo: 'action_tarefa',   label: 'Criar Tarefa',    Icon: CheckSquare },
-      { tipo: 'action_whatsapp', label: 'WhatsApp',        Icon: Phone },
-      { tipo: 'action_email',    label: 'Email',           Icon: Mail },
-      { tipo: 'action_mover',    label: 'Mover Pipeline',  Icon: MoveRight },
-      { tipo: 'action_atribuir', label: 'Atribuir',        Icon: UserCheck },
+      { tipo: 'stage_etapa', label: 'Etapa', Icon: MapPin },
+    ],
+  },
+  {
+    label: 'Produtos', category: 'product', color: '#10B981',
+    items: [
+      { tipo: 'product_saude_pf',      label: 'Saúde PF',          Icon: Heart },
+      { tipo: 'product_saude_pj',      label: 'Saúde PJ',          Icon: Heart },
+      { tipo: 'product_auto',          label: 'Auto Individual',    Icon: Car },
+      { tipo: 'product_auto_frota',    label: 'Auto Frota',         Icon: Truck },
+      { tipo: 'product_vida',          label: 'Seguro de Vida',     Icon: Shield },
+      { tipo: 'product_celular',       label: 'Seguro Celular',     Icon: Smartphone },
+      { tipo: 'product_consorcio',     label: 'Consórcio',          Icon: Layers },
+      { tipo: 'product_transporte',    label: 'Seg. Transporte',    Icon: Package },
+      { tipo: 'product_incendio',      label: 'Seg. Incêndio',      Icon: Flame },
+    ],
+  },
+  {
+    label: 'Contato', category: 'contact', color: '#3B82F6',
+    items: [
+      { tipo: 'contact_whatsapp', label: 'WhatsApp',   Icon: Phone },
+      { tipo: 'contact_email',    label: 'Email',      Icon: Mail },
+      { tipo: 'contact_ligacao',  label: 'Ligação',    Icon: PhoneCall },
+    ],
+  },
+  {
+    label: 'Ações', category: 'action', color: '#4A90D9',
+    items: [
+      { tipo: 'action_tarefa',   label: 'Criar Tarefa',   Icon: CheckSquare },
+      { tipo: 'action_mover',    label: 'Mover Pipeline', Icon: MoveRight },
+      { tipo: 'action_atribuir', label: 'Atribuir',       Icon: UserCheck },
     ],
   },
   {
@@ -95,16 +126,21 @@ function WorkflowNode({ id, data, selected }) {
       {/* Target handle (top) — hidden for triggers */}
       {!isTrigger && (
         <Handle type="target" position={Position.Top}
-          style={{ background: color, width: 10, height: 10, border: '2px solid var(--dark-bg, #0f172a)', top: -6 }} />
+          style={{ background: color, width: 12, height: 12, border: '2.5px solid white', top: -7 }} />
       )}
 
       {/* Header */}
       <div
-        style={{ background: color + '22', borderBottom: `1px solid ${color}33` }}
-        className="flex items-center gap-2 px-3 py-2 rounded-t-[10px]"
+        style={{ background: color + '18', borderBottom: `1px solid ${color}22` }}
+        className="px-3 py-2 rounded-t-[10px]"
       >
-        {Icon && <Icon style={{ color }} className="w-3.5 h-3.5 flex-shrink-0" />}
-        <span style={{ color }} className="text-xs font-bold leading-none">{label}</span>
+        <div className="flex items-center gap-2">
+          {Icon && <Icon style={{ color }} className="w-3.5 h-3.5 flex-shrink-0" />}
+          <span style={{ color }} className="text-xs font-bold leading-none">{label}</span>
+        </div>
+        {data.category === 'stage' && (
+          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full mt-1 inline-block" style={{ background: 'rgba(107,114,128,0.2)', color: '#9CA3AF' }}>Marco manual</span>
+        )}
       </div>
 
       {/* Body */}
@@ -119,14 +155,14 @@ function WorkflowNode({ id, data, selected }) {
       {/* Source handle(s) (bottom) — hidden for fim */}
       {!isFim && !isCondition && (
         <Handle type="source" position={Position.Bottom}
-          style={{ background: color, width: 10, height: 10, border: '2px solid var(--dark-bg, #0f172a)', bottom: -6 }} />
+          style={{ background: color, width: 12, height: 12, border: '2.5px solid white', bottom: -7 }} />
       )}
       {isCondition && (
         <>
           <Handle id="yes" type="source" position={Position.Bottom}
-            style={{ background: '#10B981', width: 10, height: 10, border: '2px solid var(--dark-bg, #0f172a)', bottom: -6, left: '30%' }} />
+            style={{ background: '#10B981', width: 12, height: 12, border: '2.5px solid white', bottom: -7, left: '30%' }} />
           <Handle id="no" type="source" position={Position.Bottom}
-            style={{ background: '#EF4444', width: 10, height: 10, border: '2px solid var(--dark-bg, #0f172a)', bottom: -6, left: '70%' }} />
+            style={{ background: '#EF4444', width: 12, height: 12, border: '2.5px solid white', bottom: -7, left: '70%' }} />
           <div className="absolute -bottom-5 flex w-full px-2 pointer-events-none">
             <span style={{ left: 'calc(30% - 10px)' }} className="absolute text-[10px] font-bold text-status-success">Sim</span>
             <span style={{ left: 'calc(70% - 8px)' }} className="absolute text-[10px] font-bold text-status-error">Não</span>
@@ -142,32 +178,48 @@ const nodeTypes = { workflowNode: WorkflowNode }
 // ── Painel Nós (left sidebar in editor) ──────────────────────────────────────
 
 function PainelNos() {
+  const getSubtitle = (item, group) => {
+    if (group.category === 'stage') return 'Marco manual'
+    return null
+  }
+
   return (
     <div className="w-56 flex-shrink-0 border-r border-dark-border bg-dark-surface flex flex-col overflow-y-auto">
       <div className="px-3 py-3 border-b border-dark-border">
         <p className="text-xs font-bold text-dark-muted uppercase tracking-wider">Componentes</p>
         <p className="text-[10px] text-dark-muted/60 mt-0.5">Arraste para o canvas</p>
       </div>
-      {NODE_GROUPS.map(group => (
-        <div key={group.label} className="px-2 py-3 border-b border-dark-border/50 last:border-0">
-          <p className="text-[10px] font-bold uppercase tracking-wider mb-2 px-1" style={{ color: group.color }}>
-            {group.label}
-          </p>
-          <div className="space-y-1">
-            {group.items.map(item => (
-              <div
-                key={item.tipo}
-                draggable
-                onDragStart={e => {
-                  e.dataTransfer.setData('application/workflow-tipo', item.tipo)
-                  e.dataTransfer.effectAllowed = 'move'
-                }}
-                className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-grab active:cursor-grabbing hover:bg-dark-surface2 transition-colors select-none"
-              >
-                <item.Icon style={{ color: group.color }} className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="text-xs text-dark-text">{item.label}</span>
-              </div>
-            ))}
+      {NODE_GROUPS.map((group, gi) => (
+        <div key={group.label}>
+          {gi > 0 && <div className="mx-2 border-t border-dark-border/40" />}
+          <div className="px-2 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5 px-1" style={{ color: group.color }}>
+              {group.label}
+            </p>
+            <div className="space-y-0.5">
+              {group.items.map(item => {
+                const subtitle = getSubtitle(item, group)
+                return (
+                  <div
+                    key={item.tipo}
+                    draggable
+                    onDragStart={e => {
+                      e.dataTransfer.setData('application/workflow-tipo', item.tipo)
+                      e.dataTransfer.effectAllowed = 'move'
+                    }}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-grab active:cursor-grabbing hover:bg-dark-surface2 transition-colors select-none"
+                  >
+                    <div style={{ width: 28, height: 28, borderRadius: 6, background: group.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <item.Icon style={{ color: group.color, width: 14, height: 14 }} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-dark-text leading-tight">{item.label}</p>
+                      {subtitle && <p className="text-[9px] text-dark-muted/70 leading-tight">{subtitle}</p>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       ))}
@@ -291,6 +343,76 @@ function PainelConfig({ node, onUpdate, onClose, onDelete }) {
           </>
         )}
 
+        {/* stage_etapa */}
+        {tipo === 'stage_etapa' && (
+          <ConfigField label="Nome da etapa" value={config.nome || ''} onChange={v => set('nome', v)} placeholder="ex: Contato Inicial" />
+        )}
+
+        {/* product_saude */}
+        {(tipo === 'product_saude_pf' || tipo === 'product_saude_pj') && (
+          <>
+            <ConfigField label="Operadora" value={config.operadora || ''} onChange={v => set('operadora', v)} />
+            <ConfigField label="Observação" value={config.observacao || ''} onChange={v => set('observacao', v)} textarea />
+          </>
+        )}
+
+        {/* product_auto / vida / transporte / incendio */}
+        {['product_auto', 'product_auto_frota', 'product_vida', 'product_transporte', 'product_incendio'].includes(tipo) && (
+          <>
+            <ConfigField label="Seguradora" value={config.seguradora || ''} onChange={v => set('seguradora', v)} />
+            <ConfigField label="Observação" value={config.observacao || ''} onChange={v => set('observacao', v)} textarea />
+          </>
+        )}
+
+        {/* product_celular */}
+        {tipo === 'product_celular' && (
+          <>
+            <ConfigField label="Modelo do aparelho" value={config.modelo || ''} onChange={v => set('modelo', v)} />
+            <ConfigField label="Observação" value={config.observacao || ''} onChange={v => set('observacao', v)} textarea />
+          </>
+        )}
+
+        {/* product_consorcio */}
+        {tipo === 'product_consorcio' && (
+          <>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Tipo</label>
+              <Select
+                value={config.tipo_consorcio || ''}
+                onChange={v => set('tipo_consorcio', v)}
+                options={[
+                  { value: '', label: 'Selecionar...' },
+                  { value: 'Auto', label: 'Auto' },
+                  { value: 'Residência', label: 'Residência' },
+                  { value: 'Campanha', label: 'Campanha' },
+                ]}
+              />
+            </div>
+            {config.tipo_consorcio === 'Campanha' && (
+              <ConfigField label="Nome da campanha" value={config.nome_campanha || ''} onChange={v => set('nome_campanha', v)} />
+            )}
+            <ConfigField label="Observação" value={config.observacao || ''} onChange={v => set('observacao', v)} textarea />
+          </>
+        )}
+
+        {/* contact_whatsapp */}
+        {tipo === 'contact_whatsapp' && (
+          <ConfigField label="Mensagem" value={config.mensagem || ''} onChange={v => set('mensagem', v)} textarea placeholder="Olá {nome}, ..." />
+        )}
+
+        {/* contact_email */}
+        {tipo === 'contact_email' && (
+          <>
+            <ConfigField label="Assunto" value={config.assunto || ''} onChange={v => set('assunto', v)} />
+            <ConfigField label="Corpo" value={config.corpo || ''} onChange={v => set('corpo', v)} textarea />
+          </>
+        )}
+
+        {/* contact_ligacao */}
+        {tipo === 'contact_ligacao' && (
+          <ConfigField label="Roteiro" value={config.roteiro || ''} onChange={v => set('roteiro', v)} textarea placeholder="Pontos a abordar na ligação..." />
+        )}
+
         {/* triggers */}
         {tipo.startsWith('trigger_') && tipo !== 'trigger_manual' && (
           <p className="text-xs text-dark-muted/60 italic">Este gatilho não requer configuração adicional.</p>
@@ -338,12 +460,37 @@ function EditorInner({ journey, onBack, toast }) {
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initEdges)
-  const [nome, setNome]           = useState(journey.nome)
+  const [nome, setNome]             = useState(journey.nome)
   const [selectedId, setSelectedId] = useState(null)
-  const [dirty, setDirty]         = useState(false)
-  const [saving, setSaving]       = useState(false)
-  const wrapperRef                = useRef(null)
-  const rfInstanceRef             = useRef(null)
+  const [dirty, setDirty]           = useState(false)
+  const [saving, setSaving]         = useState(false)
+  const [addMenuOpen, setAddMenuOpen]   = useState(false)
+  const [addMenuGroup, setAddMenuGroup] = useState(null)
+  const wrapperRef  = useRef(null)
+  const rfInstanceRef = useRef(null)
+  const addMenuRef  = useRef(null)
+
+  useEffect(() => {
+    function handler(e) {
+      if (addMenuRef.current && !addMenuRef.current.contains(e.target)) {
+        setAddMenuOpen(false)
+        setAddMenuGroup(null)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  function addNodeFromMenu(tipo) {
+    if (!rfInstanceRef.current || !wrapperRef.current) return
+    const bounds = wrapperRef.current.getBoundingClientRect()
+    const position = rfInstanceRef.current.project({ x: bounds.width / 2, y: bounds.height / 2 })
+    const info = findNodeInfo(tipo)
+    setNodes(ns => [...ns, { id: crypto.randomUUID(), type: 'workflowNode', position, data: { ...info, config: {} } }])
+    setDirty(true)
+    setAddMenuOpen(false)
+    setAddMenuGroup(null)
+  }
 
   const selectedNode = useMemo(() => nodes.find(n => n.id === selectedId) || null, [nodes, selectedId])
 
@@ -403,7 +550,7 @@ function EditorInner({ journey, onBack, toast }) {
     try {
       const status = newStatus || wf.status || 'rascunho'
       const etapas = {
-        _type: 'workflow', status,
+        status,
         nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, data: n.data })),
         edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle, targetHandle: e.targetHandle, style: e.style, animated: e.animated })),
       }
@@ -414,6 +561,17 @@ function EditorInner({ journey, onBack, toast }) {
       toast({ type: 'error', title: 'Erro ao salvar jornada' })
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!window.confirm('Excluir esta jornada? Esta ação não pode ser desfeita.')) return
+    try {
+      await journeyDelete(journey.id)
+      toast({ type: 'success', title: 'Jornada excluída' })
+      onBack()
+    } catch {
+      toast({ type: 'error', title: 'Erro ao excluir jornada' })
     }
   }
 
@@ -444,6 +602,11 @@ function EditorInner({ journey, onBack, toast }) {
           <Save className="w-3.5 h-3.5" />
           {saving ? 'Salvando...' : 'Salvar'}
         </button>
+        <button onClick={handleDelete}
+          className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5 flex-shrink-0 text-status-error border-status-error/30 hover:bg-status-error/10">
+          <Trash2 className="w-3.5 h-3.5" />
+          Excluir
+        </button>
         <button onClick={() => persistWorkflow('ativa')} disabled={saving}
           className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5 flex-shrink-0">
           <Play className="w-3.5 h-3.5" />
@@ -458,7 +621,7 @@ function EditorInner({ journey, onBack, toast }) {
         {/* Canvas */}
         <div
           ref={wrapperRef}
-          className="flex-1 bg-dark-bg"
+          className="flex-1 bg-dark-bg relative"
           onDrop={handleDrop}
           onDragOver={e => e.preventDefault()}
         >
@@ -484,6 +647,54 @@ function EditorInner({ journey, onBack, toast }) {
               className="!bg-dark-surface !border-dark-border !rounded-xl"
             />
           </ReactFlow>
+
+          {/* Floating + button */}
+          <div ref={addMenuRef} style={{ position: 'absolute', bottom: 80, right: 16, zIndex: 10 }}>
+            <button
+              onClick={() => { setAddMenuOpen(o => !o); setAddMenuGroup(null) }}
+              style={{ width: 40, height: 40, borderRadius: '50%', background: '#1A3A6B', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}
+            >
+              <Plus className="w-5 h-5 text-white" />
+            </button>
+            {addMenuOpen && (
+              <div style={{ position: 'absolute', bottom: 48, right: 0, width: 210, background: 'var(--dark-surface)', border: '1px solid var(--dark-border)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+                {addMenuGroup === null ? (
+                  NODE_GROUPS.map(group => (
+                    <button key={group.label} onClick={() => setAddMenuGroup(group.label)}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                      className="hover:bg-dark-surface2 transition-colors">
+                      <span style={{ width: 28, height: 28, borderRadius: 6, background: group.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <group.items[0].Icon style={{ color: group.color, width: 14, height: 14 }} />
+                      </span>
+                      <div>
+                        <p style={{ color: group.color, fontWeight: 700, fontSize: 11, margin: 0 }}>{group.label}</p>
+                        <p style={{ color: 'var(--dark-muted)', fontSize: 10, margin: 0 }}>{group.items.length} tipos</p>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <>
+                    <div style={{ padding: '6px 12px', borderBottom: '1px solid var(--dark-border)' }}>
+                      <button onClick={() => setAddMenuGroup(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--dark-muted)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        ← Voltar
+                      </button>
+                    </div>
+                    {NODE_GROUPS.find(g => g.label === addMenuGroup)?.items.map(item => {
+                      const grp = NODE_GROUPS.find(g => g.label === addMenuGroup)
+                      return (
+                        <button key={item.tipo} onClick={() => addNodeFromMenu(item.tipo)}
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                          className="hover:bg-dark-surface2 transition-colors">
+                          <item.Icon style={{ color: grp?.color, width: 14, height: 14 }} />
+                          <span style={{ color: 'var(--dark-text)', fontSize: 12 }}>{item.label}</span>
+                        </button>
+                      )
+                    })}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {selectedNode && (

@@ -64,7 +64,7 @@ function validarFicha(form) {
 function Field({ label, children, span2 = false, required = false }) {
   return (
     <div className={span2 ? 'col-span-2' : ''}>
-      <label className="block text-xs font-medium text-dark-muted mb-1.5 uppercase tracking-wider">
+      <label className="eyebrow text-dark-muted block mb-1.5">
         {label}{required && <span className="text-status-danger ml-0.5">*</span>}
       </label>
       {children}
@@ -75,7 +75,7 @@ function Field({ label, children, span2 = false, required = false }) {
 function Sec({ title, children }) {
   return (
     <div>
-      <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-3 pb-2 border-b border-dark-border">{title}</p>
+      <p className="eyebrow text-dark-muted mb-3 pb-2 border-b border-dark-border/30">{title}</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{children}</div>
     </div>
   )

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   fetchKPIsApolices, fetchApolicesPorDia,
@@ -150,7 +150,7 @@ export default function ApolicesDashboard() {
       {/* ── Header ── */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-lg font-bold text-dark-text">Dashboard de Apólices</h1>
+          <h1 className="title-page text-dark-text">Dashboard de Apólices</h1>
           <p className="text-xs text-dark-muted mt-0.5 capitalize">{mesLabel}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -324,3 +324,4 @@ export default function ApolicesDashboard() {
     </div>
   )
 }
+

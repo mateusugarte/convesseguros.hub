@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+﻿import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   useComercial, leadMover, calcScore, scoreFaixa, PIPELINE_COLS, ORIGENS,
@@ -409,7 +409,7 @@ export default function BaseLeads() {
       {/* ── Barra nível 1 ──────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 flex-wrap">
         <div>
-          <h1 className="text-lg font-bold text-dark-text">Base de Leads</h1>
+          <h1 className="title-page text-dark-text">Base de Leads</h1>
           <p className="text-xs text-dark-muted">{filtered.length} de {(state.leads || []).length} contatos</p>
         </div>
 
@@ -644,3 +644,4 @@ export default function BaseLeads() {
     </div>
   )
 }
+

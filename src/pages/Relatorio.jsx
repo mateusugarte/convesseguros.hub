@@ -224,8 +224,8 @@ function Metricas({ fichas }) {
         { label: 'Taxa recuperação',    val: `${taxaRecuperacao}%`, color: '#4A90D9', sub: 'recuperados / aprovadas' },
       ].map(({ label, val, color, sub }) => (
         <div key={label} className="card p-4">
-          <p className="text-xs text-dark-muted mb-1">{label}</p>
-          <p className="text-2xl font-bold font-mono" style={{ color }}>{val}</p>
+          <p className="eyebrow text-dark-muted mb-1">{label}</p>
+          <p className="stat-number" style={{ color }}>{val}</p>
           <p className="text-[10px] text-dark-muted mt-1">{sub}</p>
         </div>
       ))}
@@ -384,7 +384,7 @@ export default function Relatorio() {
 
       {/* ── Header ── */}
       <div>
-        <h1 className="text-lg font-bold text-dark-text">Relatório por Imobiliária</h1>
+        <h1 className="title-page text-dark-text">Relatório por Imobiliária</h1>
         <p className="text-xs text-dark-muted mt-0.5">Fichas finalizadas filtradas por imobiliária e período</p>
       </div>
 

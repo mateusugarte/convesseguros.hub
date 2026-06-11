@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+﻿import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core'
 import { snapCenterToCursor } from '@dnd-kit/modifiers'
@@ -702,7 +702,7 @@ export default function ApoicesGestao() {
       {/* ── Header ── */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-lg font-bold text-dark-text">Gestão de Apólices</h1>
+          <h1 className="title-page text-dark-text">Gestão de Apólices</h1>
           <p className="text-xs text-dark-muted mt-0.5">Arraste as apólices entre as colunas para atualizar o status</p>
         </div>
       </div>
@@ -784,3 +784,4 @@ export default function ApoicesGestao() {
     </div>
   )
 }
+

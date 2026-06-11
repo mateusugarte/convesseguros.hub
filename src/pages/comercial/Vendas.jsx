@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+﻿import { useState, useMemo } from 'react'
 import { useComercial, saleAdd, PRODUTOS } from '../../lib/comercial'
 import { useToast } from '../../contexts/ToastContext'
 import { Plus, ArrowLeft, TrendingUp, DollarSign, Award } from 'lucide-react'
@@ -123,7 +123,7 @@ export default function Vendas() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-lg font-bold text-dark-text">Área de Vendas</h1>
+          <h1 className="title-page text-dark-text">Área de Vendas</h1>
           <p className="text-xs text-dark-muted mt-0.5">{filteredSales.length} vendas{periodo !== 'todos' ? ' no período' : ' registradas'}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -203,3 +203,4 @@ export default function Vendas() {
     </div>
   )
 }
+

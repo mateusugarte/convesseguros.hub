@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+﻿import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchNomesImobiliariasAll } from '../lib/fichas'
@@ -862,7 +862,7 @@ export default function Imobiliarias() {
       {/* ── Header ── */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-lg font-bold text-dark-text">Imobiliárias</h1>
+          <h1 className="title-page text-dark-text">Imobiliárias</h1>
           <p className="text-xs text-dark-muted mt-0.5">
             Mapeie variações de nomes e gerencie cadastros por imobiliária
           </p>
@@ -942,3 +942,4 @@ export default function Imobiliarias() {
     </div>
   )
 }
+

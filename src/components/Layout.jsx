@@ -192,8 +192,11 @@ export default function Layout() {
           </div>
           {(sidebarOpen || isMobile) && (
             <div className="min-w-0">
-              <p className="text-sm font-bold text-white leading-none" style={{ fontFamily: 'var(--font-heading)' }}>Conves</p>
-              <p className="text-[10px] text-white/40 mt-0.5 truncate tracking-wide">Sistema de Fichas</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-bold text-white leading-none" style={{ fontFamily: 'var(--font-heading)' }}>Conves</p>
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-gold flex-shrink-0 opacity-65" />
+              </div>
+              <p className="text-[10px] mt-0.5 truncate tracking-wide" style={{ color: 'rgba(201,168,76,0.55)' }}>Sistema de Fichas</p>
             </div>
           )}
         </div>
@@ -219,12 +222,12 @@ export default function Layout() {
                       <button
                         onClick={() => toggleExpand(item.to)}
                         title={(!sidebarOpen && !isMobile) ? item.label : undefined}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer min-h-[40px]
+                        className={`w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer min-h-[40px]
                           ${isActive
-                            ? 'bg-white/10 text-white'
-                            : 'text-white/50 hover:text-white/80 hover:bg-white/[0.06]'
+                            ? 'bg-brand-accent/[0.18] text-white border-l-2 border-brand-accent/90 pl-[calc(0.75rem-2px)] pr-3'
+                            : 'text-white/50 hover:text-white/80 hover:bg-white/[0.06] px-3'
                           }
-                          ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}
+                          ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}
                         `}
                       >
                         <Icon className="w-4 h-4 flex-shrink-0" />
@@ -283,12 +286,12 @@ export default function Layout() {
                     end={item.end}
                     title={(!sidebarOpen && !isMobile) ? item.label : undefined}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer min-h-[40px]
+                      `flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer min-h-[40px]
                         ${isActive
-                          ? 'bg-white/10 text-white'
-                          : 'text-white/50 hover:text-white/80 hover:bg-white/[0.06] hover:translate-x-0.5'
+                          ? 'bg-brand-accent/[0.18] text-white border-l-2 border-brand-accent/90 pl-[calc(0.75rem-2px)] pr-3'
+                          : 'text-white/50 hover:text-white/80 hover:bg-white/[0.06] hover:translate-x-0.5 px-3'
                         }
-                        ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}
+                        ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}
                       `
                     }
                   >
@@ -306,7 +309,7 @@ export default function Layout() {
           ${(!sidebarOpen && !isMobile) ? 'flex justify-center' : 'flex items-center gap-2.5'}
         `}>
           <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 ring-1 ring-white/10"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 ring-1 ring-white/20"
             style={{ background: avatarColor }}
           >
             {initials(profile?.nome)}
@@ -315,7 +318,11 @@ export default function Layout() {
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-white/80 truncate">{profile?.nome}</p>
               {abertasCount > 0 && (
-                <p className="text-[10px] text-status-warning mt-0.5">{abertasCount} em cotação</p>
+                <p className="text-[10px] mt-0.5">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-brand-accent font-semibold" style={{ background: 'rgba(74,144,217,0.18)' }}>
+                    {abertasCount} em cotação
+                  </span>
+                </p>
               )}
             </div>
           )}
@@ -327,9 +334,9 @@ export default function Layout() {
             onClick={() => setSidebarOpen(o => !o)}
             className="absolute -right-3 top-[72px] w-6 h-6 rounded-full flex items-center justify-center transition-all z-50 cursor-pointer"
             style={{
-              background: '#1e293b',
-              border: '1px solid rgba(255,255,255,0.10)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+              background: 'rgba(15, 26, 50, 0.95)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
             }}
           >
             {sidebarOpen

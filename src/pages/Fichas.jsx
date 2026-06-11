@@ -270,7 +270,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-lg font-bold text-dark-text">Fichas</h1>
+          <h1 className="title-page text-dark-text">Fichas</h1>
           <p className="text-xs text-dark-muted mt-0.5 capitalize">Visão geral · {mesLabel}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
@@ -319,8 +319,8 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
           { label: 'Em Cotação',    val: kpis?.emCotacao,  accent: '#C9A84C' },
         ].map(({ label, val, variacao, accent }) => (
           <div key={label} className="card p-4">
-            <p className="text-xs text-dark-muted mb-2">{label}</p>
-            <p className="text-2xl font-bold font-mono" style={{ color: accent }}>{val ?? '—'}</p>
+            <p className="eyebrow text-dark-muted mb-2">{label}</p>
+            <p className="stat-number" style={{ color: accent }}>{val ?? '—'}</p>
             {variacao !== undefined && variacao !== null && (
               <div className={`flex items-center gap-1 mt-1 text-[10px] font-medium ${variacao >= 0 ? 'text-status-success' : 'text-status-danger'}`}>
                 {variacao >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}

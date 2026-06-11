@@ -123,12 +123,14 @@ export default function ImobiliariaSelect({
         <div
           className="glass-panel animate-fade-in"
           style={{
-            position: 'fixed',
-            top:      dropdownStyle.top,
-            bottom:   dropdownStyle.bottom,
-            left:     dropdownStyle.left,
-            width:    dropdownStyle.width,
-            zIndex:   9999,
+            position:    'fixed',
+            top:         dropdownStyle.top,
+            bottom:      dropdownStyle.bottom,
+            left:        dropdownStyle.left,
+            width:       dropdownStyle.width,
+            zIndex:      9999,
+            borderTop:   '2px solid rgba(74,144,217,0.22)',
+            boxShadow:   '0 24px 64px rgba(0,0,0,0.32), 0 8px 24px rgba(20,60,140,0.16)',
           }}
         >
           {/* Opção "Todas" só aparece quando input está vazio */}

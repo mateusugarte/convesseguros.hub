@@ -1,4 +1,4 @@
-import { Lock, Star } from 'lucide-react'
+﻿import { Lock, Star } from 'lucide-react'
 
 const LOGO = 'https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/conves/file.jpeg'
 
@@ -38,7 +38,7 @@ export default function GestaoEmissoes() {
           {/* Title */}
           <div>
             <div className="flex items-center justify-center gap-2 mb-2">
-              <h1 className="text-xl font-bold text-dark-text">Gestão de Emissões</h1>
+              <h1 className="title-page text-dark-text">Gestão de Emissões</h1>
               <span className="badge-soon">Em Breve</span>
             </div>
             <p className="text-sm text-dark-muted leading-relaxed max-w-sm mx-auto">
@@ -64,3 +64,4 @@ export default function GestaoEmissoes() {
     </div>
   )
 }
+

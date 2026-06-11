@@ -104,11 +104,11 @@ function DarkTip({ active, payload, label, dateLabel }) {
 
 // ── KPI Card ─────────────────────────────────────────────────────────────────
 
-function KPICard({ label, value, sub, icon: Icon, accent }) {
+function KPICard({ label, value, sub, icon: Icon, accent, gold }) {
   return (
     <div className="card p-5 space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold text-dark-muted uppercase tracking-widest">{label}</p>
+        <p className="eyebrow text-dark-muted">{label}</p>
         {Icon && (
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -118,7 +118,7 @@ function KPICard({ label, value, sub, icon: Icon, accent }) {
           </div>
         )}
       </div>
-      <p className="text-3xl font-bold text-dark-text font-mono tabular-nums">{value ?? '—'}</p>
+      <p className="stat-number" style={{ color: gold ? '#C9A84C' : undefined }}>{value ?? '—'}</p>
       {sub && <p className="text-[11px] text-dark-muted mt-0.5">{sub}</p>}
     </div>
   )
@@ -130,7 +130,7 @@ function SectionHeader({ title, icon: Icon }) {
   return (
     <div className="flex items-center gap-2 mb-4">
       {Icon && <Icon className="w-4 h-4 text-brand-accent" />}
-      <h2 className="text-sm font-semibold text-dark-text">{title}</h2>
+      <h2 className="title-section text-dark-text">{title}</h2>
     </div>
   )
 }
@@ -291,7 +291,7 @@ export default function Dashboard() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-dark-text">Dashboard</h1>
+          <h1 className="title-page text-dark-text">Dashboard</h1>
           <p className="text-xs text-dark-muted">
             {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
           </p>
@@ -309,7 +309,7 @@ export default function Dashboard() {
         <div className="animate-fade-in stagger-1"><KPICard label="Hoje"        value={kpis?.hoje}     icon={Zap}         accent="#4A90D9" /></div>
         <div className="animate-fade-in stagger-2"><KPICard label="Esta Semana" value={kpis?.semana}   icon={TrendingUp}  accent="#8B5CF6" /></div>
         <div className="animate-fade-in stagger-3"><KPICard label="Este Mês"    value={kpis?.mes}      icon={BarChart3}   accent="#F59E0B" /></div>
-        <div className="animate-fade-in stagger-4"><KPICard label="Em Aberto"   value={kpis?.emAberto} sub="pendente + cotação" icon={Clock} accent="#F59E0B" /></div>
+        <div className="animate-fade-in stagger-4"><KPICard label="Em Aberto"   value={kpis?.emAberto} sub="pendente + cotação" icon={Clock} accent="#F59E0B" gold /></div>
         <div className="animate-fade-in stagger-5"><KPICard label="Emitidas"    value={emitidas}       sub="este mês"    icon={CheckCircle2} accent="#10B981" /></div>
       </div>
 

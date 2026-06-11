@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+﻿import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, useDraggable } from '@dnd-kit/core'
 import { snapCenterToCursor } from '@dnd-kit/modifiers'
@@ -691,7 +691,7 @@ export default function Pipeline() {
       {/* Header */}
       <div className="flex items-center gap-3 flex-shrink-0">
         <div>
-          <h1 className="text-lg font-bold text-dark-text">Pipeline</h1>
+          <h1 className="title-page text-dark-text">Pipeline</h1>
           <p className="text-xs text-dark-muted">
             {state.leads.filter(l => l.coluna !== 'recusou').length} leads ativos
           </p>
@@ -769,3 +769,4 @@ export default function Pipeline() {
     </div>
   )
 }
+

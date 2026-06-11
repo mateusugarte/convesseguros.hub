@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+﻿import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchApolicesLista, STATUS_EMISSAO_LABELS } from '../lib/apolices'
 import { supabase } from '../lib/supabase'
@@ -158,7 +158,7 @@ export default function ApolicesLista() {
 
       {/* ── Header ── */}
       <div>
-        <h1 className="text-lg font-bold text-dark-text">Apólices</h1>
+        <h1 className="title-page text-dark-text">Apólices</h1>
         <p className="text-xs text-dark-muted mt-0.5">Listagem completa de todas as apólices</p>
       </div>
 
@@ -317,3 +317,4 @@ export default function ApolicesLista() {
     </div>
   )
 }
+

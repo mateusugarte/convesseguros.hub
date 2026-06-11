@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   useComercial, leadUpdate, leadMover, eventAdd, eventUpdate, eventDelete,
@@ -282,7 +282,7 @@ function CardResumo({ lead, events }) {
       <div className="grid grid-cols-3 gap-2 text-center">
         {[['contatos', contatos], ['tarefas', tarefas], ['dias', diasP]].map(([lbl, val]) => (
           <div key={lbl}>
-            <p className="text-lg font-bold text-dark-text">{val}</p>
+            <p className="title-page text-dark-text">{val}</p>
             <p className="text-[10px] text-dark-muted">{lbl}</p>
           </div>
         ))}
@@ -896,3 +896,4 @@ export default function LeadDetalhe() {
     </div>
   )
 }
+

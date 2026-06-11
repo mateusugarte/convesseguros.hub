@@ -131,7 +131,7 @@ export default function MinhasFichas() {
           {initials(profile?.nome)}
         </div>
         <div>
-          <h1 className="text-lg font-bold text-dark-text">Minhas Fichas</h1>
+          <h1 className="title-page text-dark-text">Minhas Fichas</h1>
           <p className="text-xs text-dark-muted">{profile?.nome}</p>
         </div>
       </div>
@@ -141,29 +141,29 @@ export default function MinhasFichas() {
         <div className="card p-4 flex items-center gap-3">
           <Clock className="w-5 h-5 text-status-warning flex-shrink-0" />
           <div>
-            <p className="text-xs text-dark-muted">Em Cotação</p>
-            <p className="text-2xl font-bold text-dark-text font-mono">{abertas.length}</p>
+            <p className="eyebrow text-dark-muted">Em Cotação</p>
+            <p className="stat-number text-dark-text">{abertas.length}</p>
           </div>
         </div>
         <div className="card p-4 flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 text-status-success flex-shrink-0" />
           <div>
-            <p className="text-xs text-dark-muted">Aprovadas</p>
-            <p className="text-2xl font-bold text-status-success font-mono">{metricas.aprovadas}</p>
+            <p className="eyebrow text-dark-muted">Aprovadas</p>
+            <p className="stat-number text-status-success">{metricas.aprovadas}</p>
           </div>
         </div>
         <div className="card p-4 flex items-center gap-3">
           <FileText className="w-5 h-5 text-brand-accent flex-shrink-0" />
           <div>
-            <p className="text-xs text-dark-muted">Finalizadas</p>
-            <p className="text-2xl font-bold text-dark-text font-mono">{passadas.length}</p>
+            <p className="eyebrow text-dark-muted">Finalizadas</p>
+            <p className="stat-number text-dark-text">{passadas.length}</p>
           </div>
         </div>
         <div className="card p-4 flex items-center gap-3">
           <TrendingUp className="w-5 h-5 text-status-success flex-shrink-0" />
           <div>
-            <p className="text-xs text-dark-muted">Taxa Aprovação</p>
-            <p className="text-2xl font-bold text-status-success font-mono">{metricas.taxaAprovacao}%</p>
+            <p className="eyebrow text-dark-muted">Taxa Aprovação</p>
+            <p className="stat-number text-status-success">{metricas.taxaAprovacao}%</p>
           </div>
         </div>
       </div>

@@ -5,11 +5,17 @@
 
 /* Base gradient background — fixed, sem image loading */
 html {
-  background: linear-gradient(160deg, #edf2ff 0%, #e6ecff 35%, #f0f5ff 65%, #edf1ff 100%);
+  background:
+    radial-gradient(ellipse 70% 50% at 0% 0%, rgba(43,91,168,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 100% 100%, rgba(201,168,76,0.03) 0%, transparent 55%),
+    linear-gradient(160deg, #edf2ff 0%, #e6ecff 35%, #f0f5ff 65%, #edf1ff 100%);
   background-attachment: fixed;
 }
 html.dark {
-  background: linear-gradient(160deg, #05091a 0%, #080f28 45%, #050b1e 100%);
+  background:
+    radial-gradient(ellipse 80% 50% at 8% 0%, rgba(74,144,217,0.09) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 92% 100%, rgba(201,168,76,0.04) 0%, transparent 55%),
+    linear-gradient(160deg, #05091a 0%, #080f28 45%, #050b1e 100%);
   background-attachment: fixed;
 }
 
@@ -56,14 +62,15 @@ html.dark {
            disabled:opacity-40 disabled:cursor-not-allowed
            focus:outline-none focus:ring-2 focus:ring-brand-accent/40;
     font-family: var(--font-heading);
-    background: linear-gradient(135deg, #3A6BC0 0%, #1E4A8C 100%);
-    box-shadow: 0 2px 8px rgba(43,91,168,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+    background: linear-gradient(135deg, #5090E0 0%, #2B5BA8 55%, #1E4A8C 100%);
+    box-shadow: 0 2px 8px rgba(43,91,168,0.40), inset 0 1px 0 rgba(255,255,255,0.22);
     letter-spacing: 0.01em;
   }
   .btn-primary:hover:not(:disabled) {
-    background: linear-gradient(135deg, #4A7BD0 0%, #2B5BA8 100%);
-    box-shadow: 0 4px 16px rgba(43,91,168,0.45), inset 0 1px 0 rgba(255,255,255,0.18);
-    transform: translateY(-1px);
+    background: linear-gradient(135deg, #60A0F0 0%, #3A6BC0 55%, #2B5BA8 100%);
+    box-shadow: 0 0 28px rgba(74,144,217,0.45), 0 4px 16px rgba(43,91,168,0.50),
+                inset 0 1px 0 rgba(255,255,255,0.25);
+    transform: translateY(-2px);
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2
@@ -104,17 +111,27 @@ html.dark {
   .card::before {
     content: '';
     position: absolute;
-    top: 0; left: 8px; right: 8px;
+    top: 0; left: 2px; right: 2px;
     height: 1px;
-    background: rgba(255,255,255,0.50);
+    background: rgba(255,255,255,0.90);
     border-radius: 0 0 2px 2px;
     pointer-events: none;
     z-index: 1;
   }
+  .card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(160deg, rgba(255,255,255,0.04) 0%, transparent 40%);
+    z-index: 0;
+  }
   .card:hover {
     background: var(--glass-bg-hover);
     box-shadow: var(--glass-shadow-deep), var(--glass-inset);
-    transform: translateY(-1px);
+    border-color: rgba(74,144,217,0.28);
+    transform: translateY(-2px);
   }
   .glass {
     background: var(--glass-bg);
@@ -203,8 +220,10 @@ html.dark {
     min-height: 44px; /* touch target mobile */
   }
   .nav-item-active {
-    @apply text-brand-accent;
-    background: rgba(43, 91, 168, 0.12);
+    @apply text-brand-accent font-medium;
+    background: rgba(74, 144, 217, 0.14);
+    border-left: 2px solid rgba(74, 144, 217, 0.85);
+    padding-left: calc(1rem - 2px);
   }
   .nav-item-inactive {
     @apply text-dark-muted;
@@ -249,9 +268,9 @@ html.dark {
   }
   .kanban-card:hover {
     background: var(--glass-bg-hover);
-    border-color: rgba(43,91,168,0.35);
-    box-shadow: var(--shadow-float, var(--glass-shadow-deep)), var(--glass-inset);
-    transform: translateY(-2px);
+    border-color: rgba(74,144,217,0.32);
+    box-shadow: 0 8px 32px rgba(26,58,107,0.30), 0 2px 8px rgba(0,0,0,0.14), var(--glass-inset);
+    transform: translateY(-3px);
   }
   .kanban-card:active {
     transform: scale(0.98) translateY(0);
@@ -291,7 +310,7 @@ html.dark {
     backdrop-filter: var(--glass-blur-ultra, blur(24px) saturate(200%));
     border: 1px solid var(--glass-border);
     border-radius: 20px;
-    box-shadow: var(--glass-shadow-deep), var(--glass-inset), 0 0 0 1px rgba(255,255,255,0.05);
+    box-shadow: var(--shadow-modal, var(--glass-shadow-deep)), var(--glass-inset), 0 0 0 1px rgba(255,255,255,0.05);
   }
 
   /* ── Modal backdrop — replaces bg-black/40 backdrop-blur-sm ─────────────── */
@@ -341,9 +360,9 @@ html.dark {
     box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
   }
 
-  /* ── Button active feedback ───────────────────────────────────────────────── */
+  /* ── Button active feedback (Apple scale(0.95) principle) ──────────────── */
   .btn-primary:active:not(:disabled) {
-    transform: scale(0.97);
+    transform: scale(0.95);
     box-shadow: 0 1px 4px rgba(43,91,168,0.20);
     transition-duration: 60ms;
   }
@@ -373,6 +392,45 @@ html.dark {
     border-radius: 0 0 2px 2px;
     pointer-events: none;
     z-index: 1;
+  }
+
+  /* ── Typography — Premium tracking (Apple/Linear principle) ──────────────── */
+  .title-display {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 2.25rem;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+  }
+  .title-page {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 1.5rem;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+  .title-section {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 1.125rem;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+  .stat-number {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 2.5rem;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .eyebrow {
+    font-family: var(--font-heading);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.5;
   }
 
   /* ── Kanban empty state ───────────────────────────────────────────────────── */

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from 'react'
+﻿import { useState, useCallback, useRef, useMemo } from 'react'
 import ReactFlow, {
   Background, Controls, MiniMap,
   addEdge, useNodesState, useEdgesState,
@@ -822,7 +822,7 @@ export default function Jornadas() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-dark-text">Jornadas & Materiais</h1>
+          <h1 className="title-page text-dark-text">Jornadas & Materiais</h1>
           <p className="text-xs text-dark-muted mt-0.5">Playbooks, scripts e conteúdos de apoio</p>
         </div>
         {tab !== 'Materiais' && (
@@ -917,3 +917,4 @@ export default function Jornadas() {
     </div>
   )
 }
+

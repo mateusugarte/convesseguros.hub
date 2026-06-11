@@ -44,6 +44,7 @@ export default function CommandPalette({ open, onClose, onOpenFicha }) {
       <div className="modal-backdrop" onClick={onClose} />
       <div
         className="glass-modal w-full max-w-xl overflow-hidden relative z-10"
+        style={{ boxShadow: '0 0 0 1px rgba(74,144,217,0.18), 0 24px 64px rgba(0,0,0,0.38), 0 8px 24px rgba(20,60,140,0.20)' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Input */}

@@ -102,9 +102,21 @@ export default {
       boxShadow: {
         'glow':      '0 0 20px rgba(74, 144, 217, 0.25)',
         'glow-sm':   '0 0 10px rgba(74, 144, 217, 0.15)',
-        'glow-gold': '0 0 20px rgba(201, 168, 76, 0.3)',
+        'glow-gold': '0 0 24px rgba(201, 168, 76, 0.28), 0 4px 12px rgba(201, 168, 76, 0.14)',
         'float':     '0 8px 32px -4px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.06)',
         'glow-blue': '0 0 24px rgba(43,91,168,0.30), 0 4px 12px rgba(43,91,168,0.15)',
+        'modal':     '0 24px 64px rgba(0,0,0,0.32), 0 8px 24px rgba(20,60,140,0.16)',
+      },
+      transitionTimingFunction: {
+        'spring': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'smooth': 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+        'decel':  'cubic-bezier(0.0, 0.0, 0.2, 1.0)',
+      },
+      letterSpacing: {
+        'display': '-0.03em',
+        'title':   '-0.02em',
+        'heading': '-0.01em',
+        'eyebrow': '0.08em',
       },
     },
   },

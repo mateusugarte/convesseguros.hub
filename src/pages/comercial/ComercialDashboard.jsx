@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+﻿import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useComercial, scoreFaixa, diffDias, PIPELINE_COLS } from '../../lib/comercial'
 import { useAuth } from '../../contexts/AuthContext'
@@ -482,7 +482,7 @@ export default function ComercialDashboard() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-dark-text">
+          <h1 className="title-page text-dark-text">
             {saudacao}{nome ? `, ${nome}` : ''}
           </h1>
           <p className="text-xs text-dark-muted mt-0.5">
@@ -715,3 +715,4 @@ export default function ComercialDashboard() {
     </div>
   )
 }
+

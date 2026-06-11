@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+﻿import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useComercial, eventAdd, eventUpdate, eventDelete, TIPOS_EVENTO, CORES_EVENTO } from '../../lib/comercial'
 import { Select } from '../../components/ui/Select'
@@ -497,7 +497,7 @@ export default function Calendario() {
       {/* ── Barra superior ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-bold text-dark-text">Calendário</h1>
+          <h1 className="title-page text-dark-text">Calendário</h1>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -595,3 +595,4 @@ export default function Calendario() {
     </div>
   )
 }
+

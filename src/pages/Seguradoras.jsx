@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../contexts/ToastContext'
 import SeguradoraBadge from '../components/SeguradoraBadge'
@@ -481,7 +481,7 @@ export default function Seguradoras() {
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-lg font-bold text-dark-text">Seguradoras</h1>
+          <h1 className="title-page text-dark-text">Seguradoras</h1>
           <p className="text-xs text-dark-muted mt-0.5">
             Cadastro e mapeamento de variações de nomes das seguradoras
           </p>
@@ -547,3 +547,4 @@ export default function Seguradoras() {
     </div>
   )
 }
+

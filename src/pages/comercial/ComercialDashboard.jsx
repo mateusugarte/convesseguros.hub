@@ -15,6 +15,7 @@ import {
   addDays, addWeeks, subMonths, subQuarters, isToday, differenceInDays,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { DatePicker } from '../../components/ui/DatePicker'
 
 // ── Period helpers ────────────────────────────────────────────────────────────
 
@@ -508,11 +509,9 @@ export default function ComercialDashboard() {
           </div>
           {periodo.tipo === 'personalizado' && (
             <div className="flex items-center gap-1.5">
-              <input type="date" value={periodo.de} onChange={e => setPeriodo(p => ({ ...p, de: e.target.value }))}
-                className="input text-xs py-1.5 w-32" />
+              <DatePicker value={periodo.de} onChange={v => setPeriodo(p => ({ ...p, de: v }))} />
               <span className="text-dark-muted text-xs">até</span>
-              <input type="date" value={periodo.ate} onChange={e => setPeriodo(p => ({ ...p, ate: e.target.value }))}
-                className="input text-xs py-1.5 w-32" />
+              <DatePicker value={periodo.ate} onChange={v => setPeriodo(p => ({ ...p, ate: v }))} />
             </div>
           )}
         </div>

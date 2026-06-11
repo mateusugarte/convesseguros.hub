@@ -12,6 +12,7 @@ import { Home, Briefcase, Building, LayoutGrid, RefreshCw, ChevronLeft, ChevronR
 import SeguradoraBadge from './SeguradoraBadge'
 import SeguradoraSelect from './SeguradoraSelect'
 import { KanbanSkeleton } from './Skeleton'
+import { DatePicker } from './ui/DatePicker'
 
 // ── Column config ─────────────────────────────────────────────────────────────
 
@@ -727,9 +728,9 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
           {periodo === 'custom' && (
             <div className="flex items-center gap-1.5 text-xs text-dark-muted">
               <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-              <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} className="input py-1 px-2 text-xs w-[120px]" />
+              <DatePicker value={customFrom} onChange={v => setCustomFrom(v)} />
               <span>—</span>
-              <input type="date" value={customTo}   onChange={e => setCustomTo(e.target.value)}   className="input py-1 px-2 text-xs w-[120px]" />
+              <DatePicker value={customTo} onChange={v => setCustomTo(v)} />
             </div>
           )}
 

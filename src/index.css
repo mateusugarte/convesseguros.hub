@@ -193,8 +193,14 @@ html.dark {
     font-size: max(14px, 16px);
   }
   .select:focus {
-    border-color: rgba(43, 91, 168, 0.60);
-    box-shadow: 0 0 0 3px rgba(43, 91, 168, 0.15);
+    border-color: rgba(74, 144, 217, 0.60);
+    box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.18);
+  }
+
+  /* ── Select dropdown animation ───────────────────────────────────────────── */
+  .select-dropdown-panel {
+    animation: selectSlideIn 0.14s var(--ease-decel, cubic-bezier(0,0,0.2,1)) both;
+    transform-origin: top center;
   }
 
   /* ── Badges ───────────────────────────────────────────────────────────────── */
@@ -511,6 +517,11 @@ html.dark .badge-blue    { background: rgba(74,144,217,0.15);  color: #4A90D9; }
 }
 
 /* ── Animation keyframes ────────────────────────────────────────────────────── */
+@keyframes selectSlideIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @keyframes cardNew {
   0%   { box-shadow: 0 0 0 3px rgba(16,185,129,0.6); border-color: #10B981; }
   60%  { box-shadow: 0 0 0 2px rgba(16,185,129,0.2); }

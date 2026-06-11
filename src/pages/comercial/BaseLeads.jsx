@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { DatePicker } from '../../components/ui/DatePicker'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -149,8 +150,8 @@ function FilterPanel({ filters, onChange, onApply, onReset }) {
         <div>
           <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-2">Período</p>
           <div className="space-y-1.5">
-            <input type="date" value={filters.from || ''} onChange={e => onChange('from', e.target.value)} className="input text-xs py-1.5 w-full" />
-            <input type="date" value={filters.to   || ''} onChange={e => onChange('to',   e.target.value)} className="input text-xs py-1.5 w-full" />
+            <DatePicker value={filters.from || ''} onChange={v => onChange('from', v)} />
+            <DatePicker value={filters.to   || ''} onChange={v => onChange('to', v)} />
           </div>
         </div>
       </div>

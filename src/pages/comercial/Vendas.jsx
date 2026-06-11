@@ -4,6 +4,8 @@ import { useToast } from '../../contexts/ToastContext'
 import { Plus, ArrowLeft, TrendingUp, DollarSign, Award } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { DatePicker } from '../../components/ui/DatePicker'
+import { Select } from '../../components/ui/Select'
 
 function ModalVenda({ onClose, onSave, leads }) {
   const [form, setForm] = useState({ leadId: '', produto: '', valor: '', comissao: '', dataEmissao: new Date().toISOString().slice(0,10), observacoes: '' })
@@ -30,17 +32,21 @@ function ModalVenda({ onClose, onSave, leads }) {
         <div className="px-6 py-5 space-y-3">
           <div>
             <label className="text-xs font-medium text-dark-muted uppercase tracking-wider block mb-1">Lead (opcional)</label>
-            <select value={form.leadId} onChange={e => set('leadId', e.target.value)} className="select w-full">
-              <option value="">Sem lead vinculado</option>
-              {leads.map(l => <option key={l.id} value={l.id}>{l.nome}</option>)}
-            </select>
+            <Select
+              value={form.leadId}
+              onChange={v => set('leadId', v)}
+              options={leads.map(l => ({ value: l.id, label: l.nome }))}
+              placeholder="Sem lead vinculado"
+            />
           </div>
           <div>
             <label className="text-xs font-medium text-dark-muted uppercase tracking-wider block mb-1">Produto *</label>
-            <select value={form.produto} onChange={e => set('produto', e.target.value)} className="select w-full">
-              <option value="">Selecionar...</option>
-              {PRODUTOS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-            </select>
+            <Select
+              value={form.produto}
+              onChange={v => set('produto', v)}
+              options={PRODUTOS.map(p => ({ value: p.id, label: p.label }))}
+              placeholder="Selecionar..."
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -55,7 +61,7 @@ function ModalVenda({ onClose, onSave, leads }) {
             </div>
             <div>
               <label className="text-xs font-medium text-dark-muted uppercase tracking-wider block mb-1">Data Emissão *</label>
-              <input type="date" value={form.dataEmissao} onChange={e => set('dataEmissao', e.target.value)} className="input" />
+              <DatePicker value={form.dataEmissao} onChange={v => set('dataEmissao', v)} />
             </div>
             <div>
               <label className="text-xs font-medium text-dark-muted uppercase tracking-wider block mb-1">Comissão Calculada</label>

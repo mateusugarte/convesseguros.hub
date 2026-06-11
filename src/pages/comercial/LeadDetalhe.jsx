@@ -7,6 +7,7 @@ import {
 } from '../../lib/comercial'
 import { useToast } from '../../contexts/ToastContext'
 import { Select } from '../../components/ui/Select'
+import { DatePicker } from '../../components/ui/DatePicker'
 import {
   ArrowLeft, MessageCircle, ChevronDown, Check, Flame, Sun, Snowflake,
   Building2, Clock, Plus, Trash2, PhoneCall, Users, FileText, ArrowRight,
@@ -485,7 +486,7 @@ function TabTarefas({ lead, events, toast }) {
         <div className="grid grid-cols-2 gap-2">
           <input value={form.descricao} onChange={e => set('descricao', e.target.value)}
             className="input text-sm col-span-2" placeholder="Título da tarefa..." />
-          <input type="date" value={form.data} onChange={e => set('data', e.target.value)} className="input text-sm" />
+          <DatePicker value={form.data} onChange={v => set('data', v)} />
         </div>
         <button onClick={add} disabled={saving || !form.descricao.trim()}
           className="btn-primary text-sm flex items-center gap-2">

@@ -311,98 +311,161 @@ function PainelDia({ selectedDay, events, leads, deletingIds, pendingUndo, onAdd
 
 // ── ModalEvento ───────────────────────────────────────────────────────────────
 
+const TIME_SLOTS = [
+  '08:00','09:00','10:00','11:00',
+  '12:00','13:00','14:00','15:00',
+  '16:00','17:00','18:00','19:00','20:00',
+]
+
 function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
   const isEdit = !!evento?.id
-  const [form, setForm] = useState(() => isEdit ? {
-    nome:     evento.nome     || '',
-    tipo:     evento.tipo     || 'Reunião',
-    data:     isoToLocal(evento.data),
-    descricao:evento.descricao|| '',
-    leadId:   evento.leadId   || '',
-  } : {
-    nome: '', tipo: 'Reunião',
-    data: evento?.data || '',
-    descricao: '', leadId: '',
+
+  const localStr = isEdit ? isoToLocal(evento.data) : (evento?.data || '')
+  const [form, setForm] = useState({
+    nome:      isEdit ? (evento.nome      || '') : '',
+    tipo:      isEdit ? (evento.tipo      || 'Reunião') : 'Reunião',
+    date:      localStr.slice(0, 10) || '',
+    time:      localStr.slice(11, 16) || '09:00',
+    descricao: isEdit ? (evento.descricao || '') : '',
+    leadId:    isEdit ? (evento.leadId    || '') : '',
   })
-  const set   = (k, v) => setForm(p => ({ ...p, [k]: v }))
-  const valido = form.nome.trim() && form.data
+
+  const set    = (k, v) => setForm(p => ({ ...p, [k]: v }))
+  const valido = form.nome.trim() && form.date
 
   function handleSave() {
     if (!valido) return
-    onSave({ ...form, data: new Date(form.data).toISOString() })
+    const iso = new Date(form.date + 'T' + form.time).toISOString()
+    onSave({ nome: form.nome, tipo: form.tipo, leadId: form.leadId, descricao: form.descricao, data: iso })
   }
+
+  const dateFmt = form.date
+    ? (() => { try { return format(parseISO(form.date), "EEEE, d 'de' MMMM", { locale: ptBR }) } catch { return form.date } })()
+    : 'Sem data'
+
+  const corTipo = corEvento(form.tipo)
 
   return (
     <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
       <div className="modal-backdrop" onClick={onClose} />
       <div className="relative glass-modal rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-fade-in">
+
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border">
-          <h2 className="font-bold text-dark-text">{isEdit ? 'Editar Evento' : 'Novo Evento'}</h2>
+          <div>
+            <h2 className="font-bold text-dark-text">{isEdit ? 'Editar Evento' : 'Novo Evento'}</h2>
+            <p className="text-xs mt-0.5 capitalize" style={{ color: 'var(--glass-text-muted)' }}>
+              <Calendar className="inline w-3 h-3 mr-1 -mt-px" />{dateFmt}
+            </p>
+          </div>
           <button onClick={onClose} className="text-dark-muted hover:text-dark-text transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Form */}
-        <div className="px-5 py-4 space-y-3">
+        <div className="px-5 py-4 space-y-4 max-h-[72vh] overflow-y-auto">
+
+          {/* Título */}
           <div>
             <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">
               Título <span className="text-status-error">*</span>
             </label>
-            <input value={form.nome} onChange={e => set('nome', e.target.value)}
-              className="input w-full" autoFocus placeholder="Ex: Reunião de alinhamento" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Tipo</label>
-              <Select
-                value={form.tipo}
-                onChange={v => set('tipo', v)}
-                options={TIPOS_EVENTO.map(t => ({ value: t, label: t }))}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">
-                Data/Hora <span className="text-status-error">*</span>
-              </label>
-              <input type="datetime-local" value={form.data} onChange={e => set('data', e.target.value)}
-                className="input w-full text-sm" />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Lead Vinculado</label>
-            <Select
-              value={form.leadId}
-              onChange={v => set('leadId', v)}
-              placeholder="Nenhum"
-              options={[
-                { value: '', label: 'Nenhum' },
-                ...(leads || []).map(l => ({ value: l.id, label: l.nome })),
-              ]}
+            <input
+              value={form.nome}
+              onChange={e => set('nome', e.target.value)}
+              className="input w-full"
+              autoFocus
+              placeholder="Ex: Reunião de alinhamento"
             />
           </div>
 
+          {/* Tipo + Lead */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Tipo</label>
+              <Select value={form.tipo} onChange={v => set('tipo', v)}
+                options={TIPOS_EVENTO.map(t => ({ value: t, label: t }))} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Lead</label>
+              <Select value={form.leadId} onChange={v => set('leadId', v)}
+                placeholder="Nenhum"
+                options={[{ value: '', label: 'Nenhum' }, ...(leads || []).map(l => ({ value: l.id, label: l.nome }))]} />
+            </div>
+          </div>
+
+          {/* Horário */}
+          <div>
+            <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-2">
+              <Clock className="inline w-3 h-3 mr-1 -mt-px" />Horário
+            </label>
+            <div className="grid grid-cols-4 gap-1.5 mb-3">
+              {TIME_SLOTS.map(slot => {
+                const active = form.time === slot
+                return (
+                  <button
+                    key={slot}
+                    type="button"
+                    onClick={() => set('time', slot)}
+                    style={{
+                      padding: '7px 4px',
+                      borderRadius: 9,
+                      fontSize: 11,
+                      fontWeight: active ? 700 : 400,
+                      border: active
+                        ? `1.5px solid ${corTipo}90`
+                        : '1.5px solid var(--glass-border)',
+                      background: active
+                        ? corTipo + '22'
+                        : 'transparent',
+                      color: active ? corTipo : 'var(--glass-text-primary)',
+                      cursor: 'pointer',
+                      transition: 'all 0.12s ease',
+                    }}
+                  >
+                    {slot}
+                  </button>
+                )
+              })}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-dark-muted whitespace-nowrap">Ou digitar:</span>
+              <input
+                type="time"
+                value={form.time}
+                onChange={e => set('time', e.target.value)}
+                className="input text-sm"
+                style={{ width: 110, padding: '5px 10px' }}
+              />
+            </div>
+          </div>
+
+          {/* Notas */}
           <div>
             <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Notas</label>
-            <textarea value={form.descricao} onChange={e => set('descricao', e.target.value)}
-              rows={2} className="input w-full resize-none text-sm" placeholder="Observações opcionais..." />
+            <textarea
+              value={form.descricao}
+              onChange={e => set('descricao', e.target.value)}
+              rows={2}
+              className="input w-full resize-none text-sm"
+              placeholder="Observações opcionais..."
+            />
           </div>
         </div>
 
         {/* Footer */}
         <div className="flex items-center gap-2 px-5 py-4 border-t border-dark-border">
           {isEdit && (
-            <button onClick={() => onDelete(evento.id)}
-              className="p-2 rounded-xl bg-status-error/10 text-status-error hover:bg-status-error/20 transition-colors">
+            <button
+              onClick={() => onDelete(evento.id)}
+              className="p-2 rounded-xl bg-status-error/10 text-status-error hover:bg-status-error/20 transition-colors"
+            >
               <Trash2 className="w-4 h-4" />
             </button>
           )}
           <button onClick={onClose} className="btn-secondary flex-1 text-sm">Cancelar</button>
           <button onClick={handleSave} disabled={!valido} className="btn-primary flex-1 text-sm">
-            {isEdit ? 'Salvar' : 'Criar'}
+            {isEdit ? 'Salvar' : 'Criar Evento'}
           </button>
         </div>
       </div>

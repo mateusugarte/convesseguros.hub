@@ -8,6 +8,7 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Search, Download, Calendar, Filter } from 'lucide-react'
 import { Select } from '../components/ui/Select'
+import { DatePicker } from '../components/ui/DatePicker'
 
 const FILTROS_PERIODO = [
   { key: 'hoje',        label: 'Hoje' },
@@ -179,9 +180,9 @@ export default function ApolicesLista() {
         {filtro === 'personalizado' && (
           <div className="flex items-center gap-2 text-xs text-dark-muted">
             <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-            <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} className="input py-1 px-2 text-xs w-[120px]" />
+            <DatePicker value={customFrom} onChange={v => setCustomFrom(v)} />
             <span>—</span>
-            <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} className="input py-1 px-2 text-xs w-[120px]" />
+            <DatePicker value={customTo} onChange={v => setCustomTo(v)} />
           </div>
         )}
 

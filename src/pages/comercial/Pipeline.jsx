@@ -11,6 +11,7 @@ import {
 import { useToast } from '../../contexts/ToastContext'
 import { Plus, X, Search, Building2, Clock, CheckCircle2, PenLine, ClipboardList, FileCheck, Check } from 'lucide-react'
 import { Select } from '../../components/ui/Select'
+import { DatePicker } from '../../components/ui/DatePicker'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -285,7 +286,7 @@ function ModalVenda({ lead, onClose, onConfirm }) {
           </div>
           <div>
             <label className={LBL}>Data Emissão *</label>
-            <input type="date" value={form.dataEmissao} onChange={e => set('dataEmissao', e.target.value)} className="input" />
+            <DatePicker value={form.dataEmissao} onChange={v => set('dataEmissao', v)} />
           </div>
           <div>
             <label className={LBL}>Comissão Calculada</label>

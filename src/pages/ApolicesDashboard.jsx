@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Select } from '../components/ui/Select'
 import {
   fetchKPIsApolices, fetchApolicesPorDia,
   fetchTopImobiliariasApolices, fetchPorSeguradora,
@@ -166,14 +167,12 @@ export default function ApolicesDashboard() {
       {/* ── Seletor mês ── */}
       <div className="card px-4 py-3">
         <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={ano}
-            onChange={e => setAno(Number(e.target.value))}
-            className="select text-sm py-1.5 w-auto pr-8"
-            style={{ minWidth: '90px' }}
-          >
-            {[agora.getFullYear(), agora.getFullYear() - 1].map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
+          <Select
+            value={String(ano)}
+            onChange={v => setAno(Number(v))}
+            options={[agora.getFullYear(), agora.getFullYear() - 1].map(a => ({ value: String(a), label: String(a) }))}
+            className="w-24"
+          />
           <div className="flex items-center gap-1 flex-wrap">
             {MESES_ABBR.map((label, i) => (
               <button

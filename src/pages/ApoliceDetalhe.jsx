@@ -9,6 +9,8 @@ import { ptBR } from 'date-fns/locale'
 import { ArrowLeft, Save, Trash2 } from 'lucide-react'
 import SeguradoraSelect from '../components/SeguradoraSelect'
 import SecaoDocumentos from '../components/SecaoDocumentos'
+import { DatePicker } from '../components/ui/DatePicker'
+import { Select } from '../components/ui/Select'
 
 function fmtDt(v) {
   if (!v) return null
@@ -43,31 +45,36 @@ function EditField({ label, value, onChange, type = 'text', placeholder, require
       <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">
         {label}{required && <span className="text-status-danger ml-0.5">*</span>}
       </label>
-      <input
-        type={type}
-        value={value || ''}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="input text-sm"
-      />
+      {type === 'date' ? (
+        <DatePicker value={value || ''} onChange={onChange} />
+      ) : (
+        <input
+          type={type}
+          value={value || ''}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="input text-sm"
+        />
+      )}
     </div>
   )
 }
 
 function SelectField({ label, value, onChange, options, required }) {
+  const normalized = options.map(o =>
+    typeof o === 'string' ? { value: o, label: o } : o
+  )
   return (
     <div>
       <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">
         {label}{required && <span className="text-status-danger ml-0.5">*</span>}
       </label>
-      <select value={value || ''} onChange={e => onChange(e.target.value)} className="select text-sm">
-        <option value="">Selecione...</option>
-        {options.map(o => (
-          typeof o === 'string'
-            ? <option key={o} value={o}>{o}</option>
-            : <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
+      <Select
+        value={value || ''}
+        onChange={onChange}
+        options={normalized}
+        placeholder="Selecione..."
+      />
     </div>
   )
 }

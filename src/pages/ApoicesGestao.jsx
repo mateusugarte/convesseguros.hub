@@ -9,6 +9,7 @@ import {
 } from '../lib/apolices'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { Select } from '../components/ui/Select'
+import { DatePicker } from '../components/ui/DatePicker'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { PRODUTO_LABELS } from '../lib/fichas'
@@ -545,11 +546,11 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
             </div>
             <div>
               <LabelReq>Início da Vigência</LabelReq>
-              <input type="date" value={inicioVigencia} onChange={e => setInicioVigencia(e.target.value)} className="input" />
+              <DatePicker value={inicioVigencia} onChange={v => setInicioVigencia(v)} />
             </div>
             <div>
               <LabelReq>Fim da Vigência</LabelReq>
-              <input type="date" value={fimVigencia} onChange={e => setFimVigencia(e.target.value)} className="input" />
+              <DatePicker value={fimVigencia} onChange={v => setFimVigencia(v)} />
             </div>
             <div>
               <LabelOpt>Tempo de Vigência</LabelOpt>

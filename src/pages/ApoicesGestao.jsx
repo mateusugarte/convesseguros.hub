@@ -1,7 +1,6 @@
 ﻿import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core'
-import { snapCenterToCursor } from '@dnd-kit/modifiers'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, pointerWithin } from '@dnd-kit/core'
 import {
   fetchApolicesKanban, criarApolice, moverStatusApolice,
   buscarFichasParaEmissao,
@@ -217,11 +216,14 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, 
 // ── DraggableCard ─────────────────────────────────────────────────────────────
 
 function DraggableCard({ apolice, onDetalhe, resolverNome }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: apolice.id })
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: apolice.id,
+    data: { type: 'card' },
+  })
   return (
     <div
       ref={setNodeRef}
-      style={{ opacity: isDragging ? 0.35 : 1, transition: isDragging ? 'none' : 'opacity 0.15s ease' }}
+      style={{ opacity: isDragging ? 0.25 : 1, transition: isDragging ? 'none' : 'opacity 0.2s ease' }}
     >
       <ApoliceCard
         apolice={apolice}
@@ -237,12 +239,21 @@ function DraggableCard({ apolice, onDetalhe, resolverNome }) {
 // ── Column ────────────────────────────────────────────────────────────────────
 
 function DroppableColumn({ col, apolices, onDetalhe, resolverNome, colIndex, collapsed, onToggleCollapse }) {
-  const { isOver, setNodeRef } = useDroppable({ id: col.id })
+  const { isOver, setNodeRef: setDropRef } = useDroppable({ id: col.id })
+  const { attributes: colAttrs, listeners: colListeners, setNodeRef: setDragRef, isDragging: isColDragging } = useDraggable({
+    id: 'col::' + col.id,
+    data: { type: 'column', colId: col.id },
+  })
+  const combinedRef = useCallback((node) => { setDragRef(node); setDropRef(node) }, [setDragRef, setDropRef])
   const anim = { animationDelay: `${colIndex * 30}ms`, animationFillMode: 'both', scrollSnapAlign: 'start' }
 
   if (collapsed) {
     return (
-      <div className="animate-fade-in flex flex-col flex-shrink-0" style={{ width: '48px', ...anim }}>
+      <div
+        ref={combinedRef}
+        className="animate-fade-in flex flex-col flex-shrink-0"
+        style={{ width: '52px', ...anim, opacity: isColDragging ? 0.25 : 1, transition: 'opacity 0.2s' }}
+      >
         <button
           onClick={onToggleCollapse}
           title={`${col.label} (${apolices.length})`}
@@ -253,12 +264,11 @@ function DroppableColumn({ col, apolices, onDetalhe, resolverNome, colIndex, col
           <span className="text-[10px] font-mono font-bold" style={{ color: col.color }}>{apolices.length}</span>
         </button>
         <div
-          ref={setNodeRef}
-          className="flex-1 rounded-b-xl border"
+          className="flex-1 rounded-b-xl border transition-colors"
           style={{
             minHeight: '60px',
             borderColor: isOver ? col.color + '70' : 'rgb(var(--color-border))',
-            backgroundColor: isOver ? col.color + '12' : 'rgb(var(--color-surface2) / 0.3)',
+            backgroundColor: isOver ? col.color + '14' : 'rgb(var(--color-surface2) / 0.3)',
           }}
         />
       </div>
@@ -266,12 +276,26 @@ function DroppableColumn({ col, apolices, onDetalhe, resolverNome, colIndex, col
   }
 
   return (
-    <div className="kanban-col animate-fade-in flex flex-col" style={anim}>
+    <div
+      ref={combinedRef}
+      className="kanban-col animate-fade-in flex flex-col"
+      style={{ ...anim, opacity: isColDragging ? 0.25 : 1, transition: 'opacity 0.2s ease' }}
+    >
       <div
         className="kanban-col-header"
         style={{ background: col.color + '12', borderColor: col.color + '40' }}
       >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+        <button
+          {...colListeners}
+          {...colAttrs}
+          className="kanban-col-drag-handle"
+          onClick={e => e.stopPropagation()}
+          tabIndex={-1}
+          aria-label={`Arrastar coluna ${col.label}`}
+        >
+          <GripVertical className="w-3 h-3" />
+        </button>
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
           <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: col.color, boxShadow: `0 0 6px ${col.color}90` }} />
           <span className="text-[11px] font-bold tracking-wide truncate" style={{ color: col.color }}>{col.label}</span>
         </div>
@@ -286,15 +310,14 @@ function DroppableColumn({ col, apolices, onDetalhe, resolverNome, colIndex, col
       </div>
 
       <div
-        ref={setNodeRef}
         className="kanban-col-body flex-1 p-1.5 space-y-1.5 overflow-y-auto"
         style={{
           border:          isOver ? `1.5px dashed ${col.color}70` : '1px solid rgb(var(--color-border))',
           borderTop:       'none',
           borderRadius:    '0 0 12px 12px',
-          backgroundColor: isOver ? col.color + '08' : 'rgb(var(--color-surface2) / 0.35)',
-          boxShadow:       isOver ? `inset 0 0 0 1px ${col.color}18` : 'none',
-          transition:      'border-color 0.15s ease, background 0.15s ease',
+          backgroundColor: isOver ? col.color + '0a' : 'rgb(var(--color-surface2) / 0.35)',
+          boxShadow:       isOver ? `inset 0 0 0 1px ${col.color}20, 0 0 20px ${col.color}10` : 'none',
+          transition:      'border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease',
         }}
       >
         {apolices.length === 0 ? (
@@ -697,12 +720,19 @@ export default function ApoicesGestao() {
   const [modalFinalizar, setModalFinalizar] = useState(null) // { id, apolice }
   const [pendingMove,    setPendingMove]    = useState(null) // { id, fromStatus }
   const [collapsed,      setCollapsed]      = useState(new Set())
+  const [colOrder,       setColOrder]       = useState(() => {
+    try {
+      const s = localStorage.getItem('kanban-apolices-col-order')
+      if (s) { const p = JSON.parse(s); if (COLUNAS.every(c => p.includes(c.id)) && p.length === COLUNAS.length) return p }
+    } catch {}
+    return COLUNAS.map(c => c.id)
+  })
 
   const scrollRef    = useRef(null)
   const [canScrollL, setCanScrollL] = useState(false)
   const [canScrollR, setCanScrollR] = useState(false)
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   const getAliasesRef = useRef(getAliases)
   getAliasesRef.current = getAliases
@@ -741,10 +771,32 @@ export default function ApoicesGestao() {
   async function handleDragEnd({ active, over }) {
     setActiveId(null)
     if (!over) return
+
+    // ── Column reorder ──
+    if (active.data.current?.type === 'column') {
+      const fromColId = active.data.current.colId
+      const toColId   = over.id
+      if (fromColId !== toColId && COLUNAS.some(c => c.id === toColId)) {
+        setCollapsed(prev => prev) // keep state, just reorder display
+        // Persist reorder
+        setApolices(prev => [...prev]) // trigger re-render with new colOrder
+        setColOrder(prev => {
+          const fi = prev.indexOf(fromColId), ti = prev.indexOf(toColId)
+          if (fi === -1 || ti === -1) return prev
+          const next = [...prev]; next.splice(fi, 1); next.splice(ti, 0, fromColId)
+          try { localStorage.setItem('kanban-apolices-col-order', JSON.stringify(next)) } catch {}
+          return next
+        })
+      }
+      return
+    }
+
+    // ── Card move ──
     const id         = active.id
     const novoStatus = over.id
     const apolice    = apolices.find(a => a.id === id)
     if (!apolice || apolice.status_emissao === novoStatus) return
+    if (!COLUNAS.some(c => c.id === novoStatus)) return
 
     if (novoStatus === 'enviada') {
       setPendingMove({ id, fromStatus: apolice.status_emissao })
@@ -752,7 +804,6 @@ export default function ApoicesGestao() {
       return
     }
 
-    // Otimista
     setApolices(prev => prev.map(a =>
       a.id === id ? { ...a, status_emissao: novoStatus } : a
     ))
@@ -781,7 +832,7 @@ export default function ApoicesGestao() {
     })
   }
 
-  const activeCard = activeId ? apolices.find(a => a.id === activeId) : null
+  const activeCard = (!activeId || activeId.startsWith('col::')) ? null : apolices.find(a => a.id === activeId)
 
   if (modalIniciar) return (
     <ModalIniciarEmissao onClose={() => setModalIniciar(false)} onCriado={load} toast={toast} />
@@ -858,30 +909,61 @@ export default function ApoicesGestao() {
           )}
 
           <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
-            <DndContext sensors={sensors}
-                        onDragStart={({ active }) => setActiveId(active.id)}
-                        onDragEnd={handleDragEnd}
-                        onDragCancel={() => setActiveId(null)}>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={pointerWithin}
+              onDragStart={({ active }) => setActiveId(active.id)}
+              onDragEnd={handleDragEnd}
+              onDragCancel={() => setActiveId(null)}
+            >
               <div className="flex gap-2 min-w-max px-0.5">
-                {COLUNAS.map((col, i) => (
-                  <DroppableColumn
-                    key={col.id}
-                    col={col}
-                    apolices={groups[col.id] || []}
-                    onDetalhe={id => navigate(`/apolices/${id}`)}
-                    resolverNome={resolverNome}
-                    colIndex={i}
-                    collapsed={collapsed.has(col.id)}
-                    onToggleCollapse={() => toggleCollapse(col.id)}
-                  />
-                ))}
+                {colOrder.map((colId, i) => {
+                  const col = COLUNAS.find(c => c.id === colId)
+                  if (!col) return null
+                  return (
+                    <DroppableColumn
+                      key={col.id}
+                      col={col}
+                      apolices={groups[col.id] || []}
+                      onDetalhe={id => navigate(`/apolices/${id}`)}
+                      resolverNome={resolverNome}
+                      colIndex={i}
+                      collapsed={collapsed.has(col.id)}
+                      onToggleCollapse={() => toggleCollapse(col.id)}
+                    />
+                  )
+                })}
               </div>
-              <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>
-                {activeCard && (
-                  <div style={{ width: "calc(var(--kanban-col-w, 224px) - 12px)" }}>
+              <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }}>
+                {activeId?.startsWith?.('col::') ? (() => {
+                  const cid = activeId.replace('col::', '')
+                  const col = COLUNAS.find(c => c.id === cid)
+                  if (!col) return null
+                  return (
+                    <div className="kanban-col flex flex-col" style={{ transform: 'rotate(2deg)', opacity: 0.9, filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.4))' }}>
+                      <div className="kanban-col-header" style={{ background: col.color + '20', borderColor: col.color + '60' }}>
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="w-2 h-2 rounded-full" style={{ background: col.color }} />
+                          <span className="text-[11px] font-bold" style={{ color: col.color }}>{col.label}</span>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md" style={{ background: col.color + '30', color: col.color }}>
+                          {groups[cid]?.length ?? 0}
+                        </span>
+                      </div>
+                      <div className="p-1.5 rounded-b-xl border border-t-0 min-h-[60px]" style={{ background: col.color + '06', borderColor: col.color + '30' }}>
+                        {(groups[cid] || []).slice(0, 3).map(a => (
+                          <div key={a.id} className="text-[10px] text-dark-muted truncate py-1 px-2 rounded-lg mb-1" style={{ background: 'rgb(var(--color-surface2) / 0.6)' }}>
+                            {a.fichas?.nome_interessado || a.nome_interessado || '—'}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })() : activeCard ? (
+                  <div style={{ width: 'calc(var(--kanban-col-w, 232px) - 12px)' }}>
                     <ApoliceCard apolice={activeCard} isDragOverlay resolverNome={resolverNome} />
                   </div>
-                )}
+                ) : null}
               </DragOverlay>
             </DndContext>
           </div>

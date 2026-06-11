@@ -460,6 +460,36 @@ html.dark {
     border-bottom: none;
   }
 
+  /* Column drag handle */
+  .kanban-col-drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 22px;
+    border: none;
+    background: transparent;
+    border-radius: 4px;
+    cursor: grab;
+    opacity: 0;
+    color: currentColor;
+    transition: opacity 0.15s ease, background 0.15s ease;
+    padding: 0;
+    flex-shrink: 0;
+    margin-right: 2px;
+  }
+  .kanban-col-header:hover .kanban-col-drag-handle {
+    opacity: 0.35;
+  }
+  .kanban-col-drag-handle:hover {
+    opacity: 0.75 !important;
+    background: rgba(255,255,255,0.08);
+  }
+  .kanban-col-drag-handle:active {
+    cursor: grabbing;
+    opacity: 1 !important;
+  }
+
   /* Collapse button */
   .kanban-col-collapse {
     display: flex;

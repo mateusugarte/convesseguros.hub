@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, useDraggable } from '@dnd-kit/core'
-import { snapCenterToCursor } from '@dnd-kit/modifiers'
+import { useState, useCallback } from 'react'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, useDraggable, pointerWithin } from '@dnd-kit/core'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { STATUS_LABELS, PRODUTO_LABELS, marcarRetornoEnviado } from '../lib/fichas'
@@ -197,12 +196,21 @@ function KanbanCard({ ficha, userId, onAssumir, onFinalizar, onDetalhe }) {
 // ── Column ─────────────────────────────────────────────────────────────────────
 
 function DroppableColumn({ col, fichas, userId, onAssumir, onFinalizar, onDetalhe, collapsed, onToggleCollapse, colIndex }) {
-  const { isOver, setNodeRef } = useDroppable({ id: col.id })
+  const { isOver, setNodeRef: setDropRef } = useDroppable({ id: col.id })
+  const { attributes: colAttrs, listeners: colListeners, setNodeRef: setDragRef, isDragging: isColDragging } = useDraggable({
+    id: 'col::' + col.id,
+    data: { type: 'column', colId: col.id },
+  })
+  const combinedRef = useCallback((node) => { setDragRef(node); setDropRef(node) }, [setDragRef, setDropRef])
   const animStyle = { animationDelay: `${colIndex * 28}ms`, animationFillMode: 'both' }
 
   if (collapsed) {
     return (
-      <div className="animate-fade-in flex flex-col flex-shrink-0" style={{ width: '48px', ...animStyle }}>
+      <div
+        ref={combinedRef}
+        className="animate-fade-in flex flex-col flex-shrink-0"
+        style={{ width: '52px', ...animStyle, opacity: isColDragging ? 0.25 : 1, transition: 'opacity 0.2s' }}
+      >
         <button
           onClick={onToggleCollapse}
           title={`${col.label} (${fichas.length})`}
@@ -213,12 +221,11 @@ function DroppableColumn({ col, fichas, userId, onAssumir, onFinalizar, onDetalh
           <span className="text-[10px] font-mono font-bold" style={{ color: col.color }}>{fichas.length}</span>
         </button>
         <div
-          ref={setNodeRef}
-          className="flex-1 rounded-b-xl border"
+          className="flex-1 rounded-b-xl border transition-colors"
           style={{
             minHeight: '60px',
             borderColor: isOver ? col.color + '70' : 'rgb(var(--color-border))',
-            backgroundColor: isOver ? col.color + '12' : 'rgb(var(--color-surface2) / 0.3)',
+            backgroundColor: isOver ? col.color + '14' : 'rgb(var(--color-surface2) / 0.3)',
           }}
         />
       </div>
@@ -226,12 +233,26 @@ function DroppableColumn({ col, fichas, userId, onAssumir, onFinalizar, onDetalh
   }
 
   return (
-    <div className="kanban-col animate-fade-in flex flex-col" style={animStyle}>
+    <div
+      ref={combinedRef}
+      className="kanban-col animate-fade-in flex flex-col"
+      style={{ ...animStyle, opacity: isColDragging ? 0.25 : 1, transition: 'opacity 0.2s ease' }}
+    >
       <div
         className="kanban-col-header"
         style={{ background: col.color + '12', borderColor: col.color + '40' }}
       >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+        <button
+          {...colListeners}
+          {...colAttrs}
+          className="kanban-col-drag-handle"
+          onClick={e => e.stopPropagation()}
+          tabIndex={-1}
+          aria-label={`Arrastar coluna ${col.label}`}
+        >
+          <GripVertical className="w-3 h-3" />
+        </button>
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
           <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: col.color, boxShadow: `0 0 6px ${col.color}90` }} />
           <span className="text-[11px] font-bold tracking-wide truncate" style={{ color: col.color }}>{col.label}</span>
         </div>
@@ -245,7 +266,6 @@ function DroppableColumn({ col, fichas, userId, onAssumir, onFinalizar, onDetalh
         </div>
       </div>
       <div
-        ref={setNodeRef}
         className="kanban-col-body flex-1 p-1.5 space-y-1.5 overflow-y-auto"
         style={{
           border:          isOver ? `1.5px dashed ${col.color}70` : '1px solid rgb(var(--color-border))',
@@ -282,19 +302,45 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
   const { user }  = useAuth()
   const [activeId, setActiveId] = useState(null)
   const [collapsed, setCollapsed] = useState(new Set())
+  const [colOrder,  setColOrder]  = useState(() => {
+    try {
+      const s = localStorage.getItem('kanban-board-col-order')
+      if (s) { const p = JSON.parse(s); if (COLS.every(c => p.includes(c.id)) && p.length === COLS.length) return p }
+    } catch {}
+    return COLS.map(c => c.id)
+  })
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
 
   const grouped = {}
   for (const col of COLS) grouped[col.id] = fichas.filter(f => getCol(f) === col.id)
 
-  const activeFicha = activeId ? fichas.find(f => f.id === activeId) : null
+  const isColDrag  = activeId?.startsWith?.('col::')
+  const activeColId = isColDrag ? activeId.replace('col::', '') : null
+  const activeCol   = activeColId ? COLS.find(c => c.id === activeColId) : null
+  const activeFicha = !isColDrag && activeId ? fichas.find(f => f.id === activeId) : null
 
   async function handleDragEnd({ active, over }) {
     setActiveId(null)
     if (!over) return
+
+    if (active.data.current?.type === 'column') {
+      const fromId = active.data.current.colId
+      const toId   = over.id
+      if (fromId !== toId && COLS.some(c => c.id === toId)) {
+        setColOrder(prev => {
+          const fi = prev.indexOf(fromId), ti = prev.indexOf(toId)
+          if (fi === -1 || ti === -1) return prev
+          const next = [...prev]; next.splice(fi, 1); next.splice(ti, 0, fromId)
+          try { localStorage.setItem('kanban-board-col-order', JSON.stringify(next)) } catch {}
+          return next
+        })
+      }
+      return
+    }
+
     const ficha = fichas.find(f => f.id === active.id)
     if (!ficha) return
     const src = getCol(ficha)
@@ -322,35 +368,62 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={pointerWithin}
       onDragStart={({ active }) => setActiveId(active.id)}
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}
     >
       <div className="kanban-scroll overflow-x-auto pb-4">
         <div className="flex gap-2 min-w-max px-0.5">
-          {COLS.map((col, i) => (
-            <DroppableColumn
-              key={col.id}
-              col={col}
-              fichas={grouped[col.id] ?? []}
-              userId={user?.id}
-              onAssumir={onAssumir}
-              onFinalizar={onFinalizar}
-              onDetalhe={onDetalhe}
-              collapsed={collapsed.has(col.id)}
-              onToggleCollapse={() => toggleCollapse(col.id)}
-              colIndex={i}
-            />
-          ))}
+          {colOrder.map((colId, i) => {
+            const col = COLS.find(c => c.id === colId)
+            if (!col) return null
+            return (
+              <DroppableColumn
+                key={col.id}
+                col={col}
+                fichas={grouped[col.id] ?? []}
+                userId={user?.id}
+                onAssumir={onAssumir}
+                onFinalizar={onFinalizar}
+                onDetalhe={onDetalhe}
+                collapsed={collapsed.has(col.id)}
+                onToggleCollapse={() => toggleCollapse(col.id)}
+                colIndex={i}
+              />
+            )
+          })}
         </div>
       </div>
 
-      <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>
-        {activeFicha && (
+      <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }}>
+        {activeCol ? (
+          <div
+            className="kanban-col flex flex-col"
+            style={{ transform: 'rotate(2deg)', opacity: 0.9, filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.4))' }}
+          >
+            <div className="kanban-col-header" style={{ background: activeCol.color + '20', borderColor: activeCol.color + '60' }}>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="w-2 h-2 rounded-full" style={{ background: activeCol.color }} />
+                <span className="text-[11px] font-bold" style={{ color: activeCol.color }}>{activeCol.label}</span>
+              </div>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md" style={{ background: activeCol.color + '30', color: activeCol.color }}>
+                {grouped[activeColId]?.length ?? 0}
+              </span>
+            </div>
+            <div className="p-1.5 rounded-b-xl border border-t-0 min-h-[60px]" style={{ background: activeCol.color + '06', borderColor: activeCol.color + '30' }}>
+              {(grouped[activeColId] || []).slice(0, 3).map(f => (
+                <div key={f.id} className="text-[10px] text-dark-muted truncate py-1 px-2 rounded-lg mb-1" style={{ background: 'rgb(var(--color-surface2) / 0.6)' }}>
+                  {f.nome_empresa || f.nome_interessado || '—'}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : activeFicha ? (
           <div style={{ width: 'calc(var(--kanban-col-w, 232px) - 12px)' }}>
             <FichaCardContent ficha={activeFicha} userId={user?.id} isDragOverlay />
           </div>
-        )}
+        ) : null}
       </DragOverlay>
     </DndContext>
   )

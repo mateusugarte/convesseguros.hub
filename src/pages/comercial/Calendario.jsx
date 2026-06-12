@@ -36,8 +36,8 @@ function EventPill({ evento, onClick }) {
   const cor = corEvento(evento.tipo)
   return (
     <button onClick={e => { e.stopPropagation(); onClick(evento) }}
-      className="w-full text-left text-[10px] font-semibold px-1.5 py-0.5 rounded truncate transition-opacity hover:opacity-80"
-      style={{ background: cor + '28', color: cor, border: `1px solid ${cor}45` }}>
+      className="w-full text-left text-[10px] font-semibold px-2 py-1 rounded-xl truncate transition-all hover:opacity-90 hover:-translate-y-[1px] shadow-sm"
+      style={{ background: cor + '1F', color: cor, border: `1px solid ${cor}40` }}>
       {fmtHora(evento.data)} {evento.nome}
     </button>
   )
@@ -60,7 +60,7 @@ function MonthView({ date, events, selectedDay, onDaySelect, onEventClick, delet
   }
 
   return (
-    <div className="glass-panel overflow-hidden">
+    <div className="glass-panel overflow-hidden rounded-[24px]">
       {/* Day headers */}
       <div className="grid grid-cols-7 border-b border-dark-border">
         {DIAS_SEMANA.map(d => (
@@ -78,8 +78,8 @@ function MonthView({ date, events, selectedDay, onDaySelect, onEventClick, delet
           const selected = isSameDay(day, selectedDay)
           return (
             <div key={i} onClick={() => onDaySelect(day)}
-              className={`min-h-[90px] p-1.5 border-r border-b border-dark-border/30 cursor-pointer transition-colors
-                ${!inMonth  ? 'opacity-25' : 'hover:bg-dark-surface2'}
+              className={`min-h-[110px] p-2 border-r border-b border-dark-border/20 cursor-pointer transition-colors
+                ${!inMonth  ? 'opacity-25' : 'hover:bg-white/45'}
                 ${selected  ? 'bg-brand-accent/5 border-brand-accent/30' : ''}`}
               style={selected ? { boxShadow: 'inset 0 0 0 1.5px rgba(74,144,217,0.35)' } : {}}>
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mb-1 flex-shrink-0
@@ -146,7 +146,7 @@ function WeekView({ date, events, onDaySelect, onSlotClick, onEventClick, deleti
               const evs = slotEvents(d, h)
               return (
                 <div key={d.toString()} onClick={() => onSlotClick(d, h)}
-                  className={`border-l border-dark-border/20 p-0.5 cursor-pointer hover:bg-dark-surface2 transition-colors min-h-[40px]
+                  className={`border-l border-dark-border/20 p-1 cursor-pointer hover:bg-white/45 transition-colors min-h-[44px]
                     ${isToday(d) ? 'bg-brand-accent/[0.03]' : ''}`}>
                   {evs.map(e => <EventPill key={e.id} evento={e} onClick={onEventClick} />)}
                 </div>
@@ -174,7 +174,7 @@ function EventCard({ evento, lead, openMenuId, setOpenMenuId, onEdit, onDelete, 
   }, [open, setOpenMenuId])
 
   return (
-    <div className="flex gap-2.5 p-3 rounded-xl border border-dark-border bg-dark-surface2/40 hover:bg-dark-surface2 transition-colors group">
+    <div className="flex gap-2.5 p-3 rounded-2xl border border-dark-border/60 bg-white/45 hover:bg-white/70 transition-all group shadow-sm">
       {/* Color bar */}
       <div className="w-0.5 rounded-full flex-shrink-0 self-stretch" style={{ background: cor }} />
 
@@ -190,7 +190,7 @@ function EventCard({ evento, lead, openMenuId, setOpenMenuId, onEdit, onDelete, 
               <MoreHorizontal className="w-3.5 h-3.5" />
             </button>
             {open && (
-              <div className="absolute right-0 top-full mt-1 w-32 glass-modal rounded-xl shadow-xl z-[300] py-1 overflow-hidden">
+              <div className="absolute right-0 top-full mt-1 w-32 glass-modal rounded-2xl shadow-xl z-[300] py-1 overflow-hidden">
                 <button onClick={() => { setOpenMenuId(null); onEdit(evento) }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-dark-text hover:bg-dark-surface2 text-left transition-colors">
                   <Pencil className="w-3 h-3" /> Editar
@@ -244,9 +244,9 @@ function PainelDia({ selectedDay, events, leads, deletingIds, pendingUndo, onAdd
   const todayMark   = isToday(selectedDay)
 
   return (
-    <div className="card p-0 overflow-hidden flex flex-col" style={{ minHeight: 360 }}>
+    <div className="glass-panel p-0 overflow-hidden flex flex-col" style={{ minHeight: 360 }}>
       {/* Header */}
-      <div className="px-4 py-3 border-b border-dark-border flex-shrink-0">
+      <div className="modal-shell-header px-4 py-3 border-b border-dark-border/60 flex-shrink-0">
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="font-bold text-dark-text capitalize">{dateTitle}</p>
@@ -299,7 +299,7 @@ function PainelDia({ selectedDay, events, leads, deletingIds, pendingUndo, onAdd
       </div>
 
       {/* Footer */}
-      <div className="p-3 border-t border-dark-border flex-shrink-0">
+      <div className="modal-shell-footer p-3 border-t border-dark-border/60 flex-shrink-0">
         <button onClick={() => onAdd(selectedDay)}
           className="w-full btn-primary text-sm flex items-center justify-center gap-1.5">
           <Plus className="w-4 h-4" /> Adicionar ao dia
@@ -346,12 +346,12 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
   const corTipo = corEvento(form.tipo)
 
   return (
-    <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 animate-fade-in">
       <div className="modal-backdrop" onClick={onClose} />
-      <div className="relative glass-modal rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-fade-in">
+      <div className="relative glass-modal rounded-[24px] w-full max-w-md shadow-2xl overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border">
+        <div className="modal-shell-header flex items-center justify-between px-5 py-4 border-b border-dark-border/60">
           <div>
             <h2 className="font-bold text-dark-text">{isEdit ? 'Editar Evento' : 'Novo Evento'}</h2>
             <p className="text-xs mt-0.5 capitalize" style={{ color: 'var(--glass-text-muted)' }}>
@@ -363,7 +363,7 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
           </button>
         </div>
 
-        <div className="px-5 py-4 space-y-4 max-h-[72vh] overflow-y-auto">
+        <div className="modal-shell-body px-5 py-4 space-y-4 max-h-[72vh] overflow-y-auto">
 
           {/* Título */}
           <div>
@@ -408,8 +408,8 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
                     type="button"
                     onClick={() => set('time', slot)}
                     style={{
-                      padding: '7px 4px',
-                      borderRadius: 9,
+                      padding: '9px 4px',
+                      borderRadius: 12,
                       fontSize: 11,
                       fontWeight: active ? 700 : 400,
                       border: active
@@ -454,7 +454,7 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-2 px-5 py-4 border-t border-dark-border">
+        <div className="modal-shell-footer flex items-center gap-2 px-5 py-4 border-t border-dark-border/60">
           {isEdit && (
             <button
               onClick={() => onDelete(evento.id)}
@@ -658,4 +658,3 @@ export default function Calendario() {
     </div>
   )
 }
-

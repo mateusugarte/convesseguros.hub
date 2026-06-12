@@ -22,7 +22,7 @@ function ModalVenda({ onClose, onSave, leads }) {
 
   return (
     <div className="animate-fade-in">
-      <div className="glass-panel rounded-2xl overflow-hidden">
+      <div className="table-shell rounded-2xl overflow-hidden">
         <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
           <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
             <ArrowLeft className="w-5 h-5" />
@@ -127,10 +127,11 @@ export default function Vendas() {
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="dashboard-hero flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="title-page text-dark-text">Área de Vendas</h1>
-          <p className="text-xs text-dark-muted mt-0.5">{filteredSales.length} vendas{periodo !== 'todos' ? ' no período' : ' registradas'}</p>
+          <div className="section-kicker mb-2">Receita</div>
+          <h1 className="title-display text-dark-text">Área de Vendas</h1>
+          <p className="section-lead mt-1">{filteredSales.length} vendas{periodo !== 'todos' ? ' no período' : ' registradas'}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex bg-dark-surface2 rounded-xl p-0.5">
@@ -155,21 +156,21 @@ export default function Vendas() {
           { icon: Award,      label: 'Total de Vendas', value: String(stats.count), color: '#6366F1' },
           { icon: Award,      label: 'Top Produto',     value: stats.topProd, color: '#8B5CF6' },
         ].map(c => (
-          <div key={c.label} className="card p-4">
+          <div key={c.label} className="metric-tile">
             <div className="flex items-center gap-2 mb-1">
               <c.icon className="w-4 h-4" style={{ color: c.color }} />
-              <p className="text-xs text-dark-muted font-medium">{c.label}</p>
+              <p className="metric-label">{c.label}</p>
             </div>
-            <p className="text-xl font-black font-mono text-dark-text leading-tight truncate">{c.value}</p>
+            <p className="metric-value truncate">{c.value}</p>
           </div>
         ))}
       </div>
 
       {/* Tabela */}
-      <div className="glass-panel overflow-hidden">
+      <div className="table-shell overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
+          <table className="table-table text-sm">
+            <thead className="table-thead">
               <tr className="border-b border-dark-border">
                 {['Lead','Produto','Valor','Comissão','Data Emissão','Observações'].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-dark-muted uppercase tracking-wider">{h}</th>
@@ -179,24 +180,24 @@ export default function Vendas() {
             <tbody>
               {filteredSales.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center text-dark-muted py-12 text-sm">Nenhuma venda {periodo !== 'todos' ? 'no período' : 'registrada'}</td>
+                  <td colSpan={6} className="table-empty py-12 text-sm">Nenhuma venda {periodo !== 'todos' ? 'no período' : 'registrada'}</td>
                 </tr>
               ) : (
                 [...filteredSales].reverse().map(s => {
                   const prod = PRODUTOS.find(p => p.id === s.produto)
                   const comVal = ((parseFloat(s.valor)||0) * (parseFloat(s.comissao)||0) / 100)
                   return (
-                    <tr key={s.id} className="border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors">
-                      <td className="px-4 py-3 font-semibold text-dark-text">{s.leadNome || '—'}</td>
-                      <td className="px-4 py-3">
+                    <tr key={s.id} className="table-row">
+                      <td className="td font-semibold text-dark-text">{s.leadNome || '—'}</td>
+                      <td className="td">
                         {prod ? (
                           <span className="px-2 py-1 rounded text-xs font-semibold" style={{ background: prod.cor + '22', color: prod.cor }}>{prod.label}</span>
                         ) : <span className="text-dark-muted text-xs">{s.produto}</span>}
                       </td>
-                      <td className="px-4 py-3 font-mono text-dark-text">R$ {parseFloat(s.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
-                      <td className="px-4 py-3 font-mono text-status-success">R$ {comVal.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
-                      <td className="px-4 py-3 text-dark-muted text-xs">{s.dataEmissao ? format(parseISO(s.dataEmissao), 'dd/MM/yyyy') : '—'}</td>
-                      <td className="px-4 py-3 text-dark-muted text-xs max-w-[200px] truncate">{s.observacoes || '—'}</td>
+                      <td className="td font-mono text-dark-text">R$ {parseFloat(s.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+                      <td className="td font-mono text-status-success">R$ {comVal.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+                      <td className="td text-dark-muted text-xs">{s.dataEmissao ? format(parseISO(s.dataEmissao), 'dd/MM/yyyy') : '—'}</td>
+                      <td className="td text-dark-muted text-xs max-w-[200px] truncate">{s.observacoes || '—'}</td>
                     </tr>
                   )
                 })
@@ -209,4 +210,3 @@ export default function Vendas() {
     </div>
   )
 }
-

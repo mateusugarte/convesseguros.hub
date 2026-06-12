@@ -523,8 +523,8 @@ function MesAnoSelector({ ano, anos, mes, mesesComFichas, onAnoChange, onMesChan
 
 function TabelaAberta({ fichas, user, navigate, onDetalhe, onAssumir, onFinalizar, onEditar, resolverNome }) {
   return (
-    <table className="w-full text-sm">
-      <thead className="bg-dark-surface2/80 border-b border-dark-border">
+    <table className="table-table w-full text-sm">
+      <thead className="table-thead border-b border-dark-border">
         <tr>
           {['Data','Imobiliária','Nome','Status','Orçamentista','Tempo',''].map(h => (
             <th key={h} className="th whitespace-nowrap">{h}</th>
@@ -582,8 +582,8 @@ function TabelaAberta({ fichas, user, navigate, onDetalhe, onAssumir, onFinaliza
 
 function TabelaPassadas({ fichas, user, navigate, onEditar, resolverNome }) {
   return (
-    <table className="w-full text-sm">
-      <thead className="bg-dark-surface2/80 border-b border-dark-border">
+    <table className="table-table w-full text-sm">
+      <thead className="table-thead border-b border-dark-border">
         <tr>
           {['Data','Imobiliária','Nome','Status','Orçamentista','Seguradora',''].map(h => (
             <th key={h} className="th whitespace-nowrap">{h}</th>

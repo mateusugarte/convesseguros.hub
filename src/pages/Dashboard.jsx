@@ -130,7 +130,7 @@ function SectionHeader({ title, icon: Icon }) {
   return (
     <div className="flex items-center gap-2 mb-4">
       {Icon && <Icon className="w-4 h-4 text-brand-accent" />}
-      <h2 className="title-section text-dark-text">{title}</h2>
+      <h2 className="section-title text-dark-text">{title}</h2>
     </div>
   )
 }

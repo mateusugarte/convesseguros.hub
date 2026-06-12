@@ -139,28 +139,28 @@ function TabelaImob({ nome, fichas }) {
       <TotalizadorImob fichas={fichas} />
       <div className="table-shell mt-3">
         <div className="overflow-x-auto">
-        <table className="table-table text-xs">
-          <thead className="table-thead border-b border-dark-border">
-            <tr>
-              {['Nome','Doc','Produto','Enviada','Resultado','Desistiu','Orçamentista'].map(h => (
-                <th key={h} className="th whitespace-nowrap">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-dark-border">
-            {fichas.map(f => (
-              <tr key={f.id} className="table-row hover:bg-dark-surface2/40 transition-colors">
-                <td className="td text-dark-text font-medium max-w-[150px] truncate">{nomePrincipal(f)}</td>
-                <td className="td font-mono text-dark-muted">{docMask(f)}</td>
-                <td className="td"><ProdutoBadge produto={f.produto} /></td>
-                <td className="td">{f.retorno_enviado ? <Sim /> : <Nao />}</td>
-                <td className="td"><ResultadoFinal status={f.status} /></td>
-                <td className="td">{f.status === 'cancelado' ? <Sim /> : <Dash />}</td>
-                <td className="td text-dark-muted max-w-[120px] truncate">{f.orcamentista_forms || '—'}</td>
+          <table className="table-table text-xs">
+            <thead className="table-thead border-b border-dark-border">
+              <tr>
+                {['Nome','Doc','Produto','Enviada','Resultado','Desistiu','Orçamentista'].map(h => (
+                  <th key={h} className="th whitespace-nowrap">{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-dark-border">
+              {fichas.map(f => (
+                <tr key={f.id} className="table-row hover:bg-dark-surface2/40 transition-colors">
+                  <td className="td text-dark-text font-medium max-w-[150px] truncate">{nomePrincipal(f)}</td>
+                  <td className="td font-mono text-dark-muted">{docMask(f)}</td>
+                  <td className="td"><ProdutoBadge produto={f.produto} /></td>
+                  <td className="td">{f.retorno_enviado ? <Sim /> : <Nao />}</td>
+                  <td className="td"><ResultadoFinal status={f.status} /></td>
+                  <td className="td">{f.status === 'cancelado' ? <Sim /> : <Dash />}</td>
+                  <td className="td text-dark-muted max-w-[120px] truncate">{f.orcamentista_forms || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

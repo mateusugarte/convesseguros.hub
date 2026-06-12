@@ -82,8 +82,8 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
 
   return (
     <div className="animate-fade-in">
-      <div className="glass-panel rounded-2xl overflow-hidden">
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
+      <div className="glass-modal rounded-[24px] overflow-hidden">
+        <div className="modal-shell-header flex items-center gap-3 px-6 py-4 border-b border-dark-border/60">
           <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
             <ArrowLeft className="w-4 h-4" />
           </button>
@@ -136,7 +136,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
                     className={`w-full flex items-center gap-2 px-3 py-2.5 text-left transition-colors ${
                       segExistente === s.id
                         ? 'bg-brand-accent/10 text-brand-accent'
-                        : 'text-dark-text hover:bg-dark-surface2/60'
+                        : 'text-dark-text hover:bg-white/55'
                     }`}
                   >
                     <SeguradoraBadge nome={s.nome_canonico} size="xs" showName={false} />
@@ -177,7 +177,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
             ) : (
               <div className="rounded-xl border border-dark-border divide-y divide-dark-border overflow-hidden mb-2 max-h-44 overflow-y-auto">
                 {aliases.map(a => (
-                  <div key={a} className="flex items-center justify-between px-3 py-2 hover:bg-dark-surface2/40">
+                <div key={a} className="flex items-center justify-between px-3 py-2 hover:bg-white/50 transition-colors">
                     <span className="font-mono text-xs text-dark-text truncate">{a}</span>
                     <button
                       onClick={() => removerAlias(a)}
@@ -192,7 +192,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-dark-border">
+        <div className="modal-shell-footer flex justify-end gap-3 px-6 py-4 border-t border-dark-border/60">
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
           <button
             onClick={salvar}
@@ -243,7 +243,7 @@ function TabCadastradas({ seguradoras, onEditar, onExcluir, confirmExcluir, setC
 
       <div className="space-y-3">
         {filtradas.map(seg => (
-          <div key={seg.id} className="card p-4">
+          <div key={seg.id} className="glass-panel p-4">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div className="min-w-0 flex-1">
                 <SeguradoraBadge nome={seg.nome_canonico} size="md" />
@@ -349,7 +349,7 @@ function TabNaoMapeadas({ naoMapeadas, selecionados, setSelecionados, onAgrupar 
       </div>
 
       <div className="card overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-2.5 bg-dark-surface2/60 border-b border-dark-border">
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-white/55 border-b border-dark-border/60">
           <input
             type="checkbox"
             checked={selecionados.size === filtradas.length && filtradas.length > 0}
@@ -365,7 +365,7 @@ function TabNaoMapeadas({ naoMapeadas, selecionados, setSelecionados, onAgrupar 
             <label
               key={n.nome}
               className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
-                selecionados.has(n.nome) ? 'bg-brand-accent/5' : 'hover:bg-dark-surface2/40'
+                selecionados.has(n.nome) ? 'bg-brand-accent/5' : 'hover:bg-white/50'
               }`}
             >
               <input

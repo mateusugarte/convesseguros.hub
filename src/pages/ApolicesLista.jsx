@@ -158,9 +158,26 @@ export default function ApolicesLista() {
     <div className="space-y-5 animate-fade-in">
 
       {/* ── Header ── */}
-      <div>
-        <h1 className="title-page text-dark-text">Apólices</h1>
-        <p className="text-xs text-dark-muted mt-0.5">Listagem completa de todas as apólices</p>
+      <div className="dashboard-hero flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="section-kicker mb-2">Gestão documental</div>
+          <h1 className="title-display text-dark-text">Apólices</h1>
+          <p className="section-lead mt-1">Listagem completa de todas as apólices</p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <div className="dashboard-hero-chip">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Total no filtro</p>
+            <p className="mt-1 text-sm font-semibold text-dark-text">{total}</p>
+          </div>
+          <div className="dashboard-hero-chip">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Emitidas</p>
+            <p className="mt-1 text-sm font-semibold text-dark-text">{emitidas}</p>
+          </div>
+          <div className="dashboard-hero-chip">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Valor total</p>
+            <p className="mt-1 text-sm font-semibold text-dark-text">{fmtBRL(valorTotal)}</p>
+          </div>
+        </div>
       </div>
 
       {/* ── Filtros ── */}
@@ -247,15 +264,15 @@ export default function ApolicesLista() {
           { label: 'Enviadas',         val: enviadas,                    color: '#10B981' },
           { label: 'Valor total',      val: fmtBRL(valorTotal),          color: '#F59E0B' },
         ].map(({ label, val, color }) => (
-          <div key={label} className="card p-4">
-            <p className="text-xs text-dark-muted mb-1">{label}</p>
-            <p className="text-xl font-bold font-mono" style={{ color }}>{val ?? '—'}</p>
+          <div key={label} className="metric-tile">
+            <p className="metric-label">{label}</p>
+            <p className="metric-value" style={{ color }}>{val ?? '—'}</p>
           </div>
         ))}
       </div>
 
       {/* ── Tabela ── */}
-      <div className="card overflow-hidden">
+      <div className="table-shell overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-48 gap-2 text-dark-muted text-sm">
             <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -265,13 +282,13 @@ export default function ApolicesLista() {
             Carregando...
           </div>
         ) : apolices.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 gap-2 text-dark-muted">
+          <div className="table-empty h-48">
             <p className="text-sm">Nenhuma apólice encontrada</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-dark-surface2/80 border-b border-dark-border">
+            <table className="table-table text-sm">
+              <thead className="table-thead border-b border-dark-border">
                 <tr>
                   {['Data Emissão','Imobiliária','Locatário','Apólice','Seguradora','Status','Parcela','Emissor',''].map(h => (
                     <th key={h} className="th whitespace-nowrap">{h}</th>

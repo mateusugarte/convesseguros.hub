@@ -4,44 +4,44 @@
 */
 :root {
   /* Surfaces */
-  --color-bg:       248 249 255;   /* #F8F9FF */
+  --color-bg:       236 239 244;   /* #ECEFF4 */
   --color-surface:  255 255 255;   /* #FFFFFF */
-  --color-surface2: 241 245 252;   /* #F1F5FC */
-  --color-border:   220 230 245;   /* #DCE6F5 */
+  --color-surface2: 247 248 250;   /* #F7F8FA */
+  --color-border:   227 231 236;   /* #E3E7EC */
 
   /* Text */
-  --color-text:     5 15 40;       /* #050F28 */
-  --color-muted:    45 65 105;     /* #2D4169 */
+  --color-text:     18 24 38;      /* #121826 */
+  --color-muted:    92 102 119;    /* #5C6677 */
 
   /* Semantic */
-  --color-success:  5 150 105;     /* #059669 */
-  --color-warning:  217 119 6;     /* #D97706 */
-  --color-danger:   220 38 38;     /* #DC2626 */
-  --color-info:     37 99 235;     /* #2563EB */
+  --color-success:  16 185 129;    /* #10B981 */
+  --color-warning:  249 115 22;    /* #F97316 */
+  --color-danger:   239 68 68;     /* #EF4444 */
+  --color-info:     59 130 246;    /* #3B82F6 */
 
   /* Brand — primary action */
-  --color-primary:       43 91 168;   /* #2B5BA8 */
-  --color-primary-hover: 58 107 192;  /* #3A6BC0 */
+  --color-primary:       245 88 42;    /* #F5582A */
+  --color-primary-hover: 255 110 61;   /* #FF6E3D */
 
   /* Shadows */
-  --shadow-card:  0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
-  --shadow-hover: 0 4px 16px rgba(0,0,0,0.10);
+  --shadow-card:  0 1px 2px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.05);
+  --shadow-hover: 0 8px 24px rgba(15,23,42,0.10);
   --shadow-sm:    0 1px 3px rgba(0,0,0,0.06);
   --shadow-lg:    0 8px 30px rgba(0,0,0,0.12);
 
   /* Glass — light */
-  --glass-bg:              rgba(255, 255, 255, 0.72);
-  --glass-bg-hover:        rgba(255, 255, 255, 0.86);
-  --glass-bg-active:       rgba(255, 255, 255, 0.92);
-  --glass-bg-heavy:        rgba(255, 255, 255, 0.88);
-  --glass-bg-strong:       rgba(255, 255, 255, 0.84);
-  --glass-border:          rgba(190, 210, 240, 0.70);
-  --glass-border-subtle:   rgba(170, 195, 230, 0.45);
-  --glass-shadow:      0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(20,60,140,0.07);
-  --glass-shadow-deep: 0 2px 6px rgba(0,0,0,0.08), 0 10px 28px rgba(20,60,140,0.10);
-  --glass-inset:           inset 0 1px 0 rgba(255,255,255,0.90);
-  --glass-blur:            blur(6px) saturate(140%);
-  --glass-blur-strong:     blur(10px) saturate(150%);
+  --glass-bg:              rgba(255, 255, 255, 0.82);
+  --glass-bg-hover:        rgba(255, 255, 255, 0.94);
+  --glass-bg-active:       rgba(255, 255, 255, 0.98);
+  --glass-bg-heavy:        rgba(255, 255, 255, 0.96);
+  --glass-bg-strong:       rgba(255, 255, 255, 0.92);
+  --glass-border:          rgba(220, 227, 236, 0.96);
+  --glass-border-subtle:   rgba(210, 219, 229, 0.72);
+  --glass-shadow:      0 1px 2px rgba(15,23,42,0.04), 0 12px 30px rgba(15,23,42,0.06);
+  --glass-shadow-deep: 0 2px 8px rgba(15,23,42,0.08), 0 20px 40px rgba(15,23,42,0.08);
+  --glass-inset:           inset 0 1px 0 rgba(255,255,255,0.96);
+  --glass-blur:            blur(10px) saturate(150%);
+  --glass-blur-strong:     blur(18px) saturate(170%);
 
   /* Sidebar — always dark */
   --sidebar-bg: #0f172a;
@@ -63,23 +63,23 @@
   --modal-backdrop-tint: rgba(0, 0, 0, 0.04);
 
   /* Extended shadows */
-  --shadow-float: 0 8px 32px -4px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.06);
-  --shadow-glow-blue: 0 0 24px rgba(43,91,168,0.30), 0 4px 12px rgba(43,91,168,0.15);
+  --shadow-float: 0 12px 36px -8px rgba(15,23,42,0.14), 0 2px 8px rgba(15,23,42,0.06);
+  --shadow-glow-blue: 0 0 24px rgba(245,88,42,0.18), 0 4px 12px rgba(245,88,42,0.08);
 
   /* Shadow scale expanded */
-  --shadow-pop:   0 8px 24px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.06);
-  --shadow-lift:  0 16px 48px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.08);
-  --shadow-modal: 0 24px 64px rgba(0,0,0,0.32), 0 8px 24px rgba(20,60,140,0.16);
+  --shadow-pop:   0 10px 28px rgba(15,23,42,0.10), 0 2px 8px rgba(15,23,42,0.04);
+  --shadow-lift:  0 18px 52px rgba(15,23,42,0.16), 0 6px 18px rgba(15,23,42,0.08);
+  --shadow-modal: 0 28px 70px rgba(15,23,42,0.22), 0 10px 28px rgba(15,23,42,0.10);
 
   /* Gold glow */
-  --shadow-glow-gold: 0 0 24px rgba(201,168,76,0.28), 0 4px 12px rgba(201,168,76,0.14);
+  --shadow-glow-gold: 0 0 24px rgba(201,168,76,0.22), 0 4px 12px rgba(201,168,76,0.10);
 
   /* Inset highlights */
-  --glass-inset-strong: inset 0 1px 0 rgba(255,255,255,0.95), inset 1px 0 0 rgba(255,255,255,0.18);
+  --glass-inset-strong: inset 0 1px 0 rgba(255,255,255,0.98), inset 1px 0 0 rgba(255,255,255,0.24);
 
   /* Hairline (Linear-inspired) */
-  --hairline:        rgba(180, 210, 255, 0.30);
-  --hairline-strong: rgba(180, 210, 255, 0.55);
+  --hairline:        rgba(224, 229, 236, 0.96);
+  --hairline-strong: rgba(206, 214, 225, 0.98);
 
   /* Premium easing */
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -95,14 +95,14 @@
 
 html.dark {
   /* Surfaces */
-  --color-bg:       10 15 30;      /* #0A0F1E */
+  --color-bg:       15 20 30;      /* #0F141E */
   --color-surface:  17 24 39;      /* #111827 */
-  --color-surface2: 28 36 56;      /* #1C2438 */
-  --color-border:   30 45 69;      /* #1E2D45 */
+  --color-surface2: 24 32 48;      /* #182030 */
+  --color-border:   38 50 72;      /* #263248 */
 
   /* Text */
-  --color-text:     240 244 255;   /* #F0F4FF */
-  --color-muted:    136 153 187;   /* #8899BB */
+  --color-text:     241 245 249;   /* #F1F5F9 */
+  --color-muted:    148 163 184;   /* #94A3B8 */
 
   /* Semantic */
   --color-success:  16 185 129;    /* #10B981 */
@@ -111,8 +111,8 @@ html.dark {
   --color-info:     59 130 246;    /* #3B82F6 */
 
   /* Brand — primary action (lighter in dark mode) */
-  --color-primary:       74 144 217;  /* #4A90D9 */
-  --color-primary-hover: 90 160 230;  /* #5AA0E6 */
+  --color-primary:       255 130 84;   /* #FF8254 */
+  --color-primary-hover: 255 154 110;  /* #FF9A6E */
 
   /* Shadows */
   --shadow-card:  0 1px 4px rgba(0,0,0,0.35);
@@ -121,41 +121,41 @@ html.dark {
   --shadow-lg:    0 8px 30px rgba(0,0,0,0.5);
 
   /* Glass — dark */
-  --glass-bg:              rgba(12, 22, 52, 0.78);
-  --glass-bg-hover:        rgba(14, 26, 60, 0.88);
-  --glass-bg-active:       rgba(16, 30, 66, 0.94);
-  --glass-bg-heavy:        rgba(8, 16, 44, 0.92);
-  --glass-bg-strong:       rgba(8, 16, 44, 0.88);
-  --glass-border:          rgba(80, 130, 220, 0.20);
-  --glass-border-subtle:   rgba(70, 120, 200, 0.12);
-  --glass-shadow:      0 1px 3px rgba(0,0,0,0.30), 0 4px 16px rgba(0,0,0,0.25);
-  --glass-shadow-deep: 0 2px 6px rgba(0,0,0,0.40), 0 10px 28px rgba(0,0,0,0.38);
-  --glass-inset:           inset 0 1px 0 rgba(80,160,255,0.12);
-  --glass-blur:            blur(6px) saturate(140%);
-  --glass-blur-strong:     blur(10px) saturate(150%);
+  --glass-bg:              rgba(11, 18, 34, 0.80);
+  --glass-bg-hover:        rgba(15, 24, 44, 0.90);
+  --glass-bg-active:       rgba(18, 28, 48, 0.96);
+  --glass-bg-heavy:        rgba(10, 16, 30, 0.94);
+  --glass-bg-strong:       rgba(10, 16, 30, 0.90);
+  --glass-border:          rgba(88, 132, 200, 0.18);
+  --glass-border-subtle:   rgba(88, 132, 200, 0.12);
+  --glass-shadow:      0 1px 3px rgba(0,0,0,0.25), 0 14px 28px rgba(0,0,0,0.24);
+  --glass-shadow-deep: 0 2px 8px rgba(0,0,0,0.34), 0 20px 40px rgba(0,0,0,0.34);
+  --glass-inset:           inset 0 1px 0 rgba(255,255,255,0.10);
+  --glass-blur:            blur(10px) saturate(150%);
+  --glass-blur-strong:     blur(18px) saturate(170%);
 
   --sidebar-bg: #0f172a;
 
   /* Modal backdrop — dark */
   --modal-backdrop-tint: rgba(0, 0, 0, 0.10);
-  --shadow-float: 0 8px 32px -4px rgba(0,0,0,0.50), 0 2px 8px rgba(0,0,0,0.30);
-  --shadow-glow-blue: 0 0 24px rgba(74,144,217,0.25), 0 4px 12px rgba(74,144,217,0.12);
-  --shadow-pop:   0 8px 24px rgba(0,0,0,0.40), 0 2px 8px rgba(0,0,0,0.25);
-  --shadow-lift:  0 16px 48px rgba(0,0,0,0.55), 0 4px 16px rgba(0,0,0,0.30);
-  --shadow-modal: 0 24px 64px rgba(0,0,0,0.60), 0 8px 24px rgba(10,30,80,0.40);
-  --shadow-glow-gold: 0 0 28px rgba(201,168,76,0.35), 0 4px 16px rgba(201,168,76,0.18);
-  --glass-inset-strong: inset 0 1px 0 rgba(255,255,255,0.14), inset 1px 0 0 rgba(255,255,255,0.06);
-  --hairline:        rgba(80, 130, 255, 0.14);
-  --hairline-strong: rgba(80, 130, 255, 0.26);
+  --shadow-float: 0 12px 36px -8px rgba(0,0,0,0.56), 0 2px 8px rgba(0,0,0,0.26);
+  --shadow-glow-blue: 0 0 24px rgba(255,130,84,0.20), 0 4px 12px rgba(255,130,84,0.10);
+  --shadow-pop:   0 10px 28px rgba(0,0,0,0.34), 0 2px 8px rgba(0,0,0,0.20);
+  --shadow-lift:  0 18px 52px rgba(0,0,0,0.56), 0 4px 16px rgba(0,0,0,0.28);
+  --shadow-modal: 0 28px 70px rgba(0,0,0,0.58), 0 10px 28px rgba(10,30,80,0.38);
+  --shadow-glow-gold: 0 0 28px rgba(201,168,76,0.26), 0 4px 16px rgba(201,168,76,0.14);
+  --glass-inset-strong: inset 0 1px 0 rgba(255,255,255,0.12), inset 1px 0 0 rgba(255,255,255,0.05);
+  --hairline:        rgba(88, 132, 200, 0.18);
+  --hairline-strong: rgba(88, 132, 200, 0.28);
   --glass-blur-ultra: blur(24px) saturate(200%);
 
   /* Text contrast tokens — dark */
-  --glass-text-primary:    rgba(215, 232, 255, 0.95);
-  --glass-text-secondary:  rgba(170, 200, 255, 0.72);
-  --glass-text-muted:      rgba(130, 170, 255, 0.50);
-  --nav-text:         rgba(200, 220, 255, 0.88);
-  --nav-text-muted:   rgba(150, 180, 255, 0.50);
-  --nav-icon-opacity: 0.80;
-  --input-placeholder: rgba(150, 185, 255, 0.45);
-  --divider-color: rgba(100, 150, 255, 0.15);
+  --glass-text-primary:    rgba(240, 246, 255, 0.96);
+  --glass-text-secondary:  rgba(187, 204, 230, 0.76);
+  --glass-text-muted:      rgba(145, 165, 190, 0.60);
+  --nav-text:         rgba(232, 240, 250, 0.90);
+  --nav-text-muted:   rgba(154, 174, 198, 0.56);
+  --nav-icon-opacity: 0.84;
+  --input-placeholder: rgba(154, 174, 198, 0.48);
+  --divider-color: rgba(90, 115, 150, 0.16);
 }

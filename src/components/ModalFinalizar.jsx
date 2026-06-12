@@ -42,13 +42,13 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
   return (
     <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 animate-fade-in">
       <div className="modal-backdrop" onClick={!loading ? onClose : undefined} />
-      <div className="relative glass-modal rounded-2xl overflow-hidden w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="relative glass-modal rounded-[24px] overflow-hidden w-full max-w-md max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
+        <div className="modal-shell-header flex items-center gap-3 px-6 py-4 border-b border-dark-border/60">
           <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="w-9 h-9 rounded-xl bg-status-success/15 flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 rounded-2xl bg-status-success/15 flex items-center justify-center flex-shrink-0">
             <CheckCircle2 className="w-5 h-5 text-status-success" />
           </div>
           <div>
@@ -59,7 +59,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
           </div>
         </div>
 
-        <div className="px-6 py-5 space-y-4">
+        <div className="modal-shell-body px-6 py-5 space-y-4">
           {/* Status */}
           <div>
             <label className="block text-xs font-medium text-dark-muted mb-2 uppercase tracking-wider">
@@ -106,7 +106,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
           )}
         </div>
 
-        <div className="flex gap-3 px-6 pb-5">
+        <div className="modal-shell-footer flex gap-3 px-6 pb-5 pt-4 border-t border-dark-border/60">
           <button onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
           <button onClick={handleFinalizar} disabled={loading || !status} className="btn-primary flex-1">
             {loading ? 'Salvando...' : 'Finalizar Ficha'}
@@ -116,4 +116,3 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
     </div>
   )
 }
-

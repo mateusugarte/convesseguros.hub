@@ -98,8 +98,9 @@ function RelatorioCard({ ficha, onClick }) {
   const orc       = ficha.orcamentista_forms
 
   return (
-    <div className="kanban-card" onClick={onClick}>
-      <div className="flex items-center justify-between gap-1">
+    <div className="kanban-card" style={{ '--kanban-accent': prodColor }} onClick={onClick}>
+      <div className="kanban-card-body">
+        <div className="flex items-center justify-between gap-1 mb-1.5">
         <span
           className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
           style={{ background: prodColor + '20', color: prodColor }}
@@ -111,27 +112,28 @@ function RelatorioCard({ ficha, onClick }) {
         </span>
       </div>
 
-      <p className="text-[11px] font-semibold text-dark-text leading-tight truncate">{nome}</p>
+        <p className="text-[11px] font-semibold text-dark-text leading-tight truncate">{nome}</p>
 
-      {doc && <p className="text-[10px] text-dark-muted font-mono">{doc}</p>}
+        {doc && <p className="text-[10px] text-dark-muted font-mono">{doc}</p>}
 
-      {ficha.numero_apolice && (
-        <p className="text-[10px] font-mono" style={{ color: '#2B5BA8' }}>
-          Apólice: {ficha.numero_apolice}
-        </p>
-      )}
+        {ficha.numero_apolice && (
+          <p className="text-[10px] font-mono" style={{ color: '#2B5BA8' }}>
+            Apólice: {ficha.numero_apolice}
+          </p>
+        )}
 
-      {orc && (
-        <div className="flex items-center gap-1 pt-1 border-t border-dark-border/50">
-          <div
-            className="w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold text-white flex-shrink-0"
-            style={{ background: stringColor(orc) }}
-          >
-            {initials(orc)}
+        {orc && (
+          <div className="flex items-center gap-1 pt-1 border-t border-dark-border/50 mt-1.5">
+            <div
+              className="w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold text-white flex-shrink-0"
+              style={{ background: stringColor(orc) }}
+            >
+              {initials(orc)}
+            </div>
+            <span className="text-[9px] text-dark-muted truncate">{orc.split(' ')[0]}</span>
           </div>
-          <span className="text-[9px] text-dark-muted truncate">{orc.split(' ')[0]}</span>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
@@ -158,12 +160,12 @@ function KanbanColuna({ coluna, fichas, onFichaClick, colIndex }) {
 
   return (
     <div
-      className="flex flex-col flex-shrink-0 animate-fade-in"
-      style={{ width: 'var(--kanban-col-w, 224px)', animationDelay: `${colIndex * 40}ms`, animationFillMode: 'both' }}
+      className="kanban-col animate-fade-in flex flex-col"
+      style={{ animationDelay: `${colIndex * 40}ms`, animationFillMode: 'both' }}
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between px-2.5 py-2 rounded-t-xl border border-b-0"
+        className="kanban-col-header flex items-center justify-between flex-shrink-0"
         style={{ background: coluna.color + '18', borderColor: coluna.color + '50' }}
       >
         <div className="flex items-center gap-1.5">
@@ -181,7 +183,7 @@ function KanbanColuna({ coluna, fichas, onFichaClick, colIndex }) {
       {/* Body — droppable */}
       <div
         ref={setNodeRef}
-        className="kanban-col-body flex-1 space-y-1.5 p-1.5 rounded-b-xl border overflow-y-auto transition-colors duration-150"
+        className="kanban-col-body flex-1 p-1.5 space-y-1.5 overflow-y-auto transition-colors duration-150"
         style={{
           borderColor:     isOver ? coluna.color + '80' : 'rgb(var(--color-border))',
           backgroundColor: isOver ? coluna.color + '08' : 'rgb(var(--color-surface2) / 0.4)',
@@ -223,9 +225,9 @@ function Metricas({ fichas }) {
         { label: 'RECUPERADOS',         val: totalRecuperados,      color: '#7C3AED', sub: 'emitidas c/ n° apólice' },
         { label: 'Taxa recuperação',    val: `${taxaRecuperacao}%`, color: '#4A90D9', sub: 'recuperados / aprovadas' },
       ].map(({ label, val, color, sub }) => (
-        <div key={label} className="card p-4">
-          <p className="eyebrow text-dark-muted mb-1">{label}</p>
-          <p className="stat-number" style={{ color }}>{val}</p>
+        <div key={label} className="metric-tile">
+          <p className="metric-label">{label}</p>
+          <p className="metric-value" style={{ color }}>{val}</p>
           <p className="text-[10px] text-dark-muted mt-1">{sub}</p>
         </div>
       ))}
@@ -383,9 +385,12 @@ export default function Relatorio() {
     <div className="space-y-5 animate-fade-in">
 
       {/* ── Header ── */}
-      <div>
-        <h1 className="title-page text-dark-text">Relatório por Imobiliária</h1>
-        <p className="text-xs text-dark-muted mt-0.5">Fichas finalizadas filtradas por imobiliária e período</p>
+      <div className="dashboard-hero flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="section-kicker mb-2">Relatório</div>
+          <h1 className="title-display text-dark-text">Relatório por Imobiliária</h1>
+          <p className="section-lead mt-1">Fichas finalizadas filtradas por imobiliária e período</p>
+        </div>
       </div>
 
       {/* ── Filtros ── */}
@@ -457,7 +462,7 @@ export default function Relatorio() {
               onDragCancel={() => setActiveId(null)}
             >
               <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
-                <div className="flex gap-2 min-w-max px-0.5">
+                <div className="flex gap-3 min-w-max px-1">
                   {COLUNAS.map((col, i) => (
                     <KanbanColuna
                       key={col.id}
@@ -472,7 +477,7 @@ export default function Relatorio() {
 
               <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>
                 {activeFicha && (
-                  <div style={{ width: 'calc(var(--kanban-col-w, 224px) - 12px)' }}>
+                  <div style={{ width: 'calc(var(--kanban-col-w, 286px) - 12px)' }}>
                     <RelatorioCard ficha={activeFicha} onClick={() => {}} />
                   </div>
                 )}

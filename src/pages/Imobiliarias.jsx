@@ -63,7 +63,7 @@ function ImobiliariaSelector({ mapeadas }) {
       {/* Trigger */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-dark-border text-sm text-left transition-all hover:border-brand-accent/50"
+        className="w-full flex items-center gap-2 px-3 py-2.5 rounded-2xl border border-dark-border text-sm text-left transition-all hover:border-brand-accent/50 hover:shadow-sm"
         style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(8px)' }}
       >
         <Search className="w-3.5 h-3.5 text-dark-muted flex-shrink-0" />
@@ -103,7 +103,7 @@ function ImobiliariaSelector({ mapeadas }) {
                 <button
                   key={imob.id}
                   onClick={() => navegar(imob.id)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-dark-surface2 transition-colors text-left"
+                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/55 transition-all text-left"
                 >
                   {/* Avatar com iniciais */}
                   <div
@@ -250,10 +250,10 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
 
   return (
     <div className="animate-fade-in">
-      <div className="glass-panel rounded-2xl overflow-hidden">
+      <div className="glass-modal rounded-[24px] overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
+        <div className="modal-shell-header flex items-center gap-3 px-6 py-4 border-b border-dark-border/60">
           <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
             <ArrowLeft className="w-4 h-4" />
           </button>
@@ -262,7 +262,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
           </h2>
         </div>
 
-        <div className="px-6 py-5 space-y-5">
+        <div className="modal-shell-body px-6 py-5 space-y-5">
 
           {/* Toggle Nova / Existente — apenas no modo criar */}
           {!ehEditar && mapeadas.length > 0 && (
@@ -366,7 +366,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
             ) : (
               <div className="rounded-xl border border-dark-border divide-y divide-dark-border overflow-hidden mb-2">
                 {aliasesModal.map(v => (
-                  <div key={v} className="flex items-center justify-between px-3 py-2 hover:bg-dark-surface2/40">
+                  <div key={v} className="flex items-center justify-between px-3 py-2 hover:bg-white/50 transition-colors">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="font-mono text-xs text-dark-text truncate">{v}</span>
                       {contagemPorNome[v] !== undefined && (
@@ -415,7 +415,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-dark-border">
+        <div className="modal-shell-footer flex justify-end gap-3 px-6 py-4 border-t border-dark-border/60">
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
           <button
             onClick={salvar}
@@ -448,7 +448,7 @@ function TabMapeadas({ mapeadas, confirmExcluir, setConfirmExcluir, onExcluir, o
   return (
     <div className="space-y-3">
       {mapeadas.map(imob => (
-        <div key={imob.id} className="card p-4">
+        <div key={imob.id} className="glass-panel p-4">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="min-w-0 flex-1">
               <button
@@ -665,7 +665,7 @@ function TabCadastros({ mapeadas, seguradoras, vinculacoes, onToggleSeguradora, 
         {filtradas.map(imob => {
           const segsVinc = new Set(vinculacoes[imob.id] || [])
           return (
-            <div key={imob.id} className="card p-4">
+            <div key={imob.id} className="glass-panel p-4">
               <p className="font-bold text-dark-text mb-1">{imob.nome_canonico}</p>
               <p className="text-xs text-dark-muted mb-3">
                 {imob.totalFichas} ficha{imob.totalFichas !== 1 ? 's' : ''}

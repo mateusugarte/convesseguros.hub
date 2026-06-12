@@ -123,53 +123,70 @@ export default function MinhasFichas() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold text-white flex-shrink-0"
-          style={{ background: avatarColor }}
-        >
-          {initials(profile?.nome)}
+      <div className="dashboard-hero flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex items-center gap-4">
+          <div
+            className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold text-white flex-shrink-0 shadow-lg"
+            style={{ background: avatarColor }}
+          >
+            {initials(profile?.nome)}
+          </div>
+          <div>
+            <div className="section-kicker mb-2">Fila pessoal</div>
+            <h1 className="title-display text-dark-text">Minhas Fichas</h1>
+            <p className="section-lead mt-1">{profile?.nome}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="title-page text-dark-text">Minhas Fichas</h1>
-          <p className="text-xs text-dark-muted">{profile?.nome}</p>
+        <div className="flex flex-wrap gap-3">
+          <div className="dashboard-hero-chip">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Em cotação</p>
+            <p className="mt-1 text-sm font-semibold text-dark-text">{abertas.length}</p>
+          </div>
+          <div className="dashboard-hero-chip">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Finalizadas</p>
+            <p className="mt-1 text-sm font-semibold text-dark-text">{passadas.length}</p>
+          </div>
+          <div className="dashboard-hero-chip">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Taxa aprovação</p>
+            <p className="mt-1 text-sm font-semibold text-dark-text">{metricas.taxaAprovacao}%</p>
+          </div>
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card p-4 flex items-center gap-3">
+        <div className="metric-tile flex items-center gap-3">
           <Clock className="w-5 h-5 text-status-warning flex-shrink-0" />
           <div>
-            <p className="eyebrow text-dark-muted">Em Cotação</p>
-            <p className="stat-number text-dark-text">{abertas.length}</p>
+            <p className="metric-label">Em Cotação</p>
+            <p className="metric-value text-dark-text">{abertas.length}</p>
           </div>
         </div>
-        <div className="card p-4 flex items-center gap-3">
+        <div className="metric-tile flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 text-status-success flex-shrink-0" />
           <div>
-            <p className="eyebrow text-dark-muted">Aprovadas</p>
-            <p className="stat-number text-status-success">{metricas.aprovadas}</p>
+            <p className="metric-label">Aprovadas</p>
+            <p className="metric-value text-status-success">{metricas.aprovadas}</p>
           </div>
         </div>
-        <div className="card p-4 flex items-center gap-3">
+        <div className="metric-tile flex items-center gap-3">
           <FileText className="w-5 h-5 text-brand-accent flex-shrink-0" />
           <div>
-            <p className="eyebrow text-dark-muted">Finalizadas</p>
-            <p className="stat-number text-dark-text">{passadas.length}</p>
+            <p className="metric-label">Finalizadas</p>
+            <p className="metric-value text-dark-text">{passadas.length}</p>
           </div>
         </div>
-        <div className="card p-4 flex items-center gap-3">
+        <div className="metric-tile flex items-center gap-3">
           <TrendingUp className="w-5 h-5 text-status-success flex-shrink-0" />
           <div>
-            <p className="eyebrow text-dark-muted">Taxa Aprovação</p>
-            <p className="stat-number text-status-success">{metricas.taxaAprovacao}%</p>
+            <p className="metric-label">Taxa Aprovação</p>
+            <p className="metric-value text-status-success">{metricas.taxaAprovacao}%</p>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="card overflow-hidden">
+      <div className="table-shell overflow-hidden">
         <div className="flex items-center justify-between border-b border-dark-border pr-4 flex-wrap gap-2">
           <div className="flex">
             {[['abertas','Em Cotação'], ['passadas','Finalizadas']].map(([k, l]) => (
@@ -213,8 +230,8 @@ export default function MinhasFichas() {
           <TableSkeleton rows={6} cols={tab === 'abertas' ? 5 : 6} />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-dark-surface2/80 border-b border-dark-border">
+            <table className="table-table text-sm">
+              <thead className="table-thead border-b border-dark-border">
                 <tr>
                   {tab === 'abertas' ? (
                     <>

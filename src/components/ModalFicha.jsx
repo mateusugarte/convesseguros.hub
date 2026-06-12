@@ -194,13 +194,13 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
 
   return (
     <div className="animate-fade-in">
-      <div className="glass-panel rounded-2xl overflow-hidden">
+      <div className="glass-modal rounded-[24px] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
+        <div className="modal-shell-header flex items-center gap-3 px-6 py-4 border-b border-dark-border/60">
           <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="w-9 h-9 rounded-xl bg-brand-secondary/20 flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 rounded-2xl bg-brand-secondary/20 flex items-center justify-center flex-shrink-0">
             {isEdit ? <Save className="w-4 h-4 text-brand-accent" /> : <Plus className="w-4 h-4 text-brand-accent" />}
           </div>
           <h2 className="font-bold text-dark-text">
@@ -208,7 +208,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
           </h2>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-6">
+        <form onSubmit={handleSubmit} className="modal-shell-body px-6 py-5 space-y-6">
 
           {/* ── Identificação ── */}
           <Sec title="Identificação">
@@ -381,7 +381,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
             </p>
           )}
 
-          <div className="flex justify-end gap-3 pt-2 border-t border-dark-border">
+          <div className="modal-shell-footer flex justify-end gap-3 pt-4 border-t border-dark-border/60">
             <button type="button" onClick={onClose} className="btn-secondary min-h-[44px] sm:min-h-0">Cancelar</button>
             <button type="submit" disabled={saving} className="btn-primary flex items-center gap-2 min-h-[44px] sm:min-h-0">
               {isEdit ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}

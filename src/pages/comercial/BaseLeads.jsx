@@ -408,10 +408,11 @@ export default function BaseLeads() {
     <div className="space-y-3 animate-fade-in pb-16">
 
       {/* ── Barra nível 1 ──────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="dashboard-hero flex items-center gap-3 flex-wrap">
         <div>
-          <h1 className="title-page text-dark-text">Base de Leads</h1>
-          <p className="text-xs text-dark-muted">{filtered.length} de {(state.leads || []).length} contatos</p>
+          <div className="section-kicker mb-2">Comercial</div>
+          <h1 className="title-display text-dark-text">Base de Leads</h1>
+          <p className="section-lead mt-1">{filtered.length} de {(state.leads || []).length} contatos</p>
         </div>
 
         {(state.leads || []).length > 500 && (
@@ -478,10 +479,10 @@ export default function BaseLeads() {
       )}
 
       {/* ── Tabela ─────────────────────────────────────────────────────────── */}
-      <div className="glass-panel overflow-hidden">
+      <div className="table-shell overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
+          <table className="table-table text-sm">
+            <thead className="table-thead">
               <tr className="border-b border-dark-border">
                 <th className="w-10 px-3 py-3">
                   <button onClick={toggleAll}
@@ -518,8 +519,8 @@ export default function BaseLeads() {
               {pageRows.length === 0 ? (
                 <tr>
                   <td colSpan={9}>
-                    <div className="flex flex-col items-center justify-center py-16 gap-3">
-                      <SearchX className="w-10 h-10 text-dark-muted opacity-40" />
+                    <div className="table-empty">
+                      <SearchX className="table-empty-icon text-dark-muted" />
                       <p className="text-dark-muted text-sm">Nenhum lead encontrado</p>
                       {hasFilters && (
                         <button onClick={clearAllFilters} className="btn-secondary text-xs">Limpar filtros</button>
@@ -645,4 +646,3 @@ export default function BaseLeads() {
     </div>
   )
 }
-

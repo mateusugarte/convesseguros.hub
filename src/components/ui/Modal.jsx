@@ -57,13 +57,12 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' 
         {/* Header */}
         {title && (
           <div
-            className="flex items-center justify-between px-5 py-4 border-b border-dark-border/60 flex-shrink-0 rounded-t-[20px]"
-            style={{ background: 'linear-gradient(to bottom, rgba(74,144,217,0.05) 0%, transparent 100%)' }}
+            className="modal-shell-header flex items-center justify-between px-5 py-4 border-b border-dark-border/60 flex-shrink-0 rounded-t-[24px]"
           >
             <h2 className="title-section text-dark-text">{title}</h2>
             <button
               onClick={handleClose}
-              className="btn-ghost p-1.5 -mr-1 cursor-pointer rounded-lg transition-all hover:rotate-90 hover:scale-110 duration-200"
+              className="btn-ghost p-1.5 -mr-1 cursor-pointer rounded-xl transition-all hover:rotate-90 hover:scale-110 duration-200"
               aria-label="Fechar"
             >
               <X className="w-4 h-4" />
@@ -72,7 +71,7 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' 
         )}
 
         {/* Content */}
-        <div className="overflow-y-auto flex-1 p-5">
+        <div className="modal-shell-body overflow-y-auto flex-1 p-5">
           {children}
         </div>
       </div>

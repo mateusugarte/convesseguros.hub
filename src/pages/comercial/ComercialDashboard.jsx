@@ -352,8 +352,8 @@ function ActivityTable({ items, navigate }) {
   )
 
   return (
-    <div className="card overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-dark-border">
+    <div className="table-shell overflow-hidden">
+      <div className="data-shell-head">
         <p className="text-sm font-semibold text-dark-text">Atividade Recente</p>
         <button onClick={() => navigate('/comercial/leads')}
           className="text-xs text-brand-accent hover:underline flex items-center gap-1">
@@ -361,8 +361,8 @@ function ActivityTable({ items, navigate }) {
         </button>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
+        <table className="table-table text-sm">
+          <thead className="table-thead">
             <tr className="border-b border-dark-border">
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-dark-muted uppercase tracking-wider">Lead</th>
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-dark-muted uppercase tracking-wider hidden sm:table-cell">Imobiliária</th>
@@ -375,15 +375,14 @@ function ActivityTable({ items, navigate }) {
               let dataFmt = '—'
               try { dataFmt = format(new Date(item.data), "dd/MM HH:mm") } catch {}
               return (
-                <tr key={i} onClick={() => navigate(`/comercial/leads/${item.leadId}`)}
-                  className="border-b border-dark-border/50 hover:bg-dark-surface2 cursor-pointer transition-colors">
-                  <td className="px-4 py-3">
+                <tr key={i} onClick={() => navigate(`/comercial/leads/${item.leadId}`)} className="table-row">
+                  <td className="td">
                     <p className="font-semibold text-dark-text text-sm truncate max-w-[140px]">{item.leadNome}</p>
                   </td>
-                  <td className="px-4 py-3 hidden sm:table-cell text-xs text-dark-muted truncate max-w-[120px]">
+                  <td className="td hidden sm:table-cell text-xs text-dark-muted truncate max-w-[120px]">
                     {item.imobiliaria || '—'}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="td">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-[11px] font-medium px-1.5 py-0.5 rounded"
                         style={{ color: item.fromColor, background: item.fromColor + '22' }}>
@@ -396,7 +395,7 @@ function ActivityTable({ items, navigate }) {
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-xs text-dark-muted whitespace-nowrap font-mono">{dataFmt}</td>
+                  <td className="td text-xs text-dark-muted whitespace-nowrap font-mono">{dataFmt}</td>
                 </tr>
               )
             })}
@@ -714,4 +713,3 @@ export default function ComercialDashboard() {
     </div>
   )
 }
-

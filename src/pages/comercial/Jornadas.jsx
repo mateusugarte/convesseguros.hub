@@ -16,6 +16,13 @@ import {
   CheckCircle, FileCheck, Hand, MessageCircle, ClipboardList, Flag,
 } from 'lucide-react'
 import { Select } from '../../components/ui/Select'
+import {
+  CrmEmptyState,
+  CrmMetricCard,
+  CrmPageHeader,
+  CrmSectionCard,
+  CrmSegmentedControl,
+} from '../../components/comercial'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -125,8 +132,8 @@ function WorkflowNode({ id, data, selected }) {
 
   return (
     <div
-      style={{ borderColor: color, minWidth: 180 }}
-      className={`relative rounded-xl border-2 bg-dark-surface shadow-lg transition-shadow ${selected ? 'shadow-[0_0_0_3px_rgba(99,102,241,0.4)]' : ''}`}
+      style={{ borderColor: color, minWidth: 220, background: 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96))' }}
+      className={`relative rounded-[20px] border shadow-[0_18px_40px_rgba(15,23,42,0.10)] transition-all ${selected ? 'shadow-[0_0_0_4px_rgba(37,99,235,0.18),0_22px_48px_rgba(37,99,235,0.18)] -translate-y-0.5' : 'hover:-translate-y-0.5 hover:shadow-[0_22px_50px_rgba(15,23,42,0.14)]'}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       data-nodeid={id}
@@ -134,7 +141,7 @@ function WorkflowNode({ id, data, selected }) {
       {/* Hover delete button */}
       {hovered && !isInitial && (
         <button
-          className="nodrag absolute -top-2 -right-2 z-10 w-5 h-5 rounded-full bg-dark-surface border border-dark-border flex items-center justify-center text-dark-muted hover:text-status-error hover:border-status-error transition-colors shadow-md"
+          className="nodrag absolute -top-2 -right-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-dark-border bg-white text-dark-muted shadow-md transition-colors hover:border-status-error hover:text-status-error"
           onClick={e => { e.stopPropagation(); deleteNode(id) }}
         >
           <Trash2 className="w-2.5 h-2.5" />
@@ -144,41 +151,50 @@ function WorkflowNode({ id, data, selected }) {
       {/* Target handle (top) — hidden for triggers */}
       {!isTrigger && (
         <Handle type="target" position={Position.Top}
-          style={{ background: color, width: 12, height: 12, border: '2.5px solid #1e293b', top: -7 }} />
+          style={{ background: color, width: 12, height: 12, border: '2.5px solid #ffffff', boxShadow: '0 0 0 1px rgba(15,23,42,0.08)', top: -7 }} />
       )}
 
       {/* Header */}
       <div
-        style={{ background: color + '1a', borderBottom: `1px solid ${color}33` }}
-        className="px-3 py-2 rounded-t-[10px] flex items-center gap-2"
+        style={{ background: `linear-gradient(135deg, ${color}22, rgba(255,255,255,0.92))`, borderBottom: `1px solid ${color}22` }}
+        className="flex items-center gap-2 rounded-t-[18px] px-3 py-2.5"
       >
-        {Icon && <Icon style={{ color }} className="w-3.5 h-3.5 flex-shrink-0" />}
-        <span style={{ color }} className="text-xs font-bold leading-none truncate">{label}</span>
+        {Icon && (
+          <div className="flex h-7 w-7 items-center justify-center rounded-xl flex-shrink-0" style={{ background: `${color}18` }}>
+            <Icon style={{ color }} className="w-3.5 h-3.5 flex-shrink-0" />
+          </div>
+        )}
+        <div className="min-w-0">
+          <span style={{ color }} className="block truncate text-xs font-bold leading-none">{label}</span>
+          <span className="mt-1 block text-[10px] uppercase tracking-[0.18em] text-dark-muted">
+            {isTrigger ? 'Trigger' : isCondition ? 'Condicao' : isFim ? 'Fim' : 'Acao'}
+          </span>
+        </div>
         {isInitial && (
           <span className="ml-auto text-[9px] font-semibold px-1 py-0.5 rounded" style={{ background: color + '33', color }}>início</span>
         )}
       </div>
 
       {/* Body */}
-      <div className="px-3 py-2 rounded-b-[10px]" style={{ minHeight: 36 }}>
+      <div className="rounded-b-[18px] px-3 py-3" style={{ minHeight: 64 }}>
         {configSummary ? (
           <p className="text-[11px] text-dark-muted leading-relaxed">{configSummary}</p>
         ) : (
-          <p className="text-[11px] text-dark-muted/40 italic">Clique para configurar</p>
+          <p className="text-[11px] text-dark-muted/50 italic">Clique para configurar</p>
         )}
       </div>
 
       {/* Source handle(s) — hidden for fim */}
       {!isFim && !isCondition && (
         <Handle type="source" position={Position.Bottom}
-          style={{ background: color, width: 12, height: 12, border: '2.5px solid #1e293b', bottom: -7 }} />
+          style={{ background: color, width: 12, height: 12, border: '2.5px solid #ffffff', boxShadow: '0 0 0 1px rgba(15,23,42,0.08)', bottom: -7 }} />
       )}
       {isCondition && (
         <>
           <Handle id="yes" type="source" position={Position.Bottom}
-            style={{ background: '#10B981', width: 12, height: 12, border: '2.5px solid #1e293b', bottom: -7, left: '30%' }} />
+            style={{ background: '#10B981', width: 12, height: 12, border: '2.5px solid #ffffff', boxShadow: '0 0 0 1px rgba(15,23,42,0.08)', bottom: -7, left: '30%' }} />
           <Handle id="no" type="source" position={Position.Bottom}
-            style={{ background: '#EF4444', width: 12, height: 12, border: '2.5px solid #1e293b', bottom: -7, left: '70%' }} />
+            style={{ background: '#EF4444', width: 12, height: 12, border: '2.5px solid #ffffff', boxShadow: '0 0 0 1px rgba(15,23,42,0.08)', bottom: -7, left: '70%' }} />
           <div className="absolute -bottom-5 flex w-full px-2 pointer-events-none">
             <span style={{ left: 'calc(30% - 10px)' }} className="absolute text-[10px] font-bold text-status-success">Sim</span>
             <span style={{ left: 'calc(70% - 8px)' }}  className="absolute text-[10px] font-bold text-status-error">Não</span>
@@ -196,19 +212,19 @@ const edgeTypes = { deletable: DeletableEdge }
 
 function PainelNos() {
   return (
-    <div className="flex-shrink-0 border-r border-dark-border bg-dark-surface flex flex-col overflow-y-auto" style={{ width: 240 }}>
-      <div className="px-3 py-3 border-b border-dark-border">
-        <p className="text-xs font-bold text-dark-muted uppercase tracking-wider">Componentes</p>
-        <p className="text-[10px] text-dark-muted/60 mt-0.5">Arraste para o canvas</p>
+    <div className="flex flex-shrink-0 flex-col overflow-y-auto border-r border-dark-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(241,245,249,0.96))]" style={{ width: 260 }}>
+      <div className="border-b border-dark-border/60 px-4 py-4">
+        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-dark-muted">Biblioteca</p>
+        <p className="mt-1 text-xs text-dark-muted">Arraste componentes para montar a jornada.</p>
       </div>
       {NODE_GROUPS.map((group, gi) => (
         <div key={group.label}>
           {gi > 0 && <div className="mx-2 border-t border-dark-border/40" />}
-          <div className="px-2 py-2">
-            <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5 px-1" style={{ color: group.color }}>
+          <div className="px-3 py-3">
+            <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: group.color }}>
               {group.label}
             </p>
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               {group.items.map(item => (
                 <div
                   key={item.tipo}
@@ -217,12 +233,15 @@ function PainelNos() {
                     e.dataTransfer.setData('application/workflow-tipo', item.tipo)
                     e.dataTransfer.effectAllowed = 'move'
                   }}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-grab active:cursor-grabbing hover:bg-dark-surface2 transition-colors select-none"
+                  className="flex cursor-grab select-none items-center gap-2 rounded-2xl border border-dark-border/40 bg-white/72 px-3 py-2 transition-all hover:-translate-y-0.5 hover:shadow-sm active:cursor-grabbing"
                 >
-                  <div style={{ width: 28, height: 28, borderRadius: 6, background: group.color + '1a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 12, background: group.color + '1a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <item.Icon style={{ color: group.color, width: 14, height: 14 }} />
                   </div>
-                  <p className="text-xs text-dark-text leading-tight">{item.label}</p>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold leading-tight text-dark-text">{item.label}</p>
+                    <p className="mt-0.5 text-[10px] text-dark-muted">{group.label}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -243,15 +262,18 @@ function PainelConfig({ node, onUpdate, onClose, deleteNode }) {
   const destOpts = [{ value: '', label: 'Selecionar...' }, { value: 'cliente', label: 'Cliente' }, { value: 'responsavel', label: 'Responsável interno' }]
 
   return (
-    <div className="flex-shrink-0 border-l border-dark-border bg-dark-surface flex flex-col overflow-y-auto" style={{ width: 300 }}>
-      <div className="flex items-center justify-between px-3 py-3 border-b border-dark-border">
-        <p className="text-xs font-bold text-dark-text">{node.data.label}</p>
-        <button onClick={onClose} className="p-1 rounded-lg text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-colors">
+    <div className="flex flex-shrink-0 flex-col overflow-y-auto border-l border-dark-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(241,245,249,0.96))]" style={{ width: 320 }}>
+      <div className="flex items-center justify-between border-b border-dark-border/60 px-4 py-4">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-dark-muted">Configuracao</p>
+          <p className="mt-1 text-sm font-semibold text-dark-text">{node.data.label}</p>
+        </div>
+        <button onClick={onClose} className="rounded-xl p-1.5 text-dark-muted transition-colors hover:bg-white hover:text-dark-text">
           <X className="w-4 h-4" />
         </button>
       </div>
 
-      <div className="flex-1 px-3 py-3 space-y-3 overflow-y-auto">
+      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
 
         {/* Gatilhos — ficha aprovada + lead criado */}
         {(tipo === 'trigger_ficha' || tipo === 'trigger_lead') && (
@@ -560,18 +582,21 @@ function EditorInner({ journey, onBack, toast }) {
 
   return (
     <EditorContext.Provider value={{ deleteNode, deleteEdge }}>
-      <div className="flex flex-col -m-4 md:-m-6" style={{ height: 'calc(100vh - 56px)' }}>
+      <div className="flex flex-col -m-4 bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(239,246,255,0.96))] md:-m-6" style={{ height: 'calc(100vh - 56px)' }}>
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-dark-border bg-dark-surface flex-shrink-0">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-dark-border/60 bg-white/80 backdrop-blur-sm flex-shrink-0">
           <button onClick={handleBack}
             className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <input
-            value={nome}
-            onChange={e => { setNome(e.target.value); setDirty(true) }}
-            className="flex-1 bg-transparent font-bold text-dark-text text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent/50 rounded px-1 min-w-0"
-          />
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-dark-muted">Editor de jornada</p>
+            <input
+              value={nome}
+              onChange={e => { setNome(e.target.value); setDirty(true) }}
+              className="mt-1 w-full min-w-0 rounded bg-transparent px-1 text-sm font-bold text-dark-text focus:outline-none focus:ring-1 focus:ring-brand-accent/50"
+            />
+          </div>
           <StatusBadge status={currentStatus} />
           {dirty && <span className="text-[10px] text-amber-500 font-medium flex-shrink-0">Não salvo</span>}
           <button onClick={() => persistWorkflow()} disabled={saving}
@@ -593,10 +618,15 @@ function EditorInner({ journey, onBack, toast }) {
           <div
             ref={wrapperRef}
             className="flex-1 relative"
-            style={{ background: '#F8FAFC' }}
+            style={{ background: 'radial-gradient(circle at top, rgba(191,219,254,0.45), rgba(248,250,252,0.98) 35%)' }}
             onDrop={handleDrop}
             onDragOver={e => e.preventDefault()}
           >
+            <div className="pointer-events-none absolute left-4 top-4 z-10 rounded-[20px] border border-dark-border/50 bg-white/82 px-4 py-3 shadow-sm backdrop-blur-sm">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-dark-muted">Canvas</p>
+              <p className="mt-1 text-sm font-semibold text-dark-text">{nodes.length} nos · {edges.length} conexoes</p>
+              <p className="mt-1 text-xs text-dark-muted">Arraste blocos da biblioteca e conecte o fluxo comercial.</p>
+            </div>
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -612,12 +642,12 @@ function EditorInner({ journey, onBack, toast }) {
               deleteKeyCode="Delete"
               defaultEdgeOptions={{ type: 'deletable', animated: true }}
             >
-              <Background variant={BackgroundVariant.Dots} color="#E2E8F0" gap={16} size={1.5} />
-              <Controls className="!bg-white !border-slate-200 !shadow-md" />
+              <Background variant={BackgroundVariant.Dots} color="#CBD5E1" gap={20} size={1.6} />
+              <Controls className="!bg-white !border-slate-200 !shadow-md !rounded-2xl !overflow-hidden" />
               <MiniMap
                 nodeColor={n => findNodeInfo(n.data?.tipo)?.color || '#6366f1'}
-                maskColor="rgba(241,245,249,0.7)"
-                className="!bg-white !border-slate-200 !rounded-xl"
+                maskColor="rgba(248,250,252,0.78)"
+                className="!bg-white !border-slate-200 !rounded-2xl !shadow-md"
               />
             </ReactFlow>
           </div>

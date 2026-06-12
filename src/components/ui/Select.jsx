@@ -134,14 +134,14 @@ export function Select({
           cursor:     disabled ? 'not-allowed' : 'pointer',
           transition: 'border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease',
           ...(open ? {
-            borderColor: 'rgba(74,144,217,0.65)',
-            boxShadow:   '0 0 0 3px rgba(74,144,217,0.18)',
+            borderColor: 'rgb(var(--brand-primary-rgb) / 0.52)',
+            boxShadow:   '0 0 0 3px rgb(var(--brand-primary-rgb) / 0.14)',
             background:  'var(--glass-bg-active)',
           } : {}),
         }}
         onMouseEnter={e => {
           if (!open && !disabled) {
-            e.currentTarget.style.borderColor = 'rgba(74,144,217,0.38)'
+            e.currentTarget.style.borderColor = 'rgb(var(--brand-primary-rgb) / 0.32)'
             e.currentTarget.style.background  = 'var(--glass-bg-hover)'
           }
         }}

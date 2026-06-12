@@ -2,47 +2,70 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown, Check } from 'lucide-react'
 
-// ── Input ─────────────────────────────────────────────────────────────────────
-export function Input({ label, error, className = '', ...props }) {
+function FieldShell({ label, error, description, children, labelClassName = '' }) {
   return (
-    <div className="space-y-1">
-      {label && <label className="block text-xs font-medium text-dark-muted uppercase tracking-wider">{label}</label>}
+    <div className="space-y-1.5">
+      {label && (
+        <label className={`block text-[11px] font-semibold text-dark-muted uppercase tracking-[0.14em] ${labelClassName}`}>
+          {label}
+        </label>
+      )}
+      {children}
+      {description && !error && <p className="text-[11px] text-dark-muted">{description}</p>}
+      {error && <p className="text-[11px] text-status-danger">{error}</p>}
+    </div>
+  )
+}
+
+export function Input({ label, error, description, className = '', labelClassName = '', ...props }) {
+  return (
+    <FieldShell label={label} error={error} description={description} labelClassName={labelClassName}>
       <input {...props} className={`input ${error ? 'border-status-danger focus:ring-status-danger/20' : ''} ${className}`} />
-      {error && <p className="text-[11px] text-status-danger">{error}</p>}
-    </div>
+    </FieldShell>
   )
 }
 
-// ── Textarea ──────────────────────────────────────────────────────────────────
-export function Textarea({ label, error, className = '', ...props }) {
+export function Textarea({ label, error, description, className = '', labelClassName = '', ...props }) {
   return (
-    <div className="space-y-1">
-      {label && <label className="block text-xs font-medium text-dark-muted uppercase tracking-wider">{label}</label>}
+    <FieldShell label={label} error={error} description={description} labelClassName={labelClassName}>
       <textarea {...props} className={`input resize-none ${error ? 'border-status-danger' : ''} ${className}`} />
-      {error && <p className="text-[11px] text-status-danger">{error}</p>}
-    </div>
+    </FieldShell>
   )
 }
 
-// ── Select (portal-based, never clipped) ─────────────────────────────────────
-export function Select({ label, error, options = [], value, onChange, placeholder = 'Selecionar...', className = '' }) {
+export function Select({
+  label,
+  error,
+  description,
+  options = [],
+  value,
+  onChange,
+  placeholder = 'Selecionar...',
+  className = '',
+  labelClassName = '',
+}) {
   const [open, setOpen] = useState(false)
-  const [pos,  setPos]  = useState(null)
+  const [pos, setPos] = useState(null)
   const triggerRef = useRef(null)
 
   useEffect(() => {
-    if (!open) { setPos(null); return }
+    if (!open) {
+      setPos(null)
+      return
+    }
+
     function calc() {
       if (!triggerRef.current) return
-      const r = triggerRef.current.getBoundingClientRect()
-      const spaceBelow = window.innerHeight - r.bottom
-      const above = spaceBelow < 200 && r.top > spaceBelow
+      const rect = triggerRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      const above = spaceBelow < 200 && rect.top > spaceBelow
       setPos({
-        left:  r.left,
-        width: r.width,
-        ...(above ? { bottom: window.innerHeight - r.top + 4, top: 'auto' } : { top: r.bottom + 4, bottom: 'auto' }),
+        left: rect.left,
+        width: rect.width,
+        ...(above ? { bottom: window.innerHeight - rect.top + 4, top: 'auto' } : { top: rect.bottom + 4, bottom: 'auto' }),
       })
     }
+
     calc()
     window.addEventListener('resize', calc, { passive: true })
     window.addEventListener('scroll', calc, { passive: true, capture: true })
@@ -54,7 +77,9 @@ export function Select({ label, error, options = [], value, onChange, placeholde
 
   useEffect(() => {
     if (!open) return
-    function handler(e) { if (!triggerRef.current?.contains(e.target)) setOpen(false) }
+    function handler(e) {
+      if (!triggerRef.current?.contains(e.target)) setOpen(false)
+    }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
@@ -63,8 +88,7 @@ export function Select({ label, error, options = [], value, onChange, placeholde
   const selectedLabel = selected ? (typeof selected === 'object' ? selected.label : selected) : null
 
   return (
-    <div className="space-y-1">
-      {label && <label className="block text-xs font-medium text-dark-muted uppercase tracking-wider">{label}</label>}
+    <FieldShell label={label} error={error} description={description} labelClassName={labelClassName}>
       <button
         ref={triggerRef}
         type="button"
@@ -74,7 +98,6 @@ export function Select({ label, error, options = [], value, onChange, placeholde
         <span className={selectedLabel ? 'text-dark-text' : 'text-dark-muted/60'}>{selectedLabel ?? placeholder}</span>
         <ChevronDown className={`w-4 h-4 text-dark-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
-      {error && <p className="text-[11px] text-status-danger">{error}</p>}
 
       {open && pos && createPortal(
         <div
@@ -82,23 +105,26 @@ export function Select({ label, error, options = [], value, onChange, placeholde
           style={{ position: 'fixed', zIndex: 300, ...pos, maxHeight: 240, overflowY: 'auto' }}
         >
           {options.map(opt => {
-            const v = typeof opt === 'object' ? opt.value : opt
-            const l = typeof opt === 'object' ? opt.label : opt
+            const optionValue = typeof opt === 'object' ? opt.value : opt
+            const optionLabel = typeof opt === 'object' ? opt.label : opt
             return (
               <button
-                key={v}
+                key={optionValue}
                 type="button"
-                onClick={() => { onChange(v); setOpen(false) }}
+                onClick={() => {
+                  onChange(optionValue)
+                  setOpen(false)
+                }}
                 className="w-full flex items-center justify-between px-3 py-2 text-sm text-dark-text hover:bg-dark-surface2 transition-colors text-left"
               >
-                {l}
-                {v === value && <Check className="w-3.5 h-3.5 text-brand-accent" />}
+                {optionLabel}
+                {optionValue === value && <Check className="w-3.5 h-3.5 text-brand-accent" />}
               </button>
             )
           })}
         </div>,
         document.body,
       )}
-    </div>
+    </FieldShell>
   )
 }

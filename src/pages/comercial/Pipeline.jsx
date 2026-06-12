@@ -1,7 +1,6 @@
 ﻿import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, useDraggable } from '@dnd-kit/core'
-import { snapCenterToCursor } from '@dnd-kit/modifiers'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, useDraggable, closestCenter } from '@dnd-kit/core'
 import {
   useComercial, leadAdd, leadMover, leadUpdate, saleAdd, eventAdd,
   PIPELINE_COLS, PRODUTOS, ORIGENS, MOTIVOS_RECUSA, TAGS_DEFAULT,
@@ -9,9 +8,13 @@ import {
   calcScore, scoreFaixa, diffDias,
 } from '../../lib/comercial'
 import { useToast } from '../../contexts/ToastContext'
-import { Plus, X, Search, Building2, Clock, CheckCircle2, PenLine, ClipboardList, FileCheck, Check } from 'lucide-react'
+import {
+  Plus, X, Search, Building2, Clock, CheckCircle2, PenLine, ClipboardList, FileCheck, Check, GripVertical,
+  AlertTriangle, Flame, Layers3, Users,
+} from 'lucide-react'
 import { Select } from '../../components/ui/Select'
 import { DatePicker } from '../../components/ui/DatePicker'
+import { CrmMetricCard, CrmPageHeader, CrmSectionCard } from '../../components/comercial'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -33,11 +36,17 @@ function ScoreBadge({ score }) {
   )
 }
 
+function fmtIdleDays(dias) {
+  if (dias === null) return 'Sem atividade'
+  if (dias === 0) return 'Hoje'
+  return `${dias}d`
+}
+
 // ── LeadCard ──────────────────────────────────────────────────────────────────
 
 const AVATAR_COLORS = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#2B5BA8','#EC4899','#06B6D4','#EF4444']
 
-function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSelect }) {
+function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSelect, dragListeners, dragAttributes }) {
   const score    = calcScore(lead)
   const dias     = lead.ultimaAtividade ? diffDias(lead.ultimaAtividade) : null
   const leadTags = (lead.tags || []).map(tid => tags.find(t => t.id === tid)).filter(Boolean)
@@ -55,6 +64,18 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
       <div className="kanban-card-body pl-2 pr-1">
         {/* Row 1: avatar/select + nome + score */}
         <div className="flex items-start gap-2 mb-2">
+          {dragListeners && dragAttributes && (
+            <button
+              {...dragListeners}
+              {...dragAttributes}
+              type="button"
+              className="kanban-grip mt-0.5"
+              onClick={e => e.stopPropagation()}
+              aria-label="Arrastar lead"
+            >
+              <GripVertical className="w-3.5 h-3.5" />
+            </button>
+          )}
           <div className="relative flex-shrink-0 cursor-pointer"
             onClick={e => { e.stopPropagation(); onSelect?.() }}>
             {selected ? (
@@ -108,20 +129,27 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
           </div>
         )}
 
-        {lead.proximaAcao && (
-          <p className="text-[10px] text-brand-accent truncate mb-1">{lead.proximaAcao}</p>
+        {lead.resumo && (
+          <p className="mb-2 line-clamp-2 text-[10px] leading-relaxed text-dark-muted">{lead.resumo}</p>
         )}
 
-        {dias !== null && (
-          <div className={`flex items-center gap-1 mt-1.5 px-2 py-1 rounded-md w-fit
-            ${isUrgent ? 'bg-status-error/10' : isWarn ? 'bg-status-warning/10' : 'bg-dark-surface2'}`}>
-            <Clock className={`w-3 h-3 flex-shrink-0 ${isUrgent ? 'text-status-error' : isWarn ? 'text-status-warning' : 'text-dark-muted'}`} />
-            <span className={`text-[10px] font-medium
-              ${isUrgent ? 'text-status-error font-semibold' : isWarn ? 'text-status-warning' : 'text-dark-muted'}`}>
-              {dias === 0 ? 'Hoje' : `${dias}d`}
-            </span>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="rounded-xl border border-dark-border/40 bg-white/55 px-2 py-2">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Última atividade</p>
+            <div className={`mt-1 inline-flex items-center gap-1 text-[10px] font-semibold ${
+              isUrgent ? 'text-status-error' : isWarn ? 'text-status-warning' : 'text-dark-text'
+            }`}>
+              <Clock className="h-3 w-3 flex-shrink-0" />
+              <span>{fmtIdleDays(dias)}</span>
+            </div>
           </div>
-        )}
+          <div className="rounded-xl border border-dark-border/40 bg-white/55 px-2 py-2">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Próxima ação</p>
+            <p className="mt-1 truncate text-[10px] font-semibold text-brand-accent">
+              {lead.proximaAcao || 'Definir próximo passo'}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -132,12 +160,20 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
 function DraggableCard({ lead, col, tags, activeId, onClick, selected, onSelect }) {
   const { setNodeRef, attributes, listeners, isDragging } = useDraggable({ id: lead.id })
   return (
-    <div ref={setNodeRef} {...attributes} {...listeners}
+    <div ref={setNodeRef}
       className={isDragging ? 'opacity-50' : ''}
-      style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none' }}
+      style={{ cursor: isDragging ? 'grabbing' : 'default', touchAction: 'none' }}
       onClick={e => { if (!isDragging) { e.stopPropagation(); onClick(lead.id) } }}>
-      <LeadCard lead={lead} col={col} tags={tags} ghost={activeId === lead.id && !isDragging}
-        selected={selected} onSelect={onSelect} />
+      <LeadCard
+        lead={lead}
+        col={col}
+        tags={tags}
+        ghost={activeId === lead.id && !isDragging}
+        selected={selected}
+        onSelect={onSelect}
+        dragListeners={listeners}
+        dragAttributes={attributes}
+      />
     </div>
   )
 }
@@ -638,16 +674,30 @@ export default function Pipeline() {
 
   const sensors    = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
   const activeLead = activeId ? state.leads.find(l => l.id === activeId) : null
+  const leads      = state.leads || []
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return state.leads
+    if (!search.trim()) return state.leads || []
     const q = search.toLowerCase()
-    return state.leads.filter(l =>
+    return (state.leads || []).filter(l =>
       l.nome.toLowerCase().includes(q) ||
       (l.telefone || '').includes(q) ||
       (l.imobiliaria || '').toLowerCase().includes(q)
     )
   }, [state.leads, search])
+
+  const activeLeads = leads.filter(l => l.coluna !== 'recusou')
+  const hotLeads = activeLeads.filter(l => calcScore(l) > 60)
+  const staleLeads = activeLeads.filter(l => l.ultimaAtividade && diffDias(l.ultimaAtividade) >= 7)
+  const proposalLeads = activeLeads.filter(l => ['oferta', 'negociando', 'followup'].includes(l.coluna) || l.propostaEnviada)
+  const stageOverview = PIPELINE_COLS.map(col => {
+    const colLeads = filtered.filter(l => l.coluna === col.id)
+    return {
+      ...col,
+      total: colLeads.length,
+      stale: colLeads.filter(l => l.ultimaAtividade && diffDias(l.ultimaAtividade) >= 7).length,
+    }
+  })
 
   function toggleSelect(id) {
     setSelectedIds(prev => {
@@ -686,62 +736,151 @@ export default function Pipeline() {
   }
 
   return (
-    <div className="flex flex-col gap-3 animate-fade-in" style={{ height: 'calc(100vh - 9.5rem)' }}>
-      {/* Header */}
-      <div className="flex items-center gap-3 flex-shrink-0">
-        <div>
-          <h1 className="title-page text-dark-text">Pipeline</h1>
-          <p className="text-xs text-dark-muted">
-            {state.leads.filter(l => l.coluna !== 'recusou').length} leads ativos
-          </p>
-        </div>
-        <div className="relative flex-1 max-w-xs ml-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted pointer-events-none" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar leads..."
-            className="input pl-9 py-2 text-sm w-full"
-          />
-        </div>
-        <button onClick={() => setAddOpen(true)} className="btn-primary flex items-center gap-2 text-sm ml-auto">
-          <Plus className="w-4 h-4" /> Novo Lead
-        </button>
+    <div className="space-y-5 animate-fade-in pb-10">
+      <CrmPageHeader
+        eyebrow="Pipeline comercial"
+        title="Operação de avanço e fechamento"
+        description="O pipeline agora funciona como uma mesa de controle comercial: volume por etapa, temperatura, inatividade e próximos movimentos na mesma superfície."
+        aside={(
+          <div className="rounded-[24px] border border-dark-border/60 bg-white/70 px-4 py-3 text-sm shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-dark-muted">Leads visíveis</p>
+            <p className="mt-1 text-2xl font-black text-dark-text">{filtered.length}</p>
+            <p className="mt-1 text-xs text-dark-muted">{activeLeads.length} ativos na operação</p>
+          </div>
+        )}
+        actions={(
+          <>
+            <div className="relative min-w-[240px] max-w-sm">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-muted" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar por nome, telefone ou imobiliária"
+                className="input w-full py-2 pl-9 text-sm"
+              />
+            </div>
+            <button onClick={() => setAddOpen(true)} className="btn-primary text-sm">
+              <span className="inline-flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Novo lead
+              </span>
+            </button>
+          </>
+        )}
+      />
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <CrmMetricCard icon={Users} label="Leads ativos" value={activeLeads.length} accent="#2563EB" helper="Em andamento no pipeline" />
+        <CrmMetricCard icon={Flame} label="Alta temperatura" value={hotLeads.length} accent="#DC2626" helper="Score acima de 60" />
+        <CrmMetricCard icon={ClipboardList} label="Propostas" value={proposalLeads.length} accent="#7C3AED" helper="Oferta, negociação e follow-up" />
+        <CrmMetricCard icon={AlertTriangle} label="Sem atividade" value={staleLeads.length} accent="#D97706" helper="Leads com 7 dias ou mais sem contato" />
       </div>
 
-      {/* Board — kanban vertical columns */}
-      <div className="flex-1 min-h-0">
-        <DndContext
-          sensors={sensors}
-          onDragStart={({ active }) => setActiveId(active.id)}
-          onDragEnd={handleDragEnd}>
-          <div className="flex gap-3 overflow-x-auto pb-4 h-full">
-            {PIPELINE_COLS.map(col => (
-              <SwimLane
-                key={col.id}
-                col={col}
-                leads={filtered.filter(l => l.coluna === col.id)}
-                tags={state.tags}
-                activeId={activeId}
-                onCardClick={id => navigate('/comercial/leads/' + id)}
-                selectedIds={selectedIds}
-                onSelect={toggleSelect}
-              />
-            ))}
+      <CrmSectionCard
+        title="Board executivo"
+        subtitle="Arraste, revise gargalos e leia cada etapa como uma unidade operacional."
+        contentClassName="p-0"
+      >
+        <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="min-w-0 border-b border-dark-border/50 xl:border-b-0 xl:border-r">
+            <div className="flex items-center gap-2 overflow-x-auto px-5 py-4">
+              {stageOverview.map(stage => (
+                <div key={stage.id} className="min-w-[148px] rounded-[20px] border border-dark-border/50 bg-white/60 px-3 py-3">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: stage.color }} />
+                    <p className="truncate text-xs font-semibold text-dark-text">{stage.label}</p>
+                  </div>
+                  <p className="mt-3 text-2xl font-black text-dark-text">{stage.total}</p>
+                  <p className="mt-1 text-[11px] text-dark-muted">{stage.stale} com inatividade crítica</p>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ height: 'calc(100vh - 28rem)' }} className="min-h-[520px] px-5 pb-5">
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={({ active }) => setActiveId(active.id)}
+                onDragEnd={handleDragEnd}
+              >
+                <div className="flex h-full gap-3 overflow-x-auto pb-4">
+                  {PIPELINE_COLS.map(col => (
+                    <SwimLane
+                      key={col.id}
+                      col={col}
+                      leads={filtered.filter(l => l.coluna === col.id)}
+                      tags={state.tags}
+                      activeId={activeId}
+                      onCardClick={id => navigate('/comercial/leads/' + id)}
+                      selectedIds={selectedIds}
+                      onSelect={toggleSelect}
+                    />
+                  ))}
+                </div>
+                <DragOverlay dropAnimation={null}>
+                  {activeLead ? (
+                    <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.4))' }}>
+                      <LeadCard
+                        lead={activeLead}
+                        col={PIPELINE_COLS.find(c => c.id === activeLead.coluna)}
+                        tags={state.tags}
+                      />
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
+            </div>
           </div>
-          <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>
-            {activeLead ? (
-              <div style={{ filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.4))' }}>
-                <LeadCard
-                  lead={activeLead}
-                  col={PIPELINE_COLS.find(c => c.id === activeLead.coluna)}
-                  tags={state.tags}
-                />
+
+          <aside className="space-y-4 px-5 py-5">
+            <div className="rounded-[24px] border border-dark-border/50 bg-white/65 p-4">
+              <div className="flex items-center gap-2">
+                <Layers3 className="h-4 w-4 text-brand-accent" />
+                <p className="text-sm font-semibold text-dark-text">Leitura rápida</p>
               </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      </div>
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-dark-muted">Selecionados</span>
+                  <span className="text-sm font-semibold text-dark-text">{selectedIds.size}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-dark-muted">Recusados</span>
+                  <span className="text-sm font-semibold text-dark-text">{leads.filter(l => l.coluna === 'recusou').length}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-dark-muted">Em venda</span>
+                  <span className="text-sm font-semibold text-dark-text">{leads.filter(l => l.coluna === 'venda').length}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-dark-border/50 bg-white/65 p-4">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-status-warning" />
+                <p className="text-sm font-semibold text-dark-text">Pontos de atenção</p>
+              </div>
+              <div className="mt-4 space-y-2.5">
+                {staleLeads.slice(0, 4).map(lead => (
+                  <button
+                    key={lead.id}
+                    type="button"
+                    onClick={() => navigate(`/comercial/leads/${lead.id}`)}
+                    className="w-full rounded-[18px] border border-dark-border/40 bg-white/70 px-3 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm"
+                  >
+                    <p className="truncate text-sm font-semibold text-dark-text">{lead.nome}</p>
+                    <p className="mt-1 text-xs text-dark-muted">
+                      {PIPELINE_COLS.find(c => c.id === lead.coluna)?.label || 'Pipeline'} • {diffDias(lead.ultimaAtividade)}d sem contato
+                    </p>
+                  </button>
+                ))}
+                {staleLeads.length === 0 && (
+                  <p className="text-sm text-dark-muted">Nenhum lead crítico no momento.</p>
+                )}
+              </div>
+            </div>
+          </aside>
+        </div>
+      </CrmSectionCard>
 
       {/* Modais */}
       {addOpen    && <ModalAddLead onClose={() => setAddOpen(false)} leads={state.leads} tags={state.tags} toast={toast} />}

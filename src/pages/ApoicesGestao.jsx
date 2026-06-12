@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, pointerWithin } from '@dnd-kit/core'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, closestCenter } from '@dnd-kit/core'
 import {
   fetchApolicesKanban, criarApolice, moverStatusApolice,
   buscarFichasParaEmissao,
@@ -912,12 +912,12 @@ export default function ApoicesGestao() {
           )}
 
           <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={pointerWithin}
-              onDragStart={({ active }) => setActiveId(active.id)}
-              onDragEnd={handleDragEnd}
-              onDragCancel={() => setActiveId(null)}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={({ active }) => setActiveId(active.id)}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveId(null)}
             >
               <div className="flex gap-3 min-w-max px-1">
                 {colOrder.map((colId, i) => {
@@ -937,7 +937,7 @@ export default function ApoicesGestao() {
                   )
                 })}
               </div>
-              <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }}>
+              <DragOverlay dropAnimation={null}>
                 {activeId?.startsWith?.('col::') ? (() => {
                   const cid = activeId.replace('col::', '')
                   const col = COLUNAS.find(c => c.id === cid)
@@ -963,7 +963,7 @@ export default function ApoicesGestao() {
                     </div>
                   )
                 })() : activeCard ? (
-                  <div style={{ width: 'calc(var(--kanban-col-w, 286px) - 12px)', '--kanban-accent': PRODUTO_COLOR[produtoApolice(activeCard)] || '#4A90D9' }}>
+                  <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', '--kanban-accent': PRODUTO_COLOR[produtoApolice(activeCard)] || '#4A90D9' }}>
                     <ApoliceCard apolice={activeCard} isDragOverlay resolverNome={resolverNome} />
                   </div>
                 ) : null}

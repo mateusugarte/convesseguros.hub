@@ -7,11 +7,12 @@ import { useToast } from '../../contexts/ToastContext'
 import {
   Search, SlidersHorizontal, X, ChevronDown,
   ChevronRight, SearchX, Download, ArrowUpDown, ArrowUp, ArrowDown,
-  Check, Building2, Calendar,
+  Check, Building2, Calendar, Flame, Activity, AlertTriangle, Users,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { DatePicker } from '../../components/ui/DatePicker'
+import { CrmMetricCard, CrmPageHeader, CrmSectionCard } from '../../components/comercial'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -403,56 +404,70 @@ export default function BaseLeads() {
   }
 
   const hasFilters = activeChips.length > 0
+  const hotLeads = filtered.filter(lead => calcScore(lead) > 60)
+  const staleLeads = filtered.filter(lead => lead.ultimaAtividade && ((Date.now() - new Date(lead.ultimaAtividade).getTime()) / 86400000) >= 7)
+  const proposalLeads = filtered.filter(lead => ['oferta', 'negociando', 'followup'].includes(lead.coluna) || lead.propostaEnviada)
 
   return (
-    <div className="space-y-3 animate-fade-in pb-16">
-
-      {/* ── Barra nível 1 ──────────────────────────────────────────────────── */}
-      <div className="dashboard-hero flex items-center gap-3 flex-wrap">
-        <div>
-          <div className="section-kicker mb-2">Comercial</div>
-          <h1 className="title-display text-dark-text">Base de Leads</h1>
-          <p className="section-lead mt-1">{filtered.length} de {(state.leads || []).length} contatos</p>
-        </div>
-
-        {(state.leads || []).length > 500 && (
-          <span className="text-xs text-status-warning bg-status-warning/10 border border-status-warning/20 px-2 py-1 rounded-lg">
-            +500 leads — desempenho pode variar
-          </span>
+    <div className="space-y-5 animate-fade-in pb-16">
+      <CrmPageHeader
+        eyebrow="Base de leads"
+        title="Segmentação, busca e qualificação"
+        description="A base agora funciona como uma mesa de triagem comercial: filtros persistentes, leitura de temperatura e acesso rápido ao detalhe do lead."
+        aside={(
+          <div className="rounded-[24px] border border-dark-border/60 bg-white/70 px-4 py-3 text-sm shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-dark-muted">Cobertura</p>
+            <p className="mt-1 text-2xl font-black text-dark-text">{filtered.length}</p>
+            <p className="mt-1 text-xs text-dark-muted">de {(state.leads || []).length} contatos visíveis</p>
+          </div>
         )}
-
-        <div className="relative flex-1 min-w-[200px] max-w-sm ml-auto">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-dark-muted pointer-events-none" />
-          <input
-            value={searchInput}
-            onChange={e => setSearchInput(e.target.value)}
-            placeholder="Buscar por nome, telefone, imobiliária..."
-            className="input pl-8 pr-8 text-sm py-2 w-full"
-          />
-          {searchInput && (
-            <button onClick={() => setSearchInput('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark-text">
-              <X className="w-3.5 h-3.5" />
+        actions={(
+          <>
+            <div className="relative min-w-[240px] max-w-sm">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-dark-muted" />
+              <input
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
+                placeholder="Buscar por nome, telefone ou imobiliária"
+                className="input w-full py-2 pl-8 pr-8 text-sm"
+              />
+              {searchInput && (
+                <button onClick={() => setSearchInput('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark-text">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            <button onClick={() => setShowFilter(o => !o)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm transition-colors
+                ${showFilter || hasFilters
+                  ? 'border-brand-accent text-brand-accent bg-brand-accent/10'
+                  : 'border-dark-border text-dark-muted hover:text-dark-text hover:border-dark-text/40'}`}>
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              Filtros
+              {hasFilters && (
+                <span className="ml-0.5 w-4 h-4 rounded-full bg-brand-accent text-white text-[10px] flex items-center justify-center font-bold">
+                  {activeChips.length}
+                </span>
+              )}
             </button>
-          )}
-        </div>
+          </>
+        )}
+      />
 
-        <button onClick={() => setShowFilter(o => !o)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm transition-colors
-            ${showFilter || hasFilters
-              ? 'border-brand-accent text-brand-accent bg-brand-accent/10'
-              : 'border-dark-border text-dark-muted hover:text-dark-text hover:border-dark-text/40'}`}>
-          <SlidersHorizontal className="w-3.5 h-3.5" />
-          Filtros
-          {hasFilters && (
-            <span className="ml-0.5 w-4 h-4 rounded-full bg-brand-accent text-white text-[10px] flex items-center justify-center font-bold">
-              {activeChips.length}
-            </span>
-          )}
-        </button>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <CrmMetricCard icon={Users} label="Leads filtrados" value={filtered.length} accent="#2563EB" helper="Recorte atual da base" />
+        <CrmMetricCard icon={Flame} label="Alta temperatura" value={hotLeads.length} accent="#DC2626" helper="Score acima de 60" />
+        <CrmMetricCard icon={Activity} label="Em proposta" value={proposalLeads.length} accent="#7C3AED" helper="Oferta, negociação e follow-up" />
+        <CrmMetricCard icon={AlertTriangle} label="Sem atividade" value={staleLeads.length} accent="#D97706" helper="7 dias ou mais sem contato" />
       </div>
 
-      {/* ── Barra nível 2 — chips ──────────────────────────────────────────── */}
+      {(state.leads || []).length > 500 && (
+        <div className="rounded-[22px] border border-status-warning/20 bg-status-warning/10 px-4 py-3 text-sm text-status-warning">
+          +500 leads carregados. Priorize filtros e busca para leitura mais precisa da operação.
+        </div>
+      )}
+
       {hasFilters && (
         <div className="flex items-center gap-2 flex-wrap">
           {activeChips.map((chip, i) => (
@@ -468,7 +483,6 @@ export default function BaseLeads() {
         </div>
       )}
 
-      {/* ── Painel de filtros ──────────────────────────────────────────────── */}
       {showFilter && (
         <FilterPanel
           filters={pendingFilters}
@@ -478,8 +492,12 @@ export default function BaseLeads() {
         />
       )}
 
-      {/* ── Tabela ─────────────────────────────────────────────────────────── */}
-      <div className="table-shell overflow-hidden">
+      <CrmSectionCard
+        title="Tabela operacional"
+        subtitle="Ordene, selecione e exporte leads com o mesmo contexto visual do restante do CRM."
+        contentClassName="p-0"
+      >
+        <div className="table-shell overflow-hidden rounded-none border-0 bg-transparent shadow-none">
         <div className="overflow-x-auto">
           <table className="table-table text-sm">
             <thead className="table-thead">
@@ -631,7 +649,8 @@ export default function BaseLeads() {
             </div>
           </div>
         )}
-      </div>
+        </div>
+      </CrmSectionCard>
 
       {/* ── Floating bar ───────────────────────────────────────────────────── */}
       {selectedIds.size > 0 && (

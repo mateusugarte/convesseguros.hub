@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Cell, PieChart, Pie, CartesianGrid,
+  BarChart, Bar, PieChart, Pie, CartesianGrid, Cell,
 } from 'recharts'
 import { format, parseISO, formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -16,216 +16,208 @@ import { useTheme } from '../contexts/ThemeContext'
 import ModalFinalizar from '../components/ModalFinalizar'
 import { DashboardSkeleton } from '../components/Skeleton'
 import {
-  TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle,
-  BarChart3, Activity, Zap, CalendarDays, ChevronDown, ChevronLeft, ChevronRight,
+  Activity, AlertTriangle, ArrowRight, BarChart3, BellRing, CalendarDays,
+  CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Clock3,
+  Crown, ShieldCheck, Sparkles, Target, TrendingUp, Users, Zap,
 } from 'lucide-react'
+import {
+  DataCard,
+  EmptyState,
+  FilterBar,
+  MetricCard,
+  PageHeader,
+  SectionHeading,
+} from '../components/ui'
 
-// ── Chart theme constants ─────────────────────────────────────────────────────
-
-const CHART_COLORS = {
-  light: {
-    grid:    'rgba(8, 20, 50, 0.10)',
-    tick:    'rgba(8, 20, 50, 0.55)',
-    line1:   '#1d4ed8',
-    line2:   '#059669',
-    bar:     '#1d4ed8',
-    tooltip: {
-      background: 'rgba(255,255,255,0.90)',
-      border:     'rgba(8,20,50,0.18)',
-      color:      'rgba(8,20,50,0.90)',
-    },
-  },
-  dark: {
-    grid:    'rgba(180, 210, 255, 0.10)',
-    tick:    'rgba(180, 210, 255, 0.55)',
-    line1:   '#60a5fa',
-    line2:   '#34d399',
-    bar:     '#60a5fa',
-    tooltip: {
-      background: 'rgba(10,30,60,0.92)',
-      border:     'rgba(100,160,255,0.22)',
-      color:      'rgba(220,235,255,0.92)',
-    },
-  },
-}
-
-const tooltipStyle = (theme) => ({
-  background:          CHART_COLORS[theme].tooltip.background,
-  backdropFilter:      'blur(16px)',
-  WebkitBackdropFilter:'blur(16px)',
-  border:              `1px solid ${CHART_COLORS[theme].tooltip.border}`,
-  borderRadius:        '12px',
-  color:               CHART_COLORS[theme].tooltip.color,
-  boxShadow:           '0 8px 32px rgba(0,0,0,0.18)',
-})
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function stringColor(str) {
-  const c = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#2B5BA8']
-  let h = 0; for (let i = 0; i < (str||'').length; i++) h = str.charCodeAt(i) + ((h << 5) - h)
-  return c[Math.abs(h) % c.length]
-}
-function initials(n) {
-  return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || '?'
-}
+const LS_KEY = 'dashboard-periodo'
+const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
 const STATUS_COLORS = {
-  aprovado:     '#10B981',
-  recusado:     '#EF4444',
-  em_cotacao:   '#F59E0B',
-  pendente:     '#3B82F6',
-  emitido:      '#2B5BA8',
-  em_analise:   '#4A90D9',
-  cancelado:    '#8899BB',
+  aprovado: '#10B981',
+  recusado: '#EF4444',
+  em_cotacao: '#FF9F0A',
+  pendente: '#3B82F6',
+  emitido: '#FF2D55',
+  em_analise: '#8B5CF6',
+  cancelado: '#94A3B8',
   cpf_invalido: '#F59E0B',
 }
 
-// ── Chart tooltip ─────────────────────────────────────────────────────────────
-
-function DarkTip({ active, payload, label, dateLabel }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="glass-panel px-3 py-2.5 text-xs min-w-[120px]">
-      {label && (
-        <p className="text-dark-muted mb-1.5">
-          {dateLabel ? (() => { try { return format(parseISO(label), "dd 'de' MMM", { locale: ptBR }) } catch { return label } })() : label}
-        </p>
-      )}
-      {payload.map((p, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.color || p.fill }} />
-          <span className="text-dark-text font-medium">{p.name}: {p.value}</span>
-        </div>
-      ))}
-    </div>
-  )
+function stringColor(str) {
+  const colors = ['#4A90D9', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#2B5BA8']
+  let hash = 0
+  for (let i = 0; i < (str || '').length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash)
+  return colors[Math.abs(hash) % colors.length]
 }
 
-// ── KPI Card ─────────────────────────────────────────────────────────────────
-
-function KPICard({ label, value, sub, icon: Icon, accent, gold }) {
-  return (
-    <div className="metric-tile">
-      <div className="flex items-center justify-between gap-3">
-        <p className="metric-label">{label}</p>
-        {Icon && (
-          <div
-            className="w-9 h-9 rounded-2xl flex items-center justify-center border border-dark-border/70"
-            style={{ background: `${accent}18`, boxShadow: `0 0 0 4px ${accent}0f` }}
-          >
-            <Icon className="w-4 h-4" style={{ color: accent }} />
-          </div>
-        )}
-      </div>
-      <p className="metric-value" style={{ color: gold ? '#C9A84C' : undefined }}>{value ?? '—'}</p>
-      {sub && <p className="metric-sub">{sub}</p>}
-    </div>
-  )
+function initials(name) {
+  return (name || '').split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase() || '?'
 }
 
-// ── Section header ────────────────────────────────────────────────────────────
-
-function SectionHeader({ title, icon: Icon }) {
-  return (
-    <div className="flex items-center gap-2 mb-4">
-      {Icon && <Icon className="w-4 h-4 text-brand-accent" />}
-      <h2 className="section-title text-dark-text">{title}</h2>
-    </div>
-  )
+function toHourAge(dateString) {
+  return Math.floor((Date.now() - new Date(dateString).getTime()) / (1000 * 60 * 60))
 }
 
-// ── Time badge ────────────────────────────────────────────────────────────────
-
-function TimeBadge({ since }) {
-  const h = Math.floor((Date.now() - new Date(since).getTime()) / (1000 * 60 * 60))
-  const [cls, label] = h < 4
-    ? ['bg-status-success/15 text-status-success', h < 1 ? 'agora' : `${h}h`]
-    : h < 24
-    ? ['bg-status-warning/15 text-status-warning', `${h}h`]
-    : ['bg-status-danger/15 text-status-danger', `${Math.floor(h/24)}d`]
-  return <span className={`badge ${cls}`}>{label}</span>
+function timeChip(dateString) {
+  const hours = toHourAge(dateString)
+  if (hours < 1) return { label: 'agora', className: 'bg-status-success/12 text-status-success border-status-success/15' }
+  if (hours < 8) return { label: `${hours}h`, className: 'bg-status-success/12 text-status-success border-status-success/15' }
+  if (hours < 24) return { label: `${hours}h`, className: 'bg-status-warning/12 text-status-warning border-status-warning/15' }
+  return { label: `${Math.floor(hours / 24)}d`, className: 'bg-status-danger/12 text-status-danger border-status-danger/15' }
 }
 
-// ── Main Dashboard ────────────────────────────────────────────────────────────
+function buildTeamRanking(activity) {
+  const summary = new Map()
 
-const MESES_ABBR_DASH = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-const LS_KEY = 'dashboard-periodo'
+  activity.forEach(item => {
+    const name = item.profiles?.nome || 'Sem responsavel'
+    const current = summary.get(name) || {
+      name,
+      total: 0,
+      latestAt: item.created_at,
+      approved: 0,
+      emitted: 0,
+    }
 
-// ── MonthYearPicker ───────────────────────────────────────────────────────────
+    current.total += 1
+    if (item.status === 'aprovado') current.approved += 1
+    if (item.status === 'emitido') current.emitted += 1
+    if (new Date(item.created_at) > new Date(current.latestAt)) current.latestAt = item.created_at
+    summary.set(name, current)
+  })
 
-function MonthYearPicker({ ano, mes, onChange }) {
-  const [open,     setOpen]     = useState(false)
-  const [viewAno,  setViewAno]  = useState(ano)
+  return [...summary.values()]
+    .sort((a, b) => {
+      if (b.total !== a.total) return b.total - a.total
+      return new Date(b.latestAt) - new Date(a.latestAt)
+    })
+    .slice(0, 5)
+}
+
+function buildAlerts({ kpis, metricas, minhasFichas, topImob }) {
+  const alerts = []
+
+  if ((metricas?.semResposta || 0) > 0) {
+    alerts.push({
+      id: 'sem-resposta',
+      tone: 'warning',
+      title: 'Pendencias acima de 48h',
+      description: `${metricas.semResposta} ficha(s) aguardando retorno sem resposta recente.`,
+    })
+  }
+
+  if ((kpis?.emAberto || 0) > 20) {
+    alerts.push({
+      id: 'backlog',
+      tone: 'danger',
+      title: 'Backlog operacional elevado',
+      description: `${kpis.emAberto} fichas em aberto demandando triagem ou conclusao.`,
+    })
+  }
+
+  const overdueMine = minhasFichas.filter(item => toHourAge(item.assumida_em || item.created_at) >= 24)
+  if (overdueMine.length > 0) {
+    alerts.push({
+      id: 'minhas-atrasadas',
+      tone: 'warning',
+      title: 'Carteira pessoal envelhecendo',
+      description: `${overdueMine.length} ficha(s) em cotacao com 24h ou mais.`,
+    })
+  }
+
+  if ((topImob?.length || 0) === 0) {
+    alerts.push({
+      id: 'sem-aprovacoes',
+      tone: 'neutral',
+      title: 'Sem destaques no periodo',
+      description: 'Ainda nao ha aprovacoes suficientes para ranquear imobiliarias neste recorte.',
+    })
+  }
+
+  if (alerts.length === 0) {
+    alerts.push({
+      id: 'all-clear',
+      tone: 'success',
+      title: 'Operacao sob controle',
+      description: 'Nao ha alertas criticos neste momento. O fluxo segue dentro do esperado.',
+    })
+  }
+
+  return alerts.slice(0, 4)
+}
+
+function MonthYearPicker({ year, month, onChange }) {
+  const [open, setOpen] = useState(false)
+  const [viewYear, setViewYear] = useState(year)
   const wrapRef = useRef(null)
-  const agora   = new Date()
-  const anos    = [agora.getFullYear(), agora.getFullYear() - 1, agora.getFullYear() - 2]
+  const now = new Date()
+  const years = [now.getFullYear(), now.getFullYear() - 1, now.getFullYear() - 2]
 
-  useEffect(() => { if (open) setViewAno(ano) }, [open, ano])
+  useEffect(() => {
+    if (open) setViewYear(year)
+  }, [open, year])
 
   useEffect(() => {
     if (!open) return
-    function h(e) { if (!wrapRef.current?.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
+    function handler(event) {
+      if (!wrapRef.current?.contains(event.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  function select(m) {
-    onChange(viewAno, m)
-    setOpen(false)
-  }
-
-  const label = `${MESES_ABBR_DASH[mes - 1]} ${ano}`
+  const label = `${MONTHS[month - 1]} ${year}`
 
   return (
     <div ref={wrapRef} className="relative">
       <button
-        onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-dark-border text-sm font-semibold text-dark-text hover:border-brand-accent/60 transition-all"
-        style={{ minWidth: '110px' }}
+        type="button"
+        onClick={() => setOpen(current => !current)}
+        className="btn-secondary min-w-[148px] justify-between"
       >
-        <CalendarDays className="w-3.5 h-3.5 text-brand-accent flex-shrink-0" />
-        <span className="flex-1 text-left">{label}</span>
-        <ChevronDown className={`w-3.5 h-3.5 text-dark-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        <span className="flex items-center gap-2">
+          <CalendarDays className="w-4 h-4 text-brand-accent" />
+          {label}
+        </span>
+        <ChevronDown className={`w-4 h-4 text-dark-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute top-full right-0 mt-1.5 glass-panel z-50 p-3 w-[220px] animate-fade-in"
-             style={{ boxShadow: 'var(--glass-shadow-deep)' }}>
-          {/* Year navigator */}
-          <div className="flex items-center justify-between mb-2.5">
+        <div className="absolute right-0 top-full mt-2 glass-panel z-[60] p-3 w-[240px] animate-fade-in">
+          <div className="flex items-center justify-between mb-3">
             <button
-              onClick={() => setViewAno(y => Math.max(anos[anos.length - 1], y - 1))}
-              disabled={viewAno <= anos[anos.length - 1]}
-              className="p-1 rounded hover:bg-dark-surface2 text-dark-muted hover:text-dark-text transition-colors disabled:opacity-30"
+              type="button"
+              onClick={() => setViewYear(current => Math.max(years[years.length - 1], current - 1))}
+              disabled={viewYear <= years[years.length - 1]}
+              className="btn-ghost p-1.5 disabled:opacity-30"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
-            <span className="text-sm font-bold text-dark-text">{viewAno}</span>
+            <span className="text-sm font-semibold text-dark-text">{viewYear}</span>
             <button
-              onClick={() => setViewAno(y => Math.min(anos[0], y + 1))}
-              disabled={viewAno >= anos[0]}
-              className="p-1 rounded hover:bg-dark-surface2 text-dark-muted hover:text-dark-text transition-colors disabled:opacity-30"
+              type="button"
+              onClick={() => setViewYear(current => Math.min(years[0], current + 1))}
+              disabled={viewYear >= years[0]}
+              className="btn-ghost p-1.5 disabled:opacity-30"
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          {/* Month grid */}
-          <div className="grid grid-cols-4 gap-1">
-            {MESES_ABBR_DASH.map((m, i) => {
-              const isActive = (i + 1) === mes && viewAno === ano
+          <div className="grid grid-cols-4 gap-1.5">
+            {MONTHS.map((item, index) => {
+              const active = viewYear === year && index + 1 === month
               return (
                 <button
-                  key={i}
-                  onClick={() => select(i + 1)}
-                  className={`py-1.5 text-xs rounded-md font-medium transition-all ${
-                    isActive
-                      ? 'bg-brand-secondary text-white shadow-sm'
-                      : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2'
-                  }`}
+                  key={item}
+                  type="button"
+                  onClick={() => {
+                    onChange(viewYear, index + 1)
+                    setOpen(false)
+                  }}
+                  className={`rounded-xl px-2 py-2 text-xs font-semibold transition-colors ${active ? 'bg-brand-accent text-white shadow-sm' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2'}`}
                 >
-                  {m}
+                  {item}
                 </button>
               )
             })}
@@ -236,352 +228,615 @@ function MonthYearPicker({ ano, mes, onChange }) {
   )
 }
 
+function DashboardTooltip({ active, payload, label, dateLabel }) {
+  if (!active || !payload?.length) return null
+
+  return (
+    <div className="glass-panel px-3 py-2.5 min-w-[140px] text-xs">
+      {label && (
+        <p className="text-dark-muted mb-1.5">
+          {dateLabel ? format(parseISO(label), "dd 'de' MMM", { locale: ptBR }) : label}
+        </p>
+      )}
+      <div className="space-y-1">
+        {payload.map(item => (
+          <div key={item.name} className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full" style={{ background: item.color || item.fill }} />
+            <span className="text-dark-text font-medium">{item.name}: {item.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function AlertCard({ alert }) {
+  const tones = {
+    success: {
+      icon: <ShieldCheck className="w-4 h-4 text-status-success" />,
+      shell: 'border-status-success/20 bg-status-success/6',
+    },
+    warning: {
+      icon: <AlertTriangle className="w-4 h-4 text-status-warning" />,
+      shell: 'border-status-warning/20 bg-status-warning/6',
+    },
+    danger: {
+      icon: <CircleAlert className="w-4 h-4 text-status-danger" />,
+      shell: 'border-status-danger/20 bg-status-danger/6',
+    },
+    neutral: {
+      icon: <BellRing className="w-4 h-4 text-brand-secondary" />,
+      shell: 'border-dark-border/70 bg-dark-surface2/40',
+    },
+  }
+
+  const tone = tones[alert.tone] || tones.neutral
+
+  return (
+    <div className={`rounded-2xl border px-4 py-4 ${tone.shell}`}>
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-2xl border border-white/20 bg-white/50 flex items-center justify-center flex-shrink-0">
+          {tone.icon}
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-dark-text">{alert.title}</p>
+          <p className="mt-1 text-xs leading-relaxed text-dark-muted">{alert.description}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const { user } = useAuth()
   const { theme } = useTheme()
   const [finalizar, setFinalizar] = useState(null)
 
-  // Filtro de período — persistido em localStorage
-  const agora = new Date()
-  const saved = (() => { try { return JSON.parse(localStorage.getItem(LS_KEY)) } catch { return null } })()
-  const [filtroAno, setFiltroAno] = useState(saved?.ano ?? agora.getFullYear())
-  const [filtroMes, setFiltroMes] = useState(saved?.mes ?? agora.getMonth() + 1)
+  const now = new Date()
+  const stored = (() => {
+    try { return JSON.parse(localStorage.getItem(LS_KEY)) } catch { return null }
+  })()
+
+  const [filterYear, setFilterYear] = useState(stored?.ano ?? now.getFullYear())
+  const [filterMonth, setFilterMonth] = useState(stored?.mes ?? now.getMonth() + 1)
 
   useEffect(() => {
-    localStorage.setItem(LS_KEY, JSON.stringify({ ano: filtroAno, mes: filtroMes }))
-  }, [filtroAno, filtroMes])
-  const inicioFiltro = new Date(filtroAno, filtroMes - 1, 1).toISOString()
-  const fimFiltro    = new Date(filtroAno, filtroMes, 0, 23, 59, 59).toISOString()
+    localStorage.setItem(LS_KEY, JSON.stringify({ ano: filterYear, mes: filterMonth }))
+  }, [filterYear, filterMonth])
 
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['dashboard', user?.id, filtroAno, filtroMes],
+  const rangeStart = new Date(filterYear, filterMonth - 1, 1).toISOString()
+  const rangeEnd = new Date(filterYear, filterMonth, 0, 23, 59, 59).toISOString()
+
+  const query = useQuery({
+    queryKey: ['dashboard', user?.id, filterYear, filterMonth],
     queryFn: async () => {
-      const [k, em, g, ti, dist, pm, met, atv, mf] = await Promise.all([
-        fetchKPIs(inicioFiltro, fimFiltro),
-        fetchEmitidas(inicioFiltro, fimFiltro),
+      const [kpis, emitted, byDay, topImob, distribution, byProduct, metrics, activity, mine] = await Promise.all([
+        fetchKPIs(rangeStart, rangeEnd),
+        fetchEmitidas(rangeStart, rangeEnd),
         fetchFichasPorDia(30),
-        fetchTopImobiliarias(5, inicioFiltro, fimFiltro),
-        fetchDistribuicaoStatus(inicioFiltro, fimFiltro),
+        fetchTopImobiliarias(5, rangeStart, rangeEnd),
+        fetchDistribuicaoStatus(rangeStart, rangeEnd),
         fetchFichasPorProdutoMes(),
         fetchMetricas(),
         fetchAtividadeRecente(10),
         user ? fetchFichasDoOrcamentista(user.id) : Promise.resolve([]),
       ])
-      return { kpis: k, emitidas: em, grafico: g, topImob: ti, distribuicao: dist, prodMes: pm, metricas: met, atividade: atv, minhasFichas: mf }
+
+      return {
+        kpis,
+        emitted,
+        byDay,
+        topImob,
+        distribution,
+        byProduct,
+        metrics,
+        activity,
+        mine,
+      }
     },
   })
 
-  const kpis         = data?.kpis         ?? null
-  const emitidas     = data?.emitidas     ?? 0
-  const grafico      = data?.grafico      ?? []
-  const topImob      = data?.topImob      ?? []
-  const distribuicao = data?.distribuicao ?? []
-  const prodMes      = data?.prodMes      ?? []
-  const metricas     = data?.metricas     ?? null
-  const atividade    = data?.atividade    ?? []
-  const minhasFichas = data?.minhasFichas ?? []
+  const data = query.data
+  const kpis = data?.kpis ?? null
+  const emitted = data?.emitted ?? 0
+  const byDay = data?.byDay ?? []
+  const topImob = data?.topImob ?? []
+  const distribution = data?.distribution ?? []
+  const byProduct = data?.byProduct ?? []
+  const metrics = data?.metrics ?? null
+  const activity = data?.activity ?? []
+  const mine = data?.mine ?? []
 
-  // Theme-responsive chart colors
-  const chartGrid = CHART_COLORS[theme].grid
-  const chartTick = CHART_COLORS[theme].tick
+  const chartTheme = useMemo(() => {
+    const isDark = theme === 'dark'
+    return {
+      grid: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(41,23,31,0.08)',
+      tick: isDark ? 'rgba(246,235,240,0.56)' : 'rgba(122,97,109,0.72)',
+      accent: isDark ? '#FF5A7D' : '#FF2D55',
+      accentSoft: isDark ? '#FF8EA4' : '#FF6F90',
+      success: '#10B981',
+      gold: isDark ? '#C7B091' : '#C1A680',
+      violet: '#8B5CF6',
+      sky: '#4A90D9',
+      danger: '#EF4444',
+    }
+  }, [theme])
 
-  if (isLoading) return <DashboardSkeleton />
+  const teamRanking = useMemo(() => buildTeamRanking(activity), [activity])
+  const alerts = useMemo(() => buildAlerts({ kpis, metricas: metrics, minhasFichas: mine, topImob }), [kpis, metrics, mine, topImob])
+  const upcomingDeadlines = useMemo(
+    () => [...mine].sort((a, b) => new Date(a.assumida_em || a.created_at) - new Date(b.assumida_em || b.created_at)).slice(0, 5),
+    [mine],
+  )
+  const periodLabel = `${MONTHS[filterMonth - 1]} ${filterYear}`
+
+  if (query.isLoading) return <DashboardSkeleton />
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="dashboard-hero">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-24 right-0 w-72 h-72 rounded-full bg-brand-accent/10 blur-3xl" />
-          <div className="absolute -bottom-20 -left-10 w-64 h-64 rounded-full bg-brand-gold/10 blur-3xl" />
-        </div>
-        <div className="relative flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-          <div className="space-y-4 max-w-2xl">
-            <div className="section-kicker">
-              <span className="w-2 h-2 rounded-full bg-brand-accent shadow-glow-sm" />
-              Operação em tempo real
-            </div>
-            <div>
-              <h1 className="title-display text-dark-text">Dashboard</h1>
-              <p className="section-lead mt-2 max-w-xl">
-                Acompanhamento diário da operação com indicadores agrupados, atividade recente e foco no que precisa de ação agora.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <div className="dashboard-hero-chip">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Atualização</p>
-                <p className="mt-1 text-sm font-semibold text-dark-text">
-                  {format(new Date(), "dd 'de' MMMM", { locale: ptBR })}
-                </p>
-              </div>
-              <div className="dashboard-hero-chip">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Período ativo</p>
-                <p className="mt-1 text-sm font-semibold text-dark-text">{MESES_ABBR_DASH[filtroMes - 1]} {filtroAno}</p>
-              </div>
-              <div className="dashboard-hero-chip">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Fichas em aberto</p>
-                <p className="mt-1 text-sm font-semibold text-dark-text">{kpis?.emAberto ?? '—'}</p>
-              </div>
+      <PageHeader
+        eyebrow="Central de operacoes"
+        title="Dashboard Geral"
+        description="Uma leitura unica da operacao para priorizar backlog, monitorar produtividade, enxergar riscos e agir rapido nas fichas que precisam destravar."
+        actions={(
+          <div className="flex flex-wrap items-center gap-3">
+            <MonthYearPicker year={filterYear} month={filterMonth} onChange={(year, month) => { setFilterYear(year); setFilterMonth(month) }} />
+            <div className="rounded-2xl border border-brand-accent/15 bg-brand-accent/10 px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-accent/80">Janela ativa</p>
+              <p className="mt-1 text-sm font-semibold text-dark-text">{periodLabel}</p>
             </div>
           </div>
-          <div className="flex flex-col items-stretch gap-3 lg:min-w-[240px]">
-            <MonthYearPicker
-              ano={filtroAno}
-              mes={filtroMes}
-              onChange={(a, m) => { setFiltroAno(a); setFiltroMes(m) }}
+        )}
+        stats={(
+          <>
+            <MetricCard
+              label="Fichas do dia"
+              value={kpis?.hoje ?? '—'}
+              hint="entrada operacional do dia"
+              icon={<Zap className="w-5 h-5" />}
             />
-            <div className="rounded-2xl border border-brand-accent/20 bg-brand-accent/10 px-4 py-3 shadow-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-accent/80">Resumo rápido</p>
-              <p className="mt-1 text-sm text-dark-text">
-                Hoje: <span className="font-semibold">{kpis?.hoje ?? '—'}</span> | Semana: <span className="font-semibold">{kpis?.semana ?? '—'}</span>
-              </p>
+            <MetricCard
+              label="Fichas da semana"
+              value={kpis?.semana ?? '—'}
+              hint="volume consolidado na semana"
+              icon={<TrendingUp className="w-5 h-5" />}
+              tone="secondary"
+            />
+            <MetricCard
+              label="Fichas do mes"
+              value={kpis?.mes ?? '—'}
+              hint="capacidade entregue no periodo"
+              icon={<BarChart3 className="w-5 h-5" />}
+              tone="warning"
+            />
+            <MetricCard
+              label="Apolices emitidas"
+              value={emitted}
+              hint="status emitido no periodo"
+              icon={<CheckCircle2 className="w-5 h-5" />}
+              tone="success"
+            />
+          </>
+        )}
+      />
+
+      <FilterBar
+        actions={(
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="rounded-2xl border border-dark-border/70 bg-white/50 px-3 py-2 text-xs text-dark-muted">
+              Atualizado em {format(new Date(), "dd/MM 'as' HH:mm", { locale: ptBR })}
             </div>
           </div>
+        )}
+      >
+        <div className="rounded-2xl border border-dark-border/70 bg-white/60 px-4 py-3 min-w-[180px]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Carteira aberta</p>
+          <p className="mt-1 text-lg font-semibold text-dark-text">{kpis?.emAberto ?? 0}</p>
         </div>
-      </div>
+        <div className="rounded-2xl border border-dark-border/70 bg-white/60 px-4 py-3 min-w-[180px]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Pendencias 48h+</p>
+          <p className="mt-1 text-lg font-semibold text-dark-text">{metrics?.semResposta ?? 0}</p>
+        </div>
+        <div className="rounded-2xl border border-dark-border/70 bg-white/60 px-4 py-3 min-w-[180px]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Tempo medio</p>
+          <p className="mt-1 text-lg font-semibold text-dark-text">{metrics?.tempoMedio != null ? `${metrics.tempoMedio}h` : '—'}</p>
+        </div>
+        <div className="rounded-2xl border border-dark-border/70 bg-white/60 px-4 py-3 min-w-[180px]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Taxa de aprovacao</p>
+          <p className="mt-1 text-lg font-semibold text-dark-text">{metrics ? `${metrics.taxaAprovacao}%` : '—'}</p>
+        </div>
+      </FilterBar>
 
-      {/* ── KPIs ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="animate-fade-in stagger-1"><KPICard label="Hoje"        value={kpis?.hoje}     icon={Zap}         accent="#4A90D9" /></div>
-        <div className="animate-fade-in stagger-2"><KPICard label="Esta Semana" value={kpis?.semana}   icon={TrendingUp}  accent="#8B5CF6" /></div>
-        <div className="animate-fade-in stagger-3"><KPICard label="Este Mês"    value={kpis?.mes}      icon={BarChart3}   accent="#F59E0B" /></div>
-        <div className="animate-fade-in stagger-4"><KPICard label="Em Aberto"   value={kpis?.emAberto} sub="pendente + cotação" icon={Clock} accent="#F59E0B" gold /></div>
-        <div className="animate-fade-in stagger-5"><KPICard label="Emitidas"    value={emitidas}       sub="este mês"    icon={CheckCircle2} accent="#10B981" /></div>
-      </div>
-
-      {/* ── Area chart ── */}
-      <div className="card p-5">
-        <SectionHeader title="Fichas por dia — últimos 30 dias" icon={Activity} />
-        <ResponsiveContainer width="100%" height={180}>
-          <AreaChart data={grafico} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-            <defs>
-              <linearGradient id="gTotal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#4A90D9" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#4A90D9" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="gAprov" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#10B981" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartGrid} />
-            <XAxis dataKey="dia"
-                   tickFormatter={v => { try { return format(parseISO(v), 'dd/MM', { locale: ptBR }) } catch { return v } }}
-                   tick={{ fill: CHART_COLORS[theme].tick, fontSize: 11 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-            <YAxis tick={{ fill: CHART_COLORS[theme].tick, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-            <Tooltip content={<DarkTip dateLabel />} />
-            <Area type="monotone" dataKey="total"    name="Total"    stroke="#4A90D9" fill="url(#gTotal)" strokeWidth={2} dot={false} />
-            <Area type="monotone" dataKey="aprovadas" name="Aprovadas" stroke="#10B981" fill="url(#gAprov)" strokeWidth={1.5} dot={false} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* ── Second row: donut + bar + metrics ── */}
-      <div className="grid lg:grid-cols-3 gap-4">
-
-        {/* Donut — distribuição */}
-        <div className="card p-5">
-          <SectionHeader title="Distribuição por Status" />
-          {distribuicao.length === 0 ? (
-            <EmptyState message="Sem dados" />
+      <div className="grid gap-6 xl:grid-cols-12">
+        <DataCard
+          className="xl:col-span-8"
+          title="Main Analytics"
+          subtitle="Fichas recebidas nos ultimos 30 dias com leitura paralela de aprovacoes e recusas."
+          actions={<div className="ops-kicker">30 dias</div>}
+        >
+          {byDay.length === 0 ? (
+            <EmptyState title="Sem dados para o periodo" description="Nao houve movimentacao suficiente para montar a serie temporal." icon={<Activity className="w-6 h-6" />} />
           ) : (
-            <div className="flex gap-4 items-center">
-              <PieChart width={140} height={140}>
-                <Pie data={distribuicao} cx={65} cy={65} innerRadius={42} outerRadius={62}
-                     paddingAngle={2} dataKey="value" stroke="none">
-                  {distribuicao.map((e, i) => <Cell key={i} fill={STATUS_COLORS[e.status] || '#8899BB'} />)}
-                </Pie>
-                <Tooltip content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null
-                  const p = payload[0]
-                  return (
-                    <div className="glass-panel px-3 py-2 text-xs">
-                      <p className="font-medium text-dark-text">{p.name}: {p.value}</p>
-                    </div>
-                  )
-                }} />
-              </PieChart>
-              <div className="flex-1 space-y-1.5 min-w-0">
-                {distribuicao.map((d, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs">
-                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: STATUS_COLORS[d.status] || '#8899BB' }} />
-                    <span className="text-dark-muted flex-1 truncate">{d.label}</span>
-                    <span className="text-dark-text font-mono font-medium">{d.value}</span>
+            <div className="grid gap-5 lg:grid-cols-[1.4fr,0.8fr]">
+              <div className="h-[320px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={byDay} margin={{ top: 10, right: 10, left: -22, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="dashboard-total" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={chartTheme.accent} stopOpacity={0.34} />
+                        <stop offset="100%" stopColor={chartTheme.accent} stopOpacity={0.02} />
+                      </linearGradient>
+                      <linearGradient id="dashboard-approved" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={chartTheme.success} stopOpacity={0.22} />
+                        <stop offset="100%" stopColor={chartTheme.success} stopOpacity={0.01} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartTheme.grid} />
+                    <XAxis
+                      dataKey="dia"
+                      tickFormatter={value => format(parseISO(value), 'dd/MM', { locale: ptBR })}
+                      tick={{ fill: chartTheme.tick, fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis tick={{ fill: chartTheme.tick, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <Tooltip content={<DashboardTooltip dateLabel />} />
+                    <Area type="monotone" dataKey="total" name="Total" stroke={chartTheme.accent} strokeWidth={2.5} fill="url(#dashboard-total)" dot={false} />
+                    <Area type="monotone" dataKey="aprovadas" name="Aprovadas" stroke={chartTheme.success} strokeWidth={2} fill="url(#dashboard-approved)" dot={false} />
+                    <Area type="monotone" dataKey="recusadas" name="Recusadas" stroke={chartTheme.danger} strokeWidth={1.5} fillOpacity={0} dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="space-y-3">
+                <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+                  <p className="metric-label">Pico de entrada</p>
+                  <p className="stat-number text-dark-text mt-3">
+                    {Math.max(...byDay.map(item => item.total), 0)}
+                  </p>
+                  <p className="metric-sub mt-2">Maior volume diario observado na janela atual.</p>
+                </div>
+                <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+                  <p className="metric-label">Aprovacoes na serie</p>
+                  <p className="stat-number text-dark-text mt-3">
+                    {byDay.reduce((sum, item) => sum + item.aprovadas, 0)}
+                  </p>
+                  <p className="metric-sub mt-2">Soma das aprovacoes registradas nos ultimos 30 dias.</p>
+                </div>
+                <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+                  <p className="metric-label">Recusas na serie</p>
+                  <p className="stat-number text-dark-text mt-3">
+                    {byDay.reduce((sum, item) => sum + item.recusadas, 0)}
+                  </p>
+                  <p className="metric-sub mt-2">Leitura rapida para calibrar gargalo e qualidade de entrada.</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DataCard>
+
+        <DataCard
+          className="xl:col-span-4"
+          title="Alerts"
+          subtitle="O que pede atencao imediata na operacao."
+          actions={<div className="ops-kicker">Prioridades</div>}
+        >
+          <div className="space-y-3">
+            {alerts.map(alert => <AlertCard key={alert.id} alert={alert} />)}
+          </div>
+        </DataCard>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-12">
+        <DataCard
+          className="xl:col-span-5"
+          title="Hero Metrics"
+          subtitle="Resumo executivo do que esta sendo entregue agora."
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+              <p className="metric-label">Volume total do periodo</p>
+              <p className="stat-number text-dark-text mt-3">{kpis?.total ?? '—'}</p>
+              <p className="metric-sub mt-2">Base total observada na janela selecionada.</p>
+            </div>
+            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+              <p className="metric-label">Taxa de recusa</p>
+              <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaRecusa}%` : '—'}</p>
+              <p className="metric-sub mt-2">Leitura de risco para ajustes de triagem e proposta.</p>
+            </div>
+            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+              <p className="metric-label">Carteira pessoal</p>
+              <p className="stat-number text-dark-text mt-3">{mine.length}</p>
+              <p className="metric-sub mt-2">Fichas em cotacao sob responsabilidade do usuario.</p>
+            </div>
+            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+              <p className="metric-label">Imobiliarias em destaque</p>
+              <p className="stat-number text-dark-text mt-3">{topImob.length}</p>
+              <p className="metric-sub mt-2">Quantidade de nomes com aprovacao no periodo ativo.</p>
+            </div>
+          </div>
+        </DataCard>
+
+        <DataCard
+          className="xl:col-span-4"
+          title="Production Breakdown"
+          subtitle="Comparativo por produto no mes atual."
+        >
+          {byProduct.every(item => item.total === 0) ? (
+            <EmptyState title="Sem producao neste mes" description="Ainda nao houve fichas suficientes para montar o comparativo por produto." icon={<Target className="w-6 h-6" />} />
+          ) : (
+            <div className="h-[260px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={byProduct} margin={{ top: 12, right: 6, left: -14, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartTheme.grid} />
+                  <XAxis dataKey="name" tick={{ fill: chartTheme.tick, fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: chartTheme.tick, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip content={<DashboardTooltip />} />
+                  <Bar dataKey="total" name="Total" radius={[8, 8, 0, 0]} fill={chartTheme.accent} />
+                  <Bar dataKey="aprovadas" name="Aprovadas" radius={[8, 8, 0, 0]} fill={chartTheme.success} />
+                  <Bar dataKey="recusadas" name="Recusadas" radius={[8, 8, 0, 0]} fill={chartTheme.danger} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </DataCard>
+
+        <DataCard
+          className="xl:col-span-3"
+          title="Status Mix"
+          subtitle="Distribuicao das fichas no periodo selecionado."
+        >
+          {distribution.length === 0 ? (
+            <EmptyState title="Sem distribuicao disponivel" description="Nao ha fichas suficientes para distribuir status neste periodo." icon={<Sparkles className="w-6 h-6" />} />
+          ) : (
+            <div className="space-y-4">
+              <div className="h-[170px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={distribution} dataKey="value" innerRadius={50} outerRadius={72} stroke="none" paddingAngle={3}>
+                      {distribution.map(item => (
+                        <Cell key={item.status} fill={STATUS_COLORS[item.status] || chartTheme.gold} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<DashboardTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-2">
+                {distribution.slice(0, 5).map(item => (
+                  <div key={item.status} className="flex items-center gap-2 text-sm">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: STATUS_COLORS[item.status] || chartTheme.gold }} />
+                    <span className="flex-1 truncate text-dark-muted">{item.label}</span>
+                    <span className="font-mono font-semibold text-dark-text">{item.value}</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
-        </div>
-
-        {/* Bar — Top imobiliárias */}
-        <div className="card p-5">
-          <SectionHeader title="Top 5 Imobiliárias" />
-          {topImob.length === 0 ? (
-            <EmptyState message="Nenhuma aprovação ainda" />
-          ) : (
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={topImob} layout="vertical" margin={{ left: -15, right: 5 }}>
-                <XAxis type="number" tick={{ fill: CHART_COLORS[theme].tick, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <YAxis type="category" dataKey="name" tick={{ fill: CHART_COLORS[theme].tick, fontSize: 11 }} width={100} axisLine={false} tickLine={false} />
-                <Tooltip content={<DarkTip />} />
-                <Bar dataKey="total" name="Aprovações" radius={[0, 4, 4, 0]}>
-                  {topImob.map((_, i) => (
-                    <Cell key={i} fill={`rgba(74, 144, 217, ${1 - i * 0.15})`} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
-        {/* Quick metrics */}
-        <div className="card p-5">
-          <SectionHeader title="Métricas" icon={BarChart3} />
-          <div className="space-y-3">
-            <MetricRow
-              icon={<CheckCircle2 className="w-4 h-4 text-status-success" />}
-              label="Taxa de Aprovação"
-              value={metricas ? `${metricas.taxaAprovacao}%` : '—'}
-              accent="text-status-success"
-            />
-            <MetricRow
-              icon={<XCircle className="w-4 h-4 text-status-danger" />}
-              label="Taxa de Recusa"
-              value={metricas ? `${metricas.taxaRecusa}%` : '—'}
-              accent="text-status-danger"
-            />
-            <MetricRow
-              icon={<Clock className="w-4 h-4 text-brand-accent" />}
-              label="Tempo Médio Cotação"
-              value={metricas?.tempoMedio != null ? `${metricas.tempoMedio}h` : '—'}
-              accent="text-brand-accent"
-            />
-            <MetricRow
-              icon={<AlertTriangle className="w-4 h-4 text-status-warning" />}
-              label="Sem Resposta +48h"
-              value={metricas ? metricas.semResposta : '—'}
-              accent={metricas?.semResposta > 0 ? 'text-status-warning' : 'text-dark-muted'}
-            />
-          </div>
-        </div>
+        </DataCard>
       </div>
 
-      {/* ── Third row ── */}
-      <div className="grid lg:grid-cols-5 gap-4">
-
-        {/* Fichas por produto (este mês) */}
-        <div className="card p-5 lg:col-span-3">
-          <SectionHeader title="Fichas por Produto — Este Mês" />
-          {prodMes.every(p => p.total === 0) ? (
-            <EmptyState message="Nenhuma ficha este mês" />
+      <div className="grid gap-6 xl:grid-cols-12">
+        <DataCard
+          className="xl:col-span-5"
+          title="Imobiliarias Destaque"
+          subtitle="Aprovacoes concentradas no periodo selecionado."
+          actions={<div className="ops-kicker">Top 5</div>}
+        >
+          {topImob.length === 0 ? (
+            <EmptyState title="Sem aprovacoes ranqueadas" description="Nao houve aprovacoes suficientes para destacar imobiliarias nesta janela." icon={<Crown className="w-6 h-6" />} />
           ) : (
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={prodMes} margin={{ left: -20 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartGrid} />
-                <XAxis dataKey="name" tick={{ fill: CHART_COLORS[theme].tick, fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: CHART_COLORS[theme].tick, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip content={<DarkTip />} />
-                <Bar dataKey="total"     name="Total"    fill="#2B5BA8" radius={[4,4,0,0]} />
-                <Bar dataKey="aprovadas" name="Aprovadas" fill="#10B981" radius={[4,4,0,0]} />
-                <Bar dataKey="recusadas" name="Recusadas" fill="#EF4444" radius={[4,4,0,0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
-        {/* Minhas fichas em cotação */}
-        <div className="card flex flex-col lg:col-span-2">
-          <div className="px-5 py-4 border-b border-dark-border flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-dark-text">Minhas Fichas em Cotação</h2>
-            <span className="badge bg-status-warning/15 text-status-warning">{minhasFichas.length}</span>
-          </div>
-          {minhasFichas.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center py-8">
-              <p className="text-sm text-dark-muted text-center">Nenhuma ficha em cotação</p>
-            </div>
-          ) : (
-            <div className="overflow-y-auto max-h-48 divide-y divide-dark-border">
-              {minhasFichas.map(f => (
-                <div key={f.id} className="flex items-center gap-3 px-5 py-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-dark-text truncate">{f.nome_interessado || '—'}</p>
-                    <p className="text-[10px] text-dark-muted truncate">{f.imobiliaria || '—'}</p>
+            <div className="space-y-3">
+              {topImob.map((item, index) => (
+                <div key={item.name} className="rounded-2xl border border-dark-border/60 bg-dark-surface2/30 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-bold text-white" style={{ background: index === 0 ? chartTheme.accent : index === 1 ? chartTheme.violet : chartTheme.sky }}>
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-dark-text truncate">{item.name}</p>
+                      <p className="text-xs text-dark-muted mt-1">Aprovacoes contabilizadas no periodo ativo.</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-semibold text-dark-text">{item.total}</p>
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">aprov.</p>
+                    </div>
                   </div>
-                  <TimeBadge since={f.assumida_em || f.created_at} />
-                  <button
-                    onClick={() => setFinalizar(f)}
-                    className="text-[11px] px-2.5 py-1 rounded-lg bg-brand-secondary/20 text-brand-accent border border-brand-accent/20 hover:bg-brand-secondary/40 transition-colors font-medium flex-shrink-0"
-                  >
-                    Finalizar
-                  </button>
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </DataCard>
+
+        <DataCard
+          className="xl:col-span-7"
+          title="Recent Activity"
+          subtitle="Ultimas movimentacoes registradas no fluxo operacional."
+        >
+          {activity.length === 0 ? (
+            <EmptyState title="Sem atividade recente" description="Assim que novas fichas entrarem ou mudarem de etapa, elas aparecerao aqui." icon={<Activity className="w-6 h-6" />} />
+          ) : (
+            <div className="space-y-2">
+              {activity.map(item => {
+                const statusMeta = STATUS_LABELS[item.status] ?? { label: item.status }
+                const chip = timeChip(item.created_at)
+                const owner = item.profiles?.nome || 'Livre'
+
+                return (
+                  <div key={item.id} className="rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-2xl flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0"
+                        style={{ background: stringColor(owner) }}
+                      >
+                        {initials(owner)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-dark-text truncate">{item.nome_interessado || 'Sem nome'}</p>
+                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${chip.className}`}>{chip.label}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-dark-muted truncate">
+                          {item.imobiliaria || 'Sem imobiliaria'} · {PRODUTO_LABELS[item.produto] || item.produto} · {owner}
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold" style={{ background: `${STATUS_COLORS[item.status] || chartTheme.gold}18`, color: STATUS_COLORS[item.status] || chartTheme.gold }}>
+                          {statusMeta.label}
+                        </span>
+                        <p className="mt-1 text-[10px] text-dark-muted">
+                          {formatDistanceToNow(parseISO(item.created_at), { locale: ptBR, addSuffix: true })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </DataCard>
       </div>
 
-      {/* ── Activity feed ── */}
-      <div className="card">
-        <div className="px-5 py-4 border-b border-dark-border flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-dark-text">Atividade Recente</h2>
-            <p className="text-[11px] text-dark-muted mt-1">Últimos movimentos da operação, do mais novo ao mais antigo.</p>
-          </div>
-          <span className="badge bg-brand-accent/10 text-brand-accent">{atividade.length}</span>
-        </div>
-        {atividade.length === 0 ? (
-          <EmptyState message="Nenhuma ficha recebida ainda" className="py-8" />
-        ) : (
-          <div className="divide-y divide-dark-border">
-            {atividade.map(f => {
-              const si    = STATUS_LABELS[f.status] ?? { label: f.status, color: '' }
-              const color = stringColor(f.profiles?.nome || '')
-              const ago   = formatDistanceToNow(parseISO(f.created_at), { locale: ptBR, addSuffix: true })
-              return (
-                <div key={f.id} className="flex items-center gap-4 px-5 py-3 hover:bg-dark-surface2/50 transition-colors">
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
-                       style={{ background: color }}>
-                    {initials(f.profiles?.nome)}
+      <div className="grid gap-6 xl:grid-cols-12">
+        <DataCard
+          className="xl:col-span-5"
+          title="User Ranking"
+          subtitle="Ranking recente derivado das ultimas 10 movimentacoes registradas."
+          actions={<div className="ops-kicker">Recente</div>}
+        >
+          {teamRanking.length === 0 ? (
+            <EmptyState title="Sem movimentacoes suficientes" description="O ranking aparece assim que houver atividade recente atribuida a usuarios." icon={<Users className="w-6 h-6" />} />
+          ) : (
+            <div className="space-y-3">
+              {teamRanking.map((item, index) => (
+                <div key={item.name} className="rounded-2xl border border-dark-border/60 bg-dark-surface2/25 px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-2xl flex items-center justify-center text-sm font-bold text-white flex-shrink-0" style={{ background: index === 0 ? chartTheme.accent : stringColor(item.name) }}>
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-dark-text truncate">{item.name}</p>
+                      <p className="mt-1 text-xs text-dark-muted">
+                        {item.approved} aprovadas · {item.emitted} emitidas nas ultimas movimentacoes.
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-semibold text-dark-text">{item.total}</p>
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">eventos</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-dark-text truncate font-medium">{f.nome_interessado || 'Sem nome'}</p>
-                    <p className="text-xs text-dark-muted truncate">{f.imobiliaria} · {PRODUTO_LABELS[f.produto]}</p>
-                  </div>
-                  <span className={`badge ${si.color} flex-shrink-0`}>{si.label}</span>
-                  <span className="text-[10px] text-dark-muted flex-shrink-0 hidden sm:block">{ago}</span>
                 </div>
-              )
-            })}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </DataCard>
+
+        <DataCard
+          className="xl:col-span-7"
+          title="Upcoming Deadlines"
+          subtitle="Fila prioritaria das fichas em cotacao mais envelhecidas."
+        >
+          {upcomingDeadlines.length === 0 ? (
+            <EmptyState title="Nenhuma ficha em cotacao" description="Quando houver fichas sob responsabilidade do usuario, elas serao priorizadas aqui." icon={<Clock3 className="w-6 h-6" />} />
+          ) : (
+            <div className="space-y-3">
+              {upcomingDeadlines.map(item => {
+                const since = item.assumida_em || item.created_at
+                const chip = timeChip(since)
+                const owner = item.profiles?.nome || 'Sem responsavel'
+
+                return (
+                  <div key={item.id} className="rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-4 py-3">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-dark-text truncate">{item.nome_interessado || 'Sem nome'}</p>
+                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${chip.className}`}>{chip.label}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-dark-muted truncate">
+                          {item.imobiliaria || 'Sem imobiliaria'} · {item.seguradora || 'Seguradora pendente'} · {owner}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="rounded-2xl border border-dark-border/70 bg-white/60 px-3 py-2 text-right">
+                          <p className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">Assumida</p>
+                          <p className="text-xs font-semibold text-dark-text">{format(parseISO(since), 'dd/MM HH:mm', { locale: ptBR })}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setFinalizar(item)}
+                          className="btn-primary"
+                        >
+                          Finalizar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </DataCard>
       </div>
+
+      <DataCard title="Operational Metrics" subtitle="Leituras de eficiencia para acompanhar ritmo, backlog e resultado.">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="metric-label">Taxa de aprovacao</p>
+                <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaAprovacao}%` : '—'}</p>
+              </div>
+              <Target className="w-5 h-5 text-status-success" />
+            </div>
+            <p className="metric-sub mt-2">Indicador de conversao das fichas finalizadas.</p>
+          </div>
+
+          <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="metric-label">Taxa de recusa</p>
+                <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaRecusa}%` : '—'}</p>
+              </div>
+              <CircleAlert className="w-5 h-5 text-status-danger" />
+            </div>
+            <p className="metric-sub mt-2">Pressao de qualidade e ajuste da entrada comercial.</p>
+          </div>
+
+          <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="metric-label">Tempo medio</p>
+                <p className="stat-number text-dark-text mt-3">{metrics?.tempoMedio != null ? `${metrics.tempoMedio}h` : '—'}</p>
+              </div>
+              <Clock3 className="w-5 h-5 text-brand-accent" />
+            </div>
+            <p className="metric-sub mt-2">Tempo medio entre assumir e finalizar fichas.</p>
+          </div>
+
+          <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="metric-label">Sem resposta</p>
+                <p className="stat-number text-dark-text mt-3">{metrics?.semResposta ?? '—'}</p>
+              </div>
+              <ArrowRight className="w-5 h-5 text-status-warning" />
+            </div>
+            <p className="metric-sub mt-2">Fichas pendentes acima de 48h sem retorno.</p>
+          </div>
+        </div>
+      </DataCard>
 
       {finalizar && (
         <ModalFinalizar
           ficha={finalizar}
           onClose={() => setFinalizar(null)}
-          onSuccess={() => { setFinalizar(null); refetch() }}
+          onSuccess={() => {
+            setFinalizar(null)
+            query.refetch()
+          }}
         />
       )}
-    </div>
-  )
-}
-
-function MetricRow({ icon, label, value, accent }) {
-  return (
-    <div className="flex items-center gap-3 p-3 rounded-lg bg-dark-surface2/50">
-      {icon}
-      <span className="text-xs text-dark-muted flex-1">{label}</span>
-      <span className={`text-sm font-bold font-mono ${accent}`}>{value}</span>
-    </div>
-  )
-}
-
-function EmptyState({ message, className = '' }) {
-  return (
-    <div className={`flex items-center justify-center text-dark-muted/60 text-sm ${className || 'h-32'}`}>
-      {message}
     </div>
   )
 }

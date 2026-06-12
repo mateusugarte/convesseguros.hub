@@ -18,6 +18,7 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import ReactFlow, { Background, Controls, Handle, Position, ReactFlowProvider } from 'reactflow'
 import 'reactflow/dist/style.css'
+import { CrmAvatarBadge, CrmMetricCard, CrmPageHeader, CrmSectionCard } from '../../components/comercial'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -997,39 +998,28 @@ export default function LeadDetalhe() {
   }
 
   const currentCol = PIPELINE_COLS.find(c => c.id === lead.coluna)
-  const aColor     = avatarColor(lead.nome)
+  const score      = calcScore(lead)
+  const scoreBand  = scoreFaixa(score)
+  const taskCount  = events.filter(e => e.tipo === 'Tarefa').length
+  const noteCount  = events.filter(e => e.tipo === 'Nota').length
+  const daysIdle   = lead.ultimaAtividade ? diffDias(lead.ultimaAtividade) : null
 
   return (
-    <div className="space-y-4 animate-fade-in pb-8">
-
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-4">
-        {/* Top bar */}
-        <div className="flex items-start gap-4 flex-wrap">
-          <button onClick={() => navigate('/comercial/pipeline')}
-            className="flex items-center gap-1.5 text-sm text-dark-muted hover:text-dark-text transition-colors flex-shrink-0 mt-1">
-            <ArrowLeft className="w-4 h-4" /> Pipeline
-          </button>
-
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            {/* Avatar */}
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-white text-base flex-shrink-0"
-              style={{ background: aColor }}>
-              {initials(lead.nome)}
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-dark-text leading-tight truncate">{lead.nome}</h1>
-              {lead.imobiliaria && (
-                <div className="flex items-center gap-1 mt-0.5">
-                  <Building2 className="w-3 h-3 text-dark-muted flex-shrink-0" />
-                  <span className="text-sm text-dark-muted truncate">{lead.imobiliaria}</span>
-                </div>
-              )}
-            </div>
+    <div className="space-y-5 animate-fade-in pb-8">
+      <CrmPageHeader
+        eyebrow="Lead detail"
+        title={lead.nome}
+        description={lead.resumo || 'Histórico, jornada, qualificação e próximos movimentos centralizados em uma visão comercial única.'}
+        aside={(
+          <div className="rounded-[24px] border border-dark-border/60 bg-white/70 px-4 py-3 text-sm shadow-sm">
+            <CrmAvatarBadge name={lead.nome} subtitle={lead.imobiliaria || lead.origem || 'Lead comercial'} />
           </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+        )}
+        actions={(
+          <>
+            <button onClick={() => navigate('/comercial/pipeline')} className="btn-secondary text-sm">
+              <span className="inline-flex items-center gap-1.5"><ArrowLeft className="w-4 h-4" /> Pipeline</span>
+            </button>
             <button onClick={() => setEditOpen(true)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-sm text-dark-muted hover:text-dark-text hover:border-dark-text/40 transition-colors">
               <Pencil className="w-4 h-4" /> Editar
@@ -1042,7 +1032,6 @@ export default function LeadDetalhe() {
               </a>
             )}
 
-            {/* Mover dropdown */}
             <div ref={moveRef} className="relative">
               <button onClick={() => setMoveOpen(o => !o)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-sm text-dark-muted hover:text-dark-text hover:border-dark-text/40 transition-colors">
@@ -1065,52 +1054,61 @@ export default function LeadDetalhe() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </>
+        )}
+      />
 
-        {/* Metadata */}
-        <div className="flex flex-wrap gap-3 text-xs text-dark-muted">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <CrmMetricCard icon={Flame} label="Score" value={`${score}/100`} accent={scoreBand.color} helper={scoreBand.label} />
+        <CrmMetricCard icon={Clock} label="Último contato" value={daysIdle === null ? '—' : daysIdle === 0 ? 'Hoje' : `${daysIdle}d`} accent={daysIdle >= 7 ? '#D97706' : '#2563EB'} helper="Tempo desde a última atividade" />
+        <CrmMetricCard icon={CheckSquare} label="Tarefas" value={taskCount} accent="#7C3AED" helper="Eventos do tipo tarefa" />
+        <CrmMetricCard icon={FileText} label="Notas" value={noteCount} accent="#0F766E" helper="Registros escritos no lead" />
+      </div>
+
+      <CrmSectionCard title="Posição no pipeline" subtitle="Etapa atual, avanço e regressão do lead sem sair do contexto.">
+        <div className="mb-4 flex flex-wrap gap-3 text-xs text-dark-muted">
           {lead.origem    && <span className="flex items-center gap-1"><Tag className="w-3 h-3" /> {lead.origem}</span>}
           {lead.tipo      && <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {lead.tipo}</span>}
           {lead.criadoEm  && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Criado {fmtDateShort(lead.criadoEm)}</span>}
           {lead.ultimaAtividade && <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Ativo {fmtDate(lead.ultimaAtividade)}</span>}
         </div>
-      </div>
+        <PipelineFunnel lead={lead} onMove={handleMove} />
+      </CrmSectionCard>
 
-      {/* ── Funil ──────────────────────────────────────────────────────────── */}
-      <PipelineFunnel lead={lead} onMove={handleMove} />
+      <div className="grid grid-cols-1 gap-4 items-start lg:grid-cols-[1fr_320px]">
+        <div className="min-w-0">
+          <CrmSectionCard title="Execução do lead" subtitle="Timeline, notas, tarefas, jornada, qualificação e apólices em uma mesma área.">
+            <div className="mb-4 flex gap-1 overflow-x-auto border-b border-dark-border">
+              {TABS.map(tab => (
+                <button key={tab.id} onClick={() => setTab(tab.id)}
+                  className={`px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px
+                    ${activeTab === tab.id
+                      ? 'border-brand-accent text-brand-accent'
+                      : 'border-transparent text-dark-muted hover:text-dark-text'}`}>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
-      {/* ── Grid principal ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">
-
-        {/* Coluna principal */}
-        <div className="min-w-0 space-y-0">
-          {/* Abas */}
-          <div className="flex gap-1 border-b border-dark-border mb-4 overflow-x-auto">
-            {TABS.map(tab => (
-              <button key={tab.id} onClick={() => setTab(tab.id)}
-                className={`px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px
-                  ${activeTab === tab.id
-                    ? 'border-brand-accent text-brand-accent'
-                    : 'border-transparent text-dark-muted hover:text-dark-text'}`}>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {activeTab === 'timeline' && <TabTimeline  lead={lead} events={events} toast={toast} />}
-          {activeTab === 'notas'    && <TabNotas     lead={lead} events={events} toast={toast} />}
-          {activeTab === 'tarefas'  && <TabTarefas   lead={lead} events={events} toast={toast} />}
-          {activeTab === 'jornada'  && <TabJornada   lead={lead} journeys={state.journeys} events={events} toast={toast} />}
-          {activeTab === 'qualif'   && <TabQualificacao lead={lead} tags={tags} toast={toast} />}
-          {activeTab === 'apolices' && <TabApolices  lead={lead} navigate={navigate} toast={toast} />}
+            {activeTab === 'timeline' && <TabTimeline  lead={lead} events={events} toast={toast} />}
+            {activeTab === 'notas'    && <TabNotas     lead={lead} events={events} toast={toast} />}
+            {activeTab === 'tarefas'  && <TabTarefas   lead={lead} events={events} toast={toast} />}
+            {activeTab === 'jornada'  && <TabJornada   lead={lead} journeys={state.journeys} events={events} toast={toast} />}
+            {activeTab === 'qualif'   && <TabQualificacao lead={lead} tags={tags} toast={toast} />}
+            {activeTab === 'apolices' && <TabApolices  lead={lead} navigate={navigate} toast={toast} />}
+          </CrmSectionCard>
         </div>
 
-        {/* Coluna lateral */}
         <div className="space-y-3 lg:sticky lg:top-4">
-          <CardTemperatura  lead={lead} />
-          <CardProximaAcao  lead={lead} />
-          <CardResumo       lead={lead} events={events} />
+          <CrmSectionCard title="Temperatura e score" contentClassName="p-0">
+            <CardTemperatura  lead={lead} />
+          </CrmSectionCard>
+          <CrmSectionCard title="Próxima ação" contentClassName="p-0">
+            <CardProximaAcao  lead={lead} />
+          </CrmSectionCard>
+          <CrmSectionCard title="Resumo operacional" contentClassName="p-0">
+            <CardResumo       lead={lead} events={events} />
+          </CrmSectionCard>
         </div>
       </div>
 
@@ -1120,4 +1118,3 @@ export default function LeadDetalhe() {
     </div>
   )
 }
-

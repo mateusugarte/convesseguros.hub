@@ -5,15 +5,16 @@ import { Select } from '../../components/ui/Select'
 import { useToast } from '../../contexts/ToastContext'
 import {
   Plus, ChevronLeft, ChevronRight, Trash2, MoreHorizontal,
-  Clock, Calendar, Pencil, X,
+  Clock, Calendar, Pencil, X, BellRing, ListTodo, Users,
 } from 'lucide-react'
 import {
   format, parseISO,
   startOfMonth, endOfMonth, eachDayOfInterval,
-  isSameMonth, isToday, isSameDay, addMonths, subMonths,
+  isSameMonth, isToday, isSameDay, addMonths, subMonths, addDays, subDays,
   startOfWeek, endOfWeek, addWeeks, subWeeks,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { CrmMetricCard, CrmPageHeader, CrmSectionCard, CrmSegmentedControl } from '../../components/comercial'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -154,6 +155,60 @@ function WeekView({ date, events, onDaySelect, onSlotClick, onEventClick, deleti
             })}
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+function DayView({ date, events, onSlotClick, onEventClick, deletingIds }) {
+  const hours = Array.from({ length: 14 }, (_, index) => index + 7)
+  const dayEvents = (events || [])
+    .filter(event => !deletingIds.has(event.id))
+    .filter(event => {
+      try { return isSameDay(parseISO(event.data), date) } catch { return false }
+    })
+    .sort((a, b) => a.data.localeCompare(b.data))
+
+  return (
+    <div className="glass-panel overflow-hidden rounded-[24px]">
+      <div className="border-b border-dark-border/60 px-4 py-4">
+        <p className="text-lg font-semibold capitalize text-dark-text">{format(date, "EEEE, d 'de' MMMM", { locale: ptBR })}</p>
+        <p className="mt-1 text-sm text-dark-muted">{dayEvents.length} evento(s) nesta agenda diária</p>
+      </div>
+      <div className="divide-y divide-dark-border/20">
+        {hours.map(hour => {
+          const slotEvents = dayEvents.filter(event => {
+            try { return parseISO(event.data).getHours() === hour } catch { return false }
+          })
+          return (
+            <div key={hour} className="grid min-h-[72px] grid-cols-[70px_1fr] gap-0">
+              <button
+                type="button"
+                onClick={() => onSlotClick(date, hour)}
+                className="border-r border-dark-border/20 px-4 py-4 text-left text-xs font-semibold text-dark-muted transition-colors hover:bg-white/40"
+              >
+                {String(hour).padStart(2, '0')}:00
+              </button>
+              <div className="px-3 py-3">
+                {slotEvents.length > 0 ? (
+                  <div className="space-y-2">
+                    {slotEvents.map(event => (
+                      <EventPill key={event.id} evento={event} onClick={onEventClick} />
+                    ))}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onSlotClick(date, hour)}
+                    className="rounded-xl border border-dashed border-dark-border/60 px-3 py-2 text-xs text-dark-muted transition-colors hover:border-brand-accent/40 hover:text-brand-accent"
+                  >
+                    Adicionar evento
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -475,7 +530,11 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-const VIEWS = ['Mês', 'Semana']
+const VIEWS = [
+  { value: 'Dia', label: 'Diária' },
+  { value: 'Semana', label: 'Semanal' },
+  { value: 'Mês', label: 'Mensal' },
+]
 
 export default function Calendario() {
   const state    = useComercial()
@@ -493,6 +552,10 @@ export default function Calendario() {
   const undoTimerRef = useRef(null)
 
   const title = useMemo(() => {
+    if (view === 'Dia') {
+      const t = format(date, "EEEE, d 'de' MMMM", { locale: ptBR })
+      return t.charAt(0).toUpperCase() + t.slice(1)
+    }
     if (view === 'Mês') {
       const t = format(date, 'MMMM yyyy', { locale: ptBR })
       return t.charAt(0).toUpperCase() + t.slice(1)
@@ -503,6 +566,10 @@ export default function Calendario() {
   }, [date, view])
 
   function nav(dir) {
+    if (view === 'Dia') {
+      setDate(d => dir > 0 ? addDays(d, 1) : subDays(d, 1))
+      setSelectedDay(d => dir > 0 ? addDays(d, 1) : subDays(d, 1))
+    }
     if (view === 'Mês')    setDate(d => dir > 0 ? addMonths(d, 1) : subMonths(d, 1))
     if (view === 'Semana') setDate(d => dir > 0 ? addWeeks(d, 1)  : subWeeks(d, 1))
   }
@@ -554,96 +621,126 @@ export default function Calendario() {
     setDate(day)
   }
 
+  const events = state.events || []
+  const todayCount = events.filter(event => { try { return isToday(parseISO(event.data)) } catch { return false } }).length
+  const weekStart = startOfWeek(date, { weekStartsOn: 0 })
+  const weekEnd = endOfWeek(date, { weekStartsOn: 0 })
+  const weekCount = events.filter(event => {
+    try {
+      const when = parseISO(event.data)
+      return when >= weekStart && when <= weekEnd
+    } catch { return false }
+  }).length
+  const meetingsCount = events.filter(event => event.tipo === 'Reunião').length
+  const followUpCount = events.filter(event => event.tipo === 'Follow Up').length
+
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="space-y-5 animate-fade-in">
+      <CrmPageHeader
+        eyebrow="Agenda comercial"
+        title="Calendário de execução e follow-up"
+        description="Visões diária, semanal e mensal para reuniões, follow-ups, compromissos e tarefas da operação comercial."
+        aside={(
+          <div className="rounded-[24px] border border-dark-border/60 bg-white/70 px-4 py-3 text-sm shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-dark-muted">Janela atual</p>
+            <p className="mt-1 font-semibold capitalize text-dark-text">{title}</p>
+            <p className="mt-1 text-xs text-dark-muted">{weekCount} evento(s) nesta semana móvel</p>
+          </div>
+        )}
+        actions={(
+          <>
+            <button onClick={() => { setDate(new Date()); setSelectedDay(new Date()) }}
+              className="btn-secondary text-sm">
+              Hoje
+            </button>
+            <button onClick={() => openNew(selectedDay)}
+              className="btn-primary text-sm">
+              <span className="inline-flex items-center gap-1.5">
+                <Plus className="w-4 h-4" /> Novo evento
+              </span>
+            </button>
+          </>
+        )}
+      />
 
-      {/* ── Barra superior ─────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-2">
-          <h1 className="title-page text-dark-text">Calendário</h1>
-        </div>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <CrmMetricCard icon={BellRing} label="Hoje" value={todayCount} accent="#2563EB" helper="Atividades programadas para hoje" />
+        <CrmMetricCard icon={Calendar} label="Semana" value={weekCount} accent="#0F766E" helper="Eventos dentro da semana atual" />
+        <CrmMetricCard icon={Users} label="Reuniões" value={meetingsCount} accent="#7C3AED" helper="Agenda total de reuniões" />
+        <CrmMetricCard icon={ListTodo} label="Follow-up" value={followUpCount} accent="#D97706" helper="Eventos de acompanhamento" />
+      </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Navegação */}
-          <div className="flex items-center gap-1">
+      <CrmSectionCard
+        title="Planner comercial"
+        subtitle="Navegue por períodos, mude a granularidade e organize a agenda da equipe."
+        action={(
+          <div className="flex items-center gap-2">
             <button onClick={() => nav(-1)}
               className="p-1.5 rounded-xl border border-dark-border text-dark-muted hover:text-dark-text hover:border-dark-text/40 transition-colors">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="font-semibold text-dark-text min-w-[170px] text-center text-sm capitalize">
-              {title}
-            </span>
+            <span className="min-w-[170px] text-center text-sm font-semibold capitalize text-dark-text">{title}</span>
             <button onClick={() => nav(1)}
               className="p-1.5 rounded-xl border border-dark-border text-dark-muted hover:text-dark-text hover:border-dark-text/40 transition-colors">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
+        )}
+        contentClassName="p-5 pt-0"
+      >
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <CrmSegmentedControl options={VIEWS} value={view} onChange={setView} />
+        </div>
 
-          <button onClick={() => { setDate(new Date()); setSelectedDay(new Date()) }}
-            className="text-xs text-dark-muted hover:text-dark-text border border-dark-border px-2.5 py-1.5 rounded-xl transition-colors">
-            Hoje
-          </button>
-
-          {/* View toggle */}
-          <div className="flex bg-dark-surface2 rounded-xl p-0.5">
-            {VIEWS.map(v => (
-              <button key={v} onClick={() => setView(v)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all
-                  ${view === v ? 'bg-dark-glass text-dark-text shadow-sm' : 'text-dark-muted hover:text-dark-text'}`}>
-                {v}
-              </button>
-            ))}
+        <div className="grid grid-cols-1 gap-4 items-start lg:grid-cols-[1fr_296px]">
+          <div>
+            {view === 'Mês' && (
+              <MonthView
+                date={date}
+                events={events}
+                selectedDay={selectedDay}
+                onDaySelect={handleDaySelect}
+                onEventClick={setModal}
+                deletingIds={deletingIds}
+              />
+            )}
+            {view === 'Semana' && (
+              <WeekView
+                date={date}
+                events={events}
+                onDaySelect={handleDaySelect}
+                onSlotClick={openNew}
+                onEventClick={setModal}
+                deletingIds={deletingIds}
+              />
+            )}
+            {view === 'Dia' && (
+              <DayView
+                date={selectedDay}
+                events={events}
+                onSlotClick={openNew}
+                onEventClick={setModal}
+                deletingIds={deletingIds}
+              />
+            )}
           </div>
 
-          <button onClick={() => openNew(selectedDay)}
-            className="btn-primary flex items-center gap-1.5 text-sm">
-            <Plus className="w-4 h-4" /> Novo Evento
-          </button>
-        </div>
-      </div>
-
-      {/* ── Layout 70/30 ───────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_296px] gap-4 items-start">
-        {/* Calendar grid */}
-        <div>
-          {view === 'Mês' && (
-            <MonthView
-              date={date}
-              events={state.events || []}
+          <div className="lg:sticky lg:top-4">
+            <PainelDia
               selectedDay={selectedDay}
-              onDaySelect={handleDaySelect}
-              onEventClick={setModal}
+              events={events}
+              leads={state.leads  || []}
               deletingIds={deletingIds}
+              pendingUndo={pendingUndo}
+              onAdd={openNew}
+              onEdit={setModal}
+              onDelete={handleDeleteEvent}
+              onUndoDelete={handleUndoDelete}
+              navigate={navigate}
             />
-          )}
-          {view === 'Semana' && (
-            <WeekView
-              date={date}
-              events={state.events || []}
-              onDaySelect={handleDaySelect}
-              onSlotClick={openNew}
-              onEventClick={setModal}
-              deletingIds={deletingIds}
-            />
-          )}
+          </div>
         </div>
-
-        {/* Side panel */}
-        <div className="lg:sticky lg:top-4">
-          <PainelDia
-            selectedDay={selectedDay}
-            events={state.events || []}
-            leads={state.leads  || []}
-            deletingIds={deletingIds}
-            pendingUndo={pendingUndo}
-            onAdd={openNew}
-            onEdit={setModal}
-            onDelete={handleDeleteEvent}
-            onUndoDelete={handleUndoDelete}
-            navigate={navigate}
-          />
-        </div>
-      </div>
+      </CrmSectionCard>
 
       {/* ── Modal overlay ──────────────────────────────────────────────────── */}
       {modal !== null && (

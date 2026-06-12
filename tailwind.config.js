@@ -3,46 +3,46 @@ export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   darkMode: 'class',
   theme: {
-    extend: {
-        colors: {
+      extend: {
+      colors: {
           brand: {
-          primary:   '#F5582A',
-          secondary: '#2B5BA8',
-          accent:    '#FF8B5F',
-          gold:      '#C9A84C',
+            primary:   'rgb(var(--brand-primary-rgb) / <alpha-value>)',
+            secondary: 'rgb(var(--brand-secondary-rgb) / <alpha-value>)',
+            accent:    'rgb(var(--brand-accent-rgb) / <alpha-value>)',
+            gold:      'rgb(var(--brand-gold-rgb) / <alpha-value>)',
+          },
+          // These colors respond to the theme via CSS variables in tokens.css
+          dark: {
+            bg:       'rgb(var(--color-bg) / <alpha-value>)',
+            surface:  'rgb(var(--color-surface) / <alpha-value>)',
+            surface2: 'rgb(var(--color-surface2) / <alpha-value>)',
+            border:   'rgb(var(--color-border) / <alpha-value>)',
+            text:     'rgb(var(--color-text) / <alpha-value>)',
+            muted:    'rgb(var(--color-muted) / <alpha-value>)',
+          },
+          status: {
+            success: 'rgb(var(--color-success) / <alpha-value>)',
+            warning: 'rgb(var(--color-warning) / <alpha-value>)',
+            danger:  'rgb(var(--color-danger) / <alpha-value>)',
+            info:    'rgb(var(--color-info) / <alpha-value>)',
+          },
+          token: {
+            primary:         'rgb(var(--color-primary) / <alpha-value>)',
+            'primary-hover': 'rgb(var(--color-primary-hover) / <alpha-value>)',
+          },
+          primary: {
+            50:  '#fff4ee',
+            100: '#ffe3d8',
+            500: '#f5582a',
+            600: '#ea4f22',
+            700: '#c63f1a',
+            800: '#9f3114',
+            900: '#7f260f',
+          },
+          violet: {
+            500: '#8B5CF6',
+          },
         },
-        // These colors respond to the theme via CSS variables in tokens.css
-        dark: {
-          bg:       'rgb(var(--color-bg) / <alpha-value>)',
-          surface:  'rgb(var(--color-surface) / <alpha-value>)',
-          surface2: 'rgb(var(--color-surface2) / <alpha-value>)',
-          border:   'rgb(var(--color-border) / <alpha-value>)',
-          text:     'rgb(var(--color-text) / <alpha-value>)',
-          muted:    'rgb(var(--color-muted) / <alpha-value>)',
-        },
-        status: {
-          success: 'rgb(var(--color-success) / <alpha-value>)',
-          warning: 'rgb(var(--color-warning) / <alpha-value>)',
-          danger:  'rgb(var(--color-danger) / <alpha-value>)',
-          info:    'rgb(var(--color-info) / <alpha-value>)',
-        },
-        token: {
-          primary:       'rgb(var(--color-primary) / <alpha-value>)',
-          'primary-hover': 'rgb(var(--color-primary-hover) / <alpha-value>)',
-        },
-        primary: {
-          50:  '#fff4ee',
-          100: '#ffe3d8',
-          500: '#f5582a',
-          600: '#ea4f22',
-          700: '#c63f1a',
-          800: '#9f3114',
-          900: '#7f260f',
-        },
-        violet: {
-          500: '#8B5CF6',
-        },
-      },
       zIndex: {
         dropdown: '300',
         modal:    '400',

@@ -101,14 +101,14 @@ export function DatePicker({
           opacity: disabled ? 0.45 : 1,
           cursor:  disabled ? 'not-allowed' : 'pointer',
           ...(open ? {
-            borderColor: 'rgba(74,144,217,0.65)',
-            boxShadow:   '0 0 0 3px rgba(74,144,217,0.18)',
+            borderColor: 'rgb(var(--brand-primary-rgb) / 0.52)',
+            boxShadow:   '0 0 0 3px rgb(var(--brand-primary-rgb) / 0.14)',
             background:  'var(--glass-bg-active)',
           } : {}),
         }}
         onMouseEnter={e => {
           if (!open && !disabled) {
-            e.currentTarget.style.borderColor = 'rgba(74,144,217,0.38)'
+            e.currentTarget.style.borderColor = 'rgb(var(--brand-primary-rgb) / 0.32)'
             e.currentTarget.style.background  = 'var(--glass-bg-hover)'
           }
         }}
@@ -121,7 +121,7 @@ export function DatePicker({
       >
         <Calendar
           className="w-3.5 h-3.5 flex-shrink-0"
-          style={{ color: selected ? 'rgb(74,144,217)' : 'var(--glass-text-muted)' }}
+          style={{ color: selected ? 'rgb(var(--brand-primary-rgb))' : 'var(--glass-text-muted)' }}
         />
         <span
           className="flex-1 text-left text-sm truncate"

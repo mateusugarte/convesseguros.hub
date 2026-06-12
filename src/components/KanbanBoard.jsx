@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, useDraggable, pointerWithin } from '@dnd-kit/core'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, useDraggable, closestCenter } from '@dnd-kit/core'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { STATUS_LABELS, PRODUTO_LABELS, marcarRetornoEnviado } from '../lib/fichas'
@@ -371,7 +371,7 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={pointerWithin}
+      collisionDetection={closestCenter}
       onDragStart={({ active }) => setActiveId(active.id)}
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}
@@ -399,7 +399,7 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
         </div>
       </div>
 
-      <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }}>
+      <DragOverlay dropAnimation={null}>
         {activeCol ? (
           <div
             className="kanban-col flex flex-col"
@@ -423,7 +423,7 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
             </div>
           </div>
         ) : activeFicha ? (
-          <div style={{ width: 'calc(var(--kanban-col-w, 286px) - 12px)', '--kanban-accent': PROD_COLOR[activeFicha?.produto] || '#4A90D9' }}>
+          <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', '--kanban-accent': PROD_COLOR[activeFicha?.produto] || '#4A90D9' }}>
             <FichaCardContent ficha={activeFicha} userId={user?.id} isDragOverlay />
           </div>
         ) : null}

@@ -27,25 +27,25 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: 'Gestão',
+    label: 'Gestao',
     items: [
       {
         to: '/apolices',
         icon: FileCheck,
-        label: 'Apólices',
+        label: 'Apolices',
         subitems: [
           { to: '/apolices', label: 'Dashboard', end: true },
-          { to: '/apolices/gestao', label: 'Gestão' },
-          { to: '/apolices/lista', label: 'Apólices' },
+          { to: '/apolices/gestao', label: 'Gestao' },
+          { to: '/apolices/lista', label: 'Pesquisa' },
         ],
       },
-      { to: '/imobiliarias', icon: Building2, label: 'Imobiliárias' },
+      { to: '/imobiliarias', icon: Building2, label: 'Imobiliarias' },
       { to: '/seguradoras', icon: Shield, label: 'Seguradoras' },
-      { to: '/relatorio', icon: BarChart2, label: 'Relatório' },
+      { to: '/relatorio', icon: BarChart2, label: 'Relatorios' },
     ],
   },
   {
-    label: 'Área Comercial',
+    label: 'Area Comercial',
     items: [
       {
         to: '/comercial',
@@ -56,18 +56,18 @@ const NAV_GROUPS = [
           { to: '/comercial/pipeline', label: 'Pipeline' },
           { to: '/comercial/leads', label: 'Base de Leads' },
           { to: '/comercial/vendas', label: 'Vendas' },
-          { to: '/comercial/calendario', label: 'Calendário' },
+          { to: '/comercial/calendario', label: 'Calendario' },
           { to: '/comercial/jornadas', label: 'Jornadas' },
         ],
       },
-      { to: '/renovacoes', icon: RefreshCw, label: 'Renovações', soon: true },
-      { to: '/calendario', icon: Calendar, label: 'Calendário', soon: true },
+      { to: '/renovacoes', icon: RefreshCw, label: 'Renovacoes', soon: true },
+      { to: '/calendario', icon: Calendar, label: 'Calendario', soon: true },
       { to: '/materiais', icon: FolderOpen, label: 'Materiais', soon: true },
     ],
   },
   {
     items: [
-      { to: '/configuracoes', icon: Settings, label: 'Configurações' },
+      { to: '/configuracoes', icon: Settings, label: 'Configuracoes' },
     ],
   },
 ]
@@ -99,13 +99,20 @@ export default function Layout() {
   const [cmdOpen, setCmdOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [expandedItems, setExpandedItems] = useState(() => {
-    const s = new Set()
-    if (location.pathname.startsWith('/apolices')) s.add('/apolices')
-    if (location.pathname.startsWith('/comercial')) s.add('/comercial')
-    return s
+    const initial = new Set()
+    if (location.pathname.startsWith('/apolices')) initial.add('/apolices')
+    if (location.pathname.startsWith('/comercial')) initial.add('/comercial')
+    return initial
   })
 
   const avatarColor = profile?.avatar_url || stringColor(profile?.nome || '')
+  const isCommercialRoute = location.pathname.startsWith('/comercial')
+  const shellClassName = isCommercialRoute ? 'crm-shell' : 'ops-shell'
+  const workspaceLabel = isCommercialRoute ? 'CRM comercial' : 'Core ops'
+  const workspaceTitle = isCommercialRoute ? 'Painel comercial em operacao.' : 'Central operacional premium.'
+  const workspaceLead = isCommercialRoute
+    ? 'Leads, vendas e jornadas no mesmo workspace.'
+    : 'Fichas, apolices e operacao em uma unica mesa de controle.'
 
   useEffect(() => {
     try { localStorage.setItem('sidebar-open', String(sidebarOpen)) } catch {}
@@ -123,10 +130,9 @@ export default function Layout() {
   }, [])
 
   useEffect(() => {
-    if (user) {
-      fetchContagemAbertaOrcamentista(user.id).then(setAbertasCount)
-      initComercialStore(user.id)
-    }
+    if (!user) return
+    fetchContagemAbertaOrcamentista(user.id).then(setAbertasCount)
+    initComercialStore(user.id)
   }, [user])
 
   useEffect(() => {
@@ -177,33 +183,20 @@ export default function Layout() {
 
   const sidebarWidth = isMobile ? 'w-72' : sidebarOpen ? 'w-[272px]' : 'w-[84px]'
   const contentMargin = isMobile ? 'ml-0' : sidebarOpen ? 'ml-[272px]' : 'ml-[84px]'
-  const shellSidebarStyle = theme === 'dark'
-    ? {
-        background: 'linear-gradient(180deg, rgba(11,18,34,0.98) 0%, rgba(9,15,30,0.96) 52%, rgba(6,10,22,0.98) 100%)',
-        borderRight: '1px solid rgba(74,144,217,0.14)',
-        boxShadow: '18px 0 48px rgba(0,0,0,0.26)',
-      }
-    : {
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(252,253,255,0.96) 48%, rgba(245,247,250,0.94) 100%)',
-        borderRight: '1px solid rgba(220,227,236,0.92)',
-        boxShadow: '18px 0 48px rgba(15,23,42,0.06)',
-      }
-  const shellTopbarStyle = theme === 'dark'
-    ? {
-        background: 'linear-gradient(180deg, rgba(10,16,30,0.90) 0%, rgba(11,18,36,0.84) 100%)',
-        borderBottom: '1px solid rgba(74,144,217,0.12)',
-        backdropFilter: 'blur(18px) saturate(160%)',
-        WebkitBackdropFilter: 'blur(18px) saturate(160%)',
-      }
-    : {
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.90) 0%, rgba(248,250,252,0.84) 100%)',
-        borderBottom: '1px solid rgba(220,227,236,0.88)',
-        backdropFilter: 'blur(18px) saturate(160%)',
-        WebkitBackdropFilter: 'blur(18px) saturate(160%)',
-      }
+  const shellSidebarStyle = {
+    background: 'var(--shell-sidebar-bg)',
+    borderRight: '1px solid var(--shell-sidebar-border)',
+    boxShadow: 'var(--shell-sidebar-shadow)',
+  }
+  const shellTopbarStyle = {
+    background: 'var(--shell-topbar-bg)',
+    borderBottom: '1px solid var(--shell-topbar-border)',
+    backdropFilter: 'blur(18px) saturate(160%)',
+    WebkitBackdropFilter: 'blur(18px) saturate(160%)',
+  }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className={`flex h-screen overflow-hidden ${shellClassName}`}>
       {isMobile && sidebarOpen && (
         <div
           className="fixed inset-0 z-[300] bg-black/35 backdrop-blur-sm"
@@ -215,8 +208,9 @@ export default function Layout() {
         className={`shell-sidebar fixed left-0 top-0 h-full flex flex-col transition-[width,transform] duration-200 z-[400] ${sidebarWidth} ${isMobile ? (sidebarOpen ? 'translate-x-0' : '-translate-x-full') : ''}`}
         style={shellSidebarStyle}
       >
-        <div className={`flex items-center h-16 px-4 border-b flex-shrink-0 ${!sidebarOpen && !isMobile ? 'justify-center' : 'gap-3'}`}
-          style={{ borderColor: theme === 'dark' ? 'rgba(74,144,217,0.12)' : 'rgba(180,200,230,0.55)' }}
+        <div
+          className={`flex items-center h-16 px-4 border-b flex-shrink-0 ${!sidebarOpen && !isMobile ? 'justify-center' : 'gap-3'}`}
+          style={{ borderColor: 'var(--shell-panel-border)' }}
         >
           <div className="w-9 h-9 rounded-2xl overflow-hidden flex-shrink-0 ring-1 ring-black/5 shadow-sm">
             <img src={LOGO} alt="Conves" className="w-full h-full object-cover" width="32" height="32" loading="eager" />
@@ -227,25 +221,31 @@ export default function Layout() {
                 <p className="text-sm font-bold leading-none text-dark-text" style={{ fontFamily: 'var(--font-heading)' }}>Conves</p>
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-gold flex-shrink-0 opacity-80" />
               </div>
-              <p className="text-[10px] mt-0.5 truncate tracking-[0.18em] uppercase text-dark-muted">Workspace operacional</p>
+              <p className="text-[10px] mt-0.5 truncate tracking-[0.18em] uppercase text-dark-muted">{workspaceLabel}</p>
             </div>
           )}
         </div>
 
         {(sidebarOpen || isMobile) && (
-          <div className="px-3 py-3 border-b" style={{ borderColor: theme === 'dark' ? 'rgba(74,144,217,0.10)' : 'rgba(180,200,230,0.40)' }}>
+          <div className="px-3 py-3 border-b" style={{ borderColor: 'var(--shell-panel-border)' }}>
             <div className="shell-sidebar-card rounded-3xl p-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-dark-muted mb-1">Operação ativa</p>
-                  <p className="text-sm font-semibold text-dark-text leading-tight">Fichas, apólices e comercial no mesmo workspace.</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-dark-muted mb-1">{workspaceTitle}</p>
+                  <p className="text-sm font-semibold text-dark-text leading-tight">{workspaceLead}</p>
                 </div>
-                <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, rgba(74,144,217,0.15), rgba(201,168,76,0.20))' }}>
+                <div
+                  className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+                  style={{ background: 'linear-gradient(135deg, rgb(var(--brand-primary-rgb) / 0.14), rgb(var(--brand-gold-rgb) / 0.22))' }}
+                >
                   <TrendingUp className="w-4 h-4 text-brand-secondary" />
                 </div>
               </div>
               <div className="mt-3 h-2 rounded-full overflow-hidden bg-dark-border/40">
-                <div className="h-full w-[68%] rounded-full bg-gradient-to-r from-brand-accent via-brand-secondary to-brand-gold shadow-[0_0_18px_rgba(74,144,217,0.35)]" />
+                <div
+                  className="h-full w-[68%] rounded-full bg-gradient-to-r from-brand-accent via-brand-secondary to-brand-gold"
+                  style={{ boxShadow: '0 0 18px rgb(var(--brand-primary-rgb) / 0.26)' }}
+                />
               </div>
             </div>
           </div>
@@ -260,6 +260,7 @@ export default function Layout() {
                   {group.label}
                 </p>
               )}
+
               {group.items.map(item => {
                 const Icon = item.icon
 
@@ -271,7 +272,7 @@ export default function Layout() {
                       <button
                         onClick={() => toggleExpand(item.to)}
                         title={(!sidebarOpen && !isMobile) ? item.label : undefined}
-                        className={`shell-nav-item w-full flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-dark-text pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-white/60 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`}
+                        className={`shell-nav-item w-full flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-dark-text pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`}
                       >
                         <Icon className="w-4 h-4 flex-shrink-0" />
                         {(sidebarOpen || isMobile) && (
@@ -281,6 +282,7 @@ export default function Layout() {
                           </>
                         )}
                       </button>
+
                       {(sidebarOpen || isMobile) && isExpanded && (
                         <div className="ml-3 mt-1 border-l border-dark-border/40 pl-3 space-y-1">
                           {item.subitems.map(sub => (
@@ -289,7 +291,7 @@ export default function Layout() {
                               to={sub.to}
                               end={sub.end}
                               className={({ isActive }) =>
-                                `shell-subnav-item flex items-center px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${isActive ? 'shell-subnav-item-active text-brand-secondary bg-white' : 'text-dark-muted hover:text-dark-text hover:bg-white/70'}`
+                                `shell-subnav-item flex items-center px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${isActive ? 'shell-subnav-item-active text-brand-secondary' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60'}`
                               }
                             >
                               {sub.label}
@@ -326,7 +328,7 @@ export default function Layout() {
                     end={item.end}
                     title={(!sidebarOpen && !isMobile) ? item.label : undefined}
                     className={({ isActive }) =>
-                      `shell-nav-item flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-dark-text pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-white/60 hover:translate-x-0.5 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`
+                      `shell-nav-item flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-dark-text pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60 hover:translate-x-0.5 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`
                     }
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
@@ -340,7 +342,7 @@ export default function Layout() {
 
         <div
           className={`shell-user-card border-t px-3 py-3 flex-shrink-0 ${(!sidebarOpen && !isMobile) ? 'flex justify-center' : 'flex items-center gap-2.5'}`}
-          style={{ borderColor: theme === 'dark' ? 'rgba(74,144,217,0.10)' : 'rgba(180,200,230,0.40)' }}
+          style={{ borderColor: 'var(--shell-panel-border)' }}
         >
           <div
             className="w-8 h-8 rounded-2xl flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 ring-1 ring-white/20 shadow-sm"
@@ -353,8 +355,11 @@ export default function Layout() {
               <p className="text-xs font-semibold text-dark-text truncate">{profile?.nome}</p>
               {abertasCount > 0 && (
                 <p className="text-[10px] mt-0.5">
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-brand-secondary font-semibold" style={{ background: 'rgba(74,144,217,0.10)' }}>
-                    {abertasCount} em cotação
+                  <span
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-brand-secondary font-semibold"
+                    style={{ background: 'rgb(var(--brand-primary-rgb) / 0.10)' }}
+                  >
+                    {abertasCount} em cotacao
                   </span>
                 </p>
               )}
@@ -367,9 +372,9 @@ export default function Layout() {
             onClick={() => setSidebarOpen(o => !o)}
             className="absolute -right-3 top-[72px] w-7 h-7 rounded-full flex items-center justify-center transition-all z-50 cursor-pointer"
             style={{
-              background: theme === 'dark' ? 'rgba(10,18,36,0.96)' : 'rgba(255,255,255,0.95)',
-              border: theme === 'dark' ? '1px solid rgba(74,144,217,0.18)' : '1px solid rgba(180,200,230,0.55)',
-              boxShadow: theme === 'dark' ? '0 10px 20px rgba(0,0,0,0.32)' : '0 10px 20px rgba(29,78,216,0.10)',
+              background: 'var(--shell-panel-bg)',
+              border: '1px solid var(--shell-panel-border)',
+              boxShadow: 'var(--shell-panel-shadow)',
             }}
           >
             {sidebarOpen
@@ -396,11 +401,8 @@ export default function Layout() {
               className="shell-search-pill hidden md:flex items-center gap-2 px-3 py-2 rounded-2xl border text-dark-muted transition-all cursor-pointer shadow-sm"
             >
               <Search className="w-3.5 h-3.5" />
-              <span className="text-xs">Buscar fichas...</span>
-              <kbd
-                className="ml-3 text-[10px] border rounded px-1.5 py-0.5 text-dark-muted/70"
-                style={{ borderColor: theme === 'dark' ? 'rgba(74,144,217,0.12)' : 'rgba(180,200,230,0.55)' }}
-              >
+              <span className="text-xs">Buscar no workspace...</span>
+              <kbd className="ml-3 text-[10px] border rounded px-1.5 py-0.5 text-dark-muted/70" style={{ borderColor: 'var(--shell-panel-border)' }}>
                 Ctrl K
               </kbd>
             </button>
@@ -422,7 +424,7 @@ export default function Layout() {
               }
             </button>
 
-            <button className="btn-ghost p-2 relative rounded-lg cursor-pointer" aria-label="Notificações">
+            <button className="btn-ghost p-2 relative rounded-lg cursor-pointer" aria-label="Notificacoes">
               <Bell className="w-4 h-4" />
               {abertasCount > 0 && (
                 <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-status-warning" />
@@ -433,7 +435,7 @@ export default function Layout() {
               <button
                 onClick={() => setUserMenuOpen(o => !o)}
                 className="shell-user-button flex items-center gap-2 pl-2.5 pr-2 py-1.5 rounded-2xl border transition-all cursor-pointer shadow-sm"
-                style={{ borderColor: theme === 'dark' ? 'rgba(74,144,217,0.12)' : 'rgba(180,200,230,0.55)' }}
+                style={{ borderColor: 'var(--shell-panel-border)' }}
               >
                 <div
                   className="w-6 h-6 rounded-2xl flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
@@ -451,11 +453,11 @@ export default function Layout() {
                   <div
                     className="absolute right-0 top-full mt-2 w-56 z-[400] py-1 animate-slide-up rounded-2xl overflow-hidden"
                     style={{
-                      background: theme === 'dark' ? 'rgba(9,15,32,0.96)' : 'rgba(255,255,255,0.96)',
+                      background: 'var(--shell-panel-bg)',
                       backdropFilter: 'blur(18px) saturate(170%)',
                       WebkitBackdropFilter: 'blur(18px) saturate(170%)',
-                      border: theme === 'dark' ? '1px solid rgba(74,144,217,0.14)' : '1px solid rgba(180,200,230,0.55)',
-                      boxShadow: theme === 'dark' ? '0 24px 54px rgba(0,0,0,0.34)' : '0 24px 54px rgba(29,78,216,0.10)',
+                      border: '1px solid var(--shell-panel-border)',
+                      boxShadow: 'var(--shadow-float)',
                     }}
                   >
                     <div className="px-4 py-3 border-b border-dark-border">

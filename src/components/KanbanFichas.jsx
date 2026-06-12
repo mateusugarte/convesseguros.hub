@@ -2,9 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
-  useDraggable, useDroppable, rectIntersection,
+  useDraggable, useDroppable, closestCenter,
 } from '@dnd-kit/core'
-import { snapCenterToCursor } from '@dnd-kit/modifiers'
 import { fetchFichasKanban, assumirFicha, moverFichaStatus } from '../lib/fichas'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useAuth } from '../contexts/AuthContext'
@@ -228,7 +227,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
 }
 
 // ── DraggableCard ─────────────────────────────────────────────────────────────
-// ref e listeners no MESMO elemento → DragOverlay sempre alinhado ao cursor
+// O drag fica no handle para manter o overlay estável durante o movimento
 
 function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onToggleRetorno, isNew, resolverNome }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ficha.id })
@@ -841,12 +840,12 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
             </button>
           )}
 
-          <DndContext
-            sensors={sensors}
-            collisionDetection={rectIntersection}
-            onDragStart={({ active }) => setActiveId(active.id)}
-            onDragEnd={handleDragEnd}
-            onDragCancel={() => setActiveId(null)}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={({ active }) => setActiveId(active.id)}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveId(null)}
           >
             <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
               <div className="flex gap-3 min-w-max px-1">
@@ -870,9 +869,9 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
               </div>
             </div>
 
-            <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>
+            <DragOverlay dropAnimation={null}>
               {activeCard && (
-                <div style={{ width: 'calc(var(--kanban-col-w, 286px) - 12px)', '--kanban-accent': PRODUTO_COLOR[activeCard?.produto] || '#4A90D9', cursor: 'grabbing' }}>
+                <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', '--kanban-accent': PRODUTO_COLOR[activeCard?.produto] || '#4A90D9', cursor: 'grabbing' }}>
                   <FichaCard ficha={activeCard} isDragOverlay resolverNome={resolverNome} />
                 </div>
               )}

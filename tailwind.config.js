@@ -4,11 +4,11 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
-      colors: {
-        brand: {
-          primary:   '#1A3A6B',
+        colors: {
+          brand: {
+          primary:   '#F5582A',
           secondary: '#2B5BA8',
-          accent:    '#4A90D9',
+          accent:    '#FF8B5F',
           gold:      '#C9A84C',
         },
         // These colors respond to the theme via CSS variables in tokens.css
@@ -31,13 +31,13 @@ export default {
           'primary-hover': 'rgb(var(--color-primary-hover) / <alpha-value>)',
         },
         primary: {
-          50:  '#eff6ff',
-          100: '#dbeafe',
-          500: '#4A90D9',
-          600: '#2B5BA8',
-          700: '#1A3A6B',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50:  '#fff4ee',
+          100: '#ffe3d8',
+          500: '#f5582a',
+          600: '#ea4f22',
+          700: '#c63f1a',
+          800: '#9f3114',
+          900: '#7f260f',
         },
         violet: {
           500: '#8B5CF6',
@@ -95,16 +95,16 @@ export default {
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         pulseGlow: {
-          '0%, 100%': { boxShadow: '0 0 0 0 rgba(43,91,168,0)' },
-          '50%':      { boxShadow: '0 0 0 4px rgba(43,91,168,0.15)' },
+          '0%, 100%': { boxShadow: '0 0 0 0 rgba(245,88,42,0)' },
+          '50%':      { boxShadow: '0 0 0 4px rgba(245,88,42,0.15)' },
         },
       },
       boxShadow: {
-        'glow':      '0 0 20px rgba(74, 144, 217, 0.25)',
-        'glow-sm':   '0 0 10px rgba(74, 144, 217, 0.15)',
+        'glow':      '0 0 20px rgba(245, 88, 42, 0.22)',
+        'glow-sm':   '0 0 10px rgba(245, 88, 42, 0.14)',
         'glow-gold': '0 0 24px rgba(201, 168, 76, 0.28), 0 4px 12px rgba(201, 168, 76, 0.14)',
         'float':     '0 8px 32px -4px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.06)',
-        'glow-blue': '0 0 24px rgba(43,91,168,0.30), 0 4px 12px rgba(43,91,168,0.15)',
+        'glow-blue': '0 0 24px rgba(245,88,42,0.20), 0 4px 12px rgba(245,88,42,0.10)',
         'modal':     '0 24px 64px rgba(0,0,0,0.32), 0 8px 24px rgba(20,60,140,0.16)',
       },
       transitionTimingFunction: {

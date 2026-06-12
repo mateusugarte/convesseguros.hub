@@ -12,7 +12,7 @@ export function PageLoader() {
         width={56}
         height={56}
         className="rounded-2xl object-cover animate-pulse-slow"
-        style={{ boxShadow: '0 4px 20px rgba(43,91,168,0.25)' }}
+        style={{ boxShadow: '0 10px 24px rgba(245,88,42,0.18)' }}
       />
       <p
         className="mt-4 text-sm"

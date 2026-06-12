@@ -45,12 +45,12 @@ Concluido
 
 ## Proximo Responsavel
 
-Claude Code
+Usuario / validacao visual
 
 ## Proxima Tarefa
 
-Revisar a consistencia visual geral, principalmente mobile, densidade e estados vazios.
+Validar as telas principais e apontar qualquer ajuste fino de fidelidade visual.
 
 ## Observacoes
 
-Manter os quadros Kanban com a mesma funcao e o mesmo fluxo atual. As superficies antigas de modal, calendario e dropdown foram ajustadas para o novo shell CRM.
+As funcoes foram preservadas. O redesign alterou apenas a camada visual, motion e tokens compartilhados.

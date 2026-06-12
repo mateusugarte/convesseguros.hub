@@ -179,25 +179,25 @@ export default function Layout() {
   const contentMargin = isMobile ? 'ml-0' : sidebarOpen ? 'ml-[272px]' : 'ml-[84px]'
   const shellSidebarStyle = theme === 'dark'
     ? {
-        background: 'linear-gradient(180deg, rgba(8,16,34,0.98) 0%, rgba(11,20,40,0.96) 52%, rgba(5,10,24,0.98) 100%)',
-        borderRight: '1px solid rgba(74,144,217,0.16)',
-        boxShadow: '18px 0 48px rgba(0,0,0,0.28)',
+        background: 'linear-gradient(180deg, rgba(11,18,34,0.98) 0%, rgba(9,15,30,0.96) 52%, rgba(6,10,22,0.98) 100%)',
+        borderRight: '1px solid rgba(74,144,217,0.14)',
+        boxShadow: '18px 0 48px rgba(0,0,0,0.26)',
       }
     : {
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(247,250,255,0.94) 48%, rgba(237,243,252,0.90) 100%)',
-        borderRight: '1px solid rgba(180,200,230,0.55)',
-        boxShadow: '18px 0 48px rgba(29,78,216,0.08)',
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(252,253,255,0.96) 48%, rgba(245,247,250,0.94) 100%)',
+        borderRight: '1px solid rgba(220,227,236,0.92)',
+        boxShadow: '18px 0 48px rgba(15,23,42,0.06)',
       }
   const shellTopbarStyle = theme === 'dark'
     ? {
-        background: 'linear-gradient(180deg, rgba(9,15,32,0.90) 0%, rgba(11,18,36,0.84) 100%)',
+        background: 'linear-gradient(180deg, rgba(10,16,30,0.90) 0%, rgba(11,18,36,0.84) 100%)',
         borderBottom: '1px solid rgba(74,144,217,0.12)',
         backdropFilter: 'blur(18px) saturate(160%)',
         WebkitBackdropFilter: 'blur(18px) saturate(160%)',
       }
     : {
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.84) 0%, rgba(247,250,255,0.78) 100%)',
-        borderBottom: '1px solid rgba(180,200,230,0.45)',
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.90) 0%, rgba(248,250,252,0.84) 100%)',
+        borderBottom: '1px solid rgba(220,227,236,0.88)',
         backdropFilter: 'blur(18px) saturate(160%)',
         WebkitBackdropFilter: 'blur(18px) saturate(160%)',
       }

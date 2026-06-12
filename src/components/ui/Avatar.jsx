@@ -1,4 +1,4 @@
-const PALETTE = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#2B5BA8']
+const PALETTE = ['#F5582A','#10B981','#F97316','#8B5CF6','#EC4899','#06B6D4','#2B5BA8']
 
 function nameToColor(str) {
   let h = 0

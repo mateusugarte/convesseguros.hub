@@ -106,20 +106,20 @@ function DarkTip({ active, payload, label, dateLabel }) {
 
 function KPICard({ label, value, sub, icon: Icon, accent, gold }) {
   return (
-    <div className="card p-5 space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="eyebrow text-dark-muted">{label}</p>
+    <div className="metric-tile">
+      <div className="flex items-center justify-between gap-3">
+        <p className="metric-label">{label}</p>
         {Icon && (
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: accent + '30', boxShadow: `0 0 12px ${accent}25` }}
+            className="w-9 h-9 rounded-2xl flex items-center justify-center border border-dark-border/70"
+            style={{ background: `${accent}18`, boxShadow: `0 0 0 4px ${accent}0f` }}
           >
             <Icon className="w-4 h-4" style={{ color: accent }} />
           </div>
         )}
       </div>
-      <p className="stat-number" style={{ color: gold ? '#C9A84C' : undefined }}>{value ?? '—'}</p>
-      {sub && <p className="text-[11px] text-dark-muted mt-0.5">{sub}</p>}
+      <p className="metric-value" style={{ color: gold ? '#C9A84C' : undefined }}>{value ?? '—'}</p>
+      {sub && <p className="metric-sub">{sub}</p>}
     </div>
   )
 }
@@ -289,19 +289,54 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="title-page text-dark-text">Dashboard</h1>
-          <p className="text-xs text-dark-muted">
-            {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
-          </p>
+      <div className="dashboard-hero">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-24 right-0 w-72 h-72 rounded-full bg-brand-accent/10 blur-3xl" />
+          <div className="absolute -bottom-20 -left-10 w-64 h-64 rounded-full bg-brand-gold/10 blur-3xl" />
         </div>
-        {/* Seletor de período elegante — filtra KPIs, ranking imobs e distribuição de status */}
-        <MonthYearPicker
-          ano={filtroAno}
-          mes={filtroMes}
-          onChange={(a, m) => { setFiltroAno(a); setFiltroMes(m) }}
-        />
+        <div className="relative flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+          <div className="space-y-4 max-w-2xl">
+            <div className="section-kicker">
+              <span className="w-2 h-2 rounded-full bg-brand-accent shadow-glow-sm" />
+              Operação em tempo real
+            </div>
+            <div>
+              <h1 className="title-display text-dark-text">Dashboard</h1>
+              <p className="section-lead mt-2 max-w-xl">
+                Acompanhamento diário da operação com indicadores agrupados, atividade recente e foco no que precisa de ação agora.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <div className="dashboard-hero-chip">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Atualização</p>
+                <p className="mt-1 text-sm font-semibold text-dark-text">
+                  {format(new Date(), "dd 'de' MMMM", { locale: ptBR })}
+                </p>
+              </div>
+              <div className="dashboard-hero-chip">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Período ativo</p>
+                <p className="mt-1 text-sm font-semibold text-dark-text">{MESES_ABBR_DASH[filtroMes - 1]} {filtroAno}</p>
+              </div>
+              <div className="dashboard-hero-chip">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Fichas em aberto</p>
+                <p className="mt-1 text-sm font-semibold text-dark-text">{kpis?.emAberto ?? '—'}</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col items-stretch gap-3 lg:min-w-[240px]">
+            <MonthYearPicker
+              ano={filtroAno}
+              mes={filtroMes}
+              onChange={(a, m) => { setFiltroAno(a); setFiltroMes(m) }}
+            />
+            <div className="rounded-2xl border border-brand-accent/20 bg-brand-accent/10 px-4 py-3 shadow-sm">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-accent/80">Resumo rápido</p>
+              <p className="mt-1 text-sm text-dark-text">
+                Hoje: <span className="font-semibold">{kpis?.hoje ?? '—'}</span> | Semana: <span className="font-semibold">{kpis?.semana ?? '—'}</span>
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── KPIs ── */}
@@ -488,8 +523,12 @@ export default function Dashboard() {
 
       {/* ── Activity feed ── */}
       <div className="card">
-        <div className="px-5 py-4 border-b border-dark-border">
-          <h2 className="text-sm font-semibold text-dark-text">Atividade Recente</h2>
+        <div className="px-5 py-4 border-b border-dark-border flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-dark-text">Atividade Recente</h2>
+            <p className="text-[11px] text-dark-muted mt-1">Últimos movimentos da operação, do mais novo ao mais antigo.</p>
+          </div>
+          <span className="badge bg-brand-accent/10 text-brand-accent">{atividade.length}</span>
         </div>
         {atividade.length === 0 ? (
           <EmptyState message="Nenhuma ficha recebida ainda" className="py-8" />

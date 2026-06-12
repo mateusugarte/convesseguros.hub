@@ -48,14 +48,11 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
   const avatarColor = AVATAR_COLORS[(lead.nome || '').charCodeAt(0) % AVATAR_COLORS.length]
 
   return (
-    <div className={`group relative rounded-xl border transition-all duration-150 select-none overflow-hidden
-      ${ghost ? 'opacity-30' : 'hover:border-brand-accent/40 hover:shadow-md'}
-      ${selected ? 'border-brand-accent ring-1 ring-brand-accent/20' : 'border-dark-border'}
-      bg-dark-surface`}>
-      {/* Left color bar */}
-      <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: col?.color || 'transparent' }} />
-
-      <div className="pl-4 pr-3 py-3">
+    <div
+      className={`kanban-card group ${ghost ? 'opacity-30' : ''} ${selected ? 'ring-1 ring-brand-accent/20' : ''}`}
+      style={{ '--kanban-accent': col?.color || '#4A90D9' }}
+    >
+      <div className="kanban-card-body pl-2 pr-1">
         {/* Row 1: avatar/select + nome + score */}
         <div className="flex items-start gap-2 mb-2">
           <div className="relative flex-shrink-0 cursor-pointer"
@@ -150,9 +147,10 @@ function DraggableCard({ lead, col, tags, activeId, onClick, selected, onSelect 
 function DroppableLane({ colId, children }) {
   const { setNodeRef, isOver } = useDroppable({ id: colId })
   return (
-    <div ref={setNodeRef}
-      className={`flex-1 flex flex-col min-h-0 rounded-b-xl border border-t-0 overflow-hidden transition-colors duration-150
-        ${isOver ? 'border-brand-accent/60 bg-brand-accent/5' : 'border-dark-border'}`}>
+    <div
+      ref={setNodeRef}
+      className={`flex-1 flex flex-col min-h-0 overflow-hidden transition-colors duration-150 ${isOver ? 'bg-brand-accent/5' : ''}`}
+    >
       {children}
     </div>
   )
@@ -162,10 +160,10 @@ function DroppableLane({ colId, children }) {
 
 function SwimLane({ col, leads, tags, activeId, onCardClick, selectedIds, onSelect }) {
   return (
-    <div className="w-[280px] flex-shrink-0 flex flex-col h-full">
+    <div className="kanban-col w-[296px] flex-shrink-0 flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2.5 rounded-t-xl border border-b-0 border-dark-border flex-shrink-0"
-        style={{ background: 'var(--glass-bg)' }}>
+      <div className="kanban-col-header flex items-center justify-between flex-shrink-0"
+        style={{ background: col.color + '12', borderColor: col.color + '40' }}>
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: col.color }} />
           <span className="text-sm font-bold text-dark-text">{col.label}</span>
@@ -177,9 +175,9 @@ function SwimLane({ col, leads, tags, activeId, onCardClick, selectedIds, onSele
       </div>
 
       <DroppableLane colId={col.id}>
-        <div className="flex flex-col gap-2 p-2 overflow-y-auto flex-1">
+        <div className="kanban-col-body flex flex-col gap-2 p-3 overflow-y-auto flex-1">
           {leads.length === 0 ? (
-            <div className="flex items-center justify-center h-20 rounded-lg border-2 border-dashed border-dark-border/40 text-[11px] text-dark-muted">
+            <div className="flex items-center justify-center h-20 rounded-2xl border-2 border-dashed border-dark-border/40 text-[11px] text-dark-muted bg-white/40">
               Soltar aqui
             </div>
           ) : (
@@ -770,4 +768,3 @@ export default function Pipeline() {
     </div>
   )
 }
-

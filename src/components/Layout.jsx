@@ -21,44 +21,48 @@ const LOGO = 'https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/
 const NAV_GROUPS = [
   {
     items: [
-      { to: '/',              icon: LayoutDashboard, label: 'Dashboard',     end: true },
-      { to: '/fichas',        icon: FileText,        label: 'Fichas' },
-      { to: '/minhas-fichas', icon: User,            label: 'Minhas Fichas' },
+      { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
+      { to: '/fichas', icon: FileText, label: 'Fichas' },
+      { to: '/minhas-fichas', icon: User, label: 'Minhas Fichas' },
     ],
   },
   {
     label: 'Gestão',
     items: [
       {
-        to: '/apolices', icon: FileCheck, label: 'Apólices',
+        to: '/apolices',
+        icon: FileCheck,
+        label: 'Apólices',
         subitems: [
-          { to: '/apolices',        label: 'Dashboard', end: true },
+          { to: '/apolices', label: 'Dashboard', end: true },
           { to: '/apolices/gestao', label: 'Gestão' },
-          { to: '/apolices/lista',  label: 'Apólices' },
+          { to: '/apolices/lista', label: 'Apólices' },
         ],
       },
       { to: '/imobiliarias', icon: Building2, label: 'Imobiliárias' },
-      { to: '/seguradoras',  icon: Shield,    label: 'Seguradoras' },
-      { to: '/relatorio',    icon: BarChart2, label: 'Relatório' },
+      { to: '/seguradoras', icon: Shield, label: 'Seguradoras' },
+      { to: '/relatorio', icon: BarChart2, label: 'Relatório' },
     ],
   },
   {
     label: 'Área Comercial',
     items: [
       {
-        to: '/comercial', icon: TrendingUp, label: 'Comercial',
+        to: '/comercial',
+        icon: TrendingUp,
+        label: 'Comercial',
         subitems: [
-          { to: '/comercial',            label: 'Dashboard',   end: true },
-          { to: '/comercial/pipeline',   label: 'Pipeline' },
-          { to: '/comercial/leads',      label: 'Base de Leads' },
-          { to: '/comercial/vendas',     label: 'Vendas' },
+          { to: '/comercial', label: 'Dashboard', end: true },
+          { to: '/comercial/pipeline', label: 'Pipeline' },
+          { to: '/comercial/leads', label: 'Base de Leads' },
+          { to: '/comercial/vendas', label: 'Vendas' },
           { to: '/comercial/calendario', label: 'Calendário' },
-          { to: '/comercial/jornadas',   label: 'Jornadas' },
+          { to: '/comercial/jornadas', label: 'Jornadas' },
         ],
       },
-      { to: '/renovacoes', icon: RefreshCw,  label: 'Renovações', soon: true },
-      { to: '/calendario', icon: Calendar,   label: 'Calendário',  soon: true },
-      { to: '/materiais',  icon: FolderOpen, label: 'Materiais',   soon: true },
+      { to: '/renovacoes', icon: RefreshCw, label: 'Renovações', soon: true },
+      { to: '/calendario', icon: Calendar, label: 'Calendário', soon: true },
+      { to: '/materiais', icon: FolderOpen, label: 'Materiais', soon: true },
     ],
   },
   {
@@ -74,40 +78,39 @@ function initials(nome) {
 }
 
 function stringColor(str) {
-  const colors = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#2B5BA8']
-  let h = 0; for (let i = 0; i < (str||'').length; i++) h = str.charCodeAt(i) + ((h << 5) - h)
+  const colors = ['#4A90D9', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#2B5BA8']
+  let h = 0
+  for (let i = 0; i < (str || '').length; i++) h = str.charCodeAt(i) + ((h << 5) - h)
   return colors[Math.abs(h) % colors.length]
 }
 
 export default function Layout() {
   const { profile, signOut, user } = useAuth()
-  const toast    = useToast()
+  const toast = useToast()
   const navigate = useNavigate()
   const location = useLocation()
   const { theme, toggleTheme } = useTheme()
 
-  const [sidebarOpen,   setSidebarOpen]   = useState(() => {
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
     try { return localStorage.getItem('sidebar-open') !== 'false' } catch { return true }
   })
-  const [isMobile,      setIsMobile]      = useState(false)
-  const [abertasCount,  setAbertasCount]  = useState(0)
-  const [cmdOpen,       setCmdOpen]       = useState(false)
-  const [userMenuOpen,  setUserMenuOpen]  = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [abertasCount, setAbertasCount] = useState(0)
+  const [cmdOpen, setCmdOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [expandedItems, setExpandedItems] = useState(() => {
     const s = new Set()
-    if (location.pathname.startsWith('/apolices'))  s.add('/apolices')
+    if (location.pathname.startsWith('/apolices')) s.add('/apolices')
     if (location.pathname.startsWith('/comercial')) s.add('/comercial')
     return s
   })
 
   const avatarColor = profile?.avatar_url || stringColor(profile?.nome || '')
 
-  // Persist sidebar state
   useEffect(() => {
     try { localStorage.setItem('sidebar-open', String(sidebarOpen)) } catch {}
   }, [sidebarOpen])
 
-  // Responsive
   useEffect(() => {
     function check() {
       const mobile = window.innerWidth < 1024
@@ -126,7 +129,6 @@ export default function Layout() {
     }
   }, [user])
 
-  // Realtime — new ficha toast
   useEffect(() => {
     const ch = supabase.channel('layout-fichas-new')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'fichas' }, p => {
@@ -142,14 +144,27 @@ export default function Layout() {
       })
       .subscribe()
     return () => supabase.removeChannel(ch)
-  }, [toast])
+  }, [toast, navigate])
 
-  // Ctrl+K
   useEffect(() => {
-    const handler = e => { if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setCmdOpen(o => !o) } }
+    const handler = e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        setCmdOpen(o => !o)
+      }
+    }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [])
+
+  useEffect(() => {
+    setExpandedItems(prev => {
+      const next = new Set(prev)
+      if (location.pathname.startsWith('/apolices')) next.add('/apolices')
+      if (location.pathname.startsWith('/comercial')) next.add('/comercial')
+      return next
+    })
+  }, [location.pathname])
 
   function toggleExpand(to) {
     setExpandedItems(prev => {
@@ -160,54 +175,88 @@ export default function Layout() {
     })
   }
 
-  const sidebarWidth = isMobile ? 'w-64' : sidebarOpen ? 'w-[240px]' : 'w-16'
-  const contentMargin = isMobile ? 'ml-0' : sidebarOpen ? 'ml-[240px]' : 'ml-16'
+  const sidebarWidth = isMobile ? 'w-72' : sidebarOpen ? 'w-[272px]' : 'w-[84px]'
+  const contentMargin = isMobile ? 'ml-0' : sidebarOpen ? 'ml-[272px]' : 'ml-[84px]'
+  const shellSidebarStyle = theme === 'dark'
+    ? {
+        background: 'linear-gradient(180deg, rgba(8,16,34,0.98) 0%, rgba(11,20,40,0.96) 52%, rgba(5,10,24,0.98) 100%)',
+        borderRight: '1px solid rgba(74,144,217,0.16)',
+        boxShadow: '18px 0 48px rgba(0,0,0,0.28)',
+      }
+    : {
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(247,250,255,0.94) 48%, rgba(237,243,252,0.90) 100%)',
+        borderRight: '1px solid rgba(180,200,230,0.55)',
+        boxShadow: '18px 0 48px rgba(29,78,216,0.08)',
+      }
+  const shellTopbarStyle = theme === 'dark'
+    ? {
+        background: 'linear-gradient(180deg, rgba(9,15,32,0.90) 0%, rgba(11,18,36,0.84) 100%)',
+        borderBottom: '1px solid rgba(74,144,217,0.12)',
+        backdropFilter: 'blur(18px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(18px) saturate(160%)',
+      }
+    : {
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.84) 0%, rgba(247,250,255,0.78) 100%)',
+        borderBottom: '1px solid rgba(180,200,230,0.45)',
+        backdropFilter: 'blur(18px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(18px) saturate(160%)',
+      }
 
   return (
     <div className="flex h-screen overflow-hidden">
-
-      {/* ── Mobile backdrop ─────────────────────────────────────────────── */}
       {isMobile && sidebarOpen && (
         <div
-          className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 z-[300] bg-black/35 backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* ── Sidebar ─────────────────────────────────────────────────────── */}
       <aside
-        className={`fixed left-0 top-0 h-full flex flex-col transition-[width,transform] duration-200 z-[400]
-          ${sidebarWidth}
-          ${isMobile ? (sidebarOpen ? 'translate-x-0' : '-translate-x-full') : ''}
-        `}
-        style={{
-          background: 'var(--sidebar-bg, #0f172a)',
-          borderRight: '1px solid rgba(255,255,255,0.06)',
-        }}
+        className={`shell-sidebar fixed left-0 top-0 h-full flex flex-col transition-[width,transform] duration-200 z-[400] ${sidebarWidth} ${isMobile ? (sidebarOpen ? 'translate-x-0' : '-translate-x-full') : ''}`}
+        style={shellSidebarStyle}
       >
-        {/* Logo */}
-        <div className={`flex items-center h-16 px-4 border-b border-white/5 flex-shrink-0 ${!sidebarOpen && !isMobile ? 'justify-center' : 'gap-3'}`}>
-          <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-white/10">
+        <div className={`flex items-center h-16 px-4 border-b flex-shrink-0 ${!sidebarOpen && !isMobile ? 'justify-center' : 'gap-3'}`}
+          style={{ borderColor: theme === 'dark' ? 'rgba(74,144,217,0.12)' : 'rgba(180,200,230,0.55)' }}
+        >
+          <div className="w-9 h-9 rounded-2xl overflow-hidden flex-shrink-0 ring-1 ring-black/5 shadow-sm">
             <img src={LOGO} alt="Conves" className="w-full h-full object-cover" width="32" height="32" loading="eager" />
           </div>
           {(sidebarOpen || isMobile) && (
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <p className="text-sm font-bold text-white leading-none" style={{ fontFamily: 'var(--font-heading)' }}>Conves</p>
-                <span className="w-1.5 h-1.5 rounded-full bg-brand-gold flex-shrink-0 opacity-65" />
+                <p className="text-sm font-bold leading-none text-dark-text" style={{ fontFamily: 'var(--font-heading)' }}>Conves</p>
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-gold flex-shrink-0 opacity-80" />
               </div>
-              <p className="text-[10px] mt-0.5 truncate tracking-wide" style={{ color: 'rgba(201,168,76,0.55)' }}>Sistema de Fichas</p>
+              <p className="text-[10px] mt-0.5 truncate tracking-[0.18em] uppercase text-dark-muted">Workspace operacional</p>
             </div>
           )}
         </div>
 
-        {/* Navigation */}
+        {(sidebarOpen || isMobile) && (
+          <div className="px-3 py-3 border-b" style={{ borderColor: theme === 'dark' ? 'rgba(74,144,217,0.10)' : 'rgba(180,200,230,0.40)' }}>
+            <div className="shell-sidebar-card rounded-3xl p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-dark-muted mb-1">Operação ativa</p>
+                  <p className="text-sm font-semibold text-dark-text leading-tight">Fichas, apólices e comercial no mesmo workspace.</p>
+                </div>
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, rgba(74,144,217,0.15), rgba(201,168,76,0.20))' }}>
+                  <TrendingUp className="w-4 h-4 text-brand-secondary" />
+                </div>
+              </div>
+              <div className="mt-3 h-2 rounded-full overflow-hidden bg-dark-border/40">
+                <div className="h-full w-[68%] rounded-full bg-gradient-to-r from-brand-accent via-brand-secondary to-brand-gold shadow-[0_0_18px_rgba(74,144,217,0.35)]" />
+              </div>
+            </div>
+          </div>
+        )}
+
         <nav className="flex-1 px-2 py-3 overflow-y-auto space-y-0.5 scrollbar-none">
           {NAV_GROUPS.map((group, gi) => (
             <div key={gi}>
-              {gi > 0 && <div className="my-2 border-t border-white/[0.06]" />}
+              {gi > 0 && <div className="my-2 border-t border-dark-border/30" />}
               {group.label && (sidebarOpen || isMobile) && (
-                <p className="px-3 pt-1 pb-2 text-[9px] font-bold text-white/25 uppercase tracking-[0.12em]">
+                <p className="px-3 pt-1 pb-2 text-[9px] font-bold text-dark-muted uppercase tracking-[0.16em]">
                   {group.label}
                 </p>
               )}
@@ -216,38 +265,31 @@ export default function Layout() {
 
                 if (item.subitems) {
                   const isExpanded = expandedItems.has(item.to)
-                  const isActive   = location.pathname.startsWith(item.to)
+                  const isActive = location.pathname.startsWith(item.to)
                   return (
                     <div key={item.to}>
                       <button
                         onClick={() => toggleExpand(item.to)}
                         title={(!sidebarOpen && !isMobile) ? item.label : undefined}
-                        className={`w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer min-h-[40px]
-                          ${isActive
-                            ? 'bg-brand-accent/[0.18] text-white border-l-2 border-brand-accent/90 pl-[calc(0.75rem-2px)] pr-3'
-                            : 'text-white/50 hover:text-white/80 hover:bg-white/[0.06] px-3'
-                          }
-                          ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}
-                        `}
+                        className={`shell-nav-item w-full flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-dark-text pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-white/60 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`}
                       >
                         <Icon className="w-4 h-4 flex-shrink-0" />
                         {(sidebarOpen || isMobile) && (
                           <>
                             <span className="flex-1 text-left truncate">{item.label}</span>
-                            <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                            <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform duration-200 text-dark-muted ${isExpanded ? 'rotate-180' : ''}`} />
                           </>
                         )}
                       </button>
                       {(sidebarOpen || isMobile) && isExpanded && (
-                        <div className="ml-3 mt-0.5 border-l border-white/[0.08] pl-3 space-y-0.5">
+                        <div className="ml-3 mt-1 border-l border-dark-border/40 pl-3 space-y-1">
                           {item.subitems.map(sub => (
                             <NavLink
                               key={sub.to}
                               to={sub.to}
                               end={sub.end}
                               className={({ isActive }) =>
-                                `flex items-center px-3 py-2 rounded-md text-xs font-medium transition-all duration-100
-                                  ${isActive ? 'text-white bg-white/10' : 'text-white/40 hover:text-white/70 hover:bg-white/[0.05]'}`
+                                `shell-subnav-item flex items-center px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${isActive ? 'shell-subnav-item-active text-brand-secondary bg-white' : 'text-dark-muted hover:text-dark-text hover:bg-white/70'}`
                               }
                             >
                               {sub.label}
@@ -264,15 +306,13 @@ export default function Layout() {
                     <div
                       key={item.to}
                       title={(!sidebarOpen && !isMobile) ? item.label : undefined}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm opacity-35 cursor-not-allowed min-h-[40px] text-white/40
-                        ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}
-                      `}
+                      className={`shell-nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm opacity-50 cursor-not-allowed min-h-[42px] text-dark-muted ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}`}
                     >
                       <Icon className="w-4 h-4 flex-shrink-0" />
                       {(sidebarOpen || isMobile) && (
                         <>
                           <span className="flex-1 truncate">{item.label}</span>
-                          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-white/10 text-white/40">Em Breve</span>
+                          <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-brand-gold/15 text-brand-gold border border-brand-gold/25">Em breve</span>
                         </>
                       )}
                     </div>
@@ -286,13 +326,7 @@ export default function Layout() {
                     end={item.end}
                     title={(!sidebarOpen && !isMobile) ? item.label : undefined}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer min-h-[40px]
-                        ${isActive
-                          ? 'bg-brand-accent/[0.18] text-white border-l-2 border-brand-accent/90 pl-[calc(0.75rem-2px)] pr-3'
-                          : 'text-white/50 hover:text-white/80 hover:bg-white/[0.06] hover:translate-x-0.5 px-3'
-                        }
-                        ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}
-                      `
+                      `shell-nav-item flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-dark-text pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-white/60 hover:translate-x-0.5 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`
                     }
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
@@ -304,22 +338,22 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* User footer */}
-        <div className={`border-t border-white/[0.06] px-3 py-3 flex-shrink-0
-          ${(!sidebarOpen && !isMobile) ? 'flex justify-center' : 'flex items-center gap-2.5'}
-        `}>
+        <div
+          className={`shell-user-card border-t px-3 py-3 flex-shrink-0 ${(!sidebarOpen && !isMobile) ? 'flex justify-center' : 'flex items-center gap-2.5'}`}
+          style={{ borderColor: theme === 'dark' ? 'rgba(74,144,217,0.10)' : 'rgba(180,200,230,0.40)' }}
+        >
           <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 ring-1 ring-white/20"
+            className="w-8 h-8 rounded-2xl flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 ring-1 ring-white/20 shadow-sm"
             style={{ background: avatarColor }}
           >
             {initials(profile?.nome)}
           </div>
           {(sidebarOpen || isMobile) && (
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-white/80 truncate">{profile?.nome}</p>
+              <p className="text-xs font-semibold text-dark-text truncate">{profile?.nome}</p>
               {abertasCount > 0 && (
                 <p className="text-[10px] mt-0.5">
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-brand-accent font-semibold" style={{ background: 'rgba(74,144,217,0.18)' }}>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-brand-secondary font-semibold" style={{ background: 'rgba(74,144,217,0.10)' }}>
                     {abertasCount} em cotação
                   </span>
                 </p>
@@ -328,71 +362,66 @@ export default function Layout() {
           )}
         </div>
 
-        {/* Collapse toggle — desktop only */}
         {!isMobile && (
           <button
             onClick={() => setSidebarOpen(o => !o)}
-            className="absolute -right-3 top-[72px] w-6 h-6 rounded-full flex items-center justify-center transition-all z-50 cursor-pointer"
+            className="absolute -right-3 top-[72px] w-7 h-7 rounded-full flex items-center justify-center transition-all z-50 cursor-pointer"
             style={{
-              background: 'rgba(15, 26, 50, 0.95)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+              background: theme === 'dark' ? 'rgba(10,18,36,0.96)' : 'rgba(255,255,255,0.95)',
+              border: theme === 'dark' ? '1px solid rgba(74,144,217,0.18)' : '1px solid rgba(180,200,230,0.55)',
+              boxShadow: theme === 'dark' ? '0 10px 20px rgba(0,0,0,0.32)' : '0 10px 20px rgba(29,78,216,0.10)',
             }}
           >
             {sidebarOpen
-              ? <ChevronLeft  className="w-3 h-3 text-white/60" />
-              : <ChevronRight className="w-3 h-3 text-white/60" />
+              ? <ChevronLeft className="w-3.5 h-3.5 text-dark-muted" />
+              : <ChevronRight className="w-3.5 h-3.5 text-dark-muted" />
             }
           </button>
         )}
       </aside>
 
-      {/* ── Main area ─────────────────────────────────────────────────────── */}
       <div className={`flex-1 flex flex-col min-w-0 transition-[margin] duration-200 ${contentMargin}`}>
-
-        {/* ── Topbar ── */}
-        <header className="sticky top-0 z-[300] h-16 flex items-center justify-between px-5 flex-shrink-0 topbar-glass">
-
+        <header className="shell-topbar sticky top-0 z-[300] h-16 flex items-center justify-between px-5 flex-shrink-0 topbar-glass" style={shellTopbarStyle}>
           <div className="flex items-center gap-3">
-            {/* Hamburger */}
             <button
               onClick={() => setSidebarOpen(o => !o)}
-              className="btn-ghost p-2 cursor-pointer"
+              className="btn-ghost shell-toolbar-button p-2 cursor-pointer"
               aria-label="Menu"
             >
               <Menu className="w-4 h-4" />
             </button>
 
-            {/* Search trigger */}
             <button
               onClick={() => setCmdOpen(true)}
-              className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg border border-dark-border bg-dark-surface2 text-dark-muted hover:border-brand-accent/40 transition-colors cursor-pointer"
+              className="shell-search-pill hidden md:flex items-center gap-2 px-3 py-2 rounded-2xl border text-dark-muted transition-all cursor-pointer shadow-sm"
             >
               <Search className="w-3.5 h-3.5" />
               <span className="text-xs">Buscar fichas...</span>
-              <kbd className="ml-3 text-[10px] border border-dark-border rounded px-1.5 py-0.5 text-dark-muted/50">Ctrl K</kbd>
+              <kbd
+                className="ml-3 text-[10px] border rounded px-1.5 py-0.5 text-dark-muted/70"
+                style={{ borderColor: theme === 'dark' ? 'rgba(74,144,217,0.12)' : 'rgba(180,200,230,0.55)' }}
+              >
+                Ctrl K
+              </kbd>
             </button>
           </div>
 
           <div className="flex items-center gap-1">
-            {/* Mobile search */}
             <button onClick={() => setCmdOpen(true)} className="md:hidden btn-ghost p-2 cursor-pointer">
               <Search className="w-4 h-4" />
             </button>
 
-            {/* Theme toggle */}
             <button
               onClick={toggleTheme}
               className="btn-ghost p-2 rounded-lg cursor-pointer"
               title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
             >
               {theme === 'dark'
-                ? <Sun  className="w-4 h-4 text-brand-gold" />
+                ? <Sun className="w-4 h-4 text-brand-gold" />
                 : <Moon className="w-4 h-4 text-brand-accent" />
               }
             </button>
 
-            {/* Notifications */}
             <button className="btn-ghost p-2 relative rounded-lg cursor-pointer" aria-label="Notificações">
               <Bell className="w-4 h-4" />
               {abertasCount > 0 && (
@@ -400,14 +429,14 @@ export default function Layout() {
               )}
             </button>
 
-            {/* User menu */}
             <div className="relative ml-1">
               <button
                 onClick={() => setUserMenuOpen(o => !o)}
-                className="flex items-center gap-2 pl-2.5 pr-2 py-1.5 rounded-lg border border-dark-border bg-dark-surface2 hover:border-brand-accent/40 transition-colors cursor-pointer"
+                className="shell-user-button flex items-center gap-2 pl-2.5 pr-2 py-1.5 rounded-2xl border transition-all cursor-pointer shadow-sm"
+                style={{ borderColor: theme === 'dark' ? 'rgba(74,144,217,0.12)' : 'rgba(180,200,230,0.55)' }}
               >
                 <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
+                  className="w-6 h-6 rounded-2xl flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
                   style={{ background: avatarColor }}
                 >
                   {initials(profile?.nome)}
@@ -420,13 +449,13 @@ export default function Layout() {
                 <>
                   <div className="fixed inset-0 z-[399]" onClick={() => setUserMenuOpen(false)} />
                   <div
-                    className="absolute right-0 top-full mt-2 w-52 z-[400] py-1 animate-slide-up rounded-xl overflow-hidden"
+                    className="absolute right-0 top-full mt-2 w-56 z-[400] py-1 animate-slide-up rounded-2xl overflow-hidden"
                     style={{
-                      background: 'var(--glass-bg-heavy)',
-                      backdropFilter: 'var(--glass-blur-strong)',
-                      WebkitBackdropFilter: 'var(--glass-blur-strong)',
-                      border: '1px solid var(--glass-border)',
-                      boxShadow: 'var(--glass-shadow-deep)',
+                      background: theme === 'dark' ? 'rgba(9,15,32,0.96)' : 'rgba(255,255,255,0.96)',
+                      backdropFilter: 'blur(18px) saturate(170%)',
+                      WebkitBackdropFilter: 'blur(18px) saturate(170%)',
+                      border: theme === 'dark' ? '1px solid rgba(74,144,217,0.14)' : '1px solid rgba(180,200,230,0.55)',
+                      boxShadow: theme === 'dark' ? '0 24px 54px rgba(0,0,0,0.34)' : '0 24px 54px rgba(29,78,216,0.10)',
                     }}
                   >
                     <div className="px-4 py-3 border-b border-dark-border">
@@ -457,9 +486,8 @@ export default function Layout() {
           </div>
         </header>
 
-        {/* ── Page content ── */}
         <main className="flex-1 overflow-y-auto bg-dark-bg">
-          <div className="p-6 pb-20 max-w-screen-2xl mx-auto">
+          <div className="p-6 pb-20 max-w-[1680px] mx-auto">
             <PageTransition>
               <Outlet />
             </PageTransition>
@@ -467,12 +495,7 @@ export default function Layout() {
         </main>
       </div>
 
-      {/* Command Palette */}
-      <CommandPalette
-        open={cmdOpen}
-        onClose={() => setCmdOpen(false)}
-        onOpenFicha={id => { setCmdOpen(false); navigate(`/fichas/${id}`) }}
-      />
+      <CommandPalette isOpen={cmdOpen} onClose={() => setCmdOpen(false)} />
     </div>
   )
 }

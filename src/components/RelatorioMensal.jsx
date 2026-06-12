@@ -137,9 +137,10 @@ function TabelaImob({ nome, fichas }) {
         </div>
       </div>
       <TotalizadorImob fichas={fichas} />
-      <div className="mt-3 overflow-x-auto rounded-xl border border-dark-border">
-        <table className="w-full text-xs">
-          <thead className="bg-dark-surface2/80 border-b border-dark-border">
+      <div className="table-shell mt-3">
+        <div className="overflow-x-auto">
+        <table className="table-table text-xs">
+          <thead className="table-thead border-b border-dark-border">
             <tr>
               {['Nome','Doc','Produto','Enviada','Resultado','Desistiu','Orçamentista'].map(h => (
                 <th key={h} className="th whitespace-nowrap">{h}</th>
@@ -148,7 +149,7 @@ function TabelaImob({ nome, fichas }) {
           </thead>
           <tbody className="divide-y divide-dark-border">
             {fichas.map(f => (
-              <tr key={f.id} className="hover:bg-dark-surface2/40 transition-colors">
+              <tr key={f.id} className="table-row hover:bg-dark-surface2/40 transition-colors">
                 <td className="td text-dark-text font-medium max-w-[150px] truncate">{nomePrincipal(f)}</td>
                 <td className="td font-mono text-dark-muted">{docMask(f)}</td>
                 <td className="td"><ProdutoBadge produto={f.produto} /></td>
@@ -160,6 +161,7 @@ function TabelaImob({ nome, fichas }) {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   )
@@ -245,8 +247,8 @@ export default function RelatorioMensal({ onClose }) {
       <div className="glass-modal border border-dark-border w-full max-w-5xl my-4 relative z-10">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
-          <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
+        <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-brand-accent/15 flex items-center justify-center">
               <FileText className="w-5 h-5 text-brand-accent" />
             </div>

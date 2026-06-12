@@ -99,7 +99,10 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, 
   const emissor  = apolice.profiles?.nome
 
   return (
-    <div className={`kanban-card${isDragOverlay ? ' kanban-card-dragging' : ''}`}>
+    <div
+      className={`kanban-card${isDragOverlay ? ' kanban-card-dragging' : ''}`}
+      style={{ '--kanban-accent': pColor }}
+    >
       {/* Grip handle */}
       {!isDragOverlay && (
         <button
@@ -891,7 +894,7 @@ export default function ApoicesGestao() {
             <>
               <div className="absolute left-0 top-0 bottom-4 w-16 z-10 pointer-events-none"
                    style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }} />
-              <button onClick={() => scrollRef.current?.scrollBy({ left: -200, behavior: 'smooth' })}
+              <button onClick={() => scrollRef.current?.scrollBy({ left: -280, behavior: 'smooth' })}
                       className="absolute left-0.5 top-[60px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-md flex items-center justify-center text-dark-muted hover:text-dark-text transition-all">
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -901,7 +904,7 @@ export default function ApoicesGestao() {
             <>
               <div className="absolute right-0 top-0 bottom-4 w-16 z-10 pointer-events-none"
                    style={{ background: 'linear-gradient(to left, rgb(var(--color-bg)), transparent)' }} />
-              <button onClick={() => scrollRef.current?.scrollBy({ left: 200, behavior: 'smooth' })}
+              <button onClick={() => scrollRef.current?.scrollBy({ left: 280, behavior: 'smooth' })}
                       className="absolute right-0.5 top-[60px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-md flex items-center justify-center text-dark-muted hover:text-dark-text transition-all">
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -916,7 +919,7 @@ export default function ApoicesGestao() {
               onDragEnd={handleDragEnd}
               onDragCancel={() => setActiveId(null)}
             >
-              <div className="flex gap-2 min-w-max px-0.5">
+              <div className="flex gap-3 min-w-max px-1">
                 {colOrder.map((colId, i) => {
                   const col = COLUNAS.find(c => c.id === colId)
                   if (!col) return null
@@ -960,7 +963,7 @@ export default function ApoicesGestao() {
                     </div>
                   )
                 })() : activeCard ? (
-                  <div style={{ width: 'calc(var(--kanban-col-w, 232px) - 12px)' }}>
+                  <div style={{ width: 'calc(var(--kanban-col-w, 286px) - 12px)', '--kanban-accent': PRODUTO_COLOR[produtoApolice(activeCard)] || '#4A90D9' }}>
                     <ApoliceCard apolice={activeCard} isDragOverlay resolverNome={resolverNome} />
                   </div>
                 ) : null}

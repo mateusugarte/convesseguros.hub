@@ -73,7 +73,10 @@ function FichaCardContent({
   const canFinalizar = ficha.orcamentista_id === userId && ficha.status === 'em_cotacao'
 
   return (
-    <div className={`kanban-card${isDragOverlay ? ' kanban-card-dragging' : ''}`}>
+    <div
+      className={`kanban-card${isDragOverlay ? ' kanban-card-dragging' : ''}`}
+      style={{ '--kanban-accent': prodColor }}
+    >
       {/* Grip handle */}
       {!isDragOverlay && (
         <button
@@ -374,7 +377,7 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
       onDragCancel={() => setActiveId(null)}
     >
       <div className="kanban-scroll overflow-x-auto pb-4">
-        <div className="flex gap-2 min-w-max px-0.5">
+        <div className="flex gap-3 min-w-max px-1">
           {colOrder.map((colId, i) => {
             const col = COLS.find(c => c.id === colId)
             if (!col) return null
@@ -420,7 +423,7 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
             </div>
           </div>
         ) : activeFicha ? (
-          <div style={{ width: 'calc(var(--kanban-col-w, 232px) - 12px)' }}>
+          <div style={{ width: 'calc(var(--kanban-col-w, 286px) - 12px)', '--kanban-accent': PROD_COLOR[activeFicha?.produto] || '#4A90D9' }}>
             <FichaCardContent ficha={activeFicha} userId={user?.id} isDragOverlay />
           </div>
         ) : null}

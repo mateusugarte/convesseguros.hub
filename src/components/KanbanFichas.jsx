@@ -128,7 +128,10 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
   const showRetorno = ficha.status !== 'pendente'
 
   return (
-    <div className={`kanban-card${isNew ? ' animate-card-new' : ''}${isDragOverlay ? ' kanban-card-dragging' : ''}`}>
+    <div
+      className={`kanban-card${isNew ? ' animate-card-new' : ''}${isDragOverlay ? ' kanban-card-dragging' : ''}`}
+      style={{ '--kanban-accent': prodColor }}
+    >
       <div className="kanban-card-body">
         {/* Linha topo: produto + tempo */}
         <div className="flex items-center justify-between gap-1 mb-1.5">
@@ -589,7 +592,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   }, [loading])
 
   function scrollBy(dir) {
-    scrollRef.current?.scrollBy({ left: dir === 'left' ? -220 : 220, behavior: 'smooth' })
+    scrollRef.current?.scrollBy({ left: dir === 'left' ? -280 : 280, behavior: 'smooth' })
   }
 
   const cols       = groupFichas(fichas, user?.id)
@@ -846,7 +849,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
             onDragCancel={() => setActiveId(null)}
           >
             <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
-              <div className="flex gap-2 min-w-max px-0.5">
+              <div className="flex gap-3 min-w-max px-1">
                 {COLUMNS.map((column, i) => (
                   <DroppableColumn
                     key={column.id}
@@ -869,7 +872,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
             <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>
               {activeCard && (
-                <div style={{ width: 'calc(var(--kanban-col-w, 232px) - 12px)', cursor: 'grabbing' }}>
+                <div style={{ width: 'calc(var(--kanban-col-w, 286px) - 12px)', '--kanban-accent': PRODUTO_COLOR[activeCard?.produto] || '#4A90D9', cursor: 'grabbing' }}>
                   <FichaCard ficha={activeCard} isDragOverlay resolverNome={resolverNome} />
                 </div>
               )}

@@ -6,11 +6,11 @@ Codex
 
 ## Pagina
 
-Governanca de IAs e AGENTS.md
+Design do sistema
 
 ## Objetivo
 
-Revisar e modernizar os documentos centrais para suportar Claude Code e Codex no mesmo fluxo.
+Modernizar a sidebar, a barra superior e os kanbans do sistema mantendo a funcao atual de cada quadro.
 
 ## Status
 
@@ -18,14 +18,12 @@ Concluido
 
 ## Arquivos em uso
 
-- `AGENTS.md`
-- `CLAUDE.md`
-- `ROADMAP.md`
-- `docs/IA_ORCHESTRATOR.md`
-- `docs/PROJECT_CONTEXT.md`
-- `docs/CONTEXT_TEMPLATE.md`
-- `artifacts/adr_governanca_ia.md`
-- `scripts/validate-page-contexts.mjs`
+- `src/components/Layout.jsx`
+- `src/components/KanbanBoard.jsx`
+- `src/components/KanbanFichas.jsx`
+- `src/pages/ApoicesGestao.jsx`
+- `src/pages/comercial/Pipeline.jsx`
+- `src/index.css`
 
 ## Proximo Responsavel
 
@@ -33,8 +31,8 @@ Claude Code
 
 ## Proxima Tarefa
 
-Manter a governanca atualizada quando surgirem novos agentes, paginas ou mudancas de fluxo.
+Manter o novo shell visual coerente quando novas telas, colunas ou cards forem adicionados.
 
 ## Observacoes
 
-Atualizar este arquivo antes e depois de cada tarefa.
+Manter os quadros Kanban com a mesma funcao e o mesmo fluxo atual.

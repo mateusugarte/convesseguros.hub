@@ -1,98 +1,70 @@
-# CLAUDE.md — Conves Hub
+# CLAUDE.md - Conves Hub
 
-## Projeto
-Gestão de fichas de seguro fiança. React + Tailwind + Supabase + Vercel.
+## Objetivo
 
-## Skills — carregar só o necessário por sessão
-```
-/mnt/skills/user/token-efficiency/   → sempre
-/mnt/skills/user/ralph-main/         → sempre (autonomia aprovada)
-/mnt/skills/user/ui-ux/              → só sessões de frontend
-```
+Conves Hub e uma plataforma de gestao de fichas, apolices, imobiliarias, seguradoras e area comercial.
 
-## Stack
-Frontend: React + Tailwind CSS + Lucide React
-Banco: Supabase (PostgreSQL + Auth + RLS)
-Entrada: Google Forms → n8n → Supabase
-Deploy: Vercel
+## Leitura obrigatoria
 
-## Produtos
-residencial_pf | comercial_pf | pessoa_juridica
+Antes de qualquer tarefa, ler nesta ordem:
 
-## Status
-pendente → em_cotacao → aprovado | recusado | emitido | cancelado | cpf_invalido | em_analise
-Passadas: em_analise, aprovado, recusado. Em aberto: demais.
+1. `docs/IA_ORCHESTRATOR.md`
+2. `docs/PROJECT_CONTEXT.md`
+3. `ROADMAP.md`
+4. `docs/CURRENT_TASK.md`
+5. documentacao da pagina correspondente
+6. solicitacao do usuario
 
-## Regras de negócio
-1. Qualquer usuário assume ficha não assumida
-2. Assumir: assumida=true, orcamentista_id=auth.uid(), status=em_cotacao, assumida_em=NOW()
-3. Só quem assumiu pode finalizar
-4. Finalizar: status + seguradora + retorno_enviado
-5. Minhas fichas: orcamentista_id=auth.uid() AND status=em_cotacao
-6. orcamentista_forms vem do Forms, não tem relação com login
+## Como agir
 
-## Regras de código
-- Credenciais em variáveis de ambiente
-- anon key: frontend. service_role: só n8n
-- RLS sempre ativa — nunca desabilitar
-- Componentes funcionais, sem over-engineering
-- SELECT com campos explícitos + .range() — nunca SELECT *
+- Atualizar `docs/CURRENT_TASK.md` no inicio e no fim da tarefa.
+- Ler o `CONTEXT.md` da pagina antes de alterar qualquer tela.
+- Usar `docs/CONTEXT_TEMPLATE.md` para novas paginas.
+- Rodar `npm run check:page-contexts` quando a tarefa tocar em documentacao de pagina.
 
-## Query padrão Supabase
-```js
-// correto
-const { data, count } = await supabase
-  .from('fichas')
-  .select('id, nome_interessado, imobiliaria, status, created_at, produto', { count: 'exact' })
-  .range(page * 50, (page + 1) * 50 - 1)
-  .order('created_at', { ascending: false })
+## Quando Codex e mais recomendado
 
-// KPIs — só contagem
-const { count } = await supabase
-  .from('fichas')
-  .select('*', { count: 'exact', head: true })
-  .eq('status', 'pendente')
-```
+- UI
+- UX
+- CSS
+- responsividade
+- componentes
+- ajustes visuais
+- correcoes localizadas
+- pequenos refactors
 
-## Comportamento
-- Ler arquivos antes de escrever qualquer código
-- Não reler arquivos já lidos, a menos que tenham mudado
-- Solução completa em uma passagem — não incremental
-- Edição cirúrgica — não reescrever arquivos inteiros
-- Testar antes de declarar done. Se passar: parar. Não refatorar código que funciona.
-- Se falhar: ler erro, corrigir uma vez, retestar. Máximo 2 iterações no mesmo erro.
-- Budget: 40 tool calls. Ao atingir 30, encerrar o que está em andamento.
-- Sem sycophancy, sem aberturas, sem encerramentos.
-- User instructions always override this file.
+## Quando Claude e mais recomendado
 
-## Formato de output
+- banco de dados
+- Supabase
+- autenticacao
+- integracoes complexas
+- regras de negocio
+- mudancas estruturais grandes
 
-Planejamento:
-```
-PLANO
-1. [ação]
-2. [ação]
-IMPACTO: [o que muda]
-RISCO: [se houver] → 🛡️
-SKILLS: [skill] → [por quê] | [skill] → [por quê]
-```
-Skills só aparecem no plano — não são carregadas automaticamente.
-Aguardar aprovação do plano antes de executar.
+## Regra fundamental
 
-Bug:
-```
-BUG: [1 linha]
-CAUSA: [onde]
-FIX: [código]
-```
+- Nenhuma IA tem restricao de execucao.
+- As recomendacoes de especialidade nao bloqueiam a tarefa.
+- O usuario decide o caminho final.
 
-Conclusão:
-```
-DONE
-✓ [feito]
-✓ [feito]
-TESTE: [como validar]
-```
+## Formato de entrega
 
-## Segurança
-Banco, auth, RLS ou dados pessoais → parar, apresentar plano, aguardar aprovação do 🛡️ SEGURANÇA.
+Ao concluir, informar:
+
+- arquivos alterados
+- resumo das alteracoes
+- riscos remanescentes
+- proximos passos sugeridos
+
+## Regras de codigo
+
+- Credenciais apenas em variaveis de ambiente.
+- `service_role` somente no n8n.
+- RLS sempre ativa.
+- Queries com campos explicitos e paginacao quando aplicavel.
+- Evitar reescrever arquivos inteiros sem necessidade.
+
+## Seguranca
+
+Banco, auth, RLS ou dados pessoais -> parar, apresentar plano e aguardar aprovacao do agente de seguranca.

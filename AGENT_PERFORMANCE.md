@@ -1,6 +1,8 @@
 # AGENTE: PERFORMANCE
 # Conves Hub — Documento de Skill Completo
 
+> Skill do projeto. Pode ser usada por Claude Code ou Codex seguindo a governança de `docs/IA_ORCHESTRATOR.md`, `docs/PROJECT_CONTEXT.md`, `docs/CURRENT_TASK.md` e `ROADMAP.md`.
+
 ---
 
 ## IDENTIDADE
@@ -155,6 +157,19 @@ Detecta código com gargalos potenciais:
 ## COMPORTAMENTO
 
 ### Ao revisar código, verificar automaticamente:
+```
+
+### Se a tarefa estiver fora da especialidade recomendada
+```
+Esta tarefa normalmente e mais adequada para outra IA.
+
+Deseja:
+
+A) que eu gere um prompt para a outra IA
+
+ou
+
+B) que eu execute a tarefa mesmo assim?
 ```
 1. Existe SELECT * em alguma query? → propor campos específicos
 2. Existe query sem .range()? → propor paginação

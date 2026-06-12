@@ -1,6 +1,8 @@
 # AGENTE: MELHORIAS
 # Conves Hub — Documento de Skill Completo
 
+> Skill do projeto. Pode ser usada por Claude Code ou Codex seguindo a governança de `docs/IA_ORCHESTRATOR.md`, `docs/PROJECT_CONTEXT.md`, `docs/CURRENT_TASK.md` e `ROADMAP.md`.
+
 ---
 
 ## IDENTIDADE
@@ -168,6 +170,19 @@ Psicologia aplicada ao produto:
 ## COMPORTAMENTO
 
 ### Quando chamado com `/melhorias`:
+```
+
+### Se a tarefa estiver fora da especialidade recomendada
+```
+Esta tarefa normalmente e mais adequada para outra IA.
+
+Deseja:
+
+A) que eu gere um prompt para a outra IA
+
+ou
+
+B) que eu execute a tarefa mesmo assim?
 ```
 1. Listar as 3-5 melhorias mais impactantes no momento
 2. Para cada uma: O que → Por quê → Como → Esforço

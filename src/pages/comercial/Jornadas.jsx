@@ -1,8 +1,9 @@
-﻿import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
+import { useState, useCallback, useRef, useMemo, useEffect, createContext, useContext } from 'react'
 import ReactFlow, {
-  Background, Controls, MiniMap,
+  Background, BackgroundVariant, Controls, MiniMap,
   addEdge, useNodesState, useEdgesState,
   Handle, Position, ReactFlowProvider,
+  getBezierPath, BaseEdge, EdgeLabelRenderer,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { useComercial, journeyAdd, journeyUpdate, journeyDelete, scriptAdd, PIPELINE_COLS } from '../../lib/comercial'
@@ -10,17 +11,16 @@ import { useToast } from '../../contexts/ToastContext'
 import {
   Plus, ArrowLeft, FileText, Tag, Users, Map, Layers,
   Pencil, Copy, Play, Pause, X, Zap, GitBranch, Clock,
-  Mail, Phone, MoveRight, UserCheck, CheckSquare, CircleDot, Save, Trash2,
-  MapPin, UserPlus, RefreshCw, Heart, Car, Truck, Shield, Smartphone, Package, Flame, PhoneCall,
+  Mail, ArrowRight, UserCheck, CheckSquare, Save, Trash2,
+  UserPlus, RefreshCw, ChevronDown, ChevronRight,
+  CheckCircle, FileCheck, Hand, MessageCircle, ClipboardList, Flag,
 } from 'lucide-react'
 import { Select } from '../../components/ui/Select'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const isWorkflow = j => j.etapas && typeof j.etapas === 'object' && !Array.isArray(j.etapas)
 const getWorkflowData = j => {
-  if (!j.etapas) return { status: 'rascunho', nodes: [], edges: [] }
-  if (j.etapas._type === 'workflow') return j.etapas  // compatibilidade legada
+  if (!j.etapas || Array.isArray(j.etapas)) return { status: 'rascunho', nodes: [], edges: [] }
   return j.etapas
 }
 const getStatus = j => getWorkflowData(j).status || 'rascunho'
@@ -46,57 +46,34 @@ function StatusBadge({ status }) {
 
 const NODE_GROUPS = [
   {
-    label: 'Gatilhos', category: 'trigger', color: '#F59E0B',
+    label: 'Gatilhos', category: 'trigger', color: '#1A3A6B',
     items: [
-      { tipo: 'trigger_ficha',     label: 'Ficha Aprovada',    Icon: CheckSquare },
-      { tipo: 'trigger_criado',    label: 'Lead Criado',       Icon: UserPlus },
-      { tipo: 'trigger_movido',    label: 'Lead Movido',       Icon: MoveRight },
+      { tipo: 'trigger_ficha',     label: 'Ficha Aprovada',    Icon: CheckCircle },
+      { tipo: 'trigger_lead',      label: 'Lead Criado',       Icon: UserPlus },
+      { tipo: 'trigger_movido',    label: 'Lead Movido',       Icon: ArrowRight },
       { tipo: 'trigger_renovacao', label: 'Renovação Próxima', Icon: RefreshCw },
-      { tipo: 'trigger_manual',    label: 'Manual',            Icon: Play },
+      { tipo: 'trigger_apolice',   label: 'Apólice Emitida',   Icon: FileCheck },
+      { tipo: 'trigger_manual',    label: 'Manual',            Icon: Hand },
     ],
   },
   {
-    label: 'Etapas', category: 'stage', color: '#6B7280',
+    label: 'Ações', category: 'action', color: '#2B5BA8',
     items: [
-      { tipo: 'stage_etapa', label: 'Etapa', Icon: MapPin },
+      { tipo: 'action_tarefa',    label: 'Criar Tarefa',         Icon: CheckSquare },
+      { tipo: 'action_whatsapp',  label: 'Enviar WhatsApp',      Icon: MessageCircle },
+      { tipo: 'action_email',     label: 'Enviar Email',         Icon: Mail },
+      { tipo: 'action_mover',     label: 'Mover no Pipeline',    Icon: Layers },
+      { tipo: 'action_atribuir',  label: 'Atribuir Responsável', Icon: UserCheck },
+      { tipo: 'action_etiqueta',  label: 'Adicionar Etiqueta',   Icon: Tag },
+      { tipo: 'action_atividade', label: 'Registrar Atividade',  Icon: ClipboardList },
     ],
   },
   {
-    label: 'Produtos', category: 'product', color: '#10B981',
+    label: 'Controle', category: 'control', color: '#6B7280',
     items: [
-      { tipo: 'product_saude_pf',      label: 'Saúde PF',          Icon: Heart },
-      { tipo: 'product_saude_pj',      label: 'Saúde PJ',          Icon: Heart },
-      { tipo: 'product_auto',          label: 'Auto Individual',    Icon: Car },
-      { tipo: 'product_auto_frota',    label: 'Auto Frota',         Icon: Truck },
-      { tipo: 'product_vida',          label: 'Seguro de Vida',     Icon: Shield },
-      { tipo: 'product_celular',       label: 'Seguro Celular',     Icon: Smartphone },
-      { tipo: 'product_consorcio',     label: 'Consórcio',          Icon: Layers },
-      { tipo: 'product_transporte',    label: 'Seg. Transporte',    Icon: Package },
-      { tipo: 'product_incendio',      label: 'Seg. Incêndio',      Icon: Flame },
-    ],
-  },
-  {
-    label: 'Contato', category: 'contact', color: '#3B82F6',
-    items: [
-      { tipo: 'contact_whatsapp', label: 'WhatsApp',   Icon: Phone },
-      { tipo: 'contact_email',    label: 'Email',      Icon: Mail },
-      { tipo: 'contact_ligacao',  label: 'Ligação',    Icon: PhoneCall },
-    ],
-  },
-  {
-    label: 'Ações', category: 'action', color: '#4A90D9',
-    items: [
-      { tipo: 'action_tarefa',   label: 'Criar Tarefa',   Icon: CheckSquare },
-      { tipo: 'action_mover',    label: 'Mover Pipeline', Icon: MoveRight },
-      { tipo: 'action_atribuir', label: 'Atribuir',       Icon: UserCheck },
-    ],
-  },
-  {
-    label: 'Controle', category: 'control', color: '#8B5CF6',
-    items: [
-      { tipo: 'control_aguardar', label: 'Aguardar',  Icon: Clock },
-      { tipo: 'control_condicao', label: 'Condição',  Icon: GitBranch },
-      { tipo: 'control_fim',      label: 'Fim',       Icon: CircleDot },
+      { tipo: 'control_aguardar', label: 'Aguardar',       Icon: Clock },
+      { tipo: 'control_condicao', label: 'Condição',       Icon: GitBranch },
+      { tipo: 'control_fim',      label: 'Fim da Jornada', Icon: Flag },
     ],
   },
 ]
@@ -104,68 +81,107 @@ const NODE_GROUPS = [
 const ALL_ITEMS = NODE_GROUPS.flatMap(g => g.items.map(i => ({ ...i, category: g.category, color: g.color })))
 const findNodeInfo = tipo => ALL_ITEMS.find(i => i.tipo === tipo) || { tipo, label: tipo, Icon: Zap, category: 'action', color: '#3B82F6' }
 
+// ── Editor context (passes deleteNode / deleteEdge into custom node/edge renderers) ─
+
+const EditorContext = createContext({ deleteNode: () => {}, deleteEdge: () => {} })
+
+// ── Custom deletable edge ─────────────────────────────────────────────────────
+
+function DeletableEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, selected }) {
+  const { deleteEdge } = useContext(EditorContext)
+  const [edgePath, labelX, labelY] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition })
+  return (
+    <>
+      <BaseEdge path={edgePath} style={{ strokeWidth: 2, stroke: selected ? '#818CF8' : '#6366f1', ...style }} />
+      {selected && (
+        <EdgeLabelRenderer>
+          <button
+            className="nodrag nopan absolute w-5 h-5 rounded-full bg-dark-surface border border-dark-border flex items-center justify-center text-dark-muted hover:text-status-error hover:border-status-error transition-colors shadow-sm"
+            style={{ transform: `translate(-50%,-50%) translate(${labelX}px,${labelY}px)`, pointerEvents: 'all' }}
+            onClick={e => { e.stopPropagation(); deleteEdge(id) }}
+          >
+            <X className="w-2.5 h-2.5" />
+          </button>
+        </EdgeLabelRenderer>
+      )}
+    </>
+  )
+}
+
 // ── Custom React Flow Node ─────────────────────────────────────────────────────
 
 function WorkflowNode({ id, data, selected }) {
-  const { label, Icon, color, tipo, config = {} } = data
+  const { deleteNode } = useContext(EditorContext)
+  const [hovered, setHovered] = useState(false)
+  const { label, Icon, color, tipo, config = {}, isInitial } = data
   const isCondition = tipo === 'control_condicao'
   const isTrigger   = (data.category || '') === 'trigger'
   const isFim       = tipo === 'control_fim'
 
   const configSummary = useMemo(() => {
     const entries = Object.entries(config).filter(([, v]) => v)
-    return entries.slice(0, 2).map(([k, v]) => `${v}`).join(' · ')
+    return entries.slice(0, 2).map(([, v]) => String(v)).join(' · ')
   }, [config])
 
   return (
     <div
       style={{ borderColor: color, minWidth: 180 }}
-      className={`relative rounded-xl border-2 shadow-lg transition-shadow ${selected ? 'shadow-[0_0_0_3px_rgba(99,102,241,0.4)]' : ''}`}
+      className={`relative rounded-xl border-2 bg-dark-surface shadow-lg transition-shadow ${selected ? 'shadow-[0_0_0_3px_rgba(99,102,241,0.4)]' : ''}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       data-nodeid={id}
     >
+      {/* Hover delete button */}
+      {hovered && !isInitial && (
+        <button
+          className="nodrag absolute -top-2 -right-2 z-10 w-5 h-5 rounded-full bg-dark-surface border border-dark-border flex items-center justify-center text-dark-muted hover:text-status-error hover:border-status-error transition-colors shadow-md"
+          onClick={e => { e.stopPropagation(); deleteNode(id) }}
+        >
+          <Trash2 className="w-2.5 h-2.5" />
+        </button>
+      )}
+
       {/* Target handle (top) — hidden for triggers */}
       {!isTrigger && (
         <Handle type="target" position={Position.Top}
-          style={{ background: color, width: 12, height: 12, border: '2.5px solid white', top: -7 }} />
+          style={{ background: color, width: 12, height: 12, border: '2.5px solid #1e293b', top: -7 }} />
       )}
 
       {/* Header */}
       <div
-        style={{ background: color + '18', borderBottom: `1px solid ${color}22` }}
-        className="px-3 py-2 rounded-t-[10px]"
+        style={{ background: color + '1a', borderBottom: `1px solid ${color}33` }}
+        className="px-3 py-2 rounded-t-[10px] flex items-center gap-2"
       >
-        <div className="flex items-center gap-2">
-          {Icon && <Icon style={{ color }} className="w-3.5 h-3.5 flex-shrink-0" />}
-          <span style={{ color }} className="text-xs font-bold leading-none">{label}</span>
-        </div>
-        {data.category === 'stage' && (
-          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full mt-1 inline-block" style={{ background: 'rgba(107,114,128,0.2)', color: '#9CA3AF' }}>Marco manual</span>
+        {Icon && <Icon style={{ color }} className="w-3.5 h-3.5 flex-shrink-0" />}
+        <span style={{ color }} className="text-xs font-bold leading-none truncate">{label}</span>
+        {isInitial && (
+          <span className="ml-auto text-[9px] font-semibold px-1 py-0.5 rounded" style={{ background: color + '33', color }}>início</span>
         )}
       </div>
 
       {/* Body */}
-      <div className="px-3 py-2 bg-dark-surface rounded-b-[10px]" style={{ minHeight: 36 }}>
+      <div className="px-3 py-2 rounded-b-[10px]" style={{ minHeight: 36 }}>
         {configSummary ? (
           <p className="text-[11px] text-dark-muted leading-relaxed">{configSummary}</p>
         ) : (
-          <p className="text-[11px] text-dark-muted/50 italic">Clique para configurar</p>
+          <p className="text-[11px] text-dark-muted/40 italic">Clique para configurar</p>
         )}
       </div>
 
-      {/* Source handle(s) (bottom) — hidden for fim */}
+      {/* Source handle(s) — hidden for fim */}
       {!isFim && !isCondition && (
         <Handle type="source" position={Position.Bottom}
-          style={{ background: color, width: 12, height: 12, border: '2.5px solid white', bottom: -7 }} />
+          style={{ background: color, width: 12, height: 12, border: '2.5px solid #1e293b', bottom: -7 }} />
       )}
       {isCondition && (
         <>
           <Handle id="yes" type="source" position={Position.Bottom}
-            style={{ background: '#10B981', width: 12, height: 12, border: '2.5px solid white', bottom: -7, left: '30%' }} />
+            style={{ background: '#10B981', width: 12, height: 12, border: '2.5px solid #1e293b', bottom: -7, left: '30%' }} />
           <Handle id="no" type="source" position={Position.Bottom}
-            style={{ background: '#EF4444', width: 12, height: 12, border: '2.5px solid white', bottom: -7, left: '70%' }} />
+            style={{ background: '#EF4444', width: 12, height: 12, border: '2.5px solid #1e293b', bottom: -7, left: '70%' }} />
           <div className="absolute -bottom-5 flex w-full px-2 pointer-events-none">
             <span style={{ left: 'calc(30% - 10px)' }} className="absolute text-[10px] font-bold text-status-success">Sim</span>
-            <span style={{ left: 'calc(70% - 8px)' }} className="absolute text-[10px] font-bold text-status-error">Não</span>
+            <span style={{ left: 'calc(70% - 8px)' }}  className="absolute text-[10px] font-bold text-status-error">Não</span>
           </div>
         </>
       )}
@@ -174,17 +190,13 @@ function WorkflowNode({ id, data, selected }) {
 }
 
 const nodeTypes = { workflowNode: WorkflowNode }
+const edgeTypes = { deletable: DeletableEdge }
 
-// ── Painel Nós (left sidebar in editor) ──────────────────────────────────────
+// ── Painel Nós (left sidebar) ─────────────────────────────────────────────────
 
 function PainelNos() {
-  const getSubtitle = (item, group) => {
-    if (group.category === 'stage') return 'Marco manual'
-    return null
-  }
-
   return (
-    <div className="w-56 flex-shrink-0 border-r border-dark-border bg-dark-surface flex flex-col overflow-y-auto">
+    <div className="flex-shrink-0 border-r border-dark-border bg-dark-surface flex flex-col overflow-y-auto" style={{ width: 240 }}>
       <div className="px-3 py-3 border-b border-dark-border">
         <p className="text-xs font-bold text-dark-muted uppercase tracking-wider">Componentes</p>
         <p className="text-[10px] text-dark-muted/60 mt-0.5">Arraste para o canvas</p>
@@ -197,28 +209,22 @@ function PainelNos() {
               {group.label}
             </p>
             <div className="space-y-0.5">
-              {group.items.map(item => {
-                const subtitle = getSubtitle(item, group)
-                return (
-                  <div
-                    key={item.tipo}
-                    draggable
-                    onDragStart={e => {
-                      e.dataTransfer.setData('application/workflow-tipo', item.tipo)
-                      e.dataTransfer.effectAllowed = 'move'
-                    }}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-grab active:cursor-grabbing hover:bg-dark-surface2 transition-colors select-none"
-                  >
-                    <div style={{ width: 28, height: 28, borderRadius: 6, background: group.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <item.Icon style={{ color: group.color, width: 14, height: 14 }} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs text-dark-text leading-tight">{item.label}</p>
-                      {subtitle && <p className="text-[9px] text-dark-muted/70 leading-tight">{subtitle}</p>}
-                    </div>
+              {group.items.map(item => (
+                <div
+                  key={item.tipo}
+                  draggable
+                  onDragStart={e => {
+                    e.dataTransfer.setData('application/workflow-tipo', item.tipo)
+                    e.dataTransfer.effectAllowed = 'move'
+                  }}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-grab active:cursor-grabbing hover:bg-dark-surface2 transition-colors select-none"
+                >
+                  <div style={{ width: 28, height: 28, borderRadius: 6, background: group.color + '1a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <item.Icon style={{ color: group.color, width: 14, height: 14 }} />
                   </div>
-                )
-              })}
+                  <p className="text-xs text-dark-text leading-tight">{item.label}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -227,14 +233,17 @@ function PainelNos() {
   )
 }
 
-// ── Painel Config (right sidebar in editor) ────────────────────────────────────
+// ── Painel Config (right sidebar) ─────────────────────────────────────────────
 
-function PainelConfig({ node, onUpdate, onClose, onDelete }) {
-  const { tipo, config = {} } = node.data
+function PainelConfig({ node, onUpdate, onClose, deleteNode }) {
+  const { tipo, config = {}, isInitial } = node.data
   const set = (k, v) => onUpdate(node.id, { config: { ...config, [k]: v } })
 
+  const pipelineOpts = [{ value: '', label: 'Selecionar...' }, ...PIPELINE_COLS.map(c => ({ value: c.id, label: c.label }))]
+  const destOpts = [{ value: '', label: 'Selecionar...' }, { value: 'cliente', label: 'Cliente' }, { value: 'responsavel', label: 'Responsável interno' }]
+
   return (
-    <div className="w-72 flex-shrink-0 border-l border-dark-border bg-dark-surface flex flex-col overflow-y-auto">
+    <div className="flex-shrink-0 border-l border-dark-border bg-dark-surface flex flex-col overflow-y-auto" style={{ width: 300 }}>
       <div className="flex items-center justify-between px-3 py-3 border-b border-dark-border">
         <p className="text-xs font-bold text-dark-text">{node.data.label}</p>
         <button onClick={onClose} className="p-1 rounded-lg text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-colors">
@@ -243,47 +252,122 @@ function PainelConfig({ node, onUpdate, onClose, onDelete }) {
       </div>
 
       <div className="flex-1 px-3 py-3 space-y-3 overflow-y-auto">
-        {/* action_tarefa */}
-        {tipo === 'action_tarefa' && (
+
+        {/* Gatilhos — ficha aprovada + lead criado */}
+        {(tipo === 'trigger_ficha' || tipo === 'trigger_lead') && (
           <>
-            <ConfigField label="Título da tarefa" value={config.titulo || ''} onChange={v => set('titulo', v)} />
-            <ConfigField label="Descrição" value={config.descricao || ''} onChange={v => set('descricao', v)} textarea />
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Perfil alvo</label>
+              <Select value={config.perfil || ''} onChange={v => set('perfil', v)} options={[
+                { value: '', label: 'Todos' },
+                { value: 'locatario_pf', label: 'Locatário PF' },
+                { value: 'locatario_pj', label: 'Locatário PJ' },
+                { value: 'proprietario_pf', label: 'Proprietário PF' },
+                { value: 'proprietario_pj', label: 'Proprietário PJ' },
+              ]} />
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Produto</label>
+              <Select value={config.produto || ''} onChange={v => set('produto', v)} options={[
+                { value: '', label: 'Todos' },
+                { value: 'residencial_pf', label: 'Residencial PF' },
+                { value: 'comercial_pf', label: 'Comercial PF' },
+                { value: 'pessoa_juridica', label: 'Pessoa Jurídica' },
+              ]} />
+            </div>
           </>
         )}
 
-        {/* action_whatsapp */}
-        {tipo === 'action_whatsapp' && (
-          <ConfigField label="Mensagem" value={config.mensagem || ''} onChange={v => set('mensagem', v)} textarea
-            placeholder="Olá {nome}, ..." />
+        {/* Gatilho — lead movido */}
+        {tipo === 'trigger_movido' && (
+          <>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">De qual coluna</label>
+              <Select value={config.de || ''} onChange={v => set('de', v)} options={pipelineOpts} />
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Para qual coluna</label>
+              <Select value={config.para || ''} onChange={v => set('para', v)} options={pipelineOpts} />
+            </div>
+          </>
         )}
 
-        {/* action_email */}
+        {/* Gatilho — renovação */}
+        {tipo === 'trigger_renovacao' && (
+          <div>
+            <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Dias antes do vencimento</label>
+            <input type="number" min="1" value={config.dias || ''} onChange={e => set('dias', e.target.value)}
+              className="input w-full text-sm" placeholder="30" />
+          </div>
+        )}
+
+        {/* Gatilhos sem config */}
+        {(tipo === 'trigger_apolice' || tipo === 'trigger_manual') && (
+          <p className="text-xs text-dark-muted/60 italic">Este gatilho não requer configuração adicional.</p>
+        )}
+
+        {/* Ação — criar tarefa */}
+        {tipo === 'action_tarefa' && (
+          <>
+            <ConfigField label="Título da tarefa" value={config.titulo || ''} onChange={v => set('titulo', v)} />
+            <ConfigField label="Responsável" value={config.responsavel || ''} onChange={v => set('responsavel', v)} placeholder="Nome do responsável" />
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Prazo (dias após gatilho)</label>
+              <input type="number" min="0" value={config.prazo || ''} onChange={e => set('prazo', e.target.value)}
+                className="input w-full text-sm" placeholder="3" />
+            </div>
+          </>
+        )}
+
+        {/* Ação — WhatsApp */}
+        {tipo === 'action_whatsapp' && (
+          <>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Destinatário</label>
+              <Select value={config.destinatario || ''} onChange={v => set('destinatario', v)} options={destOpts} />
+            </div>
+            <ConfigField label="Mensagem" value={config.mensagem || ''} onChange={v => set('mensagem', v)} textarea
+              placeholder="Olá {{nome}}, ..." />
+            <p className="text-[10px] text-dark-muted/60">Variáveis: {'{{nome}}'}, {'{{produto}}'}, {'{{telefone}}'}</p>
+          </>
+        )}
+
+        {/* Ação — Email */}
         {tipo === 'action_email' && (
           <>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Destinatário</label>
+              <Select value={config.destinatario || ''} onChange={v => set('destinatario', v)} options={destOpts} />
+            </div>
             <ConfigField label="Assunto" value={config.assunto || ''} onChange={v => set('assunto', v)} />
             <ConfigField label="Corpo" value={config.corpo || ''} onChange={v => set('corpo', v)} textarea />
           </>
         )}
 
-        {/* action_mover */}
+        {/* Ação — mover pipeline */}
         {tipo === 'action_mover' && (
           <div>
             <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Coluna destino</label>
-            <Select
-              value={config.coluna || ''}
-              onChange={v => set('coluna', v)}
-              placeholder="Selecionar..."
-              options={[{ value: '', label: 'Selecionar...' }, ...PIPELINE_COLS.map(c => ({ value: c.id, label: c.label }))]}
-            />
+            <Select value={config.coluna || ''} onChange={v => set('coluna', v)} options={pipelineOpts} />
           </div>
         )}
 
-        {/* action_atribuir */}
+        {/* Ação — atribuir */}
         {tipo === 'action_atribuir' && (
           <ConfigField label="Responsável" value={config.responsavel || ''} onChange={v => set('responsavel', v)} />
         )}
 
-        {/* control_aguardar */}
+        {/* Ação — etiqueta */}
+        {tipo === 'action_etiqueta' && (
+          <ConfigField label="Etiqueta" value={config.etiqueta || ''} onChange={v => set('etiqueta', v)} placeholder="ex: Urgente" />
+        )}
+
+        {/* Ação — registrar atividade */}
+        {tipo === 'action_atividade' && (
+          <ConfigField label="Descrição da atividade" value={config.descricao || ''} onChange={v => set('descricao', v)} textarea />
+        )}
+
+        {/* Controle — aguardar */}
         {tipo === 'control_aguardar' && (
           <div className="flex gap-2">
             <div className="flex-1">
@@ -293,142 +377,55 @@ function PainelConfig({ node, onUpdate, onClose, onDelete }) {
             </div>
             <div className="flex-1">
               <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Unidade</label>
-              <Select
-                value={config.unidade || 'dias'}
-                onChange={v => set('unidade', v)}
-                options={[
-                  { value: 'horas', label: 'Horas' },
-                  { value: 'dias', label: 'Dias' },
-                  { value: 'semanas', label: 'Semanas' },
-                ]}
-              />
+              <Select value={config.unidade || 'dias'} onChange={v => set('unidade', v)} options={[
+                { value: 'horas',   label: 'Horas' },
+                { value: 'dias',    label: 'Dias' },
+                { value: 'semanas', label: 'Semanas' },
+              ]} />
             </div>
           </div>
         )}
 
-        {/* control_condicao */}
+        {/* Controle — condição */}
         {tipo === 'control_condicao' && (
           <>
             <div>
-              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Campo</label>
-              <Select
-                value={config.campo || ''}
-                onChange={v => set('campo', v)}
-                placeholder="Selecionar..."
-                options={[
-                  { value: '', label: 'Selecionar...' },
-                  { value: 'score', label: 'Score do lead' },
-                  { value: 'coluna', label: 'Estágio' },
-                  { value: 'origem', label: 'Origem' },
-                  { value: 'tipoCliente', label: 'Tipo cliente' },
-                ]}
-              />
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Campo a verificar</label>
+              <Select value={config.campo || ''} onChange={v => set('campo', v)} options={[
+                { value: '', label: 'Selecionar...' },
+                { value: 'apolice', label: 'Tem apólice' },
+                { value: 'produto', label: 'Produto' },
+                { value: 'status',  label: 'Status' },
+                { value: 'etiqueta',label: 'Etiqueta' },
+              ]} />
             </div>
             <div>
               <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Operador</label>
-              <Select
-                value={config.operador || ''}
-                onChange={v => set('operador', v)}
-                placeholder="Selecionar..."
-                options={[
-                  { value: '', label: 'Selecionar...' },
-                  { value: 'eq', label: 'É igual a' },
-                  { value: 'gt', label: 'Maior que' },
-                  { value: 'lt', label: 'Menor que' },
-                  { value: 'contains', label: 'Contém' },
-                ]}
-              />
+              <Select value={config.operador || ''} onChange={v => set('operador', v)} options={[
+                { value: '', label: 'Selecionar...' },
+                { value: 'eq',  label: 'É' },
+                { value: 'neq', label: 'Não é' },
+              ]} />
             </div>
             <ConfigField label="Valor" value={config.valor || ''} onChange={v => set('valor', v)} />
           </>
         )}
 
-        {/* stage_etapa */}
-        {tipo === 'stage_etapa' && (
-          <ConfigField label="Nome da etapa" value={config.nome || ''} onChange={v => set('nome', v)} placeholder="ex: Contato Inicial" />
-        )}
-
-        {/* product_saude */}
-        {(tipo === 'product_saude_pf' || tipo === 'product_saude_pj') && (
-          <>
-            <ConfigField label="Operadora" value={config.operadora || ''} onChange={v => set('operadora', v)} />
-            <ConfigField label="Observação" value={config.observacao || ''} onChange={v => set('observacao', v)} textarea />
-          </>
-        )}
-
-        {/* product_auto / vida / transporte / incendio */}
-        {['product_auto', 'product_auto_frota', 'product_vida', 'product_transporte', 'product_incendio'].includes(tipo) && (
-          <>
-            <ConfigField label="Seguradora" value={config.seguradora || ''} onChange={v => set('seguradora', v)} />
-            <ConfigField label="Observação" value={config.observacao || ''} onChange={v => set('observacao', v)} textarea />
-          </>
-        )}
-
-        {/* product_celular */}
-        {tipo === 'product_celular' && (
-          <>
-            <ConfigField label="Modelo do aparelho" value={config.modelo || ''} onChange={v => set('modelo', v)} />
-            <ConfigField label="Observação" value={config.observacao || ''} onChange={v => set('observacao', v)} textarea />
-          </>
-        )}
-
-        {/* product_consorcio */}
-        {tipo === 'product_consorcio' && (
-          <>
-            <div>
-              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Tipo</label>
-              <Select
-                value={config.tipo_consorcio || ''}
-                onChange={v => set('tipo_consorcio', v)}
-                options={[
-                  { value: '', label: 'Selecionar...' },
-                  { value: 'Auto', label: 'Auto' },
-                  { value: 'Residência', label: 'Residência' },
-                  { value: 'Campanha', label: 'Campanha' },
-                ]}
-              />
-            </div>
-            {config.tipo_consorcio === 'Campanha' && (
-              <ConfigField label="Nome da campanha" value={config.nome_campanha || ''} onChange={v => set('nome_campanha', v)} />
-            )}
-            <ConfigField label="Observação" value={config.observacao || ''} onChange={v => set('observacao', v)} textarea />
-          </>
-        )}
-
-        {/* contact_whatsapp */}
-        {tipo === 'contact_whatsapp' && (
-          <ConfigField label="Mensagem" value={config.mensagem || ''} onChange={v => set('mensagem', v)} textarea placeholder="Olá {nome}, ..." />
-        )}
-
-        {/* contact_email */}
-        {tipo === 'contact_email' && (
-          <>
-            <ConfigField label="Assunto" value={config.assunto || ''} onChange={v => set('assunto', v)} />
-            <ConfigField label="Corpo" value={config.corpo || ''} onChange={v => set('corpo', v)} textarea />
-          </>
-        )}
-
-        {/* contact_ligacao */}
-        {tipo === 'contact_ligacao' && (
-          <ConfigField label="Roteiro" value={config.roteiro || ''} onChange={v => set('roteiro', v)} textarea placeholder="Pontos a abordar na ligação..." />
-        )}
-
-        {/* triggers */}
-        {tipo.startsWith('trigger_') && tipo !== 'trigger_manual' && (
-          <p className="text-xs text-dark-muted/60 italic">Este gatilho não requer configuração adicional.</p>
-        )}
-        {tipo === 'trigger_manual' && (
-          <ConfigField label="Etiqueta" value={config.etiqueta || ''} onChange={v => set('etiqueta', v)} placeholder="ex: Início do fluxo" />
+        {/* Controle — fim */}
+        {tipo === 'control_fim' && (
+          <p className="text-xs text-dark-muted/60 italic">Marca o encerramento do fluxo para este lead.</p>
         )}
       </div>
 
-      {/* Delete */}
-      <div className="px-3 py-3 border-t border-dark-border">
-        <button onClick={() => onDelete(node.id)}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-status-error hover:bg-status-error/10 transition-colors text-xs font-semibold">
-          <X className="w-3.5 h-3.5" /> Remover nó
-        </button>
-      </div>
+      {/* Delete node */}
+      {!isInitial && (
+        <div className="px-3 py-3 border-t border-dark-border">
+          <button onClick={() => deleteNode(node.id)}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-status-error hover:bg-status-error/10 transition-colors text-xs font-semibold">
+            <Trash2 className="w-3.5 h-3.5" /> Remover nó
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -452,11 +449,26 @@ function ConfigField({ label, value, onChange, textarea, placeholder }) {
 function EditorInner({ journey, onBack, toast }) {
   const wf = getWorkflowData(journey)
 
-  const initNodes = useMemo(() => (wf.nodes || []).map(n => {
-    const info = findNodeInfo(n.data?.tipo)
-    return { ...n, type: 'workflowNode', data: { ...info, ...n.data } }
-  }), [])
-  const initEdges = useMemo(() => wf.edges || [], [])
+  const initNodes = useMemo(() => {
+    const saved = (wf.nodes || []).map(n => {
+      const info = findNodeInfo(n.data?.tipo)
+      const deletable = !(n.data?.isInitial || false)
+      return { ...n, type: 'workflowNode', deletable, data: { ...n.data, ...info } }
+    })
+    if (saved.length === 0) {
+      const info = findNodeInfo('trigger_ficha')
+      return [{
+        id: 'node_initial',
+        type: 'workflowNode',
+        position: { x: 300, y: 150 },
+        deletable: false,
+        data: { ...info, config: {}, isInitial: true },
+      }]
+    }
+    return saved
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const initEdges = useMemo(() => (wf.edges || []).map(e => ({ ...e, type: 'deletable', animated: true })), []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initEdges)
@@ -464,43 +476,34 @@ function EditorInner({ journey, onBack, toast }) {
   const [selectedId, setSelectedId] = useState(null)
   const [dirty, setDirty]           = useState(false)
   const [saving, setSaving]         = useState(false)
-  const [addMenuOpen, setAddMenuOpen]   = useState(false)
-  const [addMenuGroup, setAddMenuGroup] = useState(null)
-  const wrapperRef  = useRef(null)
+  const wrapperRef    = useRef(null)
   const rfInstanceRef = useRef(null)
-  const addMenuRef  = useRef(null)
-
-  useEffect(() => {
-    function handler(e) {
-      if (addMenuRef.current && !addMenuRef.current.contains(e.target)) {
-        setAddMenuOpen(false)
-        setAddMenuGroup(null)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  function addNodeFromMenu(tipo) {
-    if (!rfInstanceRef.current || !wrapperRef.current) return
-    const bounds = wrapperRef.current.getBoundingClientRect()
-    const position = rfInstanceRef.current.project({ x: bounds.width / 2, y: bounds.height / 2 })
-    const info = findNodeInfo(tipo)
-    setNodes(ns => [...ns, { id: crypto.randomUUID(), type: 'workflowNode', position, data: { ...info, config: {} } }])
-    setDirty(true)
-    setAddMenuOpen(false)
-    setAddMenuGroup(null)
-  }
 
   const selectedNode = useMemo(() => nodes.find(n => n.id === selectedId) || null, [nodes, selectedId])
 
-  const onConnect = useCallback(params => {
-    setEdges(es => addEdge({ ...params, style: { stroke: '#6366f1', strokeWidth: 2 }, animated: true }, es))
+  const deleteNode = useCallback((nodeId) => {
+    setNodes(ns => {
+      const node = ns.find(n => n.id === nodeId)
+      if (node?.data?.isInitial) return ns
+      return ns.filter(n => n.id !== nodeId)
+    })
+    setEdges(es => es.filter(e => e.source !== nodeId && e.target !== nodeId))
+    setSelectedId(null)
+    setDirty(true)
+  }, [setNodes, setEdges])
+
+  const deleteEdge = useCallback((edgeId) => {
+    setEdges(es => es.filter(e => e.id !== edgeId))
     setDirty(true)
   }, [setEdges])
 
-  const onNodeClick = useCallback((_, node) => setSelectedId(node.id), [])
-  const onPaneClick = useCallback(() => setSelectedId(null), [])
+  const onConnect = useCallback(params => {
+    setEdges(es => addEdge({ ...params, type: 'deletable', animated: true }, es))
+    setDirty(true)
+  }, [setEdges])
+
+  const onNodeClick  = useCallback((_, node) => setSelectedId(node.id), [])
+  const onPaneClick  = useCallback(() => setSelectedId(null), [])
 
   const handleNodesChange = useCallback(changes => {
     onNodesChange(changes)
@@ -509,7 +512,7 @@ function EditorInner({ journey, onBack, toast }) {
 
   const handleEdgesChange = useCallback(changes => {
     onEdgesChange(changes)
-    setDirty(true)
+    if (changes.some(c => c.type !== 'select')) setDirty(true)
   }, [onEdgesChange])
 
   function updateNodeData(nodeId, patch) {
@@ -517,31 +520,15 @@ function EditorInner({ journey, onBack, toast }) {
     setDirty(true)
   }
 
-  function deleteNode(nodeId) {
-    setNodes(ns => ns.filter(n => n.id !== nodeId))
-    setEdges(es => es.filter(e => e.source !== nodeId && e.target !== nodeId))
-    setSelectedId(null)
-    setDirty(true)
-  }
-
   const handleDrop = useCallback(e => {
     e.preventDefault()
     const tipo = e.dataTransfer.getData('application/workflow-tipo')
-    if (!tipo || !rfInstanceRef.current || !wrapperRef.current) return
-
-    const bounds = wrapperRef.current.getBoundingClientRect()
-    const position = rfInstanceRef.current.project({
-      x: e.clientX - bounds.left,
-      y: e.clientY - bounds.top,
-    })
-
+    if (!tipo || !rfInstanceRef.current) return
+    const position = rfInstanceRef.current.screenToFlowPosition
+      ? rfInstanceRef.current.screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      : rfInstanceRef.current.project({ x: e.clientX - wrapperRef.current.getBoundingClientRect().left, y: e.clientY - wrapperRef.current.getBoundingClientRect().top })
     const info = findNodeInfo(tipo)
-    setNodes(ns => [...ns, {
-      id: crypto.randomUUID(),
-      type: 'workflowNode',
-      position,
-      data: { ...info, config: {} },
-    }])
+    setNodes(ns => [...ns, { id: crypto.randomUUID(), type: 'workflowNode', position, data: { ...info, config: {} } }])
     setDirty(true)
   }, [setNodes])
 
@@ -551,27 +538,16 @@ function EditorInner({ journey, onBack, toast }) {
       const status = newStatus || wf.status || 'rascunho'
       const etapas = {
         status,
-        nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, data: n.data })),
-        edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle, targetHandle: e.targetHandle, style: e.style, animated: e.animated })),
+        nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, data: { tipo: n.data.tipo, config: n.data.config || {}, isInitial: n.data.isInitial || false } })),
+        edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle, targetHandle: e.targetHandle })),
       }
       await journeyUpdate(journey.id, { nome, etapas })
       setDirty(false)
-      toast({ type: 'success', title: newStatus === 'ativa' ? 'Jornada publicada!' : 'Jornada salva!' })
+      toast({ type: 'success', title: newStatus === 'ativa' ? 'Jornada publicada!' : 'Rascunho salvo!' })
     } catch {
       toast({ type: 'error', title: 'Erro ao salvar jornada' })
     } finally {
       setSaving(false)
-    }
-  }
-
-  async function handleDelete() {
-    if (!window.confirm('Excluir esta jornada? Esta ação não pode ser desfeita.')) return
-    try {
-      await journeyDelete(journey.id)
-      toast({ type: 'success', title: 'Jornada excluída' })
-      onBack()
-    } catch {
-      toast({ type: 'error', title: 'Erro ao excluir jornada' })
     }
   }
 
@@ -583,143 +559,80 @@ function EditorInner({ journey, onBack, toast }) {
   const currentStatus = wf.status || 'rascunho'
 
   return (
-    <div className="flex flex-col -m-4 md:-m-6" style={{ height: 'calc(100vh - 56px)' }}>
-      {/* Editor header */}
-      <div className="flex items-center gap-3 px-4 py-2.5 border-b border-dark-border bg-dark-surface flex-shrink-0">
-        <button onClick={handleBack}
-          className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <input
-          value={nome}
-          onChange={e => { setNome(e.target.value); setDirty(true) }}
-          className="flex-1 bg-transparent font-bold text-dark-text text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent/50 rounded px-1 min-w-0"
-        />
-        <StatusBadge status={currentStatus} />
-        {dirty && <span className="text-[10px] text-amber-500 font-medium flex-shrink-0">Não salvo</span>}
-        <button onClick={() => persistWorkflow()} disabled={saving}
-          className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5 flex-shrink-0">
-          <Save className="w-3.5 h-3.5" />
-          {saving ? 'Salvando...' : 'Salvar'}
-        </button>
-        <button onClick={handleDelete}
-          className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5 flex-shrink-0 text-status-error border-status-error/30 hover:bg-status-error/10">
-          <Trash2 className="w-3.5 h-3.5" />
-          Excluir
-        </button>
-        <button onClick={() => persistWorkflow('ativa')} disabled={saving}
-          className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5 flex-shrink-0">
-          <Play className="w-3.5 h-3.5" />
-          Publicar
-        </button>
-      </div>
-
-      {/* Editor body */}
-      <div className="flex flex-1 overflow-hidden">
-        <PainelNos />
-
-        {/* Canvas */}
-        <div
-          ref={wrapperRef}
-          className="flex-1 bg-dark-bg relative"
-          onDrop={handleDrop}
-          onDragOver={e => e.preventDefault()}
-        >
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={handleNodesChange}
-            onEdgesChange={handleEdgesChange}
-            onConnect={onConnect}
-            onNodeClick={onNodeClick}
-            onPaneClick={onPaneClick}
-            onInit={instance => { rfInstanceRef.current = instance }}
-            nodeTypes={nodeTypes}
-            fitView
-            deleteKeyCode="Delete"
-            defaultEdgeOptions={{ style: { stroke: '#6366f1', strokeWidth: 2 }, animated: true }}
-          >
-            <Background color="#334155" gap={20} size={1} />
-            <Controls className="!bg-dark-surface !border-dark-border !shadow-xl" />
-            <MiniMap
-              nodeColor={n => findNodeInfo(n.data?.tipo)?.color || '#6366f1'}
-              maskColor="rgba(0,0,0,0.6)"
-              className="!bg-dark-surface !border-dark-border !rounded-xl"
-            />
-          </ReactFlow>
-
-          {/* Floating + button */}
-          <div ref={addMenuRef} style={{ position: 'absolute', bottom: 80, right: 16, zIndex: 10 }}>
-            <button
-              onClick={() => { setAddMenuOpen(o => !o); setAddMenuGroup(null) }}
-              style={{ width: 40, height: 40, borderRadius: '50%', background: '#1A3A6B', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}
-            >
-              <Plus className="w-5 h-5 text-white" />
-            </button>
-            {addMenuOpen && (
-              <div style={{ position: 'absolute', bottom: 48, right: 0, width: 210, background: 'var(--dark-surface)', border: '1px solid var(--dark-border)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
-                {addMenuGroup === null ? (
-                  NODE_GROUPS.map(group => {
-                    const GroupIcon = group.items[0].Icon
-                    return (
-                      <button key={group.label} onClick={() => setAddMenuGroup(group.label)}
-                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-                        className="hover:bg-dark-surface2 transition-colors">
-                        <span style={{ width: 28, height: 28, borderRadius: 6, background: group.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <GroupIcon style={{ color: group.color, width: 14, height: 14 }} />
-                        </span>
-                        <div>
-                          <p style={{ color: group.color, fontWeight: 700, fontSize: 11, margin: 0 }}>{group.label}</p>
-                          <p style={{ color: 'var(--dark-muted)', fontSize: 10, margin: 0 }}>{group.items.length} tipos</p>
-                        </div>
-                      </button>
-                    )
-                  })
-                ) : (
-                  <>
-                    <div style={{ padding: '6px 12px', borderBottom: '1px solid var(--dark-border)' }}>
-                      <button onClick={() => setAddMenuGroup(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--dark-muted)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        ← Voltar
-                      </button>
-                    </div>
-                    {NODE_GROUPS.find(g => g.label === addMenuGroup)?.items.map(item => {
-                      const grp = NODE_GROUPS.find(g => g.label === addMenuGroup)
-                      return (
-                        <button key={item.tipo} onClick={() => addNodeFromMenu(item.tipo)}
-                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-                          className="hover:bg-dark-surface2 transition-colors">
-                          <item.Icon style={{ color: grp?.color, width: 14, height: 14 }} />
-                          <span style={{ color: 'var(--dark-text)', fontSize: 12 }}>{item.label}</span>
-                        </button>
-                      )
-                    })}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {selectedNode && (
-          <PainelConfig
-            node={selectedNode}
-            onUpdate={updateNodeData}
-            onClose={() => setSelectedId(null)}
-            onDelete={deleteNode}
+    <EditorContext.Provider value={{ deleteNode, deleteEdge }}>
+      <div className="flex flex-col -m-4 md:-m-6" style={{ height: 'calc(100vh - 56px)' }}>
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-dark-border bg-dark-surface flex-shrink-0">
+          <button onClick={handleBack}
+            className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <input
+            value={nome}
+            onChange={e => { setNome(e.target.value); setDirty(true) }}
+            className="flex-1 bg-transparent font-bold text-dark-text text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent/50 rounded px-1 min-w-0"
           />
-        )}
-      </div>
-
-      {/* Empty canvas hint */}
-      {nodes.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ left: 224, right: selectedNode ? 288 : 0 }}>
-          <div className="text-center">
-            <GitBranch className="w-12 h-12 text-dark-muted/20 mx-auto mb-2" />
-            <p className="text-sm text-dark-muted/40">Arraste componentes para iniciar</p>
-          </div>
+          <StatusBadge status={currentStatus} />
+          {dirty && <span className="text-[10px] text-amber-500 font-medium flex-shrink-0">Não salvo</span>}
+          <button onClick={() => persistWorkflow()} disabled={saving}
+            className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5 flex-shrink-0">
+            <Save className="w-3.5 h-3.5" />
+            {saving ? 'Salvando...' : 'Salvar Rascunho'}
+          </button>
+          <button onClick={() => persistWorkflow('ativa')} disabled={saving}
+            className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5 flex-shrink-0">
+            ⚡ Publicar
+          </button>
         </div>
-      )}
-    </div>
+
+        {/* Body: 3-column layout */}
+        <div className="flex flex-1 overflow-hidden">
+          <PainelNos />
+
+          {/* Canvas */}
+          <div
+            ref={wrapperRef}
+            className="flex-1 relative"
+            style={{ background: '#F8FAFC' }}
+            onDrop={handleDrop}
+            onDragOver={e => e.preventDefault()}
+          >
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={handleNodesChange}
+              onEdgesChange={handleEdgesChange}
+              onConnect={onConnect}
+              onNodeClick={onNodeClick}
+              onPaneClick={onPaneClick}
+              onInit={instance => { rfInstanceRef.current = instance }}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              fitView
+              deleteKeyCode="Delete"
+              defaultEdgeOptions={{ type: 'deletable', animated: true }}
+            >
+              <Background variant={BackgroundVariant.Dots} color="#E2E8F0" gap={16} size={1.5} />
+              <Controls className="!bg-white !border-slate-200 !shadow-md" />
+              <MiniMap
+                nodeColor={n => findNodeInfo(n.data?.tipo)?.color || '#6366f1'}
+                maskColor="rgba(241,245,249,0.7)"
+                className="!bg-white !border-slate-200 !rounded-xl"
+              />
+            </ReactFlow>
+          </div>
+
+          {selectedNode && (
+            <PainelConfig
+              node={selectedNode}
+              onUpdate={updateNodeData}
+              onClose={() => setSelectedId(null)}
+              deleteNode={deleteNode}
+            />
+          )}
+        </div>
+      </div>
+    </EditorContext.Provider>
   )
 }
 
@@ -731,28 +644,22 @@ function EditorJornada(props) {
   )
 }
 
-// ── Journey Card (grid listing) ───────────────────────────────────────────────
+// ── Journey Card ──────────────────────────────────────────────────────────────
 
 function JourneyCard({ journey, leads, onEdit, onDuplicate, onToggle }) {
-  const [confirmArquivar, setConfirmArquivar] = useState(false)
+  const [confirmExcluir, setConfirmExcluir] = useState(false)
   const status   = getStatus(journey)
   const wf       = getWorkflowData(journey)
   const nodesQty = (wf.nodes || []).length
-  const vinculados = leads.filter(l => l.jornadaId === journey.id).length
-
-  const CATEGORY_ICONS = { trigger: Zap, action: MoveRight, control: GitBranch }
-  const categoryBreakdown = NODE_GROUPS.map(g => ({
-    label: g.label, color: g.color,
-    count: (wf.nodes || []).filter(n => g.items.some(i => i.tipo === n.data?.tipo)).length,
-  })).filter(x => x.count > 0)
+  const vinculados = leads.filter(l => l.jornada_id === journey.id).length
 
   return (
     <div className="card flex flex-col overflow-hidden group hover:border-brand-accent/30 transition-colors">
-      {/* Header gradient */}
-      <div className="h-1.5 w-full rounded-t-[inherit]" style={{ background: 'linear-gradient(90deg, #6366f1, #8B5CF6)' }} />
+      {/* Top color strip */}
+      <div className="h-1 w-full rounded-t-[inherit]" style={{ background: 'linear-gradient(90deg, #1A3A6B, #2B5BA8)' }} />
 
       <div className="p-4 flex-1 flex flex-col gap-3">
-        {/* Top row */}
+        {/* Icon + status */}
         <div className="flex items-start justify-between gap-2">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-brand-accent/10">
             <Map className="w-5 h-5 text-brand-accent" />
@@ -760,7 +667,7 @@ function JourneyCard({ journey, leads, onEdit, onDuplicate, onToggle }) {
           <StatusBadge status={status} />
         </div>
 
-        {/* Name + desc */}
+        {/* Name + description */}
         <div className="flex-1 min-w-0">
           <p className="font-bold text-dark-text text-sm leading-snug">{journey.nome}</p>
           {journey.descricao && (
@@ -768,42 +675,22 @@ function JourneyCard({ journey, leads, onEdit, onDuplicate, onToggle }) {
           )}
         </div>
 
-        {/* Stats */}
-        <div className="flex items-center gap-3 text-xs text-dark-muted">
+        {/* Metadata */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-dark-muted">
+          {journey.tipoCliente && (
+            <span className="flex items-center gap-1">
+              <Users className="w-3 h-3" /> {journey.tipoCliente}
+            </span>
+          )}
           <span className="flex items-center gap-1">
-            <GitBranch className="w-3.5 h-3.5" />
+            <GitBranch className="w-3 h-3" />
             {nodesQty} {nodesQty === 1 ? 'nó' : 'nós'}
           </span>
           <span className="flex items-center gap-1">
-            <Users className="w-3.5 h-3.5" />
+            <Users className="w-3 h-3" />
             {vinculados} leads
           </span>
         </div>
-
-        {/* Category breakdown */}
-        {categoryBreakdown.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {categoryBreakdown.map(c => (
-              <span key={c.label} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: c.color + '18', color: c.color }}>
-                {c.count} {c.label}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Legacy etapas (array) */}
-        {Array.isArray(journey.etapas) && journey.etapas.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {journey.etapas.slice(0, 4).map((e, i) => (
-              <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-md bg-dark-surface2 text-dark-muted border border-dark-border">
-                {typeof e === 'string' ? e : (e.nome || String(e))}
-              </span>
-            ))}
-            {journey.etapas.length > 4 && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-dark-surface2 text-dark-muted">+{journey.etapas.length - 4}</span>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Footer actions */}
@@ -813,34 +700,37 @@ function JourneyCard({ journey, leads, onEdit, onDuplicate, onToggle }) {
           <Pencil className="w-3.5 h-3.5" /> Editar
         </button>
         <button onClick={() => onDuplicate(journey)}
-          className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-colors">
+          className="flex items-center justify-center px-2 py-1.5 rounded-lg text-xs text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-colors"
+          title="Duplicar">
           <Copy className="w-3.5 h-3.5" />
         </button>
-        <button onClick={() => onToggle(journey)}
-          className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs transition-colors ${
-            status === 'ativa'
-              ? 'text-amber-500 hover:bg-amber-500/10'
-              : 'text-status-success hover:bg-status-success/10'
-          }`}>
+        <button
+          onClick={() => onToggle(journey)}
+          className={`flex items-center justify-center px-2 py-1.5 rounded-lg text-xs transition-colors ${
+            status === 'ativa' ? 'text-amber-500 hover:bg-amber-500/10' : 'text-status-success hover:bg-status-success/10'
+          }`}
+          title={status === 'ativa' ? 'Pausar' : 'Ativar'}
+        >
           {status === 'ativa' ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
         </button>
-        {confirmArquivar ? (
+        {confirmExcluir ? (
           <div className="flex items-center gap-1">
             <button onClick={async () => {
               await journeyUpdate(journey.id, { etapas: { ...getWorkflowData(journey), status: 'arquivada' } })
-              setConfirmArquivar(false)
-            }} className="text-[10px] px-2 py-1 rounded-lg bg-status-error/10 text-status-error font-semibold hover:bg-status-error/20 transition-colors">
+              setConfirmExcluir(false)
+            }} className="text-[10px] px-2 py-1 rounded-lg bg-status-error/10 text-status-error font-semibold hover:bg-status-error/20">
               Sim
             </button>
-            <button onClick={() => setConfirmArquivar(false)}
-              className="text-[10px] px-2 py-1 rounded-lg bg-dark-surface2 text-dark-muted font-semibold hover:bg-dark-surface2/80 transition-colors">
+            <button onClick={() => setConfirmExcluir(false)}
+              className="text-[10px] px-2 py-1 rounded-lg bg-dark-surface2 text-dark-muted font-semibold">
               Não
             </button>
           </div>
         ) : (
-          <button onClick={() => setConfirmArquivar(true)}
-            className="flex items-center justify-center px-2 py-1.5 rounded-lg text-xs text-dark-muted/60 hover:text-status-error hover:bg-status-error/10 transition-colors">
-            <X className="w-3.5 h-3.5" />
+          <button onClick={() => setConfirmExcluir(true)}
+            className="flex items-center justify-center px-2 py-1.5 rounded-lg text-xs text-dark-muted/60 hover:text-status-error hover:bg-status-error/10 transition-colors"
+            title="Excluir">
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
@@ -907,9 +797,7 @@ function ModalJornada({ onClose, onSave }) {
               {['PF', 'PJ', 'Ambos'].map(t => (
                 <button key={t} onClick={() => set('tipoCliente', t)}
                   className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-all ${
-                    form.tipoCliente === t
-                      ? 'bg-brand-accent text-white border-brand-accent'
-                      : 'border-dark-border text-dark-muted hover:border-brand-accent/50'
+                    form.tipoCliente === t ? 'bg-brand-accent text-white border-brand-accent' : 'border-dark-border text-dark-muted hover:border-brand-accent/50'
                   }`}>
                   {t}
                 </button>
@@ -949,16 +837,13 @@ function ModalScript({ onClose, onSave }) {
           </div>
           <div>
             <label className="text-xs font-medium text-dark-muted uppercase tracking-wider block mb-1">Tipo</label>
-            <Select
-              value={form.tipo}
-              onChange={v => set('tipo', v)}
-              options={['Abordagem', 'Follow Up', 'Proposta', 'Fechamento', 'Objeção']}
-            />
+            <Select value={form.tipo} onChange={v => set('tipo', v)}
+              options={['Abordagem', 'Follow Up', 'Proposta', 'Fechamento', 'Objeção']} />
           </div>
           <div>
             <label className="text-xs font-medium text-dark-muted uppercase tracking-wider block mb-1">Conteúdo *</label>
-            <textarea value={form.conteudo} onChange={e => set('conteudo', e.target.value)} rows={5} className="input w-full resize-none"
-              placeholder="Olá {nome}, ..." />
+            <textarea value={form.conteudo} onChange={e => set('conteudo', e.target.value)} rows={5}
+              className="input w-full resize-none" placeholder="Olá {nome}, ..." />
           </div>
           <div className="flex gap-3 pt-1">
             <button onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
@@ -985,7 +870,6 @@ export default function Jornadas() {
   const scripts   = state.scripts.filter(s => (s.tipo || s.categoria) !== 'Material')
   const visibleJourneys = state.journeys.filter(j => getStatus(j) !== 'arquivada')
 
-  // If editor is open, render editor
   const editorJourney = editorId ? state.journeys.find(j => j.id === editorId) : null
   if (editorJourney) {
     return <EditorJornada journey={editorJourney} onBack={() => setEditorId(null)} toast={toast} />
@@ -1029,7 +913,6 @@ export default function Jornadas() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* Modals */}
       {modal === 'Jornadas' && <ModalJornada onClose={() => setModal(null)} onSave={handleAddJornada} />}
       {modal === 'Scripts'  && <ModalScript  onClose={() => setModal(null)} onSave={f => handleAddScript({ ...f, tipo: tab === 'Materiais' ? 'Material' : f.tipo })} />}
 
@@ -1061,45 +944,28 @@ export default function Jornadas() {
 
       {/* Jornadas grid */}
       {tab === 'Jornadas' && (
-        <>
-          {visibleJourneys.length === 0 ? (
-            <div className="text-center py-16 text-dark-muted">
-              <Map className="w-10 h-10 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">Nenhuma jornada cadastrada</p>
-              <button onClick={() => setModal('Jornadas')} className="mt-3 btn-secondary text-xs">
-                <Plus className="w-3.5 h-3.5 inline mr-1" /> Criar primeira jornada
-              </button>
+        visibleJourneys.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-brand-accent/10 flex items-center justify-center mb-4">
+              <GitBranch className="w-8 h-8 text-brand-accent/40" />
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {visibleJourneys.map(j => (
-                <JourneyCard key={j.id} journey={j} leads={state.leads}
-                  onEdit={j => setEditorId(j.id)}
-                  onDuplicate={handleDuplicate}
-                  onToggle={handleToggle}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Tags */}
-          {state.tags.length > 0 && (
-            <div className="glass-panel p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Tag className="w-4 h-4 text-dark-muted" />
-                <p className="text-sm font-semibold text-dark-text">Etiquetas Disponíveis</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {state.tags.map(t => (
-                  <span key={t.id} className="px-2 py-1 rounded-lg text-xs font-semibold"
-                    style={{ background: t.cor + '22', color: t.cor, border: `1px solid ${t.cor}44` }}>
-                    {t.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
+            <p className="font-semibold text-dark-text mb-1">Nenhuma jornada criada</p>
+            <p className="text-xs text-dark-muted mb-4">Crie fluxos automatizados para engajar seus leads</p>
+            <button onClick={() => setModal('Jornadas')} className="btn-primary text-sm flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Criar primeira jornada
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {visibleJourneys.map(j => (
+              <JourneyCard key={j.id} journey={j} leads={state.leads}
+                onEdit={j => setEditorId(j.id)}
+                onDuplicate={handleDuplicate}
+                onToggle={handleToggle}
+              />
+            ))}
+          </div>
+        )
       )}
 
       {/* Scripts */}
@@ -1131,4 +997,3 @@ export default function Jornadas() {
     </div>
   )
 }
-

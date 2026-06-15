@@ -32,6 +32,13 @@ const ApolicesLista      = lazy(() => import('./pages/ApolicesLista'))
 const ApoliceDetalhe     = lazy(() => import('./pages/ApoliceDetalhe'))
 const Seguradoras        = lazy(() => import('./pages/Seguradoras'))
 
+// Área Auto
+const AutoDashboard  = lazy(() => import('./pages/auto/AutoDashboard'))
+const AutoRenovacoes = lazy(() => import('./pages/auto/AutoRenovacoes'))
+const AutoEmissoes   = lazy(() => import('./pages/auto/AutoEmissoes'))
+const AutoCotacoes   = lazy(() => import('./pages/auto/AutoCotacoes'))
+const AutoSinistros  = lazy(() => import('./pages/auto/AutoSinistros'))
+
 // Área Comercial
 const ComercialDashboard = lazy(() => import('./pages/comercial/ComercialDashboard'))
 const Pipeline           = lazy(() => import('./pages/comercial/Pipeline'))
@@ -68,6 +75,12 @@ function AppRoutes() {
           <Route path="apolices/gestao" element={<ApoicesGestao />} />
           <Route path="apolices/lista" element={<ApolicesLista />} />
           <Route path="apolices/:id" element={<ApoliceDetalhe />} />
+          {/* Área Auto */}
+          <Route path="auto"                element={<AutoDashboard />} />
+          <Route path="auto/renovacoes"     element={<AutoRenovacoes />} />
+          <Route path="auto/emissoes"       element={<AutoEmissoes />} />
+          <Route path="auto/cotacoes"       element={<AutoCotacoes />} />
+          <Route path="auto/sinistros"      element={<AutoSinistros />} />
           {/* Área Comercial */}
           <Route path="comercial"            element={<ComercialDashboard />} />
           <Route path="comercial/pipeline"   element={<Pipeline />} />

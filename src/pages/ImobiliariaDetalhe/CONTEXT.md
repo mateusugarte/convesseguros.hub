@@ -1,19 +1,22 @@
 # ImobiliariaDetalhe
 
 ## Propósito
-Detalhe de uma imobiliária: edição inline de dados cadastrais e gestão dos códigos de seguradora (mapeamento imobiliária × seguradora × código).
+Detalhe operacional de imobiliária em shell premium, com edição inline, status, variações de nome e códigos por seguradora.
 
 ## Componentes usados
-- `Select` (ui/) — seleção de seguradora
-- `CampoEditavel` (componente local inline) — edição inline de campos
+- `PageHeader`
+- `MetricCard`
+- `DataCard`
+- `Select`
+- `CampoEditavel` (componente local inline)
+- `CampoEmBreve` (componente local inline)
 
 ## Queries Supabase
-- `lib/supabase.js` — busca e atualização da imobiliária por id
-- `lib/imobiliariasCodigos.js` — fetchCodigos, fetchSeguradoras, upsertCodigo, deletarCodigo
-- Rota: `/imobiliarias/:id`
+- `lib/supabase.js` - busca e atualização de imobiliária por id
+- `lib/imobiliariasCodigos.js` - `fetchCodigos`, `fetchSeguradoras`, `upsertCodigo`, `deletarCodigo`
 
 ## Status
-pronto
+em andamento
 
 ## Usuários que utilizam
-Admin e gestores (Luciano, Mateus)
+Admin e gestores

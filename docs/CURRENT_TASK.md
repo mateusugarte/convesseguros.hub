@@ -14,17 +14,17 @@ Executar a etapa de redesign premium de `ImobiliariaDetalhe`, elevando a tela de
 
 ## Status
 
-Em andamento - imobiliaria detalhe premium iniciado em 2026-06-15
+Concluida - redesign operacional premium fechado em 2026-06-15
 
 ## Atualizacao de Execucao
 
 - `ApolicesDashboard`, `ApolicesLista` e `ApoliceDetalhe` já foram convertidas para o shell premium e seguem validadas por build.
 - `Imobiliarias` e `Seguradoras` foram convertidas para o shell premium e o build voltou a passar.
 - `Relatorio` também foi convertido para o shell premium com `PageHeader`, `MetricCard` e `DataCard`.
-- `Imobiliarias`, `Seguradoras` e `Relatorio` já estão no shell premium e o build desta etapa segue validado.
-- O foco agora é reorganizar `ImobiliariaDetalhe` no shell premium sem mexer em lógica de edição, códigos ou integrações.
-- A validação visual no browser in-app segue dependente do alvo `iab` ficar disponível.
-- Próximo avanço: reescrever `ImobiliariaDetalhe` com `PageHeader`, `MetricCard` e `DataCard`.
+- `ImobiliariaDetalhe` foi convertida para o shell premium com `PageHeader`, `MetricCard` e `DataCard`.
+- O build da etapa foi validado com `npm.cmd exec vite build -- --configLoader runner`.
+- A validação visual no browser in-app segue dependente do alvo `iab` ficar disponível para revisão final.
+- Próximo passo fora deste trilho: iniciar a trilha comercial quando solicitado.
 
 ## Arquivos em uso
 
@@ -73,11 +73,11 @@ Codex
 
 ## Proxima Tarefa
 
-Revisar visualmente `ImobiliariaDetalhe` no browser in-app quando o alvo `iab` estiver disponível e aplicar ajustes finos se necessário.
+Revisar visualmente o núcleo operacional no browser in-app quando o alvo `iab` estiver disponível e aplicar ajustes finos se necessário.
 
 ## Observacoes
 
-Fase 4 concluída como base do shell operacional premium. Foco atual restrito a `ImobiliariaDetalhe`; comercial permanece fora do escopo desta trilha.
+Fase 4 e o redesign operacional foram concluídos como base do shell premium. Comercial permanece fora do escopo desta trilha.
 
 ---
 
@@ -142,6 +142,65 @@ Build validado com `npm.cmd run build`. Validacao visual no Browser in-app nao f
 Fases 3 e 4 concluidas com foco em `Pipeline`, `LeadDetalhe`, `BaseLeads` e `Calendario`.
 Build validado novamente com `npm.cmd run build`. Validacao visual no Browser in-app segue pendente porque o alvo `iab` continuou indisponivel nesta sessao.
 Execucao retomada para a Fase 5 com foco em `Jornadas` e React Flow premium dentro do modulo comercial.
+
+---
+
+## Agente C — Modulo Seguro Auto (NOVO)
+
+### Responsavel Atual
+
+Claude Code
+
+### Pagina
+
+Modulo Seguro Auto
+
+### Objetivo
+
+Implementar o modulo completo de Seguro Auto: 5 tabelas Supabase + triggers automaticos + 5 paginas React (Dashboard, Renovacoes, Emissoes, Cotacoes, Sinistros).
+
+### Status
+
+Concluido - build validado em 2026-06-15
+
+### Atualizacao de Execucao
+
+- Arquitetura definida: Opcao A (tabelas separadas por entidade).
+- 5 tabelas criadas em `supabase/auto_tables.sql` (executar no Supabase).
+- 2 triggers criados em `supabase/auto_triggers.sql` (executar no Supabase).
+- RLS configurada em `supabase/auto_rls.sql` (executar no Supabase).
+- `src/lib/auto.js` criado com todas as queries do modulo.
+- 5 paginas React criadas em `src/pages/auto/`.
+- Rotas registradas em `src/App.jsx`.
+- Grupo "Auto" adicionado na sidebar em `src/components/Layout.jsx`.
+- Build validado com `npm run build` sem erros.
+
+### Arquivos criados/modificados
+
+- `supabase/auto_tables.sql` (EXECUTAR NO SUPABASE)
+- `supabase/auto_triggers.sql` (EXECUTAR NO SUPABASE)
+- `supabase/auto_rls.sql` (EXECUTAR NO SUPABASE)
+- `src/lib/auto.js`
+- `src/pages/auto/AutoDashboard.jsx`
+- `src/pages/auto/AutoRenovacoes.jsx`
+- `src/pages/auto/AutoEmissoes.jsx`
+- `src/pages/auto/AutoCotacoes.jsx`
+- `src/pages/auto/AutoSinistros.jsx`
+- `src/App.jsx` (rotas adicionadas)
+- `src/components/Layout.jsx` (grupo Auto na sidebar)
+
+### Proximo Responsavel
+
+Codex
+
+### Proxima Tarefa
+
+Aplicar redesign premium nas paginas do modulo Auto seguindo o mesmo padrao visual do shell premium ja adotado nos outros modulos. Nao alterar logica, queries ou integracao.
+
+### Pendencias
+
+- Executar os 3 arquivos SQL no Supabase (tabelas, triggers, RLS)
+- Validacao visual no browser apos execucao do SQL
 
 
 

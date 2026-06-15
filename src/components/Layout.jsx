@@ -13,7 +13,7 @@ import {
   Building2, BarChart2, Settings, Search,
   Bell, LogOut, ChevronLeft, ChevronRight, Menu,
   Sun, Moon, Shield, TrendingUp,
-  ChevronDown, FolderOpen, Calendar, RefreshCw,
+  ChevronDown, FolderOpen, Calendar, RefreshCw, Car,
 } from 'lucide-react'
 
 const LOGO = 'https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/conves/file.jpeg'
@@ -42,6 +42,23 @@ const NAV_GROUPS = [
       { to: '/imobiliarias', icon: Building2, label: 'Imobiliarias' },
       { to: '/seguradoras', icon: Shield, label: 'Seguradoras' },
       { to: '/relatorio', icon: BarChart2, label: 'Relatorios' },
+    ],
+  },
+  {
+    label: 'Auto',
+    items: [
+      {
+        to: '/auto',
+        icon: Car,
+        label: 'Seguro Auto',
+        subitems: [
+          { to: '/auto',            label: 'Dashboard', end: true },
+          { to: '/auto/renovacoes', label: 'Renovacoes' },
+          { to: '/auto/emissoes',   label: 'Emissoes' },
+          { to: '/auto/cotacoes',   label: 'Cotacoes' },
+          { to: '/auto/sinistros',  label: 'Sinistros' },
+        ],
+      },
     ],
   },
   {
@@ -102,6 +119,7 @@ export default function Layout() {
     const initial = new Set()
     if (location.pathname.startsWith('/apolices')) initial.add('/apolices')
     if (location.pathname.startsWith('/comercial')) initial.add('/comercial')
+    if (location.pathname.startsWith('/auto')) initial.add('/auto')
     return initial
   })
 
@@ -168,6 +186,7 @@ export default function Layout() {
       const next = new Set(prev)
       if (location.pathname.startsWith('/apolices')) next.add('/apolices')
       if (location.pathname.startsWith('/comercial')) next.add('/comercial')
+      if (location.pathname.startsWith('/auto')) next.add('/auto')
       return next
     })
   }, [location.pathname])

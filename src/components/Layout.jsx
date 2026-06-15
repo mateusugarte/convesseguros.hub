@@ -508,7 +508,7 @@ export default function Layout() {
         </header>
 
         <main className="flex-1 overflow-y-auto bg-dark-bg">
-          <div className="p-6 pb-20 max-w-[1680px] mx-auto">
+          <div className="w-full min-w-0 p-6 pb-20">
             <PageTransition>
               <Outlet />
             </PageTransition>

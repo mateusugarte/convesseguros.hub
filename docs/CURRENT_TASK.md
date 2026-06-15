@@ -6,25 +6,22 @@ Codex
 
 ## Pagina
 
-ImobiliariaDetalhe
+Layout global
 
 ## Objetivo
 
-Executar a etapa de redesign premium de `ImobiliariaDetalhe`, elevando a tela de detalhe e mapeamento de códigos ao shell premium sem alterar regras de negocio, dados, queries ou integracoes.
+Corrigir o layout global do sistema para remover a faixa em branco lateral e fazer as areas ocuparem toda a largura disponivel sem alterar regras de negocio, dados, queries ou integracoes.
 
 ## Status
 
-Concluida - redesign operacional premium fechado em 2026-06-15
+Em andamento - ajuste global de layout iniciado em 2026-06-15
 
 ## Atualizacao de Execucao
 
-- `ApolicesDashboard`, `ApolicesLista` e `ApoliceDetalhe` já foram convertidas para o shell premium e seguem validadas por build.
-- `Imobiliarias` e `Seguradoras` foram convertidas para o shell premium e o build voltou a passar.
-- `Relatorio` também foi convertido para o shell premium com `PageHeader`, `MetricCard` e `DataCard`.
-- `ImobiliariaDetalhe` foi convertida para o shell premium com `PageHeader`, `MetricCard` e `DataCard`.
-- O build da etapa foi validado com `npm.cmd exec vite build -- --configLoader runner`.
-- A validação visual no browser in-app segue dependente do alvo `iab` ficar disponível para revisão final.
-- Próximo passo fora deste trilho: iniciar a trilha comercial quando solicitado.
+- O contêiner principal do layout foi ajustado para ocupar toda a largura útil da tela.
+- A faixa em branco lateral estava sendo causada pela limitação global de largura no `Layout.jsx`.
+- O build foi revalidado após a correção.
+- A validação visual final no browser in-app segue dependente do alvo `iab` ficar disponível.
 
 ## Arquivos em uso
 
@@ -73,11 +70,11 @@ Codex
 
 ## Proxima Tarefa
 
-Revisar visualmente o núcleo operacional no browser in-app quando o alvo `iab` estiver disponível e aplicar ajustes finos se necessário.
+Revalidar visualmente o sistema no browser in-app quando o alvo `iab` estiver disponível e confirmar que a faixa lateral em branco sumiu.
 
 ## Observacoes
 
-Fase 4 e o redesign operacional foram concluídos como base do shell premium. Comercial permanece fora do escopo desta trilha.
+Este ajuste é global e impacta todas as páginas do shell operacional. Comercial permanece fora do escopo desta trilha.
 
 ---
 
@@ -201,7 +198,6 @@ Aplicar redesign premium nas paginas do modulo Auto seguindo o mesmo padrao visu
 
 - Executar os 3 arquivos SQL no Supabase (tabelas, triggers, RLS)
 - Validacao visual no browser apos execucao do SQL
-
 
 
 

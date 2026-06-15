@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useToast } from '../contexts/ToastContext'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import { Shield, Plus, Pencil, Trash2, X, Check, Search, ArrowLeft } from 'lucide-react'
+import { PageHeader, MetricCard, DataCard } from '../components/ui'
 
 // ── Modal Agrupar / Criar / Editar ────────────────────────────────────────────
 
@@ -475,75 +476,85 @@ export default function Seguradoras() {
     />
   )
 
+  const totalAliases = seguradoras.reduce((acc, seg) => acc + (seg.aliases?.length || 0), 0)
+  const ativas = seguradoras.filter(seg => seg.ativa !== false).length
+
   return (
     <div className="space-y-5 animate-fade-in">
+      <PageHeader
+        eyebrow="Cadastro operacional"
+        title="Seguradoras"
+        description="Centralize o cadastro, as variações de nome e a limpeza de mapeamentos."
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            {tab === 'cadastradas' && (
+              <button onClick={() => setModal({ mode: 'criar', variacoes: [] })} className="btn-primary flex items-center gap-2 text-sm">
+                <Plus className="w-4 h-4" /> Nova Seguradora
+              </button>
+            )}
+          </div>
+        }
+      />
 
-      {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="title-page text-dark-text">Seguradoras</h1>
-          <p className="text-xs text-dark-muted mt-0.5">
-            Cadastro e mapeamento de variações de nomes das seguradoras
-          </p>
-        </div>
-        {tab === 'cadastradas' && (
-          <button onClick={() => setModal({ mode: 'criar', variacoes: [] })} className="btn-primary flex items-center gap-2 text-sm">
-            <Plus className="w-4 h-4" /> Nova Seguradora
-          </button>
-        )}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <MetricCard label="Seguradoras cadastradas" value={seguradoras.length} />
+        <MetricCard label="Ativas" value={ativas} />
+        <MetricCard label="Sem mapeamento" value={naoMapeadas.length} />
+        <MetricCard label="Variações ativas" value={totalAliases} />
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-dark-border">
-        {[
-          ['cadastradas',  `Cadastradas (${seguradoras.length})`],
-          ['nao_mapeadas', `Não Mapeadas (${naoMapeadas.length})`],
-        ].map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => { setTab(key); setSelecionados(new Set()) }}
-            className={`px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
-              tab === key
-                ? 'border-brand-accent text-brand-accent'
-                : 'border-transparent text-dark-muted hover:text-dark-text'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-        {naoMapeadas.length > 0 && tab !== 'nao_mapeadas' && (
-          <span className="ml-2 bg-status-warning/15 text-status-warning text-[10px] font-bold px-2 py-0.5 rounded-full">
-            {naoMapeadas.length} sem mapeamento
-          </span>
-        )}
-      </div>
-
-      {/* Conteúdo */}
-      {loading ? (
-        <div className="flex items-center justify-center h-48 gap-2 text-dark-muted text-sm">
-          <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-          </svg>
-          Carregando...
+      <DataCard title="Operação" description="Aba de cadastros e fila de limpeza das variações." className="overflow-hidden">
+        <div className="flex items-center gap-1 border-b border-dark-border">
+          {[
+            ['cadastradas',  `Cadastradas (${seguradoras.length})`],
+            ['nao_mapeadas', `Não Mapeadas (${naoMapeadas.length})`],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => { setTab(key); setSelecionados(new Set()) }}
+              className={`px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
+                tab === key
+                  ? 'border-brand-accent text-brand-accent'
+                  : 'border-transparent text-dark-muted hover:text-dark-text'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          {naoMapeadas.length > 0 && tab !== 'nao_mapeadas' && (
+            <span className="ml-2 bg-status-warning/15 text-status-warning text-[10px] font-bold px-2 py-0.5 rounded-full">
+              {naoMapeadas.length} sem mapeamento
+            </span>
+          )}
         </div>
-      ) : tab === 'cadastradas' ? (
-        <TabCadastradas
-          seguradoras={seguradoras}
-          onEditar={seg => setModal({ mode: 'editar', seg, variacoes: seg.aliases })}
-          onExcluir={excluir}
-          confirmExcluir={confirmExcluir}
-          setConfirmExcluir={setConfirmExcluir}
-        />
-      ) : (
-        <TabNaoMapeadas
-          naoMapeadas={naoMapeadas}
-          selecionados={selecionados}
-          setSelecionados={setSelecionados}
-          onAgrupar={abrirAgrupar}
-        />
-      )}
 
+        <div className="pt-5">
+          {loading ? (
+            <div className="flex items-center justify-center h-48 gap-2 text-dark-muted text-sm">
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              Carregando...
+            </div>
+          ) : tab === 'cadastradas' ? (
+            <TabCadastradas
+              seguradoras={seguradoras}
+              onEditar={seg => setModal({ mode: 'editar', seg, variacoes: seg.aliases })}
+              onExcluir={excluir}
+              confirmExcluir={confirmExcluir}
+              setConfirmExcluir={setConfirmExcluir}
+            />
+          ) : (
+            <TabNaoMapeadas
+              naoMapeadas={naoMapeadas}
+              selecionados={selecionados}
+              setSelecionados={setSelecionados}
+              onAgrupar={abrirAgrupar}
+            />
+          )}
+        </div>
+      </DataCard>
     </div>
   )
 }

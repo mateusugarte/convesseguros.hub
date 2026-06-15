@@ -1,21 +1,22 @@
 # Relatorio
 
 ## Propósito
-Relatório mensal de fichas organizadas em colunas Kanban (aprovada, emitida, enviado_cobrança, recuperados, desistiu, expirada). Permite arrastar fichas entre status e atualizar banco.
+Relatório mensal operacional em shell premium, com filtros por ano, mês e imobiliária, métricas de contexto e quadro Kanban arrastável.
 
 ## Componentes usados
-- `ImobiliariaSelect` — filtro por imobiliária
-- `Select` (ui/) — filtro de ano/mês
-- @dnd-kit: DndContext, DragOverlay, useDraggable, useDroppable — drag entre colunas
+- `PageHeader`
+- `MetricCard`
+- `DataCard`
+- `ImobiliariaSelect`
+- `Select`
+- `DndContext`, `DragOverlay`, `useDraggable`, `useDroppable`
 
 ## Queries Supabase
-- `lib/fichas.js` — fetchAnosRelatorio, fetchMesesRelatorio, fetchFichasRelatorio
-- `lib/supabase.js` — atualização direta de status ao arrastar card
-- Hook: `useImobiliaria`
-- Colunas mapeadas: aprovada → status:aprovado | emitida → status:emitido | enviado_cobranca → retorno_enviado:true | desistiu → status:cancelado | expirada → status:expirada
+- `lib/fichas.js` - `fetchAnosRelatorio`, `fetchMesesRelatorio`, `fetchFichasRelatorio`
+- `lib/supabase.js` - atualização direta de status ao arrastar cards
 
 ## Status
-pronto
+em andamento
 
 ## Usuários que utilizam
-Gestores e orçamentistas seniores (Luciano, Mateus)
+Gestores e orçamentistas seniores

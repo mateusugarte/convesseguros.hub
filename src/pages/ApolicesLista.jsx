@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchApolicesLista, STATUS_EMISSAO_LABELS } from '../lib/apolices'
 import { supabase } from '../lib/supabase'
@@ -6,34 +6,31 @@ import { useImobiliaria } from '../hooks/useImobiliaria'
 import ImobiliariaSelect from '../components/ImobiliariaSelect'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Search, Download, Calendar, Filter } from 'lucide-react'
+import { Search, Download, Filter, ListChecks, LayoutGrid } from 'lucide-react'
 import { Select } from '../components/ui/Select'
 import { DatePicker } from '../components/ui/DatePicker'
+import { PageHeader, MetricCard, DataCard } from '../components/ui'
 
 const FILTROS_PERIODO = [
-  { key: 'hoje',        label: 'Hoje' },
-  { key: 'semana',      label: 'Semana' },
-  { key: 'mes',         label: 'Mês' },
+  { key: 'hoje', label: 'Hoje' },
+  { key: 'semana', label: 'Semana' },
+  { key: 'mes', label: 'Mês' },
   { key: 'personalizado', label: 'Personalizado' },
-  { key: 'total',       label: 'Todo período' },
+  { key: 'total', label: 'Todo período' },
 ]
 
 function getRangeFiltro(filtro, customFrom, customTo) {
   const now = new Date()
   if (filtro === 'hoje') {
-    const s = new Date(now); s.setHours(0,0,0,0)
+    const s = new Date(now); s.setHours(0, 0, 0, 0)
     return [s.toISOString(), now.toISOString()]
   }
   if (filtro === 'semana') {
-    const s = new Date(now); s.setDate(s.getDate() - 7); s.setHours(0,0,0,0)
+    const s = new Date(now); s.setDate(s.getDate() - 7); s.setHours(0, 0, 0, 0)
     return [s.toISOString(), now.toISOString()]
   }
-  if (filtro === 'mes') {
-    return [new Date(now.getFullYear(), now.getMonth(), 1).toISOString(), now.toISOString()]
-  }
-  if (filtro === 'personalizado') {
-    return [customFrom || null, customTo ? new Date(customTo + 'T23:59:59').toISOString() : null]
-  }
+  if (filtro === 'mes') return [new Date(now.getFullYear(), now.getMonth(), 1).toISOString(), now.toISOString()]
+  if (filtro === 'personalizado') return [customFrom || null, customTo ? new Date(`${customTo}T23:59:59`).toISOString() : null]
   return [null, null]
 }
 
@@ -44,14 +41,13 @@ function fmtBRL(v) {
 
 function fmtData(v) {
   if (!v) return '—'
-  try { return format(parseISO(String(v).slice(0,10) + 'T12:00:00'), 'dd/MM/yy', { locale: ptBR }) } catch { return v }
+  try { return format(parseISO(String(v).slice(0, 10) + 'T12:00:00'), 'dd/MM/yy', { locale: ptBR }) } catch { return v }
 }
 
 function StatusBadge({ status }) {
   const s = STATUS_EMISSAO_LABELS[status] || { label: status, color: '#6B7280' }
   return (
-    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-          style={{ background: s.color + '20', color: s.color }}>
+    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: `${s.color}20`, color: s.color }}>
       {s.label}
     </span>
   )
@@ -64,34 +60,36 @@ function nomeFicha(item) {
 const PAGE_SIZE = 50
 
 export default function ApolicesLista() {
-  const navigate                          = useNavigate()
+  const navigate = useNavigate()
   const { resolverNome, getAliases } = useImobiliaria()
 
   const [apolices, setApolices] = useState([])
-  const [total,    setTotal]    = useState(0)
-  const [loading,  setLoading]  = useState(false)
-  const [page,     setPage]     = useState(0)
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [page, setPage] = useState(0)
+
+  const [filtro, setFiltro] = useState('mes')
+  const [customFrom, setCustomFrom] = useState('')
+  const [customTo, setCustomTo] = useState('')
+  const [imobFiltro, setImobFiltro] = useState('')
+  const [segFiltro, setSegFiltro] = useState('')
+  const [statusFiltro, setStatusFiltro] = useState('')
+  const [busca, setBusca] = useState('')
   const [segsOpcoes, setSegsOpcoes] = useState([])
 
-  useEffect(() => {
-    supabase.from('seguradoras').select('nome_canonico').eq('ativa', true).order('nome_canonico')
-      .then(({ data }) => setSegsOpcoes(data?.map(s => s.nome_canonico) || []))
-  }, [])
-
-  // Campos do formulário (não disparam busca automaticamente)
-  const [filtro,       setFiltro]       = useState('mes')
-  const [customFrom,   setCustomFrom]   = useState('')
-  const [customTo,     setCustomTo]     = useState('')
-  const [imobFiltro,   setImobFiltro]   = useState('')
-  const [segFiltro,    setSegFiltro]    = useState('')
-  const [statusFiltro, setStatusFiltro] = useState('')
-  const [busca,        setBusca]        = useState('')
-
-  // Estado aplicado — atualizado apenas ao clicar "Buscar"
   const [applied, setApplied] = useState({
     filtro: 'mes', customFrom: '', customTo: '',
     imobFiltro: '', segFiltro: '', statusFiltro: '', busca: '',
   })
+
+  useEffect(() => {
+    supabase
+      .from('seguradoras')
+      .select('nome_canonico')
+      .eq('ativa', true)
+      .order('nome_canonico')
+      .then(({ data }) => setSegsOpcoes(data?.map(s => s.nome_canonico) || []))
+  }, [])
 
   function buscar() {
     setPage(0)
@@ -114,183 +112,178 @@ export default function ApolicesLista() {
     const { data, count } = await fetchApolicesLista({
       dateFrom,
       dateTo,
-      imobiliarias:  imobiliariasFilter,
-      seguradora:    applied.segFiltro    || undefined,
+      imobiliarias: imobiliariasFilter,
+      seguradora: applied.segFiltro || undefined,
       statusEmissao: applied.statusFiltro || undefined,
-      busca:         applied.busca        || undefined,
-      page,
-      pageSize:      PAGE_SIZE,
+      busca: applied.busca || undefined,
+      offset: page * PAGE_SIZE,
+      limit: PAGE_SIZE,
     })
-    setApolices(data)
-    setTotal(count)
+
+    setApolices(data || [])
+    setTotal(count || 0)
     setLoading(false)
   }, [applied, page])
 
-  // Carrega na montagem e quando applied/page muda (não ao digitar filtros)
   useEffect(() => { load() }, [load])
 
-  // Métricas do resultado atual
-  const emitidas  = apolices.filter(a => a.status_emissao === 'emitida').length
-  const enviadas  = apolices.filter(a => a.status_emissao === 'enviada').length
-  const valorTotal = apolices.reduce((s, a) => s + (Number(a.valor_parcela) || 0), 0)
+  async function exportarCSV() {
+    const [dateFrom, dateTo] = getRangeFiltro(applied.filtro, applied.customFrom, applied.customTo)
+    let imobiliariasFilter
+    if (applied.imobFiltro) {
+      imobiliariasFilter = await getAliasesRef.current(applied.imobFiltro)
+      if (!imobiliariasFilter.length) imobiliariasFilter = [applied.imobFiltro]
+    }
+    const { data } = await fetchApolicesLista({
+      dateFrom,
+      dateTo,
+      imobiliarias: imobiliariasFilter,
+      seguradora: applied.segFiltro || undefined,
+      statusEmissao: applied.statusFiltro || undefined,
+      busca: applied.busca || undefined,
+      offset: 0,
+      limit: 1000,
+    })
 
-  // CSV export
-  function exportarCSV() {
-    const headers = ['Data Emissão','Imobiliária','Locatário','Apólice','Seguradora','Status','Parcela']
-    const rows = apolices.map(a => [
+    const rows = (data || []).map(a => [
       fmtData(a.data_emissao),
-      resolverNome(a.imobiliaria),
+      resolverNome(a.imobiliaria) || a.imobiliaria || '',
       nomeFicha(a),
       a.numero_apolice || '',
       a.seguradora || '',
       STATUS_EMISSAO_LABELS[a.status_emissao]?.label || a.status_emissao || '',
-      a.valor_parcela ? Number(a.valor_parcela).toFixed(2) : '',
+      a.valor_parcela ? fmtBRL(a.valor_parcela) : '',
+      a.profiles?.nome || '',
     ])
-    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n')
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
-    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'apolices.csv' })
+
+    const csv = [
+      ['Data Emissão', 'Imobiliária', 'Locatário', 'Apólice', 'Seguradora', 'Status', 'Parcela', 'Emissor'],
+      ...rows,
+    ].map(r => r.map(v => `"${String(v).replaceAll('"', '""')}"`).join(';')).join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `apolices-${Date.now()}.csv`
     a.click()
+    URL.revokeObjectURL(url)
   }
 
-  const pages = Math.ceil(total / PAGE_SIZE)
+  const emitidas = apolices.filter(a => a.status_emissao === 'emitida').length
+  const enviadas = apolices.filter(a => a.status_emissao === 'enviada').length
+  const valorTotal = apolices.reduce((sum, a) => sum + (Number(a.valor_parcela) || 0), 0)
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
     <div className="space-y-5 animate-fade-in">
+      <PageHeader
+        eyebrow="Apólices"
+        title="Lista de Apólices"
+        description="Visão tabular do fluxo de apólices com filtros por período, imobiliária, seguradora e status. A navegação para o detalhe segue no mesmo fluxo premium."
+        actions={(
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => navigate('/apolices')} className="flex items-center gap-1.5 rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted transition-colors hover:border-brand-accent/50 hover:text-dark-text">
+              <LayoutGrid className="h-3.5 w-3.5" /> Dashboard
+            </button>
+            <button onClick={() => navigate('/apolices/gestao')} className="flex items-center gap-1.5 rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted transition-colors hover:border-brand-accent/50 hover:text-dark-text">
+              <ListChecks className="h-3.5 w-3.5" /> Gestão
+            </button>
+          </div>
+        )}
+        stats={(
+          <>
+            <MetricCard label="Total no filtro" value={total} hint="resultado aplicado" tone="accent" />
+            <MetricCard label="Emitidas" value={emitidas} hint="status emitida" tone="secondary" />
+            <MetricCard label="Enviadas" value={enviadas} hint="status enviada" tone="success" />
+            <MetricCard label="Valor total" value={fmtBRL(valorTotal)} hint="soma das parcelas" tone="warning" />
+          </>
+        )}
+      />
 
-      {/* ── Header ── */}
-      <div className="dashboard-hero flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <div className="section-kicker mb-2">Gestão documental</div>
-          <h1 className="title-display text-dark-text">Apólices</h1>
-          <p className="section-lead mt-1">Listagem completa de todas as apólices</p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <div className="dashboard-hero-chip">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Total no filtro</p>
-            <p className="mt-1 text-sm font-semibold text-dark-text">{total}</p>
-          </div>
-          <div className="dashboard-hero-chip">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Emitidas</p>
-            <p className="mt-1 text-sm font-semibold text-dark-text">{emitidas}</p>
-          </div>
-          <div className="dashboard-hero-chip">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Valor total</p>
-            <p className="mt-1 text-sm font-semibold text-dark-text">{fmtBRL(valorTotal)}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Filtros ── */}
-      <div className="card p-4 space-y-3">
-        {/* Período */}
-        <div className="flex flex-wrap items-center gap-1">
-          {FILTROS_PERIODO.map(f => (
-            <button key={f.key} onClick={() => setFiltro(f.key)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      filtro === f.key ? 'bg-brand-secondary text-white shadow-sm' : 'border border-dark-border text-dark-muted hover:text-dark-text hover:border-brand-accent/40'
-                    }`}>
-              {f.label}
+      <DataCard title="Filtros" subtitle="Combine período e atributos da apólice antes de buscar." bodyClassName="space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {FILTROS_PERIODO.map(opt => (
+            <button
+              key={opt.key}
+              onClick={() => setFiltro(opt.key)}
+              className={`rounded-2xl px-3 py-2 text-xs font-medium transition-colors ${filtro === opt.key ? 'bg-brand-secondary text-white' : 'border border-dark-border text-dark-muted hover:text-dark-text'}`}
+            >
+              {opt.label}
             </button>
           ))}
         </div>
 
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="space-y-2">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Imobiliária</label>
+            <ImobiliariaSelect value={imobFiltro} onChange={setImobFiltro} />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Seguradora</label>
+            <Select value={segFiltro} onChange={setSegFiltro} options={['', ...segsOpcoes].map(v => ({ value: v, label: v || 'Todas' }))} placeholder="Todas" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Status</label>
+            <Select value={statusFiltro} onChange={setStatusFiltro} options={[{ value: '', label: 'Todos' }, ...Object.entries(STATUS_EMISSAO_LABELS).map(([k, v]) => ({ value: k, label: v.label }))]} />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Busca</label>
+            <div className="flex items-center gap-2 rounded-2xl border border-dark-border px-3 py-2 bg-dark-surface2/60">
+              <Search className="h-4 w-4 text-dark-muted" />
+              <input
+                value={busca}
+                onChange={e => setBusca(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && buscar()}
+                className="w-full bg-transparent text-sm text-dark-text outline-none placeholder:text-dark-muted"
+                placeholder="Nome, apólice, CPF/CNPJ..."
+              />
+            </div>
+          </div>
+        </div>
+
         {filtro === 'personalizado' && (
-          <div className="flex items-center gap-2 text-xs text-dark-muted">
-            <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-            <DatePicker value={customFrom} onChange={v => setCustomFrom(v)} />
-            <span>—</span>
-            <DatePicker value={customTo} onChange={v => setCustomTo(v)} />
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">De</label>
+              <DatePicker value={customFrom} onChange={setCustomFrom} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Até</label>
+              <DatePicker value={customTo} onChange={setCustomTo} />
+            </div>
           </div>
         )}
 
-        {/* Dropdowns */}
         <div className="flex flex-wrap items-center gap-2">
-          <ImobiliariaSelect
-            value={imobFiltro}
-            onChange={setImobFiltro}
-            placeholder="Imobiliária"
-            className="text-sm"
-          />
-
-          <Select
-            value={segFiltro}
-            onChange={setSegFiltro}
-            placeholder="Seguradora"
-            className="w-36"
-            options={[{ value: '', label: 'Seguradora' }, ...segsOpcoes.map(s => ({ value: s, label: s }))]}
-          />
-
-          <Select
-            value={statusFiltro}
-            onChange={setStatusFiltro}
-            placeholder="Status"
-            className="w-36"
-            options={[
-              { value: '', label: 'Status' },
-              ...Object.entries(STATUS_EMISSAO_LABELS).map(([k, v]) => ({ value: k, label: v.label })),
-            ]}
-          />
-
-          <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2">
-            <Search className="w-4 h-4 text-dark-muted flex-shrink-0" />
-            <input
-              type="text"
-              placeholder="Buscar apólice, locatário..."
-              value={busca}
-              onChange={e => setBusca(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && buscar()}
-              className="text-sm flex-1 outline-none bg-transparent text-dark-text placeholder-dark-muted"
-            />
-          </div>
-
-          <button
-            onClick={buscar}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-secondary text-white text-xs font-semibold hover:bg-brand-primary transition-colors"
-          >
-            <Filter className="w-3.5 h-3.5" /> Buscar
+          <button onClick={buscar} className="inline-flex items-center gap-1.5 rounded-2xl bg-brand-secondary px-4 py-2 text-xs font-semibold text-white transition-colors hover:opacity-90">
+            <Filter className="h-3.5 w-3.5" /> Buscar
           </button>
-
-          <button onClick={exportarCSV} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors">
-            <Download className="w-3.5 h-3.5" /> Exportar
+          <button onClick={exportarCSV} className="inline-flex items-center gap-1.5 rounded-2xl border border-dark-border px-4 py-2 text-xs text-dark-muted transition-colors hover:border-brand-accent/50 hover:text-dark-text">
+            <Download className="h-3.5 w-3.5" /> Exportar
           </button>
         </div>
-      </div>
+      </DataCard>
 
-      {/* ── Métricas ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: 'Total no filtro',  val: total,                       color: '#4A90D9' },
-          { label: 'Emitidas',         val: emitidas,                    color: '#8B5CF6' },
-          { label: 'Enviadas',         val: enviadas,                    color: '#10B981' },
-          { label: 'Valor total',      val: fmtBRL(valorTotal),          color: '#F59E0B' },
-        ].map(({ label, val, color }) => (
-          <div key={label} className="metric-tile">
-            <p className="metric-label">{label}</p>
-            <p className="metric-value" style={{ color }}>{val ?? '—'}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Tabela ── */}
-      <div className="table-shell overflow-hidden">
+      <DataCard title="Tabela de apólices" subtitle={`Resultados aplicados: ${total}. Clique em uma linha para abrir o detalhe.`}>
         {loading ? (
-          <div className="flex items-center justify-center h-48 gap-2 text-dark-muted text-sm">
-            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          <div className="flex h-48 items-center justify-center gap-2 text-sm text-dark-muted">
+            <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
             Carregando...
           </div>
         ) : apolices.length === 0 ? (
-          <div className="table-empty h-48">
-            <p className="text-sm">Nenhuma apólice encontrada</p>
+          <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-dark-border text-sm text-dark-muted">
+            Nenhuma apólice encontrada
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="table-table text-sm">
               <thead className="table-thead border-b border-dark-border">
                 <tr>
-                  {['Data Emissão','Imobiliária','Locatário','Apólice','Seguradora','Status','Parcela','Emissor',''].map(h => (
+                  {['Data Emissão', 'Imobiliária', 'Locatário', 'Apólice', 'Seguradora', 'Status', 'Parcela', 'Emissor', ''].map(h => (
                     <th key={h} className="th whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -298,17 +291,16 @@ export default function ApolicesLista() {
               <tbody className="divide-y divide-dark-border">
                 {apolices.map(a => (
                   <tr key={a.id} className="table-row" onClick={() => navigate(`/apolices/${a.id}`)}>
-                    <td className="td text-dark-muted text-xs font-mono whitespace-nowrap">{fmtData(a.data_emissao)}</td>
-                    <td className="td font-medium text-dark-text max-w-[140px] truncate">{resolverNome(a.imobiliaria) || '—'}</td>
-                    <td className="td text-dark-text max-w-[150px] truncate">{nomeFicha(a)}</td>
+                    <td className="td text-xs font-mono whitespace-nowrap text-dark-muted">{fmtData(a.data_emissao)}</td>
+                    <td className="td max-w-[140px] truncate font-medium text-dark-text">{resolverNome(a.imobiliaria) || '—'}</td>
+                    <td className="td max-w-[150px] truncate text-dark-text">{nomeFicha(a)}</td>
                     <td className="td font-mono text-xs text-dark-muted">{a.numero_apolice || '—'}</td>
-                    <td className="td text-dark-muted text-xs">{a.seguradora || '—'}</td>
+                    <td className="td text-xs text-dark-muted">{a.seguradora || '—'}</td>
                     <td className="td"><StatusBadge status={a.status_emissao} /></td>
                     <td className="td font-mono text-xs">{a.valor_parcela ? fmtBRL(a.valor_parcela) : '—'}</td>
-                    <td className="td text-dark-muted text-xs">{a.profiles?.nome?.split(' ')[0] || '—'}</td>
+                    <td className="td text-xs text-dark-muted">{a.profiles?.nome?.split(' ')[0] || '—'}</td>
                     <td className="td" onClick={e => e.stopPropagation()}>
-                      <button onClick={() => navigate(`/apolices/${a.id}`)}
-                              className="text-xs px-2 py-1 rounded border border-dark-border text-dark-muted hover:text-dark-text transition-colors">
+                      <button onClick={() => navigate(`/apolices/${a.id}`)} className="rounded-lg border border-dark-border px-2 py-1 text-xs text-dark-muted transition-colors hover:border-brand-accent/50 hover:text-dark-text">
                         Ver
                       </button>
                     </td>
@@ -319,20 +311,28 @@ export default function ApolicesLista() {
           </div>
         )}
 
-        {/* Paginação */}
         {pages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-dark-border text-xs text-dark-muted">
+          <div className="flex items-center justify-between border-t border-dark-border px-4 py-3 text-xs text-dark-muted">
             <span>{page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} de {total}</span>
             <div className="flex items-center gap-1">
-              <button onClick={() => setPage(p => p - 1)} disabled={page === 0}
-                      className="px-2.5 py-1 rounded-lg border border-dark-border hover:border-brand-accent/50 disabled:opacity-30 transition-colors">← Anterior</button>
-              <button onClick={() => setPage(p => p + 1)} disabled={page >= pages - 1}
-                      className="px-2.5 py-1 rounded-lg border border-dark-border hover:border-brand-accent/50 disabled:opacity-30 transition-colors">Próximo →</button>
+              <button
+                onClick={() => setPage(p => p - 1)}
+                disabled={page === 0}
+                className="rounded-2xl border border-dark-border px-2.5 py-1 transition-colors hover:border-brand-accent/50 disabled:opacity-30"
+              >
+                ← Anterior
+              </button>
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={page >= pages - 1}
+                className="rounded-2xl border border-dark-border px-2.5 py-1 transition-colors hover:border-brand-accent/50 disabled:opacity-30"
+              >
+                Próximo →
+              </button>
             </div>
           </div>
         )}
-      </div>
+      </DataCard>
     </div>
   )
 }
-

@@ -9,6 +9,7 @@ import {
 import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { Select } from '../components/ui/Select'
+import { PageHeader, DataCard, FilterBar, MetricCard } from '../components/ui'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useToast } from '../contexts/ToastContext'
@@ -264,126 +265,156 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
     })
   }, [inicioFiltro, fimFiltro])
 
+  const kpiCards = [
+    { label: 'Total do mês', value: kpis?.totalMes ?? '—', hint: kpis?.variacaoMes !== undefined && kpis?.variacaoMes !== null ? `${kpis.variacaoMes >= 0 ? '+' : ''}${kpis.variacaoMes}% vs mês anterior` : 'Janela atual', tone: 'accent', icon: <TrendingUp className="w-4 h-4" /> },
+    { label: 'Hoje', value: kpis?.hoje ?? '—', hint: 'Entrada do dia', tone: 'success', icon: <Clock className="w-4 h-4" /> },
+    { label: 'Esta semana', value: kpis?.semana ?? '—', hint: 'Volume recente', tone: 'secondary', icon: <CheckCircle2 className="w-4 h-4" /> },
+    { label: 'Pendentes', value: kpis?.pendentes ?? '—', hint: 'Aguardando ação', tone: 'warning', icon: <AlertCircle className="w-4 h-4" /> },
+    { label: 'Em cotação', value: kpis?.emCotacao ?? '—', hint: 'Já assumidas', tone: 'accent', icon: <FileText className="w-4 h-4" /> },
+  ]
+
   return (
     <div className="space-y-6 animate-fade-in">
-
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="title-page text-dark-text">Fichas</h1>
-          <p className="text-xs text-dark-muted mt-0.5 capitalize">Visão geral · {mesLabel}</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          {/* Seletor mês/ano para os KPIs */}
-          <div className="flex items-center gap-2">
-            <Select
-              value={String(filtroMes)}
-              onChange={v => setFiltroMes(Number(v))}
-              options={MESES_ABBR.map((m, i) => ({ value: String(i+1), label: m }))}
-              className="w-20"
-            />
-            <Select
-              value={String(filtroAno)}
-              onChange={v => setFiltroAno(Number(v))}
-              options={[now.getFullYear(), now.getFullYear()-1, now.getFullYear()-2].map(y => ({ value: String(y), label: String(y) }))}
-              className="w-[74px]"
-            />
+      <PageHeader
+        eyebrow="Mesa operacional"
+        title="Fichas"
+        description={`Visão geral da operação em ${mesLabel}. Acompanhe volume, status e entrada por produto sem sair da mesa.`}
+        actions={(
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <div className="flex items-center gap-2">
+              <Select
+                value={String(filtroMes)}
+                onChange={v => setFiltroMes(Number(v))}
+                options={MESES_ABBR.map((m, i) => ({ value: String(i + 1), label: m }))}
+                className="w-20"
+              />
+              <Select
+                value={String(filtroAno)}
+                onChange={v => setFiltroAno(Number(v))}
+                options={[now.getFullYear(), now.getFullYear() - 1, now.getFullYear() - 2].map(y => ({ value: String(y), label: String(y) }))}
+                className="w-[74px]"
+              />
+            </div>
+            <Link
+              to="/minhas-fichas"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
+            >
+              <UserSquare2 className="w-3.5 h-3.5" />
+              Minhas Fichas
+              {minhasFichasCount > 0 && (
+                <span className="bg-status-warning text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                  {minhasFichasCount}
+                </span>
+              )}
+            </Link>
+            <button
+              onClick={onRelatorio}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
+            >
+              <BarChart2 className="w-3.5 h-3.5" /> Relatório Mensal
+            </button>
+            <button onClick={onCriar} className="btn-primary flex items-center gap-2 text-sm">
+              <Plus className="w-4 h-4" /> Nova Ficha
+            </button>
           </div>
-          <Link to="/minhas-fichas"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors">
-            <UserSquare2 className="w-3.5 h-3.5" />
-            Minhas Fichas
-            {minhasFichasCount > 0 && (
-              <span className="bg-status-warning text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
-                {minhasFichasCount}
-              </span>
-            )}
-          </Link>
-          <button onClick={onRelatorio}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors">
-            <BarChart2 className="w-3.5 h-3.5" /> Relatório Mensal
-          </button>
-          <button onClick={onCriar} className="btn-primary flex items-center gap-2 text-sm">
-            <Plus className="w-4 h-4" /> Nova Ficha
-          </button>
-        </div>
-      </div>
+        )}
+        stats={(
+          <>
+            <MetricCard
+              label="Total do mês"
+              value={kpis?.totalMes ?? '—'}
+              hint={kpis?.variacaoMes != null ? `${kpis.variacaoMes >= 0 ? '+' : ''}${kpis.variacaoMes}% vs mês anterior` : 'Volume do período'}
+              tone="accent"
+            />
+            <MetricCard
+              label="Hoje"
+              value={kpis?.hoje ?? '—'}
+              hint="entrada no dia"
+              tone="success"
+            />
+            <MetricCard
+              label="Esta semana"
+              value={kpis?.semana ?? '—'}
+              hint="janela operacional"
+              tone="secondary"
+            />
+            <MetricCard
+              label="Pendentes"
+              value={kpis?.pendentes ?? '—'}
+              hint="aguardando ação"
+              tone="warning"
+            />
+            <MetricCard
+              label="Em cotação"
+              value={kpis?.emCotacao ?? '—'}
+              hint="carteira ativa"
+              tone="accent"
+            />
+          </>
+        )}
+      />
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        {[
-          { label: 'Total do mês',  val: kpis?.totalMes,  variacao: kpis?.variacaoMes, accent: '#4A90D9' },
-          { label: 'Hoje',          val: kpis?.hoje,       accent: '#10B981' },
-          { label: 'Esta semana',   val: kpis?.semana,     accent: '#4A90D9' },
-          { label: 'Pendentes',     val: kpis?.pendentes,  accent: '#F59E0B' },
-          { label: 'Em Cotação',    val: kpis?.emCotacao,  accent: '#C9A84C' },
-        ].map(({ label, val, variacao, accent }) => (
-          <div key={label} className="card p-4">
-            <p className="eyebrow text-dark-muted mb-2">{label}</p>
-            <p className="stat-number" style={{ color: accent }}>{val ?? '—'}</p>
-            {variacao !== undefined && variacao !== null && (
-              <div className={`flex items-center gap-1 mt-1 text-[10px] font-medium ${variacao >= 0 ? 'text-status-success' : 'text-status-danger'}`}>
-                {variacao >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                {variacao >= 0 ? '+' : ''}{variacao}% vs mês anterior
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Area chart */}
-        <div className="card p-4 lg:col-span-2">
-          <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-4">Fichas — últimos 14 dias</p>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <DataCard
+          className="xl:col-span-2"
+          title="Entrada recente"
+          subtitle="Fichas recebidas nos últimos 14 dias"
+          bodyClassName="pt-4"
+        >
           {fichasPorDia.length > 0 ? (
-            <ResponsiveContainer width="100%" height={140}>
+            <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={fichasPorDia} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gradTotal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4A90D9" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#4A90D9" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#FF2D55" stopOpacity={0.28} />
+                    <stop offset="95%" stopColor="#FF2D55" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="dia" tick={{ fontSize: 11, fill: CHART_COLORS[theme].tick }}
-                       tickFormatter={v => { try { return format(parseISO(v), 'dd/MM') } catch { return v } }}
-                       axisLine={false} tickLine={false} />
+                <XAxis
+                  dataKey="dia"
+                  tick={{ fontSize: 11, fill: CHART_COLORS[theme].tick }}
+                  tickFormatter={v => { try { return format(parseISO(v), 'dd/MM') } catch { return v } }}
+                  axisLine={false}
+                  tickLine={false}
+                />
                 <Tooltip content={<DarkTip />} />
-                <Area type="monotone" dataKey="total" name="Total" stroke="#4A90D9" fill="url(#gradTotal)" strokeWidth={2} dot={false} />
+                <Area type="monotone" dataKey="total" name="Total" stroke="#FF2D55" fill="url(#gradTotal)" strokeWidth={2.2} dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[140px] flex items-center justify-center text-dark-muted text-sm">Carregando...</div>
+            <div className="h-[180px] flex items-center justify-center text-dark-muted text-sm">Sem dados para o período</div>
           )}
-        </div>
+        </DataCard>
 
-        {/* Donut chart */}
-        <div className="card p-4">
-          <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-4">Por Status</p>
+        <DataCard
+          title="Mix por status"
+          subtitle="Distribuição consolidada no mês selecionado"
+          bodyClassName="pt-4"
+        >
           {statusDist.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              <ResponsiveContainer width="100%" height={100}>
+            <div className="flex flex-col gap-3">
+              <ResponsiveContainer width="100%" height={120}>
                 <PieChart>
-                  <Pie data={statusDist} dataKey="value" cx="50%" cy="50%" innerRadius={28} outerRadius={46}>
+                  <Pie data={statusDist} dataKey="value" cx="50%" cy="50%" innerRadius={30} outerRadius={50}>
                     {statusDist.map((entry, i) => (
-                      <Cell key={i} fill={STATUS_CHART_COLORS[entry.status] || '#4A90D9'} />
+                      <Cell key={i} fill={STATUS_CHART_COLORS[entry.status] || '#FF2D55'} />
                     ))}
                   </Pie>
                   <Tooltip content={({ active, payload }) => active && payload?.length ? (
                     <div style={tooltipStyle(theme)} className="px-2 py-1.5 text-xs">
-                      <span style={{ color: STATUS_CHART_COLORS[payload[0]?.payload?.status] || '#4A90D9' }}>
+                      <span style={{ color: STATUS_CHART_COLORS[payload[0]?.payload?.status] || '#FF2D55' }}>
                         {payload[0]?.payload?.label}: {payload[0]?.value}
                       </span>
                     </div>
                   ) : null} />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {statusDist.slice(0, 4).map(s => (
                   <div key={s.status} className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: STATUS_CHART_COLORS[s.status] || '#4A90D9' }} />
-                      <span className="text-dark-muted truncate max-w-[90px]">{s.label}</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: STATUS_CHART_COLORS[s.status] || '#FF2D55' }} />
+                      <span className="text-dark-muted truncate">{s.label}</span>
                     </div>
                     <span className="font-mono font-semibold text-dark-text">{s.value}</span>
                   </div>
@@ -391,15 +422,17 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
               </div>
             </div>
           ) : (
-            <div className="h-[140px] flex items-center justify-center text-dark-muted text-sm">Carregando...</div>
+            <div className="h-[180px] flex items-center justify-center text-dark-muted text-sm">Sem dados para o período</div>
           )}
-        </div>
+        </DataCard>
       </div>
 
-      {/* Cards de produto */}
-      <div>
-        <p className="text-xs font-semibold text-dark-muted uppercase tracking-widest mb-4">Selecione um produto</p>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <DataCard
+        title="Selecionar produto"
+        subtitle="Abra a mesa operacional por linha de negócio"
+        bodyClassName="pt-4"
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {PRODUTOS.map((p, i) => {
             const PIcon = p.Icon
             return (
@@ -408,9 +441,9 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
                 onClick={() => onSelectProduto(p.key)}
                 className="animate-slide-up group text-left rounded-2xl p-5 border transition-all duration-200 active:scale-[0.97] relative overflow-hidden"
                 style={{
-                  background:   p.bg,
-                  borderColor:  p.border,
-                  animationDelay:    `${i * 50}ms`,
+                  background: p.bg,
+                  borderColor: p.border,
+                  animationDelay: `${i * 50}ms`,
                   animationFillMode: 'both',
                 }}
                 onMouseEnter={e => {
@@ -424,15 +457,10 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
                   e.currentTarget.style.borderColor = p.border
                 }}
               >
-                {/* Icon */}
                 <div className="flex items-start justify-between mb-4">
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center"
-                    style={{ background: p.accent + '20' }}
-                  >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: p.accent + '20' }}>
                     <PIcon className="w-5 h-5" style={{ color: p.accent }} strokeWidth={1.5} />
                   </div>
-                  {/* Badge de categoria */}
                   <span
                     className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
                     style={{ background: p.accent + '18', color: p.accent }}
@@ -441,10 +469,8 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
                   </span>
                 </div>
 
-                {/* Nome do produto em destaque */}
                 <p className="font-bold text-base text-dark-text mb-3 leading-tight">{p.label}</p>
 
-                {/* Métricas */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-dark-muted">Total</span>
@@ -453,7 +479,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-dark-muted">Em Aberto</span>
+                    <span className="text-xs text-dark-muted">Em aberto</span>
                     <span className="text-sm font-bold font-mono text-status-warning">
                       {contagem[p.key]?.emAberto ?? '—'}
                     </span>
@@ -463,7 +489,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
             )
           })}
         </div>
-      </div>
+      </DataCard>
     </div>
   )
 }
@@ -621,39 +647,41 @@ function TabelaPassadas({ fichas, user, navigate, onEditar, resolverNome }) {
 // ── PageShell ─────────────────────────────────────────────────────────────────
 
 function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, onRelatorio, viewToggle, selectorSlot, children }) {
-  const PIcon = prodInfo?.Icon
   return (
-    <div className="space-y-4 animate-fade-in">
-      {/* Header: breadcrumb + ações */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-1.5 text-sm flex-wrap">
-          <button onClick={onHome} className="text-dark-muted hover:text-dark-text transition-colors">
-            <Home className="w-4 h-4" />
-          </button>
-          <ChevronRight className="w-3 h-3 text-dark-border" />
-          <Crumb onClick={onProduto} active={false}>
-            {PIcon && <PIcon className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" style={{ color: prodInfo?.accent }} strokeWidth={1.5} />}
-            {prodInfo?.label}
-          </Crumb>
-          {anoLabel && <>
-            <ChevronRight className="w-3 h-3 text-dark-border" />
-            <Crumb active>{mesLabel} {anoLabel}</Crumb>
-          </>}
-        </div>
-        <div className="flex items-center gap-2">
-          {viewToggle}
-          <button onClick={onRelatorio}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors">
-            <BarChart2 className="w-3.5 h-3.5" /> Relatório
-          </button>
-          <button onClick={onCreate} className="btn-primary flex items-center gap-2 text-sm">
-            <Plus className="w-4 h-4" /> Nova Ficha
-          </button>
-        </div>
-      </div>
+    <div className="space-y-5 animate-fade-in">
+      <PageHeader
+        eyebrow="Mesa operacional"
+        title={prodInfo?.label || 'Fichas'}
+        description={anoLabel ? `${mesLabel} ${anoLabel} · lista e kanban da linha de negócio selecionada.` : 'Mesa operacional com lista, kanban e drill-down.'}
+        actions={(
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <button
+              onClick={onHome}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
+            >
+              <Home className="w-3.5 h-3.5" />
+              Visão geral
+            </button>
+            {viewToggle}
+            <button
+              onClick={onRelatorio}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
+            >
+              <BarChart2 className="w-3.5 h-3.5" /> Relatório
+            </button>
+            <button onClick={onCreate} className="btn-primary flex items-center gap-2 text-sm">
+              <Plus className="w-4 h-4" /> Nova Ficha
+            </button>
+          </div>
+        )}
+      />
 
-      {/* Seletor de mês/ano */}
-      {selectorSlot}
+      <DataCard
+        title="Recorte de trabalho"
+        subtitle="Use o período para refinar o lote exibido na mesa operacional"
+      >
+        {selectorSlot}
+      </DataCard>
 
       {children}
     </div>
@@ -847,7 +875,7 @@ export default function Fichas() {
   const mesLabel  = MESES_ABBR[mes - 1] || ''
 
   const selectorSlot = (
-    <div className="card px-4 py-3">
+    <FilterBar>
       <MesAnoSelector
         ano={ano}
         anos={anos}
@@ -856,7 +884,7 @@ export default function Fichas() {
         onAnoChange={a => { setAno(a); setPage(0) }}
         onMesChange={m => { setMes(m); setPage(0) }}
       />
-    </div>
+    </FilterBar>
   )
 
   return (
@@ -893,41 +921,53 @@ export default function Fichas() {
         />
       ) : (
         <>
-          {/* Tabs */}
-          <div className="flex items-center gap-1 border-b border-dark-border mb-5">
-            {[
-              ['abertas',          'Em Aberto',       <Clock className="w-3.5 h-3.5" />],
-              ['passadas',         'Passadas',         <CheckCircle2 className="w-3.5 h-3.5" />],
-              ['passadas_por_mim', 'Passadas por Mim', <XCircle className="w-3.5 h-3.5" />],
-            ].map(([key, label, icon]) => (
-              <button key={key} onClick={() => changeTab(key)}
-                      className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
-                        tab === key ? 'border-brand-accent text-brand-accent' : 'border-transparent text-dark-muted hover:text-dark-text'
-                      }`}>
-                {icon}{label}
-              </button>
-            ))}
-          </div>
-
-          {tab === 'passadas_por_mim' && fichas.length > 0 && (
-            <div className="grid grid-cols-4 gap-3 mb-4">
+          <FilterBar
+            className="mb-4"
+            actions={(
+              <>
+                {(tab === 'passadas' || tab === 'passadas_por_mim') && (
+                  <button
+                    onClick={() => { setSemSeguradora(s => !s); setPage(0) }}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl border text-xs font-medium transition-all ${
+                      semSeguradora
+                        ? 'border-status-warning bg-status-warning/10 text-status-warning'
+                        : 'border-dark-border text-dark-muted hover:text-dark-text hover:border-dark-muted'
+                    }`}
+                  >
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    Sem seguradora
+                  </button>
+                )}
+                <button
+                  onClick={() => exportCSV(fichas, `conves-fichas-${produto}-${ano}-${mes}.csv`, resolverNome)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" /> Exportar
+                </button>
+              </>
+            )}
+          >
+            <div className="flex items-center gap-1 rounded-2xl border border-dark-border/70 bg-dark-surface2/60 p-1">
               {[
-                ['Aprovadas', minhaMetrica.aprovadas, 'text-status-success'],
-                ['Recusadas', minhaMetrica.recusadas, 'text-status-danger'],
-                ['Emitidas',  minhaMetrica.emitidas,  'text-brand-accent'],
-                [`Taxa Aprov.`, `${minhaMetrica.taxa}%`, 'text-status-success'],
-              ].map(([l, v, cls]) => (
-                <div key={l} className="card p-3 text-center">
-                  <p className="text-xs text-dark-muted mb-1">{l}</p>
-                  <p className={`text-xl font-bold font-mono ${cls}`}>{v}</p>
-                </div>
+                ['abertas', 'Em Aberto', Clock],
+                ['passadas', 'Passadas', CheckCircle2],
+                ['passadas_por_mim', 'Passadas por Mim', XCircle],
+              ].map(([key, label, Icon]) => (
+                <button
+                  key={key}
+                  onClick={() => changeTab(key)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    tab === key ? 'bg-brand-secondary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {label}
+                </button>
               ))}
             </div>
-          )}
 
-          <div className="flex flex-wrap items-center gap-3 mb-4">
-            <div className="flex flex-col gap-1 flex-1 min-w-[200px] max-w-sm">
-              <div className={`flex items-center gap-2 bg-dark-surface2 border rounded-lg px-3 py-2 transition-colors ${
+            <div className="flex flex-col gap-1 flex-1 min-w-[220px] max-w-sm">
+              <div className={`flex items-center gap-2 bg-dark-surface2 border rounded-2xl px-3 py-2.5 transition-colors ${
                 search ? 'border-brand-accent/50' : 'border-dark-border'
               }`}>
                 {search && search !== debouncedSearch ? (
@@ -958,29 +998,26 @@ export default function Fichas() {
                 </span>
               )}
             </div>
-            {(tab === 'passadas' || tab === 'passadas_por_mim') && (
-              <button
-                onClick={() => { setSemSeguradora(s => !s); setPage(0) }}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
-                  semSeguradora
-                    ? 'border-status-warning bg-status-warning/10 text-status-warning'
-                    : 'border-dark-border text-dark-muted hover:text-dark-text hover:border-dark-muted'
-                }`}
-              >
-                <AlertCircle className="w-3.5 h-3.5" />
-                Sem seguradora
-              </button>
-            )}
-            {!debouncedSearch && <span className="text-xs text-dark-muted ml-auto">{total} ficha{total !== 1 ? 's' : ''}</span>}
-            <button
-              onClick={() => exportCSV(fichas, `conves-fichas-${produto}-${ano}-${mes}.csv`, resolverNome)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
-            >
-              <Download className="w-3.5 h-3.5" /> Exportar
-            </button>
-          </div>
 
-          <div className="card overflow-hidden">
+            {!debouncedSearch && (
+              <span className="text-xs text-dark-muted ml-auto">{total} ficha{total !== 1 ? 's' : ''}</span>
+            )}
+          </FilterBar>
+
+          {tab === 'passadas_por_mim' && fichas.length > 0 && minhaMetrica && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+              <MetricCard label="Aprovadas" value={minhaMetrica.aprovadas} tone="success" />
+              <MetricCard label="Recusadas" value={minhaMetrica.recusadas} tone="warning" />
+              <MetricCard label="Emitidas" value={minhaMetrica.emitidas} tone="accent" />
+              <MetricCard label="Taxa aprov." value={`${minhaMetrica.taxa}%`} tone="secondary" />
+            </div>
+          )}
+
+          <DataCard
+            title={tab === 'abertas' ? 'Fichas em aberto' : 'Fichas finalizadas'}
+            subtitle={debouncedSearch ? `Resultados para "${debouncedSearch}"` : `Total: ${total} ficha${total !== 1 ? 's' : ''}`}
+            bodyClassName="p-0"
+          >
             {loading ? (
               <div className="flex items-center justify-center h-48 gap-2 text-dark-muted text-sm">
                 <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -1004,7 +1041,7 @@ export default function Fichas() {
               </div>
             )}
             <Pagination page={page} total={total} pageSize={PAGE_SIZE} onPage={p => { setPage(p); window.scrollTo(0,0) }} />
-          </div>
+          </DataCard>
         </>
       )}
 

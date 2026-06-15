@@ -2,12 +2,12 @@
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchNomesImobiliariasAll } from '../lib/fichas'
-import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
 import { useToast } from '../contexts/ToastContext'
 import {
   Building2, Plus, Pencil, Trash2, X, Check,
   ChevronRight, AlertCircle, Search, ChevronDown, ArrowLeft,
 } from 'lucide-react'
+import { PageHeader, MetricCard, DataCard } from '../components/ui'
 
 // ── ImobiliariaSelector ───────────────────────────────────────────────────────
 // Componente customizado para buscar e navegar rapidamente para uma imobiliária
@@ -858,89 +858,99 @@ export default function Imobiliarias() {
     />
   )
 
+  const totalAliases = mapeadas.reduce((acc, imob) => acc + (imob.aliases?.length || 0), 0)
+  const totalVinculos = Object.values(vinculacoes).reduce((acc, arr) => acc + (arr?.length || 0), 0)
+
   return (
     <div className="space-y-5 animate-fade-in">
+      <PageHeader
+        eyebrow="Cadastro operacional"
+        title="Imobiliárias"
+        description="Mapeie variações de nomes, consolide cadastros e gerencie vínculos com seguradoras."
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            {mapeadas.length > 0 && <ImobiliariaSelector mapeadas={mapeadas} />}
+            {tab !== 'cadastros' && (
+              <button onClick={abrirNova} className="btn-primary flex items-center gap-2 text-sm">
+                <Plus className="w-4 h-4" /> Nova Imobiliária
+              </button>
+            )}
+          </div>
+        }
+      />
 
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="title-page text-dark-text">Imobiliárias</h1>
-          <p className="text-xs text-dark-muted mt-0.5">
-            Mapeie variações de nomes e gerencie cadastros por imobiliária
-          </p>
-        </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          {mapeadas.length > 0 && (
-            <ImobiliariaSelector mapeadas={mapeadas} />
-          )}
-          {tab !== 'cadastros' && (
-            <button onClick={abrirNova} className="btn-primary flex items-center gap-2 text-sm">
-              <Plus className="w-4 h-4" /> Nova Imobiliária
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <MetricCard label="Imobiliárias mapeadas" value={mapeadas.length} />
+        <MetricCard label="Sem mapeamento" value={naoMapeadas.length} />
+        <MetricCard label="Variações ativas" value={totalAliases} />
+        <MetricCard label="Vínculos com seguradoras" value={totalVinculos} />
+      </div>
+
+      <DataCard
+        title="Operação"
+        description="Use as abas para administrar mapeamento, pendências e vínculos."
+        className="overflow-hidden"
+      >
+        <div className="flex items-center gap-1 border-b border-dark-border">
+          {[
+            ['mapeadas',     `Mapeamento (${mapeadas.length})`],
+            ['nao_mapeadas', `Não Mapeadas (${naoMapeadas.length})`],
+            ['cadastros',    `Cadastros (${mapeadas.length})`],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => { setTab(key); setSelecionados(new Set()) }}
+              className={`px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
+                tab === key
+                  ? 'border-brand-accent text-brand-accent'
+                  : 'border-transparent text-dark-muted hover:text-dark-text'
+              }`}
+            >
+              {label}
             </button>
+          ))}
+          {naoMapeadas.length > 0 && tab !== 'nao_mapeadas' && (
+            <span className="ml-2 bg-status-warning/15 text-status-warning text-[10px] font-bold px-2 py-0.5 rounded-full">
+              {naoMapeadas.length} sem mapeamento
+            </span>
           )}
         </div>
-      </div>
 
-      {/* ── Tabs ── */}
-      <div className="flex items-center gap-1 border-b border-dark-border">
-        {[
-          ['mapeadas',     `Mapeamento (${mapeadas.length})`],
-          ['nao_mapeadas', `Não Mapeadas (${naoMapeadas.length})`],
-          ['cadastros',    `Cadastros (${mapeadas.length})`],
-        ].map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => { setTab(key); setSelecionados(new Set()) }}
-            className={`px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
-              tab === key
-                ? 'border-brand-accent text-brand-accent'
-                : 'border-transparent text-dark-muted hover:text-dark-text'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-        {naoMapeadas.length > 0 && tab !== 'nao_mapeadas' && (
-          <span className="ml-2 bg-status-warning/15 text-status-warning text-[10px] font-bold px-2 py-0.5 rounded-full">
-            {naoMapeadas.length} sem mapeamento
-          </span>
-        )}
-      </div>
-
-      {/* ── Conteúdo ── */}
-      {loading ? (
-        <div className="flex items-center justify-center h-48 gap-2 text-dark-muted text-sm">
-          <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-          </svg>
-          Carregando...
+        <div className="pt-5">
+          {loading ? (
+            <div className="flex items-center justify-center h-48 gap-2 text-dark-muted text-sm">
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              Carregando...
+            </div>
+          ) : tab === 'mapeadas' ? (
+            <TabMapeadas
+              mapeadas={mapeadas}
+              confirmExcluir={confirmExcluir}
+              setConfirmExcluir={setConfirmExcluir}
+              onExcluir={excluirImobiliaria}
+              onEditar={abrirEditar}
+            />
+          ) : tab === 'nao_mapeadas' ? (
+            <TabNaoMapeadas
+              naoMapeadas={naoMapeadas}
+              selecionados={selecionados}
+              setSelecionados={setSelecionados}
+              onAgrupar={abrirAgrupar}
+            />
+          ) : (
+            <TabCadastros
+              mapeadas={mapeadas}
+              seguradoras={seguradoras}
+              vinculacoes={vinculacoes}
+              onToggleSeguradora={toggleSeguradora}
+              salvandoVinc={salvandoVinc}
+            />
+          )}
         </div>
-      ) : tab === 'mapeadas' ? (
-        <TabMapeadas
-          mapeadas={mapeadas}
-          confirmExcluir={confirmExcluir}
-          setConfirmExcluir={setConfirmExcluir}
-          onExcluir={excluirImobiliaria}
-          onEditar={abrirEditar}
-        />
-      ) : tab === 'nao_mapeadas' ? (
-        <TabNaoMapeadas
-          naoMapeadas={naoMapeadas}
-          selecionados={selecionados}
-          setSelecionados={setSelecionados}
-          onAgrupar={abrirAgrupar}
-        />
-      ) : (
-        <TabCadastros
-          mapeadas={mapeadas}
-          seguradoras={seguradoras}
-          vinculacoes={vinculacoes}
-          onToggleSeguradora={toggleSeguradora}
-          salvandoVinc={salvandoVinc}
-        />
-      )}
-
+      </DataCard>
     </div>
   )
 }

@@ -1,19 +1,21 @@
 # Imobiliarias
 
 ## Propósito
-Gestão do cadastro de imobiliárias: lista mapeadas vs não mapeadas, permite criar, editar e mesclar variações de nome. Centraliza normalização de nomes vindos do Google Forms.
+Gestão operacional de imobiliárias com shell premium: visão analítica, mapeamento de variações, fila de não mapeadas, cadastros e vínculos com seguradoras.
 
 ## Componentes usados
-- `ImobiliariaSelector` (componente local inline) — busca e navegação rápida
-- Sem componentes externos específicos
+- `PageHeader`
+- `MetricCard`
+- `DataCard`
+- `ImobiliariaSelector` (componente local inline)
+- `ModalAgrupar` (componente local inline)
 
 ## Queries Supabase
-- `lib/supabase.js` — CRUD direto na tabela `imobiliarias`
-- `lib/fichas.js` — fetchNomesImobiliariasAll (lista nomes não normalizados)
-- `lib/normalizeImobiliaria.js` — normalização de strings
+- `lib/supabase.js` - CRUD direto em `imobiliarias`, `imobiliaria_aliases` e `imobiliaria_seguradoras`
+- `lib/fichas.js` - `fetchNomesImobiliariasAll`
 
 ## Status
-pronto
+em andamento
 
 ## Usuários que utilizam
-Admin e gestores (Luciano, Mateus)
+Admin e gestores

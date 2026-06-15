@@ -1,20 +1,21 @@
 # ApolicesLista
 
 ## Propósito
-Listagem tabular de apólices com filtros por período (hoje/semana/mês/personalizado), imobiliária e status. Permite exportação e navegação para detalhe.
+Listagem tabular premium de apólices com filtros por período, imobiliária, seguradora, status e busca textual. Mantém exportação CSV e navegação para o detalhe.
 
 ## Componentes usados
-- `ImobiliariaSelect` — filtro por imobiliária
-- `Select` (ui/) — filtro de status
-- `DatePicker` (ui/) — período personalizado
+- `PageHeader`, `MetricCard`, `DataCard`
+- `ImobiliariaSelect`
+- `Select` (ui/)
+- `DatePicker` (ui/)
 
 ## Queries Supabase
-- `lib/apolices.js` — fetchApolicesLista (com range de datas e filtros)
-- `lib/supabase.js` — acesso direto para exportação
+- `lib/apolices.js` — `fetchApolicesLista`
+- `lib/supabase.js` — lista de seguradoras
 - Hook: `useImobiliaria`
 
 ## Status
-pronto
+em andamento
 
 ## Usuários que utilizam
 Gestores e orçamentistas seniores

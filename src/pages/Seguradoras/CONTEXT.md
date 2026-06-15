@@ -1,18 +1,20 @@
 # Seguradoras
 
 ## Propósito
-Gestão do cadastro de seguradoras: criação, edição, agrupamento de variações de nome (aliases) e visualização de fichas por seguradora.
+Gestão operacional de seguradoras com shell premium: visão analítica, cadastro, variações de nomes e limpeza de itens não mapeados.
 
 ## Componentes usados
-- `SeguradoraBadge` — exibe logo/nome da seguradora
-- `ModalSeguradora` (componente local inline) — modal de criação/edição/agrupamento
+- `PageHeader`
+- `MetricCard`
+- `DataCard`
+- `SeguradoraBadge`
+- `ModalSeguradora` (componente local inline)
 
 ## Queries Supabase
-- `lib/supabase.js` — CRUD na tabela `seguradoras` (nome_canonico, aliases)
-- Busca de variações não mapeadas para agrupamento
+- `lib/supabase.js` - CRUD em `seguradoras` e `seguradora_aliases`
 
 ## Status
-pronto
+em andamento
 
 ## Usuários que utilizam
-Admin e gestores (Luciano, Mateus)
+Admin e gestores

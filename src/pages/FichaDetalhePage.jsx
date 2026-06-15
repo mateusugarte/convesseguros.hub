@@ -5,7 +5,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ArrowLeft, Pencil, Trash2, Check, X } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, Check, X, CalendarDays, Building2, UserRound, Clock3 } from 'lucide-react'
+import { PageHeader, MetricCard, DataCard } from '../components/ui'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import SeguradoraSelect from '../components/SeguradoraSelect'
 import ModalFicha from '../components/ModalFicha'
@@ -264,92 +265,105 @@ export default function FichaDetalhePage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-
-      {/* ── Breadcrumb / Header ── */}
-      <div className="flex items-start gap-4 flex-wrap">
-        <button
-          onClick={() => {
-            const state = location.state
-            if (state?.from === '/fichas') {
-              // Voltar para o Kanban preservando produto/mês/ano/scroll
-              navigate('/fichas', {
-                replace: true,
-                state: { restoreKanban: true, ...state },
-              })
-            } else {
-              navigate('/fichas')
-            }
-          }}
-          className="flex items-center gap-1.5 text-dark-muted hover:text-dark-text transition-colors text-sm flex-shrink-0 mt-0.5"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Voltar
-        </button>
-
-        <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-bold text-dark-text truncate">{nomePrincipal}</h1>
-          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-            <span className={`badge ${si.color}`}>{si.label}</span>
-            <span
-              className="text-[11px] font-semibold px-2 py-0.5 rounded-full border"
-              style={{ background: prodColor.bg, color: prodColor.text, borderColor: prodColor.border }}
+      <PageHeader
+        eyebrow="Ficha individual"
+        title={nomePrincipal}
+        description={`Detalhe completo de ${ficha.imobiliaria || 'imobiliária não informada'}. Mantenha a edição, a finalização e os documentos no mesmo fluxo.`}
+        actions={(
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <button
+              onClick={() => {
+                const state = location.state
+                if (state?.from === '/fichas') {
+                  navigate('/fichas', { replace: true, state: { restoreKanban: true, ...state } })
+                } else {
+                  navigate('/fichas')
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
             >
-              {PRODUTO_LABELS[ficha.produto] ?? ficha.produto}
-            </span>
-            {ficha.imobiliaria && (
-              <span className="text-xs text-dark-muted">{ficha.imobiliaria}</span>
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Voltar
+            </button>
+            {canAssumir && (
+              <button onClick={() => setAssumir(true)} className="btn-primary text-sm">
+                Assumir
+              </button>
+            )}
+            {canFinalizar && (
+              <button
+                onClick={() => setFinalizar(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-status-success/15 text-status-success border border-status-success/20 hover:bg-status-success/25 transition-colors text-sm font-medium"
+              >
+                <Check className="w-4 h-4" /> Finalizar
+              </button>
+            )}
+            <button
+              onClick={() => setEditar(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
+            >
+              <Pencil className="w-3.5 h-3.5" /> Editar
+            </button>
+            {!confirm ? (
+              <button
+                onClick={() => setConfirm(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-status-danger/30 text-xs text-status-danger hover:bg-status-danger/10 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Excluir
+              </button>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-status-danger font-medium">Confirmar?</span>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="px-2.5 py-1.5 rounded-2xl bg-status-danger text-white text-xs font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+                >
+                  {deleting ? '...' : 'Sim'}
+                </button>
+                <button
+                  onClick={() => setConfirm(false)}
+                  className="px-2.5 py-1.5 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text transition-colors"
+                >
+                  Não
+                </button>
+              </div>
             )}
           </div>
-        </div>
-
-        {/* Ações */}
-        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-          {canAssumir && (
-            <button onClick={() => setAssumir(true)} className="btn-primary text-sm">
-              Assumir
-            </button>
-          )}
-          {canFinalizar && (
-            <button
-              onClick={() => setFinalizar(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-status-success/15 text-status-success border border-status-success/20 hover:bg-status-success/25 transition-colors text-sm font-medium"
-            >
-              <Check className="w-4 h-4" /> Finalizar
-            </button>
-          )}
-          <button
-            onClick={() => setEditar(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
-          >
-            <Pencil className="w-3.5 h-3.5" /> Editar
-          </button>
-          {!confirm ? (
-            <button
-              onClick={() => setConfirm(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-status-danger/30 text-xs text-status-danger hover:bg-status-danger/10 transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" /> Excluir
-            </button>
-          ) : (
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-status-danger font-medium">Confirmar?</span>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="px-2.5 py-1.5 rounded-lg bg-status-danger text-white text-xs font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
-              >
-                {deleting ? '...' : 'Sim'}
-              </button>
-              <button
-                onClick={() => setConfirm(false)}
-                className="px-2.5 py-1.5 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text transition-colors"
-              >
-                Não
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+        )}
+        stats={(
+          <>
+            <MetricCard
+              label="Status"
+              value={si.label}
+              hint="estado atual da ficha"
+              tone="accent"
+              icon={<CalendarDays className="w-4 h-4" />}
+            />
+            <MetricCard
+              label="Produto"
+              value={PRODUTO_LABELS[ficha.produto] ?? ficha.produto}
+              hint="linha de negócio"
+              tone="secondary"
+              icon={<Building2 className="w-4 h-4" />}
+            />
+            <MetricCard
+              label="Responsável"
+              value={ficha.profiles?.nome || 'Livre'}
+              hint={ficha.assumida_em ? 'já assumida' : 'aguardando ação'}
+              tone={isMe ? 'success' : 'warning'}
+              icon={<UserRound className="w-4 h-4" />}
+            />
+            <MetricCard
+              label="Recebida em"
+              value={fmtDt(ficha.created_at) || '—'}
+              hint="entrada original"
+              tone="secondary"
+              icon={<Clock3 className="w-4 h-4" />}
+            />
+          </>
+        )}
+      />
 
       {/* ── Body: 2 colunas ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -358,109 +372,88 @@ export default function FichaDetalhePage() {
         <div className="lg:col-span-2 space-y-4">
 
           {/* Identificação */}
-          <div className="card p-5">
-            <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-4 pb-2 border-b border-dark-border">
-              {isPJ ? 'Empresa' : 'Interessado'}
-            </p>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              {isPJ ? (
-                <>
-                  <ReadField label="Nome da Empresa" value={ficha.nome_empresa} />
-                  <ReadField label="CNPJ" value={ficha.cnpj} />
-                  <div className="col-span-2">
-                    <ReadField label="CPF dos Sócios" value={ficha.cpf_socios} />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <ReadField label="Nome" value={ficha.nome_interessado} />
-                  <ReadField label="CPF" value={ficha.cpf} />
-                </>
-              )}
-              <ReadField label="Celular" value={ficha.celular} />
-              <ReadField label="E-mail" value={ficha.email} />
-            </div>
-          </div>
+          <DataCard title={isPJ ? 'Empresa' : 'Interessado'} bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
+            {isPJ ? (
+              <>
+                <ReadField label="Nome da Empresa" value={ficha.nome_empresa} />
+                <ReadField label="CNPJ" value={ficha.cnpj} />
+                <div className="col-span-2">
+                  <ReadField label="CPF dos Sócios" value={ficha.cpf_socios} />
+                </div>
+              </>
+            ) : (
+              <>
+                <ReadField label="Nome" value={ficha.nome_interessado} />
+                <ReadField label="CPF" value={ficha.cpf} />
+              </>
+            )}
+            <ReadField label="Celular" value={ficha.celular} />
+            <ReadField label="E-mail" value={ficha.email} />
+          </DataCard>
 
           {/* Imóvel */}
-          <div className="card p-5">
-            <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-4 pb-2 border-b border-dark-border">
-              Dados do Imóvel
-            </p>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              <ReadField label="Imobiliária" value={ficha.imobiliaria} />
-              <ReadField label="Tipo" value={ficha.tipo_imovel} />
-              <ReadField label="CEP" value={ficha.cep} />
-              <ReadField label="Aluguel" value={fmtBRL(ficha.valor_aluguel)} />
-              <ReadField label="IPTU" value={fmtBRL(ficha.valor_iptu)} />
-              <ReadField label="Condomínio" value={fmtBRL(ficha.valor_condominio)} />
-              <div className="col-span-2">
-                <InlineField
-                  label="Observações"
-                  value={ficha.observacoes}
-                  onSave={v => updateField('observacoes', v)}
-                  rows={3}
-                />
-              </div>
+          <DataCard title="Dados do Imóvel" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
+            <ReadField label="Imobiliária" value={ficha.imobiliaria} />
+            <ReadField label="Tipo" value={ficha.tipo_imovel} />
+            <ReadField label="CEP" value={ficha.cep} />
+            <ReadField label="Aluguel" value={fmtBRL(ficha.valor_aluguel)} />
+            <ReadField label="IPTU" value={fmtBRL(ficha.valor_iptu)} />
+            <ReadField label="Condomínio" value={fmtBRL(ficha.valor_condominio)} />
+            <div className="col-span-2">
+              <InlineField
+                label="Observações"
+                value={ficha.observacoes}
+                onSave={v => updateField('observacoes', v)}
+                rows={3}
+              />
             </div>
-          </div>
+          </DataCard>
 
           {/* Campos extras — Comercial PF e PJ */}
           {isComPlus && (
-            <div className="card p-5">
-              <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-4 pb-2 border-b border-dark-border">
-                Dados Complementares
-              </p>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                <ReadField label="Atividade" value={ficha.atividade} />
-                <ReadField label="Total de Rendimentos" value={fmtBRL(ficha.total_rendimentos)} />
-                <ReadField label="Capital Social" value={fmtBRL(ficha.capital_social)} />
-                <ReadField label="Motivo da Locação" value={ficha.motivo_locacao} />
-                <ReadField label="Vigência" value={ficha.vigencia} />
-                {isPJ && <ReadField label="Opção Tributária" value={ficha.opcao_tributaria} />}
-              </div>
-            </div>
+            <DataCard title="Dados Complementares" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
+              <ReadField label="Atividade" value={ficha.atividade} />
+              <ReadField label="Total de Rendimentos" value={fmtBRL(ficha.total_rendimentos)} />
+              <ReadField label="Capital Social" value={fmtBRL(ficha.capital_social)} />
+              <ReadField label="Motivo da Locação" value={ficha.motivo_locacao} />
+              <ReadField label="Vigência" value={ficha.vigencia} />
+              {isPJ && <ReadField label="Opção Tributária" value={ficha.opcao_tributaria} />}
+            </DataCard>
           )}
 
           {/* Controle interno — campos editáveis */}
-          <div className="card p-5">
-            <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-4 pb-2 border-b border-dark-border">
-              Controle Interno
-            </p>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              <ReadField label="Orçamentista (Forms)" value={ficha.orcamentista_forms} />
-              <ReadField label="Assumida por" value={ficha.profiles?.nome} />
-              <ReadField label="Assumida em" value={fmtDt(ficha.assumida_em)} />
-              {/* Número do orçamento — exibido quando aprovado */}
-              {(ficha.status === 'aprovado' || ficha.numero_orcamento) && (
-                <InlineField
-                  label="Número do Orçamento"
-                  value={ficha.numero_orcamento}
-                  onSave={v => updateField('numero_orcamento', v)}
-                />
-              )}
-              <div className="col-span-2">
-                <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wider mb-2">Retorno enviado</p>
-                <label className="flex items-center gap-3 cursor-pointer group w-fit">
-                  <div
-                    onClick={() => updateField('retorno_enviado', !ficha.retorno_enviado)}
-                    className={`w-9 h-5 rounded-full transition-colors ${ficha.retorno_enviado ? 'bg-status-success' : 'bg-dark-border'}`}
-                  >
-                    <div className={`w-3.5 h-3.5 bg-white rounded-full mt-0.75 transition-transform ${ficha.retorno_enviado ? 'translate-x-4' : 'translate-x-0.5'} m-[3px]`} />
-                  </div>
-                  <span className="text-sm text-dark-text">{ficha.retorno_enviado ? 'Sim' : 'Não'}</span>
-                </label>
-              </div>
+          <DataCard title="Controle Interno" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
+            <ReadField label="Orçamentista (Forms)" value={ficha.orcamentista_forms} />
+            <ReadField label="Assumida por" value={ficha.profiles?.nome} />
+            <ReadField label="Assumida em" value={fmtDt(ficha.assumida_em)} />
+            {/* Número do orçamento — exibido quando aprovado */}
+            {(ficha.status === 'aprovado' || ficha.numero_orcamento) && (
+              <InlineField
+                label="Número do Orçamento"
+                value={ficha.numero_orcamento}
+                onSave={v => updateField('numero_orcamento', v)}
+              />
+            )}
+            <div className="col-span-2">
+              <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wider mb-2">Retorno enviado</p>
+              <label className="flex items-center gap-3 cursor-pointer group w-fit">
+                <div
+                  onClick={() => updateField('retorno_enviado', !ficha.retorno_enviado)}
+                  className={`w-9 h-5 rounded-full transition-colors ${ficha.retorno_enviado ? 'bg-status-success' : 'bg-dark-border'}`}
+                >
+                  <div className={`w-3.5 h-3.5 bg-white rounded-full mt-0.75 transition-transform ${ficha.retorno_enviado ? 'translate-x-4' : 'translate-x-0.5'} m-[3px]`} />
+                </div>
+                <span className="text-sm text-dark-text">{ficha.retorno_enviado ? 'Sim' : 'Não'}</span>
+              </label>
             </div>
-          </div>
+          </DataCard>
         </div>
 
         {/* ── Coluna Direita: Timeline + Meta ── */}
         <div className="space-y-4">
 
           {/* Meta info */}
-          <div className="card p-4 space-y-3">
-            <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Informações</p>
+          <DataCard title="Informações" bodyClassName="space-y-3">
             <div className="space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-dark-muted">Recebida em</span>
@@ -481,13 +474,12 @@ export default function FichaDetalhePage() {
                 <span className="text-dark-muted font-mono text-[9px] truncate max-w-[120px]">{ficha.id}</span>
               </div>
             </div>
-          </div>
+          </DataCard>
 
           {/* Timeline */}
-          <div className="card p-4">
-            <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-4">Histórico</p>
+          <DataCard title="Histórico">
             <Timeline ficha={ficha} />
-          </div>
+          </DataCard>
 
           {/* Documentos */}
           <SecaoDocumentos
@@ -496,8 +488,7 @@ export default function FichaDetalhePage() {
           />
 
           {/* Seguradora + Parcela */}
-          <div className="card p-4 space-y-4">
-            <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Cotação</p>
+          <DataCard title="Cotação" bodyClassName="space-y-4">
             <div>
               <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wider mb-1.5">Seguradora</p>
               <SeguradoraSelect
@@ -511,7 +502,7 @@ export default function FichaDetalhePage() {
               type="number"
               onSave={v => updateField('valor_parcela', v ? parseFloat(v) : null)}
             />
-          </div>
+          </DataCard>
         </div>
       </div>
 

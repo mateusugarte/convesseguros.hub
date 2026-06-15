@@ -1,4 +1,4 @@
-# CURRENT TASK
+﻿# CURRENT TASK
 
 ## Responsavel Atual
 
@@ -6,15 +6,25 @@ Codex
 
 ## Pagina
 
-Core System Design
+ImobiliariaDetalhe
 
 ## Objetivo
 
-Executar a Fase 3 do redesign operacional premium: transformar Fichas e Minhas Fichas em uma mesa operacional premium com lista, kanban e drawer unificados, sem alterar regras de negocio, dados, queries ou integracoes.
+Executar a etapa de redesign premium de `ImobiliariaDetalhe`, elevando a tela de detalhe e mapeamento de códigos ao shell premium sem alterar regras de negocio, dados, queries ou integracoes.
 
 ## Status
 
-Em andamento
+Em andamento - imobiliaria detalhe premium iniciado em 2026-06-15
+
+## Atualizacao de Execucao
+
+- `ApolicesDashboard`, `ApolicesLista` e `ApoliceDetalhe` já foram convertidas para o shell premium e seguem validadas por build.
+- `Imobiliarias` e `Seguradoras` foram convertidas para o shell premium e o build voltou a passar.
+- `Relatorio` também foi convertido para o shell premium com `PageHeader`, `MetricCard` e `DataCard`.
+- `Imobiliarias`, `Seguradoras` e `Relatorio` já estão no shell premium e o build desta etapa segue validado.
+- O foco agora é reorganizar `ImobiliariaDetalhe` no shell premium sem mexer em lógica de edição, códigos ou integrações.
+- A validação visual no browser in-app segue dependente do alvo `iab` ficar disponível.
+- Próximo avanço: reescrever `ImobiliariaDetalhe` com `PageHeader`, `MetricCard` e `DataCard`.
 
 ## Arquivos em uso
 
@@ -63,11 +73,11 @@ Codex
 
 ## Proxima Tarefa
 
-Implementar o redesign de Fichas e Minhas Fichas com pagina operacional premium, filtros mais claros, cards mais densos e estrutura pronta para drill-down.
+Revisar visualmente `ImobiliariaDetalhe` no browser in-app quando o alvo `iab` estiver disponível e aplicar ajustes finos se necessário.
 
 ## Observacoes
 
-Fase 2 concluida e servindo de base. Foco atual restrito a Fichas, Minhas Fichas e componentes operacionais associados. Comercial permanece fora do escopo.
+Fase 4 concluída como base do shell operacional premium. Foco atual restrito a `ImobiliariaDetalhe`; comercial permanece fora do escopo desta trilha.
 
 ---
 
@@ -87,9 +97,16 @@ Mapear o estado atual do CRM comercial e definir um plano de redesign premium pa
 
 ### Status
 
-Em execucao - Fase 5
+Concluída - validada com build em 2026-06-15
 
-### Arquivos em uso
+## Atualizacao de Execucao
+
+- O plano comercial premium permaneceu documentado como trilha paralela separada do núcleo operacional.
+- `Jornadas` e o fluxo de React Flow seguem como próximo foco dessa frente quando ela for retomada.
+- O build desta sessão continuou validado após as mudanças no núcleo operacional.
+- A validação visual no browser in-app segue dependente de o alvo `iab` estar disponível.
+
+## Arquivos em uso
 
 - `docs/CURRENT_TASK.md`
 - `artifacts/comercial_crm_redesign_plan.md`
@@ -115,7 +132,7 @@ Codex
 
 ### Proxima Tarefa
 
-Implementar a Fase 5 em `Jornadas` e no React Flow comercial, elevando nodes, conexoes, espacamento e paineis sem alterar a logica existente.
+Retomar `Jornadas` e o React Flow comercial quando essa trilha voltar ao foco.
 
 ### Observacoes
 
@@ -125,3 +142,7 @@ Build validado com `npm.cmd run build`. Validacao visual no Browser in-app nao f
 Fases 3 e 4 concluidas com foco em `Pipeline`, `LeadDetalhe`, `BaseLeads` e `Calendario`.
 Build validado novamente com `npm.cmd run build`. Validacao visual no Browser in-app segue pendente porque o alvo `iab` continuou indisponivel nesta sessao.
 Execucao retomada para a Fase 5 com foco em `Jornadas` e React Flow premium dentro do modulo comercial.
+
+
+
+

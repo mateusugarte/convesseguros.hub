@@ -1,22 +1,23 @@
 # ApoliceDetalhe
 
 ## Propósito
-Detalhe completo de uma apólice: campos editáveis, datas de vigência, forma de pagamento, seguradora e documentos anexados.
+Detalhe premium de uma apólice com edição operacional, linha do tempo, documentos e resumo da ficha de origem.
 
 ## Componentes usados
-- `SeguradoraSelect` — troca de seguradora
-- `SecaoDocumentos` — upload e listagem de documentos
-- `DatePicker` (ui/) — vigência início/fim
-- `Select` (ui/) — forma de pagamento, produto
+- `PageHeader`, `MetricCard`, `DataCard`
+- `SeguradoraSelect`
+- `SecaoDocumentos`
+- `DatePicker` (ui/)
+- `Select` (ui/)
 
 ## Queries Supabase
-- `lib/apolices.js` — fetchApoliceDetalhe, atualizarApolice, excluirApolice
-- `lib/fichas.js` — PRODUTO_LABELS (para exibição)
+- `lib/apolices.js` — `fetchApoliceDetalhe`, `atualizarApolice`, `excluirApolice`
+- `lib/fichas.js` — `PRODUTO_LABELS`
 - Hook: `useImobiliaria`
 - Rota: `/apolices/:id`
 
 ## Status
-pronto
+em andamento
 
 ## Usuários que utilizam
 Gestores (Luciano, Mateus)

@@ -1,16 +1,16 @@
 # GestaoEmissoes
 
 ## Propósito
-Placeholder "Em Breve" para futura gestão de apólices emitidas pela Conves. Sem lógica de negócio ativa.
+Landing operacional do núcleo de apólices emitidas. A tela apresenta contexto, status visual, pilares do módulo e atalhos para as páginas já existentes do fluxo.
 
 ## Componentes usados
-Nenhum componente customizado — apenas layout estático com lista de funcionalidades planejadas.
+`PageHeader`, `MetricCard`, `DataCard`, `Link`.
 
 ## Queries Supabase
 Nenhuma.
 
 ## Status
-planejado
+em andamento
 
 ## Usuários que utilizam
-N/A — ainda não disponível
+Operação interna de apólices.

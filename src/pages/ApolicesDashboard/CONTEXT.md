@@ -1,18 +1,19 @@
 # ApolicesDashboard
 
 ## Propósito
-Dashboard de apólices emitidas: KPIs (total emitidas, em vigor, expiradas), gráficos de emissões por dia, top imobiliárias e distribuição por seguradora.
+Dashboard analítico do módulo de apólices emitidas. Consolida KPIs, gráficos de emissões por dia, top imobiliárias e distribuição por seguradora dentro do shell premium.
 
 ## Componentes usados
+- `PageHeader`, `MetricCard`, `DataCard`
 - `Select` (ui/) — filtros de período
-- Recharts: AreaChart, BarChart, PieChart — gráficos analíticos
+- Recharts: `AreaChart`, `BarChart`, `PieChart` — gráficos analíticos
 
 ## Queries Supabase
 - `lib/apolices.js` — fetchKPIsApolices, fetchApolicesPorDia, fetchTopImobiliariasApolices, fetchPorSeguradora
 - Hook: `useImobiliaria` para filtro por workspace
 
 ## Status
-pronto
+em andamento
 
 ## Usuários que utilizam
 Gestores (Luciano, Mateus)

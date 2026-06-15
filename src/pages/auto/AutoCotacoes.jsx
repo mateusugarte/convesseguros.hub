@@ -161,12 +161,29 @@ export default function AutoCotacoes() {
         })
       }
 
-      const { nome_completo, cpf, ...payload } = dados
-
       return criarCotacaoAuto({
-        ...payload,
         cliente_id: cliente.id,
         tipo: 'novo',
+        celular: dados.celular || null,
+        email: dados.email || null,
+        estado_civil: dados.estado_civil || null,
+        profissao: dados.profissao || null,
+        condutor_nome: dados.condutor_nome || null,
+        condutor_cpf: dados.condutor_cpf || null,
+        estado_civil_condutor: dados.estado_civil_condutor || null,
+        cep_pernoite: dados.cep_pernoite || null,
+        uso_veiculo: dados.uso_veiculo || null,
+        garagem_residencia: dados.garagem_residencia || null,
+        garagem_trabalho: dados.garagem_trabalho || null,
+        garagem_estudo: dados.garagem_estudo || null,
+        jovens_18_26: dados.jovens_18_26 || null,
+        modelo_veiculo: dados.modelo_veiculo || null,
+        placa: dados.placa || null,
+        veiculo_financiado: dados.veiculo_financiado || null,
+        possui_kit_gas: dados.possui_kit_gas || null,
+        possui_blindagem: dados.possui_blindagem || null,
+        isento_imposto: dados.isento_imposto || null,
+        origem_lead: dados.origem_lead || null,
       })
     },
     onSuccess: async () => {

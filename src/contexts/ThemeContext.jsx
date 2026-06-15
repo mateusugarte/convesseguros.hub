@@ -1,25 +1,36 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 
-const ThemeCtx = createContext({ theme: 'dark', toggleTheme: () => {} })
+const DEFAULT_THEME = 'light'
+
+const ThemeCtx = createContext({
+  theme: DEFAULT_THEME,
+  setTheme: () => {},
+  toggleTheme: () => {},
+})
 
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
-    const stored = localStorage.getItem('theme')
-    if (stored) return stored
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    try {
+      const stored = localStorage.getItem('theme')
+      return stored === 'dark' || stored === 'light' ? stored : DEFAULT_THEME
+    } catch {
+      return DEFAULT_THEME
+    }
   })
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
     document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('theme', theme)
+    try {
+      localStorage.setItem('theme', theme)
+    } catch {}
   }, [theme])
 
   function toggleTheme() {
     setTheme(t => t === 'dark' ? 'light' : 'dark')
   }
 
-  return <ThemeCtx.Provider value={{ theme, toggleTheme }}>{children}</ThemeCtx.Provider>
+  return <ThemeCtx.Provider value={{ theme, setTheme, toggleTheme }}>{children}</ThemeCtx.Provider>
 }
 
 export const useTheme = () => useContext(ThemeCtx)

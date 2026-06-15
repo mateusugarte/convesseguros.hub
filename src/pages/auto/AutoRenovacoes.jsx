@@ -1,29 +1,25 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { CalendarClock, CheckCircle2, RefreshCw } from 'lucide-react'
 import { getRenovacoesAuto, atualizarStatusRenovacao } from '../../lib/auto'
+import { PageHeader, MetricCard, FilterBar, DataCard, EmptyState } from '../../components/ui'
 
 const PERIODOS = [
-  { value: 'proximo_mes', label: 'Próximo mês' },
-  { value: 'mes_atual',   label: 'Mês atual' },
-  { value: 'passadas',    label: 'Passadas' },
-  { value: '',            label: 'Todas' },
+  { value: 'proximo_mes', label: 'Proximo mes' },
+  { value: 'mes_atual', label: 'Mes atual' },
+  { value: 'passadas', label: 'Passadas' },
+  { value: '', label: 'Todas' },
 ]
 
 const STATUS_COTACAO = {
-  nao_cotada:        { label: 'Não cotada',           cor: 'bg-red-50 border-red-300' },
-  cotada_nao_enviada: { label: 'Cotada — não enviada', cor: 'bg-yellow-50 border-yellow-300' },
-  cotada_enviada:    { label: 'Cotada e enviada',      cor: 'bg-green-50 border-green-300' },
-}
-
-const BADGE_COR = {
-  nao_cotada:         'bg-red-100 text-red-700',
-  cotada_nao_enviada: 'bg-yellow-100 text-yellow-700',
-  cotada_enviada:     'bg-green-100 text-green-700',
+  nao_cotada: { label: 'Nao cotada', shell: 'border-status-danger/20 bg-status-danger/10', badge: 'bg-status-danger/10 text-status-danger' },
+  cotada_nao_enviada: { label: 'Cotada - nao enviada', shell: 'border-status-warning/20 bg-status-warning/10', badge: 'bg-status-warning/10 text-status-warning' },
+  cotada_enviada: { label: 'Cotada e enviada', shell: 'border-status-success/20 bg-status-success/10', badge: 'bg-status-success/10 text-status-success' },
 }
 
 function formatarData(str) {
-  if (!str) return '—'
-  return new Date(str + 'T12:00:00').toLocaleDateString('pt-BR')
+  if (!str) return '-'
+  return new Date(`${str}T12:00:00`).toLocaleDateString('pt-BR')
 }
 
 export default function AutoRenovacoes() {
@@ -40,65 +36,98 @@ export default function AutoRenovacoes() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['auto-renovacoes'] }),
   })
 
+  const metricas = useMemo(() => ({
+    total: renovacoes.length,
+    enviadas: renovacoes.filter(item => item.status_cotacao === 'cotada_enviada').length,
+    pendentes: renovacoes.filter(item => item.status_cotacao !== 'cotada_enviada').length,
+  }), [renovacoes])
+
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Renovações Auto</h1>
-        <span className="text-sm text-gray-400">{renovacoes.length} registro(s)</span>
-      </div>
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        eyebrow="Modulo auto"
+        title="Renovacoes Auto"
+        description="Acompanhe vencimentos, situacao da cotacao e o que ainda precisa sair para proteger a carteira."
+        stats={(
+          <>
+            <MetricCard label="Renovacoes" value={metricas.total} hint="itens no recorte ativo" icon={<RefreshCw className="w-5 h-5" />} />
+            <MetricCard label="Cotadas e enviadas" value={metricas.enviadas} hint="prontas para retorno" tone="success" icon={<CheckCircle2 className="w-5 h-5" />} />
+            <MetricCard label="Pendentes" value={metricas.pendentes} hint="exigem acao operacional" tone="warning" icon={<CalendarClock className="w-5 h-5" />} />
+          </>
+        )}
+      />
 
-      <div className="flex gap-2 flex-wrap">
-        {PERIODOS.map(p => (
-          <button
-            key={p.value}
-            onClick={() => setPeriodo(p.value)}
-            className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
-              periodo === p.value
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-blue-400'
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
-
-      {isLoading && <p className="text-gray-400 py-8 text-center">Carregando...</p>}
-
-      {!isLoading && renovacoes.length === 0 && (
-        <p className="text-gray-400 py-8 text-center">Nenhuma renovação no período selecionado.</p>
-      )}
-
-      <div className="space-y-2">
-        {renovacoes.map(r => {
-          const statusInfo = STATUS_COTACAO[r.status_cotacao] ?? STATUS_COTACAO.nao_cotada
-          return (
-            <div
-              key={r.id}
-              className={`rounded-xl border p-4 flex items-center justify-between gap-4 ${statusInfo.cor}`}
+      <FilterBar>
+        <div className="flex flex-wrap items-center gap-2">
+          {PERIODOS.map(item => (
+            <button
+              key={item.value}
+              onClick={() => setPeriodo(item.value)}
+              className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-all ${
+                periodo === item.value
+                  ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                  : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+              }`}
             >
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold truncate">{r.clientes_auto?.nome_completo ?? '—'}</p>
-                <p className="text-sm text-gray-600">
-                  {r.seguradora} &mdash; Vence: <strong>{formatarData(r.vigencia_fim)}</strong>
-                </p>
-                <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block font-medium ${BADGE_COR[r.status_cotacao]}`}>
-                  {statusInfo.label}
-                </span>
-              </div>
-              <select
-                value={r.status_cotacao}
-                onChange={e => atualizarStatus({ id: r.id, status_cotacao: e.target.value })}
-                className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white text-gray-800 shrink-0"
-              >
-                <option value="nao_cotada">Não cotada</option>
-                <option value="cotada_nao_enviada">Cotada — não enviada</option>
-                <option value="cotada_enviada">Cotada e enviada</option>
-              </select>
-            </div>
-          )
-        })}
-      </div>
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </FilterBar>
+
+      <DataCard
+        title="Fila de renovacoes"
+        subtitle="Ajuste o status de cotacao sem sair da mesa operacional"
+      >
+        {isLoading ? (
+          <div className="py-12 text-center text-sm text-dark-muted">Carregando renovacoes...</div>
+        ) : renovacoes.length === 0 ? (
+          <EmptyState
+            icon={<RefreshCw className="w-6 h-6" />}
+            title="Nenhuma renovacao no recorte"
+            description="Quando houver itens no periodo selecionado, eles aparecerao aqui."
+          />
+        ) : (
+          <div className="space-y-3">
+            {renovacoes.map(item => {
+              const statusInfo = STATUS_COTACAO[item.status_cotacao] || STATUS_COTACAO.nao_cotada
+
+              return (
+                <article
+                  key={item.id}
+                  className={`rounded-3xl border p-4 transition-all ${statusInfo.shell}`}
+                >
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-sm font-semibold text-dark-text">
+                          {item.clientes_auto?.nome_completo || '-'}
+                        </h3>
+                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${statusInfo.badge}`}>
+                          {statusInfo.label}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm text-dark-muted">
+                        {item.seguradora || 'Seguradora nao informada'} · vence em <strong className="text-dark-text">{formatarData(item.vigencia_fim)}</strong>
+                      </p>
+                    </div>
+
+                    <select
+                      value={item.status_cotacao}
+                      onChange={e => atualizarStatus({ id: item.id, status_cotacao: e.target.value })}
+                      className="min-w-[220px] rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text shadow-sm outline-none"
+                    >
+                      <option value="nao_cotada">Nao cotada</option>
+                      <option value="cotada_nao_enviada">Cotada - nao enviada</option>
+                      <option value="cotada_enviada">Cotada e enviada</option>
+                    </select>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        )}
+      </DataCard>
     </div>
   )
 }

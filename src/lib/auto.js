@@ -1,6 +1,5 @@
 import { supabase } from './supabase'
 
-// ── Helpers de data ───────────────────────────────────────────
 function inicioFimMes(offset = 0) {
   const hoje = new Date()
   const ano = hoje.getFullYear()
@@ -11,13 +10,52 @@ function inicioFimMes(offset = 0) {
   }
 }
 
-// ── Clientes ──────────────────────────────────────────────────
+function monthKey(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'invalid'
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+function monthLabelFromKey(key) {
+  const [year, month] = key.split('-').map(Number)
+  if (!year || !month) return key
+  return new Date(year, month - 1, 1).toLocaleDateString('pt-BR', {
+    month: 'short',
+    year: '2-digit',
+  })
+}
+
+function countBy(items, accessor) {
+  return items.reduce((acc, item) => {
+    const key = accessor(item)
+    acc[key] = (acc[key] || 0) + 1
+    return acc
+  }, {})
+}
+
+function toMonthSeries(items, { meses = 6, getDate, getValue } = {}) {
+  const resultado = []
+  for (let i = meses - 1; i >= 0; i--) {
+    const referencia = new Date()
+    referencia.setMonth(referencia.getMonth() - i)
+    const key = `${referencia.getFullYear()}-${String(referencia.getMonth() + 1).padStart(2, '0')}`
+    const subset = items.filter(item => monthKey(getDate(item)) === key)
+    resultado.push({
+      mes: monthLabelFromKey(key),
+      ...getValue(subset),
+    })
+  }
+  return resultado
+}
+
+// Clientes
 export async function buscarClientePorCpf(cpf) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('clientes_auto')
     .select('*')
     .eq('cpf', cpf)
     .maybeSingle()
+  if (error) throw error
   return data
 }
 
@@ -31,17 +69,19 @@ export async function criarClienteAuto(payload) {
   return data
 }
 
-// ── Cotações ──────────────────────────────────────────────────
+// Cotacoes
 export async function getCotacoesAuto({ tipo, status, seguradora, inicio, fim } = {}) {
   let q = supabase
     .from('cotacoes_auto')
     .select('*, clientes_auto(nome_completo, cpf, telefone)')
     .order('created_at', { ascending: false })
+
   if (tipo) q = q.eq('tipo', tipo)
   if (status) q = q.eq('status', status)
   if (seguradora) q = q.ilike('seguradora_preferencial->>nome', `%${seguradora}%`)
   if (inicio) q = q.gte('created_at', inicio)
   if (fim) q = q.lte('created_at', fim)
+
   const { data, error } = await q
   if (error) throw error
   return data ?? []
@@ -65,7 +105,7 @@ export async function atualizarStatusCotacao(id, status) {
   if (error) throw error
 }
 
-// ── Emissões (Kanban) ─────────────────────────────────────────
+// Emissoes
 export async function getEmissoesAuto() {
   const { data, error } = await supabase
     .from('emissoes_auto')
@@ -83,27 +123,30 @@ export async function moverEmissaoColuna(id, coluna) {
   if (error) throw error
 }
 
-// ── Apólices ──────────────────────────────────────────────────
+// Apolices
 export async function emitirApoliceAuto(payload) {
   const premioLiquido = parseFloat(payload.premio_liquido) || 0
   const pctComissao = parseFloat(payload.pct_comissao) || 0
   const valorComissao = premioLiquido * pctComissao
 
-  const valorRepasse =
-    payload.tem_repasse && payload.pct_repasse
-      ? valorComissao * parseFloat(payload.pct_repasse)
-      : null
+  const valorRepasse = payload.tem_repasse && payload.pct_repasse
+    ? valorComissao * parseFloat(payload.pct_repasse)
+    : null
 
   const { data, error } = await supabase
     .from('apolices_auto')
-    .insert({ ...payload, valor_comissao: valorComissao, valor_repasse: valorRepasse })
+    .insert({
+      ...payload,
+      valor_comissao: valorComissao,
+      valor_repasse: valorRepasse,
+    })
     .select()
     .single()
   if (error) throw error
   return data
 }
 
-// ── Renovações ────────────────────────────────────────────────
+// Renovacoes
 export async function getRenovacoesAuto({ periodo } = {}) {
   let q = supabase
     .from('renovacoes_auto')
@@ -134,7 +177,7 @@ export async function atualizarStatusRenovacao(id, campos) {
   if (error) throw error
 }
 
-// ── Dashboard ─────────────────────────────────────────────────
+// Dashboard
 export async function getDashboardAutoMetrics() {
   const { inicio, fim } = inicioFimMes(0)
   const proximoMes = inicioFimMes(1)
@@ -164,8 +207,8 @@ export async function getDashboardAutoMetrics() {
   ])
 
   return {
-    novosNoMes: emissoes.data?.filter(e => !e.eh_renovacao).length ?? 0,
-    renovacoesNoMes: emissoes.data?.filter(e => e.eh_renovacao).length ?? 0,
+    novosNoMes: emissoes.data?.filter(item => !item.eh_renovacao).length ?? 0,
+    renovacoesNoMes: emissoes.data?.filter(item => item.eh_renovacao).length ?? 0,
     cotacoesNoMes: cotacoes.data?.length ?? 0,
     renovacoesConcluidas: renovadasMes.data?.length ?? 0,
     vencendoProximoMes: vencendoProximoMes.data?.length ?? 0,
@@ -173,20 +216,100 @@ export async function getDashboardAutoMetrics() {
 }
 
 export async function getGraficoEmissoesMensais(meses = 6) {
-  const resultado = []
-  for (let i = meses - 1; i >= 0; i--) {
-    const { inicio, fim } = inicioFimMes(-i)
-    const { data } = await supabase
-      .from('apolices_auto')
-      .select('id, eh_renovacao')
-      .gte('created_at', inicio)
-      .lte('created_at', fim)
-    const label = new Date(inicio).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
-    resultado.push({
-      mes: label,
-      novos: data?.filter(e => !e.eh_renovacao).length ?? 0,
-      renovacoes: data?.filter(e => e.eh_renovacao).length ?? 0,
-    })
-  }
-  return resultado
+  const apolices = await supabase
+    .from('apolices_auto')
+    .select('id, eh_renovacao, created_at')
+
+  const lista = apolices.data ?? []
+  return toMonthSeries(lista, {
+    meses,
+    getDate: item => item.created_at,
+    getValue: subset => ({
+      novos: subset.filter(item => !item.eh_renovacao).length,
+      renovacoes: subset.filter(item => item.eh_renovacao).length,
+    }),
+  })
 }
+
+export async function getAutoRenovacoesResumo({ periodo } = {}) {
+  const renovacoes = await getRenovacoesAuto({ periodo })
+  const hoje = new Date()
+  const trintaDias = new Date()
+  trintaDias.setDate(hoje.getDate() + 30)
+
+  return {
+    total: renovacoes.length,
+    vencendo30: renovacoes.filter(item => {
+      const vencimento = new Date(`${item.vigencia_fim}T12:00:00`)
+      return vencimento >= hoje && vencimento <= trintaDias
+    }).length,
+    atrasadas: renovacoes.filter(item => {
+      const vencimento = new Date(`${item.vigencia_fim}T12:00:00`)
+      return vencimento < hoje && item.status_renovacao !== 'renovada'
+    }).length,
+    statusCotacao: countBy(renovacoes, item => item.status_cotacao || 'nao_cotada'),
+    statusRenovacao: countBy(renovacoes, item => item.status_renovacao || 'pendente'),
+    serieMensal: toMonthSeries(renovacoes, {
+      meses: 6,
+      getDate: item => `${item.vigencia_fim}T12:00:00`,
+      getValue: subset => ({ total: subset.length }),
+    }),
+  }
+}
+
+export async function getAutoEmissoesResumo() {
+  const emissoes = await getEmissoesAuto()
+  return {
+    total: emissoes.length,
+    emitidas: emissoes.filter(item => item.coluna === 'emitida').length,
+    porColuna: countBy(emissoes, item => item.coluna || 'cotacao_feita'),
+    porTipo: countBy(emissoes, item => item.cotacoes_auto?.tipo || item.tipo || 'novo'),
+  }
+}
+
+export async function getAutoCotacoesResumo({ tipo, inicio, fim } = {}) {
+  const cotacoes = await getCotacoesAuto({ tipo, inicio, fim })
+  const agora = new Date()
+  const mesKeyAtual = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`
+  const cotacoesMes = cotacoes.filter(item => monthKey(item.created_at) === mesKeyAtual)
+
+  const serieMensal = Object.entries(
+    cotacoes.reduce((acc, item) => {
+      const key = monthKey(item.created_at)
+      if (!acc[key]) {
+        acc[key] = { mes: monthLabelFromKey(key), total: 0, convertidas: 0, perdidas: 0 }
+      }
+      acc[key].total += 1
+      if (item.status === 'convertida') acc[key].convertidas += 1
+      if (item.status === 'perdida') acc[key].perdidas += 1
+      return acc
+    }, {})
+  )
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, value]) => value)
+
+  return {
+    total: cotacoes.length,
+    mesAtual: cotacoesMes.length,
+    abertas: cotacoes.filter(item => item.status === 'aberta').length,
+    convertidas: cotacoes.filter(item => item.status === 'convertida').length,
+    perdidas: cotacoes.filter(item => item.status === 'perdida').length,
+    taxaConversao: cotacoes.length > 0 ? cotacoes.filter(item => item.status === 'convertida').length / cotacoes.length : 0,
+    porStatus: countBy(cotacoes, item => item.status || 'aberta'),
+    serieMensal,
+  }
+}
+
+export async function getAutoCotacoesMensais({ tipo, meses = 6 } = {}) {
+  const cotacoes = await getCotacoesAuto({ tipo })
+  return toMonthSeries(cotacoes, {
+    meses,
+    getDate: item => item.created_at,
+    getValue: subset => ({
+      total: subset.length,
+      convertidas: subset.filter(item => item.status === 'convertida').length,
+      perdidas: subset.filter(item => item.status === 'perdida').length,
+    }),
+  })
+}
+

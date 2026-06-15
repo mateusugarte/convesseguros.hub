@@ -1,274 +1,551 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  getCotacoesAuto,
-  criarCotacaoAuto,
-  criarClienteAuto,
+  BarChart,
+  Bar,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
+import { Link } from 'react-router-dom'
+import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../components/ui'
+import {
   buscarClientePorCpf,
-  atualizarStatusRenovacao,
+  criarClienteAuto,
+  criarCotacaoAuto,
+  getAutoCotacoesMensais,
+  getAutoCotacoesResumo,
+  getCotacoesAuto,
 } from '../../lib/auto'
+import {
+  COTACAO_ABAS,
+  COTACAO_STATUS,
+  formatDateBR,
+  formatMoney,
+  formatPercent,
+  statusToneClass,
+  toneClasses,
+} from './autoShared'
+import {
+  BadgeDollarSign,
+  CircleCheckBig,
+  Search,
+  ShieldHalf,
+  Sparkles,
+  TrendingUp,
+} from 'lucide-react'
 
-// ── Formulário seguro novo ────────────────────────────────────
 const NOVO_VAZIO = {
-  nome_completo: '', cpf: '', telefone: '', estado_civil: '', profissao: '',
-  condutor_nome: '', condutor_cpf: '',
-  cep_pernoite: '', uso_veiculo: '',
-  garagem_residencia: '', garagem_trabalho: '', garagem_estudo: '',
-  jovens_18_26: '', modelo_veiculo: '', placa: '',
-  veiculo_financiado: '', possui_kit_gas: '', possui_blindagem: '', isento_imposto: '',
+  nome_completo: '',
+  cpf: '',
+  telefone: '',
+  estado_civil: '',
+  profissao: '',
+  condutor_nome: '',
+  condutor_cpf: '',
+  cep_pernoite: '',
+  uso_veiculo: '',
+  garagem_residencia: '',
+  garagem_trabalho: '',
+  garagem_estudo: '',
+  jovens_18_26: '',
+  modelo_veiculo: '',
+  placa: '',
+  veiculo_financiado: '',
+  possui_kit_gas: '',
+  possui_blindagem: '',
+  isento_imposto: '',
   origem_lead: '',
 }
 
-// ── Formulário renovação ──────────────────────────────────────
-const SEG_VAZIO = { nome: '', premio_total: '', premio_liquido: '', pct_comissao: '' }
-const REN_VAZIO = { cpf: '', seguradora_preferencial: { ...SEG_VAZIO }, seguradora_mais_barata: { ...SEG_VAZIO } }
-
-function calcComissao(seg) {
-  const pl  = parseFloat(seg.premio_liquido) || 0
-  const pct = parseFloat(seg.pct_comissao)   || 0
-  return (pl * pct).toFixed(2)
+const SEG_VAZIO = {
+  nome: '',
+  premio_total: '',
+  premio_liquido: '',
+  pct_comissao: '',
 }
 
-function CampoTexto({ label, value, onChange, type = 'text', placeholder }) {
+const REN_VAZIO = {
+  cpf: '',
+  seguradora_preferencial: { ...SEG_VAZIO },
+  seguradora_mais_barata: { ...SEG_VAZIO },
+}
+
+function calcComissao(seg) {
+  const premioLiquido = parseFloat(seg.premio_liquido) || 0
+  const pctComissao = parseFloat(seg.pct_comissao) || 0
+  return premioLiquido * pctComissao
+}
+
+function ChartTip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
   return (
-    <div>
-      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{label}</label>
-      <input
-        type={type}
-        value={value}
-        placeholder={placeholder}
-        onChange={e => onChange(e.target.value)}
-        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-700"
-      />
+    <div className="rounded-2xl border border-dark-border bg-white px-3 py-2 shadow-lg">
+      <p className="text-xs text-dark-muted">{label}</p>
+      <div className="mt-1 space-y-1">
+        {payload.map((item, index) => (
+          <div key={index} className="flex items-center gap-2 text-xs text-dark-text">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: item.color || item.fill }} />
+            <span>{item.name}: {item.value}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
 
-function MetricaCard({ valor, label }) {
+function Field({ label, value, onChange, type = 'text', placeholder, children }) {
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center">
-      <p className="text-2xl font-bold">{valor}</p>
-      <p className="text-xs text-gray-500 mt-1">{label}</p>
+    <div>
+      <label className="mb-1 block text-xs font-medium text-dark-muted">{label}</label>
+      {children || (
+        <input
+          type={type}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="input"
+        />
+      )}
     </div>
+  )
+}
+
+function QuoteStatusBadge({ status }) {
+  const meta = COTACAO_STATUS[status] || COTACAO_STATUS.aberta
+  return (
+    <span className={`badge ${toneClasses(meta.tone)}`}>
+      {meta.label}
+    </span>
   )
 }
 
 export default function AutoCotacoes() {
-  const [aba, setAba]         = useState('novo')
+  const [aba, setAba] = useState('novo')
   const [formNovo, setFormNovo] = useState(NOVO_VAZIO)
-  const [formRen, setFormRen]   = useState(REN_VAZIO)
+  const [formRen, setFormRen] = useState(REN_VAZIO)
+  const [searchHistorico, setSearchHistorico] = useState('')
   const qc = useQueryClient()
 
-  const { data: cotacoes = [] } = useQuery({
+  const { data: cotacoes = [], isLoading: loadingLista } = useQuery({
     queryKey: ['auto-cotacoes', aba],
     queryFn: () => getCotacoesAuto({ tipo: aba }),
   })
 
-  // ── Métricas do mês ──────────────────────────────────────────
-  const hoje = new Date()
-  const cotacoesMes = cotacoes.filter(c => {
-    const d = new Date(c.created_at)
-    return d.getMonth() === hoje.getMonth() && d.getFullYear() === hoje.getFullYear()
+  const { data: resumo, isLoading: loadingResumo } = useQuery({
+    queryKey: ['auto-cotacoes-resumo', aba],
+    queryFn: () => getAutoCotacoesResumo({ tipo: aba }),
   })
-  const convertidas = cotacoesMes.filter(c => c.status === 'convertida').length
-  const taxa = cotacoesMes.length ? Math.round((convertidas / cotacoesMes.length) * 100) : 0
 
-  // ── Mutação: seguro novo ──────────────────────────────────────
-  const { mutate: salvarNovo, isPending: salvandoNovo } = useMutation({
+  const { data: serieMensal = [], isLoading: loadingSerie } = useQuery({
+    queryKey: ['auto-cotacoes-serie', aba],
+    queryFn: () => getAutoCotacoesMensais({ tipo: aba }),
+  })
+
+  const { mutateAsync: salvarNovo, isPending: salvandoNovo } = useMutation({
     mutationFn: async dados => {
       let cliente = await buscarClientePorCpf(dados.cpf)
       if (!cliente) {
         cliente = await criarClienteAuto({
           nome_completo: dados.nome_completo,
-          cpf:           dados.cpf,
-          telefone:      dados.telefone,
-          estado_civil:  dados.estado_civil,
-          profissao:     dados.profissao,
+          cpf: dados.cpf,
+          telefone: dados.telefone,
+          estado_civil: dados.estado_civil,
+          profissao: dados.profissao,
         })
       }
-      const { nome_completo, cpf, telefone, estado_civil, profissao, ...resto } = dados
-      return criarCotacaoAuto({ ...resto, cliente_id: cliente.id, tipo: 'novo' })
+
+      const {
+        nome_completo,
+        cpf,
+        telefone,
+        estado_civil,
+        profissao,
+        ...payload
+      } = dados
+
+      return criarCotacaoAuto({
+        ...payload,
+        cliente_id: cliente.id,
+        tipo: 'novo',
+      })
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
-      qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-emissoes-resumo'] })
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes-resumo'] })
+      await qc.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] })
+      await qc.invalidateQueries({ queryKey: ['auto-dashboard-cotacoes-resumo'] })
       setFormNovo(NOVO_VAZIO)
     },
   })
 
-  // ── Mutação: renovação ────────────────────────────────────────
-  const { mutate: salvarRenovacao, isPending: salvandoRen } = useMutation({
+  const { mutateAsync: salvarRenovacao, isPending: salvandoRen } = useMutation({
     mutationFn: async dados => {
       const cliente = await buscarClientePorCpf(dados.cpf)
-      const prefComissao = calcComissao(dados.seguradora_preferencial)
-      const baratComissao = calcComissao(dados.seguradora_mais_barata)
       return criarCotacaoAuto({
         cliente_id: cliente?.id ?? null,
         tipo: 'renovacao',
-        seguradora_preferencial: { ...dados.seguradora_preferencial, valor_comissao: prefComissao },
-        seguradora_mais_barata:  { ...dados.seguradora_mais_barata,  valor_comissao: baratComissao },
+        seguradora_preferencial: {
+          ...dados.seguradora_preferencial,
+          valor_comissao: calcComissao(dados.seguradora_preferencial),
+        },
+        seguradora_mais_barata: {
+          ...dados.seguradora_mais_barata,
+          valor_comissao: calcComissao(dados.seguradora_mais_barata),
+        },
       })
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
-      qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
-      qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-emissoes-resumo'] })
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes-resumo'] })
+      await qc.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] })
+      await qc.invalidateQueries({ queryKey: ['auto-dashboard-cotacoes-resumo'] })
       setFormRen(REN_VAZIO)
     },
   })
 
   function setNovo(campo, valor) {
-    setFormNovo(f => ({ ...f, [campo]: valor }))
+    setFormNovo(prev => ({ ...prev, [campo]: valor }))
   }
 
-  function setSeg(qual, campo, valor) {
-    setFormRen(f => ({ ...f, [qual]: { ...f[qual], [campo]: valor } }))
+  function setSeguradora(qual, campo, valor) {
+    setFormRen(prev => ({
+      ...prev,
+      [qual]: { ...prev[qual], [campo]: valor },
+    }))
   }
+
+  const agora = new Date()
+  const cotacoesMes = cotacoes.filter(item => {
+    const created = new Date(item.created_at)
+    return created.getMonth() === agora.getMonth() && created.getFullYear() === agora.getFullYear()
+  })
+
+  const convertidas = cotacoesMes.filter(item => item.status === 'convertida').length
+  const perdidas = cotacoesMes.filter(item => item.status === 'perdida').length
+  const taxa = cotacoesMes.length > 0 ? Math.round((convertidas / cotacoesMes.length) * 100) : 0
+
+  const historico = cotacoes
+    .filter(item => {
+      const text = [
+        item.clientes_auto?.nome_completo,
+        item.clientes_auto?.cpf,
+        item.cotacoes_auto?.modelo_veiculo,
+        item.seguradora_preferencial?.nome,
+        item.seguradora_mais_barata?.nome,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+
+      return text.includes(searchHistorico.toLowerCase())
+    })
+    .slice(0, 8)
+
+  const metrics = [
+    { key: 'total', label: 'Cotacoes no periodo', value: resumo?.total ?? 0, icon: BadgeDollarSign, tone: 'accent' },
+    { key: 'mesAtual', label: 'Cotacoes no mes', value: resumo?.mesAtual ?? 0, icon: Sparkles, tone: 'warning' },
+    { key: 'convertidas', label: 'Convertidas', value: resumo?.convertidas ?? 0, icon: CircleCheckBig, tone: 'success' },
+    { key: 'taxa', label: 'Taxa de conversao', value: `${taxa}%`, icon: TrendingUp, tone: 'secondary' },
+  ]
+
+  const tabs = COTACAO_ABAS.map(tab => ({
+    ...tab,
+    count: aba === tab.value ? cotacoes.length : 0,
+  }))
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Cotações Auto</h1>
-
-      {/* Abas */}
-      <div className="flex gap-2">
-        {[
-          { value: 'novo',      label: 'Seguro Novo' },
-          { value: 'renovacao', label: 'Renovação' },
-        ].map(t => (
-          <button
-            key={t.value}
-            onClick={() => setAba(t.value)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${
-              aba === t.value
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-blue-400'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Métricas */}
-      <div className="grid grid-cols-3 gap-4">
-        <MetricaCard valor={cotacoesMes.length} label={aba === 'novo' ? 'Cotações no mês' : 'Renovações cotadas'} />
-        <MetricaCard valor={convertidas}         label={aba === 'novo' ? 'Convertidas'    : 'Convertidas'} />
-        <MetricaCard valor={`${taxa}%`}          label="Taxa de conversão" />
-      </div>
-
-      {/* Formulário seguro novo */}
-      {aba === 'novo' && (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 space-y-4">
-          <h2 className="font-semibold">Novo Orçamento</h2>
-
-          <div className="grid grid-cols-2 gap-4">
-            <CampoTexto label="Nome completo (segurado)"         value={formNovo.nome_completo}   onChange={v => setNovo('nome_completo', v)} />
-            <CampoTexto label="CPF (segurado)"                   value={formNovo.cpf}             onChange={v => setNovo('cpf', v)} />
-            <CampoTexto label="Telefone"                         value={formNovo.telefone}        onChange={v => setNovo('telefone', v)} />
-            <CampoTexto label="Estado civil"                     value={formNovo.estado_civil}    onChange={v => setNovo('estado_civil', v)} />
-            <CampoTexto label="Profissão"                        value={formNovo.profissao}       onChange={v => setNovo('profissao', v)} />
-            <CampoTexto label="Nome do condutor principal"       value={formNovo.condutor_nome}   onChange={v => setNovo('condutor_nome', v)} />
-            <CampoTexto label="CPF do condutor"                  value={formNovo.condutor_cpf}    onChange={v => setNovo('condutor_cpf', v)} />
-            <CampoTexto label="CEP de pernoite"                  value={formNovo.cep_pernoite}    onChange={v => setNovo('cep_pernoite', v)} />
-            <CampoTexto label="Uso do veículo"                   value={formNovo.uso_veiculo}     onChange={v => setNovo('uso_veiculo', v)} />
-            <CampoTexto label="Modelo do veículo (marca/ano)"    value={formNovo.modelo_veiculo}  onChange={v => setNovo('modelo_veiculo', v)} />
-            <CampoTexto label="Placa (deixe vazio se 0km)"       value={formNovo.placa}           onChange={v => setNovo('placa', v)} placeholder="Opcional" />
-            <CampoTexto label="Garagem na residência"            value={formNovo.garagem_residencia} onChange={v => setNovo('garagem_residencia', v)} />
-            <CampoTexto label="Garagem no trabalho"              value={formNovo.garagem_trabalho}   onChange={v => setNovo('garagem_trabalho', v)} />
-            <CampoTexto label="Garagem no estudo"                value={formNovo.garagem_estudo}     onChange={v => setNovo('garagem_estudo', v)} />
-            <CampoTexto label="Jovens 18-26 que usam o veículo"  value={formNovo.jovens_18_26}       onChange={v => setNovo('jovens_18_26', v)} />
-            <CampoTexto label="Veículo financiado"               value={formNovo.veiculo_financiado} onChange={v => setNovo('veiculo_financiado', v)} />
-            <CampoTexto label="Possui kit gás"                   value={formNovo.possui_kit_gas}     onChange={v => setNovo('possui_kit_gas', v)} />
-            <CampoTexto label="Possui blindagem"                 value={formNovo.possui_blindagem}   onChange={v => setNovo('possui_blindagem', v)} />
-            <CampoTexto label="É isento de imposto"              value={formNovo.isento_imposto}     onChange={v => setNovo('isento_imposto', v)} />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Origem do lead</label>
-            <select
-              value={formNovo.origem_lead}
-              onChange={e => setNovo('origem_lead', e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:bg-gray-700 dark:border-gray-600"
-            >
-              <option value="">Selecionar</option>
-              <option value="indicacao">Indicação</option>
-              <option value="prospeccao">Prospecção</option>
-              <option value="carteira">Carteira</option>
-            </select>
-          </div>
-
-          <button
-            onClick={() => salvarNovo(formNovo)}
-            disabled={salvandoNovo || !formNovo.cpf}
-            className="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-medium disabled:opacity-50 hover:bg-blue-700"
-          >
-            {salvandoNovo ? 'Salvando...' : 'Salvar cotação'}
-          </button>
-        </div>
-      )}
-
-      {/* Formulário renovação */}
-      {aba === 'renovacao' && (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 space-y-5">
-          <h2 className="font-semibold">Cotação de Renovação</h2>
-
-          <CampoTexto
-            label="CPF do cliente"
-            value={formRen.cpf}
-            onChange={v => setFormRen(f => ({ ...f, cpf: v }))}
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Seguro Auto"
+        title="Cotações"
+        description="Fluxo de seguro novo e renovacao com calculo de comissao no frontend, historico recente e leitura clara do funil."
+        actions={(
+          <>
+            <Link to="/auto/dashboard" className="btn-secondary">
+              Dashboard
+            </Link>
+            <Link to="/auto/emissoes" className="btn-primary">
+              Ver emissões
+            </Link>
+          </>
+        )}
+        stats={metrics.map(({ key, label, value, icon: Icon, tone }) => (
+          <MetricCard
+            key={key}
+            label={label}
+            value={value}
+            icon={<Icon className="h-4 w-4" />}
+            tone={tone}
           />
+        ))}
+      />
 
-          {[
-            { key: 'seguradora_preferencial', titulo: 'Seguradora Preferencial' },
-            { key: 'seguradora_mais_barata',  titulo: 'Seguradora Mais Barata' },
-          ].map(({ key, titulo }) => (
-            <div key={key} className="border border-gray-200 dark:border-gray-600 rounded-xl p-4 space-y-3">
-              <h3 className="font-medium text-sm">{titulo}</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <CampoTexto label="Nome"          value={formRen[key].nome}          onChange={v => setSeg(key, 'nome', v)} />
-                <CampoTexto label="Prêmio total"  value={formRen[key].premio_total}  onChange={v => setSeg(key, 'premio_total', v)}  type="number" />
-                <CampoTexto label="Prêmio líquido" value={formRen[key].premio_liquido} onChange={v => setSeg(key, 'premio_liquido', v)} type="number" />
-                <CampoTexto label="% Comissão (0.15)" value={formRen[key].pct_comissao} onChange={v => setSeg(key, 'pct_comissao', v)} type="number" />
-              </div>
-              {formRen[key].premio_liquido && formRen[key].pct_comissao && (
-                <p className="text-sm font-medium text-green-700 bg-green-50 rounded-lg px-3 py-2">
-                  Comissão: R$ {calcComissao(formRen[key])}
-                </p>
-              )}
-            </div>
+      <FilterBar
+        actions={(
+          <div className="text-xs text-dark-muted">
+            {resumo?.convertidas ?? 0} convertidas · {resumo?.perdidas ?? 0} perdidas
+          </div>
+        )}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          {tabs.map(tab => (
+            <button
+              key={tab.value}
+              onClick={() => setAba(tab.value)}
+              className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-colors ${
+                aba === tab.value
+                  ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                  : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+              }`}
+            >
+              {tab.label}
+            </button>
           ))}
+        </div>
+      </FilterBar>
 
-          <button
-            onClick={() => salvarRenovacao(formRen)}
-            disabled={salvandoRen || !formRen.cpf}
-            className="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-medium disabled:opacity-50 hover:bg-blue-700"
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-4">
+          <DataCard
+            title={aba === 'novo' ? 'Novo orçamento' : 'Cotação de renovação'}
+            subtitle={aba === 'novo'
+              ? 'Cadastro do segurado, do condutor e do risco do veiculo.'
+              : 'Comparativo entre seguradora preferencial e mais barata.'}
           >
-            {salvandoRen ? 'Salvando...' : 'Salvar cotação'}
-          </button>
-        </div>
-      )}
+            {aba === 'novo' ? (
+              <div className="space-y-6">
+                <div className="grid gap-4 rounded-2xl border border-dark-border/70 p-4 lg:grid-cols-2">
+                  <div className="space-y-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Segurado</p>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="Nome completo" value={formNovo.nome_completo} onChange={value => setNovo('nome_completo', value)} />
+                      <Field label="CPF" value={formNovo.cpf} onChange={value => setNovo('cpf', value)} />
+                      <Field label="Telefone" value={formNovo.telefone} onChange={value => setNovo('telefone', value)} />
+                      <Field label="Estado civil" value={formNovo.estado_civil} onChange={value => setNovo('estado_civil', value)} />
+                      <Field label="Profissão" value={formNovo.profissao} onChange={value => setNovo('profissao', value)} />
+                    </div>
+                  </div>
 
-      {/* Lista de cotações */}
-      {cotacoes.length > 0 && (
-        <div className="space-y-2">
-          <h2 className="font-semibold text-sm text-gray-500 uppercase tracking-wide">Histórico</h2>
-          {cotacoes.slice(0, 20).map(c => (
-            <div key={c.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">{c.clientes_auto?.nome_completo ?? '—'}</p>
-                <p className="text-xs text-gray-500">{new Date(c.created_at).toLocaleDateString('pt-BR')}</p>
+                  <div className="space-y-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Condutor e veículo</p>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="Nome do condutor" value={formNovo.condutor_nome} onChange={value => setNovo('condutor_nome', value)} />
+                      <Field label="CPF do condutor" value={formNovo.condutor_cpf} onChange={value => setNovo('condutor_cpf', value)} />
+                      <Field label="CEP de pernoite" value={formNovo.cep_pernoite} onChange={value => setNovo('cep_pernoite', value)} />
+                      <Field label="Uso do veículo" value={formNovo.uso_veiculo} onChange={value => setNovo('uso_veiculo', value)} />
+                      <Field label="Modelo do veículo" value={formNovo.modelo_veiculo} onChange={value => setNovo('modelo_veiculo', value)} />
+                      <Field label="Placa" value={formNovo.placa} onChange={value => setNovo('placa', value)} placeholder="Opcional" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 rounded-2xl border border-dark-border/70 p-4 lg:grid-cols-2">
+                  <div className="space-y-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Risco</p>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="Garagem na residência" value={formNovo.garagem_residencia} onChange={value => setNovo('garagem_residencia', value)} />
+                      <Field label="Garagem no trabalho" value={formNovo.garagem_trabalho} onChange={value => setNovo('garagem_trabalho', value)} />
+                      <Field label="Garagem no estudo" value={formNovo.garagem_estudo} onChange={value => setNovo('garagem_estudo', value)} />
+                      <Field label="Jovens 18-26 usam o veículo" value={formNovo.jovens_18_26} onChange={value => setNovo('jovens_18_26', value)} />
+                      <Field label="Veículo financiado" value={formNovo.veiculo_financiado} onChange={value => setNovo('veiculo_financiado', value)} />
+                      <Field label="Isento de imposto" value={formNovo.isento_imposto} onChange={value => setNovo('isento_imposto', value)} />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Proteções e origem</p>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="Possui kit gás" value={formNovo.possui_kit_gas} onChange={value => setNovo('possui_kit_gas', value)} />
+                      <Field label="Possui blindagem" value={formNovo.possui_blindagem} onChange={value => setNovo('possui_blindagem', value)} />
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-dark-muted">Origem do lead</label>
+                      <select
+                        value={formNovo.origem_lead}
+                        onChange={e => setNovo('origem_lead', e.target.value)}
+                        className="select"
+                      >
+                        <option value="">Selecionar</option>
+                        <option value="indicacao">Indicação</option>
+                        <option value="prospeccao">Prospecção</option>
+                        <option value="carteira">Carteira</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => salvarNovo(formNovo)}
+                  disabled={salvandoNovo || !formNovo.cpf}
+                  className="btn-primary"
+                >
+                  {salvandoNovo ? 'Salvando...' : 'Salvar cotação'}
+                </button>
               </div>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                c.status === 'convertida' ? 'bg-green-100 text-green-700'
-                : c.status === 'perdida'  ? 'bg-red-100 text-red-700'
-                : 'bg-gray-100 text-gray-600'
-              }`}>
-                {c.status === 'convertida' ? 'Convertida' : c.status === 'perdida' ? 'Perdida' : 'Aberta'}
-              </span>
-            </div>
-          ))}
+            ) : (
+              <div className="space-y-6">
+                <Field label="CPF do cliente" value={formRen.cpf} onChange={value => setFormRen(prev => ({ ...prev, cpf: value }))} />
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {[
+                    { key: 'seguradora_preferencial', title: 'Seguradora preferencial' },
+                    { key: 'seguradora_mais_barata', title: 'Seguradora mais barata' },
+                  ].map(section => (
+                    <div key={section.key} className="rounded-2xl border border-dark-border/70 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">{section.title}</p>
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                        <Field
+                          label="Nome"
+                          value={formRen[section.key].nome}
+                          onChange={value => setSeguradora(section.key, 'nome', value)}
+                        />
+                        <Field
+                          label="Prêmio total"
+                          type="number"
+                          value={formRen[section.key].premio_total}
+                          onChange={value => setSeguradora(section.key, 'premio_total', value)}
+                        />
+                        <Field
+                          label="Prêmio líquido"
+                          type="number"
+                          value={formRen[section.key].premio_liquido}
+                          onChange={value => setSeguradora(section.key, 'premio_liquido', value)}
+                        />
+                        <Field
+                          label="% Comissão (0.15)"
+                          type="number"
+                          value={formRen[section.key].pct_comissao}
+                          onChange={value => setSeguradora(section.key, 'pct_comissao', value)}
+                        />
+                      </div>
+                      <div className={`mt-4 rounded-2xl border px-3 py-2 text-sm ${statusToneClass('success')}`}>
+                        Comissão estimada: {formatMoney(calcComissao(formRen[section.key]))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => salvarRenovacao(formRen)}
+                  disabled={salvandoRen || !formRen.cpf}
+                  className="btn-primary"
+                >
+                  {salvandoRen ? 'Salvando...' : 'Salvar cotação'}
+                </button>
+              </div>
+            )}
+          </DataCard>
         </div>
-      )}
+
+        <div className="space-y-4">
+          <DataCard
+            title="Tendência"
+            subtitle="Volume mensal da aba ativa"
+          >
+            {loadingSerie || loadingResumo ? (
+              <div className="py-10 text-center text-sm text-dark-muted">Carregando série...</div>
+            ) : serieMensal.some(item => item.total > 0 || item.convertidas > 0 || item.perdidas > 0) ? (
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={serieMensal} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(15, 23, 42, 0.08)" />
+                  <XAxis dataKey="mes" tickLine={false} axisLine={false} />
+                  <YAxis tickLine={false} axisLine={false} allowDecimals={false} />
+                  <Tooltip content={<ChartTip />} />
+                  <Bar dataKey="total" name="Total" fill="#f5582a" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="convertidas" name="Convertidas" fill="#10b981" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="perdidas" name="Perdidas" fill="#ef4444" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyState
+                icon={<TrendingUp className="h-5 w-5" />}
+                title="Sem série suficiente"
+                description="A tendência mensal aparece assim que o módulo começar a registrar as primeiras cotações."
+              />
+            )}
+          </DataCard>
+
+          <DataCard
+            title="Histórico recente"
+            subtitle="Últimas cotações da aba atual"
+            actions={(
+              <div className="relative min-w-[160px]">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-muted" />
+                <input
+                  value={searchHistorico}
+                  onChange={e => setSearchHistorico(e.target.value)}
+                  placeholder="Buscar histórico"
+                  className="input pl-10"
+                />
+              </div>
+            )}
+            bodyClassName="p-0"
+          >
+            {loadingLista ? (
+              <div className="px-5 py-10 text-center text-sm text-dark-muted">Carregando histórico...</div>
+            ) : historico.length === 0 ? (
+              <div className="px-5 py-5">
+                <EmptyState
+                  icon={<ShieldHalf className="h-5 w-5" />}
+                  title="Nenhuma cotação encontrada"
+                  description="Use o formulário principal para criar o primeiro registro desta aba."
+                />
+              </div>
+            ) : (
+              <div className="divide-y divide-dark-border/70">
+                {historico.map(item => (
+                  <div key={item.id} className="flex items-center justify-between gap-4 px-5 py-4">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-dark-text">
+                        {item.clientes_auto?.nome_completo || 'Sem nome'}
+                      </p>
+                      <p className="truncate text-xs text-dark-muted">
+                        {formatDateBR(item.created_at)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <QuoteStatusBadge status={item.status} />
+                      {aba === 'novo' ? (
+                        <span className="badge badge-info">
+                          {item.origem_lead || 'Sem origem'}
+                        </span>
+                      ) : (
+                        <span className="badge badge-muted">
+                          {formatPercent(item.seguradora_preferencial?.pct_comissao || 0.15)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DataCard>
+
+          <DataCard
+            title="Resumo rápido"
+            subtitle="Leitura operacional do funil"
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-dark-border/70 p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-dark-muted">Convertidas no mês</p>
+                <p className="mt-2 text-3xl font-semibold text-dark-text">{convertidas}</p>
+              </div>
+              <div className="rounded-2xl border border-dark-border/70 p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-dark-muted">Perdidas no mês</p>
+                <p className="mt-2 text-3xl font-semibold text-dark-text">{perdidas}</p>
+              </div>
+            </div>
+          </DataCard>
+        </div>
+      </div>
     </div>
   )
 }

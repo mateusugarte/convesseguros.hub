@@ -437,7 +437,8 @@ export default function Layout() {
             <button
               onClick={toggleTheme}
               className="btn-ghost p-2 rounded-lg cursor-pointer"
-              title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
+              title={theme === 'dark' ? 'Voltar para o tema claro' : 'Ativar tema escuro'}
+              aria-label={theme === 'dark' ? 'Voltar para o tema claro' : 'Ativar tema escuro'}
             >
               {theme === 'dark'
                 ? <Sun className="w-4 h-4 text-brand-gold" />

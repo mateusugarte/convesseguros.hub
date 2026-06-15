@@ -1,55 +1,78 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Car, CheckCircle2, FileText, RefreshCw } from 'lucide-react'
 import { getEmissoesAuto, moverEmissaoColuna, emitirApoliceAuto } from '../../lib/auto'
+import { PageHeader, MetricCard, DataCard, EmptyState } from '../../components/ui'
 
 const COLUNAS = [
-  { id: 'cotacao_feita',      label: 'Cotação Feita' },
-  { id: 'negociando',         label: 'Negociando' },
-  { id: 'aguardando_vistoria', label: 'Aguardando Vistoria' },
-  { id: 'emitida',            label: 'Emitida' },
+  { id: 'cotacao_feita', label: 'Cotacao feita' },
+  { id: 'negociando', label: 'Negociando' },
+  { id: 'aguardando_vistoria', label: 'Aguardando vistoria' },
+  { id: 'emitida', label: 'Emitida' },
 ]
 
 const FORM_VAZIO = {
-  seguradora: '', numero_apolice: '', vigencia_inicio: '', vigencia_fim: '',
-  premio_liquido: '', pct_comissao: '', forma_pagamento: '', parcelamento: '',
-  tipo_producao: 'equipe', responsavel: '', eh_renovacao: false,
-  tem_repasse: false, pct_repasse: '', nome_repasse: '',
+  seguradora: '',
+  numero_apolice: '',
+  vigencia_inicio: '',
+  vigencia_fim: '',
+  premio_liquido: '',
+  pct_comissao: '',
+  forma_pagamento: '',
+  parcelamento: '',
+  tipo_producao: 'equipe',
+  responsavel: '',
+  eh_renovacao: false,
+  tem_repasse: false,
+  pct_repasse: '',
+  nome_repasse: '',
 }
 
 function CardEmissao({ emissao, onDragStart }) {
-  const tipo = emissao.cotacoes_auto?.tipo ?? emissao.tipo
-  const cor = tipo === 'renovacao'
-    ? 'border-l-4 border-green-500'
-    : 'border-l-4 border-blue-500'
+  const tipo = emissao.cotacoes_auto?.tipo || emissao.tipo
+  const isRenovacao = tipo === 'renovacao'
 
   return (
-    <div
+    <button
+      type="button"
       draggable
       onDragStart={() => onDragStart(emissao)}
-      className={`bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-3 cursor-grab active:cursor-grabbing shadow-sm ${cor}`}
+      className={`w-full rounded-3xl border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 ${
+        isRenovacao
+          ? 'border-status-success/20 bg-status-success/5'
+          : 'border-brand-secondary/20 bg-brand-secondary/5'
+      }`}
     >
-      <p className="font-medium text-sm truncate">{emissao.clientes_auto?.nome_completo ?? '—'}</p>
-      <p className="text-xs text-gray-500 truncate mt-0.5">
-        {emissao.cotacoes_auto?.modelo_veiculo ?? '—'}
-      </p>
-      <span className={`text-xs px-2 py-0.5 rounded-full mt-1.5 inline-block font-medium ${
-        tipo === 'renovacao' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-      }`}>
-        {tipo === 'renovacao' ? 'Renovação' : 'Novo'}
-      </span>
-    </div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-dark-text">
+            {emissao.clientes_auto?.nome_completo || '-'}
+          </p>
+          <p className="mt-1 truncate text-xs text-dark-muted">
+            {emissao.cotacoes_auto?.modelo_veiculo || 'Modelo nao informado'}
+          </p>
+        </div>
+        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
+          isRenovacao
+            ? 'bg-status-success/10 text-status-success'
+            : 'bg-brand-secondary/10 text-brand-secondary'
+        }`}>
+          {isRenovacao ? 'Renovacao' : 'Novo'}
+        </span>
+      </div>
+    </button>
   )
 }
 
 function CampoTexto({ label, campo, value, onChange, type = 'text' }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">{label}</label>
       <input
         type={type}
         value={value}
         onChange={e => onChange(campo, e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+        className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
       />
     </div>
   )
@@ -84,7 +107,7 @@ export default function AutoEmissoes() {
   })
 
   function setField(campo, valor) {
-    setForm(f => ({ ...f, [campo]: valor }))
+    setForm(current => ({ ...current, [campo]: valor }))
   }
 
   function handleDrop(colunaDestino) {
@@ -99,156 +122,179 @@ export default function AutoEmissoes() {
   }
 
   const premioLiquido = parseFloat(form.premio_liquido) || 0
-  const pctComissao   = parseFloat(form.pct_comissao) || 0
+  const pctComissao = parseFloat(form.pct_comissao) || 0
   const valorComissao = premioLiquido * pctComissao
-  const valorRepasse  = form.tem_repasse ? valorComissao * (parseFloat(form.pct_repasse) || 0) : 0
+  const valorRepasse = form.tem_repasse ? valorComissao * (parseFloat(form.pct_repasse) || 0) : 0
 
   function handleEmitir() {
     emitir({
-      emissao_id:      modalEmissao.id,
-      cliente_id:      modalEmissao.cliente_id,
-      seguradora:      form.seguradora,
-      numero_apolice:  form.numero_apolice,
+      emissao_id: modalEmissao.id,
+      cliente_id: modalEmissao.cliente_id,
+      seguradora: form.seguradora,
+      numero_apolice: form.numero_apolice,
       vigencia_inicio: form.vigencia_inicio,
-      vigencia_fim:    form.vigencia_fim,
-      premio_liquido:  premioLiquido,
-      pct_comissao:    pctComissao,
-      valor_comissao:  valorComissao,
+      vigencia_fim: form.vigencia_fim,
+      premio_liquido: premioLiquido,
+      pct_comissao: pctComissao,
+      valor_comissao: valorComissao,
       forma_pagamento: form.forma_pagamento,
-      parcelamento:    form.parcelamento,
-      tipo_producao:   form.tipo_producao,
-      responsavel:     form.tipo_producao === 'individual' ? form.responsavel : null,
-      eh_renovacao:    form.eh_renovacao,
-      tem_repasse:     form.tem_repasse,
-      pct_repasse:     form.tem_repasse ? parseFloat(form.pct_repasse) : null,
-      nome_repasse:    form.tem_repasse ? form.nome_repasse : null,
-      valor_repasse:   form.tem_repasse ? valorRepasse : null,
+      parcelamento: form.parcelamento,
+      tipo_producao: form.tipo_producao,
+      responsavel: form.tipo_producao === 'individual' ? form.responsavel : null,
+      eh_renovacao: form.eh_renovacao,
+      tem_repasse: form.tem_repasse,
+      pct_repasse: form.tem_repasse ? parseFloat(form.pct_repasse) : null,
+      nome_repasse: form.tem_repasse ? form.nome_repasse : null,
+      valor_repasse: form.tem_repasse ? valorRepasse : null,
     })
     mover({ id: modalEmissao.id, coluna: 'emitida' })
   }
 
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Gestão de Emissões Auto</h1>
+  const metricas = useMemo(() => ({
+    total: emissoes.length,
+    renovacoes: emissoes.filter(item => (item.cotacoes_auto?.tipo || item.tipo) === 'renovacao').length,
+    emitidas: emissoes.filter(item => item.coluna === 'emitida').length,
+  }), [emissoes])
 
-      <div className="grid grid-cols-4 gap-4">
-        {COLUNAS.map(col => {
-          const cards = emissoes.filter(e => e.coluna === col.id)
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        eyebrow="Modulo auto"
+        title="Gestao de Emissoes"
+        description="Kanban operacional para conduzir cotacao, negociacao, vistoria e emissao da carteira Auto."
+        stats={(
+          <>
+            <MetricCard label="Em fila" value={metricas.total} hint="registros no kanban" icon={<FileText className="w-5 h-5" />} />
+            <MetricCard label="Renovacoes" value={metricas.renovacoes} hint="itens de carteira" tone="success" icon={<RefreshCw className="w-5 h-5" />} />
+            <MetricCard label="Emitidas" value={metricas.emitidas} hint="fechadas no fluxo" tone="accent" icon={<CheckCircle2 className="w-5 h-5" />} />
+          </>
+        )}
+      />
+
+      <div className="grid gap-4 xl:grid-cols-4">
+        {COLUNAS.map(coluna => {
+          const cards = emissoes.filter(item => item.coluna === coluna.id)
+
           return (
-            <div
-              key={col.id}
-              onDragOver={e => { e.preventDefault(); setDragOver(col.id) }}
-              onDrop={() => handleDrop(col.id)}
-              onDragLeave={() => setDragOver(null)}
-              className={`rounded-xl p-3 min-h-[300px] transition-colors ${
-                dragOver === col.id ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-gray-50 dark:bg-gray-800/50'
-              }`}
+            <DataCard
+              key={coluna.id}
+              title={coluna.label}
+              subtitle={`${cards.length} item(ns)`}
+              className={dragOver === coluna.id ? 'ring-2 ring-brand-accent/20' : ''}
+              bodyClassName="pt-4"
             >
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                {col.label} <span className="text-gray-400">({cards.length})</span>
-              </h2>
-              <div className="space-y-2">
-                {cards.map(e => (
-                  <CardEmissao
-                    key={e.id}
-                    emissao={e}
-                    onDragStart={setDragging}
+              <div
+                onDragOver={e => { e.preventDefault(); setDragOver(coluna.id) }}
+                onDrop={() => handleDrop(coluna.id)}
+                onDragLeave={() => setDragOver(null)}
+                className="min-h-[240px] space-y-3"
+              >
+                {cards.length === 0 ? (
+                  <EmptyState
+                    icon={<Car className="w-6 h-6" />}
+                    title="Coluna vazia"
+                    description="Arraste um item para continuar o fluxo."
+                    className="py-8"
                   />
-                ))}
+                ) : (
+                  cards.map(item => (
+                    <CardEmissao key={item.id} emissao={item} onDragStart={setDragging} />
+                  ))
+                )}
               </div>
-            </div>
+            </DataCard>
           )
         })}
       </div>
 
       {modalEmissao && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto space-y-4">
-            <div>
-              <h2 className="text-lg font-bold">Emitir Apólice</h2>
-              <p className="text-sm text-gray-500 mt-0.5">{modalEmissao.clientes_auto?.nome_completo}</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+          <div className="glass-modal w-full max-w-3xl overflow-y-auto rounded-[28px] p-6">
+            <div className="mb-5">
+              <h2 className="title-section text-dark-text">Emitir apolice</h2>
+              <p className="mt-1 text-sm text-dark-muted">{modalEmissao.clientes_auto?.nome_completo || '-'}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <CampoTexto label="Seguradora"        campo="seguradora"       value={form.seguradora}       onChange={setField} />
-              <CampoTexto label="Número da apólice" campo="numero_apolice"   value={form.numero_apolice}   onChange={setField} />
-              <CampoTexto label="Vigência início"   campo="vigencia_inicio"  value={form.vigencia_inicio}  onChange={setField} type="date" />
-              <CampoTexto label="Vigência fim"      campo="vigencia_fim"     value={form.vigencia_fim}     onChange={setField} type="date" />
-              <CampoTexto label="Prêmio líquido"    campo="premio_liquido"   value={form.premio_liquido}   onChange={setField} type="number" />
-              <CampoTexto label="% Comissão (0.15)" campo="pct_comissao"     value={form.pct_comissao}     onChange={setField} type="number" />
-              <CampoTexto label="Forma de pagamento" campo="forma_pagamento" value={form.forma_pagamento}  onChange={setField} />
-              <CampoTexto label="Parcelamento"      campo="parcelamento"     value={form.parcelamento}     onChange={setField} />
+            <div className="grid gap-4 md:grid-cols-2">
+              <CampoTexto label="Seguradora" campo="seguradora" value={form.seguradora} onChange={setField} />
+              <CampoTexto label="Numero da apolice" campo="numero_apolice" value={form.numero_apolice} onChange={setField} />
+              <CampoTexto label="Vigencia inicio" campo="vigencia_inicio" value={form.vigencia_inicio} onChange={setField} type="date" />
+              <CampoTexto label="Vigencia fim" campo="vigencia_fim" value={form.vigencia_fim} onChange={setField} type="date" />
+              <CampoTexto label="Premio liquido" campo="premio_liquido" value={form.premio_liquido} onChange={setField} type="number" />
+              <CampoTexto label="% Comissao" campo="pct_comissao" value={form.pct_comissao} onChange={setField} type="number" />
+              <CampoTexto label="Forma de pagamento" campo="forma_pagamento" value={form.forma_pagamento} onChange={setField} />
+              <CampoTexto label="Parcelamento" campo="parcelamento" value={form.parcelamento} onChange={setField} />
             </div>
 
             {premioLiquido > 0 && pctComissao > 0 && (
-              <p className="text-sm font-medium text-green-700 bg-green-50 rounded-lg px-3 py-2">
-                Comissão: R$ {valorComissao.toFixed(2)}
-              </p>
+              <div className="mt-4 rounded-2xl border border-status-success/20 bg-status-success/10 px-4 py-3 text-sm font-medium text-status-success">
+                Comissao calculada: R$ {valorComissao.toFixed(2)}
+              </div>
             )}
 
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de produção</label>
-              <select
-                value={form.tipo_producao}
-                onChange={e => setField('tipo_producao', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              >
-                <option value="equipe">Equipe</option>
-                <option value="individual">Individual</option>
-              </select>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Tipo de producao</label>
+                <select
+                  value={form.tipo_producao}
+                  onChange={e => setField('tipo_producao', e.target.value)}
+                  className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+                >
+                  <option value="equipe">Equipe</option>
+                  <option value="individual">Individual</option>
+                </select>
+              </div>
+
+              {form.tipo_producao === 'individual' && (
+                <CampoTexto label="Responsavel" campo="responsavel" value={form.responsavel} onChange={setField} />
+              )}
             </div>
 
-            {form.tipo_producao === 'individual' && (
-              <CampoTexto label="Responsável" campo="responsavel" value={form.responsavel} onChange={setField} />
-            )}
-
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <div className="mt-4 space-y-3">
+              <label className="flex items-center gap-2 text-sm text-dark-text">
                 <input
                   type="checkbox"
                   checked={form.eh_renovacao}
                   onChange={e => setField('eh_renovacao', e.target.checked)}
-                  className="rounded"
                 />
-                É renovação da carteira?
+                E renovacao da carteira?
               </label>
 
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-dark-text">
                 <input
                   type="checkbox"
                   checked={form.tem_repasse}
                   onChange={e => setField('tem_repasse', e.target.checked)}
-                  className="rounded"
                 />
                 Existe repasse?
               </label>
             </div>
 
             {form.tem_repasse && (
-              <div className="grid grid-cols-2 gap-3">
-                <CampoTexto label="% Repasse (0.10)" campo="pct_repasse"  value={form.pct_repasse}  onChange={setField} type="number" />
-                <CampoTexto label="Nome do repasse"  campo="nome_repasse" value={form.nome_repasse} onChange={setField} />
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <CampoTexto label="% Repasse" campo="pct_repasse" value={form.pct_repasse} onChange={setField} type="number" />
+                <CampoTexto label="Nome do repasse" campo="nome_repasse" value={form.nome_repasse} onChange={setField} />
                 {valorRepasse > 0 && (
-                  <p className="col-span-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg px-3 py-2">
-                    Repasse: R$ {valorRepasse.toFixed(2)}
-                  </p>
+                  <div className="md:col-span-2 rounded-2xl border border-brand-secondary/20 bg-brand-secondary/10 px-4 py-3 text-sm font-medium text-brand-secondary">
+                    Repasse calculado: R$ {valorRepasse.toFixed(2)}
+                  </div>
                 )}
               </div>
             )}
 
-            <div className="flex gap-3 pt-2">
+            <div className="mt-6 flex gap-3">
               <button
                 onClick={() => { setModalEmissao(null); setForm(FORM_VAZIO) }}
-                className="flex-1 border border-gray-300 rounded-xl py-2 text-sm text-gray-600 hover:bg-gray-50"
+                className="btn-secondary flex-1"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleEmitir}
                 disabled={isPending || !form.vigencia_fim}
-                className="flex-1 bg-blue-600 text-white rounded-xl py-2 text-sm font-medium disabled:opacity-50 hover:bg-blue-700"
+                className="btn-primary flex-1 disabled:opacity-50"
               >
-                {isPending ? 'Emitindo...' : 'Confirmar emissão'}
+                {isPending ? 'Emitindo...' : 'Confirmar emissao'}
               </button>
             </div>
           </div>

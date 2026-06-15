@@ -6,22 +6,23 @@ Codex
 
 ## Pagina
 
-Layout global
+Base do sistema - tema global
 
 ## Objetivo
 
-Corrigir o layout global do sistema para remover a faixa em branco lateral e fazer as areas ocuparem toda a largura disponivel sem alterar regras de negocio, dados, queries ou integracoes.
+Garantir que o sistema carregue em tema claro por padrao e que o modo escuro so seja ativado quando o usuario selecionar explicitamente, sem alterar regras de negocio.
 
 ## Status
 
-Em andamento - ajuste global de layout iniciado em 2026-06-15
+Concluido - bootstrap global de tema corrigido e validado por build em 2026-06-15
 
 ## Atualizacao de Execucao
 
-- O shell global foi reestruturado para manter a sidebar em fluxo no desktop e o conteúdo em `flex-1`, eliminando a faixa lateral residual.
-- O overlay da sidebar segue apenas no mobile, sem reservar espaço vazio no workspace.
-- O build será revalidado após a correção.
-- A validação visual final no browser in-app segue dependente do alvo `iab` ficar disponível.
+- O bootstrap em `index.html` foi corrigido para nao forcar `dark` quando nao existe preferencia salva.
+- `ThemeContext` ja nasce em `light` por padrao e continua permitindo troca manual.
+- `Login` e `Configuracoes` ja foram alinhadas ao padrao visual claro.
+- O build do projeto passou com `npm.cmd exec vite build -- --configLoader runner`.
+- A validacao visual no browser in-app continua dependente de o alvo `iab` ficar disponivel.
 
 ## Arquivos em uso
 
@@ -29,40 +30,11 @@ Em andamento - ajuste global de layout iniciado em 2026-06-15
 - `docs/PROJECT_CONTEXT.md`
 - `ROADMAP.md`
 - `docs/CURRENT_TASK.md`
-- `src/index.css`
-- `src/styles/tokens.css`
-- `tailwind.config.js`
+- `index.html`
+- `src/pages/Login.jsx`
+- `src/pages/Configuracoes.jsx`
+- `src/contexts/ThemeContext.jsx`
 - `src/components/Layout.jsx`
-- `src/components/KanbanFichas.jsx`
-- `src/components/KanbanBoard.jsx`
-- `src/components/ui/Button.jsx`
-- `src/components/ui/Card.jsx`
-- `src/components/ui/FormFields.jsx`
-- `src/components/ui/Modal.jsx`
-- `src/components/ui/index.js`
-- `src/components/ui/PageHeader.jsx`
-- `src/components/ui/MetricCard.jsx`
-- `src/components/ui/DataCard.jsx`
-- `src/components/ui/SectionHeading.jsx`
-- `src/components/ui/EmptyState.jsx`
-- `src/components/ui/FilterBar.jsx`
-- `src/components/ui/DatePicker.jsx`
-- `src/components/ui/Select.jsx`
-- `src/components/ui/WorkspacesSelect.jsx`
-- `artifacts/adr_core_system_design_operational_redesign.md`
-- `src/pages/Dashboard.jsx`
-- `src/pages/Dashboard/CONTEXT.md`
-- `src/lib/fichas.js`
-- `src/pages/Fichas.jsx`
-- `src/pages/Fichas/CONTEXT.md`
-- `src/pages/MinhasFichas.jsx`
-- `src/pages/MinhasFichas/CONTEXT.md`
-- `src/components/KanbanFichas.jsx`
-- `src/components/KanbanBoard.jsx`
-- `src/components/DetalhesFicha.jsx`
-- `src/components/ModalFicha.jsx`
-- `src/components/ModalFinalizar.jsx`
-- `src/components/ModalAssumir.jsx`
 
 ## Proximo Responsavel
 
@@ -70,11 +42,13 @@ Codex
 
 ## Proxima Tarefa
 
-Revalidar visualmente o sistema no browser in-app quando o alvo `iab` estiver disponível e confirmar que a faixa lateral em branco sumiu.
+Seguir para a proxima auditoria visual de design nas telas restantes que ainda destoarem do shell premium, priorizando refinamentos de consistencia e largura nos modulos ja convertidos.
 
 ## Observacoes
 
-Este ajuste é global e impacta todas as páginas do shell operacional. Comercial permanece fora do escopo desta trilha.
+O escopo desta trilha e visual e estrutural. Nao alterar regras de negocio, auth, rotas, banco ou contratos.
+
+O escopo desta trilha continua visual e estrutural. Nao alterar regras de negocio, auth, rotas, banco ou contratos.
 
 ---
 
@@ -198,5 +172,3 @@ Aplicar redesign premium nas paginas do modulo Auto seguindo o mesmo padrao visu
 
 - Executar os 3 arquivos SQL no Supabase (tabelas, triggers, RLS)
 - Validacao visual no browser apos execucao do SQL
-
-

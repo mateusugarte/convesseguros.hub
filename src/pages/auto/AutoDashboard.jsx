@@ -1,13 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { BarChart3, Car, FileText, RefreshCw, ShieldCheck, TrendingUp } from 'lucide-react'
 import { getDashboardAutoMetrics, getGraficoEmissoesMensais } from '../../lib/auto'
+import { PageHeader, MetricCard, DataCard, EmptyState } from '../../components/ui'
 
-const KPIS = [
-  { key: 'novosNoMes',           label: 'Novos no mês' },
-  { key: 'renovacoesNoMes',      label: 'Renovações no mês' },
-  { key: 'cotacoesNoMes',        label: 'Cotações no mês' },
-  { key: 'renovacoesConcluidas', label: 'Renovações concluídas' },
-  { key: 'vencendoProximoMes',   label: 'Vencendo próximo mês' },
+const KPI_META = [
+  { key: 'novosNoMes', label: 'Novos no mes', hint: 'apolices novas emitidas', tone: 'accent', icon: <Car className="w-5 h-5" /> },
+  { key: 'renovacoesNoMes', label: 'Renovacoes no mes', hint: 'carteira renovada', tone: 'success', icon: <RefreshCw className="w-5 h-5" /> },
+  { key: 'cotacoesNoMes', label: 'Cotacoes no mes', hint: 'entrada comercial', tone: 'secondary', icon: <FileText className="w-5 h-5" /> },
+  { key: 'renovacoesConcluidas', label: 'Renovacoes concluidas', hint: 'status renovada', tone: 'warning', icon: <ShieldCheck className="w-5 h-5" /> },
+  { key: 'vencendoProximoMes', label: 'Vencendo proximo mes', hint: 'fila preventiva', tone: 'accent', icon: <TrendingUp className="w-5 h-5" /> },
 ]
 
 export default function AutoDashboard() {
@@ -21,36 +23,55 @@ export default function AutoDashboard() {
     queryFn: () => getGraficoEmissoesMensais(6),
   })
 
-  if (loadingMetrics || loadingGrafico) {
-    return <div className="p-6 text-gray-400">Carregando...</div>
-  }
+  const loading = loadingMetrics || loadingGrafico
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Seguro Auto — Dashboard</h1>
-
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {KPIS.map(k => (
-          <div key={k.key} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
-            <p className="text-3xl font-bold">{metrics?.[k.key] ?? 0}</p>
-            <p className="text-xs text-gray-500 mt-1">{k.label}</p>
-          </div>
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        eyebrow="Modulo auto"
+        title="Dashboard Auto"
+        description="Leitura executiva de novos negocios, renovacoes e emissao do modulo Auto em uma unica superficie."
+        stats={KPI_META.map(item => (
+          <MetricCard
+            key={item.key}
+            label={item.label}
+            value={metrics?.[item.key] ?? (loading ? '...' : 0)}
+            hint={item.hint}
+            tone={item.tone}
+            icon={item.icon}
+          />
         ))}
-      </div>
+      />
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-        <h2 className="text-base font-semibold mb-4">Emissões mensais</h2>
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={grafico}>
-            <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="novos" name="Novos" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="renovacoes" name="Renovações" fill="#10b981" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      <DataCard
+        title="Emissoes mensais"
+        subtitle="Comparativo entre novos negocios e renovacoes nos ultimos seis meses"
+      >
+        {loading ? (
+          <div className="flex h-[280px] items-center justify-center text-sm text-dark-muted">
+            Carregando indicadores do modulo Auto...
+          </div>
+        ) : grafico.length === 0 ? (
+          <EmptyState
+            icon={<BarChart3 className="w-6 h-6" />}
+            title="Sem emissao suficiente"
+            description="Assim que houver emissao no modulo Auto, o comparativo mensal aparece aqui."
+          />
+        ) : (
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={grafico} margin={{ top: 12, right: 8, left: -18, bottom: 0 }}>
+                <XAxis dataKey="mes" tick={{ fontSize: 11, fill: 'rgba(122,97,109,0.72)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: 'rgba(122,97,109,0.72)' }} axisLine={false} tickLine={false} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="novos" name="Novos" fill="#ff2d55" radius={[10, 10, 0, 0]} />
+                <Bar dataKey="renovacoes" name="Renovacoes" fill="#10b981" radius={[10, 10, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </DataCard>
     </div>
   )
 }

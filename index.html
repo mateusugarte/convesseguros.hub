@@ -12,7 +12,9 @@
     <script>
       (function () {
         var t = localStorage.getItem('theme');
-        if (!t || t === 'dark') document.documentElement.classList.add('dark');
+        var isDark = t === 'dark';
+        document.documentElement.classList.toggle('dark', isDark);
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
       })();
     </script>
   </head>

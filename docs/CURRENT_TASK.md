@@ -18,9 +18,9 @@ Em andamento - ajuste global de layout iniciado em 2026-06-15
 
 ## Atualizacao de Execucao
 
-- O contêiner principal do layout foi ajustado para ocupar toda a largura útil da tela.
-- A faixa em branco lateral estava sendo causada pela limitação global de largura no `Layout.jsx`.
-- O build foi revalidado após a correção.
+- O shell global foi reestruturado para manter a sidebar em fluxo no desktop e o conteúdo em `flex-1`, eliminando a faixa lateral residual.
+- O overlay da sidebar segue apenas no mobile, sem reservar espaço vazio no workspace.
+- O build será revalidado após a correção.
 - A validação visual final no browser in-app segue dependente do alvo `iab` ficar disponível.
 
 ## Arquivos em uso
@@ -198,6 +198,5 @@ Aplicar redesign premium nas paginas do modulo Auto seguindo o mesmo padrao visu
 
 - Executar os 3 arquivos SQL no Supabase (tabelas, triggers, RLS)
 - Validacao visual no browser apos execucao do SQL
-
 
 

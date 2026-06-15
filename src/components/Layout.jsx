@@ -201,7 +201,6 @@ export default function Layout() {
   }
 
   const sidebarWidth = isMobile ? 'w-72' : sidebarOpen ? 'w-[272px]' : 'w-[84px]'
-  const contentMargin = isMobile ? 'ml-0' : sidebarOpen ? 'ml-[272px]' : 'ml-[84px]'
   const shellSidebarStyle = {
     background: 'var(--shell-sidebar-bg)',
     borderRight: '1px solid var(--shell-sidebar-border)',
@@ -215,7 +214,7 @@ export default function Layout() {
   }
 
   return (
-    <div className={`flex h-screen overflow-hidden ${shellClassName}`}>
+    <div className={`relative flex h-screen overflow-hidden ${shellClassName}`}>
       {isMobile && sidebarOpen && (
         <div
           className="fixed inset-0 z-[300] bg-black/35 backdrop-blur-sm"
@@ -224,7 +223,10 @@ export default function Layout() {
       )}
 
       <aside
-        className={`shell-sidebar fixed left-0 top-0 h-full flex flex-col transition-[width,transform] duration-200 z-[400] ${sidebarWidth} ${isMobile ? (sidebarOpen ? 'translate-x-0' : '-translate-x-full') : ''}`}
+        className={`shell-sidebar ${isMobile
+          ? `fixed left-0 top-0 h-full z-[400] transition-[width,transform] duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
+          : 'relative z-[200] h-full shrink-0 transition-[width] duration-200'
+        } flex flex-col ${sidebarWidth}`}
         style={shellSidebarStyle}
       >
         <div
@@ -404,7 +406,7 @@ export default function Layout() {
         )}
       </aside>
 
-      <div className={`flex-1 flex flex-col min-w-0 transition-[margin] duration-200 ${contentMargin}`}>
+      <div className="flex min-w-0 flex-1 flex-col">
         <header className="shell-topbar sticky top-0 z-[300] h-16 flex items-center justify-between px-5 flex-shrink-0 topbar-glass" style={shellTopbarStyle}>
           <div className="flex items-center gap-3">
             <button

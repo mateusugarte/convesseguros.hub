@@ -200,7 +200,7 @@ export default function Layout() {
     })
   }
 
-  const sidebarWidth = isMobile ? 'w-72' : sidebarOpen ? 'w-[272px]' : 'w-[84px]'
+  const sidebarWidth = isMobile ? 'w-72' : sidebarOpen ? 'w-[284px]' : 'w-[92px]'
   const shellSidebarStyle = {
     background: 'var(--shell-sidebar-bg)',
     borderRight: '1px solid var(--shell-sidebar-border)',
@@ -214,7 +214,7 @@ export default function Layout() {
   }
 
   return (
-    <div className={`relative flex h-screen overflow-hidden ${shellClassName}`}>
+    <div className={`relative flex h-screen overflow-hidden ${shellClassName} ${!isMobile ? 'lg:gap-4' : ''}`}>
       {isMobile && sidebarOpen && (
         <div
           className="fixed inset-0 z-[300] bg-black/35 backdrop-blur-sm"
@@ -249,24 +249,20 @@ export default function Layout() {
 
         {(sidebarOpen || isMobile) && (
           <div className="px-3 py-3 border-b" style={{ borderColor: 'var(--shell-panel-border)' }}>
-            <div className="shell-sidebar-card rounded-3xl p-3">
+            <div className="shell-sidebar-card rounded-[28px] p-3">
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-dark-muted mb-1">{workspaceTitle}</p>
-                  <p className="text-sm font-semibold text-dark-text leading-tight">{workspaceLead}</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-dark-muted mb-1">{workspaceLabel}</p>
+                  <p className="text-sm font-semibold text-dark-text leading-tight">{workspaceTitle}</p>
                 </div>
-                <div
-                  className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
-                  style={{ background: 'linear-gradient(135deg, rgb(var(--brand-primary-rgb) / 0.14), rgb(var(--brand-gold-rgb) / 0.22))' }}
-                >
-                  <TrendingUp className="w-4 h-4 text-brand-secondary" />
-                </div>
+                <span className="badge badge-info shrink-0">Live</span>
               </div>
-              <div className="mt-3 h-2 rounded-full overflow-hidden bg-dark-border/40">
-                <div
-                  className="h-full w-[68%] rounded-full bg-gradient-to-r from-brand-accent via-brand-secondary to-brand-gold"
-                  style={{ boxShadow: '0 0 18px rgb(var(--brand-primary-rgb) / 0.26)' }}
-                />
+              <div className="mt-3 flex items-center gap-2 text-[11px] text-dark-muted">
+                <span className="h-1.5 w-1.5 rounded-full bg-status-success" />
+                <span className="truncate">{workspaceLead}</span>
+                <span className="ml-auto shrink-0 rounded-full border border-dark-border/70 px-2 py-0.5 text-[10px] font-semibold text-dark-muted">
+                  {abertasCount} em cotação
+                </span>
               </div>
             </div>
           </div>
@@ -406,8 +402,8 @@ export default function Layout() {
         )}
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="shell-topbar sticky top-0 z-[300] h-16 flex items-center justify-between px-5 flex-shrink-0 topbar-glass" style={shellTopbarStyle}>
+      <div className="flex min-w-0 flex-1 flex-col px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
+        <header className="shell-topbar sticky top-3 z-[300] h-16 flex items-center justify-between px-5 flex-shrink-0 topbar-glass rounded-[28px]" style={shellTopbarStyle}>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(o => !o)}
@@ -510,8 +506,8 @@ export default function Layout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto bg-dark-bg">
-          <div className="w-full min-w-0 pt-6 pb-20">
+        <main className="flex-1 overflow-y-auto bg-transparent pt-4">
+          <div className="mx-auto w-full min-w-0 max-w-[1720px] pb-20">
             <PageTransition>
               <Outlet />
             </PageTransition>

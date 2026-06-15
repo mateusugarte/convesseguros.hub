@@ -6,23 +6,21 @@ Codex
 
 ## Pagina
 
-Base do sistema - tema global
+Layout global e sidebar
 
 ## Objetivo
 
-Garantir que o sistema carregue em tema claro por padrao e que o modo escuro so seja ativado quando o usuario selecionar explicitamente, sem alterar regras de negocio.
+Organizar melhor o espacamento do shell operacional, afastar o conteudo da sidebar e tornar a lateral mais minimalista, interativa e bonita, sem alterar regras de negocio, dados, queries ou integracoes.
 
 ## Status
 
-Concluido - bootstrap global de tema corrigido e validado por build em 2026-06-15
+Concluida - shell global e sidebar refinados com build validado em 2026-06-15
 
 ## Atualizacao de Execucao
 
-- O bootstrap em `index.html` foi corrigido para nao forcar `dark` quando nao existe preferencia salva.
-- `ThemeContext` ja nasce em `light` por padrao e continua permitindo troca manual.
-- `Login` e `Configuracoes` ja foram alinhadas ao padrao visual claro.
-- O build do projeto passou com `npm.cmd exec vite build -- --configLoader runner`.
-- A validacao visual no browser in-app continua dependente de o alvo `iab` ficar disponivel.
+- O shell ganhou mais respiro lateral no desktop, com o painel principal afastado da sidebar.
+- A sidebar ficou mais minimalista e interativa, com estados hover/ativo mais claros e leitura visual mais limpa.
+- O build do projeto passou novamente com as mudancas de layout e estilo.
 
 ## Arquivos em uso
 
@@ -30,11 +28,9 @@ Concluido - bootstrap global de tema corrigido e validado por build em 2026-06-1
 - `docs/PROJECT_CONTEXT.md`
 - `ROADMAP.md`
 - `docs/CURRENT_TASK.md`
-- `index.html`
-- `src/pages/Login.jsx`
-- `src/pages/Configuracoes.jsx`
-- `src/contexts/ThemeContext.jsx`
 - `src/components/Layout.jsx`
+- `src/index.css`
+- `src/styles/tokens.css`
 
 ## Proximo Responsavel
 
@@ -42,13 +38,11 @@ Codex
 
 ## Proxima Tarefa
 
-Seguir para a proxima auditoria visual de design nas telas restantes que ainda destoarem do shell premium, priorizando refinamentos de consistencia e largura nos modulos ja convertidos.
+Validar visualmente o shell no browser in-app quando o alvo `iab` estiver disponivel, para ajustar densidade fina se necessario.
 
 ## Observacoes
 
 O escopo desta trilha e visual e estrutural. Nao alterar regras de negocio, auth, rotas, banco ou contratos.
-
-O escopo desta trilha continua visual e estrutural. Nao alterar regras de negocio, auth, rotas, banco ou contratos.
 
 ---
 

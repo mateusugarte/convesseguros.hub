@@ -1597,24 +1597,81 @@ html.dark .skeleton-surface {
   backdrop-filter: blur(18px) saturate(160%);
 }
 
-.shell-nav-item {
-  border-radius: 18px;
-}
+  .shell-nav-item {
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    transition: transform 180ms ease, background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+    will-change: transform;
+  }
 
-.shell-nav-item-active {
-  background: var(--shell-nav-active-bg);
-  border: 1px solid var(--shell-nav-active-border);
-  box-shadow: 0 8px 18px rgb(var(--brand-primary-rgb) / 0.10);
-}
+  .shell-nav-item::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 12px;
+    bottom: 12px;
+    width: 3px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(245, 88, 42, 0.95), rgba(74, 144, 217, 0.92));
+    opacity: 0;
+    transform: scaleY(0.7);
+    transition: opacity 180ms ease, transform 180ms ease;
+  }
 
-.shell-subnav-item {
-  border: 1px solid transparent;
-}
+  .shell-nav-item:hover::before {
+    opacity: 0.28;
+    transform: scaleY(1);
+  }
+
+  .shell-nav-item-active {
+    background: var(--shell-nav-active-bg);
+    border: 1px solid var(--shell-nav-active-border);
+    box-shadow: 0 8px 18px rgb(var(--brand-primary-rgb) / 0.10);
+  }
+
+  .shell-nav-item-active::before {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+
+  .shell-subnav-item {
+    border: 1px solid transparent;
+    border-radius: 14px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 160ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  }
+
+  .shell-subnav-item::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(74, 144, 217, 0.55);
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%) scale(0.7);
+    opacity: 0;
+    transition: opacity 160ms ease, transform 160ms ease;
+  }
+
+  .shell-subnav-item:hover::before {
+    opacity: 0.45;
+    transform: translateY(-50%) scale(1);
+  }
 
 .shell-subnav-item-active {
   background: var(--shell-subnav-active-bg);
   border-color: var(--shell-subnav-active-border);
   box-shadow: var(--shell-subnav-active-shadow);
+  transform: translateX(1px);
+}
+
+  .shell-subnav-item-active::before {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
 }
 
 .ops-shell {

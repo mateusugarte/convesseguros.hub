@@ -33,6 +33,13 @@ function countBy(items, accessor) {
   }, {})
 }
 
+export function getEmissaoColuna(item) {
+  const raw = item?.coluna
+  if (typeof raw !== 'string') return 'pendentes'
+  const trimmed = raw.trim()
+  return trimmed || 'pendentes'
+}
+
 function toMonthSeries(items, { meses = 6, getDate, getValue } = {}) {
   const resultado = []
   for (let i = meses - 1; i >= 0; i--) {
@@ -73,7 +80,7 @@ export async function criarClienteAuto(payload) {
 export async function getCotacoesAuto({ tipo, status, seguradora, inicio, fim } = {}) {
   let q = supabase
     .from('cotacoes_auto')
-    .select('*, clientes_auto(nome_completo, cpf, telefone)')
+    .select('*, clientes_auto(nome_completo, cpf, telefone, celular, email, estado_civil, profissao)')
     .order('created_at', { ascending: false })
 
   if (tipo) q = q.eq('tipo', tipo)
@@ -106,11 +113,16 @@ export async function atualizarStatusCotacao(id, status) {
 }
 
 // Emissoes
-export async function getEmissoesAuto() {
-  const { data, error } = await supabase
+export async function getEmissoesAuto({ inicio, fim } = {}) {
+  let q = supabase
     .from('emissoes_auto')
-    .select('*, clientes_auto(nome_completo, telefone), cotacoes_auto(tipo, modelo_veiculo, placa)')
+    .select('*, clientes_auto(nome_completo, telefone, celular, email), cotacoes_auto(tipo, modelo_veiculo, placa)')
     .order('created_at', { ascending: false })
+
+  if (inicio) q = q.gte('created_at', `${inicio}T00:00:00`)
+  if (fim) q = q.lte('created_at', `${fim}T23:59:59`)
+
+  const { data, error } = await q
   if (error) throw error
   return data ?? []
 }
@@ -150,7 +162,7 @@ export async function emitirApoliceAuto(payload) {
 export async function getRenovacoesAuto({ periodo } = {}) {
   let q = supabase
     .from('renovacoes_auto')
-    .select('*, clientes_auto(nome_completo, telefone), apolices_auto(numero_apolice, seguradora)')
+    .select('*, clientes_auto(nome_completo, telefone, celular, email), apolices_auto(numero_apolice, seguradora)')
     .order('vigencia_fim', { ascending: true })
 
   if (periodo === 'proximo_mes') {
@@ -177,41 +189,60 @@ export async function atualizarStatusRenovacao(id, campos) {
   if (error) throw error
 }
 
+// Apolices
+export async function getApolicesAuto({ search, inicio, fim } = {}) {
+  let q = supabase
+    .from('apolices_auto')
+    .select('*, clientes_auto(nome_completo, cpf, telefone, celular, email)')
+    .order('created_at', { ascending: false })
+
+  if (inicio) q = q.gte('created_at', `${inicio}T00:00:00`)
+  if (fim) q = q.lte('created_at', `${fim}T23:59:59`)
+
+  const { data, error } = await q
+  if (error) throw error
+
+  let result = data ?? []
+  if (search) {
+    const term = search.toLowerCase()
+    result = result.filter(item =>
+      item.clientes_auto?.nome_completo?.toLowerCase().includes(term) ||
+      item.numero_apolice?.toLowerCase().includes(term) ||
+      item.seguradora?.toLowerCase().includes(term)
+    )
+  }
+  return result
+}
+
 // Dashboard
 export async function getDashboardAutoMetrics() {
   const { inicio, fim } = inicioFimMes(0)
   const proximoMes = inicioFimMes(1)
 
-  const [emissoes, cotacoes, renovadasMes, vencendoProximoMes] = await Promise.all([
-    supabase
-      .from('apolices_auto')
-      .select('id, eh_renovacao')
-      .gte('created_at', inicio)
-      .lte('created_at', fim),
-    supabase
-      .from('cotacoes_auto')
-      .select('id')
-      .gte('created_at', inicio)
-      .lte('created_at', fim),
-    supabase
-      .from('renovacoes_auto')
-      .select('id')
-      .eq('status_renovacao', 'renovada')
-      .gte('created_at', inicio)
-      .lte('created_at', fim),
-    supabase
-      .from('renovacoes_auto')
-      .select('id')
-      .gte('vigencia_fim', proximoMes.inicio)
-      .lte('vigencia_fim', proximoMes.fim),
+  const [emissoes, cotacoesMes, renovadasMes, vencendoProximoMes, apolicesMes, cotacoesConvertidas, renovacoesPendentes] = await Promise.all([
+    supabase.from('apolices_auto').select('id, eh_renovacao').gte('created_at', inicio).lte('created_at', fim),
+    supabase.from('cotacoes_auto').select('id').gte('created_at', inicio).lte('created_at', fim),
+    supabase.from('renovacoes_auto').select('id').eq('status_renovacao', 'renovada').gte('created_at', inicio).lte('created_at', fim),
+    supabase.from('renovacoes_auto').select('id').gte('vigencia_fim', proximoMes.inicio).lte('vigencia_fim', proximoMes.fim),
+    supabase.from('apolices_auto').select('valor_comissao').gte('created_at', inicio).lte('created_at', fim),
+    supabase.from('cotacoes_auto').select('id').eq('status', 'convertida').gte('created_at', inicio).lte('created_at', fim),
+    supabase.from('renovacoes_auto').select('id').neq('status_cotacao', 'cotada_enviada'),
   ])
+
+  const totalCotacoesMes = cotacoesMes.data?.length ?? 0
+  const totalConvertidas = cotacoesConvertidas.data?.length ?? 0
+  const comissaoTotal = (apolicesMes.data ?? []).reduce((sum, item) => sum + (item.valor_comissao || 0), 0)
+  const taxaConversao = totalCotacoesMes > 0 ? Math.round((totalConvertidas / totalCotacoesMes) * 100) : 0
 
   return {
     novosNoMes: emissoes.data?.filter(item => !item.eh_renovacao).length ?? 0,
     renovacoesNoMes: emissoes.data?.filter(item => item.eh_renovacao).length ?? 0,
-    cotacoesNoMes: cotacoes.data?.length ?? 0,
+    cotacoesNoMes: totalCotacoesMes,
     renovacoesConcluidas: renovadasMes.data?.length ?? 0,
     vencendoProximoMes: vencendoProximoMes.data?.length ?? 0,
+    comissaoTotal,
+    taxaConversao,
+    renovacoesPendentes: renovacoesPendentes.data?.length ?? 0,
   }
 }
 
@@ -261,8 +292,9 @@ export async function getAutoEmissoesResumo() {
   const emissoes = await getEmissoesAuto()
   return {
     total: emissoes.length,
-    emitidas: emissoes.filter(item => item.coluna === 'emitida').length,
-    porColuna: countBy(emissoes, item => item.coluna || 'cotacao_feita'),
+    pendentes: emissoes.filter(item => getEmissaoColuna(item) === 'pendentes').length,
+    emitidas: emissoes.filter(item => getEmissaoColuna(item) === 'emitida').length,
+    porColuna: countBy(emissoes, item => getEmissaoColuna(item)),
     porTipo: countBy(emissoes, item => item.cotacoes_auto?.tipo || item.tipo || 'novo'),
   }
 }
@@ -300,6 +332,19 @@ export async function getAutoCotacoesResumo({ tipo, inicio, fim } = {}) {
   }
 }
 
+export async function getGraficoCotacoesStatus(meses = 6) {
+  const cotacoes = await getCotacoesAuto({})
+  return toMonthSeries(cotacoes, {
+    meses,
+    getDate: item => item.created_at,
+    getValue: subset => ({
+      abertas: subset.filter(item => item.status === 'aberta').length,
+      convertidas: subset.filter(item => item.status === 'convertida').length,
+      perdidas: subset.filter(item => item.status === 'perdida').length,
+    }),
+  })
+}
+
 export async function getAutoCotacoesMensais({ tipo, meses = 6 } = {}) {
   const cotacoes = await getCotacoesAuto({ tipo })
   return toMonthSeries(cotacoes, {
@@ -312,4 +357,3 @@ export async function getAutoCotacoesMensais({ tipo, meses = 6 } = {}) {
     }),
   })
 }
-

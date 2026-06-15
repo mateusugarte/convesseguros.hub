@@ -6,21 +6,24 @@ Codex
 
 ## Pagina
 
-Layout global e sidebar
+Modulo Seguro Auto
 
 ## Objetivo
 
-Organizar melhor o espacamento do shell operacional, afastar o conteudo da sidebar e tornar a lateral mais minimalista, interativa e bonita, sem alterar regras de negocio, dados, queries ou integracoes.
+Aplicar redesign premium nas telas novas do `AUTO`, destacando dashboard, renovacoes, emissoes, cotacoes e o placeholder de sinistros sem alterar regras de negocio, queries ou integracoes.
 
 ## Status
 
-Concluida - shell global e sidebar refinados com build validado em 2026-06-15
+Concluída - redesign premium aplicado nas telas novas do modulo Auto em 2026-06-15
 
 ## Atualizacao de Execucao
 
-- O shell ganhou mais respiro lateral no desktop, com o painel principal afastado da sidebar.
-- A sidebar ficou mais minimalista e interativa, com estados hover/ativo mais claros e leitura visual mais limpa.
-- O build do projeto passou novamente com as mudancas de layout e estilo.
+- O dashboard ganhou uma leitura executiva mais clara com hero band e contexto operacional.
+- A tela de renovacoes recebeu ajustes visuais de densidade e contraste.
+- A tela de emissoes passou a ter leitura lateral e modal mais premium.
+- A tela de cotacoes recebeu painel lateral de contexto em tempo real.
+- O placeholder de sinistros foi transformado em preview visual da futura area.
+- O build foi validado com sucesso; a validacao visual fina depende apenas da disponibilidade do alvo `iab`.
 
 ## Arquivos em uso
 
@@ -28,9 +31,11 @@ Concluida - shell global e sidebar refinados com build validado em 2026-06-15
 - `docs/PROJECT_CONTEXT.md`
 - `ROADMAP.md`
 - `docs/CURRENT_TASK.md`
-- `src/components/Layout.jsx`
-- `src/index.css`
-- `src/styles/tokens.css`
+- `src/pages/auto/AutoDashboard.jsx`
+- `src/pages/auto/AutoRenovacoes.jsx`
+- `src/pages/auto/AutoEmissoes.jsx`
+- `src/pages/auto/AutoCotacoes.jsx`
+- `src/pages/auto/AutoSinistros.jsx`
 
 ## Proximo Responsavel
 
@@ -38,7 +43,7 @@ Codex
 
 ## Proxima Tarefa
 
-Validar visualmente o shell no browser in-app quando o alvo `iab` estiver disponivel, para ajustar densidade fina se necessario.
+Fazer apenas ajustes pontuais de densidade, se surgirem, quando a validacao visual no browser in-app puder ser executada.
 
 ## Observacoes
 
@@ -154,6 +159,15 @@ Concluido - build validado em 2026-06-15
 - `src/App.jsx` (rotas adicionadas)
 - `src/components/Layout.jsx` (grupo Auto na sidebar)
 
+### Atualizacao 2026-06-15 — Ajustes de arquitetura
+
+- Dashboard: 3 metricas extras (comissao total, taxa de conversao, renovacoes pendentes) + 2 graficos novos (funil cotacoes, linha de conversao).
+- Renovacoes: secao "Acompanhar renovacoes" com cards de resumo e tabela filtrada por status de cotacao.
+- Emissoes: botao "Consultar apolices emitidas" com modal de busca por cliente/apolice/seguradora e filtro de data; filtro de data tambem no kanban.
+- Cotacoes: botao "Ver cotacoes" com modal de historico completo (filtros de tipo, status, data, busca); filtro de data no FilterBar principal.
+- lib/auto.js: getApolicesAuto, getGraficoCotacoesStatus adicionados; getDashboardAutoMetrics expandido; getEmissoesAuto aceita { inicio, fim }.
+- Build validado sem erros em 2026-06-15.
+
 ### Proximo Responsavel
 
 Codex
@@ -164,5 +178,5 @@ Aplicar redesign premium nas paginas do modulo Auto seguindo o mesmo padrao visu
 
 ### Pendencias
 
-- Executar os 3 arquivos SQL no Supabase (tabelas, triggers, RLS)
+- Executar os 3 arquivos SQL no Supabase se ainda nao executados (tabelas, triggers, RLS)
 - Validacao visual no browser apos execucao do SQL

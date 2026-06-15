@@ -38,6 +38,8 @@ Dados do segurado. Reutilizado entre cotações e apólices.
 | nome_completo | text | Segurado |
 | cpf | text | Segurado |
 | telefone | text | |
+| celular | text | Celular principal |
+| email | text | Email principal |
 | estado_civil | text | |
 | profissao | text | |
 | created_at | timestamptz | |
@@ -55,6 +57,7 @@ Criada automaticamente quando o Forms é preenchido. Representa uma solicitaçã
 | origem_lead | text | `indicacao` / `prospeccao` / `carteira` — somente tipo `novo` |
 | condutor_nome | text | Nome do condutor principal |
 | condutor_cpf | text | CPF do condutor principal |
+| estado_civil_condutor | text | Estado civil do condutor principal |
 | cep_pernoite | text | |
 | uso_veiculo | text | ex: lazer, trabalho |
 | garagem_residencia | text | Resposta completa do Forms — ex: "Sim, portão automático" |
@@ -83,7 +86,7 @@ Card do Kanban de Gestão de Emissões. Criado automaticamente junto com a cota�
 | cotacao_id | uuid FK → cotacoes_auto | |
 | cliente_id | uuid FK → clientes_auto | |
 | tipo | text | `novo` / `renovacao` |
-| coluna | text | `cotacao_feita` / `negociando` / `aguardando_vistoria` / `emitida` |
+| coluna | text | `null` / `cotacao_feita` / `negociando` / `aguardando_vistoria` / `emitida` |
 | created_at | timestamptz | |
 | updated_at | timestamptz | |
 
@@ -138,8 +141,8 @@ Criada automaticamente via Supabase trigger quando uma apólice é inserida.
 ### Trigger 1 — `cotacoes_auto` → `emissoes_auto`
 Ao inserir em `cotacoes_auto`:
 ```sql
-INSERT INTO emissoes_auto (cotacao_id, cliente_id, tipo, coluna)
-VALUES (NEW.id, NEW.cliente_id, NEW.tipo, 'cotacao_feita');
+INSERT INTO emissoes_auto (cotacao_id, cliente_id, tipo)
+VALUES (NEW.id, NEW.cliente_id, NEW.tipo);
 ```
 
 ### Trigger 2 — `apolices_auto` → `renovacoes_auto`
@@ -206,8 +209,11 @@ Campos recebidos via n8n exatamente como abaixo (sem vírgulas ou dois-pontos):
 |-------|----------------------------------|
 | Nome completo (segurado) | `nome_completo` → `clientes_auto` |
 | CPF (segurado) | `cpf` → `clientes_auto` |
+| Celular (segurado) | `celular` → `clientes_auto` |
+| Email (segurado) | `email` → `clientes_auto` |
 | Nome completo (condutor principal) | `condutor_nome` |
 | CPF (condutor principal) | `condutor_cpf` |
+| Estado civil do condutor | `estado_civil_condutor` |
 | Estado civil | `estado_civil` → `clientes_auto` |
 | Cep de pernoite | `cep_pernoite` |
 | Profissão | `profissao` → `clientes_auto` |

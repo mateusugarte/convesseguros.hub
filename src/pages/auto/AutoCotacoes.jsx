@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   BarChart,
@@ -40,11 +40,13 @@ import {
 const NOVO_VAZIO = {
   nome_completo: '',
   cpf: '',
-  telefone: '',
+  celular: '',
+  email: '',
   estado_civil: '',
   profissao: '',
   condutor_nome: '',
   condutor_cpf: '',
+  estado_civil_condutor: '',
   cep_pernoite: '',
   uso_veiculo: '',
   garagem_residencia: '',
@@ -151,20 +153,15 @@ export default function AutoCotacoes() {
         cliente = await criarClienteAuto({
           nome_completo: dados.nome_completo,
           cpf: dados.cpf,
-          telefone: dados.telefone,
+          telefone: dados.celular,
+          celular: dados.celular,
+          email: dados.email,
           estado_civil: dados.estado_civil,
           profissao: dados.profissao,
         })
       }
 
-      const {
-        nome_completo,
-        cpf,
-        telefone,
-        estado_civil,
-        profissao,
-        ...payload
-      } = dados
+      const { nome_completo, cpf, ...payload } = dados
 
       return criarCotacaoAuto({
         ...payload,
@@ -259,6 +256,55 @@ export default function AutoCotacoes() {
     ...tab,
     count: aba === tab.value ? cotacoes.length : 0,
   }))
+  const resumoLateral = useMemo(() => {
+    if (aba === 'novo') {
+      return [
+        {
+          label: 'Segurado',
+          value: formNovo.nome_completo || 'Nome pendente',
+          hint: formNovo.celular || 'Celular pendente',
+        },
+        {
+          label: 'Contato',
+          value: formNovo.email || 'E-mail pendente',
+          hint: formNovo.estado_civil || 'Estado civil do segurado',
+        },
+        {
+          label: 'Condutor',
+          value: formNovo.condutor_nome || 'Nome do condutor',
+          hint: formNovo.estado_civil_condutor || 'Estado civil do condutor',
+        },
+        {
+          label: 'Veiculo',
+          value: formNovo.modelo_veiculo || 'Modelo do veiculo',
+          hint: formNovo.placa || 'Placa opcional',
+        },
+      ]
+    }
+
+    return [
+      {
+        label: 'CPF',
+        value: formRen.cpf || 'Pendente',
+        hint: 'identificacao do cliente',
+      },
+      {
+        label: 'Preferencial',
+        value: formRen.seguradora_preferencial.nome || 'Sem nome',
+        hint: formatMoney(calcComissao(formRen.seguradora_preferencial)),
+      },
+      {
+        label: 'Mais barata',
+        value: formRen.seguradora_mais_barata.nome || 'Sem nome',
+        hint: formatMoney(calcComissao(formRen.seguradora_mais_barata)),
+      },
+      {
+        label: 'Comissao',
+        value: formatMoney(calcComissao(formRen.seguradora_preferencial)),
+        hint: 'estimativa atual',
+      },
+    ]
+  }, [aba, formNovo, formRen])
 
   return (
     <div className="space-y-6">
@@ -287,6 +333,43 @@ export default function AutoCotacoes() {
         ))}
       />
 
+      <DataCard className="overflow-hidden border-brand-accent/12" bodyClassName="p-0">
+        <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="relative overflow-hidden bg-gradient-to-br from-brand-accent/10 via-transparent to-brand-secondary/8 p-6 md:p-8">
+            <div className="absolute -right-10 top-0 h-32 w-32 rounded-full bg-brand-accent/10 blur-3xl" />
+            <div className="absolute -bottom-6 left-1/3 h-28 w-28 rounded-full bg-brand-secondary/10 blur-3xl" />
+            <div className="relative z-[1] max-w-2xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-accent">
+                <Sparkles className="h-3.5 w-3.5" />
+                Workbench de cotacao
+              </div>
+              <h2 className="mt-4 text-2xl font-semibold text-dark-text md:text-3xl">
+                Cadastro com leitura de cliente, condutor e risco em um unico fluxo.
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-dark-muted">
+                Os campos novos de contato e condutor agora aparecem no contexto visual da tela,
+                deixando claro o que ja foi preenchido e o que ainda falta para salvar.
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="badge badge-info">{aba === 'novo' ? 'Seguro novo' : 'Renovacao'}</span>
+                <span className="badge badge-success">{resumo?.taxaConversao ? `${Math.round((resumo?.taxaConversao ?? 0) * 100)}% conversao` : `${taxa}% conversao`}</span>
+                <span className="badge badge-muted">{resumo?.total ?? 0} registros</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-3 bg-dark-surface2/45 p-6 md:p-8 sm:grid-cols-2 lg:grid-cols-1">
+            {resumoLateral.map(item => (
+              <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-white/75 p-4 shadow-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{item.label}</p>
+                <p className="mt-2 text-sm font-semibold text-dark-text">{item.value}</p>
+                <p className="mt-2 text-xs text-dark-muted">{item.hint}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </DataCard>
+
       <FilterBar
         actions={(
           <div className="text-xs text-dark-muted">
@@ -311,7 +394,7 @@ export default function AutoCotacoes() {
         </div>
       </FilterBar>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="space-y-4">
           <DataCard
             title={aba === 'novo' ? 'Novo orçamento' : 'Cotação de renovação'}
@@ -327,7 +410,8 @@ export default function AutoCotacoes() {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Field label="Nome completo" value={formNovo.nome_completo} onChange={value => setNovo('nome_completo', value)} />
                       <Field label="CPF" value={formNovo.cpf} onChange={value => setNovo('cpf', value)} />
-                      <Field label="Telefone" value={formNovo.telefone} onChange={value => setNovo('telefone', value)} />
+                      <Field label="Celular" value={formNovo.celular} onChange={value => setNovo('celular', value)} />
+                      <Field label="E-mail" value={formNovo.email} onChange={value => setNovo('email', value)} />
                       <Field label="Estado civil" value={formNovo.estado_civil} onChange={value => setNovo('estado_civil', value)} />
                       <Field label="Profissão" value={formNovo.profissao} onChange={value => setNovo('profissao', value)} />
                     </div>
@@ -338,6 +422,7 @@ export default function AutoCotacoes() {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Field label="Nome do condutor" value={formNovo.condutor_nome} onChange={value => setNovo('condutor_nome', value)} />
                       <Field label="CPF do condutor" value={formNovo.condutor_cpf} onChange={value => setNovo('condutor_cpf', value)} />
+                      <Field label="Estado civil do condutor" value={formNovo.estado_civil_condutor} onChange={value => setNovo('estado_civil_condutor', value)} />
                       <Field label="CEP de pernoite" value={formNovo.cep_pernoite} onChange={value => setNovo('cep_pernoite', value)} />
                       <Field label="Uso do veículo" value={formNovo.uso_veiculo} onChange={value => setNovo('uso_veiculo', value)} />
                       <Field label="Modelo do veículo" value={formNovo.modelo_veiculo} onChange={value => setNovo('modelo_veiculo', value)} />
@@ -445,7 +530,7 @@ export default function AutoCotacoes() {
           </DataCard>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 xl:sticky xl:top-24 self-start">
           <DataCard
             title="Tendência"
             subtitle="Volume mensal da aba ativa"

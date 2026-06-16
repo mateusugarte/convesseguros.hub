@@ -5,7 +5,7 @@ import { Car, CheckCircle2, FileText, RefreshCw, Search, X, Plus } from 'lucide-
 import { format, startOfMonth, startOfWeek } from 'date-fns'
 import {
   getEmissoesAuto, moverEmissaoColuna, emitirApoliceAuto,
-  salvarResultadoCotacao, getEmissaoColuna, getApolicesAuto,
+  salvarResultadoCotacao, getEmissaoColuna, getApolicesAuto, criarEmissaoManualAuto,
 } from '../../lib/auto'
 import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../components/ui'
 import { formatDateBR, formatMoney } from './autoShared'
@@ -26,6 +26,13 @@ const PERIOD_OPTIONS = [
 ]
 
 const FORM_EMISSAO_VAZIO = {
+  nome_cliente: '',
+  cpf_cliente: '',
+  celular_cliente: '',
+  condutor_nome: '',
+  condutor_cpf: '',
+  modelo_veiculo: '',
+  placa: '',
   seguradora: '',
   numero_apolice: '',
   vigencia_inicio: '',
@@ -34,12 +41,35 @@ const FORM_EMISSAO_VAZIO = {
   pct_comissao: '',
   forma_pagamento: '',
   parcelamento: '',
-  tipo_producao: 'equipe',
+  tipo_producao: 'individual',
   responsavel: '',
   eh_renovacao: false,
   tem_repasse: false,
   pct_repasse: '',
   nome_repasse: '',
+}
+
+const FORM_MANUAL_VAZIO = {
+  nome_cliente: '',
+  cpf_cliente: '',
+  celular_cliente: '',
+  condutor_nome: '',
+  condutor_cpf: '',
+  modelo_veiculo: '',
+  placa: '',
+  seguradora: '',
+  numero_apolice: '',
+  vigencia_inicio: '',
+  vigencia_fim: '',
+  premio_liquido: '',
+  pct_comissao: '',
+  tem_repasse: false,
+  pct_repasse: '',
+  nome_repasse: '',
+  forma_pagamento: '',
+  parcelamento: '',
+  responsavel: '',
+  eh_renovacao: false,
 }
 
 const NOVA_SEGURADORA = {
@@ -72,7 +102,26 @@ function getPeriodoRange(tipo) {
 
 function nomeEmissao(emissao) {
   const c = emissao.cotacoes_auto || {}
-  return c.nome_cliente || c.condutor_nome || '—'
+  return emissao.nome_cliente || c.nome_cliente || c.nome_interessado || c.condutor_nome || emissao.condutor_nome || '—'
+}
+
+function cpfEmissao(emissao) {
+  const c = emissao.cotacoes_auto || {}
+  return emissao.cpf_cliente || c.cpf_cliente || '—'
+}
+
+function celularEmissao(emissao) {
+  const c = emissao.cotacoes_auto || {}
+  return emissao.celular_cliente || c.celular_cliente || '—'
+}
+
+function condutorEmissao(emissao) {
+  const c = emissao.cotacoes_auto || {}
+  return emissao.condutor_nome || c.condutor_nome || '—'
+}
+
+function seguradoraEmissao(emissao) {
+  return emissao.seguradora || emissao.cotacoes_auto?.seguradora_preferencial?.nome || emissao.cotacoes_auto?.seguradora_mais_barata?.nome || '—'
 }
 
 // ─── Card ───────────────────────────────────────────────────────────────────
@@ -105,8 +154,8 @@ function CardEmissao({ emissao, onDragStart, onClick }) {
   }
 
   const nome = nomeEmissao(emissao)
-  const veiculo = emissao.cotacoes_auto?.modelo_veiculo || 'Modelo nao informado'
-  const placa = emissao.cotacoes_auto?.placa
+  const veiculo = emissao.modelo_veiculo || emissao.cotacoes_auto?.modelo_veiculo || 'Modelo nao informado'
+  const placa = emissao.placa || emissao.cotacoes_auto?.placa
 
   return (
     <button
@@ -124,6 +173,12 @@ function CardEmissao({ emissao, onDragStart, onClick }) {
           <p className="mt-1 truncate text-xs text-dark-muted">{veiculo}</p>
           <p className="mt-2 text-[11px] text-dark-muted">
             {placa ? `Placa ${placa}` : 'Sem placa'}
+          </p>
+          <p className="mt-2 text-[11px] text-dark-muted">
+            {cpfEmissao(emissao)} · {celularEmissao(emissao)}
+          </p>
+          <p className="mt-1 text-[11px] text-dark-muted">
+            Condutor: {condutorEmissao(emissao)} · Seguradora: {seguradoraEmissao(emissao)}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
@@ -215,8 +270,8 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
             </div>
             <h2 className="mt-2 text-xl font-semibold text-dark-text">{nome}</h2>
             <p className="mt-1 text-sm text-dark-muted">
-              {c.modelo_veiculo || 'Veiculo nao informado'}
-              {c.placa ? ` · Placa ${c.placa}` : ''}
+              {emissao.modelo_veiculo || c.modelo_veiculo || 'Veiculo nao informado'}
+              {(emissao.placa || c.placa) ? ` · Placa ${emissao.placa || c.placa}` : ''}
             </p>
           </div>
           <button onClick={onClose} className="rounded-full p-2 hover:bg-dark-border/40 transition-colors shrink-0">
@@ -230,9 +285,9 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
             <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
               <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Dados do cliente</p>
               <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-                <InfoRow label="Nome" value={c.nome_cliente} />
-                <InfoRow label="CPF" value={c.cpf_cliente} />
-                <InfoRow label="Celular" value={c.celular_cliente} />
+                <InfoRow label="Nome" value={emissao.nome_cliente || c.nome_cliente} />
+                <InfoRow label="CPF" value={emissao.cpf_cliente || c.cpf_cliente} />
+                <InfoRow label="Celular" value={emissao.celular_cliente || c.celular_cliente} />
                 <InfoRow label="Email" value={c.email_cliente} />
                 <InfoRow label="Estado civil" value={c.estado_civil_cliente} />
                 <InfoRow label="Profissao" value={c.profissao_cliente} />
@@ -243,20 +298,20 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
             <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
               <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Veiculo</p>
               <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-                <InfoRow label="Modelo" value={c.modelo_veiculo} />
-                <InfoRow label="Placa" value={c.placa} />
+                <InfoRow label="Modelo" value={emissao.modelo_veiculo || c.modelo_veiculo} />
+                <InfoRow label="Placa" value={emissao.placa || c.placa} />
                 <InfoRow label="Uso" value={c.uso_veiculo} />
                 <InfoRow label="CEP pernoite" value={c.cep_pernoite} />
               </div>
             </div>
 
             {/* Condutor */}
-            {(c.condutor_nome || c.condutor_cpf) && (
+            {(emissao.condutor_nome || c.condutor_nome || emissao.condutor_cpf || c.condutor_cpf) && (
               <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
                 <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Condutor principal</p>
                 <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-                  <InfoRow label="Nome" value={c.condutor_nome} />
-                  <InfoRow label="CPF" value={c.condutor_cpf} />
+                  <InfoRow label="Nome" value={emissao.condutor_nome || c.condutor_nome} />
+                  <InfoRow label="CPF" value={emissao.condutor_cpf || c.condutor_cpf} />
                   <InfoRow label="Estado civil" value={c.estado_civil_condutor} />
                 </div>
               </div>
@@ -280,7 +335,7 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
             {/* Seguradoras cotadas */}
             {seguradoras.length > 0 && (
               <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradoras cotadas</p>
+              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradoras cotadas</p>
                 <div className="space-y-3">
                   {seguradoras.map((seg, idx) => (
                     <div key={idx} className="rounded-2xl border border-dark-border/60 bg-white/60 p-3">
@@ -301,6 +356,18 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
                 </div>
               </div>
             )}
+
+            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Emissao manual</p>
+              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                <InfoRow label="Seguradora" value={emissao.seguradora || c.seguradora_preferencial?.nome || c.seguradora_mais_barata?.nome} />
+                <InfoRow label="Numero da apolice" value={emissao.numero_apolice} />
+                <InfoRow label="Vigencia" value={emissao.vigencia_inicio || emissao.vigencia_fim ? `${emissao.vigencia_inicio || '—'} a ${emissao.vigencia_fim || '—'}` : null} />
+                <InfoRow label="Premio liquido" value={emissao.premio_liquido ? formatMoney(emissao.premio_liquido) : null} />
+                <InfoRow label="% Comissao" value={emissao.pct_comissao ?? null} />
+                <InfoRow label="Repasse" value={emissao.tem_repasse ? 'Sim' : 'Nao'} />
+              </div>
+            </div>
           </div>
 
           <aside className="space-y-4">
@@ -722,6 +789,8 @@ export default function AutoEmissoes() {
   const [dragOver, setDragOver] = useState(null)
   const [modalResultado, setModalResultado] = useState(null)
   const [modalEmissao, setModalEmissao] = useState(null)
+  const [manualOpen, setManualOpen] = useState(false)
+  const [manualForm, setManualForm] = useState(FORM_MANUAL_VAZIO)
   const [form, setForm] = useState(FORM_EMISSAO_VAZIO)
   const [showApolices, setShowApolices] = useState(false)
   const [periodo, setPeriodo] = useState('semana')
@@ -757,8 +826,23 @@ export default function AutoEmissoes() {
     },
   })
 
+  const { mutate: criarManual, isPending: isCreatingManual } = useMutation({
+    mutationFn: payload => criarEmissaoManualAuto(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
+      qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
+      qc.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] })
+      setManualOpen(false)
+      setManualForm(FORM_MANUAL_VAZIO)
+    },
+  })
+
   function setField(campo, valor) {
     setForm(current => ({ ...current, [campo]: valor }))
+  }
+
+  function setManualField(campo, valor) {
+    setManualForm(current => ({ ...current, [campo]: valor }))
   }
 
   function handlePeriodoChange(value) {
@@ -784,7 +868,12 @@ export default function AutoEmissoes() {
 
   function abrirDetalhe(item) {
     const cotacaoId = item?.cotacoes_auto?.id || item?.cotacao_id
-    if (!cotacaoId) return
+    if (!cotacaoId) {
+      setModalResultado(null)
+      setModalEmissao(null)
+      setManualOpen(false)
+      return
+    }
     navigate(`/auto/cotacoes/${cotacaoId}`, {
       state: {
         from: '/auto/emissoes',
@@ -802,8 +891,13 @@ export default function AutoEmissoes() {
     emitir({
       emissao_id: modalEmissao.id,
       cliente_id: modalEmissao.cliente_id,
-      nome_cliente: modalEmissao.cotacoes_auto?.nome_cliente || null,
-      cpf_cliente: modalEmissao.cotacoes_auto?.cpf_cliente || null,
+      nome_cliente: modalEmissao.cotacoes_auto?.nome_cliente || modalEmissao.nome_cliente || null,
+      cpf_cliente: modalEmissao.cotacoes_auto?.cpf_cliente || modalEmissao.cpf_cliente || null,
+      celular_cliente: modalEmissao.cotacoes_auto?.celular_cliente || modalEmissao.celular_cliente || null,
+      condutor_nome: modalEmissao.cotacoes_auto?.condutor_nome || modalEmissao.condutor_nome || null,
+      condutor_cpf: modalEmissao.cotacoes_auto?.condutor_cpf || modalEmissao.condutor_cpf || null,
+      modelo_veiculo: modalEmissao.cotacoes_auto?.modelo_veiculo || modalEmissao.modelo_veiculo || null,
+      placa: modalEmissao.cotacoes_auto?.placa || modalEmissao.placa || null,
       seguradora: form.seguradora,
       numero_apolice: form.numero_apolice,
       vigencia_inicio: form.vigencia_inicio,
@@ -822,6 +916,32 @@ export default function AutoEmissoes() {
       valor_repasse: form.tem_repasse ? valorRepasse : null,
     })
     mover({ id: modalEmissao.id, coluna: 'emitida' })
+  }
+
+  function handleCreateManual() {
+    criarManual({
+      nome_cliente: manualForm.nome_cliente,
+      cpf_cliente: manualForm.cpf_cliente,
+      celular_cliente: manualForm.celular_cliente,
+      condutor_nome: manualForm.condutor_nome,
+      condutor_cpf: manualForm.condutor_cpf,
+      modelo_veiculo: manualForm.modelo_veiculo,
+      placa: manualForm.placa,
+      seguradora: manualForm.seguradora,
+      numero_apolice: manualForm.numero_apolice,
+      vigencia_inicio: manualForm.vigencia_inicio,
+      vigencia_fim: manualForm.vigencia_fim,
+      premio_liquido: manualForm.premio_liquido,
+      pct_comissao: manualForm.pct_comissao,
+      tem_repasse: manualForm.tem_repasse,
+      pct_repasse: manualForm.tem_repasse ? manualForm.pct_repasse : null,
+      nome_repasse: manualForm.tem_repasse ? manualForm.nome_repasse : null,
+      forma_pagamento: manualForm.forma_pagamento,
+      parcelamento: manualForm.parcelamento,
+      responsavel: manualForm.responsavel,
+      eh_renovacao: manualForm.eh_renovacao,
+      tipo_producao: 'individual',
+    })
   }
 
   const metricas = useMemo(() => ({
@@ -854,9 +974,14 @@ export default function AutoEmissoes() {
         title="Gestao de Emissoes"
         description="Kanban operacional para conduzir cotacoes pendentes, negociacao, vistoria e emissao da carteira Auto."
         actions={(
-          <button onClick={() => setShowApolices(true)} className="btn-secondary">
-            Consultar apolices emitidas
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => setManualOpen(true)} className="btn-primary">
+              Nova emissao manual
+            </button>
+            <button onClick={() => setShowApolices(true)} className="btn-secondary">
+              Consultar apolices emitidas
+            </button>
+          </div>
         )}
         stats={(
           <>
@@ -1151,6 +1276,152 @@ export default function AutoEmissoes() {
                   >
                     {isPending ? 'Emitindo...' : 'Confirmar emissao'}
                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {manualOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+          <div className="glass-modal w-full max-w-6xl overflow-hidden rounded-[32px]">
+            <div className="grid gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
+              <aside className="relative overflow-hidden bg-gradient-to-br from-brand-secondary/12 via-dark-surface2/70 to-brand-accent/10 p-6 md:p-7">
+                <div className="absolute right-0 top-0 h-28 w-28 rounded-full bg-white/40 blur-3xl" />
+                <div className="relative z-[1]">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/65 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">
+                    <Plus className="h-3.5 w-3.5" />
+                    Cadastro manual
+                  </div>
+                  <h2 className="mt-4 text-2xl font-semibold text-dark-text">Nova emissao manual</h2>
+                  <p className="mt-2 text-sm leading-6 text-dark-muted">
+                    Registre uma emissao sem cotacao previa. O sistema grava a emissao e a apolice com os dados informados.
+                  </p>
+
+                  <div className="mt-6 space-y-3">
+                    <div className="rounded-3xl border border-white/40 bg-white/70 p-4 shadow-sm">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Cliente</p>
+                      <p className="mt-2 text-sm font-semibold text-dark-text">{manualForm.nome_cliente || 'Nome pendente'}</p>
+                      <p className="mt-1 text-xs text-dark-muted">{manualForm.cpf_cliente || 'CPF pendente'}</p>
+                    </div>
+                    <div className="rounded-3xl border border-white/40 bg-white/70 p-4 shadow-sm">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Apolice</p>
+                      <p className="mt-2 text-sm font-semibold text-dark-text">{manualForm.seguradora || 'Seguradora pendente'}</p>
+                      <p className="mt-1 text-xs text-dark-muted">{manualForm.numero_apolice || 'Numero da apolice pendente'}</p>
+                    </div>
+                    <div className="rounded-3xl border border-white/40 bg-white/70 p-4 shadow-sm">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Financeiro</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <span className="badge badge-info">{manualForm.eh_renovacao ? 'Renovacao' : 'Novo'}</span>
+                        <span className="badge badge-muted">{manualForm.tem_repasse ? 'Com repasse' : 'Sem repasse'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {manualForm.premio_liquido && manualForm.pct_comissao && (
+                    <div className="mt-6 rounded-3xl border border-status-success/20 bg-status-success/10 px-4 py-4 text-sm font-medium text-status-success shadow-sm">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-status-success/80">Comissao calculada</p>
+                      <p className="mt-2 text-2xl font-semibold">
+                        {formatMoney((parseFloat(manualForm.premio_liquido) || 0) * (parseFloat(manualForm.pct_comissao) || 0))}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </aside>
+
+              <div className="overflow-y-auto bg-white/70 p-6 md:p-7">
+                <div className="mb-5 flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Dados da emissao</p>
+                    <h3 className="mt-2 text-xl font-semibold text-dark-text">Preencher e salvar manualmente</h3>
+                  </div>
+                  <button
+                    onClick={() => { setManualOpen(false); setManualForm(FORM_MANUAL_VAZIO) }}
+                    className="rounded-full p-2 hover:bg-dark-border/40 transition-colors"
+                  >
+                    <X className="w-5 h-5 text-dark-muted" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <CampoTexto label="Nome do segurado" campo="nome_cliente" value={manualForm.nome_cliente} onChange={setManualField} />
+                    <CampoTexto label="CPF do segurado" campo="cpf_cliente" value={manualForm.cpf_cliente} onChange={setManualField} />
+                    <CampoTexto label="Celular" campo="celular_cliente" value={manualForm.celular_cliente} onChange={setManualField} />
+                    <CampoTexto label="Nome do condutor" campo="condutor_nome" value={manualForm.condutor_nome} onChange={setManualField} />
+                    <CampoTexto label="CPF do condutor" campo="condutor_cpf" value={manualForm.condutor_cpf} onChange={setManualField} />
+                    <CampoTexto label="Modelo do veiculo" campo="modelo_veiculo" value={manualForm.modelo_veiculo} onChange={setManualField} />
+                    <CampoTexto label="Placa" campo="placa" value={manualForm.placa} onChange={setManualField} />
+                    <CampoTexto label="Seguradora" campo="seguradora" value={manualForm.seguradora} onChange={setManualField} />
+                    <CampoTexto label="Numero da apolice" campo="numero_apolice" value={manualForm.numero_apolice} onChange={setManualField} />
+                    <CampoTexto label="Vigencia inicio" campo="vigencia_inicio" value={manualForm.vigencia_inicio} onChange={setManualField} type="date" />
+                    <CampoTexto label="Vigencia fim" campo="vigencia_fim" value={manualForm.vigencia_fim} onChange={setManualField} type="date" />
+                    <CampoTexto label="Premio liquido" campo="premio_liquido" value={manualForm.premio_liquido} onChange={setManualField} type="number" />
+                    <CampoTexto label="% Comissao" campo="pct_comissao" value={manualForm.pct_comissao} onChange={setManualField} type="number" />
+                    <CampoTexto label="Forma de pagamento" campo="forma_pagamento" value={manualForm.forma_pagamento} onChange={setManualField} />
+                    <CampoTexto label="Parcelamento" campo="parcelamento" value={manualForm.parcelamento} onChange={setManualField} />
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <CampoTexto label="Responsavel" campo="responsavel" value={manualForm.responsavel} onChange={setManualField} placeholder="Opcional" />
+                    <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
+                      <label className="flex items-center gap-2 text-sm text-dark-text">
+                        <input
+                          type="checkbox"
+                          checked={manualForm.eh_renovacao}
+                          onChange={e => setManualField('eh_renovacao', e.target.checked)}
+                        />
+                        E renovacao?
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
+                    <label className="flex items-center gap-2 text-sm text-dark-text">
+                      <input
+                        type="checkbox"
+                        checked={manualForm.tem_repasse}
+                        onChange={e => setManualField('tem_repasse', e.target.checked)}
+                      />
+                      Tem repasse?
+                    </label>
+
+                    {manualForm.tem_repasse && (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <CampoTexto label="% Repasse" campo="pct_repasse" value={manualForm.pct_repasse} onChange={setManualField} type="number" />
+                        <CampoTexto label="Nome do repasse" campo="nome_repasse" value={manualForm.nome_repasse} onChange={setManualField} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-3 border-t border-dark-border/60 pt-5">
+                    <button
+                      onClick={() => { setManualOpen(false); setManualForm(FORM_MANUAL_VAZIO) }}
+                      className="btn-secondary flex-1"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleCreateManual}
+                      disabled={isCreatingManual
+                        || !manualForm.nome_cliente
+                        || !manualForm.cpf_cliente
+                        || !manualForm.celular_cliente
+                        || !manualForm.condutor_nome
+                        || !manualForm.numero_apolice
+                        || !manualForm.vigencia_inicio
+                        || !manualForm.vigencia_fim
+                        || !manualForm.seguradora
+                        || !manualForm.premio_liquido
+                        || !manualForm.pct_comissao
+                        || (manualForm.tem_repasse && (!manualForm.pct_repasse || !manualForm.nome_repasse))
+                      }
+                      className="btn-primary flex-1 disabled:opacity-50"
+                    >
+                      {isCreatingManual ? 'Salvando...' : 'Salvar emissao manual'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

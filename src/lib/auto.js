@@ -273,6 +273,90 @@ export async function emitirApoliceAuto(payload) {
   return data
 }
 
+export async function criarEmissaoManualAuto(payload) {
+  const premioLiquido = parseFloat(payload.premio_liquido) || 0
+  const pctComissao = parseFloat(payload.pct_comissao) || 0
+  const valorComissao = premioLiquido * pctComissao
+  const valorRepasse = payload.tem_repasse && payload.pct_repasse
+    ? valorComissao * parseFloat(payload.pct_repasse)
+    : null
+
+  const clienteId = payload.cliente_id || `${(payload.cpf_cliente || '').replace(/\D/g, '') || 'manual'}_${new Date().toISOString().split('T')[0]}`
+
+  const emissaoPayload = {
+    cotacao_id: null,
+    cliente_id: clienteId,
+    tipo: payload.tipo || 'novo',
+    coluna: 'emitida',
+    nome_cliente: payload.nome_cliente || null,
+    cpf_cliente: payload.cpf_cliente || null,
+    celular_cliente: payload.celular_cliente || null,
+    condutor_nome: payload.condutor_nome || null,
+    condutor_cpf: payload.condutor_cpf || null,
+    modelo_veiculo: payload.modelo_veiculo || null,
+    placa: payload.placa || null,
+    seguradora: payload.seguradora || null,
+    numero_apolice: payload.numero_apolice || null,
+    vigencia_inicio: payload.vigencia_inicio || null,
+    vigencia_fim: payload.vigencia_fim || null,
+    premio_liquido: premioLiquido,
+    pct_comissao: pctComissao,
+    valor_comissao: valorComissao,
+    forma_pagamento: payload.forma_pagamento || null,
+    parcelamento: payload.parcelamento || null,
+    tem_repasse: !!payload.tem_repasse,
+    pct_repasse: payload.tem_repasse ? parseFloat(payload.pct_repasse) || null : null,
+    nome_repasse: payload.tem_repasse ? payload.nome_repasse || null : null,
+    valor_repasse: payload.tem_repasse ? valorRepasse : null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+
+  const { data: emissao, error: emissaoError } = await supabase
+    .from('emissoes_auto')
+    .insert(emissaoPayload)
+    .select()
+    .single()
+  if (emissaoError) throw emissaoError
+
+  const apolicePayload = {
+    emissao_id: emissao.id,
+    cliente_id: clienteId,
+    seguradora: payload.seguradora || null,
+    numero_apolice: payload.numero_apolice || null,
+    vigencia_inicio: payload.vigencia_inicio || null,
+    vigencia_fim: payload.vigencia_fim || null,
+    premio_liquido: premioLiquido,
+    pct_comissao: pctComissao,
+    valor_comissao: valorComissao,
+    forma_pagamento: payload.forma_pagamento || null,
+    parcelamento: payload.parcelamento || null,
+    tipo_producao: payload.tipo_producao || 'individual',
+    responsavel: payload.responsavel || null,
+    eh_renovacao: !!payload.eh_renovacao,
+    tem_repasse: !!payload.tem_repasse,
+    pct_repasse: payload.tem_repasse ? parseFloat(payload.pct_repasse) || null : null,
+    nome_repasse: payload.tem_repasse ? payload.nome_repasse || null : null,
+    valor_repasse: payload.tem_repasse ? valorRepasse : null,
+    nome_cliente: payload.nome_cliente || null,
+    cpf_cliente: payload.cpf_cliente || null,
+    celular_cliente: payload.celular_cliente || null,
+    condutor_nome: payload.condutor_nome || null,
+    condutor_cpf: payload.condutor_cpf || null,
+    modelo_veiculo: payload.modelo_veiculo || null,
+    placa: payload.placa || null,
+  }
+
+  const { data: apolice, error: apoliceError } = await supabase
+    .from('apolices_auto')
+    .insert(apolicePayload)
+    .select()
+    .single()
+  if (apoliceError) throw apoliceError
+
+  return { emissao, apolice }
+}
+
 // Renovacoes
 export async function getRenovacoesAuto({ periodo } = {}) {
   let q = supabase
@@ -322,6 +406,12 @@ export async function getApolicesAuto({ search, inicio, fim } = {}) {
     const term = search.toLowerCase()
     result = result.filter(item =>
       item.nome_cliente?.toLowerCase().includes(term) ||
+      item.cpf_cliente?.toLowerCase().includes(term) ||
+      item.celular_cliente?.toLowerCase().includes(term) ||
+      item.condutor_nome?.toLowerCase().includes(term) ||
+      item.condutor_cpf?.toLowerCase().includes(term) ||
+      item.modelo_veiculo?.toLowerCase().includes(term) ||
+      item.placa?.toLowerCase().includes(term) ||
       item.numero_apolice?.toLowerCase().includes(term) ||
       item.seguradora?.toLowerCase().includes(term)
     )
@@ -352,11 +442,19 @@ export async function getAutoCarteiraClientes({ search, seguradora, inicio, fim 
         const text = [
           item.nome_cliente,
           item.cpf_cliente,
+          item.celular_cliente,
+          item.condutor_nome,
+          item.condutor_cpf,
+          item.modelo_veiculo,
+          item.placa,
           item.numero_apolice,
           item.seguradora,
           item.emissoes_auto?.numero_apolice,
           c.nome_cliente,
           c.cpf_cliente,
+          c.celular_cliente,
+          c.condutor_nome,
+          c.condutor_cpf,
           c.modelo_veiculo,
           c.placa,
           c.origem_lead,

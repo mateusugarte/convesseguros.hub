@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, CalendarDays, Car, Check, Pencil, ShieldCheck, UserRound, X } from 'lucide-react'
+import { ArrowLeft, BadgeDollarSign, CalendarDays, Car, Check, Pencil, ShieldCheck, UserRound, X, Mail, Heart, Phone, Briefcase } from 'lucide-react'
 import { DataCard, EmptyState, MetricCard, PageHeader } from '../../components/ui'
 import SeguradoraSelect from '../../components/SeguradoraSelect'
 import { deletarCotacaoAuto, getCotacaoAutoPorId, atualizarCotacaoAuto } from '../../lib/auto'
@@ -52,7 +52,7 @@ function DetailField({ label, value, onSave, type = 'text', rows, placeholder, r
   }
 
   return (
-    <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-4">
+    <div className="group rounded-2xl border border-dark-border/60 bg-white/70 p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{label}</p>
       {editing ? (
         <div className="mt-2 flex items-start gap-2">
@@ -75,7 +75,7 @@ function DetailField({ label, value, onSave, type = 'text', rows, placeholder, r
           )}
           <button
             type="button"
-            onClick={save}
+            onClick={() => { void save().catch(() => {}) }}
             disabled={saving}
             className="rounded-xl bg-status-success/15 p-2 text-status-success transition-colors hover:bg-status-success/25 disabled:opacity-50"
           >
@@ -99,7 +99,7 @@ function DetailField({ label, value, onSave, type = 'text', rows, placeholder, r
           className="mt-2 flex w-full items-center justify-between gap-3 text-left"
         >
           <span className="min-w-0 truncate text-sm text-dark-text">{value || '—'}</span>
-          <Pencil className="h-3.5 w-3.5 shrink-0 text-dark-muted/50" />
+          <Pencil className="h-3.5 w-3.5 shrink-0 text-dark-muted/50 opacity-0 transition-opacity group-hover:opacity-100" />
         </button>
       )}
     </div>
@@ -110,7 +110,7 @@ function DetailSelect({ label, value, onSave, options }) {
   const [editing, setEditing] = useState(false)
 
   return (
-    <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-4">
+    <div className="group rounded-2xl border border-dark-border/60 bg-white/70 p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{label}</p>
       {editing ? (
         <div className="mt-2 flex items-center gap-2">
@@ -145,7 +145,7 @@ function DetailSelect({ label, value, onSave, options }) {
           className="mt-2 flex w-full items-center justify-between gap-3 text-left"
         >
           <span className="min-w-0 truncate text-sm text-dark-text">{options.find(opt => opt.value === value)?.label || value || '—'}</span>
-          <Pencil className="h-3.5 w-3.5 shrink-0 text-dark-muted/50" />
+          <Pencil className="h-3.5 w-3.5 shrink-0 text-dark-muted/50 opacity-0 transition-opacity group-hover:opacity-100" />
         </button>
       )}
     </div>
@@ -185,11 +185,11 @@ function SummaryGrid({ cotacao }) {
         </div>
         <div className="border-b border-dark-border/60 p-5 lg:border-b-0 lg:border-r">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Cliente</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Segurado</p>
             <UserRound className="h-5 w-5 text-brand-accent/40" />
           </div>
-          <p className="text-2xl font-semibold text-dark-text">{cotacao.nome_cliente || 'Nao informado'}</p>
-          <p className="mt-2 text-xs text-dark-muted">segurado principal</p>
+          <p className="text-2xl font-semibold text-dark-text">{cotacao.nome_cliente || cotacao.cpf_cliente || 'Nao informado'}</p>
+          <p className="mt-2 text-xs text-dark-muted">{cotacao.cpf_cliente || 'CPF pendente'}</p>
         </div>
         <div className="p-5">
           <div className="mb-3 flex items-center justify-between">
@@ -242,6 +242,7 @@ export default function AutoCotacaoDetalhe() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [actionError, setActionError] = useState(null)
 
   const { data: cotacao, isLoading } = useQuery({
     queryKey: ['auto-cotacao', id],
@@ -252,11 +253,15 @@ export default function AutoCotacaoDetalhe() {
   const { mutateAsync: salvarCampo } = useMutation({
     mutationFn: async ({ field, value }) => atualizarCotacaoAuto(id, { [field]: value }),
     onSuccess: async () => {
+      setActionError(null)
       await qc.invalidateQueries({ queryKey: ['auto-cotacao', id] })
       await qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
       await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
       await qc.invalidateQueries({ queryKey: ['auto-cotacoes-resumo'] })
       await qc.invalidateQueries({ queryKey: ['auto-dashboard-cotacoes-resumo'] })
+    },
+    onError: error => {
+      setActionError(error?.message || 'Erro ao salvar a cotacao.')
     },
   })
 
@@ -271,19 +276,27 @@ export default function AutoCotacaoDetalhe() {
       })
     },
     onSuccess: async () => {
+      setActionError(null)
       await qc.invalidateQueries({ queryKey: ['auto-cotacao', id] })
       await qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
       await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
+    },
+    onError: error => {
+      setActionError(error?.message || 'Erro ao salvar a seguradora.')
     },
   })
 
   const { mutateAsync: excluir, isPending: deleting } = useMutation({
     mutationFn: () => deletarCotacaoAuto(id),
     onSuccess: async () => {
+      setActionError(null)
       await qc.invalidateQueries({ queryKey: ['auto-cotacao', id] })
       await qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
       await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
       navigate('/auto/cotacoes/consulta')
+    },
+    onError: error => {
+      setActionError(error?.message || 'Erro ao excluir a cotacao.')
     },
   })
 
@@ -354,41 +367,49 @@ export default function AutoCotacaoDetalhe() {
 
       <SummaryGrid cotacao={cotacao} />
 
+      {actionError && (
+        <div className="rounded-2xl border border-status-danger/30 bg-status-danger/10 px-4 py-3 text-sm text-status-danger">
+          {actionError}
+        </div>
+      )}
+
       <div className="grid gap-4 xl:grid-cols-[1.65fr_0.95fr]">
         <div className="space-y-4">
-          <DataCard title="Segurado" subtitle="Dados de identificacao e contato">
+          <DataCard title="Identificação" subtitle="Nome do segurado e dados do lead">
             <div className="grid gap-3 md:grid-cols-2">
-              <DetailField label="Nome do cliente" value={cotacao.nome_cliente} onSave={value => salvarCampo({ field: 'nome_cliente', value })} />
-              <DetailField label="CPF" value={cotacao.cpf_cliente} onSave={value => salvarCampo({ field: 'cpf_cliente', value })} />
-              <DetailField label="Celular" value={cotacao.celular_cliente} onSave={value => salvarCampo({ field: 'celular_cliente', value })} />
-              <DetailField label="E-mail" value={cotacao.email_cliente} onSave={value => salvarCampo({ field: 'email_cliente', value })} />
-              <DetailField label="Estado civil" value={cotacao.estado_civil_cliente} onSave={value => salvarCampo({ field: 'estado_civil_cliente', value })} />
-              <DetailField label="Profissao" value={cotacao.profissao_cliente} onSave={value => salvarCampo({ field: 'profissao_cliente', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5" /> Nome do segurado</span>} value={cotacao.nome_cliente} onSave={value => salvarCampo({ field: 'nome_cliente', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5" /> CPF do segurado</span>} value={cotacao.cpf_cliente} onSave={value => salvarCampo({ field: 'cpf_cliente', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> Celular</span>} value={cotacao.celular_cliente} onSave={value => salvarCampo({ field: 'celular_cliente', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> E-mail</span>} value={cotacao.email_cliente} onSave={value => salvarCampo({ field: 'email_cliente', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><Heart className="h-3.5 w-3.5" /> Estado civil</span>} value={cotacao.estado_civil_cliente} onSave={value => salvarCampo({ field: 'estado_civil_cliente', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><Briefcase className="h-3.5 w-3.5" /> Profissão</span>} value={cotacao.profissao_cliente} onSave={value => salvarCampo({ field: 'profissao_cliente', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Vigência início</span>} value={cotacao.vigencia_inicio} onSave={value => salvarCampo({ field: 'vigencia_inicio', value })} type="date" />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Vigência fim</span>} value={cotacao.vigencia_fim} onSave={value => salvarCampo({ field: 'vigencia_fim', value })} type="date" />
             </div>
           </DataCard>
 
           <DataCard title="Condutor" subtitle="Dados do condutor principal">
             <div className="grid gap-3 md:grid-cols-2">
-              <DetailField label="Nome do condutor" value={cotacao.condutor_nome} onSave={value => salvarCampo({ field: 'condutor_nome', value })} />
-              <DetailField label="CPF do condutor" value={cotacao.condutor_cpf} onSave={value => salvarCampo({ field: 'condutor_cpf', value })} />
-              <DetailField label="Estado civil" value={cotacao.estado_civil_condutor} onSave={value => salvarCampo({ field: 'estado_civil_condutor', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5" /> Nome do condutor</span>} value={cotacao.condutor_nome} onSave={value => salvarCampo({ field: 'condutor_nome', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5" /> CPF do condutor</span>} value={cotacao.condutor_cpf} onSave={value => salvarCampo({ field: 'condutor_cpf', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><Heart className="h-3.5 w-3.5" /> Estado civil</span>} value={cotacao.estado_civil_condutor} onSave={value => salvarCampo({ field: 'estado_civil_condutor', value })} />
             </div>
           </DataCard>
 
           <DataCard title="Veiculo e risco" subtitle="Informacoes usadas na cotacao">
             <div className="grid gap-3 md:grid-cols-2">
-              <DetailField label="Modelo do veiculo" value={cotacao.modelo_veiculo} onSave={value => salvarCampo({ field: 'modelo_veiculo', value })} />
-              <DetailField label="Placa" value={cotacao.placa} onSave={value => salvarCampo({ field: 'placa', value })} />
-              <DetailField label="Uso do veiculo" value={cotacao.uso_veiculo} onSave={value => salvarCampo({ field: 'uso_veiculo', value })} />
-              <DetailField label="Veiculo financiado" value={cotacao.veiculo_financiado} onSave={value => salvarCampo({ field: 'veiculo_financiado', value })} />
-              <DetailField label="CEP pernoite" value={cotacao.cep_pernoite} onSave={value => salvarCampo({ field: 'cep_pernoite', value })} />
-              <DetailField label="Garagem residencia" value={cotacao.garagem_residencia} onSave={value => salvarCampo({ field: 'garagem_residencia', value })} />
-              <DetailField label="Garagem trabalho" value={cotacao.garagem_trabalho} onSave={value => salvarCampo({ field: 'garagem_trabalho', value })} />
-              <DetailField label="Garagem estudo" value={cotacao.garagem_estudo} onSave={value => salvarCampo({ field: 'garagem_estudo', value })} />
-              <DetailField label="Jovens 18-26" value={cotacao.jovens_18_26} onSave={value => salvarCampo({ field: 'jovens_18_26', value })} />
-              <DetailField label="Possui kit gas" value={cotacao.possui_kit_gas} onSave={value => salvarCampo({ field: 'possui_kit_gas', value })} />
-              <DetailField label="Possui blindagem" value={cotacao.possui_blindagem} onSave={value => salvarCampo({ field: 'possui_blindagem', value })} />
-              <DetailField label="Isento imposto" value={cotacao.isento_imposto} onSave={value => salvarCampo({ field: 'isento_imposto', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><Car className="h-3.5 w-3.5" /> Modelo do veiculo</span>} value={cotacao.modelo_veiculo} onSave={value => salvarCampo({ field: 'modelo_veiculo', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><Car className="h-3.5 w-3.5" /> Placa</span>} value={cotacao.placa} onSave={value => salvarCampo({ field: 'placa', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><Car className="h-3.5 w-3.5" /> Uso do veiculo</span>} value={cotacao.uso_veiculo} onSave={value => salvarCampo({ field: 'uso_veiculo', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><Car className="h-3.5 w-3.5" /> Veiculo financiado</span>} value={cotacao.veiculo_financiado} onSave={value => salvarCampo({ field: 'veiculo_financiado', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> CEP pernoite</span>} value={cotacao.cep_pernoite} onSave={value => salvarCampo({ field: 'cep_pernoite', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Garagem residencia</span>} value={cotacao.garagem_residencia} onSave={value => salvarCampo({ field: 'garagem_residencia', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Garagem trabalho</span>} value={cotacao.garagem_trabalho} onSave={value => salvarCampo({ field: 'garagem_trabalho', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Garagem estudo</span>} value={cotacao.garagem_estudo} onSave={value => salvarCampo({ field: 'garagem_estudo', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5" /> Jovens 18-26</span>} value={cotacao.jovens_18_26} onSave={value => salvarCampo({ field: 'jovens_18_26', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Possui kit gas</span>} value={cotacao.possui_kit_gas} onSave={value => salvarCampo({ field: 'possui_kit_gas', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Possui blindagem</span>} value={cotacao.possui_blindagem} onSave={value => salvarCampo({ field: 'possui_blindagem', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Isento imposto</span>} value={cotacao.isento_imposto} onSave={value => salvarCampo({ field: 'isento_imposto', value })} />
             </div>
           </DataCard>
 
@@ -403,7 +424,7 @@ export default function AutoCotacaoDetalhe() {
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">{section.title}</p>
                     <button
                       type="button"
-                      onClick={() => salvarSeguradora({ field: section.key, value: '' })}
+                      onClick={() => { void salvarSeguradora({ field: section.key, value: '' }).catch(() => {}) }}
                       className="text-xs text-dark-muted transition-colors hover:text-dark-text"
                     >
                       Limpar
@@ -412,11 +433,12 @@ export default function AutoCotacaoDetalhe() {
                   <SeguradoraSelect
                     value={cotacao?.[section.key]?.nome || ''}
                     onChange={value => { void salvarSeguradora({ field: section.key, value }).catch(() => {}) }}
+                    produto="auto"
                     placeholder="Selecionar seguradora"
                   />
                   <div className="grid gap-3 sm:grid-cols-2">
                     <DetailField
-                      label="Premio total"
+                      label={<span className="inline-flex items-center gap-1.5"><BadgeDollarSign className="h-3.5 w-3.5" /> Premio total</span>}
                       type="number"
                       value={cotacao?.[section.key]?.premio_total}
                       onSave={value => salvarCampo({
@@ -428,7 +450,7 @@ export default function AutoCotacaoDetalhe() {
                       })}
                     />
                     <DetailField
-                      label="Premio liquido"
+                      label={<span className="inline-flex items-center gap-1.5"><BadgeDollarSign className="h-3.5 w-3.5" /> Premio liquido</span>}
                       type="number"
                       value={cotacao?.[section.key]?.premio_liquido}
                       onSave={value => salvarCampo({
@@ -440,7 +462,7 @@ export default function AutoCotacaoDetalhe() {
                       })}
                     />
                     <DetailField
-                      label="% Comissao"
+                      label={<span className="inline-flex items-center gap-1.5"><BadgeDollarSign className="h-3.5 w-3.5" /> % Comissao</span>}
                       type="number"
                       value={cotacao?.[section.key]?.pct_comissao}
                       onSave={value => salvarCampo({
@@ -467,12 +489,12 @@ export default function AutoCotacaoDetalhe() {
         <div className="space-y-4">
           <DataCard title="Informacoes" subtitle="Dados tecnicos e operacionais">
             <div className="grid gap-3">
-              <DetailField label="ID" value={cotacao.id} readOnly />
-              <DetailSelect label="Status" value={cotacao.status} onSave={value => salvarCampo({ field: 'status', value })} options={STATUS_OPTIONS} />
-              <DetailSelect label="Tipo" value={cotacao.tipo} onSave={value => salvarCampo({ field: 'tipo', value })} options={TIPO_OPTIONS} />
-              <DetailField label="Origem do lead" value={cotacao.origem_lead} onSave={value => salvarCampo({ field: 'origem_lead', value })} />
-              <DetailField label="ID do cliente" value={cotacao.cliente_id} onSave={value => salvarCampo({ field: 'cliente_id', value })} />
-              <DetailField label="Criado em" value={formatDateTimeBR(cotacao.created_at)} readOnly />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> ID</span>} value={cotacao.id} readOnly />
+              <DetailSelect label={<span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Status</span>} value={cotacao.status} onSave={value => salvarCampo({ field: 'status', value })} options={STATUS_OPTIONS} />
+              <DetailSelect label={<span className="inline-flex items-center gap-1.5"><Car className="h-3.5 w-3.5" /> Tipo</span>} value={cotacao.tipo} onSave={value => salvarCampo({ field: 'tipo', value })} options={TIPO_OPTIONS} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5" /> Origem do lead</span>} value={cotacao.origem_lead} onSave={value => salvarCampo({ field: 'origem_lead', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Criado em</span>} value={formatDateTimeBR(cotacao.created_at)} readOnly />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5" /> ID do cliente</span>} value={cotacao.cliente_id} readOnly />
             </div>
           </DataCard>
 
@@ -516,7 +538,7 @@ export default function AutoCotacaoDetalhe() {
                 Cancelar
               </button>
               <button
-                onClick={() => excluir()}
+                onClick={() => { void excluir().catch(() => {}) }}
                 disabled={deleting}
                 className="rounded-2xl bg-status-danger px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
               >

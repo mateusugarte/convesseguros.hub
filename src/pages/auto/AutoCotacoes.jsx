@@ -31,8 +31,15 @@ import {
   AlertCircle,
   BadgeDollarSign,
   CircleCheckBig,
+  Building2,
+  CalendarDays,
+  Car,
+  Heart,
+  Mail,
+  Phone,
   ShieldHalf,
   Sparkles,
+  UserRound,
   TrendingUp,
 } from 'lucide-react'
 
@@ -59,6 +66,8 @@ const NOVO_VAZIO = {
   possui_blindagem: '',
   isento_imposto: '',
   origem_lead: '',
+  vigencia_inicio: '',
+  vigencia_fim: '',
 }
 
 const SEG_VAZIO = {
@@ -70,8 +79,19 @@ const SEG_VAZIO = {
 
 const REN_VAZIO = {
   cpf: '',
+  vigencia_inicio: '',
+  vigencia_fim: '',
   seguradora_preferencial: { ...SEG_VAZIO },
   seguradora_mais_barata: { ...SEG_VAZIO },
+}
+
+function iconLabel(Icon, text) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {Icon && <Icon className="h-3.5 w-3.5" />}
+      <span>{text}</span>
+    </span>
+  )
 }
 
 function gerarClienteId(cpf) {
@@ -106,7 +126,7 @@ function ChartTip({ active, payload, label }) {
 function Field({ label, value, onChange, type = 'text', placeholder, children }) {
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-dark-muted">{label}</label>
+      <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-dark-muted">{label}</label>
       {children || (
         <input
           type={type}
@@ -198,6 +218,8 @@ export default function AutoCotacoes() {
         profissao_cliente: dados.profissao || null,
         tipo: 'novo',
         status: 'pendente',
+        vigencia_inicio: dados.vigencia_inicio || null,
+        vigencia_fim: dados.vigencia_fim || null,
         condutor_nome: dados.condutor_nome || null,
         condutor_cpf: dados.condutor_cpf || null,
         estado_civil_condutor: dados.estado_civil_condutor || null,
@@ -233,6 +255,8 @@ export default function AutoCotacoes() {
         cpf_cliente: dados.cpf || null,
         tipo: 'renovacao',
         status: 'pendente',
+        vigencia_inicio: dados.vigencia_inicio || null,
+        vigencia_fim: dados.vigencia_fim || null,
         seguradora_preferencial: {
           ...dados.seguradora_preferencial,
           valor_comissao: calcComissao(dados.seguradora_preferencial),
@@ -293,8 +317,15 @@ export default function AutoCotacoes() {
       return [
         {
           label: 'Segurado',
-          value: formNovo.nome_completo || 'Nome pendente',
+          value: formNovo.nome_completo || 'Nome do segurado',
           hint: formNovo.celular || 'Celular pendente',
+        },
+        {
+          label: 'Vigência',
+          value: formNovo.vigencia_inicio && formNovo.vigencia_fim
+            ? `${formNovo.vigencia_inicio} a ${formNovo.vigencia_fim}`
+            : 'Período pendente',
+          hint: 'início e fim',
         },
         {
           label: 'Contato',
@@ -319,6 +350,13 @@ export default function AutoCotacoes() {
         label: 'CPF',
         value: formRen.cpf || 'Pendente',
         hint: 'identificacao do cliente',
+      },
+      {
+        label: 'Vigência',
+        value: formRen.vigencia_inicio && formRen.vigencia_fim
+          ? `${formRen.vigencia_inicio} a ${formRen.vigencia_fim}`
+          : 'Período pendente',
+        hint: 'início e fim',
       },
       {
         label: 'Preferencial',
@@ -446,25 +484,27 @@ export default function AutoCotacoes() {
                   <div className="space-y-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Segurado</p>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <Field label="Nome completo" value={formNovo.nome_completo} onChange={value => setNovo('nome_completo', value)} />
-                      <Field label="CPF" value={formNovo.cpf} onChange={value => setNovo('cpf', value)} />
-                      <Field label="Celular" value={formNovo.celular} onChange={value => setNovo('celular', value)} />
-                      <Field label="E-mail" value={formNovo.email} onChange={value => setNovo('email', value)} />
-                      <Field label="Estado civil" value={formNovo.estado_civil} onChange={value => setNovo('estado_civil', value)} />
-                      <Field label="Profissão" value={formNovo.profissao} onChange={value => setNovo('profissao', value)} />
+                      <Field label={iconLabel(UserRound, 'Nome completo')} value={formNovo.nome_completo} onChange={value => setNovo('nome_completo', value)} />
+                      <Field label={iconLabel(UserRound, 'CPF')} value={formNovo.cpf} onChange={value => setNovo('cpf', value)} />
+                      <Field label={iconLabel(Phone, 'Celular')} value={formNovo.celular} onChange={value => setNovo('celular', value)} />
+                      <Field label={iconLabel(Mail, 'E-mail')} value={formNovo.email} onChange={value => setNovo('email', value)} />
+                      <Field label={iconLabel(Heart, 'Estado civil')} value={formNovo.estado_civil} onChange={value => setNovo('estado_civil', value)} />
+                      <Field label={iconLabel(Briefcase, 'Profissão')} value={formNovo.profissao} onChange={value => setNovo('profissao', value)} />
                     </div>
                   </div>
 
                   <div className="space-y-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Condutor e veículo</p>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <Field label="Nome do condutor" value={formNovo.condutor_nome} onChange={value => setNovo('condutor_nome', value)} />
-                      <Field label="CPF do condutor" value={formNovo.condutor_cpf} onChange={value => setNovo('condutor_cpf', value)} />
-                      <Field label="Estado civil do condutor" value={formNovo.estado_civil_condutor} onChange={value => setNovo('estado_civil_condutor', value)} />
-                      <Field label="CEP de pernoite" value={formNovo.cep_pernoite} onChange={value => setNovo('cep_pernoite', value)} />
-                      <Field label="Uso do veículo" value={formNovo.uso_veiculo} onChange={value => setNovo('uso_veiculo', value)} />
-                      <Field label="Modelo do veículo" value={formNovo.modelo_veiculo} onChange={value => setNovo('modelo_veiculo', value)} />
-                      <Field label="Placa" value={formNovo.placa} onChange={value => setNovo('placa', value)} placeholder="Opcional" />
+                      <Field label={iconLabel(UserRound, 'Nome do condutor')} value={formNovo.condutor_nome} onChange={value => setNovo('condutor_nome', value)} />
+                      <Field label={iconLabel(UserRound, 'CPF do condutor')} value={formNovo.condutor_cpf} onChange={value => setNovo('condutor_cpf', value)} />
+                      <Field label={iconLabel(Heart, 'Estado civil do condutor')} value={formNovo.estado_civil_condutor} onChange={value => setNovo('estado_civil_condutor', value)} />
+                      <Field label={iconLabel(CalendarDays, 'CEP de pernoite')} value={formNovo.cep_pernoite} onChange={value => setNovo('cep_pernoite', value)} />
+                      <Field label={iconLabel(Car, 'Uso do veículo')} value={formNovo.uso_veiculo} onChange={value => setNovo('uso_veiculo', value)} />
+                      <Field label={iconLabel(Car, 'Modelo do veículo')} value={formNovo.modelo_veiculo} onChange={value => setNovo('modelo_veiculo', value)} />
+                      <Field label={iconLabel(Car, 'Placa')} value={formNovo.placa} onChange={value => setNovo('placa', value)} placeholder="Opcional" />
+                      <Field label={iconLabel(CalendarDays, 'Vigência início')} type="date" value={formNovo.vigencia_inicio} onChange={value => setNovo('vigencia_inicio', value)} />
+                      <Field label={iconLabel(CalendarDays, 'Vigência fim')} type="date" value={formNovo.vigencia_fim} onChange={value => setNovo('vigencia_fim', value)} />
                     </div>
                   </div>
                 </div>
@@ -473,24 +513,24 @@ export default function AutoCotacoes() {
                   <div className="space-y-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Risco</p>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <Field label="Garagem na residência" value={formNovo.garagem_residencia} onChange={value => setNovo('garagem_residencia', value)} />
-                      <Field label="Garagem no trabalho" value={formNovo.garagem_trabalho} onChange={value => setNovo('garagem_trabalho', value)} />
-                      <Field label="Garagem no estudo" value={formNovo.garagem_estudo} onChange={value => setNovo('garagem_estudo', value)} />
-                      <Field label="Jovens 18-26 usam o veículo" value={formNovo.jovens_18_26} onChange={value => setNovo('jovens_18_26', value)} />
-                      <Field label="Veículo financiado" value={formNovo.veiculo_financiado} onChange={value => setNovo('veiculo_financiado', value)} />
-                      <Field label="Isento de imposto" value={formNovo.isento_imposto} onChange={value => setNovo('isento_imposto', value)} />
+                      <Field label={iconLabel(Building2, 'Garagem na residência')} value={formNovo.garagem_residencia} onChange={value => setNovo('garagem_residencia', value)} />
+                      <Field label={iconLabel(Building2, 'Garagem no trabalho')} value={formNovo.garagem_trabalho} onChange={value => setNovo('garagem_trabalho', value)} />
+                      <Field label={iconLabel(Building2, 'Garagem no estudo')} value={formNovo.garagem_estudo} onChange={value => setNovo('garagem_estudo', value)} />
+                      <Field label={iconLabel(UserRound, 'Jovens 18-26 usam o veículo')} value={formNovo.jovens_18_26} onChange={value => setNovo('jovens_18_26', value)} />
+                      <Field label={iconLabel(Car, 'Veículo financiado')} value={formNovo.veiculo_financiado} onChange={value => setNovo('veiculo_financiado', value)} />
+                      <Field label={iconLabel(ShieldHalf, 'Isento de imposto')} value={formNovo.isento_imposto} onChange={value => setNovo('isento_imposto', value)} />
                     </div>
                   </div>
 
                   <div className="space-y-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Proteções e origem</p>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <Field label="Possui kit gás" value={formNovo.possui_kit_gas} onChange={value => setNovo('possui_kit_gas', value)} />
-                      <Field label="Possui blindagem" value={formNovo.possui_blindagem} onChange={value => setNovo('possui_blindagem', value)} />
+                      <Field label={iconLabel(ShieldHalf, 'Possui kit gás')} value={formNovo.possui_kit_gas} onChange={value => setNovo('possui_kit_gas', value)} />
+                      <Field label={iconLabel(ShieldHalf, 'Possui blindagem')} value={formNovo.possui_blindagem} onChange={value => setNovo('possui_blindagem', value)} />
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-dark-muted">Origem do lead</label>
+                      <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-dark-muted">{iconLabel(UserRound, 'Origem do lead')}</label>
                       <select
                         value={formNovo.origem_lead}
                         onChange={e => setNovo('origem_lead', e.target.value)}
@@ -515,7 +555,11 @@ export default function AutoCotacoes() {
               </div>
             ) : (
               <div className="space-y-6">
-                <Field label="CPF do cliente" value={formRen.cpf} onChange={value => setFormRen(prev => ({ ...prev, cpf: value }))} />
+                <div className="grid gap-4 lg:grid-cols-3">
+                  <Field label={iconLabel(UserRound, 'CPF do cliente')} value={formRen.cpf} onChange={value => setFormRen(prev => ({ ...prev, cpf: value }))} />
+                  <Field label={iconLabel(CalendarDays, 'Vigência início')} type="date" value={formRen.vigencia_inicio} onChange={value => setFormRen(prev => ({ ...prev, vigencia_inicio: value }))} />
+                  <Field label={iconLabel(CalendarDays, 'Vigência fim')} type="date" value={formRen.vigencia_fim} onChange={value => setFormRen(prev => ({ ...prev, vigencia_fim: value }))} />
+                </div>
 
                 <div className="grid gap-4 lg:grid-cols-2">
                   {[
@@ -525,27 +569,28 @@ export default function AutoCotacoes() {
                     <div key={section.key} className="rounded-2xl border border-dark-border/70 p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">{section.title}</p>
                       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                        <Field label="Nome">
+                        <Field label={iconLabel(Briefcase, 'Nome')}>
                           <SeguradoraSelect
                             value={formRen[section.key].nome}
                             onChange={value => setSeguradora(section.key, 'nome', value)}
+                            produto="auto"
                             placeholder="Selecionar seguradora"
                           />
                         </Field>
                         <Field
-                          label="Prêmio total"
+                          label={iconLabel(BadgeDollarSign, 'Prêmio total')}
                           type="number"
                           value={formRen[section.key].premio_total}
                           onChange={value => setSeguradora(section.key, 'premio_total', value)}
                         />
                         <Field
-                          label="Prêmio líquido"
+                          label={iconLabel(BadgeDollarSign, 'Prêmio líquido')}
                           type="number"
                           value={formRen[section.key].premio_liquido}
                           onChange={value => setSeguradora(section.key, 'premio_liquido', value)}
                         />
                         <Field
-                          label="% Comissão (0.15)"
+                          label={iconLabel(BadgeDollarSign, '% Comissão (0.15)')}
                           type="number"
                           value={formRen[section.key].pct_comissao}
                           onChange={value => setSeguradora(section.key, 'pct_comissao', value)}
@@ -628,6 +673,9 @@ export default function AutoCotacoes() {
                   >
                     <div className="flex items-center justify-between gap-4">
                       <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">
+                          Segurado
+                        </p>
                         <p className="truncate text-sm font-semibold text-dark-text">
                           {item.nome_cliente || item.cpf_cliente || 'Sem identificação'}
                         </p>

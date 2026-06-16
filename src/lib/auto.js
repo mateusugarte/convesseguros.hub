@@ -143,6 +143,30 @@ export async function atualizarStatusCotacao(id, status) {
 }
 
 export async function deletarCotacaoAuto(id) {
+  // A cotação pode estar referenciada por emissoes_auto e apolices_auto.
+  // Remove dependências primeiro para evitar erro de FK ao excluir.
+  const { data: emissoes, error: emissoesError } = await supabase
+    .from('emissoes_auto')
+    .select('id')
+    .eq('cotacao_id', id)
+  if (emissoesError) throw emissoesError
+
+  const emissaoIds = (emissoes ?? []).map(item => item.id).filter(Boolean)
+
+  if (emissaoIds.length) {
+    const { error: apolicesError } = await supabase
+      .from('apolices_auto')
+      .delete()
+      .in('emissao_id', emissaoIds)
+    if (apolicesError) throw apolicesError
+
+    const { error: emissoesDeleteError } = await supabase
+      .from('emissoes_auto')
+      .delete()
+      .in('id', emissaoIds)
+    if (emissoesDeleteError) throw emissoesDeleteError
+  }
+
   const { error } = await supabase
     .from('cotacoes_auto')
     .delete()
@@ -303,6 +327,60 @@ export async function getApolicesAuto({ search, inicio, fim } = {}) {
     )
   }
   return result
+}
+
+export async function getAutoCarteiraClientes({ search, seguradora, inicio, fim } = {}) {
+  let q = supabase
+    .from('apolices_auto')
+    .select('*, emissoes_auto(*, cotacoes_auto(*))')
+    .order('vigencia_inicio', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
+
+  if (inicio) q = q.gte('vigencia_inicio', inicio)
+  if (fim) q = q.lte('vigencia_inicio', fim)
+  if (seguradora) q = q.ilike('seguradora', `%${seguradora}%`)
+
+  const { data, error } = await q
+  if (error) throw error
+
+  let result = data ?? []
+  if (search) {
+    const term = search.toLowerCase().trim()
+    if (term) {
+      result = result.filter(item => {
+        const c = item.emissoes_auto?.cotacoes_auto || {}
+        const text = [
+          item.nome_cliente,
+          item.cpf_cliente,
+          item.numero_apolice,
+          item.seguradora,
+          item.emissoes_auto?.numero_apolice,
+          c.nome_cliente,
+          c.cpf_cliente,
+          c.modelo_veiculo,
+          c.placa,
+          c.origem_lead,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+        return text.includes(term)
+      })
+    }
+  }
+
+  return result
+}
+
+export async function atualizarApoliceAuto(id, changes) {
+  const { data, error } = await supabase
+    .from('apolices_auto')
+    .update(changes)
+    .eq('id', id)
+    .select()
+    .maybeSingle()
+  if (error) throw error
+  return data
 }
 
 // Dashboard

@@ -158,6 +158,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
   const [aliasesModal,  setAliasesModal]  = useState(modal?.variacoes || imobAtual?.aliases || [])
   const [novoAlias,     setNovoAlias]     = useState('')
   const [imagemPreview, setImagemPreview] = useState(getEntityImageUrl(imobAtual?.imagem_path, imobAtual?.imagem_url || ''))
+  const [imagemPreviewError, setImagemPreviewError] = useState(false)
   const [imagemFile,    setImagemFile]    = useState(null)
   const [salvando,      setSalvando]      = useState(false)
 
@@ -182,6 +183,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
     const file = event.target.files?.[0]
     if (!file) return
     setImagemFile(file)
+    setImagemPreviewError(false)
     setImagemPreview(URL.createObjectURL(file))
   }
 
@@ -391,11 +393,24 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
                   Imagem da imobiliária
                 </label>
                 <div className="flex items-center gap-4 flex-wrap">
-                  <div className="w-20 h-20 rounded-2xl border border-dark-border bg-white/70 overflow-hidden flex items-center justify-center">
+                  <div className="space-y-1">
+                    <div className="w-20 h-20 rounded-2xl border border-dark-border bg-white/70 overflow-hidden flex items-center justify-center">
                     {imagemPreview ? (
-                      <img src={imagemPreview} alt={nomeCanonoco || 'Imobiliária'} className="w-full h-full object-cover" />
+                      <img
+                        src={imagemPreview}
+                        alt={nomeCanonoco || 'Imobiliária'}
+                        className="w-full h-full object-cover"
+                        onError={() => setImagemPreviewError(true)}
+                        onLoad={() => setImagemPreviewError(false)}
+                      />
                     ) : (
                       <Building2 className="w-8 h-8 text-dark-muted/40" />
+                    )}
+                    </div>
+                    {imagemPreviewError && (
+                      <p className="max-w-20 text-[10px] leading-tight text-status-danger">
+                        Falha ao carregar a imagem.
+                      </p>
                     )}
                   </div>
                   <label className="btn-secondary text-sm cursor-pointer flex items-center gap-2">

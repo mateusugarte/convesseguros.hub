@@ -89,6 +89,7 @@ export default function ImobiliariaDetalhe() {
   const [novoAlias, setNovoAlias] = useState('')
   const [addingAlias, setAddingAlias] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [imageLoadError, setImageLoadError] = useState(false)
 
   const [codigos, setCodigos] = useState([])
   const [seguradoras, setSeguradoras] = useState([])
@@ -152,6 +153,7 @@ export default function ImobiliariaDetalhe() {
     if (!file || !imob) return
 
     setUploadingImage(true)
+    setImageLoadError(false)
     const uploaded = await replaceEntityImage({
       file,
       entityType: 'imobiliaria',
@@ -232,11 +234,24 @@ export default function ImobiliariaDetalhe() {
         <div className="lg:col-span-2 space-y-4">
           <DataCard title="Imagem" description="Imagem usada nos cards e seletores da imobiliária.">
             <div className="flex items-center gap-4 flex-wrap">
-              <div className="w-24 h-24 rounded-2xl border border-dark-border bg-white/70 overflow-hidden flex items-center justify-center">
+              <div className="space-y-1">
+                <div className="w-24 h-24 rounded-2xl border border-dark-border bg-white/70 overflow-hidden flex items-center justify-center">
                 {getEntityImageUrl(imob.imagem_path, imob.imagem_url) ? (
-                  <img src={getEntityImageUrl(imob.imagem_path, imob.imagem_url)} alt={imob.nome_canonico} className="w-full h-full object-cover" />
+                  <img
+                    src={getEntityImageUrl(imob.imagem_path, imob.imagem_url)}
+                    alt={imob.nome_canonico}
+                    className="w-full h-full object-cover"
+                    onError={() => setImageLoadError(true)}
+                    onLoad={() => setImageLoadError(false)}
+                  />
                 ) : (
                   <Building2 className="w-10 h-10 text-dark-muted/40" />
+                )}
+                </div>
+                {imageLoadError && (
+                  <p className="max-w-24 text-[10px] leading-tight text-status-danger">
+                    Falha ao carregar a imagem.
+                  </p>
                 )}
               </div>
               <label className={`btn-secondary text-sm cursor-pointer flex items-center gap-2 ${uploadingImage ? 'opacity-50 pointer-events-none' : ''}`}>

@@ -150,6 +150,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
   const [aliases, setAliases] = useState(segAtual?.aliases || variacoes)
   const [produtos, setProdutos] = useState(segAtual?.produtos || [])
   const [logoPreview, setLogoPreview] = useState(getEntityImageUrl(segAtual?.logo_path, segAtual?.logo_url || ''))
+  const [logoPreviewError, setLogoPreviewError] = useState(false)
   const [logoFile, setLogoFile] = useState(null)
   const [pendingDocs, setPendingDocs] = useState([])
   const [salvando, setSalvando] = useState(false)
@@ -166,6 +167,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
     const file = event.target.files?.[0]
     if (!file) return
     setLogoFile(file)
+    setLogoPreviewError(false)
     setLogoPreview(URL.createObjectURL(file))
   }
 
@@ -395,11 +397,24 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
                   Logo da seguradora
                 </label>
                 <div className="flex items-center gap-4 flex-wrap">
-                  <div className="w-20 h-20 rounded-2xl border border-dark-border bg-white/70 overflow-hidden flex items-center justify-center">
+                  <div className="space-y-1">
+                    <div className="w-20 h-20 rounded-2xl border border-dark-border bg-white/70 overflow-hidden flex items-center justify-center">
                     {logoPreview ? (
-                      <img src={logoPreview} alt={nome || 'Seguradora'} className="w-full h-full object-contain" />
+                      <img
+                        src={logoPreview}
+                        alt={nome || 'Seguradora'}
+                        className="w-full h-full object-contain"
+                        onError={() => setLogoPreviewError(true)}
+                        onLoad={() => setLogoPreviewError(false)}
+                      />
                     ) : (
                       <Shield className="w-8 h-8 text-dark-muted/40" />
+                    )}
+                    </div>
+                    {logoPreviewError && (
+                      <p className="max-w-20 text-[10px] leading-tight text-status-danger">
+                        Falha ao carregar a logo.
+                      </p>
                     )}
                   </div>
                   <label className="btn-secondary text-sm cursor-pointer flex items-center gap-2">

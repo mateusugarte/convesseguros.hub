@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { useTheme } from '../contexts/ThemeContext'
+import { AVATAR_COLORS } from '../design-system/tokens'
 import { supabase } from '../lib/supabase'
 import { fetchContagemAbertaOrcamentista, PRODUTO_LABELS } from '../lib/fichas'
 import { initComercialStore } from '../lib/comercial'
@@ -95,10 +96,9 @@ function initials(nome) {
 }
 
 function stringColor(str) {
-  const colors = ['#4A90D9', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#2B5BA8']
   let h = 0
   for (let i = 0; i < (str || '').length; i++) h = str.charCodeAt(i) + ((h << 5) - h)
-  return colors[Math.abs(h) % colors.length]
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]
 }
 
 export default function Layout() {

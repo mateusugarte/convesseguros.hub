@@ -4,6 +4,7 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { STATUS_LABELS, PRODUTO_LABELS, marcarRetornoEnviado } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
+import { AVATAR_COLORS, PRODUTO_COLORS } from '../design-system/tokens'
 import {
   Home, Building2, Briefcase, FileText as FileTextIcon,
   Clock, User, ClipboardList, CheckCircle2, XCircle, Check, Send,
@@ -12,19 +13,23 @@ import {
 import SeguradoraBadge from './SeguradoraBadge'
 
 const COLS = [
-  { id: 'pendentes',   label: 'Pendentes',      color: '#F59E0B' },
+  { id: 'pendentes',   label: 'Pendentes',      color: '#4c67b0' },
   { id: 'assumidas',   label: 'Em Cotação',      color: '#3B82F6' },
-  { id: 'em_analise',  label: 'Em Análise',      color: '#8B5CF6' },
-  { id: 'aprovados',   label: 'Aprovados',       color: '#10B981' },
+  { id: 'em_analise',  label: 'Em Análise',      color: '#4b6cc2' },
+  { id: 'aprovados',   label: 'Aprovados',       color: '#0f766e' },
   { id: 'recusados',   label: 'Recusados',       color: '#EF4444' },
   { id: 'finalizadas', label: 'Finalizadas',     color: '#6B7280' },
-  { id: 'enviadas',    label: 'Retorno Enviado', color: '#2B5BA8' },
+  { id: 'enviadas',    label: 'Retorno Enviado', color: '#2247aa' },
 ]
 
 const PASSADAS_COLS = ['em_analise', 'aprovados', 'recusados', 'finalizadas']
 
 const PROD_ICON_MAP = { residencial_pf: Home, comercial_pf: Briefcase, pessoa_juridica: Building2 }
-const PROD_COLOR    = { residencial_pf: '#4A90D9', comercial_pf: '#10B981', pessoa_juridica: '#8B5CF6' }
+const PROD_COLOR    = {
+  residencial_pf: PRODUTO_COLORS.residencial_pf.color,
+  comercial_pf: PRODUTO_COLORS.comercial_pf.color,
+  pessoa_juridica: PRODUTO_COLORS.pessoa_juridica.color,
+}
 const PROD_ABBR     = { residencial_pf: 'Res. PF', comercial_pf: 'Com. PF', pessoa_juridica: 'PJ' }
 
 function timeSince(dateStr) {
@@ -40,9 +45,8 @@ function timeBadgeCls(dateStr) {
   return 'badge-danger'
 }
 function stringColor(str) {
-  const c = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#2B5BA8']
   let h = 0; for (let i = 0; i < (str||'').length; i++) h = str.charCodeAt(i) + ((h << 5) - h)
-  return c[Math.abs(h) % c.length]
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]
 }
 function initials(n) {
   return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || '?'
@@ -423,7 +427,7 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
             </div>
           </div>
         ) : activeFicha ? (
-          <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', '--kanban-accent': PROD_COLOR[activeFicha?.produto] || '#4A90D9' }}>
+          <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', '--kanban-accent': PROD_COLOR[activeFicha?.produto] || '#000079' }}>
             <FichaCardContent ficha={activeFicha} userId={user?.id} isDragOverlay />
           </div>
         ) : null}

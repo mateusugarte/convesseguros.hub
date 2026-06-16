@@ -21,11 +21,11 @@ const MESES_FULL = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
 const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
 const COLUNAS = [
-  { id: 'aprovada', label: 'Aprovada', color: '#10B981' },
-  { id: 'emitida', label: 'Emitida', color: '#1A3A6B' },
-  { id: 'enviado_cobranca', label: 'Enviado Cobrança', color: '#2B5BA8' },
-  { id: 'recuperados', label: 'RECUPERADOS (emitidas)', color: '#7C3AED' },
-  { id: 'desistiu', label: 'Desistiu da Locação', color: '#F59E0B' },
+  { id: 'aprovada', label: 'Aprovada', color: '#0f766e' },
+  { id: 'emitida', label: 'Emitida', color: '#000079' },
+  { id: 'enviado_cobranca', label: 'Enviado Cobrança', color: '#2247aa' },
+  { id: 'recuperados', label: 'RECUPERADOS (emitidas)', color: '#4b6cc2' },
+  { id: 'desistiu', label: 'Desistiu da Locação', color: '#a2d6da' },
   { id: 'expirada', label: 'Expirada', color: '#6B7280' },
 ]
 
@@ -39,9 +39,9 @@ const COLUNA_TO_UPDATE = {
 }
 
 const PRODUTO_COLOR = {
-  residencial_pf: '#4A90D9',
-  comercial_pf: '#10B981',
-  pessoa_juridica: '#8B5CF6',
+  residencial_pf: '#000079',
+  comercial_pf: '#0f766e',
+  pessoa_juridica: '#7fbec4',
 }
 
 function getColuna(ficha) {
@@ -79,7 +79,7 @@ function nomePrincipal(ficha) {
 }
 
 function stringColor(str) {
-  const c = ['#4A90D9', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#2B5BA8']
+  const c = ['#000079', '#0f766e', '#a2d6da', '#4b6cc2', '#c3f0f2', '#dcffff', '#2247aa']
   let h = 0
   for (let i = 0; i < (str || '').length; i++) h = str.charCodeAt(i) + ((h << 5) - h)
   return c[Math.abs(h) % c.length]
@@ -126,7 +126,7 @@ function RelatorioCard({ ficha, onClick, dragListeners, dragAttributes }) {
         {doc && <p className="text-[10px] text-dark-muted font-mono">{doc}</p>}
 
         {ficha.numero_apolice && (
-          <p className="text-[10px] font-mono" style={{ color: '#2B5BA8' }}>
+          <p className="text-[10px] font-mono" style={{ color: '#2247aa' }}>
             Apólice: {ficha.numero_apolice}
           </p>
         )}
@@ -477,3 +477,5 @@ export default function Relatorio() {
     </div>
   )
 }
+
+

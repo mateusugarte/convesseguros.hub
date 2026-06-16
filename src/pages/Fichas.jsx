@@ -26,6 +26,7 @@ import ModalFinalizar from '../components/ModalFinalizar'
 import ModalFicha from '../components/ModalFicha'
 import KanbanFichas from '../components/KanbanFichas'
 import RelatorioMensal from '../components/RelatorioMensal'
+import { AVATAR_COLORS, BRAND, PRODUTO_COLORS, STATUS_CHART_COLORS as TOKEN_STATUS_CHART_COLORS } from '../design-system/tokens'
 import {
   Home, Briefcase, Building, LayoutGrid,
   ChevronRight, Search, Download, Plus,
@@ -75,27 +76,21 @@ const tooltipStyle = (theme) => ({
 // ── Constantes ────────────────────────────────────────────────────────────────
 
 const PRODUTOS = [
-  { key: 'residencial_pf',  label: 'Residencial PF', Icon: Home,        accent: '#4A90D9', bg: 'rgba(74,144,217,0.08)',  border: 'rgba(74,144,217,0.25)' },
-  { key: 'comercial_pf',    label: 'Comercial PF',   Icon: Briefcase,   accent: '#10B981', bg: 'rgba(16,185,129,0.08)',  border: 'rgba(16,185,129,0.25)' },
-  { key: 'pessoa_juridica', label: 'Pessoa Jurídica', Icon: Building,   accent: '#8B5CF6', bg: 'rgba(139,92,246,0.08)', border: 'rgba(139,92,246,0.25)' },
-  { key: 'todos',           label: 'Todos',           Icon: LayoutGrid, accent: '#F59E0B', bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.25)' },
+  { key: 'residencial_pf',  label: 'Residencial PF', Icon: Home,        accent: BRAND.primary, bg: 'rgba(0,0,121,0.08)',  border: 'rgba(0,0,121,0.25)' },
+  { key: 'comercial_pf',    label: 'Comercial PF',   Icon: Briefcase,   accent: PRODUTO_COLORS.comercial_pf.color, bg: 'rgba(34,71,170,0.08)',  border: 'rgba(34,71,170,0.25)' },
+  { key: 'pessoa_juridica', label: 'Pessoa Jurídica', Icon: Building,   accent: PRODUTO_COLORS.pessoa_juridica.color, bg: 'rgba(127,190,196,0.10)', border: 'rgba(127,190,196,0.28)' },
+  { key: 'todos',           label: 'Todos',           Icon: LayoutGrid, accent: BRAND.accent, bg: 'rgba(220,255,255,0.18)',  border: 'rgba(195,240,242,0.40)' },
 ]
 
 const MESES_ABBR = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 
-const STATUS_CHART_COLORS = {
-  aprovado: '#10B981', recusado: '#EF4444', em_cotacao: '#F59E0B',
-  pendente: '#3B82F6', emitido: '#2B5BA8', em_analise: '#4A90D9',
-  cancelado: '#8899BB', cpf_invalido: '#F59E0B', expirada: '#6B7280',
-}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function stringColor(str) {
-  const c = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#2B5BA8']
   let h = 0; for (let i = 0; i < (str||'').length; i++) h = str.charCodeAt(i) + ((h << 5) - h)
-  return c[Math.abs(h) % c.length]
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]
 }
 function initials(n) { return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || '?' }
 
@@ -366,8 +361,8 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
               <AreaChart data={fichasPorDia} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gradTotal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#FF2D55" stopOpacity={0.28} />
-                    <stop offset="95%" stopColor="#FF2D55" stopOpacity={0} />
+                    <stop offset="5%" stopColor={BRAND.primary} stopOpacity={0.28} />
+                    <stop offset="95%" stopColor={BRAND.primary} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis
@@ -378,7 +373,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
                   tickLine={false}
                 />
                 <Tooltip content={<DarkTip />} />
-                <Area type="monotone" dataKey="total" name="Total" stroke="#FF2D55" fill="url(#gradTotal)" strokeWidth={2.2} dot={false} />
+                <Area type="monotone" dataKey="total" name="Total" stroke={BRAND.primary} fill="url(#gradTotal)" strokeWidth={2.2} dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
@@ -397,12 +392,12 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
                 <PieChart>
                   <Pie data={statusDist} dataKey="value" cx="50%" cy="50%" innerRadius={30} outerRadius={50}>
                     {statusDist.map((entry, i) => (
-                      <Cell key={i} fill={STATUS_CHART_COLORS[entry.status] || '#FF2D55'} />
+                      <Cell key={i} fill={TOKEN_STATUS_CHART_COLORS[entry.status] || BRAND.primary} />
                     ))}
                   </Pie>
                   <Tooltip content={({ active, payload }) => active && payload?.length ? (
                     <div style={tooltipStyle(theme)} className="px-2 py-1.5 text-xs">
-                      <span style={{ color: STATUS_CHART_COLORS[payload[0]?.payload?.status] || '#FF2D55' }}>
+                      <span style={{ color: TOKEN_STATUS_CHART_COLORS[payload[0]?.payload?.status] || BRAND.primary }}>
                         {payload[0]?.payload?.label}: {payload[0]?.value}
                       </span>
                     </div>
@@ -413,7 +408,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
                 {statusDist.slice(0, 4).map(s => (
                   <div key={s.status} className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: STATUS_CHART_COLORS[s.status] || '#FF2D55' }} />
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: TOKEN_STATUS_CHART_COLORS[s.status] || BRAND.primary }} />
                       <span className="text-dark-muted truncate">{s.label}</span>
                     </div>
                     <span className="font-mono font-semibold text-dark-text">{s.value}</span>

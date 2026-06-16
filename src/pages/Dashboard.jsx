@@ -11,6 +11,7 @@ import {
   fetchDistribuicaoStatus, fetchFichasPorProdutoMes, fetchMetricas,
   fetchAtividadeRecente, fetchFichasDoOrcamentista, STATUS_LABELS, PRODUTO_LABELS,
 } from '../lib/fichas'
+import { AVATAR_COLORS, STATUS_CHART_COLORS } from '../design-system/tokens'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import ModalFinalizar from '../components/ModalFinalizar'
@@ -32,22 +33,10 @@ import {
 const LS_KEY = 'dashboard-periodo'
 const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
-const STATUS_COLORS = {
-  aprovado: '#10B981',
-  recusado: '#EF4444',
-  em_cotacao: '#FF9F0A',
-  pendente: '#3B82F6',
-  emitido: '#FF2D55',
-  em_analise: '#8B5CF6',
-  cancelado: '#94A3B8',
-  cpf_invalido: '#F59E0B',
-}
-
 function stringColor(str) {
-  const colors = ['#4A90D9', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#2B5BA8']
   let hash = 0
   for (let i = 0; i < (str || '').length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash)
-  return colors[Math.abs(hash) % colors.length]
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
 }
 
 function initials(name) {
@@ -350,15 +339,15 @@ export default function Dashboard() {
   const chartTheme = useMemo(() => {
     const isDark = theme === 'dark'
     return {
-      grid: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(41,23,31,0.08)',
-      tick: isDark ? 'rgba(246,235,240,0.56)' : 'rgba(122,97,109,0.72)',
-      accent: isDark ? '#FF5A7D' : '#FF2D55',
-      accentSoft: isDark ? '#FF8EA4' : '#FF6F90',
-      success: '#10B981',
-      gold: isDark ? '#C7B091' : '#C1A680',
-      violet: '#8B5CF6',
-      sky: '#4A90D9',
-      danger: '#EF4444',
+      grid: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(8,15,44,0.08)',
+      tick: isDark ? 'rgba(236,242,251,0.56)' : 'rgba(8,15,44,0.72)',
+      accent: isDark ? '#c3f0f2' : '#000079',
+      accentSoft: isDark ? '#dcffff' : '#2247aa',
+      success: '#0f766e',
+      gold: isDark ? '#7fbec4' : '#a2d6da',
+      violet: '#4b6cc2',
+      sky: '#2247aa',
+      danger: '#8b1e4e',
     }
   }, [theme])
 
@@ -595,7 +584,7 @@ export default function Dashboard() {
                   <PieChart>
                     <Pie data={distribution} dataKey="value" innerRadius={50} outerRadius={72} stroke="none" paddingAngle={3}>
                       {distribution.map(item => (
-                        <Cell key={item.status} fill={STATUS_COLORS[item.status] || chartTheme.gold} />
+                        <Cell key={item.status} fill={STATUS_CHART_COLORS[item.status] || chartTheme.gold} />
                       ))}
                     </Pie>
                     <Tooltip content={<DashboardTooltip />} />
@@ -605,7 +594,7 @@ export default function Dashboard() {
               <div className="space-y-2">
                 {distribution.slice(0, 5).map(item => (
                   <div key={item.status} className="flex items-center gap-2 text-sm">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: STATUS_COLORS[item.status] || chartTheme.gold }} />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: STATUS_CHART_COLORS[item.status] || chartTheme.gold }} />
                     <span className="flex-1 truncate text-dark-muted">{item.label}</span>
                     <span className="font-mono font-semibold text-dark-text">{item.value}</span>
                   </div>
@@ -681,7 +670,7 @@ export default function Dashboard() {
                         </p>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold" style={{ background: `${STATUS_COLORS[item.status] || chartTheme.gold}18`, color: STATUS_COLORS[item.status] || chartTheme.gold }}>
+                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold" style={{ background: `${STATUS_CHART_COLORS[item.status] || chartTheme.gold}18`, color: STATUS_CHART_COLORS[item.status] || chartTheme.gold }}>
                           {statusMeta.label}
                         </span>
                         <p className="mt-1 text-[10px] text-dark-muted">

@@ -19,17 +19,18 @@ import SeguradoraBadge from './SeguradoraBadge'
 import SeguradoraSelect from './SeguradoraSelect'
 import { KanbanSkeleton } from './Skeleton'
 import { DatePicker } from './ui/DatePicker'
+import { AVATAR_COLORS, PRODUTO_COLORS } from '../design-system/tokens'
 
 // ── Colunas ───────────────────────────────────────────────────────────────────
 
 const COLUMNS = [
-  { id: 'pendente',   label: 'Pendentes',     color: '#3B82F6' },
-  { id: 'assumidas',  label: 'Assumidas',     color: '#F59E0B' },
-  { id: 'minhas',     label: 'Minhas Fichas', color: '#C9A84C' },
-  { id: 'em_analise', label: 'Em Análise',    color: '#4A90D9' },
-  { id: 'aprovado',   label: 'Aprovadas',     color: '#10B981' },
-  { id: 'recusado',   label: 'Recusadas',     color: '#EF4444' },
-  { id: 'emitido',    label: 'Emitidas',      color: '#2B5BA8' },
+  { id: 'pendente',   label: 'Pendentes',     color: '#4c67b0' },
+  { id: 'assumidas',  label: 'Assumidas',     color: '#000079' },
+  { id: 'minhas',     label: 'Minhas Fichas', color: '#a2d6da' },
+  { id: 'em_analise', label: 'Em Análise',    color: '#4b6cc2' },
+  { id: 'aprovado',   label: 'Aprovadas',     color: '#0f766e' },
+  { id: 'recusado',   label: 'Recusadas',     color: '#8b1e4e' },
+  { id: 'emitido',    label: 'Emitidas',      color: '#2247aa' },
   { id: 'expirada',   label: 'Expiradas',     color: '#6B7280' },
 ]
 
@@ -40,7 +41,11 @@ const COL_TO_STATUS = {
 }
 
 const PRODUTO_ICON  = { residencial_pf: Home, comercial_pf: Briefcase, pessoa_juridica: Building }
-const PRODUTO_COLOR = { residencial_pf: '#4A90D9', comercial_pf: '#10B981', pessoa_juridica: '#8B5CF6' }
+const PRODUTO_COLOR = {
+  residencial_pf: PRODUTO_COLORS.residencial_pf.color,
+  comercial_pf: PRODUTO_COLORS.comercial_pf.color,
+  pessoa_juridica: PRODUTO_COLORS.pessoa_juridica.color,
+}
 const PRODUTO_ABBR  = { residencial_pf: 'Res. PF', comercial_pf: 'Com. PF', pessoa_juridica: 'PJ' }
 
 const PERIODOS = [
@@ -105,9 +110,8 @@ function timeBadgeCls(dateStr) {
 }
 
 function stringColor(str) {
-  const c = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#2B5BA8']
   let h = 0; for (let i = 0; i < (str||'').length; i++) h = str.charCodeAt(i) + ((h << 5) - h)
-  return c[Math.abs(h) % c.length]
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]
 }
 function initials(n) {
   return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || '?'
@@ -121,7 +125,7 @@ function nomePrincipal(ficha) {
 
 function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isDragOverlay, isNew, resolverNome }) {
   const ProdIcon  = PRODUTO_ICON[ficha.produto] || LayoutGrid
-  const prodColor = PRODUTO_COLOR[ficha.produto] || '#4A90D9'
+  const prodColor = PRODUTO_COLOR[ficha.produto] || '#000079'
   const since     = ficha.assumida_em || ficha.created_at
   const nome      = ficha.profiles?.nome
   const showRetorno = ficha.status !== 'pendente'
@@ -871,7 +875,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
             <DragOverlay dropAnimation={null}>
               {activeCard && (
-                <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', '--kanban-accent': PRODUTO_COLOR[activeCard?.produto] || '#4A90D9', cursor: 'grabbing' }}>
+                <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', '--kanban-accent': PRODUTO_COLOR[activeCard?.produto] || '#000079', cursor: 'grabbing' }}>
                   <FichaCard ficha={activeCard} isDragOverlay resolverNome={resolverNome} />
                 </div>
               )}

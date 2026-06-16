@@ -93,8 +93,6 @@
 
 ## Pendencias conhecidas
 
-- Fluxo `comercial_pf` no n8n.
-- Fluxo `pessoa_juridica` no n8n.
 - Gestao de emissoes.
 
 ## Evolucoes futuras

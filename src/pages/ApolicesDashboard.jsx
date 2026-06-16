@@ -15,30 +15,31 @@ import {
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { TrendingUp, TrendingDown, FileCheck, LayoutGrid, List } from 'lucide-react'
+import { BRAND, AVATAR_COLORS, PALETTE } from '../design-system/tokens'
 
 const CHART_COLORS = {
   light: {
-    grid: 'rgba(8, 20, 50, 0.10)',
-    tick: 'rgba(8, 20, 50, 0.55)',
-    line1: '#1d4ed8',
-    line2: '#059669',
-    bar: '#1d4ed8',
+    grid: 'rgba(8,15,44,0.10)',
+    tick: 'rgba(8,15,44,0.55)',
+    line1: BRAND.primary,
+    line2: '#2247aa',
+    bar: BRAND.primary,
     tooltip: {
       background: 'rgba(255,255,255,0.90)',
-      border: 'rgba(8,20,50,0.18)',
-      color: 'rgba(8,20,50,0.90)',
+      border: 'rgba(8,15,44,0.18)',
+      color: 'rgba(8,15,44,0.90)',
     },
   },
   dark: {
-    grid: 'rgba(180, 210, 255, 0.10)',
-    tick: 'rgba(180, 210, 255, 0.55)',
-    line1: '#60a5fa',
-    line2: '#34d399',
-    bar: '#60a5fa',
+    grid: 'rgba(220,255,255,0.10)',
+    tick: 'rgba(220,255,255,0.55)',
+    line1: '#c3f0f2',
+    line2: '#7fbec4',
+    bar: '#c3f0f2',
     tooltip: {
-      background: 'rgba(10,30,60,0.92)',
-      border: 'rgba(100,160,255,0.22)',
-      color: 'rgba(220,235,255,0.92)',
+      background: 'rgba(10,16,30,0.92)',
+      border: 'rgba(195,240,242,0.22)',
+      color: 'rgba(236,242,251,0.92)',
     },
   },
 }
@@ -57,11 +58,11 @@ const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set
 const MESES_FULL = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 const SEG_COLORS = {
-  'Porto Seguro': '#1A3A6B',
-  'Tokio Marine': '#2B5BA8',
-  TOO: '#4A90D9',
-  'Junto Seguros': '#10B981',
-  Potencial: '#8B5CF6',
+  'Porto Seguro': '#000079',
+  'Tokio Marine': '#2247aa',
+  TOO: '#4b6cc2',
+  'Junto Seguros': '#0f766e',
+  Potencial: '#7fbec4',
   Outras: '#6B7280',
 }
 
@@ -91,7 +92,7 @@ function SegTip({ active, payload }) {
   const d = payload[0]?.payload
   return (
     <div className="glass-panel px-3 py-2 text-xs">
-      <span style={{ color: SEG_COLORS[d?.seguradora] || '#4A90D9' }}>{d?.seguradora}: {d?.value}</span>
+      <span style={{ color: SEG_COLORS[d?.seguradora] || BRAND.primary }}>{d?.seguradora}: {d?.value}</span>
     </div>
   )
 }
@@ -242,8 +243,8 @@ export default function ApolicesDashboard() {
               <AreaChart data={porDia} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gradApolice" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#1A3A6B" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#1A3A6B" stopOpacity={0} />
+                    <stop offset="5%" stopColor={BRAND.primary} stopOpacity={0.4} />
+                    <stop offset="95%" stopColor={BRAND.primary} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis
@@ -254,7 +255,7 @@ export default function ApolicesDashboard() {
                   tickLine={false}
                 />
                 <Tooltip content={<DarkTip />} />
-                <Area type="monotone" dataKey="total" name="Apólices" stroke="#2B5BA8" fill="url(#gradApolice)" strokeWidth={2} dot={false} />
+                <Area type="monotone" dataKey="total" name="Apólices" stroke={BRAND.primary} fill="url(#gradApolice)" strokeWidth={2} dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
@@ -288,7 +289,7 @@ export default function ApolicesDashboard() {
                 <PieChart>
                   <Pie data={porSeg} dataKey="value" nameKey="seguradora" cx="50%" cy="50%" innerRadius={24} outerRadius={42}>
                     {porSeg.map((entry, i) => (
-                      <Cell key={i} fill={SEG_COLORS[entry.seguradora] || '#8899BB'} />
+                      <Cell key={i} fill={SEG_COLORS[entry.seguradora] || BRAND.gold} />
                     ))}
                   </Pie>
                   <Tooltip content={<SegTip />} />
@@ -298,7 +299,7 @@ export default function ApolicesDashboard() {
                 {porSeg.slice(0, 4).map(s => (
                   <div key={s.seguradora} className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: SEG_COLORS[s.seguradora] || '#8899BB' }} />
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: SEG_COLORS[s.seguradora] || BRAND.gold }} />
                       <span className="text-dark-muted truncate max-w-[90px]">{s.seguradora}</span>
                     </div>
                     <span className="font-mono font-semibold text-dark-text">{s.value}</span>
@@ -325,7 +326,7 @@ export default function ApolicesDashboard() {
               <XAxis type="number" tick={{ fontSize: 11, fill: CHART_COLORS[theme].tick }} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="nome" tick={{ fontSize: 11, fill: CHART_COLORS[theme].tick }} width={130} axisLine={false} tickLine={false} />
               <Tooltip formatter={(v) => [v, 'Apólices']} contentStyle={tooltipStyle(theme)} />
-              <Bar dataKey="total" fill="#2B5BA8" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="total" fill={BRAND.primary} radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}

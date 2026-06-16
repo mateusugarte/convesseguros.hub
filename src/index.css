@@ -6,16 +6,16 @@
 /* Base gradient background — fixed, sem image loading */
 html {
   background:
-    radial-gradient(ellipse 70% 50% at 0% 0%, rgba(245,88,42,0.06) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 100% 100%, rgba(74,144,217,0.05) 0%, transparent 55%),
-    linear-gradient(160deg, #eceff4 0%, #f3f5f8 42%, #eef1f5 100%);
+    radial-gradient(ellipse 70% 50% at 0% 0%, rgb(var(--brand-primary-rgb) / 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 100% 100%, rgb(var(--brand-secondary-rgb) / 0.18) 0%, transparent 55%),
+    linear-gradient(160deg, rgb(var(--color-bg)) 0%, rgb(var(--color-surface2)) 42%, rgb(var(--color-bg)) 100%);
   background-attachment: fixed;
 }
 html.dark {
   background:
-    radial-gradient(ellipse 80% 50% at 8% 0%, rgba(255,130,84,0.10) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 92% 100%, rgba(74,144,217,0.07) 0%, transparent 55%),
-    linear-gradient(160deg, #0f141e 0%, #111827 45%, #0b1220 100%);
+    radial-gradient(ellipse 80% 50% at 8% 0%, rgb(var(--brand-primary-soft-rgb) / 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 92% 100%, rgb(var(--brand-primary-rgb) / 0.10) 0%, transparent 55%),
+    linear-gradient(160deg, rgb(var(--color-bg)) 0%, rgb(var(--color-surface2)) 45%, rgb(var(--color-bg)) 100%);
   background-attachment: fixed;
 }
 
@@ -63,13 +63,13 @@ html.dark {
            disabled:opacity-40 disabled:cursor-not-allowed
            focus:outline-none focus:ring-2 focus:ring-brand-accent/30;
     font-family: var(--font-heading);
-    background: linear-gradient(135deg, #ff8b5f 0%, #f5582a 52%, #ea4f22 100%);
-    box-shadow: 0 8px 18px rgba(245,88,42,0.18), inset 0 1px 0 rgba(255,255,255,0.32);
+    background: linear-gradient(135deg, rgb(var(--brand-primary-soft-rgb)) 0%, rgb(var(--brand-primary-rgb)) 56%, rgb(var(--brand-primary-deep-rgb)) 100%);
+    box-shadow: 0 8px 18px rgb(var(--brand-primary-rgb) / 0.18), inset 0 1px 0 rgba(255,255,255,0.28);
     letter-spacing: 0.01em;
   }
   .btn-primary:hover:not(:disabled) {
-    background: linear-gradient(135deg, #ff9d74 0%, #ff6d42 52%, #f5582a 100%);
-    box-shadow: 0 0 28px rgba(245,88,42,0.22), 0 10px 24px rgba(245,88,42,0.20),
+    background: linear-gradient(135deg, rgb(var(--brand-primary-soft-rgb)) 0%, rgb(var(--brand-primary-rgb)) 48%, rgb(var(--brand-primary-deep-rgb)) 100%);
+    box-shadow: 0 0 28px rgb(var(--brand-primary-rgb) / 0.22), 0 10px 24px rgb(var(--brand-primary-rgb) / 0.20),
                 inset 0 1px 0 rgba(255,255,255,0.28);
     transform: translateY(-1px);
   }
@@ -131,7 +131,7 @@ html.dark {
   .card:hover {
     background: var(--glass-bg-hover);
     box-shadow: var(--glass-shadow-deep), var(--glass-inset);
-    border-color: rgba(245,88,42,0.18);
+    border-color: rgb(var(--brand-primary-rgb) / 0.18);
     transform: translateY(-2px);
   }
   .glass {
@@ -177,8 +177,8 @@ html.dark {
     font-size: max(14px, 16px);
   }
   .input:focus {
-    border-color: rgba(245, 88, 42, 0.50);
-    box-shadow: 0 0 0 3px rgba(245, 88, 42, 0.12);
+    border-color: rgb(var(--brand-primary-rgb) / 0.50);
+    box-shadow: 0 0 0 3px rgb(var(--brand-primary-rgb) / 0.12);
   }
   .input::placeholder {
     color: var(--glass-text-muted);
@@ -194,8 +194,8 @@ html.dark {
     font-size: max(14px, 16px);
   }
   .select:focus {
-    border-color: rgba(245, 88, 42, 0.50);
-    box-shadow: 0 0 0 3px rgba(245, 88, 42, 0.12);
+    border-color: rgb(var(--brand-primary-rgb) / 0.50);
+    box-shadow: 0 0 0 3px rgb(var(--brand-primary-rgb) / 0.12);
   }
 
   /* ── Select dropdown animation ───────────────────────────────────────────── */
@@ -219,7 +219,7 @@ html.dark {
   .badge-info    { background: #DBEAFE; color: #1E40AF; }
   .badge-purple  { background: #EDE9FE; color: #5B21B6; }
   .badge-muted   { background: #F1F5F9; color: #475569; }
-  .badge-blue    { background: #DBEAFE; color: #1D4ED8; }
+  .badge-blue    { background: rgb(var(--brand-secondary-rgb) / 0.22); color: rgb(var(--brand-primary-rgb)); }
 
   /* ── Sidebar nav ──────────────────────────────────────────────────────────── */
   .nav-item {
@@ -228,8 +228,8 @@ html.dark {
   }
   .nav-item-active {
     @apply text-brand-accent font-medium;
-    background: linear-gradient(135deg, rgba(245, 88, 42, 0.12), rgba(74, 144, 217, 0.08));
-    border-left: 2px solid rgba(245, 88, 42, 0.90);
+    background: linear-gradient(135deg, rgb(var(--brand-primary-rgb) / 0.12), rgb(var(--brand-secondary-rgb) / 0.26));
+    border-left: 2px solid rgb(var(--brand-primary-rgb) / 0.90);
     padding-left: calc(1rem - 2px);
   }
   .nav-item-inactive {
@@ -307,15 +307,15 @@ html.dark {
   .dashboard-hero {
     @apply relative overflow-hidden rounded-[32px] border border-dark-border/70 p-6 shadow-float;
     background:
-      radial-gradient(circle at 20% 20%, rgba(245,88,42,0.10), transparent 34%),
-      radial-gradient(circle at 85% 15%, rgba(74,144,217,0.08), transparent 28%),
+      radial-gradient(circle at 20% 20%, rgb(var(--brand-primary-rgb) / 0.10), transparent 34%),
+      radial-gradient(circle at 85% 15%, rgb(var(--brand-secondary-rgb) / 0.14), transparent 28%),
       linear-gradient(135deg, rgba(255,255,255,0.90), rgba(248,250,252,0.96));
   }
   html.dark .dashboard-hero {
     background:
-      radial-gradient(circle at 20% 20%, rgba(255,130,84,0.12), transparent 34%),
-      radial-gradient(circle at 85% 15%, rgba(74,144,217,0.08), transparent 28%),
-      linear-gradient(135deg, rgba(12,18,32,0.92), rgba(9,15,26,0.98));
+      radial-gradient(circle at 20% 20%, rgb(var(--brand-primary-soft-rgb) / 0.08), transparent 34%),
+      radial-gradient(circle at 85% 15%, rgb(var(--brand-primary-rgb) / 0.10), transparent 28%),
+      linear-gradient(135deg, rgba(10,14,26,0.92), rgba(6,10,20,0.98));
   }
   .dashboard-hero-chip {
     @apply rounded-2xl border border-dark-border/70 px-4 py-3;
@@ -404,7 +404,7 @@ html.dark {
   .dp-nav-btn:hover {
     background: var(--glass-bg-hover);
     color: var(--glass-text-primary);
-    border-color: rgba(74,144,217,0.35);
+    border-color: rgb(var(--brand-primary-rgb) / 0.35);
   }
 
   .dp-day {
@@ -428,8 +428,8 @@ html.dark {
     transition: background 0.12s, color 0.12s;
   }
   .dp-footer-btn:hover { background: var(--glass-bg-hover); color: var(--glass-text-primary); }
-  .dp-footer-primary { color: rgb(74,144,217) !important; }
-  .dp-footer-primary:hover { background: rgba(74,144,217,0.10) !important; }
+  .dp-footer-primary { color: rgb(var(--brand-primary-rgb)) !important; }
+  .dp-footer-primary:hover { background: rgb(var(--brand-primary-rgb) / 0.10) !important; }
 
   /* ── Kanban ───────────────────────────────────────────────────────────────── */
 
@@ -460,7 +460,7 @@ html.dark {
   }
   .kanban-card:hover {
     background: var(--glass-bg-hover);
-    border-color: rgba(74,144,217,0.28);
+    border-color: rgb(var(--brand-primary-rgb) / 0.28);
     box-shadow: 0 8px 28px rgba(26,58,107,0.28), 0 3px 8px rgba(0,0,0,0.14), var(--glass-inset);
   }
   .kanban-card:hover .kanban-grip {
@@ -472,7 +472,7 @@ html.dark {
   }
   .kanban-card-dragging {
     box-shadow: 0 16px 48px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.18), var(--glass-inset) !important;
-    border-color: rgba(74,144,217,0.50) !important;
+    border-color: rgb(var(--brand-primary-rgb) / 0.50) !important;
     background: var(--glass-bg-active) !important;
     transform: rotate(1.5deg) !important;
   }
@@ -585,13 +585,13 @@ html.dark {
     white-space: nowrap;
   }
   .kanban-action-assume {
-    background: rgba(74,144,217,0.14);
-    color: rgb(74,144,217);
-    border-color: rgba(74,144,217,0.25);
+    background: rgb(var(--brand-primary-rgb) / 0.14);
+    color: rgb(var(--brand-primary-rgb));
+    border-color: rgb(var(--brand-primary-rgb) / 0.25);
   }
   .kanban-action-assume:hover {
-    background: rgba(74,144,217,0.26);
-    border-color: rgba(74,144,217,0.40);
+    background: rgb(var(--brand-primary-rgb) / 0.26);
+    border-color: rgb(var(--brand-primary-rgb) / 0.40);
   }
   .kanban-action-finish {
     background: rgba(16,185,129,0.12);
@@ -655,7 +655,7 @@ html.dark {
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(circle at top, rgba(74,144,217,0.14), transparent 45%),
+      radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.14), transparent 45%),
       var(--modal-backdrop-tint, rgba(10,16,28,0.28));
     -webkit-backdrop-filter: var(--modal-backdrop-blur, blur(26px) saturate(160%));
     backdrop-filter: var(--modal-backdrop-blur, blur(26px) saturate(160%));
@@ -663,7 +663,7 @@ html.dark {
   }
 
   .modal-shell-header {
-    background: linear-gradient(180deg, rgba(74,144,217,0.08), rgba(255,255,255,0));
+    background: linear-gradient(180deg, rgb(var(--brand-primary-rgb) / 0.08), rgba(255,255,255,0));
   }
 
   .modal-shell-body {
@@ -708,13 +708,13 @@ html.dark {
   .glass-input:focus {
     border-color: var(--glass-border);
     background: var(--glass-bg-active);
-    box-shadow: 0 0 0 3px rgba(245,88,42,0.12);
+    box-shadow: 0 0 0 3px rgb(var(--brand-primary-rgb) / 0.12);
   }
 
   /* ── Button active feedback (Apple scale(0.95) principle) ──────────────── */
   .btn-primary:active:not(:disabled) {
     transform: scale(0.95);
-    box-shadow: 0 1px 4px rgba(245,88,42,0.18);
+    box-shadow: 0 1px 4px rgb(var(--brand-primary-rgb) / 0.18);
     transition-duration: 60ms;
   }
   .btn-secondary:active, .btn-ghost:active {
@@ -832,7 +832,7 @@ html.dark {
 .kanban-scroll::-webkit-scrollbar         { height: 4px; }
 .kanban-scroll::-webkit-scrollbar-track  { background: transparent; }
 .kanban-scroll::-webkit-scrollbar-thumb  { background: rgb(var(--color-border)); border-radius: 2px; }
-.kanban-scroll::-webkit-scrollbar-thumb:hover { background: #f5582a; }
+.kanban-scroll::-webkit-scrollbar-thumb:hover { background: rgb(var(--brand-primary-rgb)); }
 
 .kanban-col-body::-webkit-scrollbar        { width: 3px; }
 .kanban-col-body::-webkit-scrollbar-track { background: transparent; }
@@ -846,7 +846,7 @@ html.dark {
 .table-shell-head {
   @apply flex items-center justify-between gap-4 px-5 py-4 border-b border-dark-border/70;
   background:
-    linear-gradient(180deg, rgba(245,88,42,0.05), rgba(255,255,255,0.10)),
+    linear-gradient(180deg, rgb(var(--brand-primary-rgb) / 0.05), rgba(255,255,255,0.10)),
     linear-gradient(180deg, rgba(255,255,255,0.34), rgba(255,255,255,0.08));
 }
 
@@ -898,7 +898,7 @@ html.dark .badge-warning { background: rgba(245,158,11,0.15);  color: #F59E0B; }
 html.dark .badge-info    { background: rgba(59,130,246,0.15);  color: #3B82F6; }
 html.dark .badge-purple  { background: rgba(139,92,246,0.15);  color: #8B5CF6; }
 html.dark .badge-muted   { background: rgba(136,153,187,0.15); color: #8899BB; }
-html.dark .badge-blue    { background: rgba(74,144,217,0.15);  color: #4A90D9; }
+html.dark .badge-blue    { background: rgb(var(--brand-primary-rgb) / 0.15);  color: rgb(var(--brand-secondary-rgb)); }
 
 /* Recharts theme overrides — use CSS variables */
 .recharts-cartesian-grid-horizontal line,
@@ -945,8 +945,8 @@ html.dark .badge-blue    { background: rgba(74,144,217,0.15);  color: #4A90D9; }
 }
 
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(245,88,42,0); }
-  50%      { box-shadow: 0 0 0 4px rgba(245,88,42,0.15); }
+  0%, 100% { box-shadow: 0 0 0 0 rgb(var(--brand-primary-rgb) / 0); }
+  50%      { box-shadow: 0 0 0 4px rgb(var(--brand-primary-rgb) / 0.15); }
 }
 
 @keyframes toastProgress {
@@ -991,8 +991,8 @@ html:not(.dark) .nav-item-inactive:hover {
   background: rgba(8, 20, 50, 0.06) !important;
 }
 html:not(.dark) .nav-item-active {
-  color: #f5582a !important;
-  background: rgba(245, 88, 42, 0.10) !important;
+  color: rgb(var(--brand-primary-rgb)) !important;
+    background: rgb(var(--brand-primary-rgb) / 0.10) !important;
 }
 html:not(.dark) .text-dark-muted {
   color: rgba(8, 20, 50, 0.55);
@@ -1192,12 +1192,12 @@ html.dark .kanban-col {
   border-radius: 28px 28px 16px 16px;
   border: 1px solid rgba(220, 227, 236, 0.70);
   border-bottom: none;
-  background: linear-gradient(135deg, rgba(245, 88, 42, 0.08), rgba(74, 144, 217, 0.06));
+  background: linear-gradient(135deg, rgb(var(--brand-primary-rgb) / 0.08), rgb(var(--brand-secondary-rgb) / 0.10));
 }
 
 html.dark .kanban-col-header {
-  border-color: rgba(74, 144, 217, 0.12);
-  background: linear-gradient(135deg, rgba(255, 130, 84, 0.12), rgba(74, 144, 217, 0.08));
+  border-color: rgb(var(--brand-primary-rgb) / 0.18);
+  background: linear-gradient(135deg, rgb(var(--brand-primary-soft-rgb) / 0.12), rgb(var(--brand-primary-rgb) / 0.08));
 }
 
 .kanban-col-body {
@@ -1218,7 +1218,7 @@ html.dark .kanban-col-body {
   border: 1px solid rgba(220, 227, 236, 0.95);
   background:
     linear-gradient(180deg, rgba(255,255,255,0.98), rgba(249,250,252,0.95)),
-    radial-gradient(circle at top left, rgba(245,88,42,0.08), transparent 70%);
+    radial-gradient(circle at top left, rgb(var(--brand-primary-rgb) / 0.08), transparent 70%);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
 }
@@ -1243,7 +1243,7 @@ html.dark .kanban-col-body {
   bottom: 0;
   width: 4px;
   border-radius: 18px 0 0 18px;
-  background: linear-gradient(180deg, var(--kanban-accent, #f5582a), rgba(245,88,42,0.72));
+  background: linear-gradient(180deg, var(--kanban-accent, rgb(var(--brand-primary-rgb))), rgb(var(--brand-primary-deep-rgb) / 0.72));
   opacity: 0.92;
 }
 
@@ -1265,7 +1265,7 @@ html.dark .kanban-card {
   border-color: rgba(74, 144, 217, 0.16);
   background:
     linear-gradient(180deg, rgba(10, 18, 36, 0.96), rgba(12, 20, 40, 0.90)),
-    radial-gradient(circle at top left, rgba(255,130,84,0.12), transparent 72%);
+    radial-gradient(circle at top left, rgb(var(--brand-primary-soft-rgb) / 0.12), transparent 72%);
   box-shadow: 0 16px 30px rgba(0, 0, 0, 0.22);
 }
 
@@ -1361,7 +1361,7 @@ html.dark .kanban-empty {
 .table-shell-head {
   @apply flex items-center justify-between gap-4 px-5 py-4 border-b border-dark-border/70;
   background:
-    linear-gradient(180deg, rgba(245,88,42,0.05), rgba(255,255,255,0.10)),
+    linear-gradient(180deg, rgb(var(--brand-primary-rgb) / 0.05), rgba(255,255,255,0.10)),
     linear-gradient(180deg, rgba(255,255,255,0.46), rgba(255,255,255,0.08));
 }
 
@@ -1391,7 +1391,7 @@ html.dark .kanban-empty {
     var(--glass-bg-heavy);
   -webkit-backdrop-filter: var(--glass-blur-ultra, blur(28px) saturate(190%));
   backdrop-filter: var(--glass-blur-ultra, blur(28px) saturate(190%));
-  border: 1px solid rgba(220, 227, 236, 0.95);
+  border: 1px solid rgb(var(--brand-secondary-rgb) / 0.30);
   border-radius: 28px;
   box-shadow:
     0 28px 80px rgba(15, 23, 42, 0.16),
@@ -1401,7 +1401,7 @@ html.dark .kanban-empty {
 }
 
 html.dark .glass-modal {
-  border-color: rgba(74, 144, 217, 0.16);
+  border-color: rgb(var(--brand-primary-rgb) / 0.22);
   box-shadow:
     0 28px 80px rgba(0, 0, 0, 0.52),
     0 2px 12px rgba(0, 0, 0, 0.22),
@@ -1412,7 +1412,7 @@ html.dark .glass-modal {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at top, rgba(245,88,42,0.12), transparent 45%),
+    radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.12), transparent 45%),
     var(--modal-backdrop-tint, rgba(15,23,42,0.10));
   -webkit-backdrop-filter: var(--modal-backdrop-blur, blur(24px) saturate(180%));
   backdrop-filter: var(--modal-backdrop-blur, blur(24px) saturate(180%));
@@ -1420,7 +1420,7 @@ html.dark .glass-modal {
 }
 
 .modal-shell-header {
-  background: linear-gradient(180deg, rgba(245,88,42,0.05), rgba(255,255,255,0));
+  background: linear-gradient(180deg, rgb(var(--brand-primary-rgb) / 0.05), rgba(255,255,255,0));
 }
 
 .modal-shell-body {

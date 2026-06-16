@@ -3,11 +3,34 @@
 // CSS variables in index.css are the runtime counterpart for Tailwind/JSX.
 
 export const BRAND = {
-  primary:   '#F5582A',
-  secondary: '#2B5BA8',
-  accent:    '#FF8B5F',
-  gold:      '#C9A84C',
+  primary:   '#000079',
+  secondary: '#c3f0f2',
+  accent:    '#dcffff',
+  gold:      '#a2d6da',
 }
+
+export const PALETTE = [
+  '#000079',
+  '#001a7a',
+  '#0d2d8f',
+  '#2247aa',
+  '#4b6cc2',
+  '#86a4d8',
+  '#c3f0f2',
+  '#dcffff',
+  '#7fbec4',
+]
+
+export const AVATAR_COLORS = [
+  '#000079',
+  '#2247aa',
+  '#4b6cc2',
+  '#86a4d8',
+  '#c3f0f2',
+  '#dcffff',
+  '#7fbec4',
+  '#001a7a',
+]
 
 // Semantic status colors — light/dark variants
 export const STATUS = {
@@ -21,15 +44,7 @@ export const STATUS = {
 
 // Chart palette — ordered for sequential data series
 export const CHART_COLORS = [
-  '#F5582A', // brand-primary
-  '#10B981', // success
-  '#F97316', // warning
-  '#8B5CF6', // purple
-  '#2B5BA8', // brand-secondary
-  '#EC4899', // pink
-  '#06B6D4', // cyan
-  '#EF4444', // danger
-  '#6B7280', // muted
+  ...PALETTE,
 ]
 
 // Status → color map (for Kanban columns, charts, badges)
@@ -47,9 +62,21 @@ export const STATUS_COLORS = {
 
 // Produto → color map
 export const PRODUTO_COLORS = {
-  residencial_pf:  { color: '#F5582A', bg: 'rgba(245,88,42,0.15)'  },
-  comercial_pf:    { color: '#10B981', bg: 'rgba(16,185,129,0.15)'  },
-  pessoa_juridica: { color: '#8B5CF6', bg: 'rgba(139,92,246,0.15)' },
+  residencial_pf:  { color: '#000079', bg: 'rgba(0,0,121,0.14)'  },
+  comercial_pf:    { color: '#2247aa', bg: 'rgba(34,71,170,0.14)'  },
+  pessoa_juridica: { color: '#7fbec4', bg: 'rgba(127,190,196,0.16)' },
+}
+
+export const STATUS_CHART_COLORS = {
+  aprovado: '#0f766e',
+  recusado: '#8b1e4e',
+  em_cotacao: '#4c67b0',
+  pendente: '#000079',
+  emitido: '#2247aa',
+  em_analise: '#4b6cc2',
+  cancelado: '#6b7280',
+  cpf_invalido: '#5db7c2',
+  expirada: '#7fbec4',
 }
 
 // z-index scale — defines all stacking layers

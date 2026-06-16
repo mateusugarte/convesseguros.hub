@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { fetchRelatorioMensal, PRODUTO_LABELS } from '../lib/fichas'
 import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
 import { useImobiliaria } from '../hooks/useImobiliaria'
+import { AVATAR_COLORS, BRAND, PRODUTO_COLORS, STATUS_CHART_COLORS } from '../design-system/tokens'
 import { ChevronLeft, ChevronRight, Download, X, FileText, CheckCircle2, XCircle, MinusCircle, AlertTriangle, Clock } from 'lucide-react'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -45,9 +46,9 @@ const PRODUTOS_FILTRO = [
 // ── Badge de produto ──────────────────────────────────────────────────────────
 
 const PRODUTO_COLOR = {
-  residencial_pf:  { bg: 'rgba(74,144,217,0.15)',  color: '#4A90D9' },
-  comercial_pf:    { bg: 'rgba(16,185,129,0.15)',  color: '#10B981' },
-  pessoa_juridica: { bg: 'rgba(139,92,246,0.15)', color: '#8B5CF6' },
+  residencial_pf:  { bg: PRODUTO_COLORS.residencial_pf.bg,  color: PRODUTO_COLORS.residencial_pf.color },
+  comercial_pf:    { bg: PRODUTO_COLORS.comercial_pf.bg,  color: PRODUTO_COLORS.comercial_pf.color },
+  pessoa_juridica: { bg: PRODUTO_COLORS.pessoa_juridica.bg, color: PRODUTO_COLORS.pessoa_juridica.color },
 }
 
 function ProdutoBadge({ produto }) {
@@ -184,11 +185,11 @@ function Rodape({ fichas }) {
       <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-4">Total do Mês</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: 'Total de fichas', val: total,    color: '#4A90D9', pct: null },
-          { label: 'Enviadas',        val: enviadas,  color: '#10B981', pct: pct(enviadas) },
-          { label: 'Emitidas',        val: emitidas,  color: '#2B5BA8', pct: pct(emitidas) },
+          { label: 'Total de fichas', val: total,    color: BRAND.primary, pct: null },
+          { label: 'Enviadas',        val: enviadas,  color: PRODUTO_COLORS.comercial_pf.color, pct: pct(enviadas) },
+          { label: 'Emitidas',        val: emitidas,  color: PRODUTO_COLORS.residencial_pf.color, pct: pct(emitidas) },
           { label: 'Expiradas',       val: expiras,   color: '#6B7280', pct: pct(expiras) },
-          { label: 'Desistências',    val: desist,    color: '#8899BB', pct: pct(desist) },
+          { label: 'Desistências',    val: desist,    color: BRAND.gold, pct: pct(desist) },
           { label: 'Recusadas',       val: recusadas, color: '#EF4444', pct: pct(recusadas) },
         ].map(({ label, val, color, pct: p }) => (
           <div key={label} className="text-center">

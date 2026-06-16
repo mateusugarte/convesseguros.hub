@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchNomesImobiliariasAll } from '../lib/fichas'
 import { useToast } from '../contexts/ToastContext'
+import { replaceEntityImage } from '../lib/entityMedia'
 import {
   Building2, Plus, Pencil, Trash2, X, Check,
-  ChevronRight, AlertCircle, Search, ChevronDown, ArrowLeft,
+  ChevronRight, AlertCircle, Search, ChevronDown, ArrowLeft, Upload,
 } from 'lucide-react'
 import { PageHeader, MetricCard, DataCard } from '../components/ui'
 
@@ -105,13 +106,18 @@ function ImobiliariaSelector({ mapeadas }) {
                   onClick={() => navegar(imob.id)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/55 transition-all text-left"
                 >
-                  {/* Avatar com iniciais */}
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0"
-                    style={{ background: color }}
-                  >
-                    {initials(imob.nome_canonico)}
-                  </div>
+                  {imob.imagem_url ? (
+                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-dark-border/30 bg-white flex items-center justify-center flex-shrink-0">
+                      <img src={imob.imagem_url} alt={imob.nome_canonico} className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0"
+                      style={{ background: color }}
+                    >
+                      {initials(imob.nome_canonico)}
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-dark-text truncate">{imob.nome_canonico}</p>
                     <p className="text-[10px] text-dark-muted">
@@ -151,6 +157,8 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
   const [nomeCanonoco,  setNomeCanonoco]  = useState(imobAtual?.nome_canonico || '')
   const [aliasesModal,  setAliasesModal]  = useState(modal?.variacoes || imobAtual?.aliases || [])
   const [novoAlias,     setNovoAlias]     = useState('')
+  const [imagemPreview, setImagemPreview] = useState(imobAtual?.imagem_url || '')
+  const [imagemFile,    setImagemFile]    = useState(null)
   const [salvando,      setSalvando]      = useState(false)
 
   const totalFichas = aliasesModal.reduce((s, v) => s + (contagemPorNome[v] || 0), 0)
@@ -168,6 +176,13 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
     if (!t || aliasesModal.includes(t)) { setNovoAlias(''); return }
     setAliasesModal(prev => [...prev, t])
     setNovoAlias('')
+  }
+
+  function handleImagem(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setImagemFile(file)
+    setImagemPreview(URL.createObjectURL(file))
   }
 
   async function salvar() {
@@ -228,6 +243,22 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
             .upsert(payload, { onConflict: 'alias' })
           if (error) throw error
         }
+      }
+
+      if ((ehEditar || modo === 'nova') && imagemFile && imobId) {
+        const uploaded = await replaceEntityImage({
+          file: imagemFile,
+          entityType: 'imobiliaria',
+          entityId: imobId,
+          previousPath: imobAtual?.imagem_path || null,
+        })
+        if (uploaded.error) throw uploaded.error
+
+        const { error: imagemError } = await supabase
+          .from('imobiliarias')
+          .update({ imagem_url: uploaded.url, imagem_path: uploaded.path })
+          .eq('id', imobId)
+        if (imagemError) throw imagemError
       }
 
       toast({ type: 'success', title: 'Configuração salva!' })
@@ -338,20 +369,42 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
             </div>
           ) : (
             /* Nome canônico — modo nova ou editar */
-            <div>
-              <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
-                Como deve aparecer no sistema *
-              </label>
-              <input
-                value={nomeCanonoco}
-                onChange={e => setNomeCanonoco(e.target.value)}
-                placeholder="Ex: Guarulhos Imóveis"
-                className="input"
-                autoFocus={ehEditar || mapeadas.length === 0}
-              />
-              <p className="text-[11px] text-dark-muted mt-1">
-                Este nome aparecerá em todos os filtros, cards e relatórios.
-              </p>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
+                  Como deve aparecer no sistema *
+                </label>
+                <input
+                  value={nomeCanonoco}
+                  onChange={e => setNomeCanonoco(e.target.value)}
+                  placeholder="Ex: Guarulhos Imóveis"
+                  className="input"
+                  autoFocus={ehEditar || mapeadas.length === 0}
+                />
+                <p className="text-[11px] text-dark-muted mt-1">
+                  Este nome aparecerá em todos os filtros, cards e relatórios.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block">
+                  Imagem da imobiliária
+                </label>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="w-20 h-20 rounded-2xl border border-dark-border bg-white/70 overflow-hidden flex items-center justify-center">
+                    {imagemPreview ? (
+                      <img src={imagemPreview} alt={nomeCanonoco || 'Imobiliária'} className="w-full h-full object-cover" />
+                    ) : (
+                      <Building2 className="w-8 h-8 text-dark-muted/40" />
+                    )}
+                  </div>
+                  <label className="btn-secondary text-sm cursor-pointer flex items-center gap-2">
+                    <Upload className="w-4 h-4" />
+                    Enviar imagem
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImagem} />
+                  </label>
+                </div>
+              </div>
             </div>
           )}
 
@@ -450,14 +503,24 @@ function TabMapeadas({ mapeadas, confirmExcluir, setConfirmExcluir, onExcluir, o
       {mapeadas.map(imob => (
         <div key={imob.id} className="glass-panel p-4">
           <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div className="min-w-0 flex-1">
-              <button
-                onClick={() => navigate(`/imobiliarias/${imob.id}`)}
-                className="font-bold text-dark-text hover:text-brand-accent transition-colors text-left flex items-center gap-1.5 group"
-              >
-                {imob.nome_canonico}
-                <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-              </button>
+            <div className="min-w-0 flex-1 flex items-start gap-3">
+              {imob.imagem_url ? (
+                <div className="w-12 h-12 rounded-xl overflow-hidden border border-dark-border/30 bg-white flex items-center justify-center flex-shrink-0">
+                  <img src={imob.imagem_url} alt={imob.nome_canonico} className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold text-white flex-shrink-0 bg-brand-accent">
+                  {imob.nome_canonico.split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase() || '?'}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <button
+                  onClick={() => navigate(`/imobiliarias/${imob.id}`)}
+                  className="font-bold text-dark-text hover:text-brand-accent transition-colors text-left flex items-center gap-1.5 group"
+                >
+                  {imob.nome_canonico}
+                  <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                </button>
               <p className="text-xs text-dark-muted mt-0.5">
                 {imob.aliases.length} variação{imob.aliases.length !== 1 ? 'ões' : ''}{' '}
                 · {imob.totalFichas} ficha{imob.totalFichas !== 1 ? 's' : ''}
@@ -468,6 +531,7 @@ function TabMapeadas({ mapeadas, confirmExcluir, setConfirmExcluir, onExcluir, o
                   {imob.aliases.join(' · ')}
                 </p>
               )}
+              </div>
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -750,7 +814,7 @@ export default function Imobiliarias() {
     // 2. Imobiliárias configuradas com seus aliases
     const { data: imobiData } = await supabase
       .from('imobiliarias')
-      .select('id, nome_canonico, ativa, imobiliaria_aliases(alias)')
+      .select('id, nome_canonico, ativa, imagem_url, imagem_path, imobiliaria_aliases(alias)')
       .order('nome_canonico')
 
     // 3. Conjunto de aliases mapeados (string exata)

@@ -2,15 +2,15 @@
 
 ## Responsavel Atual
 
-Codex
+Claude (Agente 4 - Melhorias)
 
 ## Pagina
 
-Gestao de Apolices / seletor de imobiliaria
+Comercial Jornadas
 
 ## Objetivo
 
-Corrigir o dropdown de imobiliarias que esta abrindo desalinhado em `ApoicesGestao` e telas relacionadas, mantendo o design system e sem alterar regras de negocio, rotas, queries ou integracoes.
+Melhorar o workflow visual da tela de Jornadas: enquadramento do editor, design mais consistente e animacoes mais intencionais no fluxo e nos paineis laterais.
 
 ## Status
 
@@ -18,11 +18,9 @@ Concluida
 
 ## Atualizacao de Execucao
 
-- Lido o contexto obrigatorio e a documentacao da pagina `ApoicesGestao`.
-- Identificado que `ImobiliariaSelect` usa `WorkspacesSelect`, que calcula posicao fixa dentro do fluxo normal do DOM.
-- Encontrado o mesmo padrao em `src/components/ui/Select.jsx`, usado por outros filtros do fluxo de emissao.
-- Aplicado `createPortal(..., document.body)` em `WorkspacesSelect` e `Select`, preservando o calculo de posicao e o fechamento por clique fora.
-- A tentativa de `npm.cmd run build` continuou bloqueada por erro de acesso/resolucao do `vite.config.js` nesta sessao.
+- Contexto da pagina lido, JSX mapeado.
+- Problemas identificados: canvas sem hierarquia, paineis laterais pesados, edge color fora da palette brand, animacoes ausentes nos paineis.
+- Implementado: keyframes CSS locais (jrn-slide-right, jrn-slide-left, jrn-fade-up), brand colors nas edges (#2B5BA8 / #1A3A6B), WorkflowNode com sombra direcional + header gradiente + handles com ring glow, PainelNos com animacao slide-left + itens com borda-esquerda colorida + hoverable, PainelConfig com slide-right + color-strip no topo matching o node selecionado, header do editor mais compacto (52px) com breadcrumb, canvas com background radial-gradient brand, stats pill flutuante minimalista, controles ReactFlow com CSS override (bordas arredondadas, brand hover).
 
 ## Arquivos em uso
 
@@ -30,20 +28,17 @@ Concluida
 - `docs/PROJECT_CONTEXT.md`
 - `ROADMAP.md`
 - `docs/CURRENT_TASK.md`
-- `src/pages/ApoicesGestao/CONTEXT.md`
-- `src/pages/ApoicesGestao.jsx`
-- `src/components/ImobiliariaSelect.jsx`
-- `src/components/ui/WorkspacesSelect.jsx`
-- `src/components/ui/Select.jsx`
+- `src/pages/comercial/Jornadas/CONTEXT.md`
+- `src/pages/comercial/Jornadas.jsx`
 
 ## Proximo Responsavel
 
-Codex
+Usuario
 
 ## Proxima Tarefa
 
-Validar em runtime as telas de emissao e filtros de apolices para confirmar o alinhamento do dropdown em desktop e mobile.
+Validar visualmente o editor de jornadas: paineis laterais, animacoes, nos e conexoes.
 
 ## Observacoes
 
-Escopo de UI localizado. Nao alterar auth, banco, rotas, contratos ou regras de negocio.
+Escopo exclusivamente visual. Nenhuma alteracao em banco, auth, rotas ou contratos de dados. Toda logica de negocio preservada identica.

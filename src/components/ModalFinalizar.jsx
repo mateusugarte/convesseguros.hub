@@ -85,7 +85,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
           {/* Seguradora */}
           <div>
             <label className="block text-xs font-medium text-dark-muted mb-1.5 uppercase tracking-wider">Seguradora</label>
-            <SeguradoraSelect value={seguradora} onChange={setSeguradora} />
+            <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={ficha?.produto} />
           </div>
 
           {/* Retorno */}

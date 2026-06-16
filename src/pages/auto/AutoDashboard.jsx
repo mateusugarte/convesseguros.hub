@@ -63,7 +63,7 @@ export default function AutoDashboard() {
       hint: 'cotações que viraram negocio',
     },
     {
-      label: 'Pendencias',
+      label: 'Pendentes',
       value: metrics?.renovacoesPendentes ?? 0,
       hint: 'itens ainda sem tratativa',
     },
@@ -162,7 +162,7 @@ export default function AutoDashboard() {
 
         <DataCard
           title="Funil de cotacoes"
-          subtitle="Abertas, convertidas e perdidas nos ultimos 6 meses"
+          subtitle="Pendentes, convertidas e perdidas nos ultimos 6 meses"
         >
           {loadingCotacoes ? (
             <div className="flex h-[280px] items-center justify-center text-sm text-dark-muted">
@@ -183,7 +183,7 @@ export default function AutoDashboard() {
                   <YAxis tick={{ fontSize: 11, fill: 'rgba(122,97,109,0.72)' }} axisLine={false} tickLine={false} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="abertas" name="Abertas" fill="#f59e0b" radius={[10, 10, 0, 0]} />
+                  <Bar dataKey="abertas" name="Pendentes" fill="#f59e0b" radius={[10, 10, 0, 0]} />
                   <Bar dataKey="convertidas" name="Convertidas" fill="#10b981" radius={[10, 10, 0, 0]} />
                   <Bar dataKey="perdidas" name="Perdidas" fill="#ef4444" radius={[10, 10, 0, 0]} />
                 </BarChart>
@@ -201,7 +201,7 @@ export default function AutoDashboard() {
           <div className="flex h-[200px] items-center justify-center text-sm text-dark-muted">
             Carregando tendencia...
           </div>
-        ) : graficoCotacoes.every(item => item.convertidas === 0 && item.abertas === 0 && item.perdidas === 0) ? (
+          ) : graficoCotacoes.every(item => item.convertidas === 0 && item.abertas === 0 && item.perdidas === 0) ? (
           <EmptyState
             icon={<Percent className="w-5 h-5" />}
             title="Sem dados de conversao"

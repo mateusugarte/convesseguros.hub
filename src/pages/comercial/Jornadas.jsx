@@ -14,6 +14,7 @@ import {
   Mail, ArrowRight, UserCheck, CheckSquare, Save, Trash2,
   UserPlus, RefreshCw, ChevronDown, ChevronRight,
   CheckCircle, FileCheck, Hand, MessageCircle, ClipboardList, Flag,
+  Circle,
 } from 'lucide-react'
 import { Select } from '../../components/ui/Select'
 import {
@@ -23,6 +24,73 @@ import {
   CrmSectionCard,
   CrmSegmentedControl,
 } from '../../components/comercial'
+
+// ── CSS keyframes injetado localmente (sem tocar index.css) ──────────────────
+
+const EDITOR_STYLES = `
+  @keyframes jrn-slide-right {
+    from { transform: translateX(20px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+  @keyframes jrn-slide-left {
+    from { transform: translateX(-20px); opacity: 0; }
+    to   { transform: translateX(0);     opacity: 1; }
+  }
+  @keyframes jrn-fade-up {
+    from { transform: translateY(8px); opacity: 0; }
+    to   { transform: translateY(0);   opacity: 1; }
+  }
+  .jrn-lib-item {
+    transition: transform 0.15s cubic-bezier(0.25,0.46,0.45,0.94),
+                box-shadow 0.15s ease,
+                border-color 0.15s ease;
+  }
+  .jrn-lib-item:hover {
+    transform: translateX(4px);
+    box-shadow: 0 3px 10px rgba(6,10,32,0.09) !important;
+  }
+  .jrn-lib-item:active {
+    transform: translateX(2px) scale(0.985);
+    cursor: grabbing !important;
+  }
+  .react-flow__controls {
+    border-radius: 14px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(210,225,232,0.92) !important;
+    box-shadow: 0 2px 14px rgba(6,10,32,0.09) !important;
+    backdrop-filter: blur(8px) !important;
+  }
+  .react-flow__controls-button {
+    background: rgba(255,255,255,0.96) !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(210,225,232,0.65) !important;
+    color: rgba(8,15,44,0.75) !important;
+    transition: background 0.12s ease !important;
+    padding: 7px !important;
+  }
+  .react-flow__controls-button:last-child { border-bottom: none !important; }
+  .react-flow__controls-button:hover { background: rgba(239,246,250,1) !important; color: rgba(0,0,121,1) !important; }
+  .react-flow__controls-button svg { fill: currentColor !important; }
+  .react-flow__minimap {
+    border-radius: 14px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(210,225,232,0.92) !important;
+    box-shadow: 0 2px 14px rgba(6,10,32,0.09) !important;
+  }
+  .react-flow__edge-path {
+    transition: stroke 0.18s ease, stroke-width 0.15s ease;
+  }
+  .react-flow__handle {
+    transition: box-shadow 0.15s ease, transform 0.12s ease;
+  }
+  .react-flow__handle:hover {
+    transform: scale(1.25) !important;
+  }
+  .react-flow__attribution { display: none !important; }
+  .jrn-node-selected .react-flow__handle {
+    box-shadow: 0 0 0 3px rgba(43,91,168,0.22) !important;
+  }
+`
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -76,7 +144,7 @@ const NODE_GROUPS = [
     ],
   },
   {
-    label: 'Controle', category: 'control', color: '#6B7280',
+    label: 'Controle', category: 'control', color: '#64748B',
     items: [
       { tipo: 'control_aguardar', label: 'Aguardar',       Icon: Clock },
       { tipo: 'control_condicao', label: 'Condição',       Icon: GitBranch },
@@ -86,25 +154,41 @@ const NODE_GROUPS = [
 ]
 
 const ALL_ITEMS = NODE_GROUPS.flatMap(g => g.items.map(i => ({ ...i, category: g.category, color: g.color })))
-const findNodeInfo = tipo => ALL_ITEMS.find(i => i.tipo === tipo) || { tipo, label: tipo, Icon: Zap, category: 'action', color: '#3B82F6' }
+const findNodeInfo = tipo => ALL_ITEMS.find(i => i.tipo === tipo) || { tipo, label: tipo, Icon: Zap, category: 'action', color: '#2B5BA8' }
 
-// ── Editor context (passes deleteNode / deleteEdge into custom node/edge renderers) ─
+// ── Editor context ────────────────────────────────────────────────────────────
 
 const EditorContext = createContext({ deleteNode: () => {}, deleteEdge: () => {} })
 
-// ── Custom deletable edge ─────────────────────────────────────────────────────
+// ── Custom deletable edge — brand palette ─────────────────────────────────────
 
 function DeletableEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, selected }) {
   const { deleteEdge } = useContext(EditorContext)
   const [edgePath, labelX, labelY] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition })
   return (
     <>
-      <BaseEdge path={edgePath} style={{ strokeWidth: 2, stroke: selected ? '#818CF8' : '#6366f1', ...style }} />
+      <BaseEdge
+        path={edgePath}
+        style={{
+          strokeWidth: selected ? 2.5 : 2,
+          stroke: selected ? '#1A3A6B' : '#2B5BA8',
+          opacity: selected ? 1 : 0.72,
+          ...style,
+        }}
+      />
       {selected && (
         <EdgeLabelRenderer>
           <button
-            className="nodrag nopan absolute w-5 h-5 rounded-full bg-dark-surface border border-dark-border flex items-center justify-center text-dark-muted hover:text-status-error hover:border-status-error transition-colors shadow-sm"
-            style={{ transform: `translate(-50%,-50%) translate(${labelX}px,${labelY}px)`, pointerEvents: 'all' }}
+            className="nodrag nopan absolute w-5 h-5 rounded-full border flex items-center justify-center shadow-sm transition-colors"
+            style={{
+              transform: `translate(-50%,-50%) translate(${labelX}px,${labelY}px)`,
+              pointerEvents: 'all',
+              background: '#fff',
+              borderColor: 'rgba(210,225,232,0.92)',
+              color: 'rgba(8,15,44,0.45)',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#ef4444' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(210,225,232,0.92)'; e.currentTarget.style.color = 'rgba(8,15,44,0.45)' }}
             onClick={e => { e.stopPropagation(); deleteEdge(id) }}
           >
             <X className="w-2.5 h-2.5" />
@@ -130,74 +214,160 @@ function WorkflowNode({ id, data, selected }) {
     return entries.slice(0, 2).map(([, v]) => String(v)).join(' · ')
   }, [config])
 
+  const shadowStyle = selected
+    ? `0 0 0 2.5px ${color}55, 0 0 0 5px ${color}18, 0 12px 32px ${color}20, 0 4px 10px rgba(6,10,32,0.10)`
+    : hovered
+    ? `0 8px 24px rgba(6,10,32,0.13), 0 2px 6px rgba(6,10,32,0.06), inset 0 1px 0 rgba(255,255,255,0.92)`
+    : `0 4px 16px rgba(6,10,32,0.08), 0 1px 4px rgba(6,10,32,0.05), inset 0 1px 0 rgba(255,255,255,0.90)`
+
   return (
     <div
-      style={{ borderColor: color, minWidth: 220, background: 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96))' }}
-      className={`relative rounded-[20px] border shadow-[0_18px_40px_rgba(15,23,42,0.10)] transition-all ${selected ? 'shadow-[0_0_0_4px_rgba(37,99,235,0.18),0_22px_48px_rgba(37,99,235,0.18)] -translate-y-0.5' : 'hover:-translate-y-0.5 hover:shadow-[0_22px_50px_rgba(15,23,42,0.14)]'}`}
+      style={{
+        minWidth: 220,
+        borderLeft: `3px solid ${color}`,
+        borderTop: `1px solid ${color}28`,
+        borderRight: `1px solid ${color}18`,
+        borderBottom: `1px solid ${color}18`,
+        borderRadius: 16,
+        background: 'linear-gradient(160deg, rgba(255,255,255,0.99) 0%, rgba(248,251,254,0.97) 100%)',
+        boxShadow: shadowStyle,
+        transform: selected ? 'translateY(-1px)' : hovered ? 'translateY(-1px)' : 'none',
+        transition: 'box-shadow 0.18s ease, transform 0.15s ease',
+      }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       data-nodeid={id}
     >
-      {/* Hover delete button */}
+      {/* Delete button on hover */}
       {hovered && !isInitial && (
         <button
-          className="nodrag absolute -top-2 -right-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-dark-border bg-white text-dark-muted shadow-md transition-colors hover:border-status-error hover:text-status-error"
+          className="nodrag absolute -top-2.5 -right-2.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-white text-dark-muted shadow-md transition-colors hover:text-status-danger"
+          style={{ border: '1px solid rgba(210,225,232,0.92)' }}
           onClick={e => { e.stopPropagation(); deleteNode(id) }}
         >
           <Trash2 className="w-2.5 h-2.5" />
         </button>
       )}
 
-      {/* Target handle (top) — hidden for triggers */}
+      {/* Target handle */}
       {!isTrigger && (
-        <Handle type="target" position={Position.Top}
-          style={{ background: color, width: 12, height: 12, border: '2.5px solid #ffffff', boxShadow: '0 0 0 1px rgba(15,23,42,0.08)', top: -7 }} />
+        <Handle
+          type="target"
+          position={Position.Top}
+          style={{
+            background: color,
+            width: 10,
+            height: 10,
+            border: '2px solid #ffffff',
+            boxShadow: `0 0 0 2px ${color}28`,
+            top: -6,
+          }}
+        />
       )}
 
       {/* Header */}
       <div
-        style={{ background: `linear-gradient(135deg, ${color}22, rgba(255,255,255,0.92))`, borderBottom: `1px solid ${color}22` }}
-        className="flex items-center gap-2 rounded-t-[18px] px-3 py-2.5"
+        style={{
+          background: `linear-gradient(135deg, ${color}1a 0%, rgba(255,255,255,0.70) 100%)`,
+          borderBottom: `1px solid ${color}1e`,
+          borderRadius: '13px 13px 0 0',
+        }}
+        className="flex items-center gap-2.5 px-3 py-2.5"
       >
         {Icon && (
-          <div className="flex h-7 w-7 items-center justify-center rounded-xl flex-shrink-0" style={{ background: `${color}18` }}>
-            <Icon style={{ color }} className="w-3.5 h-3.5 flex-shrink-0" />
+          <div
+            className="flex items-center justify-center flex-shrink-0"
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 10,
+              background: `${color}14`,
+              border: `1px solid ${color}20`,
+            }}
+          >
+            <Icon style={{ color, width: 14, height: 14 }} />
           </div>
         )}
-        <div className="min-w-0">
-          <span style={{ color }} className="block truncate text-xs font-bold leading-none">{label}</span>
-          <span className="mt-1 block text-[10px] uppercase tracking-[0.18em] text-dark-muted">
-            {isTrigger ? 'Trigger' : isCondition ? 'Condicao' : isFim ? 'Fim' : 'Acao'}
+        <div className="min-w-0 flex-1">
+          <span
+            style={{ color }}
+            className="block truncate text-xs font-bold leading-none tracking-tight"
+          >
+            {label}
+          </span>
+          <span className="mt-1 block text-[10px] uppercase tracking-[0.16em] text-dark-muted/70 leading-none">
+            {isTrigger ? 'Trigger' : isCondition ? 'Condição' : isFim ? 'Fim' : 'Ação'}
           </span>
         </div>
         {isInitial && (
-          <span className="ml-auto text-[9px] font-semibold px-1 py-0.5 rounded" style={{ background: color + '33', color }}>início</span>
+          <span
+            className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0"
+            style={{ background: color + '22', color }}
+          >
+            início
+          </span>
         )}
       </div>
 
       {/* Body */}
-      <div className="rounded-b-[18px] px-3 py-3" style={{ minHeight: 64 }}>
+      <div className="px-3 py-2.5" style={{ minHeight: 52 }}>
         {configSummary ? (
           <p className="text-[11px] text-dark-muted leading-relaxed">{configSummary}</p>
         ) : (
-          <p className="text-[11px] text-dark-muted/50 italic">Clique para configurar</p>
+          <p className="text-[11px] italic" style={{ color: 'rgba(78,89,117,0.42)' }}>
+            Clique para configurar
+          </p>
         )}
       </div>
 
-      {/* Source handle(s) — hidden for fim */}
+      {/* Source handles */}
       {!isFim && !isCondition && (
-        <Handle type="source" position={Position.Bottom}
-          style={{ background: color, width: 12, height: 12, border: '2.5px solid #ffffff', boxShadow: '0 0 0 1px rgba(15,23,42,0.08)', bottom: -7 }} />
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          style={{
+            background: color,
+            width: 10,
+            height: 10,
+            border: '2px solid #ffffff',
+            boxShadow: `0 0 0 2px ${color}28`,
+            bottom: -6,
+          }}
+        />
       )}
       {isCondition && (
         <>
-          <Handle id="yes" type="source" position={Position.Bottom}
-            style={{ background: '#10B981', width: 12, height: 12, border: '2.5px solid #ffffff', boxShadow: '0 0 0 1px rgba(15,23,42,0.08)', bottom: -7, left: '30%' }} />
-          <Handle id="no" type="source" position={Position.Bottom}
-            style={{ background: '#EF4444', width: 12, height: 12, border: '2.5px solid #ffffff', boxShadow: '0 0 0 1px rgba(15,23,42,0.08)', bottom: -7, left: '70%' }} />
+          <Handle
+            id="yes"
+            type="source"
+            position={Position.Bottom}
+            style={{
+              background: '#10B981',
+              width: 10,
+              height: 10,
+              border: '2px solid #ffffff',
+              boxShadow: '0 0 0 2px rgba(16,185,129,0.28)',
+              bottom: -6,
+              left: '30%',
+            }}
+          />
+          <Handle
+            id="no"
+            type="source"
+            position={Position.Bottom}
+            style={{
+              background: '#EF4444',
+              width: 10,
+              height: 10,
+              border: '2px solid #ffffff',
+              boxShadow: '0 0 0 2px rgba(239,68,68,0.28)',
+              bottom: -6,
+              left: '70%',
+            }}
+          />
           <div className="absolute -bottom-5 flex w-full px-2 pointer-events-none">
             <span style={{ left: 'calc(30% - 10px)' }} className="absolute text-[10px] font-bold text-status-success">Sim</span>
-            <span style={{ left: 'calc(70% - 8px)' }}  className="absolute text-[10px] font-bold text-status-error">Não</span>
+            <span style={{ left: 'calc(70% - 8px)' }}  className="absolute text-[10px] font-bold text-status-danger">Não</span>
           </div>
         </>
       )}
@@ -212,16 +382,47 @@ const edgeTypes = { deletable: DeletableEdge }
 
 function PainelNos() {
   return (
-    <div className="flex flex-shrink-0 flex-col overflow-y-auto border-r border-dark-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(241,245,249,0.96))]" style={{ width: 260 }}>
-      <div className="border-b border-dark-border/60 px-4 py-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-dark-muted">Biblioteca</p>
-        <p className="mt-1 text-xs text-dark-muted">Arraste componentes para montar a jornada.</p>
+    <div
+      className="flex flex-shrink-0 flex-col overflow-y-auto"
+      style={{
+        width: 248,
+        background: 'rgba(255,255,255,0.94)',
+        backdropFilter: 'blur(12px)',
+        borderRight: '1px solid rgba(210,225,232,0.88)',
+        boxShadow: '4px 0 18px rgba(6,10,32,0.05)',
+        animation: 'jrn-slide-left 0.24s cubic-bezier(0.25,0.46,0.45,0.94)',
+      }}
+    >
+      {/* Header */}
+      <div
+        className="flex-shrink-0 px-4 py-4"
+        style={{ borderBottom: '1px solid rgba(210,225,232,0.70)' }}
+      >
+        <div className="flex items-center gap-2 mb-1">
+          <div
+            className="w-5 h-5 rounded-md flex items-center justify-center"
+            style={{ background: 'rgba(0,0,121,0.10)' }}
+          >
+            <Layers className="w-3 h-3" style={{ color: '#000079' }} />
+          </div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.20em]" style={{ color: '#000079' }}>
+            Biblioteca
+          </p>
+        </div>
+        <p className="text-[11px] text-dark-muted leading-relaxed" style={{ paddingLeft: 28 }}>
+          Arraste para montar o fluxo
+        </p>
       </div>
+
+      {/* Node groups */}
       {NODE_GROUPS.map((group, gi) => (
         <div key={group.label}>
-          {gi > 0 && <div className="mx-2 border-t border-dark-border/40" />}
+          {gi > 0 && <div style={{ height: 1, background: 'rgba(210,225,232,0.55)', margin: '0 12px' }} />}
           <div className="px-3 py-3">
-            <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: group.color }}>
+            <p
+              className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.18em]"
+              style={{ color: group.color }}
+            >
               {group.label}
             </p>
             <div className="space-y-1">
@@ -233,14 +434,29 @@ function PainelNos() {
                     e.dataTransfer.setData('application/workflow-tipo', item.tipo)
                     e.dataTransfer.effectAllowed = 'move'
                   }}
-                  className="flex cursor-grab select-none items-center gap-2 rounded-2xl border border-dark-border/40 bg-white/72 px-3 py-2 transition-all hover:-translate-y-0.5 hover:shadow-sm active:cursor-grabbing"
+                  className="jrn-lib-item flex cursor-grab select-none items-center gap-2.5 rounded-xl bg-white px-3 py-2"
+                  style={{
+                    borderLeft: `3px solid ${group.color}`,
+                    borderTop: '1px solid rgba(210,225,232,0.55)',
+                    borderRight: '1px solid rgba(210,225,232,0.40)',
+                    borderBottom: '1px solid rgba(210,225,232,0.40)',
+                    boxShadow: '0 1px 4px rgba(6,10,32,0.04)',
+                  }}
                 >
-                  <div style={{ width: 32, height: 32, borderRadius: 12, background: group.color + '1a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <item.Icon style={{ color: group.color, width: 14, height: 14 }} />
+                  <div
+                    className="flex items-center justify-center flex-shrink-0"
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 8,
+                      background: group.color + '14',
+                    }}
+                  >
+                    <item.Icon style={{ color: group.color, width: 13, height: 13 }} />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs font-semibold leading-tight text-dark-text">{item.label}</p>
-                    <p className="mt-0.5 text-[10px] text-dark-muted">{group.label}</p>
+                    <p className="mt-0.5 text-[10px] text-dark-muted/70">{group.label}</p>
                   </div>
                 </div>
               ))}
@@ -257,25 +473,70 @@ function PainelNos() {
 function PainelConfig({ node, onUpdate, onClose, deleteNode }) {
   const { tipo, config = {}, isInitial } = node.data
   const set = (k, v) => onUpdate(node.id, { config: { ...config, [k]: v } })
+  const nodeInfo = findNodeInfo(tipo)
+  const accentColor = nodeInfo.color || '#2B5BA8'
 
   const pipelineOpts = [{ value: '', label: 'Selecionar...' }, ...PIPELINE_COLS.map(c => ({ value: c.id, label: c.label }))]
   const destOpts = [{ value: '', label: 'Selecionar...' }, { value: 'cliente', label: 'Cliente' }, { value: 'responsavel', label: 'Responsável interno' }]
 
   return (
-    <div className="flex flex-shrink-0 flex-col overflow-y-auto border-l border-dark-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(241,245,249,0.96))]" style={{ width: 320 }}>
-      <div className="flex items-center justify-between border-b border-dark-border/60 px-4 py-4">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-dark-muted">Configuracao</p>
-          <p className="mt-1 text-sm font-semibold text-dark-text">{node.data.label}</p>
+    <div
+      className="flex flex-shrink-0 flex-col overflow-y-auto"
+      style={{
+        width: 320,
+        background: 'rgba(255,255,255,0.96)',
+        backdropFilter: 'blur(12px)',
+        borderLeft: '1px solid rgba(210,225,232,0.88)',
+        boxShadow: '-4px 0 18px rgba(6,10,32,0.06)',
+        animation: 'jrn-slide-right 0.22s cubic-bezier(0.25,0.46,0.45,0.94)',
+      }}
+    >
+      {/* Color strip top */}
+      <div
+        style={{
+          height: 3,
+          background: `linear-gradient(90deg, ${accentColor}, ${accentColor}55)`,
+          flexShrink: 0,
+        }}
+      />
+
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-4 py-3 flex-shrink-0"
+        style={{ borderBottom: '1px solid rgba(210,225,232,0.65)' }}
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          {nodeInfo.Icon && (
+            <div
+              className="flex items-center justify-center flex-shrink-0"
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 10,
+                background: accentColor + '14',
+                border: `1px solid ${accentColor}20`,
+              }}
+            >
+              <nodeInfo.Icon style={{ color: accentColor, width: 14, height: 14 }} />
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-dark-muted/70">Configuração</p>
+            <p className="text-sm font-bold text-dark-text truncate">{node.data.label}</p>
+          </div>
         </div>
-        <button onClick={onClose} className="rounded-xl p-1.5 text-dark-muted transition-colors hover:bg-white hover:text-dark-text">
-          <X className="w-4 h-4" />
+        <button
+          onClick={onClose}
+          className="flex-shrink-0 rounded-xl p-1.5 text-dark-muted transition-colors hover:text-dark-text"
+          style={{ background: 'rgba(210,225,232,0.30)' }}
+        >
+          <X className="w-3.5 h-3.5" />
         </button>
       </div>
 
+      {/* Fields */}
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
 
-        {/* Gatilhos — ficha aprovada + lead criado */}
         {(tipo === 'trigger_ficha' || tipo === 'trigger_lead') && (
           <>
             <div>
@@ -300,7 +561,6 @@ function PainelConfig({ node, onUpdate, onClose, deleteNode }) {
           </>
         )}
 
-        {/* Gatilho — lead movido */}
         {tipo === 'trigger_movido' && (
           <>
             <div>
@@ -314,7 +574,6 @@ function PainelConfig({ node, onUpdate, onClose, deleteNode }) {
           </>
         )}
 
-        {/* Gatilho — renovação */}
         {tipo === 'trigger_renovacao' && (
           <div>
             <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Dias antes do vencimento</label>
@@ -323,12 +582,10 @@ function PainelConfig({ node, onUpdate, onClose, deleteNode }) {
           </div>
         )}
 
-        {/* Gatilhos sem config */}
         {(tipo === 'trigger_apolice' || tipo === 'trigger_manual') && (
           <p className="text-xs text-dark-muted/60 italic">Este gatilho não requer configuração adicional.</p>
         )}
 
-        {/* Ação — criar tarefa */}
         {tipo === 'action_tarefa' && (
           <>
             <ConfigField label="Título da tarefa" value={config.titulo || ''} onChange={v => set('titulo', v)} />
@@ -341,7 +598,6 @@ function PainelConfig({ node, onUpdate, onClose, deleteNode }) {
           </>
         )}
 
-        {/* Ação — WhatsApp */}
         {tipo === 'action_whatsapp' && (
           <>
             <div>
@@ -354,7 +610,6 @@ function PainelConfig({ node, onUpdate, onClose, deleteNode }) {
           </>
         )}
 
-        {/* Ação — Email */}
         {tipo === 'action_email' && (
           <>
             <div>
@@ -366,7 +621,6 @@ function PainelConfig({ node, onUpdate, onClose, deleteNode }) {
           </>
         )}
 
-        {/* Ação — mover pipeline */}
         {tipo === 'action_mover' && (
           <div>
             <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Coluna destino</label>
@@ -374,22 +628,18 @@ function PainelConfig({ node, onUpdate, onClose, deleteNode }) {
           </div>
         )}
 
-        {/* Ação — atribuir */}
         {tipo === 'action_atribuir' && (
           <ConfigField label="Responsável" value={config.responsavel || ''} onChange={v => set('responsavel', v)} />
         )}
 
-        {/* Ação — etiqueta */}
         {tipo === 'action_etiqueta' && (
           <ConfigField label="Etiqueta" value={config.etiqueta || ''} onChange={v => set('etiqueta', v)} placeholder="ex: Urgente" />
         )}
 
-        {/* Ação — registrar atividade */}
         {tipo === 'action_atividade' && (
           <ConfigField label="Descrição da atividade" value={config.descricao || ''} onChange={v => set('descricao', v)} textarea />
         )}
 
-        {/* Controle — aguardar */}
         {tipo === 'control_aguardar' && (
           <div className="flex gap-2">
             <div className="flex-1">
@@ -408,7 +658,6 @@ function PainelConfig({ node, onUpdate, onClose, deleteNode }) {
           </div>
         )}
 
-        {/* Controle — condição */}
         {tipo === 'control_condicao' && (
           <>
             <div>
@@ -433,18 +682,24 @@ function PainelConfig({ node, onUpdate, onClose, deleteNode }) {
           </>
         )}
 
-        {/* Controle — fim */}
         {tipo === 'control_fim' && (
           <p className="text-xs text-dark-muted/60 italic">Marca o encerramento do fluxo para este lead.</p>
         )}
       </div>
 
-      {/* Delete node */}
+      {/* Delete zone */}
       {!isInitial && (
-        <div className="px-3 py-3 border-t border-dark-border">
-          <button onClick={() => deleteNode(node.id)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-status-error hover:bg-status-error/10 transition-colors text-xs font-semibold">
-            <Trash2 className="w-3.5 h-3.5" /> Remover nó
+        <div
+          className="flex-shrink-0 px-4 py-3"
+          style={{ borderTop: '1px solid rgba(210,225,232,0.65)' }}
+        >
+          <button
+            onClick={() => deleteNode(node.id)}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-status-danger text-xs font-semibold transition-colors hover:bg-status-danger/8"
+            style={{ border: '1px solid rgba(239,68,68,0.16)' }}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Remover nó
           </button>
         </div>
       )}
@@ -582,51 +837,125 @@ function EditorInner({ journey, onBack, toast }) {
 
   return (
     <EditorContext.Provider value={{ deleteNode, deleteEdge }}>
-      <div className="flex flex-col -m-4 bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(239,246,255,0.96))] md:-m-6" style={{ height: 'calc(100vh - 56px)' }}>
-        {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-dark-border/60 bg-white/80 backdrop-blur-sm flex-shrink-0">
-          <button onClick={handleBack}
-            className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
-            <ArrowLeft className="w-5 h-5" />
+      <style>{EDITOR_STYLES}</style>
+
+      <div
+        className="flex flex-col -m-4 md:-m-6"
+        style={{
+          height: 'calc(100vh - 56px)',
+          background: 'linear-gradient(160deg, rgb(var(--color-bg)) 0%, rgb(var(--color-surface2)) 100%)',
+        }}
+      >
+        {/* ── Header ── */}
+        <div
+          className="flex items-center gap-3 px-4 py-0 flex-shrink-0"
+          style={{
+            height: 52,
+            background: 'rgba(255,255,255,0.93)',
+            backdropFilter: 'blur(12px)',
+            borderBottom: '1px solid rgba(210,225,232,0.80)',
+            boxShadow: '0 1px 8px rgba(6,10,32,0.05)',
+          }}
+        >
+          {/* Left: back + breadcrumb + name */}
+          <button
+            onClick={handleBack}
+            className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl text-dark-muted transition-colors hover:text-dark-text"
+            style={{ background: 'rgba(210,225,232,0.38)' }}
+          >
+            <ArrowLeft className="w-4 h-4" />
           </button>
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-dark-muted">Editor de jornada</p>
+
+          <div
+            className="h-4 w-px flex-shrink-0"
+            style={{ background: 'rgba(210,225,232,0.80)' }}
+          />
+
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-dark-muted/60 leading-none mb-0.5">
+              Editor de Jornada
+            </span>
             <input
               value={nome}
               onChange={e => { setNome(e.target.value); setDirty(true) }}
-              className="mt-1 w-full min-w-0 rounded bg-transparent px-1 text-sm font-bold text-dark-text focus:outline-none focus:ring-1 focus:ring-brand-accent/50"
+              className="w-full min-w-0 bg-transparent text-sm font-bold text-dark-text focus:outline-none leading-none"
+              style={{ letterSpacing: '-0.01em' }}
             />
           </div>
-          <StatusBadge status={currentStatus} />
-          {dirty && <span className="text-[10px] text-amber-500 font-medium flex-shrink-0">Não salvo</span>}
-          <button onClick={() => persistWorkflow()} disabled={saving}
-            className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5 flex-shrink-0">
-            <Save className="w-3.5 h-3.5" />
-            {saving ? 'Salvando...' : 'Salvar Rascunho'}
-          </button>
-          <button onClick={() => persistWorkflow('ativa')} disabled={saving}
-            className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5 flex-shrink-0">
-            ⚡ Publicar
-          </button>
+
+          {/* Right: status + dirty + actions */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <StatusBadge status={currentStatus} />
+
+            {dirty && (
+              <span
+                className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                style={{ background: 'rgba(245,158,11,0.12)', color: '#b45309' }}
+              >
+                <span className="w-1 h-1 rounded-full bg-amber-500" />
+                Não salvo
+              </span>
+            )}
+
+            <button
+              onClick={() => persistWorkflow()}
+              disabled={saving}
+              className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5 h-8"
+            >
+              <Save className="w-3.5 h-3.5" />
+              {saving ? 'Salvando...' : 'Rascunho'}
+            </button>
+
+            <button
+              onClick={() => persistWorkflow('ativa')}
+              disabled={saving}
+              className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5 h-8"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              Publicar
+            </button>
+          </div>
         </div>
 
-        {/* Body: 3-column layout */}
+        {/* ── Body: 3-column ── */}
         <div className="flex flex-1 overflow-hidden">
           <PainelNos />
 
           {/* Canvas */}
           <div
             ref={wrapperRef}
-            className="flex-1 relative"
-            style={{ background: 'radial-gradient(circle at top, rgba(191,219,254,0.45), rgba(248,250,252,0.98) 35%)' }}
+            className="flex-1 relative overflow-hidden"
+            style={{
+              background: `
+                radial-gradient(ellipse 60% 45% at 14% 0%, rgba(0,0,121,0.055) 0%, transparent 54%),
+                radial-gradient(ellipse 50% 38% at 88% 102%, rgba(195,240,242,0.16) 0%, transparent 52%),
+                #F1F5F9
+              `,
+            }}
             onDrop={handleDrop}
             onDragOver={e => e.preventDefault()}
           >
-            <div className="pointer-events-none absolute left-4 top-4 z-10 rounded-[20px] border border-dark-border/50 bg-white/82 px-4 py-3 shadow-sm backdrop-blur-sm">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-dark-muted">Canvas</p>
-              <p className="mt-1 text-sm font-semibold text-dark-text">{nodes.length} nos · {edges.length} conexoes</p>
-              <p className="mt-1 text-xs text-dark-muted">Arraste blocos da biblioteca e conecte o fluxo comercial.</p>
+            {/* Floating stats pill */}
+            <div
+              className="pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-3 px-3 py-2 rounded-2xl"
+              style={{
+                background: 'rgba(255,255,255,0.88)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(210,225,232,0.80)',
+                boxShadow: '0 2px 12px rgba(6,10,32,0.07)',
+              }}
+            >
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#2B5BA8' }} />
+                <span className="text-[11px] font-semibold text-dark-text">{nodes.length} nós</span>
+              </div>
+              <div className="w-px h-3" style={{ background: 'rgba(210,225,232,0.80)' }} />
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#64748B' }} />
+                <span className="text-[11px] font-semibold text-dark-text">{edges.length} conexões</span>
+              </div>
             </div>
+
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -642,12 +971,17 @@ function EditorInner({ journey, onBack, toast }) {
               deleteKeyCode="Delete"
               defaultEdgeOptions={{ type: 'deletable', animated: true }}
             >
-              <Background variant={BackgroundVariant.Dots} color="#CBD5E1" gap={20} size={1.6} />
-              <Controls className="!bg-white !border-slate-200 !shadow-md !rounded-2xl !overflow-hidden" />
+              <Background
+                variant={BackgroundVariant.Dots}
+                color="#94A3B8"
+                gap={24}
+                size={1.5}
+              />
+              <Controls />
               <MiniMap
-                nodeColor={n => findNodeInfo(n.data?.tipo)?.color || '#6366f1'}
-                maskColor="rgba(248,250,252,0.78)"
-                className="!bg-white !border-slate-200 !rounded-2xl !shadow-md"
+                nodeColor={n => findNodeInfo(n.data?.tipo)?.color || '#2B5BA8'}
+                maskColor="rgba(241,245,249,0.80)"
+                nodeStrokeWidth={0}
               />
             </ReactFlow>
           </div>
@@ -685,14 +1019,17 @@ function JourneyCard({ journey, leads, onEdit, onDuplicate, onToggle }) {
 
   return (
     <div className="card flex flex-col overflow-hidden group hover:border-brand-accent/30 transition-colors">
-      {/* Top color strip */}
-      <div className="h-1 w-full rounded-t-[inherit]" style={{ background: 'linear-gradient(90deg, #1A3A6B, #2B5BA8)' }} />
+      {/* Accent strip */}
+      <div className="h-0.5 w-full rounded-t-[inherit]" style={{ background: 'linear-gradient(90deg, #000079, #2B5BA8, rgba(195,240,242,0.60))' }} />
 
       <div className="p-4 flex-1 flex flex-col gap-3">
         {/* Icon + status */}
         <div className="flex items-start justify-between gap-2">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-brand-accent/10">
-            <Map className="w-5 h-5 text-brand-accent" />
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'rgba(0,0,121,0.08)', border: '1px solid rgba(0,0,121,0.12)' }}
+          >
+            <Map className="w-4.5 h-4.5" style={{ color: '#000079' }} />
           </div>
           <StatusBadge status={status} />
         </div>
@@ -748,7 +1085,7 @@ function JourneyCard({ journey, leads, onEdit, onDuplicate, onToggle }) {
             <button onClick={async () => {
               await journeyUpdate(journey.id, { etapas: { ...getWorkflowData(journey), status: 'arquivada' } })
               setConfirmExcluir(false)
-            }} className="text-[10px] px-2 py-1 rounded-lg bg-status-error/10 text-status-error font-semibold hover:bg-status-error/20">
+            }} className="text-[10px] px-2 py-1 rounded-lg bg-status-danger/10 text-status-danger font-semibold hover:bg-status-danger/20">
               Sim
             </button>
             <button onClick={() => setConfirmExcluir(false)}
@@ -758,7 +1095,7 @@ function JourneyCard({ journey, leads, onEdit, onDuplicate, onToggle }) {
           </div>
         ) : (
           <button onClick={() => setConfirmExcluir(true)}
-            className="flex items-center justify-center px-2 py-1.5 rounded-lg text-xs text-dark-muted/60 hover:text-status-error hover:bg-status-error/10 transition-colors"
+            className="flex items-center justify-center px-2 py-1.5 rounded-lg text-xs text-dark-muted/60 hover:text-status-danger hover:bg-status-danger/10 transition-colors"
             title="Excluir">
             <Trash2 className="w-3.5 h-3.5" />
           </button>

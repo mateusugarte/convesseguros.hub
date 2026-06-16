@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react'
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, useDraggable, closestCenter } from '@dnd-kit/core'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, useDraggable } from '@dnd-kit/core'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { STATUS_LABELS, PRODUTO_LABELS, marcarRetornoEnviado } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { AVATAR_COLORS, PRODUTO_COLORS } from '../design-system/tokens'
+import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/kanbanDnd'
 import {
   Home, Building2, Briefcase, FileText as FileTextIcon,
   Clock, User, ClipboardList, CheckCircle2, XCircle, Check, Send,
@@ -375,7 +376,7 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={kanbanPointerCollision}
       onDragStart={({ active }) => setActiveId(active.id)}
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}
@@ -403,7 +404,7 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
         </div>
       </div>
 
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
         {activeCol ? (
           <div
             className="kanban-col flex flex-col"

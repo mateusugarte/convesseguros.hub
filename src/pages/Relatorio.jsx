@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, closestCenter } from '@dnd-kit/core'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core'
 import {
   fetchAnosRelatorio,
   fetchMesesRelatorio,
@@ -16,6 +16,7 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { BarChart2, GripVertical } from 'lucide-react'
 import { PageHeader, MetricCard, DataCard } from '../components/ui'
+import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/kanbanDnd'
 
 const MESES_FULL = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -89,30 +90,35 @@ function initials(n) {
   return (n || '').split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase() || '?'
 }
 
-function RelatorioCard({ ficha, onClick, dragListeners, dragAttributes }) {
+function RelatorioCard({ ficha, onClick, dragListeners, dragAttributes, isDragOverlay = false }) {
   const prodColor = PRODUTO_COLOR[ficha.produto] || '#6B7280'
   const doc = docMask(ficha)
   const nome = nomePrincipal(ficha)
   const orc = ficha.orcamentista_forms
+  const imobiliaria = ficha.imobiliaria || 'Imobiliaria nao informada'
 
   return (
-    <div className="kanban-card" style={{ '--kanban-accent': prodColor }} onClick={onClick}>
+    <div
+      className={`kanban-card${isDragOverlay ? ' kanban-card-dragging' : ''}`}
+      style={{ '--kanban-accent': prodColor }}
+      onClick={onClick}
+    >
+      {!isDragOverlay && dragListeners && dragAttributes && (
+        <button
+          {...dragListeners}
+          {...dragAttributes}
+          type="button"
+          className="kanban-grip"
+          onClick={e => e.stopPropagation()}
+          aria-label="Arrastar ficha"
+        >
+          <GripVertical className="w-3.5 h-3.5" />
+        </button>
+      )}
       <div className="kanban-card-body">
-        <div className="flex items-center justify-between gap-1 mb-1.5">
-          {dragListeners && dragAttributes && (
-            <button
-              {...dragListeners}
-              {...dragAttributes}
-              type="button"
-              className="kanban-grip mt-0.5"
-              onClick={e => e.stopPropagation()}
-              aria-label="Arrastar ficha"
-            >
-              <GripVertical className="w-3.5 h-3.5" />
-            </button>
-          )}
+        <div className="mb-2 flex items-center justify-between gap-2">
           <span
-            className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+            className="inline-flex rounded-full px-2 py-1 text-[10px] font-semibold"
             style={{ background: `${prodColor}20`, color: prodColor }}
           >
             {PRODUTO_LABELS[ficha.produto] || ficha.produto}
@@ -122,24 +128,41 @@ function RelatorioCard({ ficha, onClick, dragListeners, dragAttributes }) {
           </span>
         </div>
 
-        <p className="text-[11px] font-semibold text-dark-text leading-tight truncate">{nome}</p>
-        {doc && <p className="text-[10px] text-dark-muted font-mono">{doc}</p>}
+        <div className="space-y-1.5">
+          <p className="text-[12.5px] font-semibold leading-snug text-dark-text">{nome}</p>
+          <p className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">{imobiliaria}</p>
+        </div>
 
-        {ficha.numero_apolice && (
-          <p className="text-[10px] font-mono" style={{ color: '#2247aa' }}>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {doc && (
+            <span className="rounded-full border border-dark-border/60 bg-dark-surface2/70 px-2 py-1 text-[10px] font-mono text-dark-muted">
+              {doc}
+            </span>
+          )}
+
+          {ficha.numero_apolice && (
+            <span
+              className="rounded-full px-2 py-1 text-[10px] font-mono"
+              style={{ background: '#2247aa15', color: '#2247aa' }}
+            >
             Apólice: {ficha.numero_apolice}
-          </p>
+            </span>
         )}
 
+        </div>
+
         {orc && (
-          <div className="flex items-center gap-1 pt-1 border-t border-dark-border/50 mt-1.5">
+          <div className="mt-3 flex items-center gap-1.5 border-t border-dark-border/50 pt-2">
             <div
-              className="w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold text-white flex-shrink-0"
+              className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
               style={{ background: stringColor(orc) }}
             >
               {initials(orc)}
             </div>
-            <span className="text-[9px] text-dark-muted truncate">{orc.split(' ')[0]}</span>
+            <div className="min-w-0">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Orcamentista</p>
+              <p className="truncate text-[10px] text-dark-text">{orc}</p>
+            </div>
           </div>
         )}
       </div>
@@ -444,7 +467,7 @@ export default function Relatorio() {
 
             <DndContext
               sensors={sensors}
-              collisionDetection={closestCenter}
+              collisionDetection={kanbanPointerCollision}
               onDragStart={({ active }) => setActiveId(active.id)}
               onDragEnd={handleDragEnd}
               onDragCancel={() => setActiveId(null)}
@@ -463,10 +486,10 @@ export default function Relatorio() {
                 </div>
               </div>
 
-              <DragOverlay dropAnimation={null}>
+              <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
                 {activeFicha && (
                   <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none' }}>
-                    <RelatorioCard ficha={activeFicha} onClick={() => {}} />
+                    <RelatorioCard ficha={activeFicha} onClick={() => {}} isDragOverlay />
                   </div>
                 )}
               </DragOverlay>

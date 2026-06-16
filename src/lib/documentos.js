@@ -1,5 +1,16 @@
 import { supabase } from './supabase'
 
+// TTL das URLs assinadas em segundos (1 hora)
+const SIGNED_URL_TTL = 3600
+
+async function gerarSignedUrl(path) {
+  const { data, error } = await supabase.storage
+    .from('documentos')
+    .createSignedUrl(path, SIGNED_URL_TTL)
+  if (error) return null
+  return data.signedUrl
+}
+
 export async function fetchDocumentos({ fichaId, apoliceId }) {
   let q = supabase
     .from('documentos')
@@ -9,7 +20,16 @@ export async function fetchDocumentos({ fichaId, apoliceId }) {
   if (apoliceId) q = q.eq('apolice_id', apoliceId)
   const { data, error } = await q
   if (error) throw error
-  return data || []
+  if (!data || data.length === 0) return []
+
+  // Gerar URL assinada para cada documento (bucket privado)
+  const comUrls = await Promise.all(
+    data.map(async (doc) => ({
+      ...doc,
+      signedUrl: await gerarSignedUrl(doc.url),
+    }))
+  )
+  return comUrls
 }
 
 export async function uploadDocumento({ file, fichaId, apoliceId, cpfCnpj, userId }) {
@@ -18,16 +38,15 @@ export async function uploadDocumento({ file, fichaId, apoliceId, cpfCnpj, userI
   const pasta     = fichaId ? `fichas/${fichaId}` : `apolices/${apoliceId}`
   const caminho   = `${pasta}/${nomeUnico}`
 
-  const { error: uploadErr } = await supabase.storage.from('documentos').upload(caminho, file)
+  const { error: uploadErr } = await supabase.storage
+    .from('documentos')
+    .upload(caminho, file)
   if (uploadErr) return { error: uploadErr }
 
-  // For private bucket: store the storage path, generate signed URL on demand
-  // Store path in url field for now; signed URLs are generated when displaying
-  const { data: { publicUrl } } = supabase.storage.from('documentos').getPublicUrl(caminho)
-
+  // Armazena o path (não a URL pública) — bucket é privado
   const { error: dbErr } = await supabase.from('documentos').insert({
     nome_arquivo:  file.name,
-    url:           publicUrl,
+    url:           caminho,
     tamanho_bytes: file.size,
     tipo_mime:     file.type,
     ficha_id:      fichaId   || null,
@@ -35,10 +54,17 @@ export async function uploadDocumento({ file, fichaId, apoliceId, cpfCnpj, userI
     cpf_cnpj:      cpfCnpj  || null,
     enviado_por:   userId    || null,
   })
+  if (dbErr) {
+    // Limpar arquivo do storage se insert no banco falhou
+    await supabase.storage.from('documentos').remove([caminho])
+  }
   return { error: dbErr }
 }
 
-export async function deletarDocumento(id) {
+export async function deletarDocumento(id, caminho) {
+  if (caminho) {
+    await supabase.storage.from('documentos').remove([caminho])
+  }
   const { error } = await supabase.from('documentos').delete().eq('id', id)
   return error
 }

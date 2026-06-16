@@ -1,16 +1,24 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Car, CheckCircle2, FileText, RefreshCw, Search, X } from 'lucide-react'
+import { format, startOfMonth, startOfWeek } from 'date-fns'
 import { getEmissoesAuto, moverEmissaoColuna, emitirApoliceAuto, getEmissaoColuna, getApolicesAuto } from '../../lib/auto'
 import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../components/ui'
 import { formatDateBR, formatMoney } from './autoShared'
 
 const COLUNAS = [
-  { id: 'pendentes', label: 'Cotacoes pendentes', hint: 'chegam vazias do formulario', tone: 'warning' },
+  { id: 'pendentes', label: 'Cotacoes pendentes', hint: 'entradas novas do n8n e itens sem andamento', tone: 'warning' },
   { id: 'cotacao_feita', label: 'Cotacao feita', hint: 'primeiro corte operacional', tone: 'secondary' },
   { id: 'negociando', label: 'Negociando', hint: 'em tratativa com cliente', tone: 'accent' },
   { id: 'aguardando_vistoria', label: 'Aguardando vistoria', hint: 'dependem de validacao', tone: 'warning' },
   { id: 'emitida', label: 'Emitida', hint: 'prontas para apolice', tone: 'success' },
+]
+
+const PERIOD_OPTIONS = [
+  { value: 'dia', label: 'Dia' },
+  { value: 'semana', label: 'Semana' },
+  { value: 'mes', label: 'Mes' },
+  { value: 'custom', label: 'Personalizado' },
 ]
 
 const FORM_VAZIO = {
@@ -30,12 +38,43 @@ const FORM_VAZIO = {
   nome_repasse: '',
 }
 
+function toDateInput(value) {
+  return format(value, 'yyyy-MM-dd')
+}
+
+function getPeriodoRange(tipo) {
+  const now = new Date()
+  if (tipo === 'dia') {
+    const today = toDateInput(now)
+    return { inicio: today, fim: today }
+  }
+  if (tipo === 'semana') {
+    return { inicio: toDateInput(startOfWeek(now, { weekStartsOn: 1 })), fim: toDateInput(now) }
+  }
+  if (tipo === 'mes') {
+    return { inicio: toDateInput(startOfMonth(now)), fim: toDateInput(now) }
+  }
+  return { inicio: '', fim: '' }
+}
+
 function CardEmissao({ emissao, onDragStart }) {
   const coluna = getEmissaoColuna(emissao)
   const tipo = emissao.cotacoes_auto?.tipo || emissao.tipo
   const isRenovacao = tipo === 'renovacao'
+  const isNovo = !isRenovacao
   const isPendente = coluna === 'pendentes'
-  const accent = isPendente ? 'from-status-warning to-brand-gold' : isRenovacao ? 'from-status-success to-brand-secondary' : 'from-brand-secondary to-brand-accent'
+  const accent = isRenovacao
+    ? 'from-status-success to-brand-secondary'
+    : isPendente
+      ? 'from-brand-accent to-brand-secondary'
+      : 'from-brand-secondary to-brand-accent'
+  const tipoLabel = isRenovacao ? 'Renovacao' : isPendente ? 'Novo lead' : 'Novo'
+  const tipoClass = isRenovacao
+    ? 'bg-status-success/10 text-status-success'
+    : 'bg-brand-secondary/10 text-brand-secondary'
+  const statusClass = isPendente
+    ? 'bg-status-warning/10 text-status-warning'
+    : 'bg-dark-surface2/75 text-dark-muted'
 
   return (
     <button
@@ -43,11 +82,13 @@ function CardEmissao({ emissao, onDragStart }) {
       draggable
       onDragStart={() => onDragStart(emissao)}
       className={`group relative w-full overflow-hidden rounded-[28px] border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 ${
-        isPendente
-          ? 'border-status-warning/20 bg-status-warning/5'
-          : isRenovacao
-            ? 'border-status-success/20 bg-status-success/5'
-            : 'border-brand-secondary/20 bg-brand-secondary/5'
+        isRenovacao
+          ? 'border-status-success/20 bg-status-success/5'
+          : isNovo
+            ? 'border-brand-secondary/25 bg-brand-secondary/5'
+            : 'border-dark-border bg-white/80'
+      } ${
+        isPendente ? 'shadow-[0_10px_30px_rgba(202,138,4,0.08)]' : ''
       }`}
     >
       <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${accent} opacity-80`} />
@@ -63,17 +104,14 @@ function CardEmissao({ emissao, onDragStart }) {
             {emissao.cotacoes_auto?.placa ? `Placa ${emissao.cotacoes_auto.placa}` : 'Sem placa informada ainda'}
           </p>
         </div>
-        <span
-          className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
-            isPendente
-              ? 'bg-status-warning/10 text-status-warning'
-              : isRenovacao
-                ? 'bg-status-success/10 text-status-success'
-                : 'bg-brand-secondary/10 text-brand-secondary'
-          }`}
-        >
-          {isPendente ? 'Pendente' : isRenovacao ? 'Renovacao' : 'Novo'}
-        </span>
+        <div className="flex flex-col items-end gap-1">
+          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${statusClass}`}>
+            {isPendente ? 'Pendente' : 'Em andamento'}
+          </span>
+          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${tipoClass}`}>
+            {tipoLabel}
+          </span>
+        </div>
       </div>
     </button>
   )
@@ -196,16 +234,18 @@ function CampoTexto({ label, campo, value, onChange, type = 'text' }) {
 
 export default function AutoEmissoes() {
   const qc = useQueryClient()
+  const initialRange = useMemo(() => getPeriodoRange('semana'), [])
   const [dragging, setDragging] = useState(null)
   const [dragOver, setDragOver] = useState(null)
   const [modalEmissao, setModalEmissao] = useState(null)
   const [form, setForm] = useState(FORM_VAZIO)
   const [showApolices, setShowApolices] = useState(false)
-  const [filtroInicio, setFiltroInicio] = useState('')
-  const [filtroFim, setFiltroFim] = useState('')
+  const [periodo, setPeriodo] = useState('semana')
+  const [filtroInicio, setFiltroInicio] = useState(initialRange.inicio)
+  const [filtroFim, setFiltroFim] = useState(initialRange.fim)
 
   const { data: emissoes = [] } = useQuery({
-    queryKey: ['auto-emissoes', filtroInicio, filtroFim],
+    queryKey: ['auto-emissoes', periodo, filtroInicio, filtroFim],
     queryFn: () => getEmissoesAuto({ inicio: filtroInicio || undefined, fim: filtroFim || undefined }),
   })
 
@@ -227,6 +267,14 @@ export default function AutoEmissoes() {
 
   function setField(campo, valor) {
     setForm(current => ({ ...current, [campo]: valor }))
+  }
+
+  function handlePeriodoChange(value) {
+    setPeriodo(value)
+    if (value === 'custom') return
+    const range = getPeriodoRange(value)
+    setFiltroInicio(range.inicio)
+    setFiltroFim(range.fim)
   }
 
   function handleDrop(colunaDestino) {
@@ -358,26 +406,52 @@ export default function AutoEmissoes() {
 
       <FilterBar>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs text-dark-muted font-medium">Filtrar por data</span>
-          <input
-            type="date"
-            value={filtroInicio}
-            onChange={e => setFiltroInicio(e.target.value)}
-            className="rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
-          />
-          <span className="text-xs text-dark-muted">ate</span>
-          <input
-            type="date"
-            value={filtroFim}
-            onChange={e => setFiltroFim(e.target.value)}
-            className="rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
-          />
-          {(filtroInicio || filtroFim) && (
+          <span className="text-xs font-medium text-dark-muted">Periodo das emissoes</span>
+          <div className="inline-flex flex-wrap rounded-2xl border border-dark-border/60 bg-white/70 p-1 shadow-sm">
+            {PERIOD_OPTIONS.map(option => {
+              const active = periodo === option.value
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handlePeriodoChange(option.value)}
+                  className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
+                    active ? 'bg-dark-text text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
+          </div>
+          {periodo === 'custom' && (
+            <>
+              <input
+                type="date"
+                value={filtroInicio}
+                onChange={e => setFiltroInicio(e.target.value)}
+                className="rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+              />
+              <span className="text-xs text-dark-muted">ate</span>
+              <input
+                type="date"
+                value={filtroFim}
+                onChange={e => setFiltroFim(e.target.value)}
+                className="rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+              />
+            </>
+          )}
+          {periodo !== 'custom' && filtroInicio && filtroFim && (
+            <span className="text-xs text-dark-muted">
+              {formatDateBR(filtroInicio)} ate {formatDateBR(filtroFim)}
+            </span>
+          )}
+          {(filtroInicio || filtroFim || periodo !== 'semana') && (
             <button
-              onClick={() => { setFiltroInicio(''); setFiltroFim('') }}
+              onClick={() => handlePeriodoChange('semana')}
               className="rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted hover:border-brand-accent/40 hover:text-dark-text"
             >
-              Limpar filtro
+              Voltar para semana
             </button>
           )}
         </div>

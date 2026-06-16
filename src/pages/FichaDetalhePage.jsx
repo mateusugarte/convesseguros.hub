@@ -494,6 +494,7 @@ export default function FichaDetalhePage() {
               <SeguradoraSelect
                 value={ficha.seguradora || ''}
                 onChange={v => updateField('seguradora', v || null)}
+                produto={ficha.produto}
               />
             </div>
             <InlineField

@@ -1,6 +1,6 @@
 ﻿import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, useDraggable, closestCenter } from '@dnd-kit/core'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, useDraggable } from '@dnd-kit/core'
 import {
   useComercial, leadAdd, leadMover, leadUpdate, saleAdd, eventAdd,
   PIPELINE_COLS, PRODUTOS, ORIGENS, MOTIVOS_RECUSA, TAGS_DEFAULT,
@@ -15,6 +15,7 @@ import {
 import { Select } from '../../components/ui/Select'
 import { DatePicker } from '../../components/ui/DatePicker'
 import { CrmMetricCard, CrmPageHeader, CrmSectionCard } from '../../components/comercial'
+import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../../lib/kanbanDnd'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -58,8 +59,13 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
 
   return (
     <div
-      className={`kanban-card group ${ghost ? 'opacity-30' : ''} ${selected ? 'ring-1 ring-brand-accent/20' : ''}`}
-      style={{ '--kanban-accent': col?.color || '#4A90D9' }}
+      className={`kanban-card group ${ghost ? 'opacity-30' : ''} ${selected ? 'ring-2 ring-brand-accent/25' : ''}`}
+      style={{
+        '--kanban-accent': col?.color || '#4A90D9',
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(241,245,249,0.92))',
+        borderColor: selected ? 'rgba(37, 99, 235, 0.28)' : 'rgba(148, 163, 184, 0.2)',
+        boxShadow: selected ? '0 18px 38px rgba(37, 99, 235, 0.12)' : '0 12px 28px rgba(15, 23, 42, 0.08)',
+      }}
     >
       <div className="kanban-card-body pl-2 pr-1">
         {/* Row 1: avatar/select + nome + score */}
@@ -113,12 +119,21 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
           </div>
         )}
 
-        {lead.origem && (
-          <span className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full mb-1.5"
-            style={{ background: 'rgba(99,102,241,0.12)', color: '#818cf8' }}>
-            {lead.origem}
-          </span>
-        )}
+        <div className="mb-1.5 flex flex-wrap gap-1.5">
+          {lead.origem && (
+            <span
+              className="inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-semibold"
+              style={{ background: 'rgba(59,130,246,0.1)', borderColor: 'rgba(59,130,246,0.18)', color: '#1d4ed8' }}
+            >
+              {lead.origem}
+            </span>
+          )}
+          {lead.coluna === 'venda' && (
+            <span className="inline-flex items-center rounded-full border border-emerald-700/15 bg-emerald-700/10 px-2 py-0.5 text-[9px] font-bold text-emerald-800">
+              Venda
+            </span>
+          )}
+        </div>
 
         {leadTags.length > 0 && (
           <div className="flex gap-1 flex-wrap mb-1.5">
@@ -134,7 +149,7 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
         )}
 
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <div className="rounded-xl border border-dark-border/40 bg-white/55 px-2 py-2">
+          <div className="rounded-xl border border-slate-300/55 bg-white/80 px-2 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
             <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Última atividade</p>
             <div className={`mt-1 inline-flex items-center gap-1 text-[10px] font-semibold ${
               isUrgent ? 'text-status-error' : isWarn ? 'text-status-warning' : 'text-dark-text'
@@ -143,7 +158,7 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
               <span>{fmtIdleDays(dias)}</span>
             </div>
           </div>
-          <div className="rounded-xl border border-dark-border/40 bg-white/55 px-2 py-2">
+          <div className="rounded-xl border border-slate-300/55 bg-white/80 px-2 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
             <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Próxima ação</p>
             <p className="mt-1 truncate text-[10px] font-semibold text-brand-accent">
               {lead.proximaAcao || 'Definir próximo passo'}
@@ -799,7 +814,7 @@ export default function Pipeline() {
             <div style={{ height: 'calc(100vh - 28rem)' }} className="min-h-[520px] px-5 pb-5">
               <DndContext
                 sensors={sensors}
-                collisionDetection={closestCenter}
+                collisionDetection={kanbanPointerCollision}
                 onDragStart={({ active }) => setActiveId(active.id)}
                 onDragEnd={handleDragEnd}
               >
@@ -817,7 +832,7 @@ export default function Pipeline() {
                     />
                   ))}
                 </div>
-                <DragOverlay dropAnimation={null}>
+                <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
                   {activeLead ? (
                     <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.4))' }}>
                       <LeadCard

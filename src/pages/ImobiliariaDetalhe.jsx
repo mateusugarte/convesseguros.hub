@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../contexts/ToastContext'
-import { ArrowLeft, Pencil, X, Check, Plus } from 'lucide-react'
+import { ArrowLeft, Pencil, X, Check, Plus, Upload, Building2 } from 'lucide-react'
 import { Select } from '../components/ui/Select'
 import { PageHeader, MetricCard, DataCard } from '../components/ui'
 import { fetchCodigos, fetchSeguradoras, upsertCodigo, deletarCodigo } from '../lib/imobiliariasCodigos'
+import { replaceEntityImage } from '../lib/entityMedia'
 
 function CampoEditavel({ label, value, onSave }) {
   const [editing, setEditing] = useState(false)
@@ -87,6 +88,7 @@ export default function ImobiliariaDetalhe() {
   const [loading, setLoading] = useState(true)
   const [novoAlias, setNovoAlias] = useState('')
   const [addingAlias, setAddingAlias] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   const [codigos, setCodigos] = useState([])
   const [seguradoras, setSeguradoras] = useState([])
@@ -97,7 +99,7 @@ export default function ImobiliariaDetalhe() {
     setLoading(true)
     const { data } = await supabase
       .from('imobiliarias')
-      .select('id, nome_canonico, ativa, created_at, imobiliaria_aliases(id, alias)')
+      .select('id, nome_canonico, ativa, created_at, imagem_url, imagem_path, imobiliaria_aliases(id, alias)')
       .eq('id', id)
       .single()
     setImob(data)
@@ -143,6 +145,40 @@ export default function ImobiliariaDetalhe() {
     await supabase.from('imobiliaria_aliases').delete().eq('id', aliasId)
     toast({ type: 'success', title: 'Variação removida' })
     carregar()
+  }
+
+  async function handleImageUpload(event) {
+    const file = event.target.files?.[0]
+    if (!file || !imob) return
+
+    setUploadingImage(true)
+    const uploaded = await replaceEntityImage({
+      file,
+      entityType: 'imobiliaria',
+      entityId: imob.id,
+      previousPath: imob.imagem_path || null,
+    })
+
+    if (uploaded.error) {
+      setUploadingImage(false)
+      toast({ type: 'error', title: 'Erro ao enviar imagem', message: uploaded.error.message })
+      return
+    }
+
+    const { error } = await supabase
+      .from('imobiliarias')
+      .update({ imagem_url: uploaded.url, imagem_path: uploaded.path })
+      .eq('id', id)
+
+    setUploadingImage(false)
+
+    if (error) {
+      toast({ type: 'error', title: 'Erro ao salvar imagem', message: error.message })
+      return
+    }
+
+    setImob(prev => ({ ...prev, imagem_url: uploaded.url, imagem_path: uploaded.path }))
+    toast({ type: 'success', title: 'Imagem atualizada' })
   }
 
   if (loading) {
@@ -194,6 +230,23 @@ export default function ImobiliariaDetalhe() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-4">
+          <DataCard title="Imagem" description="Imagem usada nos cards e seletores da imobiliária.">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="w-24 h-24 rounded-2xl border border-dark-border bg-white/70 overflow-hidden flex items-center justify-center">
+                {imob.imagem_url ? (
+                  <img src={imob.imagem_url} alt={imob.nome_canonico} className="w-full h-full object-cover" />
+                ) : (
+                  <Building2 className="w-10 h-10 text-dark-muted/40" />
+                )}
+              </div>
+              <label className={`btn-secondary text-sm cursor-pointer flex items-center gap-2 ${uploadingImage ? 'opacity-50 pointer-events-none' : ''}`}>
+                <Upload className="w-4 h-4" />
+                {uploadingImage ? 'Enviando...' : 'Enviar imagem'}
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+              </label>
+            </div>
+          </DataCard>
+
           <DataCard title="Dados do sistema" description="Campos principais e status da imobiliária.">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
               <CampoEditavel label="Nome no sistema" value={imob.nome_canonico} onSave={v => updateField('nome_canonico', v)} />

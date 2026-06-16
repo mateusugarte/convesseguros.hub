@@ -59,7 +59,7 @@ export default function SecaoDocumentos({ fichaId, apoliceId, cpfCnpj }) {
 
   async function handleDeletar(doc) {
     if (!confirm(`Excluir "${doc.nome_arquivo}"?`)) return
-    const error = await deletarDocumento(doc.id)
+    const error = await deletarDocumento(doc.id, doc.url)
     if (error) { toast({ type: 'error', title: 'Erro ao excluir' }); return }
     toast({ type: 'success', title: 'Documento excluído' })
     setDocs(prev => prev.filter(d => d.id !== doc.id))
@@ -115,8 +115,8 @@ export default function SecaoDocumentos({ fichaId, apoliceId, cpfCnpj }) {
                   {' · '}{format(parseISO(d.created_at), 'dd/MM/yy', { locale: ptBR })}
                 </p>
               </div>
-              <a href={d.url} target="_blank" rel="noreferrer"
-                className="text-dark-muted hover:text-brand-accent transition-colors p-1">
+              <a href={d.signedUrl || '#'} target="_blank" rel="noreferrer"
+                className={`transition-colors p-1 ${d.signedUrl ? 'text-dark-muted hover:text-brand-accent' : 'text-dark-muted/30 pointer-events-none'}`}>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
               <button onClick={() => handleDeletar(d)}

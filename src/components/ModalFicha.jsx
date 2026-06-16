@@ -364,6 +364,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
               <SeguradoraSelect
                 value={form.seguradora || ''}
                 onChange={v => set('seguradora', v)}
+                produto={form.produto}
               />
             </Field>
             <div className="col-span-2">

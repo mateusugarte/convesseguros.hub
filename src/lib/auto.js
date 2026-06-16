@@ -97,7 +97,11 @@ export async function getCotacoesAuto({ tipo, status, seguradora, inicio, fim } 
 export async function criarCotacaoAuto(payload) {
   const { data, error } = await supabase
     .from('cotacoes_auto')
-    .insert(payload)
+    .insert({
+      ...payload,
+      tipo: payload.tipo || 'novo',
+      status: payload.status || 'pendente',
+    })
     .select()
     .single()
   if (error) throw error
@@ -113,10 +117,55 @@ export async function atualizarStatusCotacao(id, status) {
 }
 
 // Emissoes
+async function sincronizarEmissoesPendentes({ inicio, fim } = {}) {
+  let cotacoesQuery = supabase
+    .from('cotacoes_auto')
+    .select('id, cliente_id, tipo, created_at')
+
+  if (inicio) cotacoesQuery = cotacoesQuery.gte('created_at', `${inicio}T00:00:00`)
+  if (fim) cotacoesQuery = cotacoesQuery.lte('created_at', `${fim}T23:59:59`)
+
+  const { data: cotacoes, error: cotacoesError } = await cotacoesQuery
+  if (cotacoesError) throw cotacoesError
+  if (!cotacoes?.length) return
+
+  const cotacaoIds = cotacoes.map(item => item.id).filter(Boolean)
+  if (!cotacaoIds.length) return
+
+  const { data: emissoesExistentes, error: emissoesError } = await supabase
+    .from('emissoes_auto')
+    .select('cotacao_id')
+    .in('cotacao_id', cotacaoIds)
+
+  if (emissoesError) throw emissoesError
+
+  const existentes = new Set((emissoesExistentes ?? []).map(item => item.cotacao_id).filter(Boolean))
+  const faltantes = cotacoes.filter(item => !existentes.has(item.id))
+
+  if (!faltantes.length) return
+
+  const payload = faltantes.map(item => ({
+    cotacao_id: item.id,
+    cliente_id: item.cliente_id,
+    tipo: item.tipo,
+    coluna: null,
+    created_at: item.created_at,
+    updated_at: item.created_at,
+  }))
+
+  const { error: insertError } = await supabase
+    .from('emissoes_auto')
+    .insert(payload)
+
+  if (insertError) throw insertError
+}
+
 export async function getEmissoesAuto({ inicio, fim } = {}) {
+  await sincronizarEmissoesPendentes({ inicio, fim })
+
   let q = supabase
     .from('emissoes_auto')
-    .select('*, clientes_auto(nome_completo, telefone, celular, email), cotacoes_auto(tipo, modelo_veiculo, placa)')
+    .select('*, clientes_auto(nome_completo, cpf, telefone, celular, email), cotacoes_auto(tipo, modelo_veiculo, placa)')
     .order('created_at', { ascending: false })
 
   if (inicio) q = q.gte('created_at', `${inicio}T00:00:00`)
@@ -323,11 +372,12 @@ export async function getAutoCotacoesResumo({ tipo, inicio, fim } = {}) {
   return {
     total: cotacoes.length,
     mesAtual: cotacoesMes.length,
-    abertas: cotacoes.filter(item => item.status === 'aberta').length,
+    pendentes: cotacoes.filter(item => item.status === 'pendente' || item.status === 'aberta').length,
+    abertas: cotacoes.filter(item => item.status === 'pendente' || item.status === 'aberta').length,
     convertidas: cotacoes.filter(item => item.status === 'convertida').length,
     perdidas: cotacoes.filter(item => item.status === 'perdida').length,
     taxaConversao: cotacoes.length > 0 ? cotacoes.filter(item => item.status === 'convertida').length / cotacoes.length : 0,
-    porStatus: countBy(cotacoes, item => item.status || 'aberta'),
+    porStatus: countBy(cotacoes, item => item.status || 'pendente'),
     serieMensal,
   }
 }
@@ -338,7 +388,7 @@ export async function getGraficoCotacoesStatus(meses = 6) {
     meses,
     getDate: item => item.created_at,
     getValue: subset => ({
-      abertas: subset.filter(item => item.status === 'aberta').length,
+      abertas: subset.filter(item => item.status === 'pendente' || item.status === 'aberta').length,
       convertidas: subset.filter(item => item.status === 'convertida').length,
       perdidas: subset.filter(item => item.status === 'perdida').length,
     }),

@@ -164,6 +164,7 @@ export default function AutoCotacoes() {
       return criarCotacaoAuto({
         cliente_id: cliente.id,
         tipo: 'novo',
+        status: 'pendente',
         celular: dados.celular || null,
         email: dados.email || null,
         estado_civil: dados.estado_civil || null,
@@ -203,6 +204,7 @@ export default function AutoCotacoes() {
       return criarCotacaoAuto({
         cliente_id: cliente?.id ?? null,
         tipo: 'renovacao',
+        status: 'pendente',
         seguradora_preferencial: {
           ...dados.seguradora_preferencial,
           valor_comissao: calcComissao(dados.seguradora_preferencial),

@@ -594,7 +594,7 @@ export default function BaseLeads() {
                     </td>
                     <td className="px-3 py-3.5" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>
                       {lead.apoliceAtiva
-                        ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-500/15 text-green-400">Ativa</span>
+                        ? <span className="inline-flex items-center rounded-full border border-emerald-700/15 bg-emerald-700/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">Ativa</span>
                         : <span className="text-dark-muted text-xs">—</span>}
                     </td>
                     <td className="px-2 py-3.5" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>

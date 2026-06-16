@@ -53,6 +53,27 @@ const SCORE_CONVES = [
   { id: 'D', label: 'D', desc: 'Baixa prioridade — mês atual', color: '#6B7280', bg: 'rgba(107,114,128,0.1)' },
 ]
 
+const QUALIFICATION_STORAGE_KEY = 'comercial_lead_qualification'
+
+function readLeadQualification(leadId) {
+  try {
+    const raw = localStorage.getItem(QUALIFICATION_STORAGE_KEY)
+    const parsed = raw ? JSON.parse(raw) : {}
+    return parsed[leadId] || ''
+  } catch {
+    return ''
+  }
+}
+
+function writeLeadQualification(leadId, value) {
+  try {
+    const raw = localStorage.getItem(QUALIFICATION_STORAGE_KEY)
+    const parsed = raw ? JSON.parse(raw) : {}
+    parsed[leadId] = value
+    localStorage.setItem(QUALIFICATION_STORAGE_KEY, JSON.stringify(parsed))
+  } catch {}
+}
+
 // ── ModalEditLead ─────────────────────────────────────────────────────────────
 
 function ModalEditLead({ lead, onClose, toast }) {
@@ -527,8 +548,12 @@ function TabTarefas({ lead, events, toast }) {
 function TabQualificacao({ lead, tags, toast }) {
   const [resumo,  setResumo]  = useState(lead.resumo  || '')
   const [obs,     setObs]     = useState(lead.observacoes || '')
-  const [scoring, setScoring] = useState(null)
+  const [scoring, setScoring] = useState(() => readLeadQualification(lead.id))
   const debounceRef = useRef({})
+
+  useEffect(() => {
+    setScoring(readLeadQualification(lead.id))
+  }, [lead.id])
 
   function autosave(key, val) {
     clearTimeout(debounceRef.current[key])
@@ -552,14 +577,30 @@ function TabQualificacao({ lead, tags, toast }) {
     </span>
   )
 
+  function handleQualificationChange(value) {
+    setScoring(value)
+    writeLeadQualification(lead.id, value)
+    toast({ type: 'success', title: 'Qualificação atualizada' })
+  }
+
   return (
     <div className="space-y-5">
       {/* Score CONVES */}
       <div className="card p-4 space-y-3">
-        <label className={LBL}>Score CONVES</label>
-        <div className="grid grid-cols-4 gap-2">
+        <label className={LBL}>Qualificação do lead</label>
+        <Select
+          value={scoring}
+          onChange={handleQualificationChange}
+          label="Qualificação"
+          placeholder="Selecionar qualificação..."
+          options={[
+            { value: '', label: 'Sem classificação' },
+            ...SCORE_CONVES.map(s => ({ value: s.id, label: `${s.id} · ${s.desc}` })),
+          ]}
+        />
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
           {SCORE_CONVES.map(s => (
-            <button key={s.id} onClick={() => setScoring(s.id)}
+            <button key={s.id} onClick={() => handleQualificationChange(s.id)}
               className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1 transition-all
                 ${scoring === s.id ? 'border-current' : 'border-dark-border hover:border-dark-text/30'}`}
               style={scoring === s.id ? { borderColor: s.color, background: s.bg, color: s.color } : {}}>
@@ -574,7 +615,7 @@ function TabQualificacao({ lead, tags, toast }) {
           </p>
         )}
         <p className="text-[10px] text-dark-muted/50 flex items-center gap-1">
-          <AlertCircle className="w-2.5 h-2.5" /> Score visual apenas — salvo no DB requer migração
+          <AlertCircle className="w-2.5 h-2.5" /> Qualificação visual salva localmente neste navegador
         </p>
       </div>
 
@@ -783,12 +824,21 @@ function TabJornada({ lead, journeys, events, toast }) {
 
   if (!lead.jornada_id) {
     return (
-      <div className="card p-4 space-y-3">
-        <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Aplicar Jornada</p>
-        <p className="text-sm text-dark-muted">Escolha uma jornada para acompanhar a evolução deste lead.</p>
+      <div className="card space-y-4 border border-brand-accent/15 bg-white/80 p-4 shadow-sm">
+        <div className="space-y-1">
+          <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Aplicar Jornada</p>
+          <p className="text-sm text-dark-muted">Escolha uma jornada para acompanhar a evolução deste lead.</p>
+        </div>
+        {journeys.length === 0 && (
+          <div className="rounded-2xl border border-dark-border/60 bg-dark-surface/50 px-4 py-3 text-sm text-dark-muted">
+            Nenhuma jornada cadastrada ainda em Comercial &gt; Jornadas.
+          </div>
+        )}
         <Select
           value={jornadaSelecionada}
           onChange={setJornadaSelecionada}
+          label="Jornadas disponíveis"
+          searchable
           placeholder="Selecionar jornada..."
           options={[{ value: '', label: 'Selecionar...' }, ...journeys.map(j => ({ value: j.id, label: j.nome }))]}
         />
@@ -1000,6 +1050,8 @@ export default function LeadDetalhe() {
   const currentCol = PIPELINE_COLS.find(c => c.id === lead.coluna)
   const score      = calcScore(lead)
   const scoreBand  = scoreFaixa(score)
+  const qualification = readLeadQualification(lead.id)
+  const qualificationMeta = SCORE_CONVES.find(item => item.id === qualification)
   const taskCount  = events.filter(e => e.tipo === 'Tarefa').length
   const noteCount  = events.filter(e => e.tipo === 'Nota').length
   const daysIdle   = lead.ultimaAtividade ? diffDias(lead.ultimaAtividade) : null
@@ -1071,6 +1123,14 @@ export default function LeadDetalhe() {
           {lead.tipo      && <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {lead.tipo}</span>}
           {lead.criadoEm  && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Criado {fmtDateShort(lead.criadoEm)}</span>}
           {lead.ultimaAtividade && <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Ativo {fmtDate(lead.ultimaAtividade)}</span>}
+          {qualificationMeta && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold"
+              style={{ color: qualificationMeta.color, background: qualificationMeta.bg }}
+            >
+              <Check className="h-3 w-3" /> Qualificação {qualificationMeta.id}
+            </span>
+          )}
         </div>
         <PipelineFunnel lead={lead} onMove={handleMove} />
       </CrmSectionCard>

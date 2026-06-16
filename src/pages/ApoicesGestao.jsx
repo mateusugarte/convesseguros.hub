@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, closestCenter } from '@dnd-kit/core'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core'
 import {
   fetchApolicesKanban, criarApolice, moverStatusApolice,
   buscarFichasParaEmissao,
@@ -21,6 +21,7 @@ import SeguradoraBadge from '../components/SeguradoraBadge'
 import SeguradoraSelect from '../components/SeguradoraSelect'
 import ImobiliariaSelect from '../components/ImobiliariaSelect'
 import { KanbanSkeleton } from '../components/Skeleton'
+import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/kanbanDnd'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -691,7 +692,7 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
             </div>
             <div>
               <LabelReq>Seguradora</LabelReq>
-              <SeguradoraSelect value={seguradora} onChange={setSeguradora} required />
+              <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={apolice?.produto || apolice?.fichas?.produto} required />
             </div>
           </div>
         </div>
@@ -914,7 +915,7 @@ export default function ApoicesGestao() {
           <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={kanbanPointerCollision}
       onDragStart={({ active }) => setActiveId(active.id)}
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}
@@ -937,7 +938,7 @@ export default function ApoicesGestao() {
                   )
                 })}
               </div>
-              <DragOverlay dropAnimation={null}>
+              <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
                 {activeId?.startsWith?.('col::') ? (() => {
                   const cid = activeId.replace('col::', '')
                   const col = COLUNAS.find(c => c.id === cid)

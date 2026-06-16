@@ -1,11 +1,10 @@
 ﻿import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useComercial, eventAdd, eventUpdate, eventDelete, TIPOS_EVENTO, CORES_EVENTO } from '../../lib/comercial'
-import { Select } from '../../components/ui/Select'
 import { useToast } from '../../contexts/ToastContext'
 import {
   Plus, ChevronLeft, ChevronRight, Trash2, MoreHorizontal,
-  Clock, Calendar, Pencil, X, BellRing, ListTodo, Users,
+  Clock, Calendar, Pencil, X, BellRing, ListTodo, Users, Search, Check,
 } from 'lucide-react'
 import {
   format, parseISO,
@@ -372,6 +371,154 @@ const TIME_SLOTS = [
   '16:00','17:00','18:00','19:00','20:00',
 ]
 
+function leadInitials(nome) {
+  return (nome || '')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase())
+    .join('') || 'LD'
+}
+
+function EventLeadSelect({ leads, value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const ref = useRef(null)
+
+  const selectedLead = useMemo(
+    () => (leads || []).find(lead => String(lead.id) === String(value)) || null,
+    [leads, value],
+  )
+
+  const filteredLeads = useMemo(() => {
+    const term = search.trim().toLowerCase()
+    if (!term) return leads || []
+    return (leads || []).filter(lead => {
+      const nome = (lead.nome || '').toLowerCase()
+      const imobiliaria = (lead.imobiliaria || '').toLowerCase()
+      return nome.includes(term) || imobiliaria.includes(term)
+    })
+  }, [leads, search])
+
+  useEffect(() => {
+    if (!open) return
+    function handleClickOutside(event) {
+      if (!ref.current?.contains(event.target)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [open])
+
+  function handleSelect(nextValue) {
+    onChange(nextValue)
+    setOpen(false)
+    setSearch('')
+  }
+
+  return (
+    <div ref={ref} className="space-y-2">
+      <button
+        type="button"
+        onClick={() => setOpen(current => !current)}
+        className={`w-full rounded-2xl border px-3 py-3 text-left transition-all ${
+          open
+            ? 'border-brand-accent/50 bg-brand-accent/5 shadow-[0_0_0_3px_rgba(59,130,246,0.12)]'
+            : 'border-dark-border/70 bg-white/75 hover:border-brand-accent/35'
+        }`}
+      >
+        {selectedLead ? (
+          <div className="flex items-center gap-3">
+            <span
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-[11px] font-bold text-white"
+              style={{ background: 'linear-gradient(135deg, #4F46E5, #2563EB)' }}
+            >
+              {leadInitials(selectedLead.nome)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-dark-text">{selectedLead.nome}</p>
+              <p className="truncate text-xs text-dark-muted">{selectedLead.imobiliaria || 'Lead sem imobiliária vinculada'}</p>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <p className="text-sm font-semibold text-dark-text">Nenhum lead vinculado</p>
+            <p className="text-xs text-dark-muted">Use quando o evento for geral ou interno.</p>
+          </div>
+        )}
+      </button>
+
+      {open && (
+        <div className="rounded-[20px] border border-dark-border/70 bg-white/90 p-2 shadow-[0_20px_50px_rgba(15,23,42,0.18)] backdrop-blur-md">
+          <div className="relative mb-2">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-dark-muted" />
+            <input
+              value={search}
+              onChange={event => setSearch(event.target.value)}
+              placeholder="Buscar lead ou imobiliária..."
+              className="input w-full pl-9 text-sm"
+            />
+          </div>
+
+          <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+            <button
+              type="button"
+              onClick={() => handleSelect('')}
+              className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left transition-colors ${
+                !value ? 'bg-brand-accent/10 text-brand-accent' : 'hover:bg-dark-surface2/70'
+              }`}
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-dark-surface2 text-[10px] font-bold text-dark-muted">
+                --
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">Nenhum lead</p>
+                <p className="text-xs text-dark-muted">Evento sem relacionamento direto com um lead.</p>
+              </div>
+              {!value && <Check className="h-4 w-4 flex-shrink-0" />}
+            </button>
+
+            {filteredLeads.map(lead => {
+              const active = String(lead.id) === String(value)
+              return (
+                <button
+                  key={lead.id}
+                  type="button"
+                  onClick={() => handleSelect(lead.id)}
+                  className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left transition-colors ${
+                    active ? 'bg-brand-accent/10 text-brand-accent' : 'hover:bg-dark-surface2/70'
+                  }`}
+                >
+                  <span
+                    className="flex h-8 w-8 items-center justify-center rounded-xl text-[10px] font-bold text-white"
+                    style={{ background: active ? 'linear-gradient(135deg, #2563EB, #4F46E5)' : 'linear-gradient(135deg, #64748B, #475569)' }}
+                  >
+                    {leadInitials(lead.nome)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{lead.nome}</p>
+                    <p className={`truncate text-xs ${active ? 'text-brand-accent/80' : 'text-dark-muted'}`}>
+                      {lead.imobiliaria || 'Sem imobiliária'}
+                    </p>
+                  </div>
+                  {active && <Check className="h-4 w-4 flex-shrink-0" />}
+                </button>
+              )
+            })}
+
+            {filteredLeads.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-dark-border/70 px-3 py-5 text-center text-sm text-dark-muted">
+                Nenhum lead encontrado para essa busca.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
   const isEdit = !!evento?.id
 
@@ -399,11 +546,12 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
     : 'Sem data'
 
   const corTipo = corEvento(form.tipo)
+  const selectedLead = (leads || []).find(lead => String(lead.id) === String(form.leadId))
 
   return (
     <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 animate-fade-in">
       <div className="modal-backdrop" onClick={onClose} />
-      <div className="relative glass-modal rounded-[24px] w-full max-w-md shadow-2xl overflow-hidden">
+      <div className="relative glass-modal rounded-[24px] w-full max-w-lg shadow-2xl overflow-hidden">
 
         {/* Header */}
         <div className="modal-shell-header flex items-center justify-between px-5 py-4 border-b border-dark-border/60">
@@ -434,18 +582,88 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
             />
           </div>
 
-          {/* Tipo + Lead */}
-          <div className="grid grid-cols-2 gap-3">
+          <div
+            className="rounded-[20px] border px-4 py-3"
+            style={{ borderColor: `${corTipo}35`, background: `${corTipo}0E` }}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: corTipo }}>
+                  Resumo do evento
+                </p>
+                <p className="mt-1 text-sm font-semibold text-dark-text">
+                  {form.nome.trim() || 'Evento sem título definido'}
+                </p>
+                <p className="mt-1 text-xs text-dark-muted">
+                  {form.tipo} às {form.time}
+                  {selectedLead ? ` com ${selectedLead.nome}` : ' sem lead vinculado'}
+                </p>
+              </div>
+              <span
+                className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                style={{ color: corTipo, background: `${corTipo}22` }}
+              >
+                {form.tipo}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-2">Tipo</label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {TIPOS_EVENTO.map(tipo => {
+                const active = form.tipo === tipo
+                const color = corEvento(tipo)
+                return (
+                  <button
+                    key={tipo}
+                    type="button"
+                    onClick={() => set('tipo', tipo)}
+                    className="rounded-2xl border px-3 py-3 text-left transition-all"
+                    style={{
+                      borderColor: active ? `${color}80` : 'var(--glass-border)',
+                      background: active ? `${color}18` : 'rgba(255,255,255,0.7)',
+                      boxShadow: active ? `0 0 0 2px ${color}20` : 'none',
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
+                      <p className="text-sm font-semibold" style={{ color: active ? color : 'var(--glass-text-primary)' }}>
+                        {tipo}
+                      </p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-2">Lead</label>
+            <EventLeadSelect
+              leads={leads || []}
+              value={form.leadId}
+              onChange={v => set('leadId', v)}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Tipo</label>
-              <Select value={form.tipo} onChange={v => set('tipo', v)}
-                options={TIPOS_EVENTO.map(t => ({ value: t, label: t }))} />
+              <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">
+                Data <span className="text-status-error">*</span>
+              </label>
+              <input
+                type="date"
+                value={form.date}
+                onChange={e => set('date', e.target.value)}
+                className="input w-full"
+              />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Lead</label>
-              <Select value={form.leadId} onChange={v => set('leadId', v)}
-                placeholder="Nenhum"
-                options={[{ value: '', label: 'Nenhum' }, ...(leads || []).map(l => ({ value: l.id, label: l.nome }))]} />
+              <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-1.5">Hora atual</label>
+              <div className="input flex items-center text-sm text-dark-text">
+                {form.time}
+              </div>
             </div>
           </div>
 
@@ -454,7 +672,7 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
             <label className="block text-xs font-semibold text-dark-muted uppercase tracking-wider mb-2">
               <Clock className="inline w-3 h-3 mr-1 -mt-px" />Horário
             </label>
-            <div className="grid grid-cols-4 gap-1.5 mb-3">
+            <div className="mb-3 grid grid-cols-3 gap-1.5 sm:grid-cols-4">
               {TIME_SLOTS.map(slot => {
                 const active = form.time === slot
                 return (

@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
-  useDraggable, useDroppable, closestCenter,
+  useDraggable, useDroppable,
 } from '@dnd-kit/core'
 import { fetchFichasKanban, assumirFicha, moverFichaStatus } from '../lib/fichas'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { supabase } from '../lib/supabase'
+import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/kanbanDnd'
 import ModalFinalizar from './ModalFinalizar'
 import {
   Home, Briefcase, Building, LayoutGrid, RefreshCw,
@@ -434,7 +435,7 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
           <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
             Seguradora <span className="text-status-danger">*</span>
           </label>
-          <SeguradoraSelect value={seguradora} onChange={setSeguradora} required />
+          <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={finalizar?.produto} required />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -846,7 +847,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={kanbanPointerCollision}
       onDragStart={({ active }) => setActiveId(active.id)}
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}
@@ -873,7 +874,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
               </div>
             </div>
 
-            <DragOverlay dropAnimation={null}>
+            <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
               {activeCard && (
                 <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', '--kanban-accent': PRODUTO_COLOR[activeCard?.produto] || '#000079', cursor: 'grabbing' }}>
                   <FichaCard ficha={activeCard} isDragOverlay resolverNome={resolverNome} />

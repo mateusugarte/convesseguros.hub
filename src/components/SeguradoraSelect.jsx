@@ -1,52 +1,59 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { useEffect, useState } from 'react'
 import { WorkspacesSelect } from './ui/WorkspacesSelect'
-
-let _cache = null
-
-async function getSeguradoras() {
-  if (_cache) return _cache
-  const { data } = await supabase
-    .from('seguradoras')
-    .select('nome_canonico')
-    .neq('ativa', false)
-    .order('nome_canonico')
-    .limit(500)
-  _cache = data?.map(s => s.nome_canonico) || []
-  return _cache
-}
-
-export function invalidarCacheSeguradoras() { _cache = null }
+import { fetchSeguradorasPorProduto, invalidarCacheSeguradoras } from '../lib/seguradoras'
 
 function segColor(nome) {
-  const palette = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#2B5BA8','#EF4444']
-  let h = 0; for (let i = 0; i < (nome||'').length; i++) h = nome.charCodeAt(i) + ((h << 5) - h)
+  const palette = ['#4A90D9', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#2B5BA8', '#EF4444']
+  let h = 0
+  for (let i = 0; i < (nome || '').length; i += 1) h = nome.charCodeAt(i) + ((h << 5) - h)
   return palette[Math.abs(h) % palette.length]
 }
+
+function logoIcon(nome, logoUrl) {
+  if (!logoUrl) return null
+  return (
+    <img
+      src={logoUrl}
+      alt={nome}
+      className="w-full h-full object-contain"
+      loading="lazy"
+      decoding="async"
+    />
+  )
+}
+
+export { invalidarCacheSeguradoras }
 
 export default function SeguradoraSelect({
   value,
   onChange,
+  produto,
   placeholder = 'Seguradora...',
-  required    = false,
-  className   = '',
-  disabled    = false,
+  required = false,
+  className = '',
+  disabled = false,
 }) {
-  const [seguradoras, setSeguradoras] = useState(_cache || [])
+  const [seguradoras, setSeguradoras] = useState([])
 
-  useEffect(() => { getSeguradoras().then(setSeguradoras) }, [])
+  useEffect(() => {
+    fetchSeguradorasPorProduto(produto).then(setSeguradoras).catch(() => setSeguradoras([]))
+  }, [produto])
 
-  const options = seguradoras.map(nome => ({
-    value:    nome,
-    label:    nome,
-    color:    segColor(nome),
-    initials: nome.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?',
+  const options = seguradoras.map(seg => ({
+    value: seg.nome_canonico,
+    label: seg.nome_canonico,
+    color: segColor(seg.nome_canonico),
+    initials: seg.nome_canonico.split(' ').map(word => word[0]).slice(0, 2).join('').toUpperCase() || '?',
+    icon: logoIcon(seg.nome_canonico, seg.logo_url),
   }))
 
   return (
     <WorkspacesSelect
       value={value || ''}
-      onChange={v => { if (required && !v) return; onChange(v) }}
+      onChange={nextValue => {
+        if (required && !nextValue) return
+        onChange(nextValue)
+      }}
       options={options}
       placeholder={placeholder}
       label="Seguradora"
@@ -54,7 +61,7 @@ export default function SeguradoraSelect({
       className={className}
       clearable={!required && !!value}
       searchable={seguradoras.length > 8}
-      emptyText="Nenhuma seguradora cadastrada"
+      emptyText={produto ? 'Nenhuma seguradora para este produto' : 'Nenhuma seguradora cadastrada'}
     />
   )
 }

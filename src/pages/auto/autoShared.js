@@ -31,7 +31,8 @@ export const COTACAO_ABAS = [
 ]
 
 export const COTACAO_STATUS = {
-  aberta: { label: 'Aberta', tone: 'warning' },
+  pendente: { label: 'Pendente', tone: 'warning' },
+  aberta: { label: 'Pendente', tone: 'warning' },
   convertida: { label: 'Convertida', tone: 'success' },
   perdida: { label: 'Perdida', tone: 'danger' },
 }

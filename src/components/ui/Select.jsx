@@ -173,7 +173,7 @@ export function Select({
           ref={dropRef}
           style={{
             position: 'fixed',
-            zIndex: 9999,
+            zIndex: 12000,
             left: pos.left,
             width: pos.width,
             ...(pos.top !== 'auto' ? { top: pos.top } : { bottom: pos.bottom }),
@@ -182,12 +182,12 @@ export function Select({
           <div
             className="select-dropdown-panel"
             style={{
-              background: 'var(--glass-bg-heavy)',
+              background: 'rgba(248, 250, 252, 0.98)',
               backdropFilter: 'var(--glass-blur-strong)',
               WebkitBackdropFilter: 'var(--glass-blur-strong)',
-              border: '1px solid var(--glass-border)',
-              borderRadius: 12,
-              boxShadow: 'var(--shadow-float)',
+              border: '1px solid rgba(15, 23, 42, 0.14)',
+              borderRadius: 14,
+              boxShadow: '0 18px 48px rgba(15, 23, 42, 0.22)',
               overflow: 'hidden',
             }}
           >

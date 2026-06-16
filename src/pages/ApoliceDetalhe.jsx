@@ -289,7 +289,7 @@ export default function ApoliceDetalhe() {
             <EditField label="Número da Proposta" value={numeroProposta} onChange={setNumeroProposta} placeholder="Opcional" />
             <div>
               <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Seguradora<span className="ml-0.5 text-status-danger">*</span></label>
-              <SeguradoraSelect value={seguradora} onChange={setSeguradora} required />
+              <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={apolice.produto || ficha?.produto} required />
             </div>
             <SelectField
               label="Status"

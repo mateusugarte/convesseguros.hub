@@ -1,14 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Car, CheckCircle2, FileText, RefreshCw, Search, X } from 'lucide-react'
+import { Car, CheckCircle2, FileText, RefreshCw, Search, X, Plus } from 'lucide-react'
 import { format, startOfMonth, startOfWeek } from 'date-fns'
-import { getEmissoesAuto, moverEmissaoColuna, emitirApoliceAuto, getEmissaoColuna, getApolicesAuto } from '../../lib/auto'
+import {
+  getEmissoesAuto, moverEmissaoColuna, emitirApoliceAuto,
+  salvarResultadoCotacao, getEmissaoColuna, getApolicesAuto,
+} from '../../lib/auto'
 import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../components/ui'
 import { formatDateBR, formatMoney } from './autoShared'
 
 const COLUNAS = [
   { id: 'pendentes', label: 'Cotacoes pendentes', hint: 'entradas novas do n8n e itens sem andamento', tone: 'warning' },
-  { id: 'cotacao_feita', label: 'Cotacao feita', hint: 'primeiro corte operacional', tone: 'secondary' },
+  { id: 'cotacao_feita', label: 'Cotacao feita', hint: 'resultado registrado da cotacao', tone: 'secondary' },
   { id: 'negociando', label: 'Negociando', hint: 'em tratativa com cliente', tone: 'accent' },
   { id: 'aguardando_vistoria', label: 'Aguardando vistoria', hint: 'dependem de validacao', tone: 'warning' },
   { id: 'emitida', label: 'Emitida', hint: 'prontas para apolice', tone: 'success' },
@@ -21,7 +24,7 @@ const PERIOD_OPTIONS = [
   { value: 'custom', label: 'Personalizado' },
 ]
 
-const FORM_VAZIO = {
+const FORM_EMISSAO_VAZIO = {
   seguradora: '',
   numero_apolice: '',
   vigencia_inicio: '',
@@ -36,6 +39,15 @@ const FORM_VAZIO = {
   tem_repasse: false,
   pct_repasse: '',
   nome_repasse: '',
+}
+
+const NOVA_SEGURADORA = {
+  nome: '',
+  valor_total: '',
+  premio_liquido: '',
+  pct_comissao: '',
+  parcelamentos: '',
+  forma_pagamento: '',
 }
 
 function toDateInput(value) {
@@ -57,65 +69,469 @@ function getPeriodoRange(tipo) {
   return { inicio: '', fim: '' }
 }
 
-function CardEmissao({ emissao, onDragStart }) {
+function nomeEmissao(emissao) {
+  const c = emissao.cotacoes_auto || {}
+  return c.nome_cliente || c.condutor_nome || '—'
+}
+
+// ─── Card ───────────────────────────────────────────────────────────────────
+
+function CardEmissao({ emissao, onDragStart, onClick }) {
   const coluna = getEmissaoColuna(emissao)
   const tipo = emissao.cotacoes_auto?.tipo || emissao.tipo
   const isRenovacao = tipo === 'renovacao'
-  const isNovo = !isRenovacao
-  const isPendente = coluna === 'pendentes'
-  const accent = isRenovacao
-    ? 'from-status-success to-brand-secondary'
-    : isPendente
+  const isRecusada = emissao.resultado === 'recusada'
+  const isAprovada = emissao.resultado === 'aprovada'
+
+  let borderClass, bgClass, accentGradient, shadowClass
+  if (isRecusada) {
+    borderClass = 'border-red-200'
+    bgClass = 'bg-red-50'
+    accentGradient = 'from-red-400 to-red-500'
+    shadowClass = ''
+  } else if (isRenovacao) {
+    borderClass = 'border-status-success/20'
+    bgClass = 'bg-status-success/5'
+    accentGradient = 'from-status-success to-brand-secondary'
+    shadowClass = ''
+  } else {
+    borderClass = 'border-brand-secondary/25'
+    bgClass = 'bg-brand-secondary/5'
+    accentGradient = coluna === 'pendentes'
       ? 'from-brand-accent to-brand-secondary'
       : 'from-brand-secondary to-brand-accent'
-  const tipoLabel = isRenovacao ? 'Renovacao' : isPendente ? 'Novo lead' : 'Novo'
-  const tipoClass = isRenovacao
-    ? 'bg-status-success/10 text-status-success'
-    : 'bg-brand-secondary/10 text-brand-secondary'
-  const statusClass = isPendente
-    ? 'bg-status-warning/10 text-status-warning'
-    : 'bg-dark-surface2/75 text-dark-muted'
+    shadowClass = coluna === 'pendentes' ? 'shadow-[0_8px_24px_rgba(202,138,4,0.08)]' : ''
+  }
+
+  const nome = nomeEmissao(emissao)
+  const veiculo = emissao.cotacoes_auto?.modelo_veiculo || 'Modelo nao informado'
+  const placa = emissao.cotacoes_auto?.placa
 
   return (
     <button
       type="button"
       draggable
       onDragStart={() => onDragStart(emissao)}
-      className={`group relative w-full overflow-hidden rounded-[28px] border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 ${
-        isRenovacao
-          ? 'border-status-success/20 bg-status-success/5'
-          : isNovo
-            ? 'border-brand-secondary/25 bg-brand-secondary/5'
-            : 'border-dark-border bg-white/80'
-      } ${
-        isPendente ? 'shadow-[0_10px_30px_rgba(202,138,4,0.08)]' : ''
-      }`}
+      onClick={() => onClick(emissao)}
+      className={`group relative w-full overflow-hidden rounded-[28px] border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 ${borderClass} ${bgClass} ${shadowClass}`}
     >
-      <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${accent} opacity-80`} />
+      <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${accentGradient} opacity-80`} />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-dark-text">
-            {emissao.cotacoes_auto?.nome_cliente || emissao.cotacoes_auto?.cpf_cliente || '-'}
-          </p>
-          <p className="mt-1 truncate text-xs text-dark-muted">
-            {emissao.cotacoes_auto?.modelo_veiculo || 'Modelo nao informado'}
-          </p>
+          <p className="truncate text-sm font-semibold text-dark-text">{nome}</p>
+          <p className="mt-1 truncate text-xs text-dark-muted">{veiculo}</p>
           <p className="mt-2 text-[11px] text-dark-muted">
-            {emissao.cotacoes_auto?.placa ? `Placa ${emissao.cotacoes_auto.placa}` : 'Sem placa informada ainda'}
+            {placa ? `Placa ${placa}` : 'Sem placa'}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${statusClass}`}>
-            {isPendente ? 'Pendente' : 'Em andamento'}
-          </span>
-          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${tipoClass}`}>
-            {tipoLabel}
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          {isRecusada && (
+            <span className="rounded-full bg-red-100 px-2 py-1 text-[10px] font-semibold text-red-600">Recusada</span>
+          )}
+          {isAprovada && (
+            <span className="rounded-full bg-status-success/10 px-2 py-1 text-[10px] font-semibold text-status-success">Aprovada</span>
+          )}
+          {!emissao.resultado && (
+            <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
+              coluna === 'pendentes'
+                ? 'bg-status-warning/10 text-status-warning'
+                : 'bg-dark-surface2/75 text-dark-muted'
+            }`}>
+              {coluna === 'pendentes' ? 'Pendente' : 'Em andamento'}
+            </span>
+          )}
+          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
+            isRenovacao
+              ? 'bg-status-success/10 text-status-success'
+              : 'bg-brand-secondary/10 text-brand-secondary'
+          }`}>
+            {isRenovacao ? 'Renovacao' : 'Novo'}
           </span>
         </div>
       </div>
     </button>
   )
 }
+
+// ─── InfoRow + BoolRow (usados nos detalhes) ────────────────────────────────
+
+function InfoRow({ label, value }) {
+  if (value === null || value === undefined || value === '') return null
+  return (
+    <div>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">{label}</p>
+      <p className="mt-1 text-sm text-dark-text">{value}</p>
+    </div>
+  )
+}
+
+function BoolRow({ label, value }) {
+  if (value === null || value === undefined) return null
+  return (
+    <div className="flex items-center justify-between py-1">
+      <p className="text-sm text-dark-muted">{label}</p>
+      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+        value ? 'bg-status-success/10 text-status-success' : 'bg-dark-border/60 text-dark-muted'
+      }`}>
+        {value ? 'Sim' : 'Nao'}
+      </span>
+    </div>
+  )
+}
+
+// ─── Modal Detalhe ──────────────────────────────────────────────────────────
+
+function ModalDetalhe({ emissao, onClose }) {
+  const c = emissao.cotacoes_auto || {}
+  const nome = nomeEmissao(emissao)
+  const tipo = (c.tipo || emissao.tipo) === 'renovacao' ? 'Renovacao' : 'Novo'
+  const seguradoras = Array.isArray(emissao.seguradoras_cotadas) ? emissao.seguradoras_cotadas : []
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/45 p-4 pt-8 backdrop-blur-sm overflow-y-auto">
+      <div className="glass-modal w-full max-w-3xl rounded-[32px] p-6">
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">Detalhe do cliente</span>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                (c.tipo || emissao.tipo) === 'renovacao'
+                  ? 'bg-status-success/10 text-status-success'
+                  : 'bg-brand-secondary/10 text-brand-secondary'
+              }`}>{tipo}</span>
+              {emissao.resultado && (
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  emissao.resultado === 'aprovada'
+                    ? 'bg-status-success/10 text-status-success'
+                    : 'bg-red-100 text-red-600'
+                }`}>{emissao.resultado === 'aprovada' ? 'Aprovada' : 'Recusada'}</span>
+              )}
+            </div>
+            <h2 className="mt-2 text-xl font-semibold text-dark-text">{nome}</h2>
+            <p className="mt-1 text-sm text-dark-muted">
+              {c.modelo_veiculo || 'Veiculo nao informado'}
+              {c.placa ? ` · Placa ${c.placa}` : ''}
+            </p>
+          </div>
+          <button onClick={onClose} className="rounded-full p-2 hover:bg-dark-border/40 transition-colors shrink-0">
+            <X className="w-5 h-5 text-dark-muted" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Cliente */}
+          <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Dados do cliente</p>
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+              <InfoRow label="Nome" value={c.nome_cliente} />
+              <InfoRow label="CPF" value={c.cpf_cliente} />
+              <InfoRow label="Celular" value={c.celular_cliente} />
+              <InfoRow label="Email" value={c.email_cliente} />
+              <InfoRow label="Estado civil" value={c.estado_civil_cliente} />
+              <InfoRow label="Profissao" value={c.profissao_cliente} />
+            </div>
+          </div>
+
+          {/* Veiculo */}
+          <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Veiculo</p>
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+              <InfoRow label="Modelo" value={c.modelo_veiculo} />
+              <InfoRow label="Placa" value={c.placa} />
+              <InfoRow label="Uso" value={c.uso_veiculo} />
+              <InfoRow label="CEP pernoite" value={c.cep_pernoite} />
+            </div>
+          </div>
+
+          {/* Condutor */}
+          {(c.condutor_nome || c.condutor_cpf) && (
+            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Condutor principal</p>
+              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                <InfoRow label="Nome" value={c.condutor_nome} />
+                <InfoRow label="CPF" value={c.condutor_cpf} />
+                <InfoRow label="Estado civil" value={c.estado_civil_condutor} />
+              </div>
+            </div>
+          )}
+
+          {/* Caracteristicas */}
+          <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Caracteristicas e riscos</p>
+            <div className="divide-y divide-dark-border/40">
+              <BoolRow label="Jovens de 18 a 26 anos" value={c.jovens_18_26} />
+              <BoolRow label="Veiculo financiado" value={c.veiculo_financiado} />
+              <BoolRow label="Kit gas" value={c.possui_kit_gas} />
+              <BoolRow label="Blindagem" value={c.possui_blindagem} />
+              <BoolRow label="Isento de imposto" value={c.isento_imposto} />
+              <BoolRow label="Garagem na residencia" value={c.garagem_residencia} />
+              <BoolRow label="Garagem no trabalho" value={c.garagem_trabalho} />
+              <BoolRow label="Garagem no estudo" value={c.garagem_estudo} />
+            </div>
+          </div>
+
+          {/* Seguradoras cotadas */}
+          {seguradoras.length > 0 && (
+            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradoras cotadas</p>
+              <div className="space-y-3">
+                {seguradoras.map((seg, idx) => (
+                  <div key={idx} className="rounded-2xl border border-dark-border/60 bg-white/60 p-3">
+                    <p className="font-semibold text-sm text-dark-text">{seg.nome || `Seguradora ${idx + 1}`}</p>
+                    <div className="mt-2 grid gap-x-4 gap-y-1 grid-cols-2 text-xs text-dark-muted">
+                      {seg.valor_total > 0 && <span>Valor total: {formatMoney(seg.valor_total)}</span>}
+                      {seg.premio_liquido > 0 && <span>Premio liq.: {formatMoney(seg.premio_liquido)}</span>}
+                      {seg.valor_comissao > 0 && (
+                        <span className="text-status-success font-medium">
+                          Comissao: {formatMoney(seg.valor_comissao)} ({seg.pct_comissao}%)
+                        </span>
+                      )}
+                      {seg.parcelamentos && <span>Parcelas: {seg.parcelamentos}</span>}
+                      {seg.forma_pagamento && <span>Pagamento: {seg.forma_pagamento}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-5 flex justify-end">
+          <button onClick={onClose} className="btn-secondary">Fechar</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── FormSeguradora ──────────────────────────────────────────────────────────
+
+function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
+  const valorComissao = (parseFloat(seg.premio_liquido) || 0) * (parseFloat(seg.pct_comissao) || 0) / 100
+
+  return (
+    <div className="rounded-3xl border border-brand-secondary/20 bg-brand-secondary/5 p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-xs font-semibold text-brand-secondary">Seguradora {idx + 1}</p>
+        {showRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="rounded-full p-1 text-dark-muted hover:text-red-500 hover:bg-red-50 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="sm:col-span-2 lg:col-span-3">
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Nome da seguradora</label>
+          <input
+            value={seg.nome}
+            onChange={e => onChange('nome', e.target.value)}
+            className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+            placeholder="Porto Seguro, Bradesco, Suhai..."
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Valor total</label>
+          <input
+            type="number"
+            step="0.01"
+            value={seg.valor_total}
+            onChange={e => onChange('valor_total', e.target.value)}
+            className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+            placeholder="0,00"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Premio liquido</label>
+          <input
+            type="number"
+            step="0.01"
+            value={seg.premio_liquido}
+            onChange={e => onChange('premio_liquido', e.target.value)}
+            className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+            placeholder="0,00"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">% Comissao</label>
+          <input
+            type="number"
+            step="0.1"
+            value={seg.pct_comissao}
+            onChange={e => onChange('pct_comissao', e.target.value)}
+            className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+            placeholder="0"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Comissao (calculada)</label>
+          <div className={`w-full rounded-2xl border px-3 py-2 text-sm font-medium ${
+            valorComissao > 0
+              ? 'border-status-success/30 bg-status-success/10 text-status-success'
+              : 'border-dark-border/40 bg-dark-surface2/40 text-dark-muted'
+          }`}>
+            {valorComissao > 0 ? formatMoney(valorComissao) : '—'}
+          </div>
+        </div>
+        <div>
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Parcelamentos</label>
+          <input
+            value={seg.parcelamentos}
+            onChange={e => onChange('parcelamentos', e.target.value)}
+            className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+            placeholder="3x, 6x, 10x sem juros"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Forma de pagamento</label>
+          <input
+            value={seg.forma_pagamento}
+            onChange={e => onChange('forma_pagamento', e.target.value)}
+            className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+            placeholder="Cartao, boleto, pix..."
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Modal Resultado da Cotacao ──────────────────────────────────────────────
+
+function ModalResultado({ emissao, onClose, onSave, isSaving }) {
+  const [resultado, setResultado] = useState('aprovada')
+  const [seguradoras, setSeguradoras] = useState([{ ...NOVA_SEGURADORA }])
+
+  const c = emissao.cotacoes_auto || {}
+  const nome = nomeEmissao(emissao)
+
+  const canSave = resultado === 'recusada' || (
+    resultado === 'aprovada' &&
+    seguradoras.length > 0 &&
+    seguradoras.every(s => s.nome.trim() !== '')
+  )
+
+  function updateSeg(idx, campo, valor) {
+    setSeguradoras(prev => prev.map((s, i) => i === idx ? { ...s, [campo]: valor } : s))
+  }
+
+  function addSeg() {
+    setSeguradoras(prev => [...prev, { ...NOVA_SEGURADORA }])
+  }
+
+  function removeSeg(idx) {
+    setSeguradoras(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  function handleSave() {
+    const seguradasFinal = resultado === 'aprovada'
+      ? seguradoras.map(s => ({
+          nome: s.nome,
+          valor_total: parseFloat(s.valor_total) || 0,
+          premio_liquido: parseFloat(s.premio_liquido) || 0,
+          pct_comissao: parseFloat(s.pct_comissao) || 0,
+          valor_comissao: (parseFloat(s.premio_liquido) || 0) * (parseFloat(s.pct_comissao) || 0) / 100,
+          parcelamentos: s.parcelamentos,
+          forma_pagamento: s.forma_pagamento,
+        }))
+      : []
+    onSave(emissao.id, { resultado, seguradoras_cotadas: seguradasFinal })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/45 p-4 pt-8 backdrop-blur-sm overflow-y-auto">
+      <div className="glass-modal w-full max-w-2xl rounded-[32px] p-6">
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">Resultado da cotacao</p>
+            <h2 className="mt-2 text-xl font-semibold text-dark-text">{nome}</h2>
+            <p className="mt-1 text-sm text-dark-muted">
+              {c.modelo_veiculo || 'Veiculo nao informado'}
+              {c.placa ? ` · ${c.placa}` : ''}
+            </p>
+          </div>
+          <button onClick={onClose} className="rounded-full p-2 hover:bg-dark-border/40 transition-colors shrink-0">
+            <X className="w-5 h-5 text-dark-muted" />
+          </button>
+        </div>
+
+        {/* Toggle aprovada/recusada */}
+        <div className="mb-5 flex gap-3">
+          <button
+            type="button"
+            onClick={() => setResultado('aprovada')}
+            className={`flex-1 rounded-2xl border py-3 text-sm font-semibold transition-all ${
+              resultado === 'aprovada'
+                ? 'border-status-success bg-status-success/10 text-status-success shadow-sm'
+                : 'border-dark-border bg-white/60 text-dark-muted hover:border-status-success/40'
+            }`}
+          >
+            Aprovada
+          </button>
+          <button
+            type="button"
+            onClick={() => setResultado('recusada')}
+            className={`flex-1 rounded-2xl border py-3 text-sm font-semibold transition-all ${
+              resultado === 'recusada'
+                ? 'border-red-300 bg-red-50 text-red-600 shadow-sm'
+                : 'border-dark-border bg-white/60 text-dark-muted hover:border-red-200'
+            }`}
+          >
+            Recusada
+          </button>
+        </div>
+
+        {resultado === 'aprovada' && (
+          <div className="space-y-3">
+            <p className="text-xs text-dark-muted">
+              Adicione ao menos uma seguradora com o resultado da cotacao.
+            </p>
+            {seguradoras.map((seg, idx) => (
+              <FormSeguradora
+                key={idx}
+                seg={seg}
+                idx={idx}
+                onChange={(campo, valor) => updateSeg(idx, campo, valor)}
+                onRemove={() => removeSeg(idx)}
+                showRemove={seguradoras.length > 1}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={addSeg}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-brand-secondary/30 py-2.5 text-sm text-brand-secondary hover:border-brand-secondary/60 hover:bg-brand-secondary/5 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Adicionar outra seguradora
+            </button>
+          </div>
+        )}
+
+        {resultado === 'recusada' && (
+          <div className="rounded-3xl border border-red-100 bg-red-50/70 p-4 text-sm text-red-500">
+            O card ficara vermelho e marcado como recusado. Esta acao pode ser revertida arrastando de volta para outra coluna.
+          </div>
+        )}
+
+        <div className="mt-5 flex gap-3 border-t border-dark-border/60 pt-5">
+          <button onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
+          <button
+            onClick={handleSave}
+            disabled={!canSave || isSaving}
+            className="btn-primary flex-1 disabled:opacity-50"
+          >
+            {isSaving ? 'Salvando...' : 'Salvar resultado'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Modal Apolices Emitidas ─────────────────────────────────────────────────
 
 function ModalApolices({ onClose }) {
   const [search, setSearch] = useState('')
@@ -199,11 +615,11 @@ function ModalApolices({ onClose }) {
               <tbody className="divide-y divide-dark-border/40">
                 {apolices.map(item => (
                   <tr key={item.id} className="transition-colors hover:bg-brand-accent/5">
-                    <td className="py-3 pr-4 font-medium text-dark-text">{item.nome_cliente || item.cpf_cliente || '-'}</td>
-                    <td className="py-3 pr-4 text-dark-muted">{item.numero_apolice || '-'}</td>
-                    <td className="py-3 pr-4 text-dark-muted">{item.seguradora || '-'}</td>
+                    <td className="py-3 pr-4 font-medium text-dark-text">{item.nome_cliente || item.cpf_cliente || '—'}</td>
+                    <td className="py-3 pr-4 text-dark-muted">{item.numero_apolice || '—'}</td>
+                    <td className="py-3 pr-4 text-dark-muted">{item.seguradora || '—'}</td>
                     <td className="py-3 pr-4 text-dark-muted">
-                      {item.vigencia_inicio ? formatDateBR(item.vigencia_inicio) : '-'} — {item.vigencia_fim ? formatDateBR(item.vigencia_fim) : '-'}
+                      {item.vigencia_inicio ? formatDateBR(item.vigencia_inicio) : '—'} — {item.vigencia_fim ? formatDateBR(item.vigencia_fim) : '—'}
                     </td>
                     <td className="py-3 pr-4 text-dark-muted">{formatMoney(item.premio_liquido)}</td>
                     <td className="py-3 font-medium text-status-success">{formatMoney(item.valor_comissao)}</td>
@@ -217,6 +633,8 @@ function ModalApolices({ onClose }) {
     </div>
   )
 }
+
+// ─── CampoTexto (formulario de emissao) ─────────────────────────────────────
 
 function CampoTexto({ label, campo, value, onChange, type = 'text' }) {
   return (
@@ -232,13 +650,18 @@ function CampoTexto({ label, campo, value, onChange, type = 'text' }) {
   )
 }
 
+// ─── Pagina principal ────────────────────────────────────────────────────────
+
 export default function AutoEmissoes() {
   const qc = useQueryClient()
   const initialRange = useMemo(() => getPeriodoRange('semana'), [])
+
   const [dragging, setDragging] = useState(null)
   const [dragOver, setDragOver] = useState(null)
+  const [modalDetalhe, setModalDetalhe] = useState(null)
+  const [modalResultado, setModalResultado] = useState(null)
   const [modalEmissao, setModalEmissao] = useState(null)
-  const [form, setForm] = useState(FORM_VAZIO)
+  const [form, setForm] = useState(FORM_EMISSAO_VAZIO)
   const [showApolices, setShowApolices] = useState(false)
   const [periodo, setPeriodo] = useState('semana')
   const [filtroInicio, setFiltroInicio] = useState(initialRange.inicio)
@@ -254,6 +677,14 @@ export default function AutoEmissoes() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['auto-emissoes'] }),
   })
 
+  const { mutate: salvarResultado, isPending: isSavingResultado } = useMutation({
+    mutationFn: ({ id, payload }) => salvarResultadoCotacao(id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
+      setModalResultado(null)
+    },
+  })
+
   const { mutate: emitir, isPending } = useMutation({
     mutationFn: payload => emitirApoliceAuto(payload),
     onSuccess: () => {
@@ -261,7 +692,7 @@ export default function AutoEmissoes() {
       qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
       qc.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] })
       setModalEmissao(null)
-      setForm(FORM_VAZIO)
+      setForm(FORM_EMISSAO_VAZIO)
     },
   })
 
@@ -279,7 +710,9 @@ export default function AutoEmissoes() {
 
   function handleDrop(colunaDestino) {
     if (!dragging) return
-    if (colunaDestino === 'emitida') {
+    if (colunaDestino === 'cotacao_feita') {
+      setModalResultado(dragging)
+    } else if (colunaDestino === 'emitida') {
       setModalEmissao(dragging)
     } else {
       mover({ id: dragging.id, coluna: colunaDestino === 'pendentes' ? null : colunaDestino })
@@ -325,15 +758,17 @@ export default function AutoEmissoes() {
     renovacoes: emissoes.filter(item => (item.cotacoes_auto?.tipo || item.tipo) === 'renovacao').length,
     emitidas: emissoes.filter(item => getEmissaoColuna(item) === 'emitida').length,
   }), [emissoes])
+
   const boardSummary = [
     { label: 'Pendentes', value: metricas.pendentes, tone: 'warning' },
     { label: 'Em fila', value: metricas.total, tone: 'secondary' },
     { label: 'Renovacoes', value: metricas.renovacoes, tone: 'success' },
     { label: 'Emitidas', value: metricas.emitidas, tone: 'accent' },
   ]
-  const modalResumo = modalEmissao ? {
-    cliente: modalEmissao.cotacoes_auto?.nome_cliente || modalEmissao.cotacoes_auto?.cpf_cliente || '-',
-    cpf: modalEmissao.cotacoes_auto?.cpf_cliente || '-',
+
+  const modalEmissaoResumo = modalEmissao ? {
+    cliente: modalEmissao.cotacoes_auto?.nome_cliente || modalEmissao.cotacoes_auto?.cpf_cliente || '—',
+    cpf: modalEmissao.cotacoes_auto?.cpf_cliente || '—',
     veiculo: modalEmissao.cotacoes_auto?.modelo_veiculo || 'Modelo nao informado',
     placa: modalEmissao.cotacoes_auto?.placa || 'Sem placa',
     tipo: (modalEmissao.cotacoes_auto?.tipo || modalEmissao.tipo) === 'renovacao' ? 'Renovacao' : 'Novo',
@@ -372,11 +807,10 @@ export default function AutoEmissoes() {
                 Mesa operacional
               </div>
               <h2 className="mt-4 text-2xl font-semibold text-dark-text md:text-3xl">
-                Cotacoes pendentes entram primeiro. Emitidas ficam visiveis sem ruido.
+                Clique no card para ver os dados. Arraste para avancar no fluxo.
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-dark-muted">
-                O kanban agora separa a entrada crua do formulario da movimentacao operacional,
-                dando mais clareza para priorizar o que ainda nao recebeu status.
+                Pendentes entram pela coluna inicial. Arraste para <strong>Cotacao feita</strong> para registrar o resultado e as seguradoras. Cards recusados ficam em vermelho.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <span className="badge badge-warning">{metricas.pendentes} pendentes</span>
@@ -395,11 +829,11 @@ export default function AutoEmissoes() {
                 accent: 'bg-brand-accent/15',
               }
               return (
-              <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-white/75 p-4 shadow-sm">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{item.label}</p>
-                <p className="mt-2 text-2xl font-semibold text-dark-text">{item.value}</p>
-                <div className={`mt-3 h-1.5 rounded-full ${barClasses[item.tone]}`} />
-              </div>
+                <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-white/75 p-4 shadow-sm">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{item.label}</p>
+                  <p className="mt-2 text-2xl font-semibold text-dark-text">{item.value}</p>
+                  <div className={`mt-3 h-1.5 rounded-full ${barClasses[item.tone]}`} />
+                </div>
               )
             })}
           </div>
@@ -462,7 +896,6 @@ export default function AutoEmissoes() {
       <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-5">
         {COLUNAS.map(coluna => {
           const cards = emissoes.filter(item => getEmissaoColuna(item) === coluna.id)
-
           return (
             <DataCard
               key={coluna.id}
@@ -482,13 +915,18 @@ export default function AutoEmissoes() {
                     icon={<Car className="w-6 h-6" />}
                     title={coluna.id === 'pendentes' ? 'Sem pendencias' : 'Coluna vazia'}
                     description={coluna.id === 'pendentes'
-                      ? 'As cotacoes criadas pelo formulario aparecem aqui antes de receberem um status.'
-                      : 'Arraste um item para continuar o fluxo.'}
+                      ? 'As cotacoes criadas pelo formulario aparecem aqui primeiro.'
+                      : 'Arraste um card para avancar no fluxo.'}
                     className="py-8"
                   />
                 ) : (
                   cards.map(item => (
-                    <CardEmissao key={item.id} emissao={item} onDragStart={setDragging} />
+                    <CardEmissao
+                      key={item.id}
+                      emissao={item}
+                      onDragStart={setDragging}
+                      onClick={setModalDetalhe}
+                    />
                   ))
                 )}
               </div>
@@ -497,6 +935,22 @@ export default function AutoEmissoes() {
         })}
       </div>
 
+      {/* Modal: detalhe do cliente */}
+      {modalDetalhe && (
+        <ModalDetalhe emissao={modalDetalhe} onClose={() => setModalDetalhe(null)} />
+      )}
+
+      {/* Modal: resultado da cotacao (drag para cotacao_feita) */}
+      {modalResultado && (
+        <ModalResultado
+          emissao={modalResultado}
+          onClose={() => setModalResultado(null)}
+          onSave={(id, payload) => salvarResultado({ id, payload })}
+          isSaving={isSavingResultado}
+        />
+      )}
+
+      {/* Modal: emitir apolice (drag para emitida) */}
       {modalEmissao && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
           <div className="glass-modal w-full max-w-6xl overflow-hidden rounded-[32px]">
@@ -509,24 +963,24 @@ export default function AutoEmissoes() {
                     Emissao selecionada
                   </div>
                   <h2 className="mt-4 text-2xl font-semibold text-dark-text">Emitir apolice</h2>
-                  <p className="mt-2 text-sm leading-6 text-dark-muted">{modalResumo?.cliente}</p>
+                  <p className="mt-2 text-sm leading-6 text-dark-muted">{modalEmissaoResumo?.cliente}</p>
 
                   <div className="mt-6 space-y-3">
                     <div className="rounded-3xl border border-white/40 bg-white/70 p-4 shadow-sm">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Cliente</p>
-                      <p className="mt-2 text-sm font-semibold text-dark-text">{modalResumo?.cliente}</p>
-                      <p className="mt-1 text-xs text-dark-muted">CPF {modalResumo?.cpf}</p>
+                      <p className="mt-2 text-sm font-semibold text-dark-text">{modalEmissaoResumo?.cliente}</p>
+                      <p className="mt-1 text-xs text-dark-muted">CPF {modalEmissaoResumo?.cpf}</p>
                     </div>
                     <div className="rounded-3xl border border-white/40 bg-white/70 p-4 shadow-sm">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Veiculo</p>
-                      <p className="mt-2 text-sm font-semibold text-dark-text">{modalResumo?.veiculo}</p>
-                      <p className="mt-1 text-xs text-dark-muted">{modalResumo?.placa}</p>
+                      <p className="mt-2 text-sm font-semibold text-dark-text">{modalEmissaoResumo?.veiculo}</p>
+                      <p className="mt-1 text-xs text-dark-muted">{modalEmissaoResumo?.placa}</p>
                     </div>
                     <div className="rounded-3xl border border-white/40 bg-white/70 p-4 shadow-sm">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Contexto</p>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        <span className="badge badge-info">{modalResumo?.tipo}</span>
-                        <span className="badge badge-muted">{modalResumo?.coluna}</span>
+                        <span className="badge badge-info">{modalEmissaoResumo?.tipo}</span>
+                        <span className="badge badge-muted">{modalEmissaoResumo?.coluna}</span>
                       </div>
                     </div>
                   </div>
@@ -546,8 +1000,13 @@ export default function AutoEmissoes() {
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Dados da apolice</p>
                     <h3 className="mt-2 text-xl font-semibold text-dark-text">Preencher e confirmar emissao</h3>
-                    <p className="mt-1 text-sm text-dark-muted">Organizei o formulario em blocos menores para leitura e preenchimento mais rapido.</p>
                   </div>
+                  <button
+                    onClick={() => { setModalEmissao(null); setForm(FORM_EMISSAO_VAZIO) }}
+                    className="rounded-full p-2 hover:bg-dark-border/40 transition-colors"
+                  >
+                    <X className="w-5 h-5 text-dark-muted" />
+                  </button>
                 </div>
 
                 <div className="space-y-4">
@@ -574,7 +1033,6 @@ export default function AutoEmissoes() {
                         <option value="individual">Individual</option>
                       </select>
                     </div>
-
                     {form.tipo_producao === 'individual' && (
                       <CampoTexto label="Responsavel" campo="responsavel" value={form.responsavel} onChange={setField} />
                     )}
@@ -589,7 +1047,6 @@ export default function AutoEmissoes() {
                       />
                       E renovacao da carteira?
                     </label>
-
                     <label className="flex items-center gap-2 text-sm text-dark-text">
                       <input
                         type="checkbox"
@@ -615,7 +1072,7 @@ export default function AutoEmissoes() {
 
                 <div className="mt-6 flex gap-3 border-t border-dark-border/60 pt-5">
                   <button
-                    onClick={() => { setModalEmissao(null); setForm(FORM_VAZIO) }}
+                    onClick={() => { setModalEmissao(null); setForm(FORM_EMISSAO_VAZIO) }}
                     className="btn-secondary flex-1"
                   >
                     Cancelar

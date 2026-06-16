@@ -179,6 +179,19 @@ export async function moverEmissaoColuna(id, coluna) {
   if (error) throw error
 }
 
+export async function salvarResultadoCotacao(id, { resultado, seguradoras_cotadas }) {
+  const { error } = await supabase
+    .from('emissoes_auto')
+    .update({
+      coluna: 'cotacao_feita',
+      resultado,
+      seguradoras_cotadas: seguradoras_cotadas ?? [],
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+  if (error) throw error
+}
+
 // Apolices
 export async function emitirApoliceAuto(payload) {
   const premioLiquido = parseFloat(payload.premio_liquido) || 0

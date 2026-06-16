@@ -117,15 +117,10 @@ export async function atualizarStatusCotacao(id, status) {
 }
 
 // Emissoes
-async function sincronizarEmissoesPendentes({ inicio, fim } = {}) {
-  let cotacoesQuery = supabase
+async function sincronizarEmissoesPendentes() {
+  const { data: cotacoes, error: cotacoesError } = await supabase
     .from('cotacoes_auto')
     .select('id, cliente_id, tipo, created_at')
-
-  if (inicio) cotacoesQuery = cotacoesQuery.gte('created_at', `${inicio}T00:00:00`)
-  if (fim) cotacoesQuery = cotacoesQuery.lte('created_at', `${fim}T23:59:59`)
-
-  const { data: cotacoes, error: cotacoesError } = await cotacoesQuery
   if (cotacoesError) throw cotacoesError
   if (!cotacoes?.length) return
 
@@ -161,7 +156,7 @@ async function sincronizarEmissoesPendentes({ inicio, fim } = {}) {
 }
 
 export async function getEmissoesAuto({ inicio, fim } = {}) {
-  await sincronizarEmissoesPendentes({ inicio, fim })
+  await sincronizarEmissoesPendentes()
 
   let q = supabase
     .from('emissoes_auto')

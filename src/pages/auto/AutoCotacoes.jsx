@@ -12,6 +12,7 @@ import {
 import { Link } from 'react-router-dom'
 import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../components/ui'
 import {
+  atualizarStatusCotacao,
   buscarClientePorCpf,
   criarClienteAuto,
   criarCotacaoAuto,
@@ -23,13 +24,18 @@ import {
   COTACAO_ABAS,
   COTACAO_STATUS,
   formatDateBR,
+  formatDateTimeBR,
   formatMoney,
   formatPercent,
   statusToneClass,
   toneClasses,
 } from './autoShared'
 import {
+  AlertCircle,
   BadgeDollarSign,
+  Car,
+  ChevronDown,
+  ChevronUp,
   CircleCheckBig,
   Search,
   ShieldHalf,
@@ -124,16 +130,43 @@ function QuoteStatusBadge({ status }) {
   )
 }
 
+function InfoRow({ label, value }) {
+  if (!value) return null
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[10px] uppercase tracking-widest text-dark-muted">{label}</span>
+      <span className="text-sm text-dark-text">{value}</span>
+    </div>
+  )
+}
+
+const STATUS_FILTROS = [
+  { value: 'todas', label: 'Todas' },
+  { value: 'pendente', label: 'Pendentes' },
+  { value: 'convertida', label: 'Convertidas' },
+  { value: 'perdida', label: 'Perdidas' },
+]
+
 export default function AutoCotacoes() {
   const [aba, setAba] = useState('novo')
   const [formNovo, setFormNovo] = useState(NOVO_VAZIO)
   const [formRen, setFormRen] = useState(REN_VAZIO)
   const [searchHistorico, setSearchHistorico] = useState('')
+  const [erro, setErro] = useState(null)
+  const [filtroStatus, setFiltroStatus] = useState('todas')
+  const [filtroTipo, setFiltroTipo] = useState('todos')
+  const [searchLista, setSearchLista] = useState('')
+  const [expandedId, setExpandedId] = useState(null)
   const qc = useQueryClient()
 
   const { data: cotacoes = [], isLoading: loadingLista } = useQuery({
     queryKey: ['auto-cotacoes', aba],
     queryFn: () => getCotacoesAuto({ tipo: aba }),
+  })
+
+  const { data: todasCotacoes = [], isLoading: loadingTodas } = useQuery({
+    queryKey: ['auto-cotacoes-todas'],
+    queryFn: () => getCotacoesAuto({}),
   })
 
   const { data: resumo, isLoading: loadingResumo } = useQuery({
@@ -145,6 +178,17 @@ export default function AutoCotacoes() {
     queryKey: ['auto-cotacoes-serie', aba],
     queryFn: () => getAutoCotacoesMensais({ tipo: aba }),
   })
+
+  const invalidarQueries = async () => {
+    await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
+    await qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
+    await qc.invalidateQueries({ queryKey: ['auto-cotacoes-resumo'] })
+    await qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
+    await qc.invalidateQueries({ queryKey: ['auto-emissoes-resumo'] })
+    await qc.invalidateQueries({ queryKey: ['auto-renovacoes-resumo'] })
+    await qc.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] })
+    await qc.invalidateQueries({ queryKey: ['auto-dashboard-cotacoes-resumo'] })
+  }
 
   const { mutateAsync: salvarNovo, isPending: salvandoNovo } = useMutation({
     mutationFn: async dados => {
@@ -161,14 +205,11 @@ export default function AutoCotacoes() {
         })
       }
 
+      // Apenas colunas que existem em cotacoes_auto
       return criarCotacaoAuto({
         cliente_id: cliente.id,
         tipo: 'novo',
         status: 'pendente',
-        celular: dados.celular || null,
-        email: dados.email || null,
-        estado_civil: dados.estado_civil || null,
-        profissao: dados.profissao || null,
         condutor_nome: dados.condutor_nome || null,
         condutor_cpf: dados.condutor_cpf || null,
         estado_civil_condutor: dados.estado_civil_condutor || null,
@@ -188,13 +229,12 @@ export default function AutoCotacoes() {
       })
     },
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
-      await qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
-      await qc.invalidateQueries({ queryKey: ['auto-emissoes-resumo'] })
-      await qc.invalidateQueries({ queryKey: ['auto-renovacoes-resumo'] })
-      await qc.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] })
-      await qc.invalidateQueries({ queryKey: ['auto-dashboard-cotacoes-resumo'] })
+      setErro(null)
+      await invalidarQueries()
       setFormNovo(NOVO_VAZIO)
+    },
+    onError: err => {
+      setErro(err?.message || 'Erro ao salvar cotação. Verifique os dados e tente novamente.')
     },
   })
 
@@ -216,14 +256,18 @@ export default function AutoCotacoes() {
       })
     },
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
-      await qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
-      await qc.invalidateQueries({ queryKey: ['auto-emissoes-resumo'] })
-      await qc.invalidateQueries({ queryKey: ['auto-renovacoes-resumo'] })
-      await qc.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] })
-      await qc.invalidateQueries({ queryKey: ['auto-dashboard-cotacoes-resumo'] })
+      setErro(null)
+      await invalidarQueries()
       setFormRen(REN_VAZIO)
     },
+    onError: err => {
+      setErro(err?.message || 'Erro ao salvar renovação. Verifique os dados e tente novamente.')
+    },
+  })
+
+  const { mutate: mudarStatus } = useMutation({
+    mutationFn: ({ id, status }) => atualizarStatusCotacao(id, status),
+    onSuccess: () => invalidarQueries(),
   })
 
   function setNovo(campo, valor) {
@@ -252,7 +296,7 @@ export default function AutoCotacoes() {
       const text = [
         item.clientes_auto?.nome_completo,
         item.clientes_auto?.cpf,
-        item.cotacoes_auto?.modelo_veiculo,
+        item.modelo_veiculo,
         item.seguradora_preferencial?.nome,
         item.seguradora_mais_barata?.nome,
       ]
@@ -263,6 +307,25 @@ export default function AutoCotacoes() {
       return text.includes(searchHistorico.toLowerCase())
     })
     .slice(0, 8)
+
+  const cotacoesFiltradas = todasCotacoes.filter(item => {
+    if (filtroStatus !== 'todas' && item.status !== filtroStatus) return false
+    if (filtroTipo !== 'todos' && item.tipo !== filtroTipo) return false
+    if (!searchLista) return true
+    const text = [
+      item.clientes_auto?.nome_completo,
+      item.clientes_auto?.cpf,
+      item.modelo_veiculo,
+      item.placa,
+      item.seguradora_preferencial?.nome,
+      item.seguradora_mais_barata?.nome,
+      item.origem_lead,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+    return text.includes(searchLista.toLowerCase())
+  })
 
   const metrics = [
     { key: 'total', label: 'Cotacoes no periodo', value: resumo?.total ?? 0, icon: BadgeDollarSign, tone: 'accent' },
@@ -400,7 +463,7 @@ export default function AutoCotacoes() {
           {tabs.map(tab => (
             <button
               key={tab.value}
-              onClick={() => setAba(tab.value)}
+              onClick={() => { setAba(tab.value); setErro(null) }}
               className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-colors ${
                 aba === tab.value
                   ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
@@ -415,6 +478,13 @@ export default function AutoCotacoes() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="space-y-4">
+          {erro && (
+            <div className="flex items-start gap-3 rounded-2xl border border-status-danger/20 bg-status-danger/8 px-4 py-3 text-sm text-status-danger">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{erro}</span>
+            </div>
+          )}
+
           <DataCard
             title={aba === 'novo' ? 'Novo orçamento' : 'Cotação de renovação'}
             subtitle={aba === 'novo'
@@ -650,6 +720,202 @@ export default function AutoCotacoes() {
           </DataCard>
         </div>
       </div>
+
+      {/* ── Listagem completa ── */}
+      <DataCard
+        title="Todas as cotações"
+        subtitle={`${cotacoesFiltradas.length} registro${cotacoesFiltradas.length !== 1 ? 's' : ''} encontrado${cotacoesFiltradas.length !== 1 ? 's' : ''}`}
+        actions={(
+          <div className="relative min-w-[200px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-muted" />
+            <input
+              value={searchLista}
+              onChange={e => setSearchLista(e.target.value)}
+              placeholder="Buscar nome, CPF, veículo..."
+              className="input pl-10"
+            />
+          </div>
+        )}
+        bodyClassName="p-0"
+      >
+        <div className="flex flex-wrap gap-2 border-b border-dark-border/70 px-5 py-3">
+          {STATUS_FILTROS.map(f => (
+            <button
+              key={f.value}
+              onClick={() => setFiltroStatus(f.value)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                filtroStatus === f.value
+                  ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                  : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+          <div className="mx-1 w-px bg-dark-border/70" />
+          {[{ value: 'todos', label: 'Todos os tipos' }, { value: 'novo', label: 'Seguro novo' }, { value: 'renovacao', label: 'Renovação' }].map(f => (
+            <button
+              key={f.value}
+              onClick={() => setFiltroTipo(f.value)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                filtroTipo === f.value
+                  ? 'border-brand-secondary bg-brand-secondary/10 text-brand-secondary'
+                  : 'border-dark-border text-dark-muted hover:border-brand-secondary/40 hover:text-dark-text'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {loadingTodas ? (
+          <div className="px-5 py-10 text-center text-sm text-dark-muted">Carregando cotações...</div>
+        ) : cotacoesFiltradas.length === 0 ? (
+          <div className="px-5 py-8">
+            <EmptyState
+              icon={<Car className="h-5 w-5" />}
+              title="Nenhuma cotação encontrada"
+              description="Ajuste os filtros ou registre uma nova cotação pelo formulário acima."
+            />
+          </div>
+        ) : (
+          <div className="divide-y divide-dark-border/70">
+            {cotacoesFiltradas.map(item => {
+              const isExpanded = expandedId === item.id
+              return (
+                <div key={item.id} className="transition-colors hover:bg-dark-surface2/30">
+                  <button
+                    onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                    className="flex w-full items-center gap-4 px-5 py-4 text-left"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-semibold text-dark-text">
+                          {item.clientes_auto?.nome_completo || 'Sem nome'}
+                        </p>
+                        <QuoteStatusBadge status={item.status} />
+                        <span className={`badge ${item.tipo === 'novo' ? 'badge-info' : 'badge-muted'}`}>
+                          {item.tipo === 'novo' ? 'Seguro novo' : 'Renovação'}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-3 text-xs text-dark-muted">
+                        {item.clientes_auto?.cpf && <span>CPF: {item.clientes_auto.cpf}</span>}
+                        {item.modelo_veiculo && <span>· {item.modelo_veiculo}{item.placa ? ` (${item.placa})` : ''}</span>}
+                        {item.seguradora_preferencial?.nome && <span>· {item.seguradora_preferencial.nome}</span>}
+                        {item.origem_lead && <span>· {item.origem_lead}</span>}
+                        <span>· {formatDateTimeBR(item.created_at)}</span>
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-dark-muted">
+                      {isExpanded
+                        ? <ChevronUp className="h-4 w-4" />
+                        : <ChevronDown className="h-4 w-4" />}
+                    </div>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="border-t border-dark-border/50 bg-dark-surface2/20 px-5 py-5">
+                      {item.tipo === 'novo' ? (
+                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                          <div className="space-y-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-muted">Segurado</p>
+                            <InfoRow label="Nome" value={item.clientes_auto?.nome_completo} />
+                            <InfoRow label="CPF" value={item.clientes_auto?.cpf} />
+                            <InfoRow label="Celular" value={item.clientes_auto?.celular} />
+                            <InfoRow label="E-mail" value={item.clientes_auto?.email} />
+                            <InfoRow label="Estado civil" value={item.clientes_auto?.estado_civil} />
+                            <InfoRow label="Profissão" value={item.clientes_auto?.profissao} />
+                          </div>
+                          <div className="space-y-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-muted">Condutor</p>
+                            <InfoRow label="Nome" value={item.condutor_nome} />
+                            <InfoRow label="CPF" value={item.condutor_cpf} />
+                            <InfoRow label="Estado civil" value={item.estado_civil_condutor} />
+                            <InfoRow label="CEP pernoite" value={item.cep_pernoite} />
+                          </div>
+                          <div className="space-y-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-muted">Veículo e risco</p>
+                            <InfoRow label="Modelo" value={item.modelo_veiculo} />
+                            <InfoRow label="Placa" value={item.placa} />
+                            <InfoRow label="Uso" value={item.uso_veiculo} />
+                            <InfoRow label="Financiado" value={item.veiculo_financiado} />
+                            <InfoRow label="Jovens 18-26" value={item.jovens_18_26} />
+                            <InfoRow label="Garagem residência" value={item.garagem_residencia} />
+                            <InfoRow label="Garagem trabalho" value={item.garagem_trabalho} />
+                            <InfoRow label="Garagem estudo" value={item.garagem_estudo} />
+                          </div>
+                          <div className="space-y-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-muted">Proteções e lead</p>
+                            <InfoRow label="Kit gás" value={item.possui_kit_gas} />
+                            <InfoRow label="Blindagem" value={item.possui_blindagem} />
+                            <InfoRow label="Isento imposto" value={item.isento_imposto} />
+                            <InfoRow label="Origem lead" value={item.origem_lead} />
+                            <InfoRow label="Criado em" value={formatDateTimeBR(item.created_at)} />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid gap-6 sm:grid-cols-3">
+                          <div className="space-y-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-muted">Cliente</p>
+                            <InfoRow label="Nome" value={item.clientes_auto?.nome_completo} />
+                            <InfoRow label="CPF" value={item.clientes_auto?.cpf} />
+                            <InfoRow label="Celular" value={item.clientes_auto?.celular} />
+                            <InfoRow label="Criado em" value={formatDateTimeBR(item.created_at)} />
+                          </div>
+                          <div className="space-y-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-muted">Seguradora preferencial</p>
+                            <InfoRow label="Nome" value={item.seguradora_preferencial?.nome} />
+                            <InfoRow label="Prêmio total" value={item.seguradora_preferencial?.premio_total ? formatMoney(item.seguradora_preferencial.premio_total) : null} />
+                            <InfoRow label="Prêmio líquido" value={item.seguradora_preferencial?.premio_liquido ? formatMoney(item.seguradora_preferencial.premio_liquido) : null} />
+                            <InfoRow label="% Comissão" value={item.seguradora_preferencial?.pct_comissao ? formatPercent(item.seguradora_preferencial.pct_comissao) : null} />
+                            <InfoRow label="Comissão est." value={item.seguradora_preferencial?.valor_comissao ? formatMoney(item.seguradora_preferencial.valor_comissao) : null} />
+                          </div>
+                          <div className="space-y-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-muted">Seguradora mais barata</p>
+                            <InfoRow label="Nome" value={item.seguradora_mais_barata?.nome} />
+                            <InfoRow label="Prêmio total" value={item.seguradora_mais_barata?.premio_total ? formatMoney(item.seguradora_mais_barata.premio_total) : null} />
+                            <InfoRow label="Prêmio líquido" value={item.seguradora_mais_barata?.premio_liquido ? formatMoney(item.seguradora_mais_barata.premio_liquido) : null} />
+                            <InfoRow label="% Comissão" value={item.seguradora_mais_barata?.pct_comissao ? formatPercent(item.seguradora_mais_barata.pct_comissao) : null} />
+                            <InfoRow label="Comissão est." value={item.seguradora_mais_barata?.valor_comissao ? formatMoney(item.seguradora_mais_barata.valor_comissao) : null} />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="mt-5 flex flex-wrap gap-2 border-t border-dark-border/50 pt-4">
+                        <span className="mr-2 self-center text-xs text-dark-muted">Alterar status:</span>
+                        {item.status !== 'convertida' && (
+                          <button
+                            onClick={() => mudarStatus({ id: item.id, status: 'convertida' })}
+                            className="rounded-full border border-status-success/30 bg-status-success/10 px-3 py-1 text-xs font-medium text-status-success hover:bg-status-success/20 transition-colors"
+                          >
+                            Marcar convertida
+                          </button>
+                        )}
+                        {item.status !== 'perdida' && (
+                          <button
+                            onClick={() => mudarStatus({ id: item.id, status: 'perdida' })}
+                            className="rounded-full border border-status-danger/30 bg-status-danger/10 px-3 py-1 text-xs font-medium text-status-danger hover:bg-status-danger/20 transition-colors"
+                          >
+                            Marcar perdida
+                          </button>
+                        )}
+                        {item.status !== 'pendente' && (
+                          <button
+                            onClick={() => mudarStatus({ id: item.id, status: 'pendente' })}
+                            className="rounded-full border border-status-warning/30 bg-status-warning/10 px-3 py-1 text-xs font-medium text-status-warning hover:bg-status-warning/20 transition-colors"
+                          >
+                            Reabrir
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </DataCard>
     </div>
   )
 }

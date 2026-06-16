@@ -840,9 +840,11 @@ function EditorInner({ journey, onBack, toast }) {
       <style>{EDITOR_STYLES}</style>
 
       <div
-        className="flex flex-col -m-4 md:-m-6"
+        className="flex flex-col"
         style={{
-          height: 'calc(100vh - 56px)',
+          position: 'fixed',
+          inset: 0,
+          zIndex: 250,
           background: 'linear-gradient(160deg, rgb(var(--color-bg)) 0%, rgb(var(--color-surface2)) 100%)',
         }}
       >
@@ -918,7 +920,7 @@ function EditorInner({ journey, onBack, toast }) {
         </div>
 
         {/* ── Body: 3-column ── */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden" style={{ minHeight: 0 }}>
           <PainelNos />
 
           {/* Canvas */}
@@ -956,6 +958,7 @@ function EditorInner({ journey, onBack, toast }) {
               </div>
             </div>
 
+            <div style={{ position: 'absolute', inset: 0 }}>
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -984,6 +987,7 @@ function EditorInner({ journey, onBack, toast }) {
                 nodeStrokeWidth={0}
               />
             </ReactFlow>
+            </div>
           </div>
 
           {selectedNode && (

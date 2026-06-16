@@ -558,7 +558,10 @@ function TabelaAberta({ fichas, user, navigate, onDetalhe, onAssumir, onFinaliza
           const isMe   = f.orcamentista_id === user?.id
           const canAss = !f.assumida && f.status === 'pendente'
           const canFin = isMe && f.status === 'em_cotacao'
-          const nome   = f.produto === 'pessoa_juridica' ? (f.nome_empresa || f.nome_interessado) : f.nome_interessado
+          const rd     = f.raw_data || {}
+          const nome   = f.produto === 'pessoa_juridica'
+            ? (f.nome_empresa || f.nome_interessado || rd.nome_empresa || rd.razao_social || rd.empresa || rd.nome || '—')
+            : (f.nome_interessado || rd.nome || '—')
           return (
             <tr key={f.id} className="table-row" onClick={() => navigate(`/fichas/${f.id}`)}>
               <td className="td text-dark-muted text-xs whitespace-nowrap font-mono">
@@ -615,7 +618,10 @@ function TabelaPassadas({ fichas, user, navigate, onEditar, resolverNome }) {
         {fichas.map(f => {
           const si   = STATUS_LABELS[f.status] ?? { label: f.status, color: '' }
           const isMe = f.orcamentista_id === user?.id
-          const nome = f.produto === 'pessoa_juridica' ? (f.nome_empresa || f.nome_interessado) : f.nome_interessado
+          const rd2  = f.raw_data || {}
+          const nome = f.produto === 'pessoa_juridica'
+            ? (f.nome_empresa || f.nome_interessado || rd2.nome_empresa || rd2.razao_social || rd2.empresa || rd2.nome || '—')
+            : (f.nome_interessado || rd2.nome || '—')
           return (
             <tr key={f.id} className="table-row" onClick={() => navigate(`/fichas/${f.id}`)}>
               <td className="td text-dark-muted text-xs whitespace-nowrap font-mono">

@@ -118,8 +118,18 @@ function initials(n) {
   return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || '?'
 }
 function nomePrincipal(ficha) {
-  if (ficha.produto === 'pessoa_juridica') return ficha.nome_empresa || ficha.nome_interessado || '—'
-  return ficha.nome_interessado || '—'
+  const rd = ficha.raw_data || {}
+  if (ficha.produto === 'pessoa_juridica') {
+    return ficha.nome_empresa
+      || ficha.nome_interessado
+      || rd.nome_empresa
+      || rd.razao_social
+      || rd.empresa
+      || rd.nome_fantasia
+      || rd.nome
+      || '—'
+  }
+  return ficha.nome_interessado || rd.nome || rd.nome_interessado || '—'
 }
 
 // ── FichaCard (visual puro, sem lógica de drag) ───────────────────────────────

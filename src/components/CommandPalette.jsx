@@ -25,8 +25,14 @@ export default function CommandPalette({ open, onClose, onOpenFicha }) {
       const s = query.trim()
       const { data } = await supabase
         .from('fichas')
-        .select('id, nome_interessado, cpf, imobiliaria, produto, status, created_at')
-        .or(`nome_interessado.ilike.%${s}%,cpf.ilike.%${s}%,imobiliaria.ilike.%${s}%`)
+        .select('id, nome_interessado, nome_empresa, cnpj, cpf, imobiliaria, produto, status, created_at')
+        .or(
+          `nome_interessado.ilike.%${s}%,` +
+          `nome_empresa.ilike.%${s}%,` +
+          `cpf.ilike.%${s}%,` +
+          `cnpj.ilike.%${s}%,` +
+          `imobiliaria.ilike.%${s}%`
+        )
         .order('created_at', { ascending: false })
         .limit(8)
       setResults(data || [])
@@ -82,9 +88,13 @@ export default function CommandPalette({ open, onClose, onOpenFicha }) {
                   className="w-full flex items-center gap-4 px-4 py-3 hover:bg-dark-surface2 transition-colors text-left"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-dark-text truncate">{f.nome_interessado || 'Sem nome'}</p>
+                    <p className="text-sm font-medium text-dark-text truncate">
+                      {f.produto === 'pessoa_juridica'
+                        ? (f.nome_empresa || f.nome_interessado || 'Sem nome')
+                        : (f.nome_interessado || 'Sem nome')}
+                    </p>
                     <p className="text-xs text-dark-muted mt-0.5 truncate">
-                      {f.imobiliaria && `${f.imobiliaria} · `}{f.cpf}
+                      {f.imobiliaria && `${f.imobiliaria} · `}{f.cnpj || f.cpf}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">

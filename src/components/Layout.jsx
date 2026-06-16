@@ -515,7 +515,11 @@ export default function Layout() {
         </main>
       </div>
 
-      <CommandPalette isOpen={cmdOpen} onClose={() => setCmdOpen(false)} />
+      <CommandPalette
+        open={cmdOpen}
+        onClose={() => setCmdOpen(false)}
+        onOpenFicha={id => { navigate(`/fichas/${id}`); setCmdOpen(false) }}
+      />
     </div>
   )
 }

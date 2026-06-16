@@ -2,34 +2,47 @@
 
 ## Responsavel Atual
 
-Claude (Agente 4 - Melhorias)
+Claude
 
 ## Pagina
 
-Comercial Jornadas
+Modulo Auto - Cotações
 
 ## Objetivo
 
-Melhorar o workflow visual da tela de Jornadas: enquadramento do editor, design mais consistente e animacoes mais intencionais no fluxo e nos paineis laterais.
+Corrigir bug de salvamento das cotações e adicionar área de listagem completa com todos os dados.
 
 ## Status
 
-Concluida
+Concluido
 
-## Atualizacao de Execucao
+## Alteracoes Realizadas
 
-- Contexto da pagina lido, JSX mapeado.
-- Problemas identificados: canvas sem hierarquia, paineis laterais pesados, edge color fora da palette brand, animacoes ausentes nos paineis.
-- Implementado: keyframes CSS locais (jrn-slide-right, jrn-slide-left, jrn-fade-up), brand colors nas edges (#2B5BA8 / #1A3A6B), WorkflowNode com sombra direcional + header gradiente + handles com ring glow, PainelNos com animacao slide-left + itens com borda-esquerda colorida + hoverable, PainelConfig com slide-right + color-strip no topo matching o node selecionado, header do editor mais compacto (52px) com breadcrumb, canvas com background radial-gradient brand, stats pill flutuante minimalista, controles ReactFlow com CSS override (bordas arredondadas, brand hover).
+### Bug corrigido: cotações não eram salvas
+- `salvarNovo` enviava campos inexistentes em `cotacoes_auto` (`celular`, `email`, `estado_civil`, `profissao`)
+  — esses campos pertencem a `clientes_auto` e são salvos corretamente na criação do cliente.
+  O insert falhava silenciosamente porque não havia `onError` na mutation.
+- Removidos os 4 campos inválidos do payload de `criarCotacaoAuto`.
+- Adicionado `onError` em ambas as mutations (`salvarNovo` e `salvarRenovacao`) com banner de erro visível.
 
-## Arquivos em uso
+### Bug corrigido: filtro do histórico recente
+- `item.cotacoes_auto?.modelo_veiculo` → corrigido para `item.modelo_veiculo`
+  (o item já é a cotação; não há relação cotacoes_auto dentro de si mesmo).
 
-- `docs/IA_ORCHESTRATOR.md`
-- `docs/PROJECT_CONTEXT.md`
-- `ROADMAP.md`
-- `docs/CURRENT_TASK.md`
-- `src/pages/comercial/Jornadas/CONTEXT.md`
-- `src/pages/comercial/Jornadas.jsx`
+### Nova funcionalidade: listagem completa de cotações
+- Nova query `['auto-cotacoes-todas']` sem filtro de tipo.
+- Nova seção "Todas as cotações" ao final da página com:
+  - Busca por nome, CPF, modelo de veículo, placa, seguradora, origem
+  - Filtros de status (Todas / Pendentes / Convertidas / Perdidas)
+  - Filtros de tipo (Todos / Seguro novo / Renovação)
+  - Linhas expansíveis mostrando todos os dados da cotação:
+    - Tipo 'novo': segurado, condutor, veículo/risco, proteções/lead
+    - Tipo 'renovacao': cliente, seguradora preferencial, seguradora mais barata
+  - Ações rápidas de status direto na listagem (Converter / Marcar perdida / Reabrir)
+
+## Arquivos Alterados
+
+- `src/pages/auto/AutoCotacoes.jsx`
 
 ## Proximo Responsavel
 
@@ -37,8 +50,10 @@ Usuario
 
 ## Proxima Tarefa
 
-Validar visualmente o editor de jornadas: paineis laterais, animacoes, nos e conexoes.
+Verificar se o SQL `supabase/15_auto_dates_migration.sql` já foi executado no Supabase
+(necessário para cotações antigas sem `created_at` aparecerem corretamente).
 
 ## Observacoes
 
-Escopo exclusivamente visual. Nenhuma alteracao em banco, auth, rotas ou contratos de dados. Toda logica de negocio preservada identica.
+- RLS, auth e regras de negocio não foram alterados.
+- A mutation `mudarStatus` usa `atualizarStatusCotacao` já existente em `src/lib/auto.js`.

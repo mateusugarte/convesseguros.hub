@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronsUpDown, Check, Search, X } from 'lucide-react'
 
 /**
@@ -34,6 +35,7 @@ export function WorkspacesSelect({
   const [search, setSearch] = useState('')
   const wrapRef   = useRef(null)
   const searchRef = useRef(null)
+  const dropRef   = useRef(null)
 
   const showSearch = searchable ?? options.length > 8
 
@@ -89,7 +91,7 @@ export function WorkspacesSelect({
   useEffect(() => {
     if (!open) return
     function handler(e) {
-      if (!wrapRef.current?.contains(e.target)) setOpen(false)
+      if (!wrapRef.current?.contains(e.target) && !dropRef.current?.contains(e.target)) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -200,8 +202,9 @@ export function WorkspacesSelect({
       </button>
 
       {/* Dropdown */}
-      {open && pos && (
+      {open && pos && createPortal(
         <div
+          ref={dropRef}
           style={{
             position: 'fixed',
             zIndex:   9999,
@@ -300,7 +303,8 @@ export function WorkspacesSelect({
               })}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

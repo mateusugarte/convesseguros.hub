@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { CalendarClock, CheckCircle2, Clock, RefreshCw, Send, XCircle } from 'lucide-react'
 import { getRenovacoesAuto, atualizarStatusRenovacao } from '../../lib/auto'
 import { PageHeader, MetricCard, FilterBar, DataCard, EmptyState } from '../../components/ui'
+import { RENOVACAO_STATUS } from './autoShared'
 
 const PERIODOS = [
   { value: 'proximo_mes', label: 'Proximo mes' },
@@ -288,7 +289,7 @@ export default function AutoRenovacoes() {
               <tbody className="divide-y divide-dark-border/40">
                 {acompanharLista.map(item => {
                   const cotacaoInfo = STATUS_COTACAO[item.status_cotacao || 'nao_cotada']
-                  const renovacaoInfo = STATUS_RENOVACAO[item.status_renovacao || 'pendente']
+                  const renovacaoInfo = RENOVACAO_STATUS[item.status_renovacao || 'pendente'] || RENOVACAO_STATUS.pendente
                   return (
                     <tr key={item.id} className="transition-colors hover:bg-brand-accent/5">
                       <td className="py-3 pr-4 font-medium text-dark-text">

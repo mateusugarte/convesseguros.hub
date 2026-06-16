@@ -305,7 +305,6 @@ export default function AutoCotacaoDetalhe() {
   }, [id])
 
   const backTo = location.state?.from || '/auto/cotacoes/consulta'
-  const backLabel = location.state?.fromLabel || 'Consulta'
 
   const metrics = useMemo(() => [
     { key: 'status', label: 'Status', value: cotacao?.status ? (COTACAO_STATUS[cotacao.status]?.label || cotacao.status) : '—', tone: 'accent' },
@@ -342,16 +341,19 @@ export default function AutoCotacaoDetalhe() {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-start">
+        <button onClick={() => navigate(backTo)} className="btn-secondary">
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </button>
+      </div>
+
       <PageHeader
         eyebrow="Seguro Auto"
         title={cotacao.nome_cliente || cotacao.cpf_cliente || 'Cotacao sem identificacao'}
         description="Area dedicada da cotacao, com leitura completa dos dados, edicao direta e apoio ao fluxo operacional."
         actions={(
           <>
-            <button onClick={() => navigate(backTo)} className="btn-secondary">
-              <ArrowLeft className="h-4 w-4" />
-              {backLabel}
-            </button>
             <button
               onClick={() => setConfirmDelete(true)}
               className="rounded-2xl border border-status-danger/30 px-3 py-2 text-sm font-medium text-status-danger transition-colors hover:bg-status-danger/10"

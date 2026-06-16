@@ -113,10 +113,39 @@ export async function criarCotacaoAuto(payload) {
   return data
 }
 
+export async function getCotacaoAutoPorId(id) {
+  const { data, error } = await supabase
+    .from('cotacoes_auto')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+export async function atualizarCotacaoAuto(id, changes) {
+  const { data, error } = await supabase
+    .from('cotacoes_auto')
+    .update(changes)
+    .eq('id', id)
+    .select()
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
 export async function atualizarStatusCotacao(id, status) {
   const { error } = await supabase
     .from('cotacoes_auto')
     .update({ status })
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function deletarCotacaoAuto(id) {
+  const { error } = await supabase
+    .from('cotacoes_auto')
+    .delete()
     .eq('id', id)
   if (error) throw error
 }

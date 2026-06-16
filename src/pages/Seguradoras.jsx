@@ -7,7 +7,11 @@ import { PageHeader, MetricCard, DataCard } from '../components/ui'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import EntityDocumentsSection from '../components/EntityDocumentsSection'
 import { replaceEntityImage, uploadEntityDocument } from '../lib/entityMedia'
-import { SEGURADORA_PRODUTOS, invalidarCacheSeguradoras } from '../lib/seguradoras'
+import {
+  SEGURADORA_PRODUTOS,
+  SEGURADORA_PRODUTO_LABELS,
+  invalidarCacheSeguradoras,
+} from '../lib/seguradoras'
 
 function fileTitle(fileName) {
   const parts = String(fileName || '').split('.')
@@ -30,22 +34,56 @@ function ProductChooser({ value, onChange }) {
       <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block">
         Produtos atendidos *
       </label>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        {SEGURADORA_PRODUTOS.map(produto => {
-          const active = value.includes(produto)
+      <div className="space-y-3">
+        {SEGURADORA_PRODUTOS.map(grupo => {
+          const isFianca = grupo.value === 'fianca'
           return (
-            <button
-              key={produto}
-              type="button"
-              onClick={() => toggle(produto)}
-              className={`rounded-xl border px-3 py-2 text-sm transition-all ${
-                active
-                  ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
-                  : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
-              }`}
-            >
-              {PRODUTO_LABELS[produto] || produto}
-            </button>
+            <div key={grupo.value} className="rounded-2xl border border-dark-border/70 bg-white/60 p-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (isFianca) return
+                  toggle(grupo.value)
+                }}
+                className={`w-full rounded-xl px-3 py-2 text-left text-sm font-semibold transition-all ${
+                  isFianca
+                    ? 'cursor-default text-dark-text'
+                    : value.includes(grupo.value)
+                      ? 'border border-brand-accent bg-brand-accent/10 text-brand-accent'
+                      : 'border border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+                }`}
+              >
+                {grupo.label}
+              </button>
+
+              {isFianca && (
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {grupo.subprodutos.map(sub => {
+                    const active = value.includes(sub.value)
+                    return (
+                      <button
+                        key={sub.value}
+                        type="button"
+                        onClick={() => toggle(sub.value)}
+                        className={`rounded-xl border px-3 py-2 text-sm transition-all ${
+                          active
+                            ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                            : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+                        }`}
+                      >
+                        {sub.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {!isFianca && (
+                <p className="mt-2 text-[11px] text-dark-muted">
+                  {SEGURADORA_PRODUTO_LABELS[grupo.value] || grupo.value}
+                </p>
+              )}
+            </div>
           )
         })}
       </div>
@@ -467,9 +505,9 @@ function TabCadastradas({ seguradoras, onEditar, onExcluir, confirmExcluir, setC
               <div className="min-w-0 flex-1 space-y-2">
                 <SeguradoraBadge nome={seg.nome_canonico} logoUrl={seg.logo_url} size="md" />
                 <div className="flex flex-wrap gap-2">
-                  {seg.produtos.map(produto => (
-                    <span key={produto} className="px-2 py-1 rounded-full text-[10px] font-semibold bg-brand-accent/10 text-brand-accent border border-brand-accent/20">
-                      {PRODUTO_LABELS[produto] || produto}
+                {seg.produtos.map(produto => (
+                  <span key={produto} className="px-2 py-1 rounded-full text-[10px] font-semibold bg-brand-accent/10 text-brand-accent border border-brand-accent/20">
+                      {SEGURADORA_PRODUTO_LABELS[produto] || PRODUTO_LABELS[produto] || produto}
                     </span>
                   ))}
                 </div>

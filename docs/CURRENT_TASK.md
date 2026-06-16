@@ -6,28 +6,27 @@ Codex
 
 ## Pagina
 
-`src/pages/auto/AutoCotacoes.jsx`
+`src/pages/Seguradoras.jsx`
 
 ## Objetivo
 
-Separar a pagina de cotacoes de seguro auto em uma tela principal com apenas as cotações mais recentes e uma subpagina dedicada de consulta com filtros e pesquisas especificas.
+Corrigir o upload de logo/imagem das seguradoras e imobiliarias, liberando as policies de RLS corretas e ajustando a taxonomia de produtos da seguradora.
 
 ## Status
 
-Concluida
+Em andamento.
 
 ## Proxima Acao OBRIGATORIA
 
-Nenhuma pendente.
+Aplicar a migracao `supabase/21_entity_media_rls_and_products.sql` no Supabase e validar o salvamento de logo/imagem.
 
 ## Alteracoes Realizadas
 
-- A tela principal de `AutoCotacoes` ficou focada nas ultimas cotações e no fluxo de cadastro.
-- A consulta completa foi movida para `AutoCotacoesConsulta` em `/auto/cotacoes/consulta`.
-- O menu lateral e as rotas do app foram ajustados para expor os dois acessos.
-- A area de consulta passou a concentrar busca, filtros de periodo, status e tipo, além do detalhamento expansivel.
+- `src/lib/seguradoras.js` passou a tratar Fiança como familia com subtipos.
+- `src/pages/Seguradoras.jsx` agora mostra os produtos de forma agrupada.
+- `supabase/21_entity_media_rls_and_products.sql` foi adicionada para abrir RLS e corrigir a taxonomia.
 
 ## Observacoes
 
-- A reorganizacao foi apenas de frontend e navegacao.
-- A validacao automatica por bundle nao foi executada nesta sessao por limitacao do ambiente com `vite.config.js`.
+- O bucket `cadastros-media` precisa ter as policies aplicadas para permitir upload, leitura e exclusão.
+- Os codigos antigos de produto foram mantidos com compatibilidade de leitura.

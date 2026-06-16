@@ -1,0 +1,452 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, Check, Pencil, Trash2, X } from 'lucide-react'
+import { DataCard, EmptyState, MetricCard, PageHeader } from '../../components/ui'
+import SeguradoraSelect from '../../components/SeguradoraSelect'
+import { deletarCotacaoAuto, getCotacaoAutoPorId, atualizarCotacaoAuto } from '../../lib/auto'
+import {
+  COTACAO_STATUS,
+  formatDateTimeBR,
+  formatMoney,
+  toneClasses,
+} from './autoShared'
+
+function QuoteStatusBadge({ status }) {
+  const meta = COTACAO_STATUS[status] || COTACAO_STATUS.aberta
+  return <span className={`badge ${toneClasses(meta.tone)}`}>{meta.label}</span>
+}
+
+function DetailField({ label, value, onSave, type = 'text', rows, placeholder, readOnly = false }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value ?? '')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!editing) setDraft(value ?? '')
+  }, [editing, value])
+
+  const cancel = useCallback(() => {
+    setEditing(false)
+    setDraft(value ?? '')
+  }, [value])
+
+  const save = useCallback(async () => {
+    if ((draft ?? '') === (value ?? '')) {
+      setEditing(false)
+      return
+    }
+    setSaving(true)
+    try {
+      await onSave(draft === '' ? null : draft)
+      setEditing(false)
+    } finally {
+      setSaving(false)
+    }
+  }, [draft, onSave, value])
+
+  const inputClass = 'w-full rounded-2xl border border-brand-accent/30 bg-white px-3 py-2 text-sm text-dark-text outline-none transition-colors focus:border-brand-accent'
+
+  if (readOnly) {
+    return (
+      <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{label}</p>
+        <p className="mt-2 text-sm text-dark-text">{value || '—'}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{label}</p>
+      {editing ? (
+        <div className="mt-2 flex items-start gap-2">
+          {rows ? (
+            <textarea
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              rows={rows}
+              placeholder={placeholder}
+              className={`${inputClass} min-h-[44px] resize-none`}
+            />
+          ) : (
+            <input
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              type={type}
+              placeholder={placeholder}
+              className={inputClass}
+            />
+          )}
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving}
+            className="rounded-xl bg-status-success/15 p-2 text-status-success transition-colors hover:bg-status-success/25 disabled:opacity-50"
+          >
+            <Check className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={cancel}
+            className="rounded-xl border border-dark-border/70 p-2 text-dark-muted transition-colors hover:text-dark-text"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setDraft(value ?? '')
+            setEditing(true)
+          }}
+          className="mt-2 flex w-full items-center justify-between gap-3 text-left"
+        >
+          <span className="min-w-0 truncate text-sm text-dark-text">{value || '—'}</span>
+          <Pencil className="h-3.5 w-3.5 shrink-0 text-dark-muted/50" />
+        </button>
+      )}
+    </div>
+  )
+}
+
+function DetailSelect({ label, value, onSave, options }) {
+  const [editing, setEditing] = useState(false)
+
+  return (
+    <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{label}</p>
+      {editing ? (
+        <div className="mt-2 flex items-center gap-2">
+          <select
+            value={value || ''}
+            onChange={async e => {
+              try {
+                await onSave(e.target.value || null)
+                setEditing(false)
+              } catch {
+                // Mantém o campo aberto para permitir nova tentativa.
+              }
+            }}
+            className="select flex-1"
+          >
+            {options.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="rounded-xl border border-dark-border/70 p-2 text-dark-muted transition-colors hover:text-dark-text"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="mt-2 flex w-full items-center justify-between gap-3 text-left"
+        >
+          <span className="min-w-0 truncate text-sm text-dark-text">{options.find(opt => opt.value === value)?.label || value || '—'}</span>
+          <Pencil className="h-3.5 w-3.5 shrink-0 text-dark-muted/50" />
+        </button>
+      )}
+    </div>
+  )
+}
+
+const STATUS_OPTIONS = [
+  { value: 'pendente', label: 'Pendente' },
+  { value: 'convertida', label: 'Convertida' },
+  { value: 'perdida', label: 'Perdida' },
+]
+
+const TIPO_OPTIONS = [
+  { value: 'novo', label: 'Seguro novo' },
+  { value: 'renovacao', label: 'Renovação' },
+]
+
+export default function AutoCotacaoDetalhe() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const qc = useQueryClient()
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const { data: cotacao, isLoading } = useQuery({
+    queryKey: ['auto-cotacao', id],
+    queryFn: () => getCotacaoAutoPorId(id),
+    enabled: !!id,
+  })
+
+  const { mutateAsync: salvarCampo } = useMutation({
+    mutationFn: async ({ field, value }) => {
+      return atualizarCotacaoAuto(id, { [field]: value })
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['auto-cotacao', id] })
+      await qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
+      await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-cotacoes-resumo'] })
+      await qc.invalidateQueries({ queryKey: ['auto-dashboard-cotacoes-resumo'] })
+    },
+  })
+
+  const { mutateAsync: salvarSeguradora } = useMutation({
+    mutationFn: async ({ field, value }) => {
+      const atual = cotacao?.[field] || {}
+      return atualizarCotacaoAuto(id, {
+        [field]: {
+          ...atual,
+          nome: value || null,
+        },
+      })
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['auto-cotacao', id] })
+      await qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
+      await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
+    },
+  })
+
+  const { mutateAsync: excluir, isPending: deleting } = useMutation({
+    mutationFn: () => deletarCotacaoAuto(id),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['auto-cotacao', id] })
+      await qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
+      await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
+      navigate('/auto/cotacoes/consulta')
+    },
+  })
+
+  useEffect(() => {
+    setConfirmDelete(false)
+  }, [id])
+
+  const metrics = useMemo(() => [
+    { key: 'status', label: 'Status', value: cotacao?.status ? (COTACAO_STATUS[cotacao.status]?.label || cotacao.status) : '—', tone: 'accent' },
+    { key: 'tipo', label: 'Tipo', value: cotacao?.tipo === 'renovacao' ? 'Renovação' : 'Seguro novo', tone: 'secondary' },
+    { key: 'cliente', label: 'Cliente', value: cotacao?.nome_cliente || cotacao?.cpf_cliente || 'Sem nome', tone: 'success' },
+    { key: 'celular', label: 'Celular', value: cotacao?.celular_cliente || '—', tone: 'warning' },
+  ], [cotacao])
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center gap-2 text-sm text-dark-muted">
+        <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        Carregando cotação...
+      </div>
+    )
+  }
+
+  if (!cotacao) {
+    return (
+      <EmptyState
+        title="Cotação não encontrada"
+        description="O registro pode ter sido removido ou o link está incorreto."
+        actions={(
+          <button onClick={() => navigate('/auto/cotacoes/consulta')} className="btn-secondary">
+            Voltar
+          </button>
+        )}
+      />
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Seguro Auto"
+        title={cotacao.nome_cliente || cotacao.cpf_cliente || 'Cotação sem identificação'}
+        description="Detalhe organizado da cotação, com edição direta dos campos e exclusão do registro."
+        actions={(
+          <>
+            <button onClick={() => navigate('/auto/cotacoes/consulta')} className="btn-secondary">
+              <ArrowLeft className="h-4 w-4" />
+              Voltar
+            </button>
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="rounded-2xl border border-status-danger/30 px-3 py-2 text-sm font-medium text-status-danger transition-colors hover:bg-status-danger/10"
+            >
+              Excluir
+            </button>
+          </>
+        )}
+        stats={metrics.map(({ key, label, value, tone }) => (
+          <MetricCard key={key} label={label} value={value} tone={tone} />
+        ))}
+      />
+
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="space-y-4">
+          <DataCard title="Segurado" subtitle="Dados de identificação e contato">
+            <div className="grid gap-3 md:grid-cols-2">
+              <DetailField label="Nome do cliente" value={cotacao.nome_cliente} onSave={value => salvarCampo({ field: 'nome_cliente', value })} />
+              <DetailField label="CPF" value={cotacao.cpf_cliente} onSave={value => salvarCampo({ field: 'cpf_cliente', value })} />
+              <DetailField label="Celular" value={cotacao.celular_cliente} onSave={value => salvarCampo({ field: 'celular_cliente', value })} />
+              <DetailField label="E-mail" value={cotacao.email_cliente} onSave={value => salvarCampo({ field: 'email_cliente', value })} />
+              <DetailField label="Estado civil" value={cotacao.estado_civil_cliente} onSave={value => salvarCampo({ field: 'estado_civil_cliente', value })} />
+              <DetailField label="Profissão" value={cotacao.profissao_cliente} onSave={value => salvarCampo({ field: 'profissao_cliente', value })} />
+            </div>
+          </DataCard>
+
+          <DataCard title="Condutor" subtitle="Dados do condutor principal">
+            <div className="grid gap-3 md:grid-cols-2">
+              <DetailField label="Nome do condutor" value={cotacao.condutor_nome} onSave={value => salvarCampo({ field: 'condutor_nome', value })} />
+              <DetailField label="CPF do condutor" value={cotacao.condutor_cpf} onSave={value => salvarCampo({ field: 'condutor_cpf', value })} />
+              <DetailField label="Estado civil" value={cotacao.estado_civil_condutor} onSave={value => salvarCampo({ field: 'estado_civil_condutor', value })} />
+            </div>
+          </DataCard>
+
+          <DataCard title="Veículo e risco" subtitle="Informações usadas na cotação">
+            <div className="grid gap-3 md:grid-cols-2">
+              <DetailField label="Modelo do veículo" value={cotacao.modelo_veiculo} onSave={value => salvarCampo({ field: 'modelo_veiculo', value })} />
+              <DetailField label="Placa" value={cotacao.placa} onSave={value => salvarCampo({ field: 'placa', value })} />
+              <DetailField label="Uso do veículo" value={cotacao.uso_veiculo} onSave={value => salvarCampo({ field: 'uso_veiculo', value })} />
+              <DetailField label="Veículo financiado" value={cotacao.veiculo_financiado} onSave={value => salvarCampo({ field: 'veiculo_financiado', value })} />
+              <DetailField label="CEP pernoite" value={cotacao.cep_pernoite} onSave={value => salvarCampo({ field: 'cep_pernoite', value })} />
+              <DetailField label="Garagem residência" value={cotacao.garagem_residencia} onSave={value => salvarCampo({ field: 'garagem_residencia', value })} />
+              <DetailField label="Garagem trabalho" value={cotacao.garagem_trabalho} onSave={value => salvarCampo({ field: 'garagem_trabalho', value })} />
+              <DetailField label="Garagem estudo" value={cotacao.garagem_estudo} onSave={value => salvarCampo({ field: 'garagem_estudo', value })} />
+              <DetailField label="Jovens 18-26" value={cotacao.jovens_18_26} onSave={value => salvarCampo({ field: 'jovens_18_26', value })} />
+              <DetailField label="Possui kit gás" value={cotacao.possui_kit_gas} onSave={value => salvarCampo({ field: 'possui_kit_gas', value })} />
+              <DetailField label="Possui blindagem" value={cotacao.possui_blindagem} onSave={value => salvarCampo({ field: 'possui_blindagem', value })} />
+              <DetailField label="Isento imposto" value={cotacao.isento_imposto} onSave={value => salvarCampo({ field: 'isento_imposto', value })} />
+            </div>
+          </DataCard>
+
+          <DataCard title="Seguradoras" subtitle="Selecione seguradoras cadastradas e ajuste os valores da cotação">
+            <div className="grid gap-4 lg:grid-cols-2">
+              {[
+                { key: 'seguradora_preferencial', title: 'Seguradora preferencial' },
+                { key: 'seguradora_mais_barata', title: 'Seguradora mais barata' },
+              ].map(section => (
+                <div key={section.key} className="space-y-3 rounded-3xl border border-dark-border/60 bg-dark-surface2/20 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">{section.title}</p>
+                    <button
+                      type="button"
+                      onClick={() => salvarSeguradora({ field: section.key, value: '' })}
+                      className="text-xs text-dark-muted transition-colors hover:text-dark-text"
+                    >
+                      Limpar
+                    </button>
+                  </div>
+                  <SeguradoraSelect
+                    value={cotacao?.[section.key]?.nome || ''}
+                    onChange={value => { void salvarSeguradora({ field: section.key, value }).catch(() => {}) }}
+                    placeholder="Selecionar seguradora"
+                  />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <DetailField
+                      label="Prêmio total"
+                      type="number"
+                      value={cotacao?.[section.key]?.premio_total}
+                      onSave={value => salvarCampo({
+                        field: section.key,
+                        value: {
+                          ...(cotacao?.[section.key] || {}),
+                          premio_total: value,
+                        },
+                      })}
+                    />
+                    <DetailField
+                      label="Prêmio líquido"
+                      type="number"
+                      value={cotacao?.[section.key]?.premio_liquido}
+                      onSave={value => salvarCampo({
+                        field: section.key,
+                        value: {
+                          ...(cotacao?.[section.key] || {}),
+                          premio_liquido: value,
+                        },
+                      })}
+                    />
+                    <DetailField
+                      label="% Comissão"
+                      type="number"
+                      value={cotacao?.[section.key]?.pct_comissao}
+                      onSave={value => salvarCampo({
+                        field: section.key,
+                        value: {
+                          ...(cotacao?.[section.key] || {}),
+                          pct_comissao: value,
+                        },
+                      })}
+                    />
+                    <div className="rounded-2xl border border-brand-accent/15 bg-brand-accent/6 p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissão estimada</p>
+                      <p className="mt-2 text-sm font-semibold text-dark-text">
+                        {formatMoney(Number(cotacao?.[section.key]?.premio_liquido || 0) * Number(cotacao?.[section.key]?.pct_comissao || 0))}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </DataCard>
+        </div>
+
+        <div className="space-y-4">
+          <DataCard title="Controle" subtitle="Campos operacionais da cotação">
+            <div className="grid gap-3">
+              <DetailSelect
+                label="Status"
+                value={cotacao.status}
+                onSave={value => salvarCampo({ field: 'status', value })}
+                options={STATUS_OPTIONS}
+              />
+              <DetailSelect
+                label="Tipo"
+                value={cotacao.tipo}
+                onSave={value => salvarCampo({ field: 'tipo', value })}
+                options={TIPO_OPTIONS}
+              />
+              <DetailField label="Origem do lead" value={cotacao.origem_lead} onSave={value => salvarCampo({ field: 'origem_lead', value })} />
+              <DetailField label="ID do cliente" value={cotacao.cliente_id} onSave={value => salvarCampo({ field: 'cliente_id', value })} />
+              <DetailField label="Criado em" value={formatDateTimeBR(cotacao.created_at)} readOnly />
+            </div>
+          </DataCard>
+
+          <DataCard title="Resumo rápido" subtitle="Leitura direta da cotação">
+            <div className="space-y-3 text-sm text-dark-muted">
+              <p><span className="font-medium text-dark-text">Cliente:</span> {cotacao.nome_cliente || '—'}</p>
+              <p><span className="font-medium text-dark-text">Celular:</span> {cotacao.celular_cliente || '—'}</p>
+              <p><span className="font-medium text-dark-text">Veículo:</span> {cotacao.modelo_veiculo || '—'}</p>
+              <p><span className="font-medium text-dark-text">Seguradora preferencial:</span> {cotacao.seguradora_preferencial?.nome || '—'}</p>
+              <p><span className="font-medium text-dark-text">Seguradora mais barata:</span> {cotacao.seguradora_mais_barata?.nome || '—'}</p>
+            </div>
+          </DataCard>
+        </div>
+      </div>
+
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/50 px-4">
+          <div className="w-full max-w-md rounded-3xl border border-dark-border/70 bg-white p-6 shadow-2xl">
+            <p className="text-lg font-semibold text-dark-text">Excluir cotação?</p>
+            <p className="mt-2 text-sm text-dark-muted">
+              Essa ação remove o registro e não pode ser desfeita.
+            </p>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button onClick={() => setConfirmDelete(false)} className="btn-secondary">
+                Cancelar
+              </button>
+              <button
+                onClick={() => excluir()}
+                disabled={deleting}
+                className="rounded-2xl bg-status-danger px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
+              >
+                {deleting ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

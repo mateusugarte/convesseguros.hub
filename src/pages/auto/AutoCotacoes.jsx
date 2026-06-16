@@ -17,6 +17,7 @@ import {
   getAutoCotacoesResumo,
   getCotacoesAuto,
 } from '../../lib/auto'
+import SeguradoraSelect from '../../components/SeguradoraSelect'
 import {
   COTACAO_ABAS,
   COTACAO_STATUS,
@@ -524,11 +525,13 @@ export default function AutoCotacoes() {
                     <div key={section.key} className="rounded-2xl border border-dark-border/70 p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">{section.title}</p>
                       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                        <Field
-                          label="Nome"
-                          value={formRen[section.key].nome}
-                          onChange={value => setSeguradora(section.key, 'nome', value)}
-                        />
+                        <Field label="Nome">
+                          <SeguradoraSelect
+                            value={formRen[section.key].nome}
+                            onChange={value => setSeguradora(section.key, 'nome', value)}
+                            placeholder="Selecionar seguradora"
+                          />
+                        </Field>
                         <Field
                           label="Prêmio total"
                           type="number"
@@ -618,28 +621,34 @@ export default function AutoCotacoes() {
             ) : (
               <div className="divide-y divide-dark-border/70">
                 {cotacoesRecentes.map(item => (
-                  <div key={item.id} className="flex items-center justify-between gap-4 px-5 py-4">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-dark-text">
-                        {item.nome_cliente || item.cpf_cliente || 'Sem identificação'}
-                      </p>
-                      <p className="truncate text-xs text-dark-muted">
-                        {formatDateTimeBR(item.created_at)}
-                      </p>
+                  <Link
+                    key={item.id}
+                    to={`/auto/cotacoes/${item.id}`}
+                    className="block px-5 py-4 transition-colors hover:bg-dark-surface2/30"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-dark-text">
+                          {item.nome_cliente || item.cpf_cliente || 'Sem identificação'}
+                        </p>
+                        <p className="truncate text-xs text-dark-muted">
+                          {item.celular_cliente ? `${item.celular_cliente} · ` : ''}{formatDateTimeBR(item.created_at)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <QuoteStatusBadge status={item.status} />
+                        {aba === 'novo' ? (
+                          <span className="badge badge-info">
+                            {item.origem_lead || 'Sem origem'}
+                          </span>
+                        ) : (
+                          <span className="badge badge-muted">
+                            {formatPercent(item.seguradora_preferencial?.pct_comissao || 0.15)}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <QuoteStatusBadge status={item.status} />
-                      {aba === 'novo' ? (
-                        <span className="badge badge-info">
-                          {item.origem_lead || 'Sem origem'}
-                        </span>
-                      ) : (
-                        <span className="badge badge-muted">
-                          {formatPercent(item.seguradora_preferencial?.pct_comissao || 0.15)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

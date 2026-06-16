@@ -113,7 +113,8 @@ function CardEmissao({ emissao, onDragStart, onClick }) {
       draggable
       onDragStart={() => onDragStart(emissao)}
       onClick={() => onClick(emissao)}
-      className={`group relative w-full overflow-hidden rounded-[28px] border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 ${borderClass} ${bgClass} ${shadowClass}`}
+      title="Abrir detalhes da cotacao"
+      className={`group relative w-full cursor-pointer overflow-hidden rounded-[28px] border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 ${borderClass} ${bgClass} ${shadowClass}`}
     >
       <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${accentGradient} opacity-80`} />
       <div className="flex items-start justify-between gap-3">
@@ -181,15 +182,19 @@ function BoolRow({ label, value }) {
 
 // ─── Modal Detalhe ──────────────────────────────────────────────────────────
 
-function ModalDetalhe({ emissao, onClose }) {
+function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice }) {
   const c = emissao.cotacoes_auto || {}
   const nome = nomeEmissao(emissao)
   const tipo = (c.tipo || emissao.tipo) === 'renovacao' ? 'Renovacao' : 'Novo'
   const seguradoras = Array.isArray(emissao.seguradoras_cotadas) ? emissao.seguradoras_cotadas : []
+  const etapaAtual = emissao.resultado
+    ? (emissao.resultado === 'aprovada' ? 'Cotacao aprovada' : 'Cotacao recusada')
+    : 'Aguardando resultado'
+  const colunaAtual = getEmissaoColuna(emissao)
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/45 p-4 pt-8 backdrop-blur-sm overflow-y-auto">
-      <div className="glass-modal w-full max-w-3xl rounded-[32px] p-6">
+      <div className="glass-modal w-full max-w-6xl rounded-[32px] p-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -218,82 +223,137 @@ function ModalDetalhe({ emissao, onClose }) {
           </button>
         </div>
 
-        <div className="space-y-4">
-          {/* Cliente */}
-          <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
-            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Dados do cliente</p>
-            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-              <InfoRow label="Nome" value={c.nome_cliente} />
-              <InfoRow label="CPF" value={c.cpf_cliente} />
-              <InfoRow label="Celular" value={c.celular_cliente} />
-              <InfoRow label="Email" value={c.email_cliente} />
-              <InfoRow label="Estado civil" value={c.estado_civil_cliente} />
-              <InfoRow label="Profissao" value={c.profissao_cliente} />
-            </div>
-          </div>
-
-          {/* Veiculo */}
-          <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
-            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Veiculo</p>
-            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-              <InfoRow label="Modelo" value={c.modelo_veiculo} />
-              <InfoRow label="Placa" value={c.placa} />
-              <InfoRow label="Uso" value={c.uso_veiculo} />
-              <InfoRow label="CEP pernoite" value={c.cep_pernoite} />
-            </div>
-          </div>
-
-          {/* Condutor */}
-          {(c.condutor_nome || c.condutor_cpf) && (
+        <div className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+          <div className="space-y-4">
+            {/* Cliente */}
             <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
-              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Condutor principal</p>
+              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Dados do cliente</p>
               <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-                <InfoRow label="Nome" value={c.condutor_nome} />
-                <InfoRow label="CPF" value={c.condutor_cpf} />
-                <InfoRow label="Estado civil" value={c.estado_civil_condutor} />
+                <InfoRow label="Nome" value={c.nome_cliente} />
+                <InfoRow label="CPF" value={c.cpf_cliente} />
+                <InfoRow label="Celular" value={c.celular_cliente} />
+                <InfoRow label="Email" value={c.email_cliente} />
+                <InfoRow label="Estado civil" value={c.estado_civil_cliente} />
+                <InfoRow label="Profissao" value={c.profissao_cliente} />
               </div>
             </div>
-          )}
 
-          {/* Caracteristicas */}
-          <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
-            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Caracteristicas e riscos</p>
-            <div className="divide-y divide-dark-border/40">
-              <BoolRow label="Jovens de 18 a 26 anos" value={c.jovens_18_26} />
-              <BoolRow label="Veiculo financiado" value={c.veiculo_financiado} />
-              <BoolRow label="Kit gas" value={c.possui_kit_gas} />
-              <BoolRow label="Blindagem" value={c.possui_blindagem} />
-              <BoolRow label="Isento de imposto" value={c.isento_imposto} />
-              <BoolRow label="Garagem na residencia" value={c.garagem_residencia} />
-              <BoolRow label="Garagem no trabalho" value={c.garagem_trabalho} />
-              <BoolRow label="Garagem no estudo" value={c.garagem_estudo} />
+            {/* Veiculo */}
+            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Veiculo</p>
+              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                <InfoRow label="Modelo" value={c.modelo_veiculo} />
+                <InfoRow label="Placa" value={c.placa} />
+                <InfoRow label="Uso" value={c.uso_veiculo} />
+                <InfoRow label="CEP pernoite" value={c.cep_pernoite} />
+              </div>
             </div>
+
+            {/* Condutor */}
+            {(c.condutor_nome || c.condutor_cpf) && (
+              <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Condutor principal</p>
+                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                  <InfoRow label="Nome" value={c.condutor_nome} />
+                  <InfoRow label="CPF" value={c.condutor_cpf} />
+                  <InfoRow label="Estado civil" value={c.estado_civil_condutor} />
+                </div>
+              </div>
+            )}
+
+            {/* Caracteristicas */}
+            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Caracteristicas e riscos</p>
+              <div className="divide-y divide-dark-border/40">
+                <BoolRow label="Jovens de 18 a 26 anos" value={c.jovens_18_26} />
+                <BoolRow label="Veiculo financiado" value={c.veiculo_financiado} />
+                <BoolRow label="Kit gas" value={c.possui_kit_gas} />
+                <BoolRow label="Blindagem" value={c.possui_blindagem} />
+                <BoolRow label="Isento de imposto" value={c.isento_imposto} />
+                <BoolRow label="Garagem na residencia" value={c.garagem_residencia} />
+                <BoolRow label="Garagem no trabalho" value={c.garagem_trabalho} />
+                <BoolRow label="Garagem no estudo" value={c.garagem_estudo} />
+              </div>
+            </div>
+
+            {/* Seguradoras cotadas */}
+            {seguradoras.length > 0 && (
+              <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradoras cotadas</p>
+                <div className="space-y-3">
+                  {seguradoras.map((seg, idx) => (
+                    <div key={idx} className="rounded-2xl border border-dark-border/60 bg-white/60 p-3">
+                      <p className="font-semibold text-sm text-dark-text">{seg.nome || `Seguradora ${idx + 1}`}</p>
+                      <div className="mt-2 grid gap-x-4 gap-y-1 grid-cols-2 text-xs text-dark-muted">
+                        {seg.valor_total > 0 && <span>Valor total: {formatMoney(seg.valor_total)}</span>}
+                        {seg.premio_liquido > 0 && <span>Premio liq.: {formatMoney(seg.premio_liquido)}</span>}
+                        {seg.valor_comissao > 0 && (
+                          <span className="text-status-success font-medium">
+                            Comissao: {formatMoney(seg.valor_comissao)} ({seg.pct_comissao}%)
+                          </span>
+                        )}
+                        {seg.parcelamentos && <span>Parcelas: {seg.parcelamentos}</span>}
+                        {seg.forma_pagamento && <span>Pagamento: {seg.forma_pagamento}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Seguradoras cotadas */}
-          {seguradoras.length > 0 && (
-            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
-              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradoras cotadas</p>
-              <div className="space-y-3">
-                {seguradoras.map((seg, idx) => (
-                  <div key={idx} className="rounded-2xl border border-dark-border/60 bg-white/60 p-3">
-                    <p className="font-semibold text-sm text-dark-text">{seg.nome || `Seguradora ${idx + 1}`}</p>
-                    <div className="mt-2 grid gap-x-4 gap-y-1 grid-cols-2 text-xs text-dark-muted">
-                      {seg.valor_total > 0 && <span>Valor total: {formatMoney(seg.valor_total)}</span>}
-                      {seg.premio_liquido > 0 && <span>Premio liq.: {formatMoney(seg.premio_liquido)}</span>}
-                      {seg.valor_comissao > 0 && (
-                        <span className="text-status-success font-medium">
-                          Comissao: {formatMoney(seg.valor_comissao)} ({seg.pct_comissao}%)
-                        </span>
-                      )}
-                      {seg.parcelamentos && <span>Parcelas: {seg.parcelamentos}</span>}
-                      {seg.forma_pagamento && <span>Pagamento: {seg.forma_pagamento}</span>}
-                    </div>
-                  </div>
-                ))}
+          <aside className="space-y-4">
+            <div className="rounded-3xl border border-brand-secondary/15 bg-brand-secondary/5 p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-secondary">Resumo da cotacao</p>
+              <p className="mt-2 text-lg font-semibold text-dark-text">{etapaAtual}</p>
+              <div className="mt-4 grid gap-3">
+                <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Coluna atual</p>
+                  <p className="mt-1 text-sm font-medium text-dark-text">{colunaAtual}</p>
+                </div>
+                <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Tipo</p>
+                  <p className="mt-1 text-sm font-medium text-dark-text">{tipo}</p>
+                </div>
               </div>
             </div>
-          )}
+
+            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Proximos passos</p>
+              <p className="mt-2 text-sm text-dark-muted">
+                Use esta area para registrar o resultado da cotacao e seguir para a emissao.
+              </p>
+              <div className="mt-4 space-y-3">
+                <button
+                  type="button"
+                  onClick={() => onRegistrarResultado?.(emissao)}
+                  className="w-full rounded-2xl border border-brand-secondary/20 bg-white/75 px-4 py-3 text-left transition-colors hover:border-brand-secondary/40 hover:bg-white"
+                >
+                  <p className="text-sm font-semibold text-dark-text">Registrar resultado da cotacao</p>
+                  <p className="mt-1 text-xs text-dark-muted">Seleciona aprovacao ou recusa e salva as seguradoras cotadas.</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onEmitirApolice?.(emissao)}
+                  className="w-full rounded-2xl border border-status-success/20 bg-status-success/5 px-4 py-3 text-left transition-colors hover:border-status-success/40 hover:bg-status-success/10"
+                >
+                  <p className="text-sm font-semibold text-dark-text">Seguir para emissao</p>
+                  <p className="mt-1 text-xs text-dark-muted">Abre o formulario com cliente, veiculo e campos da apolice.</p>
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Campos de pos-cotacao</p>
+              <ul className="mt-3 space-y-2 text-sm text-dark-muted">
+                <li>Resultado da cotacao</li>
+                <li>Seguradoras cotadas</li>
+                <li>Numero da apolice</li>
+                <li>Vigencia</li>
+                <li>Premio e comissao</li>
+              </ul>
+            </div>
+          </aside>
         </div>
 
         <div className="mt-5 flex justify-end">
@@ -937,7 +997,12 @@ export default function AutoEmissoes() {
 
       {/* Modal: detalhe do cliente */}
       {modalDetalhe && (
-        <ModalDetalhe emissao={modalDetalhe} onClose={() => setModalDetalhe(null)} />
+        <ModalDetalhe
+          emissao={modalDetalhe}
+          onClose={() => setModalDetalhe(null)}
+          onRegistrarResultado={setModalResultado}
+          onEmitirApolice={setModalEmissao}
+        />
       )}
 
       {/* Modal: resultado da cotacao (drag para cotacao_feita) */}

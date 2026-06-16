@@ -37,7 +37,12 @@ export function getEmissaoColuna(item) {
   const raw = item?.coluna
   if (typeof raw !== 'string') return 'pendentes'
   const trimmed = raw.trim()
-  return trimmed || 'pendentes'
+  if (!trimmed) return 'pendentes'
+  if (trimmed === 'pendente') return 'pendentes'
+  if (trimmed === 'cotacao_feita' && !item?.resultado) {
+    return 'pendentes'
+  }
+  return trimmed
 }
 
 function toMonthSeries(items, { meses = 6, getDate, getValue } = {}) {

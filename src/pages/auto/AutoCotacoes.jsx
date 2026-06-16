@@ -12,7 +12,6 @@ import {
 import { Link } from 'react-router-dom'
 import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../components/ui'
 import {
-  atualizarStatusCotacao,
   criarCotacaoAuto,
   getAutoCotacoesMensais,
   getAutoCotacoesResumo,
@@ -21,7 +20,6 @@ import {
 import {
   COTACAO_ABAS,
   COTACAO_STATUS,
-  formatDateBR,
   formatDateTimeBR,
   formatMoney,
   formatPercent,
@@ -31,11 +29,7 @@ import {
 import {
   AlertCircle,
   BadgeDollarSign,
-  Car,
-  ChevronDown,
-  ChevronUp,
   CircleCheckBig,
-  Search,
   ShieldHalf,
   Sparkles,
   TrendingUp,
@@ -151,26 +145,23 @@ const STATUS_FILTROS = [
   { value: 'perdida', label: 'Perdidas' },
 ]
 
+const PERIODO_FILTROS = [
+  { value: '30d', label: '30 dias' },
+  { value: '90d', label: '90 dias' },
+  { value: '180d', label: '180 dias' },
+  { value: 'todo', label: 'Todo período' },
+]
+
 export default function AutoCotacoes() {
   const [aba, setAba] = useState('novo')
   const [formNovo, setFormNovo] = useState(NOVO_VAZIO)
   const [formRen, setFormRen] = useState(REN_VAZIO)
-  const [searchHistorico, setSearchHistorico] = useState('')
   const [erro, setErro] = useState(null)
-  const [filtroStatus, setFiltroStatus] = useState('todas')
-  const [filtroTipo, setFiltroTipo] = useState('todos')
-  const [searchLista, setSearchLista] = useState('')
-  const [expandedId, setExpandedId] = useState(null)
   const qc = useQueryClient()
 
   const { data: cotacoes = [], isLoading: loadingLista } = useQuery({
     queryKey: ['auto-cotacoes', aba],
     queryFn: () => getCotacoesAuto({ tipo: aba }),
-  })
-
-  const { data: todasCotacoes = [], isLoading: loadingTodas } = useQuery({
-    queryKey: ['auto-cotacoes-todas'],
-    queryFn: () => getCotacoesAuto({}),
   })
 
   const { data: resumo, isLoading: loadingResumo } = useQuery({
@@ -261,11 +252,6 @@ export default function AutoCotacoes() {
     },
   })
 
-  const { mutate: mudarStatus } = useMutation({
-    mutationFn: ({ id, status }) => atualizarStatusCotacao(id, status),
-    onSuccess: () => invalidarQueries(),
-  })
-
   function setNovo(campo, valor) {
     setFormNovo(prev => ({ ...prev, [campo]: valor }))
   }
@@ -287,40 +273,7 @@ export default function AutoCotacoes() {
   const perdidas = cotacoesMes.filter(item => item.status === 'perdida').length
   const taxa = cotacoesMes.length > 0 ? Math.round((convertidas / cotacoesMes.length) * 100) : 0
 
-  const historico = cotacoes
-    .filter(item => {
-      const text = [
-        item.nome_cliente,
-        item.cpf_cliente,
-        item.modelo_veiculo,
-        item.seguradora_preferencial?.nome,
-        item.seguradora_mais_barata?.nome,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-      return text.includes(searchHistorico.toLowerCase())
-    })
-    .slice(0, 8)
-
-  const cotacoesFiltradas = todasCotacoes.filter(item => {
-    if (filtroStatus !== 'todas' && item.status !== filtroStatus) return false
-    if (filtroTipo !== 'todos' && item.tipo !== filtroTipo) return false
-    if (!searchLista) return true
-    const text = [
-      item.nome_cliente,
-      item.cpf_cliente,
-      item.modelo_veiculo,
-      item.placa,
-      item.seguradora_preferencial?.nome,
-      item.seguradora_mais_barata?.nome,
-      item.origem_lead,
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase()
-    return text.includes(searchLista.toLowerCase())
-  })
+  const cotacoesRecentes = useMemo(() => cotacoes.slice(0, 6), [cotacoes])
 
   const metrics = [
     { key: 'total', label: 'Cotacoes no periodo', value: resumo?.total ?? 0, icon: BadgeDollarSign, tone: 'accent' },
@@ -389,7 +342,7 @@ export default function AutoCotacoes() {
       <PageHeader
         eyebrow="Seguro Auto"
         title="Cotações"
-        description="Fluxo de seguro novo e renovacao com calculo de comissao no frontend, historico recente e leitura clara do funil."
+        description="Fluxo de seguro novo e renovacao com calculo de comissao no frontend e ultimas cotacoes em destaque."
         actions={(
           <>
             <Link to="/auto/dashboard" className="btn-secondary">
@@ -643,41 +596,35 @@ export default function AutoCotacoes() {
           </DataCard>
 
           <DataCard
-            title="Histórico recente"
-            subtitle="Últimas cotações da aba atual"
+            title="Últimas cotações feitas"
+            subtitle="Somente os registros mais recentes da aba atual"
             actions={(
-              <div className="relative min-w-[160px]">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-muted" />
-                <input
-                  value={searchHistorico}
-                  onChange={e => setSearchHistorico(e.target.value)}
-                  placeholder="Buscar histórico"
-                  className="input pl-10"
-                />
-              </div>
+              <Link to="/auto/cotacoes/consulta" className="btn-secondary text-sm">
+                Abrir consulta
+              </Link>
             )}
             bodyClassName="p-0"
           >
             {loadingLista ? (
-              <div className="px-5 py-10 text-center text-sm text-dark-muted">Carregando histórico...</div>
-            ) : historico.length === 0 ? (
+              <div className="px-5 py-10 text-center text-sm text-dark-muted">Carregando últimas cotações...</div>
+            ) : cotacoesRecentes.length === 0 ? (
               <div className="px-5 py-5">
                 <EmptyState
                   icon={<ShieldHalf className="h-5 w-5" />}
-                  title="Nenhuma cotação encontrada"
-                  description="Use o formulário principal para criar o primeiro registro desta aba."
+                  title="Nenhuma cotação recente"
+                  description="As últimas cotações criadas aparecerão aqui assim que forem registradas."
                 />
               </div>
             ) : (
               <div className="divide-y divide-dark-border/70">
-                {historico.map(item => (
+                {cotacoesRecentes.map(item => (
                   <div key={item.id} className="flex items-center justify-between gap-4 px-5 py-4">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-dark-text">
                         {item.nome_cliente || item.cpf_cliente || 'Sem identificação'}
                       </p>
                       <p className="truncate text-xs text-dark-muted">
-                        {formatDateBR(item.created_at)}
+                        {formatDateTimeBR(item.created_at)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -716,200 +663,18 @@ export default function AutoCotacoes() {
         </div>
       </div>
 
-      {/* ── Listagem completa ── */}
       <DataCard
-        title="Todas as cotações"
-        subtitle={`${cotacoesFiltradas.length} registro${cotacoesFiltradas.length !== 1 ? 's' : ''} encontrado${cotacoesFiltradas.length !== 1 ? 's' : ''}`}
+        title="Consulta detalhada"
+        subtitle="Acompanhe a lista completa em uma página dedicada com filtros e busca avançada."
         actions={(
-          <div className="relative min-w-[200px]">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-muted" />
-            <input
-              value={searchLista}
-              onChange={e => setSearchLista(e.target.value)}
-              placeholder="Buscar nome, CPF, veículo..."
-              className="input pl-10"
-            />
-          </div>
+          <Link to="/auto/cotacoes/consulta" className="btn-primary text-sm">
+            Abrir consulta completa
+          </Link>
         )}
-        bodyClassName="p-0"
       >
-        <div className="flex flex-wrap gap-2 border-b border-dark-border/70 px-5 py-3">
-          {STATUS_FILTROS.map(f => (
-            <button
-              key={f.value}
-              onClick={() => setFiltroStatus(f.value)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                filtroStatus === f.value
-                  ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
-                  : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-          <div className="mx-1 w-px bg-dark-border/70" />
-          {[{ value: 'todos', label: 'Todos os tipos' }, { value: 'novo', label: 'Seguro novo' }, { value: 'renovacao', label: 'Renovação' }].map(f => (
-            <button
-              key={f.value}
-              onClick={() => setFiltroTipo(f.value)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                filtroTipo === f.value
-                  ? 'border-brand-secondary bg-brand-secondary/10 text-brand-secondary'
-                  : 'border-dark-border text-dark-muted hover:border-brand-secondary/40 hover:text-dark-text'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        {loadingTodas ? (
-          <div className="px-5 py-10 text-center text-sm text-dark-muted">Carregando cotações...</div>
-        ) : cotacoesFiltradas.length === 0 ? (
-          <div className="px-5 py-8">
-            <EmptyState
-              icon={<Car className="h-5 w-5" />}
-              title="Nenhuma cotação encontrada"
-              description="Ajuste os filtros ou registre uma nova cotação pelo formulário acima."
-            />
-          </div>
-        ) : (
-          <div className="divide-y divide-dark-border/70">
-            {cotacoesFiltradas.map(item => {
-              const isExpanded = expandedId === item.id
-              return (
-                <div key={item.id} className="transition-colors hover:bg-dark-surface2/30">
-                  <button
-                    onClick={() => setExpandedId(isExpanded ? null : item.id)}
-                    className="flex w-full items-center gap-4 px-5 py-4 text-left"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold text-dark-text">
-                          {item.nome_cliente || item.cpf_cliente || 'Sem identificação'}
-                        </p>
-                        <QuoteStatusBadge status={item.status} />
-                        <span className={`badge ${item.tipo === 'novo' ? 'badge-info' : 'badge-muted'}`}>
-                          {item.tipo === 'novo' ? 'Seguro novo' : 'Renovação'}
-                        </span>
-                      </div>
-                      <div className="mt-1 flex flex-wrap gap-3 text-xs text-dark-muted">
-                        {item.cpf_cliente && <span>CPF: {item.cpf_cliente}</span>}
-                        {item.modelo_veiculo && <span>· {item.modelo_veiculo}{item.placa ? ` (${item.placa})` : ''}</span>}
-                        {item.seguradora_preferencial?.nome && <span>· {item.seguradora_preferencial.nome}</span>}
-                        {item.origem_lead && <span>· {item.origem_lead}</span>}
-                        <span>· {formatDateTimeBR(item.created_at)}</span>
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-dark-muted">
-                      {isExpanded
-                        ? <ChevronUp className="h-4 w-4" />
-                        : <ChevronDown className="h-4 w-4" />}
-                    </div>
-                  </button>
-
-                  {isExpanded && (
-                    <div className="border-t border-dark-border/50 bg-dark-surface2/20 px-5 py-5">
-                      {item.tipo === 'novo' ? (
-                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                          <div className="space-y-3">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-muted">Segurado</p>
-                            <InfoRow label="Nome" value={item.nome_cliente} />
-                            <InfoRow label="CPF" value={item.cpf_cliente} />
-                            <InfoRow label="Celular" value={item.celular_cliente} />
-                            <InfoRow label="E-mail" value={item.email_cliente} />
-                            <InfoRow label="Estado civil" value={item.estado_civil_cliente} />
-                            <InfoRow label="Profissão" value={item.profissao_cliente} />
-                          </div>
-                          <div className="space-y-3">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-muted">Condutor</p>
-                            <InfoRow label="Nome" value={item.condutor_nome} />
-                            <InfoRow label="CPF" value={item.condutor_cpf} />
-                            <InfoRow label="Estado civil" value={item.estado_civil_condutor} />
-                            <InfoRow label="CEP pernoite" value={item.cep_pernoite} />
-                          </div>
-                          <div className="space-y-3">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-muted">Veículo e risco</p>
-                            <InfoRow label="Modelo" value={item.modelo_veiculo} />
-                            <InfoRow label="Placa" value={item.placa} />
-                            <InfoRow label="Uso" value={item.uso_veiculo} />
-                            <InfoRow label="Financiado" value={item.veiculo_financiado} />
-                            <InfoRow label="Jovens 18-26" value={item.jovens_18_26} />
-                            <InfoRow label="Garagem residência" value={item.garagem_residencia} />
-                            <InfoRow label="Garagem trabalho" value={item.garagem_trabalho} />
-                            <InfoRow label="Garagem estudo" value={item.garagem_estudo} />
-                          </div>
-                          <div className="space-y-3">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-muted">Proteções e lead</p>
-                            <InfoRow label="Kit gás" value={item.possui_kit_gas} />
-                            <InfoRow label="Blindagem" value={item.possui_blindagem} />
-                            <InfoRow label="Isento imposto" value={item.isento_imposto} />
-                            <InfoRow label="Origem lead" value={item.origem_lead} />
-                            <InfoRow label="ID cliente" value={item.cliente_id} />
-                            <InfoRow label="Criado em" value={formatDateTimeBR(item.created_at)} />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="grid gap-6 sm:grid-cols-3">
-                          <div className="space-y-3">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-muted">Cliente</p>
-                            <InfoRow label="CPF" value={item.cpf_cliente} />
-                            <InfoRow label="ID cliente" value={item.cliente_id} />
-                            <InfoRow label="Criado em" value={formatDateTimeBR(item.created_at)} />
-                          </div>
-                          <div className="space-y-3">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-muted">Seguradora preferencial</p>
-                            <InfoRow label="Nome" value={item.seguradora_preferencial?.nome} />
-                            <InfoRow label="Prêmio total" value={item.seguradora_preferencial?.premio_total ? formatMoney(item.seguradora_preferencial.premio_total) : null} />
-                            <InfoRow label="Prêmio líquido" value={item.seguradora_preferencial?.premio_liquido ? formatMoney(item.seguradora_preferencial.premio_liquido) : null} />
-                            <InfoRow label="% Comissão" value={item.seguradora_preferencial?.pct_comissao ? formatPercent(item.seguradora_preferencial.pct_comissao) : null} />
-                            <InfoRow label="Comissão est." value={item.seguradora_preferencial?.valor_comissao ? formatMoney(item.seguradora_preferencial.valor_comissao) : null} />
-                          </div>
-                          <div className="space-y-3">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-muted">Seguradora mais barata</p>
-                            <InfoRow label="Nome" value={item.seguradora_mais_barata?.nome} />
-                            <InfoRow label="Prêmio total" value={item.seguradora_mais_barata?.premio_total ? formatMoney(item.seguradora_mais_barata.premio_total) : null} />
-                            <InfoRow label="Prêmio líquido" value={item.seguradora_mais_barata?.premio_liquido ? formatMoney(item.seguradora_mais_barata.premio_liquido) : null} />
-                            <InfoRow label="% Comissão" value={item.seguradora_mais_barata?.pct_comissao ? formatPercent(item.seguradora_mais_barata.pct_comissao) : null} />
-                            <InfoRow label="Comissão est." value={item.seguradora_mais_barata?.valor_comissao ? formatMoney(item.seguradora_mais_barata.valor_comissao) : null} />
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="mt-5 flex flex-wrap gap-2 border-t border-dark-border/50 pt-4">
-                        <span className="mr-2 self-center text-xs text-dark-muted">Alterar status:</span>
-                        {item.status !== 'convertida' && (
-                          <button
-                            onClick={() => mudarStatus({ id: item.id, status: 'convertida' })}
-                            className="rounded-full border border-status-success/30 bg-status-success/10 px-3 py-1 text-xs font-medium text-status-success hover:bg-status-success/20 transition-colors"
-                          >
-                            Marcar convertida
-                          </button>
-                        )}
-                        {item.status !== 'perdida' && (
-                          <button
-                            onClick={() => mudarStatus({ id: item.id, status: 'perdida' })}
-                            className="rounded-full border border-status-danger/30 bg-status-danger/10 px-3 py-1 text-xs font-medium text-status-danger hover:bg-status-danger/20 transition-colors"
-                          >
-                            Marcar perdida
-                          </button>
-                        )}
-                        {item.status !== 'pendente' && (
-                          <button
-                            onClick={() => mudarStatus({ id: item.id, status: 'pendente' })}
-                            className="rounded-full border border-status-warning/30 bg-status-warning/10 px-3 py-1 text-xs font-medium text-status-warning hover:bg-status-warning/20 transition-colors"
-                          >
-                            Reabrir
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
+        <p className="text-sm text-dark-muted">
+          A consulta completa agora fica em uma subpágina própria para deixar a tela principal mais limpa e mais rápida de usar.
+        </p>
       </DataCard>
     </div>
   )

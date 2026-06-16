@@ -3,6 +3,7 @@ export const AUTO_LINKS = [
   { to: '/auto/renovacoes', label: 'Renovacoes' },
   { to: '/auto/emissoes', label: 'Emissoes' },
   { to: '/auto/cotacoes', label: 'Cotacoes' },
+  { to: '/auto/cotacoes/consulta', label: 'Consulta' },
   { to: '/auto/sinistros', label: 'Sinistros' },
 ]
 

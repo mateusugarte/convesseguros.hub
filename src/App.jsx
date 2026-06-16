@@ -66,6 +66,10 @@ function AppRoutes() {
         <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route index         element={<Dashboard />} />
           <Route path="fichas" element={<Fichas />} />
+          <Route path="fichas/residencial" element={<Fichas />} />
+          <Route path="fichas/comercial-pf" element={<Fichas />} />
+          <Route path="fichas/pessoa-juridica" element={<Fichas />} />
+          <Route path="fichas/todos" element={<Fichas />} />
           <Route path="fichas/:id" element={<FichaDetalhePage />} />
           <Route path="emissoes" element={<GestaoEmissoes />} />
           <Route path="minhas-fichas" element={<MinhasFichas />} />

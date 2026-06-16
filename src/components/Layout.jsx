@@ -23,7 +23,17 @@ const NAV_GROUPS = [
   {
     items: [
       { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
-      { to: '/fichas', icon: FileText, label: 'Fichas' },
+      {
+        to: '/fichas',
+        icon: FileText,
+        label: 'Fichas',
+        subitems: [
+          { to: '/fichas', label: 'Geral', end: true },
+          { to: '/fichas/residencial', label: 'Residencial' },
+          { to: '/fichas/comercial-pf', label: 'Comercial PF' },
+          { to: '/fichas/pessoa-juridica', label: 'Pessoa Jurídica' },
+        ],
+      },
       { to: '/minhas-fichas', icon: User, label: 'Minhas Fichas' },
     ],
   },
@@ -118,6 +128,7 @@ export default function Layout() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [expandedItems, setExpandedItems] = useState(() => {
     const initial = new Set()
+    if (location.pathname.startsWith('/fichas')) initial.add('/fichas')
     if (location.pathname.startsWith('/apolices')) initial.add('/apolices')
     if (location.pathname.startsWith('/comercial')) initial.add('/comercial')
     if (location.pathname.startsWith('/auto')) initial.add('/auto')
@@ -185,6 +196,7 @@ export default function Layout() {
   useEffect(() => {
     setExpandedItems(prev => {
       const next = new Set(prev)
+      if (location.pathname.startsWith('/fichas')) next.add('/fichas')
       if (location.pathname.startsWith('/apolices')) next.add('/apolices')
       if (location.pathname.startsWith('/comercial')) next.add('/comercial')
       if (location.pathname.startsWith('/auto')) next.add('/auto')

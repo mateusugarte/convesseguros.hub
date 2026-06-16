@@ -3,6 +3,10 @@ import { supabase } from './supabase'
 export const ENTITY_MEDIA_BUCKET = 'cadastros-media'
 export const ENTITY_DOCS_BUCKET = 'entidade-documentos'
 
+function isDirectImageUrl(value) {
+  return typeof value === 'string' && /^(https?:\/\/|data:|blob:|file:)/i.test(value.trim())
+}
+
 function slugify(value) {
   return String(value || '')
     .normalize('NFD')
@@ -38,6 +42,8 @@ export async function uploadEntityImage({ file, entityType, entityId }) {
 }
 
 export function getEntityImageUrl(path, fallbackUrl = null) {
+  if (isDirectImageUrl(fallbackUrl)) return fallbackUrl
+  if (isDirectImageUrl(path)) return path
   if (path) {
     const { data } = supabase.storage.from(ENTITY_MEDIA_BUCKET).getPublicUrl(path)
     return data?.publicUrl || fallbackUrl

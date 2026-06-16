@@ -85,6 +85,29 @@ const PRODUTOS = [
 const MESES_ABBR = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 
+const FICHA_ROUTE_TO_PRODUTO = {
+  '/fichas/residencial': 'residencial_pf',
+  '/fichas/comercial-pf': 'comercial_pf',
+  '/fichas/pessoa-juridica': 'pessoa_juridica',
+  '/fichas/todos': 'todos',
+}
+
+const FICHA_PRODUTO_TO_ROUTE = {
+  residencial_pf: '/fichas/residencial',
+  comercial_pf: '/fichas/comercial-pf',
+  pessoa_juridica: '/fichas/pessoa-juridica',
+  todos: '/fichas/todos',
+}
+
+function resolveProdutoFromPathname(pathname) {
+  if (pathname === '/fichas') return null
+  return FICHA_ROUTE_TO_PRODUTO[pathname] ?? null
+}
+
+function resolvePathFromProduto(produto) {
+  return FICHA_PRODUTO_TO_ROUTE[produto] ?? '/fichas'
+}
+
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -699,7 +722,7 @@ export default function Fichas() {
   const { resolverNome } = useImobiliaria()
 
   const agora        = new Date()
-  const [produto, setProduto] = useState(null)
+  const [produto, setProduto] = useState(() => resolveProdutoFromPathname(location.pathname))
   const [ano,     setAno]     = useState(agora.getFullYear())
   const [mes,     setMes]     = useState(agora.getMonth() + 1)
   const [view,    setView]    = useState('kanban')
@@ -748,6 +771,10 @@ export default function Fichas() {
     window.history.replaceState({}, document.title)
     return cleanup
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setProduto(resolveProdutoFromPathname(location.pathname))
+  }, [location.pathname])
 
   // Contagem de produtos (sempre carregado)
   useEffect(() => {
@@ -826,12 +853,19 @@ export default function Fichas() {
   function changeTab(t) { setTab(t); setPage(0); setSearch(''); setDebouncedSearch(''); setSemSeguradora(false) }
 
   function changeProduto(p) {
-    setProduto(p)
     setFichas([]); setTotal(0)
     setView(p === 'todos' ? 'lista' : 'kanban')
     // Reset para mês/ano atual
     setAno(agora.getFullYear())
     setMes(agora.getMonth() + 1)
+    setProduto(p)
+
+    if (p === 'todos') {
+      navigate('/fichas/todos')
+      return
+    }
+
+    navigate(resolvePathFromProduto(p))
   }
 
   function refresh() { loadFichas() }
@@ -893,8 +927,8 @@ export default function Fichas() {
       prodInfo={prodInfo}
       mesLabel={mesLabel}
       anoLabel={ano}
-      onHome={() => setProduto(null)}
-      onProduto={() => setProduto(null)}
+      onHome={() => { setProduto(null); navigate('/fichas') }}
+      onProduto={() => { setProduto(null); navigate('/fichas') }}
       onCreate={() => setCriar(true)}
       onRelatorio={() => setRelatorio(true)}
       viewToggle={<ViewToggle view={view} onChange={setView} />}

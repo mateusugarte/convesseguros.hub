@@ -37,6 +37,14 @@ export async function uploadEntityImage({ file, entityType, entityId }) {
   }
 }
 
+export function getEntityImageUrl(path, fallbackUrl = null) {
+  if (path) {
+    const { data } = supabase.storage.from(ENTITY_MEDIA_BUCKET).getPublicUrl(path)
+    return data?.publicUrl || fallbackUrl
+  }
+  return fallbackUrl
+}
+
 export async function removeStorageObject(bucket, path) {
   if (!path) return null
   const { error } = await supabase.storage.from(bucket).remove([path])

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchNomesImobiliariasAll } from '../lib/fichas'
 import { useToast } from '../contexts/ToastContext'
-import { replaceEntityImage } from '../lib/entityMedia'
+import { getEntityImageUrl, replaceEntityImage } from '../lib/entityMedia'
 import {
   Building2, Plus, Pencil, Trash2, X, Check,
   ChevronRight, AlertCircle, Search, ChevronDown, ArrowLeft, Upload,
@@ -106,9 +106,9 @@ function ImobiliariaSelector({ mapeadas }) {
                   onClick={() => navegar(imob.id)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/55 transition-all text-left"
                 >
-                  {imob.imagem_url ? (
+                  {getEntityImageUrl(imob.imagem_path, imob.imagem_url) ? (
                     <div className="w-8 h-8 rounded-lg overflow-hidden border border-dark-border/30 bg-white flex items-center justify-center flex-shrink-0">
-                      <img src={imob.imagem_url} alt={imob.nome_canonico} className="w-full h-full object-cover" />
+                      <img src={getEntityImageUrl(imob.imagem_path, imob.imagem_url)} alt={imob.nome_canonico} className="w-full h-full object-cover" />
                     </div>
                   ) : (
                     <div
@@ -157,7 +157,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
   const [nomeCanonoco,  setNomeCanonoco]  = useState(imobAtual?.nome_canonico || '')
   const [aliasesModal,  setAliasesModal]  = useState(modal?.variacoes || imobAtual?.aliases || [])
   const [novoAlias,     setNovoAlias]     = useState('')
-  const [imagemPreview, setImagemPreview] = useState(imobAtual?.imagem_url || '')
+  const [imagemPreview, setImagemPreview] = useState(getEntityImageUrl(imobAtual?.imagem_path, imobAtual?.imagem_url || ''))
   const [imagemFile,    setImagemFile]    = useState(null)
   const [salvando,      setSalvando]      = useState(false)
 
@@ -504,9 +504,9 @@ function TabMapeadas({ mapeadas, confirmExcluir, setConfirmExcluir, onExcluir, o
         <div key={imob.id} className="glass-panel p-4">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="min-w-0 flex-1 flex items-start gap-3">
-              {imob.imagem_url ? (
+              {getEntityImageUrl(imob.imagem_path, imob.imagem_url) ? (
                 <div className="w-12 h-12 rounded-xl overflow-hidden border border-dark-border/30 bg-white flex items-center justify-center flex-shrink-0">
-                  <img src={imob.imagem_url} alt={imob.nome_canonico} className="w-full h-full object-cover" />
+                  <img src={getEntityImageUrl(imob.imagem_path, imob.imagem_url)} alt={imob.nome_canonico} className="w-full h-full object-cover" />
                 </div>
               ) : (
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold text-white flex-shrink-0 bg-brand-accent">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { findSeguradoraMetaByNome } from '../lib/seguradoras'
+import { getEntityImageUrl } from '../lib/entityMedia'
 
 const PALETTE = [
   { bg: '#1D4ED8', fg: '#DBEAFE' },
@@ -35,7 +36,7 @@ function iniciais(nome) {
   return (words[0][0] + words[1][0]).toUpperCase()
 }
 
-export default function SeguradoraBadge({ nome, logoUrl, size = 'sm', showName = true, className = '' }) {
+export default function SeguradoraBadge({ nome, logoUrl, logoPath, size = 'sm', showName = true, className = '' }) {
   const [imgError, setImgError] = useState(false)
   const [resolvedLogo, setResolvedLogo] = useState(logoUrl || null)
 
@@ -43,22 +44,22 @@ export default function SeguradoraBadge({ nome, logoUrl, size = 'sm', showName =
     let active = true
     setImgError(false)
 
-    if (logoUrl) {
-      setResolvedLogo(logoUrl)
+    if (logoPath || logoUrl) {
+      setResolvedLogo(getEntityImageUrl(logoPath, logoUrl))
       return () => { active = false }
     }
 
     setResolvedLogo(null)
     findSeguradoraMetaByNome(nome)
       .then(meta => {
-        if (active) setResolvedLogo(meta?.logo_url || null)
+        if (active) setResolvedLogo(getEntityImageUrl(meta?.logo_path, meta?.logo_url || null))
       })
       .catch(() => {
         if (active) setResolvedLogo(null)
       })
 
     return () => { active = false }
-  }, [nome, logoUrl])
+  }, [nome, logoPath, logoUrl])
 
   if (!nome) return null
 

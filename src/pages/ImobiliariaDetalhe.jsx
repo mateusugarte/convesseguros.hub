@@ -6,7 +6,7 @@ import { ArrowLeft, Pencil, X, Check, Plus, Upload, Building2 } from 'lucide-rea
 import { Select } from '../components/ui/Select'
 import { PageHeader, MetricCard, DataCard } from '../components/ui'
 import { fetchCodigos, fetchSeguradoras, upsertCodigo, deletarCodigo } from '../lib/imobiliariasCodigos'
-import { replaceEntityImage } from '../lib/entityMedia'
+import { getEntityImageUrl, replaceEntityImage } from '../lib/entityMedia'
 
 function CampoEditavel({ label, value, onSave }) {
   const [editing, setEditing] = useState(false)
@@ -233,8 +233,8 @@ export default function ImobiliariaDetalhe() {
           <DataCard title="Imagem" description="Imagem usada nos cards e seletores da imobiliária.">
             <div className="flex items-center gap-4 flex-wrap">
               <div className="w-24 h-24 rounded-2xl border border-dark-border bg-white/70 overflow-hidden flex items-center justify-center">
-                {imob.imagem_url ? (
-                  <img src={imob.imagem_url} alt={imob.nome_canonico} className="w-full h-full object-cover" />
+                {getEntityImageUrl(imob.imagem_path, imob.imagem_url) ? (
+                  <img src={getEntityImageUrl(imob.imagem_path, imob.imagem_url)} alt={imob.nome_canonico} className="w-full h-full object-cover" />
                 ) : (
                   <Building2 className="w-10 h-10 text-dark-muted/40" />
                 )}

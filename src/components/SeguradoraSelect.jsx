@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { WorkspacesSelect } from './ui/WorkspacesSelect'
 import { fetchSeguradorasPorProduto, invalidarCacheSeguradoras } from '../lib/seguradoras'
+import { getEntityImageUrl } from '../lib/entityMedia'
 
 function segColor(nome) {
   const palette = ['#4A90D9', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#2B5BA8', '#EF4444']
@@ -9,11 +10,12 @@ function segColor(nome) {
   return palette[Math.abs(h) % palette.length]
 }
 
-function logoIcon(nome, logoUrl) {
-  if (!logoUrl) return null
+function logoIcon(nome, logoUrl, logoPath) {
+  const resolvedUrl = getEntityImageUrl(logoPath, logoUrl)
+  if (!resolvedUrl) return null
   return (
     <img
-      src={logoUrl}
+      src={resolvedUrl}
       alt={nome}
       className="w-full h-full object-contain"
       loading="lazy"
@@ -44,7 +46,7 @@ export default function SeguradoraSelect({
     label: seg.nome_canonico,
     color: segColor(seg.nome_canonico),
     initials: seg.nome_canonico.split(' ').map(word => word[0]).slice(0, 2).join('').toUpperCase() || '?',
-    icon: logoIcon(seg.nome_canonico, seg.logo_url),
+    icon: logoIcon(seg.nome_canonico, seg.logo_url, seg.logo_path),
   }))
 
   return (

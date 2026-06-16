@@ -6,7 +6,7 @@ import { PRODUTO_LABELS } from '../lib/fichas'
 import { PageHeader, MetricCard, DataCard } from '../components/ui'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import EntityDocumentsSection from '../components/EntityDocumentsSection'
-import { replaceEntityImage, uploadEntityDocument } from '../lib/entityMedia'
+import { getEntityImageUrl, replaceEntityImage, uploadEntityDocument } from '../lib/entityMedia'
 import {
   SEGURADORA_PRODUTOS,
   SEGURADORA_PRODUTO_LABELS,
@@ -149,7 +149,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
   const [nome, setNome] = useState(segAtual?.nome_canonico || '')
   const [aliases, setAliases] = useState(segAtual?.aliases || variacoes)
   const [produtos, setProdutos] = useState(segAtual?.produtos || [])
-  const [logoPreview, setLogoPreview] = useState(segAtual?.logo_url || '')
+  const [logoPreview, setLogoPreview] = useState(getEntityImageUrl(segAtual?.logo_path, segAtual?.logo_url || ''))
   const [logoFile, setLogoFile] = useState(null)
   const [pendingDocs, setPendingDocs] = useState([])
   const [salvando, setSalvando] = useState(false)
@@ -364,7 +364,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
                         : 'text-dark-text hover:bg-white/55'
                     }`}
                   >
-                    <SeguradoraBadge nome={seg.nome_canonico} logoUrl={seg.logo_url} size="xs" showName={false} />
+                    <SeguradoraBadge nome={seg.nome_canonico} logoUrl={seg.logo_url} logoPath={seg.logo_path} size="xs" showName={false} />
                     <span className="text-sm font-medium">{seg.nome_canonico}</span>
                   </button>
                 ))}
@@ -511,7 +511,7 @@ function TabCadastradas({ seguradoras, onEditar, onExcluir, confirmExcluir, setC
           <div key={seg.id} className="glass-panel p-4">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div className="min-w-0 flex-1 space-y-2">
-                <SeguradoraBadge nome={seg.nome_canonico} logoUrl={seg.logo_url} size="md" />
+                <SeguradoraBadge nome={seg.nome_canonico} logoUrl={seg.logo_url} logoPath={seg.logo_path} size="md" />
                 <div className="flex flex-wrap gap-2">
                 {seg.produtos.map(produto => (
                   <span key={produto} className="px-2 py-1 rounded-full text-[10px] font-semibold bg-brand-accent/10 text-brand-accent border border-brand-accent/20">

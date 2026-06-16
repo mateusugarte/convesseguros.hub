@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Car, CheckCircle2, FileText, RefreshCw, Search, X, Plus } from 'lucide-react'
 import { format, startOfMonth, startOfWeek } from 'date-fns'
@@ -714,11 +715,11 @@ function CampoTexto({ label, campo, value, onChange, type = 'text' }) {
 
 export default function AutoEmissoes() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const initialRange = useMemo(() => getPeriodoRange('semana'), [])
 
   const [dragging, setDragging] = useState(null)
   const [dragOver, setDragOver] = useState(null)
-  const [modalDetalhe, setModalDetalhe] = useState(null)
   const [modalResultado, setModalResultado] = useState(null)
   const [modalEmissao, setModalEmissao] = useState(null)
   const [form, setForm] = useState(FORM_EMISSAO_VAZIO)
@@ -779,6 +780,17 @@ export default function AutoEmissoes() {
     }
     setDragging(null)
     setDragOver(null)
+  }
+
+  function abrirDetalhe(item) {
+    const cotacaoId = item?.cotacoes_auto?.id || item?.cotacao_id
+    if (!cotacaoId) return
+    navigate(`/auto/cotacoes/${cotacaoId}`, {
+      state: {
+        from: '/auto/emissoes',
+        fromLabel: 'Gestao de Emissoes',
+      },
+    })
   }
 
   const premioLiquido = parseFloat(form.premio_liquido) || 0
@@ -985,7 +997,7 @@ export default function AutoEmissoes() {
                       key={item.id}
                       emissao={item}
                       onDragStart={setDragging}
-                      onClick={setModalDetalhe}
+                      onClick={abrirDetalhe}
                     />
                   ))
                 )}
@@ -994,16 +1006,6 @@ export default function AutoEmissoes() {
           )
         })}
       </div>
-
-      {/* Modal: detalhe do cliente */}
-      {modalDetalhe && (
-        <ModalDetalhe
-          emissao={modalDetalhe}
-          onClose={() => setModalDetalhe(null)}
-          onRegistrarResultado={setModalResultado}
-          onEmitirApolice={setModalEmissao}
-        />
-      )}
 
       {/* Modal: resultado da cotacao (drag para cotacao_feita) */}
       {modalResultado && (

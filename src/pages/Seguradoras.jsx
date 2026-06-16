@@ -29,6 +29,16 @@ function ProductChooser({ value, onChange }) {
     )
   }
 
+  function toggleFianca() {
+    const fiancaValues = SEGURADORA_PRODUTOS.find(grupo => grupo.value === 'fianca')?.subprodutos.map(item => item.value) || []
+    const hasAll = fiancaValues.every(produto => value.includes(produto))
+    onChange(
+      hasAll
+        ? value.filter(produto => !fiancaValues.includes(produto))
+        : Array.from(new Set([...value, ...fiancaValues]))
+    )
+  }
+
   return (
     <div className="space-y-2">
       <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block">
@@ -41,13 +51,12 @@ function ProductChooser({ value, onChange }) {
             <div key={grupo.value} className="rounded-2xl border border-dark-border/70 bg-white/60 p-3">
               <button
                 type="button"
-                onClick={() => {
-                  if (isFianca) return
-                  toggle(grupo.value)
-                }}
+                onClick={isFianca ? toggleFianca : () => toggle(grupo.value)}
                 className={`w-full rounded-xl px-3 py-2 text-left text-sm font-semibold transition-all ${
                   isFianca
-                    ? 'cursor-default text-dark-text'
+                    ? (grupo.subprodutos.every(sub => value.includes(sub.value))
+                      ? 'border border-brand-accent bg-brand-accent/10 text-brand-accent'
+                      : 'border border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text')
                     : value.includes(grupo.value)
                       ? 'border border-brand-accent bg-brand-accent/10 text-brand-accent'
                       : 'border border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
@@ -77,7 +86,6 @@ function ProductChooser({ value, onChange }) {
                   })}
                 </div>
               )}
-
               {!isFianca && (
                 <p className="mt-2 text-[11px] text-dark-muted">
                   {SEGURADORA_PRODUTO_LABELS[grupo.value] || grupo.value}

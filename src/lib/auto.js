@@ -80,7 +80,7 @@ export async function criarClienteAuto(payload) {
 export async function getCotacoesAuto({ tipo, status, seguradora, inicio, fim } = {}) {
   let q = supabase
     .from('cotacoes_auto')
-    .select('*, clientes_auto(nome_completo, cpf, telefone, celular, email, estado_civil, profissao)')
+    .select('*')
     .order('created_at', { ascending: false })
 
   if (tipo) q = q.eq('tipo', tipo)
@@ -160,7 +160,7 @@ export async function getEmissoesAuto({ inicio, fim } = {}) {
 
   let q = supabase
     .from('emissoes_auto')
-    .select('*, clientes_auto(nome_completo, cpf, telefone, celular, email), cotacoes_auto(tipo, modelo_veiculo, placa)')
+    .select('*, cotacoes_auto(*)')
     .order('created_at', { ascending: false })
 
   if (inicio) q = q.gte('created_at', `${inicio}T00:00:00`)
@@ -237,7 +237,7 @@ export async function atualizarStatusRenovacao(id, campos) {
 export async function getApolicesAuto({ search, inicio, fim } = {}) {
   let q = supabase
     .from('apolices_auto')
-    .select('*, clientes_auto(nome_completo, cpf, telefone, celular, email)')
+    .select('*')
     .order('created_at', { ascending: false })
 
   if (inicio) q = q.gte('created_at', `${inicio}T00:00:00`)
@@ -250,7 +250,7 @@ export async function getApolicesAuto({ search, inicio, fim } = {}) {
   if (search) {
     const term = search.toLowerCase()
     result = result.filter(item =>
-      item.clientes_auto?.nome_completo?.toLowerCase().includes(term) ||
+      item.nome_cliente?.toLowerCase().includes(term) ||
       item.numero_apolice?.toLowerCase().includes(term) ||
       item.seguradora?.toLowerCase().includes(term)
     )

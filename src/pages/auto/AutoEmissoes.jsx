@@ -95,7 +95,7 @@ function CardEmissao({ emissao, onDragStart }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-dark-text">
-            {emissao.clientes_auto?.nome_completo || '-'}
+            {emissao.cotacoes_auto?.nome_cliente || emissao.cotacoes_auto?.cpf_cliente || '-'}
           </p>
           <p className="mt-1 truncate text-xs text-dark-muted">
             {emissao.cotacoes_auto?.modelo_veiculo || 'Modelo nao informado'}
@@ -199,7 +199,7 @@ function ModalApolices({ onClose }) {
               <tbody className="divide-y divide-dark-border/40">
                 {apolices.map(item => (
                   <tr key={item.id} className="transition-colors hover:bg-brand-accent/5">
-                    <td className="py-3 pr-4 font-medium text-dark-text">{item.clientes_auto?.nome_completo || '-'}</td>
+                    <td className="py-3 pr-4 font-medium text-dark-text">{item.nome_cliente || item.cpf_cliente || '-'}</td>
                     <td className="py-3 pr-4 text-dark-muted">{item.numero_apolice || '-'}</td>
                     <td className="py-3 pr-4 text-dark-muted">{item.seguradora || '-'}</td>
                     <td className="py-3 pr-4 text-dark-muted">
@@ -297,6 +297,8 @@ export default function AutoEmissoes() {
     emitir({
       emissao_id: modalEmissao.id,
       cliente_id: modalEmissao.cliente_id,
+      nome_cliente: modalEmissao.cotacoes_auto?.nome_cliente || null,
+      cpf_cliente: modalEmissao.cotacoes_auto?.cpf_cliente || null,
       seguradora: form.seguradora,
       numero_apolice: form.numero_apolice,
       vigencia_inicio: form.vigencia_inicio,
@@ -330,8 +332,8 @@ export default function AutoEmissoes() {
     { label: 'Emitidas', value: metricas.emitidas, tone: 'accent' },
   ]
   const modalResumo = modalEmissao ? {
-    cliente: modalEmissao.clientes_auto?.nome_completo || '-',
-    cpf: modalEmissao.clientes_auto?.cpf || '-',
+    cliente: modalEmissao.cotacoes_auto?.nome_cliente || modalEmissao.cotacoes_auto?.cpf_cliente || '-',
+    cpf: modalEmissao.cotacoes_auto?.cpf_cliente || '-',
     veiculo: modalEmissao.cotacoes_auto?.modelo_veiculo || 'Modelo nao informado',
     placa: modalEmissao.cotacoes_auto?.placa || 'Sem placa',
     tipo: (modalEmissao.cotacoes_auto?.tipo || modalEmissao.tipo) === 'renovacao' ? 'Renovacao' : 'Novo',

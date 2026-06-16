@@ -2,58 +2,52 @@
 
 ## Responsavel Atual
 
-Claude
+Usuario
 
 ## Pagina
 
-Modulo Auto - Cotações
+Modulo Auto - Cotações / Emissões / Apolices
 
 ## Objetivo
 
-Corrigir bug de salvamento das cotações e adicionar área de listagem completa com todos os dados.
+Migrar cliente_id de UUID FK para TEXT composto (cpf + data), armazenando dados do cliente diretamente nas tabelas de cotação.
 
 ## Status
 
-Concluido
+Aguardando execucao SQL pelo usuario
+
+## Proxima Acao OBRIGATORIA
+
+Executar `supabase/16_cotacoes_cliente_direto.sql` no Supabase SQL Editor.
 
 ## Alteracoes Realizadas
 
-### Bug corrigido: cotações não eram salvas
-- `salvarNovo` enviava campos inexistentes em `cotacoes_auto` (`celular`, `email`, `estado_civil`, `profissao`)
-  — esses campos pertencem a `clientes_auto` e são salvos corretamente na criação do cliente.
-  O insert falhava silenciosamente porque não havia `onError` na mutation.
-- Removidos os 4 campos inválidos do payload de `criarCotacaoAuto`.
-- Adicionado `onError` em ambas as mutations (`salvarNovo` e `salvarRenovacao`) com banner de erro visível.
+### supabase/16_cotacoes_cliente_direto.sql (NOVO — executar no Supabase)
+- Adiciona `nome_cliente`, `cpf_cliente`, `celular_cliente`, `email_cliente`, `estado_civil_cliente`, `profissao_cliente` a `cotacoes_auto`
+- Remove FK `cotacoes_auto_cliente_id_fkey`, muda `cliente_id` para TEXT
+- Remove FK `emissoes_auto_cliente_id_fkey`, muda `cliente_id` para TEXT
+- Remove FK `apolices_auto_cliente_id_fkey`, muda `cliente_id` para TEXT
+- Adiciona `nome_cliente`, `cpf_cliente` a `apolices_auto`
 
-### Bug corrigido: filtro do histórico recente
-- `item.cotacoes_auto?.modelo_veiculo` → corrigido para `item.modelo_veiculo`
-  (o item já é a cotação; não há relação cotacoes_auto dentro de si mesmo).
+### src/lib/auto.js
+- `getCotacoesAuto`: remove join `clientes_auto`, usa `select('*')` (dados do cliente agora estão na própria linha)
+- `getEmissoesAuto`: remove join `clientes_auto`, agora usa `cotacoes_auto(tipo, modelo_veiculo, placa, nome_cliente, cpf_cliente, celular_cliente)`
+- `getApolicesAuto`: remove join `clientes_auto`, usa `select('*')`, busca usa `item.nome_cliente`
 
-### Nova funcionalidade: listagem completa de cotações
-- Nova query `['auto-cotacoes-todas']` sem filtro de tipo.
-- Nova seção "Todas as cotações" ao final da página com:
-  - Busca por nome, CPF, modelo de veículo, placa, seguradora, origem
-  - Filtros de status (Todas / Pendentes / Convertidas / Perdidas)
-  - Filtros de tipo (Todos / Seguro novo / Renovação)
-  - Linhas expansíveis mostrando todos os dados da cotação:
-    - Tipo 'novo': segurado, condutor, veículo/risco, proteções/lead
-    - Tipo 'renovacao': cliente, seguradora preferencial, seguradora mais barata
-  - Ações rápidas de status direto na listagem (Converter / Marcar perdida / Reabrir)
+### src/pages/auto/AutoCotacoes.jsx
+- Remove imports `buscarClientePorCpf`, `criarClienteAuto`
+- Adiciona `gerarClienteId(cpf)` → `{cpf_sem_mascara}_{YYYY-MM-DD}`
+- `salvarNovo`: gera cliente_id composto, salva dados do cliente diretamente na cotação
+- `salvarRenovacao`: gera cliente_id composto
+- Todas as referências `clientes_auto?.X` substituídas por `X_cliente`
 
-## Arquivos Alterados
-
-- `src/pages/auto/AutoCotacoes.jsx`
-
-## Proximo Responsavel
-
-Usuario
-
-## Proxima Tarefa
-
-Verificar se o SQL `supabase/15_auto_dates_migration.sql` já foi executado no Supabase
-(necessário para cotações antigas sem `created_at` aparecerem corretamente).
+### src/pages/auto/AutoEmissoes.jsx
+- `CardEmissao`: usa `cotacoes_auto?.nome_cliente` ou `cpf_cliente`
+- `ModalApolices`: usa `item.nome_cliente`
+- `handleEmitir`: passa `nome_cliente` e `cpf_cliente` na apolice
 
 ## Observacoes
 
-- RLS, auth e regras de negocio não foram alterados.
-- A mutation `mudarStatus` usa `atualizarStatusCotacao` já existente em `src/lib/auto.js`.
+- `renovacoes_auto.cliente_id` (UUID FK para clientes_auto) NÃO foi alterado — renovações têm fluxo próprio
+- `clientes_auto` continua existindo no banco (outras partes podem usar)
+- Cotações existentes com UUID como cliente_id ficam com valor convertido para texto — não afeta funcionalidade

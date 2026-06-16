@@ -13,8 +13,6 @@ import { Link } from 'react-router-dom'
 import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../components/ui'
 import {
   atualizarStatusCotacao,
-  buscarClientePorCpf,
-  criarClienteAuto,
   criarCotacaoAuto,
   getAutoCotacoesMensais,
   getAutoCotacoesResumo,
@@ -79,6 +77,12 @@ const REN_VAZIO = {
   cpf: '',
   seguradora_preferencial: { ...SEG_VAZIO },
   seguradora_mais_barata: { ...SEG_VAZIO },
+}
+
+function gerarClienteId(cpf) {
+  const cpfLimpo = (cpf || '').replace(/\D/g, '')
+  const hoje = new Date().toISOString().split('T')[0]
+  return `${cpfLimpo}_${hoje}`
 }
 
 function calcComissao(seg) {
@@ -192,22 +196,14 @@ export default function AutoCotacoes() {
 
   const { mutateAsync: salvarNovo, isPending: salvandoNovo } = useMutation({
     mutationFn: async dados => {
-      let cliente = await buscarClientePorCpf(dados.cpf)
-      if (!cliente) {
-        cliente = await criarClienteAuto({
-          nome_completo: dados.nome_completo,
-          cpf: dados.cpf,
-          telefone: dados.celular,
-          celular: dados.celular,
-          email: dados.email,
-          estado_civil: dados.estado_civil,
-          profissao: dados.profissao,
-        })
-      }
-
-      // Apenas colunas que existem em cotacoes_auto
       return criarCotacaoAuto({
-        cliente_id: cliente.id,
+        cliente_id: gerarClienteId(dados.cpf),
+        nome_cliente: dados.nome_completo || null,
+        cpf_cliente: dados.cpf || null,
+        celular_cliente: dados.celular || null,
+        email_cliente: dados.email || null,
+        estado_civil_cliente: dados.estado_civil || null,
+        profissao_cliente: dados.profissao || null,
         tipo: 'novo',
         status: 'pendente',
         condutor_nome: dados.condutor_nome || null,
@@ -240,9 +236,9 @@ export default function AutoCotacoes() {
 
   const { mutateAsync: salvarRenovacao, isPending: salvandoRen } = useMutation({
     mutationFn: async dados => {
-      const cliente = await buscarClientePorCpf(dados.cpf)
       return criarCotacaoAuto({
-        cliente_id: cliente?.id ?? null,
+        cliente_id: gerarClienteId(dados.cpf),
+        cpf_cliente: dados.cpf || null,
         tipo: 'renovacao',
         status: 'pendente',
         seguradora_preferencial: {
@@ -294,8 +290,8 @@ export default function AutoCotacoes() {
   const historico = cotacoes
     .filter(item => {
       const text = [
-        item.clientes_auto?.nome_completo,
-        item.clientes_auto?.cpf,
+        item.nome_cliente,
+        item.cpf_cliente,
         item.modelo_veiculo,
         item.seguradora_preferencial?.nome,
         item.seguradora_mais_barata?.nome,
@@ -303,7 +299,6 @@ export default function AutoCotacoes() {
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
-
       return text.includes(searchHistorico.toLowerCase())
     })
     .slice(0, 8)
@@ -313,8 +308,8 @@ export default function AutoCotacoes() {
     if (filtroTipo !== 'todos' && item.tipo !== filtroTipo) return false
     if (!searchLista) return true
     const text = [
-      item.clientes_auto?.nome_completo,
-      item.clientes_auto?.cpf,
+      item.nome_cliente,
+      item.cpf_cliente,
       item.modelo_veiculo,
       item.placa,
       item.seguradora_preferencial?.nome,
@@ -338,6 +333,7 @@ export default function AutoCotacoes() {
     ...tab,
     count: aba === tab.value ? cotacoes.length : 0,
   }))
+
   const resumoLateral = useMemo(() => {
     if (aba === 'novo') {
       return [
@@ -429,8 +425,7 @@ export default function AutoCotacoes() {
                 Cadastro com leitura de cliente, condutor e risco em um unico fluxo.
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-dark-muted">
-                Os campos novos de contato e condutor agora aparecem no contexto visual da tela,
-                deixando claro o que ja foi preenchido e o que ainda falta para salvar.
+                O cliente é identificado pelo CPF combinado com a data da cotação — sem necessidade de cadastro prévio.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <span className="badge badge-info">{aba === 'novo' ? 'Seguro novo' : 'Renovacao'}</span>
@@ -679,7 +674,7 @@ export default function AutoCotacoes() {
                   <div key={item.id} className="flex items-center justify-between gap-4 px-5 py-4">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-dark-text">
-                        {item.clientes_auto?.nome_completo || 'Sem nome'}
+                        {item.nome_cliente || item.cpf_cliente || 'Sem identificação'}
                       </p>
                       <p className="truncate text-xs text-dark-muted">
                         {formatDateBR(item.created_at)}
@@ -791,7 +786,7 @@ export default function AutoCotacoes() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-semibold text-dark-text">
-                          {item.clientes_auto?.nome_completo || 'Sem nome'}
+                          {item.nome_cliente || item.cpf_cliente || 'Sem identificação'}
                         </p>
                         <QuoteStatusBadge status={item.status} />
                         <span className={`badge ${item.tipo === 'novo' ? 'badge-info' : 'badge-muted'}`}>
@@ -799,7 +794,7 @@ export default function AutoCotacoes() {
                         </span>
                       </div>
                       <div className="mt-1 flex flex-wrap gap-3 text-xs text-dark-muted">
-                        {item.clientes_auto?.cpf && <span>CPF: {item.clientes_auto.cpf}</span>}
+                        {item.cpf_cliente && <span>CPF: {item.cpf_cliente}</span>}
                         {item.modelo_veiculo && <span>· {item.modelo_veiculo}{item.placa ? ` (${item.placa})` : ''}</span>}
                         {item.seguradora_preferencial?.nome && <span>· {item.seguradora_preferencial.nome}</span>}
                         {item.origem_lead && <span>· {item.origem_lead}</span>}
@@ -819,12 +814,12 @@ export default function AutoCotacoes() {
                         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                           <div className="space-y-3">
                             <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-muted">Segurado</p>
-                            <InfoRow label="Nome" value={item.clientes_auto?.nome_completo} />
-                            <InfoRow label="CPF" value={item.clientes_auto?.cpf} />
-                            <InfoRow label="Celular" value={item.clientes_auto?.celular} />
-                            <InfoRow label="E-mail" value={item.clientes_auto?.email} />
-                            <InfoRow label="Estado civil" value={item.clientes_auto?.estado_civil} />
-                            <InfoRow label="Profissão" value={item.clientes_auto?.profissao} />
+                            <InfoRow label="Nome" value={item.nome_cliente} />
+                            <InfoRow label="CPF" value={item.cpf_cliente} />
+                            <InfoRow label="Celular" value={item.celular_cliente} />
+                            <InfoRow label="E-mail" value={item.email_cliente} />
+                            <InfoRow label="Estado civil" value={item.estado_civil_cliente} />
+                            <InfoRow label="Profissão" value={item.profissao_cliente} />
                           </div>
                           <div className="space-y-3">
                             <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-muted">Condutor</p>
@@ -850,6 +845,7 @@ export default function AutoCotacoes() {
                             <InfoRow label="Blindagem" value={item.possui_blindagem} />
                             <InfoRow label="Isento imposto" value={item.isento_imposto} />
                             <InfoRow label="Origem lead" value={item.origem_lead} />
+                            <InfoRow label="ID cliente" value={item.cliente_id} />
                             <InfoRow label="Criado em" value={formatDateTimeBR(item.created_at)} />
                           </div>
                         </div>
@@ -857,9 +853,8 @@ export default function AutoCotacoes() {
                         <div className="grid gap-6 sm:grid-cols-3">
                           <div className="space-y-3">
                             <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-muted">Cliente</p>
-                            <InfoRow label="Nome" value={item.clientes_auto?.nome_completo} />
-                            <InfoRow label="CPF" value={item.clientes_auto?.cpf} />
-                            <InfoRow label="Celular" value={item.clientes_auto?.celular} />
+                            <InfoRow label="CPF" value={item.cpf_cliente} />
+                            <InfoRow label="ID cliente" value={item.cliente_id} />
                             <InfoRow label="Criado em" value={formatDateTimeBR(item.created_at)} />
                           </div>
                           <div className="space-y-3">

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronsUpDown, Check, Search, X } from 'lucide-react'
+import { getEntityImageUrl } from '../../lib/entityMedia'
 
 /**
  * WorkspacesSelect — dropdown premium com avatar circle + label.
@@ -113,6 +114,13 @@ export function WorkspacesSelect({
     return (opt?.label || '').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?'
   }
 
+  function avatarSource(opt) {
+    if (opt?.icon) return { type: 'icon', value: opt.icon }
+    const src = getEntityImageUrl(opt?.imagePath || opt?.image_path || null, opt?.imageUrl || opt?.image_url || null)
+    if (src) return { type: 'image', value: src }
+    return { type: 'initials', value: avatarInitials(opt) }
+  }
+
   return (
     <div ref={wrapRef} className={`relative ${className}`}>
 
@@ -147,8 +155,18 @@ export function WorkspacesSelect({
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
           {/* Avatar circle */}
           {selected ? (
-            selected.icon ? (
+            avatarSource(selected).type === 'icon' ? (
               <span className="ws-avatar-icon flex-shrink-0">{selected.icon}</span>
+            ) : avatarSource(selected).type === 'image' ? (
+              <span className="ws-avatar flex-shrink-0 overflow-hidden bg-white/90 border border-dark-border/40">
+                <img
+                  src={avatarSource(selected).value}
+                  alt={selected.label}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </span>
             ) : (
               <span
                 className="ws-avatar flex-shrink-0"
@@ -289,7 +307,8 @@ export function WorkspacesSelect({
                   {search ? 'Nenhum resultado' : emptyText}
                 </p>
               ) : filtered.map(opt => {
-                const isSel = String(opt.value) === String(value)
+              const isSel = String(opt.value) === String(value)
+                const avatar = avatarSource(opt)
                 return (
                   <WorkspaceItem
                     key={opt.value}
@@ -298,6 +317,7 @@ export function WorkspacesSelect({
                     onSelect={select}
                     color={avatarColor(opt)}
                     initials={avatarInitials(opt)}
+                    avatar={avatar}
                   />
                 )
               })}
@@ -311,7 +331,7 @@ export function WorkspacesSelect({
 }
 
 // Item individual
-function WorkspaceItem({ opt, isSelected, onSelect, color, initials }) {
+function WorkspaceItem({ opt, isSelected, onSelect, color, initials, avatar }) {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -335,10 +355,20 @@ function WorkspaceItem({ opt, isSelected, onSelect, color, initials }) {
           : hovered ? 'var(--glass-bg-hover)' : 'transparent',
         transition: 'background 0.1s ease',
       }}
-    >
+      >
       {/* Avatar */}
-      {opt.icon ? (
+      {avatar?.type === 'icon' ? (
         <span className="ws-avatar-icon-sm flex-shrink-0">{opt.icon}</span>
+      ) : avatar?.type === 'image' ? (
+        <span className="ws-avatar-sm flex-shrink-0 overflow-hidden bg-white/90 border border-dark-border/40">
+          <img
+            src={avatar.value}
+            alt={opt.label}
+            className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+        </span>
       ) : (
         <span
           className="ws-avatar-sm flex-shrink-0"

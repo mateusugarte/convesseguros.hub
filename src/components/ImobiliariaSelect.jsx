@@ -27,6 +27,8 @@ export default function ImobiliariaSelect({
       label:    g.nome_canonico,
       color:    `hsl(${nameToHue(g.nome_canonico)}, 50%, 50%)`,
       initials: g.nome_canonico.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?',
+      imageUrl: g.imagem_url || null,
+      imagePath: g.imagem_path || null,
     })),
   ]
 

@@ -259,9 +259,8 @@ export async function buscarFichasParaEmissao(nome, imobiliarias) {
   let q = supabase
     .from('fichas')
     .select('id, nome_interessado, nome_empresa, cpf, cnpj, produto, imobiliaria, valor_aluguel, celular, cep, tipo_imovel, numero_apolice, vigencia, vencimento, origem_lead, observacoes, pct_comissao, pct_desconto, parcelamento, status, created_at')
-    .not('status', 'in', '("recusado","cancelado","cpf_invalido","expirada","emitido")')
     .order('created_at', { ascending: false })
-    .limit(100)
+    .limit(200)
 
   if (term) {
     // A busca precisa bater no nome do locatário enquanto ele digita.
@@ -276,7 +275,7 @@ export async function buscarFichasParaEmissao(nome, imobiliarias) {
     return []
   }
 
-  const fichas = data || []
+  const fichas = (data || []).filter(f => !['recusado', 'cancelado', 'cpf_invalido', 'expirada', 'emitido'].includes(f.status))
   if (!fichas.length) return []
 
   const fichaIds = fichas.map(f => f.id).filter(Boolean)

@@ -84,7 +84,8 @@ export function useImobiliaria() {
       .from('imobiliaria_aliases')
       .select('alias, imobiliarias!imobiliaria_id!inner(nome_canonico)')
       .eq('imobiliarias.nome_canonico', nomeCanônico)
-    return data?.map(d => d.alias) || [nomeCanônico]
+    const aliases = data?.map(d => d.alias).filter(Boolean) || []
+    return [...new Set([nomeCanônico, ...aliases])]
   }, [])
 
   function recarregar() {

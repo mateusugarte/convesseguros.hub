@@ -10,117 +10,57 @@ import {
   YAxis,
 } from 'recharts'
 import { Link } from 'react-router-dom'
-import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../components/ui'
-import {
-  criarCotacaoAuto,
-  getAutoCotacoesMensais,
-  getAutoCotacoesResumo,
-  getCotacoesAuto,
-} from '../../lib/auto'
+import { AlertCircle, BadgeDollarSign, Briefcase, CalendarDays, Car, CircleCheckBig, Heart, Mail, Phone, Search, ShieldHalf, Sparkles, TrendingUp, UserRound } from 'lucide-react'
+import { PageHeader, MetricCard, DataCard, EmptyState } from '../../components/ui'
 import SeguradoraSelect from '../../components/SeguradoraSelect'
-import {
-  COTACAO_ABAS,
-  COTACAO_STATUS,
-  formatDateTimeBR,
-  formatMoney,
-  formatPercent,
-  statusToneClass,
-  toneClasses,
-} from './autoShared'
-import {
-  AlertCircle,
-  BadgeDollarSign,
-  CircleCheckBig,
-  Building2,
-  CalendarDays,
-  Car,
-  Heart,
-  Mail,
-  Phone,
-  ShieldHalf,
-  Sparkles,
-  UserRound,
-  TrendingUp,
-} from 'lucide-react'
+import { criarCotacaoAuto, getAutoCotacoesMensais, getAutoCotacoesResumo, getCotacoesAuto } from '../../lib/auto'
+import { COTACAO_STATUS, formatDateTimeBR, formatMoney, statusToneClass, toneClasses } from './autoShared'
+
+const LISTA_TABS = [
+  { value: 'lista', label: 'Lista' },
+  { value: 'novo', label: 'Novo seguro' },
+  { value: 'renovacao', label: 'Renovacao' },
+]
+
+const STATUS_FILTROS = [
+  { value: 'todas', label: 'Todas' },
+  { value: 'pendente', label: 'Pendentes' },
+  { value: 'convertida', label: 'Convertidas' },
+  { value: 'perdida', label: 'Perdidas' },
+]
+
+const PERIODO_FILTROS = [
+  { value: '30d', label: '30 dias' },
+  { value: '90d', label: '90 dias' },
+  { value: '180d', label: '180 dias' },
+  { value: 'todo', label: 'Todo periodo' },
+]
 
 const NOVO_VAZIO = {
   nome_completo: '',
   cpf: '',
   celular: '',
   email: '',
-  estado_civil: '',
-  profissao: '',
   condutor_nome: '',
   condutor_cpf: '',
-  estado_civil_condutor: '',
-  cep_pernoite: '',
-  uso_veiculo: '',
-  garagem_residencia: '',
-  garagem_trabalho: '',
-  garagem_estudo: '',
-  jovens_18_26: '',
   modelo_veiculo: '',
   placa: '',
-  veiculo_financiado: '',
-  possui_kit_gas: '',
-  possui_blindagem: '',
-  isento_imposto: '',
   origem_lead: '',
   vigencia_inicio: '',
   vigencia_fim: '',
-}
-
-const SEG_VAZIO = {
-  nome: '',
-  premio_total: '',
-  premio_liquido: '',
-  pct_comissao: '',
 }
 
 const REN_VAZIO = {
   cpf: '',
   vigencia_inicio: '',
   vigencia_fim: '',
-  seguradora_preferencial: { ...SEG_VAZIO },
-  seguradora_mais_barata: { ...SEG_VAZIO },
+  seguradora_preferencial: { nome: '', premio_total: '', premio_liquido: '', pct_comissao: '' },
+  seguradora_mais_barata: { nome: '', premio_total: '', premio_liquido: '', pct_comissao: '' },
 }
 
-function iconLabel(Icon, text) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      {Icon && <Icon className="h-3.5 w-3.5" />}
-      <span>{text}</span>
-    </span>
-  )
-}
-
-function gerarClienteId(cpf) {
-  const cpfLimpo = (cpf || '').replace(/\D/g, '')
-  const hoje = new Date().toISOString().split('T')[0]
-  return `${cpfLimpo}_${hoje}`
-}
-
-function calcComissao(seg) {
-  const premioLiquido = parseFloat(seg.premio_liquido) || 0
-  const pctComissao = parseFloat(seg.pct_comissao) || 0
-  return premioLiquido * pctComissao
-}
-
-function ChartTip({ active, payload, label }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="rounded-2xl border border-dark-border bg-white px-3 py-2 shadow-lg">
-      <p className="text-xs text-dark-muted">{label}</p>
-      <div className="mt-1 space-y-1">
-        {payload.map((item, index) => (
-          <div key={index} className="flex items-center gap-2 text-xs text-dark-text">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: item.color || item.fill }} />
-            <span>{item.name}: {item.value}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
+function QuoteStatusBadge({ status }) {
+  const meta = COTACAO_STATUS[status] || COTACAO_STATUS.aberta
+  return <span className={`badge ${toneClasses(meta.tone)}`}>{meta.label}</span>
 }
 
 function Field({ label, value, onChange, type = 'text', placeholder, children }) {
@@ -140,266 +80,248 @@ function Field({ label, value, onChange, type = 'text', placeholder, children })
   )
 }
 
-function QuoteStatusBadge({ status }) {
-  const meta = COTACAO_STATUS[status] || COTACAO_STATUS.aberta
+function iconLabel(Icon, text) {
   return (
-    <span className={`badge ${toneClasses(meta.tone)}`}>
-      {meta.label}
+    <span className="inline-flex items-center gap-1.5">
+      {Icon && <Icon className="h-3.5 w-3.5" />}
+      <span>{text}</span>
     </span>
   )
 }
 
-function InfoRow({ label, value }) {
-  if (!value) return null
+function calcComissao(seg) {
+  const premioLiquido = parseFloat(seg.premio_liquido) || 0
+  const pctComissao = parseFloat(seg.pct_comissao) || 0
+  return premioLiquido * pctComissao
+}
+
+function sortByRecency(items) {
+  return [...items].sort((a, b) => {
+    const ta = new Date(a.updated_at || a.created_at || 0).getTime()
+    const tb = new Date(b.updated_at || b.created_at || 0).getTime()
+    return tb - ta
+  })
+}
+
+function ChartTip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[10px] uppercase tracking-widest text-dark-muted">{label}</span>
-      <span className="text-sm text-dark-text">{value}</span>
+    <div className="rounded-2xl border border-dark-border bg-white px-3 py-2 shadow-lg">
+      <p className="text-xs text-dark-muted">{label}</p>
+      <div className="mt-1 space-y-1">
+        {payload.map((item, index) => (
+          <div key={index} className="flex items-center gap-2 text-xs text-dark-text">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: item.color || item.fill }} />
+            <span>{item.name}: {item.value}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
 
-const STATUS_FILTROS = [
-  { value: 'todas', label: 'Todas' },
-  { value: 'pendente', label: 'Pendentes' },
-  { value: 'convertida', label: 'Convertidas' },
-  { value: 'perdida', label: 'Perdidas' },
-]
-
-const PERIODO_FILTROS = [
-  { value: '30d', label: '30 dias' },
-  { value: '90d', label: '90 dias' },
-  { value: '180d', label: '180 dias' },
-  { value: 'todo', label: 'Todo período' },
-]
-
 export default function AutoCotacoes() {
-  const [aba, setAba] = useState('novo')
-  const [formNovo, setFormNovo] = useState(NOVO_VAZIO)
-  const [formRen, setFormRen] = useState(REN_VAZIO)
+  const [tab, setTab] = useState('lista')
+  const [filtroStatus, setFiltroStatus] = useState('todas')
+  const [filtroTipo, setFiltroTipo] = useState('todos')
+  const [filtroPeriodo, setFiltroPeriodo] = useState('90d')
+  const [searchLista, setSearchLista] = useState('')
+  const [novo, setNovo] = useState(NOVO_VAZIO)
+  const [renovacao, setRenovacao] = useState(REN_VAZIO)
   const [erro, setErro] = useState(null)
   const qc = useQueryClient()
 
   const { data: cotacoes = [], isLoading: loadingLista } = useQuery({
-    queryKey: ['auto-cotacoes', aba],
-    queryFn: () => getCotacoesAuto({ tipo: aba }),
+    queryKey: ['auto-cotacoes-todas'],
+    queryFn: () => getCotacoesAuto({}),
   })
 
   const { data: resumo, isLoading: loadingResumo } = useQuery({
-    queryKey: ['auto-cotacoes-resumo', aba],
-    queryFn: () => getAutoCotacoesResumo({ tipo: aba }),
+    queryKey: ['auto-cotacoes-resumo'],
+    queryFn: () => getAutoCotacoesResumo({}),
   })
 
   const { data: serieMensal = [], isLoading: loadingSerie } = useQuery({
-    queryKey: ['auto-cotacoes-serie', aba],
-    queryFn: () => getAutoCotacoesMensais({ tipo: aba }),
+    queryKey: ['auto-cotacoes-serie'],
+    queryFn: () => getAutoCotacoesMensais({}),
   })
 
-  const invalidarQueries = async () => {
-    await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
+  const invalidar = async () => {
     await qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
     await qc.invalidateQueries({ queryKey: ['auto-cotacoes-resumo'] })
+    await qc.invalidateQueries({ queryKey: ['auto-cotacoes-serie'] })
+    await qc.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] })
+    await qc.invalidateQueries({ queryKey: ['auto-dashboard-cotacoes-resumo'] })
     await qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
     await qc.invalidateQueries({ queryKey: ['auto-emissoes-resumo'] })
     await qc.invalidateQueries({ queryKey: ['auto-renovacoes-resumo'] })
-    await qc.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] })
-    await qc.invalidateQueries({ queryKey: ['auto-dashboard-cotacoes-resumo'] })
   }
 
   const { mutateAsync: salvarNovo, isPending: salvandoNovo } = useMutation({
-    mutationFn: async dados => {
-      return criarCotacaoAuto({
-        cliente_id: gerarClienteId(dados.cpf),
-        nome_cliente: dados.nome_completo || null,
-        cpf_cliente: dados.cpf || null,
-        celular_cliente: dados.celular || null,
-        email_cliente: dados.email || null,
-        estado_civil_cliente: dados.estado_civil || null,
-        profissao_cliente: dados.profissao || null,
-        tipo: 'novo',
-        status: 'pendente',
-        vigencia_inicio: dados.vigencia_inicio || null,
-        vigencia_fim: dados.vigencia_fim || null,
-        condutor_nome: dados.condutor_nome || null,
-        condutor_cpf: dados.condutor_cpf || null,
-        estado_civil_condutor: dados.estado_civil_condutor || null,
-        cep_pernoite: dados.cep_pernoite || null,
-        uso_veiculo: dados.uso_veiculo || null,
-        garagem_residencia: dados.garagem_residencia || null,
-        garagem_trabalho: dados.garagem_trabalho || null,
-        garagem_estudo: dados.garagem_estudo || null,
-        jovens_18_26: dados.jovens_18_26 || null,
-        modelo_veiculo: dados.modelo_veiculo || null,
-        placa: dados.placa || null,
-        veiculo_financiado: dados.veiculo_financiado || null,
-        possui_kit_gas: dados.possui_kit_gas || null,
-        possui_blindagem: dados.possui_blindagem || null,
-        isento_imposto: dados.isento_imposto || null,
-        origem_lead: dados.origem_lead || null,
-      })
-    },
+    mutationFn: async payload => criarCotacaoAuto({
+      cliente_id: `${(payload.cpf || '').replace(/\D/g, '')}_${new Date().toISOString().split('T')[0]}`,
+      tipo: 'novo',
+      status: 'pendente',
+      nome_cliente: payload.nome_completo || null,
+      cpf_cliente: payload.cpf || null,
+      celular_cliente: payload.celular || null,
+      email_cliente: payload.email || null,
+      condutor_nome: payload.condutor_nome || null,
+      condutor_cpf: payload.condutor_cpf || null,
+      modelo_veiculo: payload.modelo_veiculo || null,
+      placa: payload.placa || null,
+      origem_lead: payload.origem_lead || null,
+      vigencia_inicio: payload.vigencia_inicio || null,
+      vigencia_fim: payload.vigencia_fim || null,
+    }),
     onSuccess: async () => {
       setErro(null)
-      await invalidarQueries()
-      setFormNovo(NOVO_VAZIO)
+      setNovo(NOVO_VAZIO)
+      await invalidar()
+      setTab('lista')
     },
-    onError: err => {
-      setErro(err?.message || 'Erro ao salvar cotação. Verifique os dados e tente novamente.')
-    },
+    onError: err => setErro(err?.message || 'Erro ao salvar cotacao.'),
   })
 
-  const { mutateAsync: salvarRenovacao, isPending: salvandoRen } = useMutation({
-    mutationFn: async dados => {
-      return criarCotacaoAuto({
-        cliente_id: gerarClienteId(dados.cpf),
-        cpf_cliente: dados.cpf || null,
-        tipo: 'renovacao',
-        status: 'pendente',
-        vigencia_inicio: dados.vigencia_inicio || null,
-        vigencia_fim: dados.vigencia_fim || null,
-        seguradora_preferencial: {
-          ...dados.seguradora_preferencial,
-          valor_comissao: calcComissao(dados.seguradora_preferencial),
-        },
-        seguradora_mais_barata: {
-          ...dados.seguradora_mais_barata,
-          valor_comissao: calcComissao(dados.seguradora_mais_barata),
-        },
-      })
-    },
+  const { mutateAsync: salvarRenovacao, isPending: salvandoRenovacao } = useMutation({
+    mutationFn: async payload => criarCotacaoAuto({
+      cliente_id: `${(payload.cpf || '').replace(/\D/g, '')}_${new Date().toISOString().split('T')[0]}`,
+      tipo: 'renovacao',
+      status: 'pendente',
+      cpf_cliente: payload.cpf || null,
+      vigencia_inicio: payload.vigencia_inicio || null,
+      vigencia_fim: payload.vigencia_fim || null,
+      seguradora_preferencial: {
+        ...payload.seguradora_preferencial,
+        valor_comissao: calcComissao(payload.seguradora_preferencial),
+      },
+      seguradora_mais_barata: {
+        ...payload.seguradora_mais_barata,
+        valor_comissao: calcComissao(payload.seguradora_mais_barata),
+      },
+    }),
     onSuccess: async () => {
       setErro(null)
-      await invalidarQueries()
-      setFormRen(REN_VAZIO)
+      setRenovacao(REN_VAZIO)
+      await invalidar()
+      setTab('lista')
     },
-    onError: err => {
-      setErro(err?.message || 'Erro ao salvar renovação. Verifique os dados e tente novamente.')
-    },
+    onError: err => setErro(err?.message || 'Erro ao salvar renovacao.'),
   })
 
-  function setNovo(campo, valor) {
-    setFormNovo(prev => ({ ...prev, [campo]: valor }))
-  }
+  const cotacoesOrdenadas = useMemo(() => sortByRecency(cotacoes), [cotacoes])
 
-  function setSeguradora(qual, campo, valor) {
-    setFormRen(prev => ({
-      ...prev,
-      [qual]: { ...prev[qual], [campo]: valor },
-    }))
-  }
+  const cotacoesFiltradas = useMemo(() => {
+    const hoje = new Date()
+    const limitePeriodo = (() => {
+      if (filtroPeriodo === 'todo') return null
+      const dias = filtroPeriodo === '30d' ? 30 : filtroPeriodo === '90d' ? 90 : 180
+      const ref = new Date(hoje)
+      ref.setDate(ref.getDate() - dias)
+      return ref
+    })()
 
-  const agora = new Date()
-  const cotacoesMes = cotacoes.filter(item => {
-    const created = new Date(item.created_at)
-    return created.getMonth() === agora.getMonth() && created.getFullYear() === agora.getFullYear()
-  })
+    const termo = searchLista.trim().toLowerCase()
+
+    return cotacoesOrdenadas.filter(item => {
+      if (limitePeriodo) {
+        const ref = new Date(item.updated_at || item.created_at)
+        if (Number.isNaN(ref.getTime()) || ref < limitePeriodo) return false
+      }
+      if (filtroStatus !== 'todas' && item.status !== filtroStatus) return false
+      if (filtroTipo !== 'todos' && item.tipo !== filtroTipo) return false
+      if (!termo) return true
+
+      const text = [
+        item.nome_cliente,
+        item.cpf_cliente,
+        item.celular_cliente,
+        item.email_cliente,
+        item.modelo_veiculo,
+        item.placa,
+        item.condutor_nome,
+        item.condutor_cpf,
+        item.seguradora_preferencial?.nome,
+        item.seguradora_mais_barata?.nome,
+        item.origem_lead,
+      ].filter(Boolean).join(' ').toLowerCase()
+
+      return text.includes(termo)
+    })
+  }, [cotacoesOrdenadas, filtroPeriodo, filtroStatus, filtroTipo, searchLista])
+
+  const cotacoesMes = useMemo(() => {
+    const agora = new Date()
+    return cotacoesOrdenadas.filter(item => {
+      const d = new Date(item.updated_at || item.created_at)
+      return d.getMonth() === agora.getMonth() && d.getFullYear() === agora.getFullYear()
+    })
+  }, [cotacoesOrdenadas])
+
+  const cotacoesRecentes = useMemo(() => cotacoesOrdenadas.slice(0, 6), [cotacoesOrdenadas])
 
   const convertidas = cotacoesMes.filter(item => item.status === 'convertida').length
   const perdidas = cotacoesMes.filter(item => item.status === 'perdida').length
   const taxa = cotacoesMes.length > 0 ? Math.round((convertidas / cotacoesMes.length) * 100) : 0
 
-  const cotacoesRecentes = useMemo(() => cotacoes.slice(0, 6), [cotacoes])
-
   const metrics = [
     { key: 'total', label: 'Cotacoes no periodo', value: resumo?.total ?? 0, icon: BadgeDollarSign, tone: 'accent' },
-    { key: 'mesAtual', label: 'Cotacoes no mes', value: resumo?.mesAtual ?? 0, icon: Sparkles, tone: 'warning' },
+    { key: 'mes', label: 'Cotacoes no mes', value: resumo?.mesAtual ?? 0, icon: Sparkles, tone: 'warning' },
     { key: 'convertidas', label: 'Convertidas', value: resumo?.convertidas ?? 0, icon: CircleCheckBig, tone: 'success' },
     { key: 'taxa', label: 'Taxa de conversao', value: `${taxa}%`, icon: TrendingUp, tone: 'secondary' },
   ]
 
-  const tabs = COTACAO_ABAS.map(tab => ({
-    ...tab,
-    count: aba === tab.value ? cotacoes.length : 0,
+  const resumoLateral = useMemo(() => [
+    {
+      label: 'Mais recente',
+      value: cotacoesOrdenadas[0]?.nome_cliente || cotacoesOrdenadas[0]?.cpf_cliente || 'Sem identificacao',
+      hint: formatDateTimeBR(cotacoesOrdenadas[0]?.updated_at || cotacoesOrdenadas[0]?.created_at),
+    },
+    {
+      label: 'Atualizacao',
+      value: cotacoesOrdenadas.find(item => item.updated_at && item.updated_at !== item.created_at)
+        ? 'Ha registros editados'
+        : 'Somente criacoes',
+      hint: 'ordenacao usa updated_at quando existir',
+    },
+    {
+      label: 'Pendentes',
+      value: `${resumo?.pendentes ?? 0} cotações`,
+      hint: 'aguardando tratativa',
+    },
+    {
+      label: 'Convertidas',
+      value: `${resumo?.convertidas ?? 0}`,
+      hint: 'status convertido',
+    },
+    {
+      label: 'Perdidas',
+      value: `${resumo?.perdidas ?? 0}`,
+      hint: 'status perdido',
+    },
+  ], [cotacoesOrdenadas, resumo])
+
+  const tabs = LISTA_TABS.map(item => ({
+    ...item,
+    count: item.value === 'lista' ? cotacoes.length : 0,
   }))
 
-  const resumoLateral = useMemo(() => {
-    if (aba === 'novo') {
-      return [
-        {
-          label: 'Segurado',
-          value: formNovo.nome_completo || 'Nome do segurado',
-          hint: formNovo.celular || 'Celular pendente',
-        },
-        {
-          label: 'Vigência',
-          value: formNovo.vigencia_inicio && formNovo.vigencia_fim
-            ? `${formNovo.vigencia_inicio} a ${formNovo.vigencia_fim}`
-            : 'Período pendente',
-          hint: 'início e fim',
-        },
-        {
-          label: 'Contato',
-          value: formNovo.email || 'E-mail pendente',
-          hint: formNovo.estado_civil || 'Estado civil do segurado',
-        },
-        {
-          label: 'Condutor',
-          value: formNovo.condutor_nome || 'Nome do condutor',
-          hint: formNovo.estado_civil_condutor || 'Estado civil do condutor',
-        },
-        {
-          label: 'Veiculo',
-          value: formNovo.modelo_veiculo || 'Modelo do veiculo',
-          hint: formNovo.placa || 'Placa opcional',
-        },
-      ]
-    }
-
-    return [
-      {
-        label: 'CPF',
-        value: formRen.cpf || 'Pendente',
-        hint: 'identificacao do cliente',
-      },
-      {
-        label: 'Vigência',
-        value: formRen.vigencia_inicio && formRen.vigencia_fim
-          ? `${formRen.vigencia_inicio} a ${formRen.vigencia_fim}`
-          : 'Período pendente',
-        hint: 'início e fim',
-      },
-      {
-        label: 'Preferencial',
-        value: formRen.seguradora_preferencial.nome || 'Sem nome',
-        hint: formatMoney(calcComissao(formRen.seguradora_preferencial)),
-      },
-      {
-        label: 'Mais barata',
-        value: formRen.seguradora_mais_barata.nome || 'Sem nome',
-        hint: formatMoney(calcComissao(formRen.seguradora_mais_barata)),
-      },
-      {
-        label: 'Comissao',
-        value: formatMoney(calcComissao(formRen.seguradora_preferencial)),
-        hint: 'estimativa atual',
-      },
-    ]
-  }, [aba, formNovo, formRen])
+  const resumoAtivo = resumo?.taxaConversao ? Math.round((resumo.taxaConversao ?? 0) * 100) : taxa
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Seguro Auto"
-        title="Cotações"
-        description="Fluxo de seguro novo e renovacao com calculo de comissao no frontend e ultimas cotacoes em destaque."
+        title="Cotacoes"
+        description="Area central com a lista completa das cotacoes, atualizada do mais recente para o mais antigo, com acesso rapido aos detalhes e edicao."
         actions={(
           <>
-            <Link to="/auto/dashboard" className="btn-secondary">
-              Dashboard
-            </Link>
-            <Link to="/auto/emissoes" className="btn-primary">
-              Ver emissões
-            </Link>
+            <Link to="/auto/dashboard" className="btn-secondary">Dashboard</Link>
+            <Link to="/auto/emissoes" className="btn-primary">Ver emissões</Link>
           </>
         )}
         stats={metrics.map(({ key, label, value, icon: Icon, tone }) => (
-          <MetricCard
-            key={key}
-            label={label}
-            value={value}
-            icon={<Icon className="h-4 w-4" />}
-            tone={tone}
-          />
+          <MetricCard key={key} label={label} value={value} icon={<Icon className="h-4 w-4" />} tone={tone} />
         ))}
       />
 
@@ -411,18 +333,18 @@ export default function AutoCotacoes() {
             <div className="relative z-[1] max-w-2xl">
               <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-accent">
                 <Sparkles className="h-3.5 w-3.5" />
-                Workbench de cotacao
+                Cotações em ordem cronológica
               </div>
               <h2 className="mt-4 text-2xl font-semibold text-dark-text md:text-3xl">
-                Cadastro com leitura de cliente, condutor e risco em um unico fluxo.
+                Veja todo o historico do modulo em uma unica tela.
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-dark-muted">
-                O cliente é identificado pelo CPF combinado com a data da cotação — sem necessidade de cadastro prévio.
+                A lista prioriza a informacao mais recente, mostra quando cada registro foi criado ou atualizado e abre o detalhe completo com um clique.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
-                <span className="badge badge-info">{aba === 'novo' ? 'Seguro novo' : 'Renovacao'}</span>
-                <span className="badge badge-success">{resumo?.taxaConversao ? `${Math.round((resumo?.taxaConversao ?? 0) * 100)}% conversao` : `${taxa}% conversao`}</span>
-                <span className="badge badge-muted">{resumo?.total ?? 0} registros</span>
+                <span className="badge badge-info">{cotacoes.length} registros</span>
+                <span className="badge badge-success">{resumoAtivo}% conversao</span>
+                <span className="badge badge-muted">{cotacoesOrdenadas.length ? 'Mais recente no topo' : 'Sem registros ainda'}</span>
               </div>
             </div>
           </div>
@@ -439,29 +361,21 @@ export default function AutoCotacoes() {
         </div>
       </DataCard>
 
-      <FilterBar
-        actions={(
-          <div className="text-xs text-dark-muted">
-            {resumo?.convertidas ?? 0} convertidas · {resumo?.perdidas ?? 0} perdidas
-          </div>
-        )}
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          {tabs.map(tab => (
-            <button
-              key={tab.value}
-              onClick={() => { setAba(tab.value); setErro(null) }}
-              className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-colors ${
-                aba === tab.value
-                  ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
-                  : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </FilterBar>
+      <div className="flex flex-wrap items-center gap-2">
+        {tabs.map(item => (
+          <button
+            key={item.value}
+            onClick={() => { setTab(item.value); setErro(null) }}
+            className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-colors ${
+              tab === item.value
+                ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="space-y-4">
@@ -472,156 +386,252 @@ export default function AutoCotacoes() {
             </div>
           )}
 
-          <DataCard
-            title={aba === 'novo' ? 'Novo orçamento' : 'Cotação de renovação'}
-            subtitle={aba === 'novo'
-              ? 'Cadastro do segurado, do condutor e do risco do veiculo.'
-              : 'Comparativo entre seguradora preferencial e mais barata.'}
-          >
-            {aba === 'novo' ? (
-              <div className="space-y-6">
-                <div className="grid gap-4 rounded-2xl border border-dark-border/70 p-4 lg:grid-cols-2">
-                  <div className="space-y-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Segurado</p>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Field label={iconLabel(UserRound, 'Nome completo')} value={formNovo.nome_completo} onChange={value => setNovo('nome_completo', value)} />
-                      <Field label={iconLabel(UserRound, 'CPF')} value={formNovo.cpf} onChange={value => setNovo('cpf', value)} />
-                      <Field label={iconLabel(Phone, 'Celular')} value={formNovo.celular} onChange={value => setNovo('celular', value)} />
-                      <Field label={iconLabel(Mail, 'E-mail')} value={formNovo.email} onChange={value => setNovo('email', value)} />
-                      <Field label={iconLabel(Heart, 'Estado civil')} value={formNovo.estado_civil} onChange={value => setNovo('estado_civil', value)} />
-                      <Field label={iconLabel(Briefcase, 'Profissão')} value={formNovo.profissao} onChange={value => setNovo('profissao', value)} />
-                    </div>
+          {tab === 'lista' ? (
+            <DataCard
+              title="Todas as cotacoes"
+              subtitle="Organizadas da mais recente para a mais antiga, com os dados principais e o ultimo momento de atualizacao."
+              actions={(
+                <span className="badge badge-muted">
+                  {cotacoesFiltradas.length} resultado{cotacoesFiltradas.length !== 1 ? 's' : ''}
+                </span>
+              )}
+              bodyClassName="p-0"
+            >
+              <div className="border-b border-dark-border/70 bg-dark-surface2/25 px-5 py-4">
+                <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-muted" />
+                    <input
+                      value={searchLista}
+                      onChange={e => setSearchLista(e.target.value)}
+                      placeholder="Buscar nome, CPF, celular, veiculo, placa ou seguradora..."
+                      className="input pl-10"
+                    />
                   </div>
-
-                  <div className="space-y-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Condutor e veículo</p>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Field label={iconLabel(UserRound, 'Nome do condutor')} value={formNovo.condutor_nome} onChange={value => setNovo('condutor_nome', value)} />
-                      <Field label={iconLabel(UserRound, 'CPF do condutor')} value={formNovo.condutor_cpf} onChange={value => setNovo('condutor_cpf', value)} />
-                      <Field label={iconLabel(Heart, 'Estado civil do condutor')} value={formNovo.estado_civil_condutor} onChange={value => setNovo('estado_civil_condutor', value)} />
-                      <Field label={iconLabel(CalendarDays, 'CEP de pernoite')} value={formNovo.cep_pernoite} onChange={value => setNovo('cep_pernoite', value)} />
-                      <Field label={iconLabel(Car, 'Uso do veículo')} value={formNovo.uso_veiculo} onChange={value => setNovo('uso_veiculo', value)} />
-                      <Field label={iconLabel(Car, 'Modelo do veículo')} value={formNovo.modelo_veiculo} onChange={value => setNovo('modelo_veiculo', value)} />
-                      <Field label={iconLabel(Car, 'Placa')} value={formNovo.placa} onChange={value => setNovo('placa', value)} placeholder="Opcional" />
-                      <Field label={iconLabel(CalendarDays, 'Vigência início')} type="date" value={formNovo.vigencia_inicio} onChange={value => setNovo('vigencia_inicio', value)} />
-                      <Field label={iconLabel(CalendarDays, 'Vigência fim')} type="date" value={formNovo.vigencia_fim} onChange={value => setNovo('vigencia_fim', value)} />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 rounded-2xl border border-dark-border/70 p-4 lg:grid-cols-2">
-                  <div className="space-y-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Risco</p>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Field label={iconLabel(Building2, 'Garagem na residência')} value={formNovo.garagem_residencia} onChange={value => setNovo('garagem_residencia', value)} />
-                      <Field label={iconLabel(Building2, 'Garagem no trabalho')} value={formNovo.garagem_trabalho} onChange={value => setNovo('garagem_trabalho', value)} />
-                      <Field label={iconLabel(Building2, 'Garagem no estudo')} value={formNovo.garagem_estudo} onChange={value => setNovo('garagem_estudo', value)} />
-                      <Field label={iconLabel(UserRound, 'Jovens 18-26 usam o veículo')} value={formNovo.jovens_18_26} onChange={value => setNovo('jovens_18_26', value)} />
-                      <Field label={iconLabel(Car, 'Veículo financiado')} value={formNovo.veiculo_financiado} onChange={value => setNovo('veiculo_financiado', value)} />
-                      <Field label={iconLabel(ShieldHalf, 'Isento de imposto')} value={formNovo.isento_imposto} onChange={value => setNovo('isento_imposto', value)} />
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Proteções e origem</p>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Field label={iconLabel(ShieldHalf, 'Possui kit gás')} value={formNovo.possui_kit_gas} onChange={value => setNovo('possui_kit_gas', value)} />
-                      <Field label={iconLabel(ShieldHalf, 'Possui blindagem')} value={formNovo.possui_blindagem} onChange={value => setNovo('possui_blindagem', value)} />
-                    </div>
-
-                    <div>
-                      <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-dark-muted">{iconLabel(UserRound, 'Origem do lead')}</label>
-                      <select
-                        value={formNovo.origem_lead}
-                        onChange={e => setNovo('origem_lead', e.target.value)}
-                        className="select"
+                  <div className="flex flex-wrap gap-2 lg:justify-end">
+                    {PERIODO_FILTROS.map(item => (
+                      <button
+                        key={item.value}
+                        onClick={() => setFiltroPeriodo(item.value)}
+                        className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                          filtroPeriodo === item.value
+                            ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                            : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+                        }`}
                       >
-                        <option value="">Selecionar</option>
-                        <option value="indicacao">Indicação</option>
-                        <option value="prospeccao">Prospecção</option>
-                        <option value="carteira">Carteira</option>
-                      </select>
-                    </div>
+                        {item.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                <button
-                  onClick={() => salvarNovo(formNovo)}
-                  disabled={salvandoNovo || !formNovo.cpf}
-                  className="btn-primary"
-                >
-                  {salvandoNovo ? 'Salvando...' : 'Salvar cotação'}
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="grid gap-4 lg:grid-cols-3">
-                  <Field label={iconLabel(UserRound, 'CPF do cliente')} value={formRen.cpf} onChange={value => setFormRen(prev => ({ ...prev, cpf: value }))} />
-                  <Field label={iconLabel(CalendarDays, 'Vigência início')} type="date" value={formRen.vigencia_inicio} onChange={value => setFormRen(prev => ({ ...prev, vigencia_inicio: value }))} />
-                  <Field label={iconLabel(CalendarDays, 'Vigência fim')} type="date" value={formRen.vigencia_fim} onChange={value => setFormRen(prev => ({ ...prev, vigencia_fim: value }))} />
-                </div>
-
-                <div className="grid gap-4 lg:grid-cols-2">
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {STATUS_FILTROS.map(item => (
+                    <button
+                      key={item.value}
+                      onClick={() => setFiltroStatus(item.value)}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                        filtroStatus === item.value
+                          ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                          : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                  <div className="mx-1 w-px bg-dark-border/70" />
                   {[
-                    { key: 'seguradora_preferencial', title: 'Seguradora preferencial' },
-                    { key: 'seguradora_mais_barata', title: 'Seguradora mais barata' },
-                  ].map(section => (
-                    <div key={section.key} className="rounded-2xl border border-dark-border/70 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">{section.title}</p>
-                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                        <Field label={iconLabel(Briefcase, 'Nome')}>
-                          <SeguradoraSelect
-                            value={formRen[section.key].nome}
-                            onChange={value => setSeguradora(section.key, 'nome', value)}
-                            produto="auto"
-                            placeholder="Selecionar seguradora"
-                          />
-                        </Field>
-                        <Field
-                          label={iconLabel(BadgeDollarSign, 'Prêmio total')}
-                          type="number"
-                          value={formRen[section.key].premio_total}
-                          onChange={value => setSeguradora(section.key, 'premio_total', value)}
-                        />
-                        <Field
-                          label={iconLabel(BadgeDollarSign, 'Prêmio líquido')}
-                          type="number"
-                          value={formRen[section.key].premio_liquido}
-                          onChange={value => setSeguradora(section.key, 'premio_liquido', value)}
-                        />
-                        <Field
-                          label={iconLabel(BadgeDollarSign, '% Comissão (0.15)')}
-                          type="number"
-                          value={formRen[section.key].pct_comissao}
-                          onChange={value => setSeguradora(section.key, 'pct_comissao', value)}
-                        />
-                      </div>
-                      <div className={`mt-4 rounded-2xl border px-3 py-2 text-sm ${statusToneClass('success')}`}>
-                        Comissão estimada: {formatMoney(calcComissao(formRen[section.key]))}
-                      </div>
-                    </div>
+                    { value: 'todos', label: 'Todos os tipos' },
+                    { value: 'novo', label: 'Seguro novo' },
+                    { value: 'renovacao', label: 'Renovacao' },
+                  ].map(item => (
+                    <button
+                      key={item.value}
+                      onClick={() => setFiltroTipo(item.value)}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                        filtroTipo === item.value
+                          ? 'border-brand-secondary bg-brand-secondary/10 text-brand-secondary'
+                          : 'border-dark-border text-dark-muted hover:border-brand-secondary/40 hover:text-dark-text'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
                   ))}
                 </div>
+              </div>
 
+              {loadingLista ? (
+                <div className="px-5 py-10 text-center text-sm text-dark-muted">Carregando cotacoes...</div>
+              ) : cotacoesFiltradas.length === 0 ? (
+                <div className="px-5 py-8">
+                  <EmptyState
+                    icon={<Car className="h-5 w-5" />}
+                    title="Nenhuma cotacao encontrada"
+                    description="Ajuste os filtros ou volte para a lista completa para ver outros registros."
+                  />
+                </div>
+              ) : (
+                <div className="divide-y divide-dark-border/70">
+                  {cotacoesFiltradas.map(item => {
+                    const updated = item.updated_at && item.updated_at !== item.created_at
+                    return (
+                      <Link
+                        key={item.id}
+                        to={`/auto/cotacoes/${item.id}`}
+                        className="block transition-colors hover:bg-dark-surface2/30"
+                      >
+                        <div className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
+                          <div className="min-w-0 space-y-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-semibold text-dark-text">
+                                {item.nome_cliente || item.cpf_cliente || 'Sem identificacao'}
+                              </p>
+                              <QuoteStatusBadge status={item.status} />
+                              <span className={`badge ${item.tipo === 'novo' ? 'badge-info' : 'badge-muted'}`}>
+                                {item.tipo === 'novo' ? 'Seguro novo' : 'Renovacao'}
+                              </span>
+                            </div>
+
+                            <div className="grid gap-2 text-xs text-dark-muted md:grid-cols-2 xl:grid-cols-4">
+                              <div>
+                                <span className="block uppercase tracking-widest text-[10px]">Contato</span>
+                                <span>{item.celular_cliente || item.email_cliente || 'Sem contato'}</span>
+                              </div>
+                              <div>
+                                <span className="block uppercase tracking-widest text-[10px]">Veiculo</span>
+                                <span>{item.modelo_veiculo || 'Nao informado'}{item.placa ? ` - ${item.placa}` : ''}</span>
+                              </div>
+                              <div>
+                                <span className="block uppercase tracking-widest text-[10px]">Seguradora</span>
+                                <span>{item.seguradora_preferencial?.nome || item.seguradora_mais_barata?.nome || 'Sem vinculacao'}</span>
+                              </div>
+                              <div>
+                                <span className="block uppercase tracking-widest text-[10px]">{updated ? 'Atualizada em' : 'Criada em'}</span>
+                                <span>{formatDateTimeBR(item.updated_at || item.created_at)}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-xs text-dark-muted">
+                            <span className="rounded-full border border-dark-border/70 px-3 py-1 text-dark-muted">
+                              Abrir detalhe
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </DataCard>
+          ) : tab === 'novo' ? (
+            <DataCard title="Nova cotacao" subtitle="Cadastro simples do segurado e do veiculo.">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label={iconLabel(UserRound, 'Nome completo')} value={novo.nome_completo} onChange={value => setNovo(prev => ({ ...prev, nome_completo: value }))} />
+                <Field label={iconLabel(UserRound, 'CPF')} value={novo.cpf} onChange={value => setNovo(prev => ({ ...prev, cpf: value }))} />
+                <Field label={iconLabel(Phone, 'Celular')} value={novo.celular} onChange={value => setNovo(prev => ({ ...prev, celular: value }))} />
+                <Field label={iconLabel(Mail, 'E-mail')} value={novo.email} onChange={value => setNovo(prev => ({ ...prev, email: value }))} />
+                <Field label={iconLabel(UserRound, 'Nome do condutor')} value={novo.condutor_nome} onChange={value => setNovo(prev => ({ ...prev, condutor_nome: value }))} />
+                <Field label={iconLabel(UserRound, 'CPF do condutor')} value={novo.condutor_cpf} onChange={value => setNovo(prev => ({ ...prev, condutor_cpf: value }))} />
+                <Field label={iconLabel(Car, 'Modelo do veiculo')} value={novo.modelo_veiculo} onChange={value => setNovo(prev => ({ ...prev, modelo_veiculo: value }))} />
+                <Field label={iconLabel(Car, 'Placa')} value={novo.placa} onChange={value => setNovo(prev => ({ ...prev, placa: value }))} placeholder="Opcional" />
+                <Field label={iconLabel(CalendarDays, 'Vigencia inicio')} type="date" value={novo.vigencia_inicio} onChange={value => setNovo(prev => ({ ...prev, vigencia_inicio: value }))} />
+                <Field label={iconLabel(CalendarDays, 'Vigencia fim')} type="date" value={novo.vigencia_fim} onChange={value => setNovo(prev => ({ ...prev, vigencia_fim: value }))} />
+                <div className="md:col-span-2">
+                  <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-dark-muted">{iconLabel(UserRound, 'Origem do lead')}</label>
+                  <select
+                    value={novo.origem_lead}
+                    onChange={e => setNovo(prev => ({ ...prev, origem_lead: e.target.value }))}
+                    className="select"
+                  >
+                    <option value="">Selecionar</option>
+                    <option value="indicacao">Indicacao</option>
+                    <option value="prospeccao">Prospeccao</option>
+                    <option value="carteira">Carteira</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-5 flex items-center gap-3">
                 <button
-                  onClick={() => salvarRenovacao(formRen)}
-                  disabled={salvandoRen || !formRen.cpf}
+                  onClick={() => salvarNovo(novo)}
+                  disabled={salvandoNovo || !novo.cpf}
                   className="btn-primary"
                 >
-                  {salvandoRen ? 'Salvando...' : 'Salvar cotação'}
+                  {salvandoNovo ? 'Salvando...' : 'Salvar cotacao'}
+                </button>
+                <button type="button" onClick={() => setTab('lista')} className="btn-secondary">
+                  Voltar para lista
                 </button>
               </div>
-            )}
-          </DataCard>
+            </DataCard>
+          ) : (
+            <DataCard title="Renovacao" subtitle="Comparativo entre seguradora preferencial e mais barata.">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label={iconLabel(UserRound, 'CPF do cliente')} value={renovacao.cpf} onChange={value => setRenovacao(prev => ({ ...prev, cpf: value }))} />
+                <Field label={iconLabel(CalendarDays, 'Vigencia inicio')} type="date" value={renovacao.vigencia_inicio} onChange={value => setRenovacao(prev => ({ ...prev, vigencia_inicio: value }))} />
+                <Field label={iconLabel(CalendarDays, 'Vigencia fim')} type="date" value={renovacao.vigencia_fim} onChange={value => setRenovacao(prev => ({ ...prev, vigencia_fim: value }))} />
+              </div>
+
+              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                {[
+                  { key: 'seguradora_preferencial', title: 'Seguradora preferencial' },
+                  { key: 'seguradora_mais_barata', title: 'Seguradora mais barata' },
+                ].map(section => (
+                  <div key={section.key} className="rounded-2xl border border-dark-border/70 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">{section.title}</p>
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                      <Field label={iconLabel(Briefcase, 'Nome')}>
+                        <SeguradoraSelect
+                          value={renovacao[section.key].nome}
+                          onChange={value => setRenovacao(prev => ({
+                            ...prev,
+                            [section.key]: { ...prev[section.key], nome: value },
+                          }))}
+                          produto="auto"
+                          placeholder="Selecionar seguradora"
+                        />
+                      </Field>
+                      <Field label={iconLabel(BadgeDollarSign, 'Premio total')} type="number" value={renovacao[section.key].premio_total} onChange={value => setRenovacao(prev => ({
+                        ...prev,
+                        [section.key]: { ...prev[section.key], premio_total: value },
+                      }))} />
+                      <Field label={iconLabel(BadgeDollarSign, 'Premio liquido')} type="number" value={renovacao[section.key].premio_liquido} onChange={value => setRenovacao(prev => ({
+                        ...prev,
+                        [section.key]: { ...prev[section.key], premio_liquido: value },
+                      }))} />
+                      <Field label={iconLabel(BadgeDollarSign, '% Comissao')} type="number" value={renovacao[section.key].pct_comissao} onChange={value => setRenovacao(prev => ({
+                        ...prev,
+                        [section.key]: { ...prev[section.key], pct_comissao: value },
+                      }))} />
+                    </div>
+                    <div className={`mt-4 rounded-2xl border px-3 py-2 text-sm ${statusToneClass('success')}`}>
+                      Comissao estimada: {formatMoney(calcComissao(renovacao[section.key]))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 flex items-center gap-3">
+                <button
+                  onClick={() => salvarRenovacao(renovacao)}
+                  disabled={salvandoRenovacao || !renovacao.cpf}
+                  className="btn-primary"
+                >
+                  {salvandoRenovacao ? 'Salvando...' : 'Salvar renovacao'}
+                </button>
+                <button type="button" onClick={() => setTab('lista')} className="btn-secondary">
+                  Voltar para lista
+                </button>
+              </div>
+            </DataCard>
+          )}
         </div>
 
         <div className="space-y-4 xl:sticky xl:top-24 self-start">
-          <DataCard
-            title="Tendência"
-            subtitle="Volume mensal da aba ativa"
-          >
+          <DataCard title="Tendencia" subtitle="Volume mensal da base completa">
             {loadingSerie || loadingResumo ? (
-              <div className="py-10 text-center text-sm text-dark-muted">Carregando série...</div>
+              <div className="py-10 text-center text-sm text-dark-muted">Carregando serie...</div>
             ) : serieMensal.some(item => item.total > 0 || item.convertidas > 0 || item.perdidas > 0) ? (
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={serieMensal} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
@@ -637,30 +647,21 @@ export default function AutoCotacoes() {
             ) : (
               <EmptyState
                 icon={<TrendingUp className="h-5 w-5" />}
-                title="Sem série suficiente"
-                description="A tendência mensal aparece assim que o módulo começar a registrar as primeiras cotações."
+                title="Sem serie suficiente"
+                description="A tendencia mensal aparece assim que houver cotacoes registradas."
               />
             )}
           </DataCard>
 
-          <DataCard
-            title="Últimas cotações feitas"
-            subtitle="Somente os registros mais recentes da aba atual"
-            actions={(
-              <Link to="/auto/cotacoes/consulta" className="btn-secondary text-sm">
-                Abrir consulta
-              </Link>
-            )}
-            bodyClassName="p-0"
-          >
+          <DataCard title="Ultimas cotacoes" subtitle="Registros mais recentes da base" bodyClassName="p-0">
             {loadingLista ? (
-              <div className="px-5 py-10 text-center text-sm text-dark-muted">Carregando últimas cotações...</div>
+              <div className="px-5 py-10 text-center text-sm text-dark-muted">Carregando ultimas cotacoes...</div>
             ) : cotacoesRecentes.length === 0 ? (
               <div className="px-5 py-5">
                 <EmptyState
                   icon={<ShieldHalf className="h-5 w-5" />}
-                  title="Nenhuma cotação recente"
-                  description="As últimas cotações criadas aparecerão aqui assim que forem registradas."
+                  title="Nenhuma cotacao recente"
+                  description="As cotacoes criadas aparecerao aqui assim que forem registradas."
                 />
               </div>
             ) : (
@@ -673,27 +674,19 @@ export default function AutoCotacoes() {
                   >
                     <div className="flex items-center justify-between gap-4">
                       <div className="min-w-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">
-                          Segurado
-                        </p>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Segurado</p>
                         <p className="truncate text-sm font-semibold text-dark-text">
-                          {item.nome_cliente || item.cpf_cliente || 'Sem identificação'}
+                          {item.nome_cliente || item.cpf_cliente || 'Sem identificacao'}
                         </p>
                         <p className="truncate text-xs text-dark-muted">
-                          {item.celular_cliente ? `${item.celular_cliente} · ` : ''}{formatDateTimeBR(item.created_at)}
+                          {item.celular_cliente ? `${item.celular_cliente} · ` : ''}{formatDateTimeBR(item.updated_at || item.created_at)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <QuoteStatusBadge status={item.status} />
-                        {aba === 'novo' ? (
-                          <span className="badge badge-info">
-                            {item.origem_lead || 'Sem origem'}
-                          </span>
-                        ) : (
-                          <span className="badge badge-muted">
-                            {formatPercent(item.seguradora_preferencial?.pct_comissao || 0.15)}
-                          </span>
-                        )}
+                        <span className={`badge ${item.tipo === 'novo' ? 'badge-info' : 'badge-muted'}`}>
+                          {item.tipo === 'novo' ? 'Seguro novo' : 'Renovacao'}
+                        </span>
                       </div>
                     </div>
                   </Link>
@@ -702,17 +695,14 @@ export default function AutoCotacoes() {
             )}
           </DataCard>
 
-          <DataCard
-            title="Resumo rápido"
-            subtitle="Leitura operacional do funil"
-          >
+          <DataCard title="Resumo rapido" subtitle="Leitura operacional do funil">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-dark-border/70 p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-dark-muted">Convertidas no mês</p>
+                <p className="text-xs uppercase tracking-[0.16em] text-dark-muted">Convertidas no mes</p>
                 <p className="mt-2 text-3xl font-semibold text-dark-text">{convertidas}</p>
               </div>
               <div className="rounded-2xl border border-dark-border/70 p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-dark-muted">Perdidas no mês</p>
+                <p className="text-xs uppercase tracking-[0.16em] text-dark-muted">Perdidas no mes</p>
                 <p className="mt-2 text-3xl font-semibold text-dark-text">{perdidas}</p>
               </div>
             </div>
@@ -721,16 +711,16 @@ export default function AutoCotacoes() {
       </div>
 
       <DataCard
-        title="Consulta detalhada"
-        subtitle="Acompanhe a lista completa em uma página dedicada com filtros e busca avançada."
+        title="Acesso completo"
+        subtitle="Abrir a lista principal a qualquer momento."
         actions={(
-          <Link to="/auto/cotacoes/consulta" className="btn-primary text-sm">
-            Abrir consulta completa
-          </Link>
+          <button onClick={() => setTab('lista')} className="btn-primary text-sm">
+            Ir para lista
+          </button>
         )}
       >
         <p className="text-sm text-dark-muted">
-          A consulta completa agora fica em uma subpágina própria para deixar a tela principal mais limpa e mais rápida de usar.
+          A area de cotacoes agora centraliza a lista completa, organizada por recencia, com acesso aos detalhes de cada registro e aos formularios de criacao.
         </p>
       </DataCard>
     </div>

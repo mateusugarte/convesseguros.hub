@@ -3,7 +3,6 @@ export const AUTO_LINKS = [
   { to: '/auto/renovacoes', label: 'Renovacoes' },
   { to: '/auto/emissoes', label: 'Emissoes' },
   { to: '/auto/cotacoes', label: 'Cotacoes' },
-  { to: '/auto/cotacoes/consulta', label: 'Consulta' },
   { to: '/auto/sinistros', label: 'Sinistros' },
 ]
 
@@ -61,10 +60,12 @@ export function formatDateTimeBR(value) {
   if (!value) return '—'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString('pt-BR', {
+  return date.toLocaleString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   })
 }
 

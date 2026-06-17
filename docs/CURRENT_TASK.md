@@ -2,32 +2,35 @@
 
 ## Responsavel Atual
 
-Codex
+Claude
 
 ## Pagina
 
-`src/pages/Seguradoras.jsx`
+`src/pages/comercial/Jornadas.jsx`
 
 ## Objetivo
 
-Corrigir o upload de logo/imagem das seguradoras e imobiliarias, liberando as policies de RLS corretas e ajustando a taxonomia de produtos da seguradora.
+Redesign completo da area de Jornadas — novos nos, configuracoes por tipo, constantes compartilhadas, PainelConfig completo.
 
 ## Status
 
-Em andamento.
-
-## Proxima Acao OBRIGATORIA
-
-Aplicar a migracao `supabase/21_entity_media_rls_and_products.sql` no Supabase e validar o salvamento de logo/imagem.
+Concluido (Fase 2 — editor visual).
 
 ## Alteracoes Realizadas
 
-- `src/lib/seguradoras.js` passou a tratar Fiança como familia com subtipos.
-- `src/pages/Seguradoras.jsx` agora mostra os produtos de forma agrupada.
-- `supabase/21_entity_media_rls_and_products.sql` foi adicionada para abrir RLS e corrigir a taxonomia.
-- A migration 21 foi corrigida para normalizar os produtos legados antes de aplicar a constraint.
+- Imports: Target, AlertCircle, TrendingUp, AlignLeft, StopCircle, BookOpen adicionados
+- Constantes: TEAM_MEMBERS, PRODUCTS, SEGMENTOS_IMOB, CAMPOS_CONDICAO, OPERADORES_CONDICAO
+- NODE_GROUPS: 4 grupos — Gatilhos (7), Acoes (10), Etapas (1), Controle (4)
+- WorkflowNode: isEtapa, isPararSe, configSummary por tipo, subtitle, source handle condicional
+- PainelConfig: fields completos para todos os 22 tipos de no, usando as constantes acima
+
+## Proximos Passos
+
+- Aba "Jornada do Cliente" no detalhe do lead (LeadDetalhe.jsx) — Fase 2 pendente
+- Campanhas (Fase 3)
+- Templates de jornada pre-construidos (playbooks prontos)
 
 ## Observacoes
 
-- O bucket `cadastros-media` precisa ter as policies aplicadas para permitir upload, leitura e exclusao.
-- Os codigos antigos de produto foram mantidos com compatibilidade de leitura.
+- Jornadas sao 100% visuais — sem automacao. Os nos sao playbook para o vendedor.
+- Cada no tem instrucoes, responsavel, produto e contexto adequados ao processo comercial da Conves.

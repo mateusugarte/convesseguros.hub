@@ -14,7 +14,7 @@ import {
   Mail, ArrowRight, UserCheck, CheckSquare, Save, Trash2,
   UserPlus, RefreshCw, ChevronDown, ChevronRight,
   CheckCircle, FileCheck, Hand, MessageCircle, ClipboardList, Flag,
-  Circle,
+  Circle, Target, AlertCircle, TrendingUp, AlignLeft, StopCircle, BookOpen,
 } from 'lucide-react'
 import { Select } from '../../components/ui/Select'
 import {
@@ -117,38 +117,109 @@ function StatusBadge({ status }) {
   )
 }
 
+// ── Shared data ───────────────────────────────────────────────────────────────
+
+const TEAM_MEMBERS = [
+  { value: '',        label: 'Selecionar...' },
+  { value: 'dono',    label: 'Dono do lead' },
+  { value: 'eduardo', label: 'Eduardo' },
+  { value: 'mateus',  label: 'Mateus' },
+  { value: 'marcos',  label: 'Marcos' },
+  { value: 'luciano', label: 'Luciano' },
+]
+
+const PRODUCTS = [
+  { value: '',                      label: 'Todos' },
+  { value: 'fianca_residencial_pf', label: 'Fiança Residencial PF' },
+  { value: 'fianca_comercial_pf',   label: 'Fiança Comercial PF' },
+  { value: 'fianca_pj',             label: 'Fiança PJ' },
+  { value: 'saude_pf',              label: 'Saúde PF' },
+  { value: 'saude_coletiva',        label: 'Saúde Coletiva / PJ' },
+  { value: 'auto_individual',       label: 'Auto Individual' },
+  { value: 'auto_frota',            label: 'Auto Frota' },
+  { value: 'vida',                  label: 'Seguro de Vida' },
+  { value: 'celular',               label: 'Seguro Celular' },
+  { value: 'consorcio_auto',        label: 'Consórcio Auto' },
+  { value: 'consorcio_residencia',  label: 'Consórcio Residência' },
+  { value: 'consorcio_campanha',    label: 'Consórcio Campanha' },
+  { value: 'transporte',            label: 'Seguro Transporte' },
+  { value: 'incendio',              label: 'Seguro Incêndio' },
+]
+
+const SEGMENTOS_IMOB = [
+  { value: '',  label: 'Todos' },
+  { value: 'A', label: 'A — Ativas' },
+  { value: 'B', label: 'B — Dormentes' },
+  { value: 'C', label: 'C — Em qualificação' },
+  { value: 'D', label: 'D — Prospects frios' },
+]
+
+const CAMPOS_CONDICAO = [
+  { value: '',                   label: 'Selecionar...' },
+  { value: 'apolice',            label: 'Tem apólice' },
+  { value: 'produto',            label: 'Produto' },
+  { value: 'status',             label: 'Status no pipeline' },
+  { value: 'etiqueta',           label: 'Etiqueta' },
+  { value: 'perfil_cliente',     label: 'Perfil do cliente' },
+  { value: 'segmento_imob',      label: 'Segmento da imobiliária' },
+  { value: 'campanha_ativa',     label: 'Tem campanha vinculada' },
+  { value: 'produto_contratado', label: 'Produto já contratado' },
+  { value: 'dias_sem_atividade', label: 'Dias sem atividade' },
+]
+
+const OPERADORES_CONDICAO = [
+  { value: '',             label: 'Selecionar...' },
+  { value: 'eq',           label: 'É' },
+  { value: 'neq',          label: 'Não é' },
+  { value: 'contains',     label: 'Contém' },
+  { value: 'not_contains', label: 'Não contém' },
+  { value: 'gt',           label: 'Maior que' },
+  { value: 'lt',           label: 'Menor que' },
+]
+
 // ── Node definitions ──────────────────────────────────────────────────────────
 
 const NODE_GROUPS = [
   {
     label: 'Gatilhos', category: 'trigger', color: '#1A3A6B',
     items: [
-      { tipo: 'trigger_ficha',     label: 'Ficha Aprovada',    Icon: CheckCircle },
-      { tipo: 'trigger_lead',      label: 'Lead Criado',       Icon: UserPlus },
-      { tipo: 'trigger_movido',    label: 'Lead Movido',       Icon: ArrowRight },
-      { tipo: 'trigger_renovacao', label: 'Renovação Próxima', Icon: RefreshCw },
-      { tipo: 'trigger_apolice',   label: 'Apólice Emitida',   Icon: FileCheck },
-      { tipo: 'trigger_manual',    label: 'Manual',            Icon: Hand },
+      { tipo: 'trigger_ficha',       label: 'Ficha Aprovada',    Icon: CheckCircle },
+      { tipo: 'trigger_lead',        label: 'Lead Criado',       Icon: UserPlus },
+      { tipo: 'trigger_movido',      label: 'Lead Movido',       Icon: ArrowRight },
+      { tipo: 'trigger_renovacao',   label: 'Renovação Próxima', Icon: RefreshCw },
+      { tipo: 'trigger_apolice',     label: 'Apólice Emitida',   Icon: FileCheck },
+      { tipo: 'trigger_inatividade', label: 'Lead Inativo',      Icon: AlertCircle },
+      { tipo: 'trigger_manual',      label: 'Manual',            Icon: Hand },
     ],
   },
   {
     label: 'Ações', category: 'action', color: '#2B5BA8',
     items: [
-      { tipo: 'action_tarefa',    label: 'Criar Tarefa',         Icon: CheckSquare },
-      { tipo: 'action_whatsapp',  label: 'Enviar WhatsApp',      Icon: MessageCircle },
-      { tipo: 'action_email',     label: 'Enviar Email',         Icon: Mail },
-      { tipo: 'action_mover',     label: 'Mover no Pipeline',    Icon: Layers },
-      { tipo: 'action_atribuir',  label: 'Atribuir Responsável', Icon: UserCheck },
-      { tipo: 'action_etiqueta',  label: 'Adicionar Etiqueta',   Icon: Tag },
-      { tipo: 'action_atividade', label: 'Registrar Atividade',  Icon: ClipboardList },
+      { tipo: 'action_tarefa',     label: 'Criar Tarefa',         Icon: CheckSquare },
+      { tipo: 'action_whatsapp',   label: 'Enviar WhatsApp',      Icon: MessageCircle },
+      { tipo: 'action_email',      label: 'Enviar Email',         Icon: Mail },
+      { tipo: 'action_script',     label: 'Usar Script',          Icon: BookOpen },
+      { tipo: 'action_cross_sell', label: 'Sugerir Produto',      Icon: TrendingUp },
+      { tipo: 'action_mover',      label: 'Mover no Pipeline',    Icon: Layers },
+      { tipo: 'action_atribuir',   label: 'Atribuir Responsável', Icon: UserCheck },
+      { tipo: 'action_nota',       label: 'Adicionar Nota',       Icon: AlignLeft },
+      { tipo: 'action_etiqueta',   label: 'Adicionar Etiqueta',   Icon: Tag },
+      { tipo: 'action_atividade',  label: 'Registrar Atividade',  Icon: ClipboardList },
+    ],
+  },
+  {
+    label: 'Etapas', category: 'etapa', color: '#0F766E',
+    items: [
+      { tipo: 'action_etapa', label: 'Etapa', Icon: Target },
     ],
   },
   {
     label: 'Controle', category: 'control', color: '#64748B',
     items: [
-      { tipo: 'control_aguardar', label: 'Aguardar',       Icon: Clock },
-      { tipo: 'control_condicao', label: 'Condição',       Icon: GitBranch },
-      { tipo: 'control_fim',      label: 'Fim da Jornada', Icon: Flag },
+      { tipo: 'control_aguardar',  label: 'Aguardar',       Icon: Clock },
+      { tipo: 'control_condicao',  label: 'Condição',       Icon: GitBranch },
+      { tipo: 'control_parar_se',  label: 'Parar Se',       Icon: StopCircle },
+      { tipo: 'control_fim',       label: 'Fim da Jornada', Icon: Flag },
     ],
   },
 ]
@@ -208,11 +279,59 @@ function WorkflowNode({ id, data, selected }) {
   const isCondition = tipo === 'control_condicao'
   const isTrigger   = (data.category || '') === 'trigger'
   const isFim       = tipo === 'control_fim'
+  const isEtapa     = tipo === 'action_etapa'
+  const isPararSe   = tipo === 'control_parar_se'
 
   const configSummary = useMemo(() => {
-    const entries = Object.entries(config).filter(([, v]) => v)
-    return entries.slice(0, 2).map(([, v]) => String(v)).join(' · ')
-  }, [config])
+    if (!config || !Object.keys(config).some(k => config[k])) return ''
+    const c = config
+    switch (tipo) {
+      case 'trigger_ficha':
+      case 'trigger_lead':
+        return [c.perfil, c.segmento ? `Seg.${c.segmento}` : '', c.produto].filter(Boolean).join(' · ')
+      case 'trigger_movido':
+        return [c.de, c.para].filter(Boolean).join(' → ')
+      case 'trigger_renovacao':
+        return [c.dias ? `${c.dias}d antes` : '', c.produto].filter(Boolean).join(' · ')
+      case 'trigger_inatividade':
+        return c.dias ? `Sem atividade há ${c.dias} dias` : ''
+      case 'trigger_apolice':
+        return [c.produto, c.proximo_produto ? `→ ${c.proximo_produto}` : ''].filter(Boolean).join(' ')
+      case 'trigger_manual':
+        return c.motivo || ''
+      case 'action_etapa':
+        return c.criterio || ''
+      case 'action_tarefa':
+        return [c.titulo, c.responsavel].filter(Boolean).join(' · ')
+      case 'action_whatsapp':
+        return [c.tipo_contato, c.tom].filter(Boolean).join(' · ')
+      case 'action_email':
+        return [c.tipo, c.assunto].filter(Boolean).join(' · ')
+      case 'action_script':
+        return [c.tipo_script, c.script_nome].filter(Boolean).join(' · ')
+      case 'action_cross_sell':
+        return [c.produto_sugerido, c.perfil].filter(Boolean).join(' · ')
+      case 'action_nota':
+        return c.nota ? c.nota.slice(0, 60) : ''
+      case 'action_mover':
+        return [c.coluna, c.motivo].filter(Boolean).join(' · ')
+      case 'action_atribuir':
+        return [c.responsavel, c.motivo].filter(Boolean).join(' · ')
+      case 'action_etiqueta':
+        return c.etiqueta || ''
+      case 'action_atividade':
+        return [c.tipo_atividade, c.resultado].filter(Boolean).join(' · ')
+      case 'control_aguardar':
+        return [c.quantidade && c.unidade ? `${c.quantidade} ${c.unidade}` : '', c.dias_uteis ? '(dias úteis)' : ''].filter(Boolean).join(' ')
+      case 'control_condicao':
+      case 'control_parar_se':
+        return [c.campo, c.operador, c.valor].filter(Boolean).join(' ')
+      case 'control_fim':
+        return [c.resultado, c.proxima_jornada ? `→ ${c.proxima_jornada}` : ''].filter(Boolean).join(' · ')
+      default:
+        return Object.values(c).filter(Boolean).slice(0, 2).join(' · ')
+    }
+  }, [config, tipo])
 
   const shadowStyle = selected
     ? `0 0 0 2.5px ${color}55, 0 0 0 5px ${color}18, 0 12px 32px ${color}20, 0 4px 10px rgba(6,10,32,0.10)`
@@ -296,7 +415,7 @@ function WorkflowNode({ id, data, selected }) {
             {label}
           </span>
           <span className="mt-1 block text-[10px] uppercase tracking-[0.16em] text-dark-muted/70 leading-none">
-            {isTrigger ? 'Trigger' : isCondition ? 'Condição' : isFim ? 'Fim' : 'Ação'}
+            {isTrigger ? 'Gatilho' : isCondition ? 'Condição' : isFim ? 'Fim' : isPararSe ? 'Parar Se' : isEtapa ? 'Etapa' : 'Ação'}
           </span>
         </div>
         {isInitial && (
@@ -311,8 +430,18 @@ function WorkflowNode({ id, data, selected }) {
 
       {/* Body */}
       <div className="px-3 py-2.5" style={{ minHeight: 52 }}>
-        {configSummary ? (
-          <p className="text-[11px] text-dark-muted leading-relaxed">{configSummary}</p>
+        {isEtapa && config.nome ? (
+          <>
+            <p className="text-[12px] font-bold text-dark-text leading-snug">{config.nome}</p>
+            {config.prazo && (
+              <p className="mt-0.5 text-[10px] font-semibold" style={{ color: '#0F766E' }}>Prazo: {config.prazo} dias</p>
+            )}
+            {configSummary && (
+              <p className="mt-1 text-[10px] text-dark-muted/70 leading-relaxed line-clamp-2">{configSummary}</p>
+            )}
+          </>
+        ) : configSummary ? (
+          <p className="text-[11px] text-dark-muted leading-relaxed line-clamp-2">{configSummary}</p>
         ) : (
           <p className="text-[11px] italic" style={{ color: 'rgba(78,89,117,0.42)' }}>
             Clique para configurar
@@ -321,7 +450,7 @@ function WorkflowNode({ id, data, selected }) {
       </div>
 
       {/* Source handles */}
-      {!isFim && !isCondition && (
+      {!isFim && !isCondition && !isPararSe && (
         <Handle
           type="source"
           position={Position.Bottom}
@@ -537,27 +666,41 @@ function PainelConfig({ node, onUpdate, onClose, deleteNode }) {
       {/* Fields */}
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
 
+        {/* ── GATILHOS ── */}
         {(tipo === 'trigger_ficha' || tipo === 'trigger_lead') && (
           <>
             <div>
               <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Perfil alvo</label>
               <Select value={config.perfil || ''} onChange={v => set('perfil', v)} options={[
-                { value: '', label: 'Todos' },
-                { value: 'locatario_pf', label: 'Locatário PF' },
-                { value: 'locatario_pj', label: 'Locatário PJ' },
+                { value: '',               label: 'Todos' },
+                { value: 'locatario_pf',    label: 'Locatário PF' },
+                { value: 'locatario_pj',    label: 'Locatário PJ' },
                 { value: 'proprietario_pf', label: 'Proprietário PF' },
                 { value: 'proprietario_pj', label: 'Proprietário PJ' },
               ]} />
             </div>
             <div>
               <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Produto</label>
-              <Select value={config.produto || ''} onChange={v => set('produto', v)} options={[
-                { value: '', label: 'Todos' },
-                { value: 'residencial_pf', label: 'Residencial PF' },
-                { value: 'comercial_pf', label: 'Comercial PF' },
-                { value: 'pessoa_juridica', label: 'Pessoa Jurídica' },
-              ]} />
+              <Select value={config.produto || ''} onChange={v => set('produto', v)} options={PRODUCTS} />
             </div>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Segmento da imobiliária</label>
+              <Select value={config.segmento || ''} onChange={v => set('segmento', v)} options={SEGMENTOS_IMOB} />
+            </div>
+            {tipo === 'trigger_lead' && (
+              <div>
+                <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Origem do lead</label>
+                <Select value={config.origem || ''} onChange={v => set('origem', v)} options={[
+                  { value: '',            label: 'Qualquer' },
+                  { value: 'imobiliaria', label: 'Imobiliária' },
+                  { value: 'indicacao',   label: 'Indicação' },
+                  { value: 'outbound',    label: 'Outbound' },
+                  { value: 'campanha',    label: 'Campanha' },
+                ]} />
+              </div>
+            )}
+            <ConfigField label="Instrução inicial" value={config.instrucao || ''} onChange={v => set('instrucao', v)} textarea
+              placeholder="Ex: Ligar em até 2h e registrar o contato" />
           </>
         )}
 
@@ -571,27 +714,106 @@ function PainelConfig({ node, onUpdate, onClose, deleteNode }) {
               <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Para qual coluna</label>
               <Select value={config.para || ''} onChange={v => set('para', v)} options={pipelineOpts} />
             </div>
+            <ConfigField label="Instrução" value={config.instrucao || ''} onChange={v => set('instrucao', v)} textarea
+              placeholder="Ex: Enviar proposta assim que lead entrar nesta coluna" />
           </>
         )}
 
         {tipo === 'trigger_renovacao' && (
-          <div>
-            <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Dias antes do vencimento</label>
-            <input type="number" min="1" value={config.dias || ''} onChange={e => set('dias', e.target.value)}
-              className="input w-full text-sm" placeholder="30" />
-          </div>
+          <>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Dias antes do vencimento</label>
+              <input type="number" min="1" value={config.dias || ''} onChange={e => set('dias', e.target.value)}
+                className="input w-full text-sm" placeholder="30" />
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Produto que renova</label>
+              <Select value={config.produto || ''} onChange={v => set('produto', v)} options={PRODUCTS} />
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Próximo produto a oferecer</label>
+              <Select value={config.proximo_produto || ''} onChange={v => set('proximo_produto', v)} options={PRODUCTS} />
+            </div>
+            <ConfigField label="Instrução" value={config.instrucao || ''} onChange={v => set('instrucao', v)} textarea
+              placeholder="Ex: Ligar 30 dias antes e propor renovação antecipada" />
+          </>
         )}
 
-        {(tipo === 'trigger_apolice' || tipo === 'trigger_manual') && (
-          <p className="text-xs text-dark-muted/60 italic">Este gatilho não requer configuração adicional.</p>
+        {tipo === 'trigger_inatividade' && (
+          <>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Dias sem atividade</label>
+              <input type="number" min="1" value={config.dias || ''} onChange={e => set('dias', e.target.value)}
+                className="input w-full text-sm" placeholder="7" />
+            </div>
+            <ConfigField label="Instrução de reativação" value={config.instrucao || ''} onChange={v => set('instrucao', v)} textarea
+              placeholder="Ex: Lead sem contato há X dias — enviar WhatsApp de reativação" />
+          </>
         )}
 
+        {tipo === 'trigger_apolice' && (
+          <>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Produto emitido</label>
+              <Select value={config.produto || ''} onChange={v => set('produto', v)} options={PRODUCTS} />
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Próximo produto a oferecer</label>
+              <Select value={config.proximo_produto || ''} onChange={v => set('proximo_produto', v)} options={PRODUCTS} />
+            </div>
+            <ConfigField label="Instrução" value={config.instrucao || ''} onChange={v => set('instrucao', v)} textarea
+              placeholder="Ex: Parabenizar e agendar contato em 30 dias para oferecer Auto" />
+          </>
+        )}
+
+        {tipo === 'trigger_manual' && (
+          <>
+            <ConfigField label="Quando usar esta jornada" value={config.motivo || ''} onChange={v => set('motivo', v)} textarea
+              placeholder="Ex: Leads vindos de indicação direta sem ficha formal" />
+            <ConfigField label="Instrução inicial" value={config.instrucao || ''} onChange={v => set('instrucao', v)} textarea
+              placeholder="Ex: Criar o lead manualmente antes de iniciar" />
+          </>
+        )}
+
+        {/* ── ETAPA ── */}
+        {tipo === 'action_etapa' && (
+          <>
+            <ConfigField label="Nome da etapa" value={config.nome || ''} onChange={v => set('nome', v)}
+              placeholder="Ex: Proposta Enviada" />
+            <ConfigField label="Critério para avançar" value={config.criterio || ''} onChange={v => set('criterio', v)} textarea
+              placeholder="Ex: Enviar proposta por WhatsApp e registrar a atividade no lead" />
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Prazo sugerido (dias)</label>
+              <input type="number" min="1" value={config.prazo || ''} onChange={e => set('prazo', e.target.value)}
+                className="input w-full text-sm" placeholder="3" />
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Produto relacionado</label>
+              <Select value={config.produto || ''} onChange={v => set('produto', v)} options={PRODUCTS} />
+            </div>
+          </>
+        )}
+
+        {/* ── AÇÕES ── */}
         {tipo === 'action_tarefa' && (
           <>
             <ConfigField label="Título da tarefa" value={config.titulo || ''} onChange={v => set('titulo', v)} />
-            <ConfigField label="Responsável" value={config.responsavel || ''} onChange={v => set('responsavel', v)} placeholder="Nome do responsável" />
+            <ConfigField label="Descrição" value={config.descricao || ''} onChange={v => set('descricao', v)} textarea
+              placeholder="Detalhamento do que a tarefa exige" />
             <div>
-              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Prazo (dias após gatilho)</label>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Responsável</label>
+              <Select value={config.responsavel || ''} onChange={v => set('responsavel', v)} options={TEAM_MEMBERS} />
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Prioridade</label>
+              <Select value={config.prioridade || 'normal'} onChange={v => set('prioridade', v)} options={[
+                { value: 'alta',   label: 'Alta' },
+                { value: 'normal', label: 'Normal' },
+                { value: 'baixa',  label: 'Baixa' },
+              ]} />
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Prazo (dias)</label>
               <input type="number" min="0" value={config.prazo || ''} onChange={e => set('prazo', e.target.value)}
                 className="input w-full text-sm" placeholder="3" />
             </div>
@@ -604,9 +826,29 @@ function PainelConfig({ node, onUpdate, onClose, deleteNode }) {
               <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Destinatário</label>
               <Select value={config.destinatario || ''} onChange={v => set('destinatario', v)} options={destOpts} />
             </div>
-            <ConfigField label="Mensagem" value={config.mensagem || ''} onChange={v => set('mensagem', v)} textarea
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Tipo de contato</label>
+              <Select value={config.tipo_contato || ''} onChange={v => set('tipo_contato', v)} options={[
+                { value: '',                label: 'Selecionar...' },
+                { value: 'primeiro_contato', label: 'Primeiro contato' },
+                { value: 'follow_up',        label: 'Follow-up' },
+                { value: 'proposta',         label: 'Proposta' },
+                { value: 'fechamento',       label: 'Fechamento' },
+                { value: 'pos_venda',        label: 'Pós-venda' },
+              ]} />
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Tom</label>
+              <Select value={config.tom || 'informal'} onChange={v => set('tom', v)} options={[
+                { value: 'formal',   label: 'Formal' },
+                { value: 'informal', label: 'Informal' },
+              ]} />
+            </div>
+            <ConfigField label="Template da mensagem" value={config.mensagem || ''} onChange={v => set('mensagem', v)} textarea
               placeholder="Olá {{nome}}, ..." />
-            <p className="text-[10px] text-dark-muted/60">Variáveis: {'{{nome}}'}, {'{{produto}}'}, {'{{telefone}}'}</p>
+            <p className="text-[10px] text-dark-muted/60">
+              Variáveis: {'{{nome}}'}, {'{{produto}}'}, {'{{telefone}}'}, {'{{imobiliaria}}'}, {'{{vencimento}}'}
+            </p>
           </>
         )}
 
@@ -616,20 +858,100 @@ function PainelConfig({ node, onUpdate, onClose, deleteNode }) {
               <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Destinatário</label>
               <Select value={config.destinatario || ''} onChange={v => set('destinatario', v)} options={destOpts} />
             </div>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Tipo</label>
+              <Select value={config.tipo || ''} onChange={v => set('tipo', v)} options={[
+                { value: '',             label: 'Selecionar...' },
+                { value: 'apresentacao', label: 'Apresentação' },
+                { value: 'proposta',     label: 'Proposta' },
+                { value: 'follow_up',    label: 'Follow-up' },
+                { value: 'renovacao',    label: 'Renovação' },
+              ]} />
+            </div>
             <ConfigField label="Assunto" value={config.assunto || ''} onChange={v => set('assunto', v)} />
             <ConfigField label="Corpo" value={config.corpo || ''} onChange={v => set('corpo', v)} textarea />
           </>
         )}
 
+        {tipo === 'action_script' && (
+          <>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Tipo de script</label>
+              <Select value={config.tipo_script || ''} onChange={v => set('tipo_script', v)} options={[
+                { value: '',          label: 'Selecionar...' },
+                { value: 'abordagem', label: 'Abordagem' },
+                { value: 'follow_up', label: 'Follow-up' },
+                { value: 'proposta',  label: 'Proposta' },
+                { value: 'fechamento', label: 'Fechamento' },
+                { value: 'objecao',   label: 'Objeção' },
+              ]} />
+            </div>
+            <ConfigField label="Nome do script" value={config.script_nome || ''} onChange={v => set('script_nome', v)}
+              placeholder="Ex: Script de abordagem Segmento B" />
+            <ConfigField label="Instrução de uso" value={config.instrucao || ''} onChange={v => set('instrucao', v)} textarea
+              placeholder="Ex: Usar na primeira ligação. Adaptar o nome da imobiliária." />
+          </>
+        )}
+
+        {tipo === 'action_cross_sell' && (
+          <>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Perfil do cliente</label>
+              <Select value={config.perfil || ''} onChange={v => set('perfil', v)} options={[
+                { value: '',               label: 'Todos' },
+                { value: 'locatario_pf',    label: 'Locatário PF' },
+                { value: 'locatario_pj',    label: 'Locatário PJ' },
+                { value: 'proprietario_pf', label: 'Proprietário PF' },
+                { value: 'proprietario_pj', label: 'Proprietário PJ' },
+              ]} />
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Produto atual do cliente</label>
+              <Select value={config.produto_atual || ''} onChange={v => set('produto_atual', v)} options={PRODUCTS} />
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Produto a sugerir</label>
+              <Select value={config.produto_sugerido || ''} onChange={v => set('produto_sugerido', v)} options={PRODUCTS} />
+            </div>
+            <ConfigField label="Argumento principal" value={config.argumento || ''} onChange={v => set('argumento', v)} textarea
+              placeholder="Ex: Cliente já tem fiança — oferecer auto com desconto de fidelidade" />
+          </>
+        )}
+
         {tipo === 'action_mover' && (
-          <div>
-            <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Coluna destino</label>
-            <Select value={config.coluna || ''} onChange={v => set('coluna', v)} options={pipelineOpts} />
-          </div>
+          <>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Coluna destino</label>
+              <Select value={config.coluna || ''} onChange={v => set('coluna', v)} options={pipelineOpts} />
+            </div>
+            <ConfigField label="Motivo do movimento" value={config.motivo || ''} onChange={v => set('motivo', v)} textarea
+              placeholder="Ex: Mover após proposta enviada e confirmada" />
+          </>
         )}
 
         {tipo === 'action_atribuir' && (
-          <ConfigField label="Responsável" value={config.responsavel || ''} onChange={v => set('responsavel', v)} />
+          <>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Responsável</label>
+              <Select value={config.responsavel || ''} onChange={v => set('responsavel', v)} options={TEAM_MEMBERS} />
+            </div>
+            <ConfigField label="Motivo da atribuição" value={config.motivo || ''} onChange={v => set('motivo', v)} textarea
+              placeholder="Ex: Transferir para hunter quando lead frio por 15 dias" />
+          </>
+        )}
+
+        {tipo === 'action_nota' && (
+          <>
+            <ConfigField label="Nota / Observação" value={config.nota || ''} onChange={v => set('nota', v)} textarea
+              placeholder="Ex: Nesta etapa o cliente costuma perguntar sobre carência — esteja preparado." />
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Visibilidade</label>
+              <Select value={config.visibilidade || 'equipe'} onChange={v => set('visibilidade', v)} options={[
+                { value: 'equipe', label: 'Equipe' },
+                { value: 'eu',     label: 'Apenas eu' },
+              ]} />
+            </div>
+          </>
         )}
 
         {tipo === 'action_etiqueta' && (
@@ -637,53 +959,108 @@ function PainelConfig({ node, onUpdate, onClose, deleteNode }) {
         )}
 
         {tipo === 'action_atividade' && (
-          <ConfigField label="Descrição da atividade" value={config.descricao || ''} onChange={v => set('descricao', v)} textarea />
-        )}
-
-        {tipo === 'control_aguardar' && (
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Quantidade</label>
-              <input type="number" min="1" value={config.quantidade || ''} onChange={e => set('quantidade', e.target.value)}
-                className="input w-full text-sm" placeholder="1" />
-            </div>
-            <div className="flex-1">
-              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Unidade</label>
-              <Select value={config.unidade || 'dias'} onChange={v => set('unidade', v)} options={[
-                { value: 'horas',   label: 'Horas' },
-                { value: 'dias',    label: 'Dias' },
-                { value: 'semanas', label: 'Semanas' },
+          <>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Tipo de atividade</label>
+              <Select value={config.tipo_atividade || ''} onChange={v => set('tipo_atividade', v)} options={[
+                { value: '',         label: 'Selecionar...' },
+                { value: 'ligacao',  label: 'Ligação' },
+                { value: 'reuniao',  label: 'Reunião' },
+                { value: 'whatsapp', label: 'WhatsApp' },
+                { value: 'email',    label: 'E-mail' },
+                { value: 'visita',   label: 'Visita' },
+                { value: 'proposta', label: 'Proposta entregue' },
               ]} />
             </div>
-          </div>
+            <ConfigField label="Descrição" value={config.descricao || ''} onChange={v => set('descricao', v)} textarea />
+            <ConfigField label="Resultado esperado" value={config.resultado || ''} onChange={v => set('resultado', v)} textarea
+              placeholder="Ex: Confirmar interesse e agendar reunião de proposta" />
+          </>
+        )}
+
+        {/* ── CONTROLE ── */}
+        {tipo === 'control_aguardar' && (
+          <>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Quantidade</label>
+                <input type="number" min="1" value={config.quantidade || ''} onChange={e => set('quantidade', e.target.value)}
+                  className="input w-full text-sm" placeholder="1" />
+              </div>
+              <div className="flex-1">
+                <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Unidade</label>
+                <Select value={config.unidade || 'dias'} onChange={v => set('unidade', v)} options={[
+                  { value: 'horas',   label: 'Horas' },
+                  { value: 'dias',    label: 'Dias' },
+                  { value: 'semanas', label: 'Semanas' },
+                ]} />
+              </div>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={!!config.dias_uteis} onChange={e => set('dias_uteis', e.target.checked)}
+                className="rounded" />
+              <span className="text-xs text-dark-muted">Apenas dias úteis</span>
+            </label>
+            <ConfigField label="Instrução durante a espera" value={config.instrucao || ''} onChange={v => set('instrucao', v)} textarea
+              placeholder="Ex: Não contatar. Aguardar o cliente processar a proposta." />
+            <ConfigField label="O que fazer ao expirar" value={config.acao_expirar || ''} onChange={v => set('acao_expirar', v)} textarea
+              placeholder="Ex: Se sem retorno, escalar para follow-up urgente" />
+          </>
         )}
 
         {tipo === 'control_condicao' && (
           <>
             <div>
               <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Campo a verificar</label>
-              <Select value={config.campo || ''} onChange={v => set('campo', v)} options={[
-                { value: '', label: 'Selecionar...' },
-                { value: 'apolice', label: 'Tem apólice' },
-                { value: 'produto', label: 'Produto' },
-                { value: 'status',  label: 'Status' },
-                { value: 'etiqueta',label: 'Etiqueta' },
-              ]} />
+              <Select value={config.campo || ''} onChange={v => set('campo', v)} options={CAMPOS_CONDICAO} />
             </div>
             <div>
               <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Operador</label>
-              <Select value={config.operador || ''} onChange={v => set('operador', v)} options={[
-                { value: '', label: 'Selecionar...' },
-                { value: 'eq',  label: 'É' },
-                { value: 'neq', label: 'Não é' },
-              ]} />
+              <Select value={config.operador || ''} onChange={v => set('operador', v)} options={OPERADORES_CONDICAO} />
             </div>
             <ConfigField label="Valor" value={config.valor || ''} onChange={v => set('valor', v)} />
+            <div style={{ height: 1, background: 'rgba(210,225,232,0.60)', margin: '4px 0' }} />
+            <ConfigField label="Instrução — caminho Sim" value={config.instrucao_sim || ''} onChange={v => set('instrucao_sim', v)} textarea
+              placeholder="Ex: Cliente tem perfil — avançar para proposta" />
+            <ConfigField label="Instrução — caminho Não" value={config.instrucao_nao || ''} onChange={v => set('instrucao_nao', v)} textarea
+              placeholder="Ex: Perfil inadequado — arquivar ou transferir" />
+          </>
+        )}
+
+        {tipo === 'control_parar_se' && (
+          <>
+            <p className="text-[10px] text-dark-muted/70 italic">Encerra o fluxo para este lead se a condição for verdadeira.</p>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Campo a verificar</label>
+              <Select value={config.campo || ''} onChange={v => set('campo', v)} options={CAMPOS_CONDICAO} />
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Operador</label>
+              <Select value={config.operador || ''} onChange={v => set('operador', v)} options={OPERADORES_CONDICAO} />
+            </div>
+            <ConfigField label="Valor" value={config.valor || ''} onChange={v => set('valor', v)} />
+            <ConfigField label="Motivo do encerramento" value={config.motivo || ''} onChange={v => set('motivo', v)} textarea
+              placeholder="Ex: Lead já convertido — encerrar jornada de prospecção" />
           </>
         )}
 
         {tipo === 'control_fim' && (
-          <p className="text-xs text-dark-muted/60 italic">Marca o encerramento do fluxo para este lead.</p>
+          <>
+            <div>
+              <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">Resultado</label>
+              <Select value={config.resultado || ''} onChange={v => set('resultado', v)} options={[
+                { value: '',            label: 'Selecionar...' },
+                { value: 'convertido',  label: 'Convertido — apólice emitida' },
+                { value: 'perdido',     label: 'Perdido — cliente desistiu' },
+                { value: 'arquivado',   label: 'Arquivado — sem resposta' },
+                { value: 'transferido', label: 'Transferido — outro vendedor' },
+              ]} />
+            </div>
+            <ConfigField label="Motivo" value={config.motivo || ''} onChange={v => set('motivo', v)} textarea
+              placeholder="Ex: Sem retorno após 3 tentativas" />
+            <ConfigField label="Próxima jornada sugerida" value={config.proxima_jornada || ''} onChange={v => set('proxima_jornada', v)}
+              placeholder="Ex: Jornada Cross-sell Auto" />
+          </>
         )}
       </div>
 

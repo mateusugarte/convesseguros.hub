@@ -293,7 +293,7 @@ export default function AutoCotacaoDetalhe() {
       await qc.invalidateQueries({ queryKey: ['auto-cotacao', id] })
       await qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
       await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
-      navigate('/auto/cotacoes/consulta')
+      navigate('/auto/cotacoes')
     },
     onError: error => {
       setActionError(error?.message || 'Erro ao excluir a cotacao.')
@@ -304,7 +304,7 @@ export default function AutoCotacaoDetalhe() {
     setConfirmDelete(false)
   }, [id])
 
-  const backTo = location.state?.from || '/auto/cotacoes/consulta'
+  const backTo = location.state?.from || '/auto/cotacoes'
 
   const metrics = useMemo(() => [
     { key: 'status', label: 'Status', value: cotacao?.status ? (COTACAO_STATUS[cotacao.status]?.label || cotacao.status) : '—', tone: 'accent' },
@@ -494,6 +494,7 @@ export default function AutoCotacaoDetalhe() {
               <DetailSelect label={<span className="inline-flex items-center gap-1.5"><Car className="h-3.5 w-3.5" /> Tipo</span>} value={cotacao.tipo} onSave={value => salvarCampo({ field: 'tipo', value })} options={TIPO_OPTIONS} />
               <DetailField label={<span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5" /> Origem do lead</span>} value={cotacao.origem_lead} onSave={value => salvarCampo({ field: 'origem_lead', value })} />
               <DetailField label={<span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Criado em</span>} value={formatDateTimeBR(cotacao.created_at)} readOnly />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Atualizado em</span>} value={formatDateTimeBR(cotacao.updated_at)} readOnly />
               <DetailField label={<span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5" /> ID do cliente</span>} value={cotacao.cliente_id} readOnly />
             </div>
           </DataCard>

@@ -14,7 +14,7 @@ import {
   Building2, BarChart2, Settings, Search,
   Bell, LogOut, ChevronLeft, ChevronRight, Menu,
   Sun, Moon, Shield, TrendingUp,
-  ChevronDown, FolderOpen, Calendar, RefreshCw, Car,
+  ChevronDown, FolderOpen, Calendar, RefreshCw, Car, Coins,
 } from 'lucide-react'
 
 const LOGO = 'https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/conves/file.jpeg'
@@ -52,6 +52,7 @@ const NAV_GROUPS = [
       },
       { to: '/imobiliarias', icon: Building2, label: 'Imobiliarias' },
       { to: '/seguradoras', icon: Shield, label: 'Seguradoras' },
+      { to: '/financeiro', icon: Coins, label: 'Financeiro', adminOnly: true },
       { to: '/relatorio', icon: BarChart2, label: 'Relatorios' },
     ],
   },
@@ -228,15 +229,15 @@ export default function Layout() {
   return (
     <div className={`relative flex h-screen overflow-hidden ${shellClassName} ${!isMobile ? 'lg:gap-4' : ''}`}>
       {isMobile && sidebarOpen && (
-        <div
-          className="fixed inset-0 z-[300]"
-          style={{
-            background: 'rgba(248, 250, 255, 0.92)',
-            backdropFilter: 'blur(64px) saturate(140%)',
-            WebkitBackdropFilter: 'blur(64px) saturate(140%)',
-          }}
-          onClick={() => setSidebarOpen(false)}
-        />
+          <div
+            className="fixed inset-0 z-[300]"
+            style={{
+              background: 'rgba(248, 250, 255, 0.97)',
+              backdropFilter: 'blur(96px) saturate(110%)',
+              WebkitBackdropFilter: 'blur(96px) saturate(110%)',
+            }}
+            onClick={() => setSidebarOpen(false)}
+          />
       )}
 
       <aside
@@ -296,6 +297,7 @@ export default function Layout() {
               )}
 
               {group.items.map(item => {
+                if (item.adminOnly && !profile?.is_admin) return null
                 const Icon = item.icon
 
                 if (item.subitems) {

@@ -244,7 +244,7 @@ function EventCard({ evento, lead, openMenuId, setOpenMenuId, onEdit, onDelete, 
               <MoreHorizontal className="w-3.5 h-3.5" />
             </button>
             {open && (
-              <div className="absolute right-0 top-full mt-1 w-32 glass-modal rounded-2xl shadow-xl z-[300] py-1 overflow-hidden">
+              <div className="absolute right-0 top-full mt-1 w-32 glass-modal rounded-2xl shadow-none z-[300] py-1 overflow-hidden">
                 <button onClick={() => { setOpenMenuId(null); onEdit(evento) }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-dark-text hover:bg-dark-surface2 text-left transition-colors">
                   <Pencil className="w-3 h-3" /> Editar
@@ -551,7 +551,7 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
   return (
     <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 animate-fade-in">
       <div className="modal-backdrop" onClick={onClose} />
-      <div className="relative glass-modal rounded-[24px] w-full max-w-lg shadow-2xl overflow-hidden">
+      <div className="relative z-10 glass-modal rounded-[24px] w-full max-w-lg overflow-hidden">
 
         {/* Header */}
         <div className="modal-shell-header flex items-center justify-between px-5 py-4 border-b border-dark-border/60">

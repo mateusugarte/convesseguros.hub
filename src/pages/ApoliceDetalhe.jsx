@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { fetchApoliceDetalhe, atualizarApolice, excluirApolice, STATUS_EMISSAO_LABELS, FORMA_PAGAMENTO_LABELS } from '../lib/apolices'
+import { fetchApoliceDetalhe, atualizarApolice, excluirApolice, STATUS_EMISSAO_LABELS, FORMA_PAGAMENTO_LABELS, calculatePremioTotal, calculateValorComissao, formatMoneyBR, toNumber } from '../lib/apolices'
 import { PRODUTO_LABELS } from '../lib/fichas'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useToast } from '../contexts/ToastContext'
@@ -12,6 +12,7 @@ import SecaoDocumentos from '../components/SecaoDocumentos'
 import { DatePicker } from '../components/ui/DatePicker'
 import { Select } from '../components/ui/Select'
 import { PageHeader, MetricCard, DataCard, Avatar } from '../components/ui'
+import { normalizeDisplayText } from '../lib/text'
 
 function fmtDt(v) {
   if (!v) return null
@@ -132,6 +133,9 @@ export default function ApoliceDetalhe() {
   const [fimVigencia, setFimVigencia] = useState('')
   const [valorParcela, setValorParcela] = useState('')
   const [parcelamento, setParcelamento] = useState('')
+  const [premioLiquido, setPremioLiquido] = useState('')
+  const [pctComissao, setPctComissao] = useState('')
+  const [pctDesconto, setPctDesconto] = useState('')
   const [formaPagamento, setFormaPagamento] = useState('')
 
   const load = useCallback(async () => {
@@ -150,6 +154,9 @@ export default function ApoliceDetalhe() {
       setFimVigencia(data.fim_vigencia || '')
       setValorParcela(data.valor_parcela !== null && data.valor_parcela !== undefined ? String(data.valor_parcela) : '')
       setParcelamento(data.parcelamento !== null && data.parcelamento !== undefined ? String(data.parcelamento) : '')
+      setPremioLiquido(data.premio_liquido !== null && data.premio_liquido !== undefined ? String(data.premio_liquido) : '')
+      setPctComissao(data.pct_comissao !== null && data.pct_comissao !== undefined ? String(data.pct_comissao) : '')
+      setPctDesconto(data.pct_desconto !== null && data.pct_desconto !== undefined ? String(data.pct_desconto) : '')
       setFormaPagamento(data.forma_pagamento || '')
     }
     setLoading(false)
@@ -160,6 +167,12 @@ export default function ApoliceDetalhe() {
   async function salvar() {
     setSalvando(true)
     const meses = calcularMeses(inicioVigencia, fimVigencia)
+    const parcelaNum = toNumber(valorParcela)
+    const parcelasNum = toNumber(parcelamento)
+    const premioLiquidoNum = toNumber(premioLiquido)
+    const premioTotal = calculatePremioTotal(parcelaNum, parcelasNum)
+    const valorComissao = calculateValorComissao(premioLiquidoNum, pctComissao)
+    const dataEmissao = ['emitida', 'enviada'].includes(statusEmissao) ? (apolice?.data_emissao || new Date().toISOString().slice(0, 10)) : null
     const err = await atualizarApolice(id, {
       numero_apolice: numeroApolice.trim() || null,
       numero_proposta: numeroProposta.trim() || null,
@@ -171,9 +184,16 @@ export default function ApoliceDetalhe() {
       inicio_vigencia: inicioVigencia || null,
       fim_vigencia: fimVigencia || null,
       tempo_vigencia_meses: meses || null,
-      parcelamento: parcelamento ? Number(parcelamento) : null,
-      valor_parcela: valorParcela ? parseFloat(valorParcela) : null,
+      parcelamento: parcelasNum || null,
+      valor_parcela: parcelaNum || null,
       forma_pagamento: formaPagamento || null,
+      premio_liquido: premioLiquidoNum || null,
+      pct_comissao: pctComissao === '' ? null : pctComissao,
+      pct_desconto: pctDesconto === '' ? null : pctDesconto,
+      premio_total: premioTotal,
+      valor_producao: premioTotal,
+      valor_comissao: valorComissao,
+      data_emissao: dataEmissao,
     })
     setSalvando(false)
     if (err) { toast({ type: 'error', title: 'Erro ao salvar' }); return }
@@ -212,11 +232,13 @@ export default function ApoliceDetalhe() {
 
   const ficha = apolice.fichas
   const meses = calcularMeses(inicioVigencia, fimVigencia)
-  const qtdParcelas = Number(parcelamento) || 0
-  const valorParcelaNum = Number(valorParcela) || 0
-  const valorTotalSeguro = qtdParcelas > 0 && valorParcelaNum > 0 ? qtdParcelas * valorParcelaNum : null
+  const qtdParcelas = toNumber(parcelamento) || 0
+  const valorParcelaNum = toNumber(valorParcela) || 0
+  const premioLiquidoNum = toNumber(premioLiquido) || 0
+  const premioTotal = calculatePremioTotal(valorParcelaNum, qtdParcelas)
+  const valorComissao = calculateValorComissao(premioLiquidoNum, pctComissao)
   const siStatus = STATUS_EMISSAO_LABELS[apolice.status_emissao] || { label: apolice.status_emissao, color: '#6B7280' }
-  const nomePrincipal = ficha?.nome_empresa || ficha?.nome_interessado || apolice.nome_interessado || 'Apólice'
+  const nomePrincipal = normalizeDisplayText(ficha?.nome_empresa || ficha?.nome_interessado || apolice.nome_interessado) || 'Apólice'
 
   return (
     <div className="space-y-5 pb-8 animate-fade-in">
@@ -271,7 +293,7 @@ export default function ApoliceDetalhe() {
             <MetricCard label="Status" value={siStatus.label} hint="situação atual" tone="accent" icon={<ShieldCheck className="h-4 w-4" />} />
             <MetricCard label="Seguradora" value={apolice.seguradora || '—'} hint="origem da emissão" tone="secondary" icon={<Building2 className="h-4 w-4" />} />
             <MetricCard label="Vigência" value={meses > 0 ? `${meses} meses` : '—'} hint="tempo contratado" tone="success" icon={<CalendarDays className="h-4 w-4" />} />
-            <MetricCard label="Total do seguro" value={valorTotalSeguro ? `R$ ${Number(valorTotalSeguro).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'} hint="parcelas x valor da parcela" tone="warning" icon={<Clock3 className="h-4 w-4" />} />
+            <MetricCard label="Prêmio total" value={premioTotal != null ? formatMoneyBR(premioTotal) : '—'} hint="parcelas x valor da parcela" tone="warning" icon={<Clock3 className="h-4 w-4" />} />
           </>
         )}
       />
@@ -280,7 +302,7 @@ export default function ApoliceDetalhe() {
         <div className="space-y-5">
           {ficha ? (
             <DataCard title="Dados da Ficha" subtitle="Base de origem da apólice." bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
-              <div className="col-span-2"><ReadField label="Nome" value={ficha.nome_empresa || ficha.nome_interessado} /></div>
+              <div className="col-span-2"><ReadField label="Nome" value={normalizeDisplayText(ficha.nome_empresa || ficha.nome_interessado)} /></div>
               <ReadField label={ficha.cnpj ? 'CNPJ' : 'CPF'} value={ficha.cpf || ficha.cnpj} />
               <ReadField label="Celular" value={ficha.celular} />
               <ReadField label="Produto" value={PRODUTO_LABELS[ficha.produto] || ficha.produto} />
@@ -291,6 +313,9 @@ export default function ApoliceDetalhe() {
               <ReadField label="Seguradora da Ficha" value={ficha.seguradora} />
               <ReadField label="Status" value={ficha.status} />
               <ReadField label="Vigência" value={ficha.vigencia} />
+              <ReadField label="% Comissão" value={ficha.pct_comissao != null ? `${ficha.pct_comissao}%` : null} />
+              <ReadField label="% Desconto" value={ficha.pct_desconto != null ? `${ficha.pct_desconto}%` : null} />
+              <ReadField label="Parcelamento" value={ficha.parcelamento} />
               <ReadField label="Vencimento" value={ficha.vencimento} />
               <ReadField label="Origem" value={ficha.origem_lead} />
               <ReadField label="Observações" value={ficha.observacoes} />
@@ -299,7 +324,7 @@ export default function ApoliceDetalhe() {
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted mb-1">Emissor</p>
                   <div className="flex items-center gap-2">
                     <Avatar name={apolice.profiles.nome} src={apolice.profiles.avatar_url || ''} size="sm" />
-                    <span className="text-sm text-dark-text">{apolice.profiles.nome}</span>
+                    <span className="text-sm text-dark-text">{normalizeDisplayText(apolice.profiles.nome) || apolice.profiles.nome}</span>
                   </div>
                 </div>
               )}
@@ -344,9 +369,16 @@ export default function ApoliceDetalhe() {
             </div>
             <EditField label="Parcelamento (vezes)" type="number" value={parcelamento} onChange={setParcelamento} placeholder="Ex: 12" required />
             <EditField label="Valor da Parcela (R$)" type="number" value={valorParcela} onChange={setValorParcela} placeholder="0,00" required />
+            <EditField label="Prêmio Líquido (R$)" type="number" value={premioLiquido} onChange={setPremioLiquido} placeholder="0,00" required />
+            <EditField label="% Comissão" type="number" value={pctComissao} onChange={setPctComissao} placeholder="Ex: 10" required />
+            <EditField label="% Desconto" type="number" value={pctDesconto} onChange={setPctDesconto} placeholder="Ex: 5" required />
             <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Valor total do seguro</p>
-              <p className="mt-1 font-semibold">{valorTotalSeguro ? `R$ ${Number(valorTotalSeguro).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}</p>
+              <p className="mt-1 font-semibold">{premioTotal != null ? formatMoneyBR(premioTotal) : '—'}</p>
+            </div>
+            <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Comissão calculada</p>
+              <p className="mt-1 font-semibold">{valorComissao != null ? formatMoneyBR(valorComissao) : '—'}</p>
             </div>
             <SelectField
               label="Forma de Pagamento"

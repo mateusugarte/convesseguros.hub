@@ -101,7 +101,7 @@ function ModalEditLead({ lead, onClose, toast }) {
   return (
     <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
       <div className="modal-backdrop" onClick={onClose} />
-      <div className="relative glass-modal rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div className="relative z-10 glass-modal rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border">
           <h2 className="font-bold text-dark-text">Editar Lead</h2>
           <button onClick={onClose} className="text-dark-muted hover:text-dark-text"><X className="w-4 h-4" /></button>
@@ -949,7 +949,7 @@ function TabJornada({ lead, journeys, events, toast }) {
       {modalAvancar && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
           <div className="modal-backdrop" onClick={() => setModalAvancar(false)} />
-          <div className="relative glass-modal rounded-2xl w-full max-w-sm overflow-hidden">
+          <div className="relative z-10 glass-modal rounded-2xl w-full max-w-sm overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border">
               <h2 className="font-bold text-dark-text text-sm">Avançar Etapa</h2>
               <button onClick={() => setModalAvancar(false)} className="text-dark-muted hover:text-dark-text">
@@ -1092,7 +1092,7 @@ export default function LeadDetalhe() {
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${moveOpen ? 'rotate-180' : ''}`} />
               </button>
               {moveOpen && (
-                <div className="absolute right-0 top-full mt-1.5 w-48 glass-modal rounded-xl shadow-xl z-[300] py-1 overflow-hidden">
+                <div className="absolute right-0 top-full mt-1.5 w-48 glass-modal rounded-xl shadow-none z-[300] py-1 overflow-hidden">
                   {PIPELINE_COLS.map(col => (
                     <button key={col.id} onClick={() => handleMoveDropdown(col)}
                       disabled={col.id === lead.coluna}

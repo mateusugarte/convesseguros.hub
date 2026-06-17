@@ -181,7 +181,7 @@ function MoverDropdown({ onSelect, onClose }) {
     return () => document.removeEventListener('mousedown', h)
   }, [onClose])
   return (
-    <div ref={ref} className="absolute bottom-full mb-1 left-0 w-44 glass-modal rounded-xl shadow-xl z-[300] py-1 overflow-hidden">
+    <div ref={ref} className="absolute bottom-full mb-1 left-0 w-44 glass-modal rounded-xl shadow-none z-[300] py-1 overflow-hidden">
       {PIPELINE_COLS.map(col => (
         <button key={col.id} onClick={() => onSelect(col.id)}
           className="w-full flex items-center gap-2 px-3 py-2 text-sm text-dark-text hover:bg-dark-surface2 text-left transition-colors">
@@ -224,7 +224,7 @@ function FloatingBar({ count, leads, selectedIds, onDeselect, toast }) {
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[400]
-      glass-modal rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3 animate-fade-in border border-dark-border">
+      glass-modal rounded-2xl px-4 py-3 flex items-center gap-3 animate-fade-in border border-dark-border">
       <span className="text-sm font-semibold text-dark-text whitespace-nowrap">{count} selecionado{count !== 1 ? 's' : ''}</span>
       <div className="w-px h-4 bg-dark-border" />
       <div className="relative">

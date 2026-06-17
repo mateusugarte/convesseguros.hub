@@ -643,22 +643,18 @@ html.dark {
     backdrop-filter: var(--glass-blur-ultra, blur(28px) saturate(190%));
     border: 1px solid rgba(180, 200, 230, 0.62);
     border-radius: 24px;
-    box-shadow:
-      0 28px 80px rgba(10, 20, 40, 0.22),
-      0 2px 12px rgba(0, 0, 0, 0.08),
-      var(--glass-inset),
-      0 0 0 1px rgba(255,255,255,0.06);
+    box-shadow: none;
   }
 
   /* ── Modal backdrop — replaces bg-black/40 backdrop-blur-sm ─────────────── */
   .modal-backdrop {
-    position: absolute;
+    position: fixed;
     inset: 0;
     background:
-      radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.10), transparent 28%),
-      var(--modal-backdrop-tint, rgba(248,250,255,0.985));
-    -webkit-backdrop-filter: var(--modal-backdrop-blur, blur(96px) saturate(120%));
-    backdrop-filter: var(--modal-backdrop-blur, blur(96px) saturate(120%));
+      radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.06), transparent 22%),
+      var(--modal-backdrop-tint, rgba(248,250,255,0.995));
+    -webkit-backdrop-filter: var(--modal-backdrop-blur, blur(140px) saturate(105%));
+    backdrop-filter: var(--modal-backdrop-blur, blur(140px) saturate(105%));
     transition: opacity 220ms ease;
   }
 
@@ -1385,41 +1381,37 @@ html.dark .kanban-empty {
   @apply w-10 h-10 opacity-35;
 }
 
-.glass-modal {
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0.16)),
-    var(--glass-bg-heavy);
-  -webkit-backdrop-filter: var(--glass-blur-ultra, blur(28px) saturate(190%));
-  backdrop-filter: var(--glass-blur-ultra, blur(28px) saturate(190%));
-  border: 1px solid rgb(var(--brand-secondary-rgb) / 0.30);
-  border-radius: 28px;
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.08),
-    var(--glass-inset);
-}
+  .glass-modal {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0.16)),
+      var(--glass-bg-heavy);
+    -webkit-backdrop-filter: var(--glass-blur-ultra, blur(28px) saturate(190%));
+    backdrop-filter: var(--glass-blur-ultra, blur(28px) saturate(190%));
+    border: 1px solid rgb(var(--brand-secondary-rgb) / 0.30);
+    border-radius: 28px;
+    box-shadow: none;
+  }
 
 html.dark .glass-modal {
   border-color: rgb(var(--brand-primary-rgb) / 0.22);
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.04),
-    var(--glass-inset);
+  box-shadow: none;
 }
 
 .modal-backdrop {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background:
-    radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.10), transparent 28%),
-    var(--modal-backdrop-tint, rgba(248,250,255,0.985));
-  -webkit-backdrop-filter: var(--modal-backdrop-blur, blur(96px) saturate(120%));
-  backdrop-filter: var(--modal-backdrop-blur, blur(96px) saturate(120%));
+    radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.06), transparent 22%),
+    var(--modal-backdrop-tint, rgba(248,250,255,0.995));
+  -webkit-backdrop-filter: var(--modal-backdrop-blur, blur(140px) saturate(105%));
+  backdrop-filter: var(--modal-backdrop-blur, blur(140px) saturate(105%));
   transition: opacity 220ms ease;
 }
 
 html.dark .modal-backdrop {
   background:
-    radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.12), transparent 28%),
-    var(--modal-backdrop-tint, rgba(10,14,24,0.985));
+    radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.08), transparent 22%),
+    var(--modal-backdrop-tint, rgba(10,14,24,0.995));
 }
 
 .modal-shell-header {
@@ -1712,7 +1704,7 @@ html.dark .skeleton-surface {
 .ops-shell .table-shell,
 .ops-shell .glass-modal {
   border-color: var(--glass-border);
-  box-shadow: var(--glass-shadow-deep), var(--glass-inset);
+  box-shadow: none;
 }
 
 .ops-page-header {

@@ -31,6 +31,7 @@ const ApoicesGestao      = lazy(() => import('./pages/ApoicesGestao'))
 const ApolicesLista      = lazy(() => import('./pages/ApolicesLista'))
 const ApoliceDetalhe     = lazy(() => import('./pages/ApoliceDetalhe'))
 const Seguradoras        = lazy(() => import('./pages/Seguradoras'))
+const Financeiro         = lazy(() => import('./pages/Financeiro'))
 
 // Área Auto
 const AutoDashboard  = lazy(() => import('./pages/auto/AutoDashboard'))
@@ -58,6 +59,13 @@ function PrivateRoute({ children }) {
   return user ? children : <Navigate to="/login" replace />
 }
 
+function AdminRoute({ children }) {
+  const { profile, loading } = useAuth()
+  if (loading) return <PageLoader />
+  if (!profile?.is_admin) return <Navigate to="/" replace />
+  return children
+}
+
 function AppRoutes() {
   const { user } = useAuth()
   return (
@@ -78,6 +86,7 @@ function AppRoutes() {
           <Route path="imobiliarias" element={<Imobiliarias />} />
           <Route path="imobiliarias/:id" element={<ImobiliariaDetalhe />} />
           <Route path="seguradoras" element={<Seguradoras />} />
+          <Route path="financeiro" element={<AdminRoute><Financeiro /></AdminRoute>} />
           <Route path="apolices" element={<ApolicesDashboard />} />
           <Route path="apolices/gestao" element={<ApoicesGestao />} />
           <Route path="apolices/lista" element={<ApolicesLista />} />

@@ -9,7 +9,7 @@ Dashboard analítico do módulo de apólices emitidas. Consolida KPIs, gráficos
 - Recharts: `AreaChart`, `BarChart`, `PieChart` — gráficos analíticos
 
 ## Queries Supabase
-- `lib/apolices.js` — fetchKPIsApolices, fetchApolicesPorDia, fetchTopImobiliariasApolices, fetchPorSeguradora
+- `lib/apolices.js` — fetchKPIsApolices, fetchApolicesPorDia, fetchTopImobiliariasApolices, fetchProducaoPorSeguradora
 - Hook: `useImobiliaria` para filtro por workspace
 
 ## Status

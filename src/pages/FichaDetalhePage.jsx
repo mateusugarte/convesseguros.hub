@@ -437,6 +437,24 @@ export default function FichaDetalhePage() {
           {/* Controle interno — campos editáveis */}
           <DataCard title="Controle Interno" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
             <ReadField label="Orçamentista (Forms)" value={ficha.orcamentista_forms} />
+            <InlineField
+              label="% Comissão"
+              value={ficha.pct_comissao != null ? String(ficha.pct_comissao) : ''}
+              type="number"
+              onSave={v => updateField('pct_comissao', v ? parseFloat(v) : null)}
+            />
+            <InlineField
+              label="% Desconto"
+              value={ficha.pct_desconto != null ? String(ficha.pct_desconto) : ''}
+              type="number"
+              onSave={v => updateField('pct_desconto', v ? parseFloat(v) : null)}
+            />
+            <InlineField
+              label="Parcelamento"
+              value={ficha.parcelamento != null ? String(ficha.parcelamento) : ''}
+              type="number"
+              onSave={v => updateField('parcelamento', v ? parseInt(v, 10) : null)}
+            />
             <div>
               <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-dark-muted">Assumida por</p>
               {ficha.profiles?.nome ? (

@@ -4,7 +4,8 @@ import { Select } from '../components/ui/Select'
 import { PageHeader, MetricCard, DataCard } from '../components/ui'
 import {
   fetchKPIsApolices, fetchApolicesPorDia,
-  fetchTopImobiliariasApolices, fetchPorSeguradora,
+  fetchTopImobiliariasApolices, fetchProducaoPorSeguradora,
+  formatMoneyBR,
 } from '../lib/apolices'
 import { useTheme } from '../contexts/ThemeContext'
 import { useImobiliaria } from '../hooks/useImobiliaria'
@@ -14,7 +15,7 @@ import {
 } from 'recharts'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { TrendingUp, TrendingDown, FileCheck, LayoutGrid, List } from 'lucide-react'
+import { TrendingUp, FileCheck, LayoutGrid, List } from 'lucide-react'
 import { BRAND, AVATAR_COLORS, PALETTE } from '../design-system/tokens'
 
 const CHART_COLORS = {
@@ -92,7 +93,9 @@ function SegTip({ active, payload }) {
   const d = payload[0]?.payload
   return (
     <div className="glass-panel px-3 py-2 text-xs">
-      <span style={{ color: SEG_COLORS[d?.seguradora] || BRAND.primary }}>{d?.seguradora}: {d?.value}</span>
+      <span style={{ color: SEG_COLORS[d?.seguradora] || BRAND.primary }}>
+        {d?.seguradora}: {formatMoneyBR(d?.value)}
+      </span>
     </div>
   )
 }
@@ -115,7 +118,7 @@ export default function ApolicesDashboard() {
   const [kpis, setKpis] = useState(null)
   const [porDia, setPorDia] = useState([])
   const [topImob, setTopImob] = useState([])
-  const [porSeg, setPorSeg] = useState([])
+  const [producaoSeg, setProducaoSeg] = useState([])
   const [filtroSeg, setFiltroSeg] = useState('mes')
   const [loading, setLoading] = useState(true)
 
@@ -151,7 +154,7 @@ export default function ApolicesDashboard() {
 
   useEffect(() => {
     const [i, f] = getRangeSeguradora()
-    fetchPorSeguradora(i, f).then(setPorSeg)
+    fetchProducaoPorSeguradora(i, f).then(setProducaoSeg)
   }, [getRangeSeguradora])
 
   return (
@@ -193,18 +196,25 @@ export default function ApolicesDashboard() {
               icon={<TrendingUp className="h-4 w-4" />}
             />
             <MetricCard
-              label="Total geral"
+              label="Total emitidas"
               value={kpis?.totalGeral ?? '—'}
               hint="base acumulada"
               tone="success"
               icon={<TrendingUp className="h-4 w-4" />}
             />
             <MetricCard
-              label="Variação"
-              value={kpis?.variacaoMes != null ? `${kpis.variacaoMes >= 0 ? '+' : ''}${kpis.variacaoMes}%` : '—'}
-              hint="comparativo mensal"
-              tone={kpis?.variacaoMes >= 0 ? 'success' : 'warning'}
-              icon={kpis?.variacaoMes >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+              label="Comissão"
+              value={formatMoneyBR(kpis?.totalComissao)}
+              hint="premiação líquida do período"
+              tone="secondary"
+              icon={<TrendingUp className="h-4 w-4" />}
+            />
+            <MetricCard
+              label="Produção"
+              value={formatMoneyBR(kpis?.totalProducao)}
+              hint="prêmio total emitido"
+              tone="warning"
+              icon={<TrendingUp className="h-4 w-4" />}
             />
           </>
         )}
@@ -266,7 +276,7 @@ export default function ApolicesDashboard() {
         </DataCard>
 
         <DataCard
-          title="Por Seguradora"
+          title="Produção por Seguradora"
           actions={(
             <div className="flex items-center gap-0.5">
               {FILTRO_SEG.map(f => (
@@ -283,12 +293,12 @@ export default function ApolicesDashboard() {
             </div>
           )}
         >
-          {porSeg.length > 0 ? (
+          {producaoSeg.length > 0 ? (
             <div className="space-y-2">
               <ResponsiveContainer width="100%" height={90}>
                 <PieChart>
-                  <Pie data={porSeg} dataKey="value" nameKey="seguradora" cx="50%" cy="50%" innerRadius={24} outerRadius={42}>
-                    {porSeg.map((entry, i) => (
+                  <Pie data={producaoSeg} dataKey="value" nameKey="seguradora" cx="50%" cy="50%" innerRadius={24} outerRadius={42}>
+                    {producaoSeg.map((entry, i) => (
                       <Cell key={i} fill={SEG_COLORS[entry.seguradora] || BRAND.gold} />
                     ))}
                   </Pie>
@@ -296,13 +306,13 @@ export default function ApolicesDashboard() {
                 </PieChart>
               </ResponsiveContainer>
               <div className="space-y-1">
-                {porSeg.slice(0, 4).map(s => (
+                {producaoSeg.slice(0, 4).map(s => (
                   <div key={s.seguradora} className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1.5">
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: SEG_COLORS[s.seguradora] || BRAND.gold }} />
                       <span className="text-dark-muted truncate max-w-[90px]">{s.seguradora}</span>
                     </div>
-                    <span className="font-mono font-semibold text-dark-text">{s.value}</span>
+                    <span className="font-mono font-semibold text-dark-text">{formatMoneyBR(s.value)}</span>
                   </div>
                 ))}
               </div>

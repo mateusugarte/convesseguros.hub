@@ -1,5 +1,6 @@
 import { Building2 } from 'lucide-react'
 import { getEntityImageUrl } from '../lib/entityMedia'
+import { normalizeDisplayText } from '../lib/text'
 
 function initials(name) {
   return (name || '')
@@ -42,7 +43,7 @@ export default function ImobiliariaIdentity({
 }) {
   const meta = SIZES[size] || SIZES.sm
   const src = getEntityImageUrl(imagemPath, imagemUrl)
-  const label = nome || 'Imobiliária'
+  const label = normalizeDisplayText(nome) || 'Imobiliária'
 
   return (
     <div
@@ -56,7 +57,7 @@ export default function ImobiliariaIdentity({
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand-secondary/10 to-brand-accent/10 text-brand-secondary">
             {nome && nome !== '—' && nome !== 'Imobiliária'
-              ? initials(nome)
+              ? initials(normalizeDisplayText(nome) || nome)
               : <Building2 className="h-4 w-4" />
             }
           </div>
@@ -73,3 +74,4 @@ export default function ImobiliariaIdentity({
     </div>
   )
 }
+

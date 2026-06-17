@@ -1,21 +1,22 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { fetchRelatorioMensal, PRODUTO_LABELS } from '../lib/fichas'
 import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
+import { normalizeDisplayText } from '../lib/text'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { AVATAR_COLORS, BRAND, PRODUTO_COLORS, STATUS_CHART_COLORS } from '../design-system/tokens'
 import { ChevronLeft, ChevronRight, Download, X, FileText, CheckCircle2, XCircle, MinusCircle, AlertTriangle, Clock } from 'lucide-react'
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function maskCpf(cpf) {
-  if (!cpf) return '—'
+  if (!cpf) return 'â€”'
   const d = cpf.replace(/\D/g, '')
   if (d.length === 11) return `***.${d.slice(3, 6)}-**`
   return cpf
 }
 
 function maskCnpj(cnpj) {
-  if (!cnpj) return '—'
+  if (!cnpj) return 'â€”'
   const d = cnpj.replace(/\D/g, '')
   if (d.length === 14) return `**.${d.slice(2, 5)}.${d.slice(5, 8)}/****-**`
   return cnpj
@@ -27,12 +28,12 @@ function docMask(ficha) {
 }
 
 function nomePrincipal(ficha) {
-  if (ficha.produto === 'pessoa_juridica') return ficha.nome_empresa || ficha.nome_interessado || '—'
-  return ficha.nome_interessado || '—'
+  if (ficha.produto === 'pessoa_juridica') return normalizeDisplayText(ficha.nome_empresa || ficha.nome_interessado) || '—'
+  return normalizeDisplayText(ficha.nome_interessado) || '—'
 }
 
 const MESES_FULL = [
-  'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+  'Janeiro','Fevereiro','MarÃ§o','Abril','Maio','Junho',
   'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro',
 ]
 
@@ -43,7 +44,7 @@ const PRODUTOS_FILTRO = [
   { key: 'pessoa_juridica',label: 'PJ' },
 ]
 
-// ── Badge de produto ──────────────────────────────────────────────────────────
+// â”€â”€ Badge de produto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const PRODUTO_COLOR = {
   residencial_pf:  { bg: PRODUTO_COLORS.residencial_pf.bg,  color: PRODUTO_COLORS.residencial_pf.color },
@@ -61,11 +62,11 @@ function ProdutoBadge({ produto }) {
   )
 }
 
-// ── Indicadores booleanos ────────────────────────────────────────────────────
+// â”€â”€ Indicadores booleanos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Sim() { return <span className="inline-flex items-center gap-1 text-status-success font-medium"><CheckCircle2 className="w-3.5 h-3.5" /> Sim</span> }
-function Nao() { return <span className="inline-flex items-center gap-1 text-status-danger font-medium"><XCircle className="w-3.5 h-3.5" /> Não</span> }
-function Dash() { return <span className="text-dark-muted">—</span> }
+function Nao() { return <span className="inline-flex items-center gap-1 text-status-danger font-medium"><XCircle className="w-3.5 h-3.5" /> NÃ£o</span> }
+function Dash() { return <span className="text-dark-muted">â€”</span> }
 
 function ResultadoFinal({ status }) {
   if (status === 'emitido')      return <span className="inline-flex items-center gap-1 text-brand-accent font-medium"><CheckCircle2 className="w-3.5 h-3.5" /> Emitida</span>
@@ -77,29 +78,29 @@ function ResultadoFinal({ status }) {
   return <Dash />
 }
 
-// ── Exportação CSV ────────────────────────────────────────────────────────────
+// â”€â”€ ExportaÃ§Ã£o CSV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function exportarCSV(fichas, mes, ano, resolverNome) {
-  const headers = ['Imobiliária','Nome','Doc','Produto','Status','Enviada','Resultado','Desistiu','Orçamentista','Data']
+  const headers = ['ImobiliÃ¡ria','Nome','Doc','Produto','Status','Enviada','Resultado','Desistiu','OrÃ§amentista','Data']
   const rows = fichas.map(f => [
     (resolverNome ? resolverNome(f.imobiliaria) : null) || f.imobiliaria || '',
     nomePrincipal(f),
     f.produto === 'pessoa_juridica' ? (f.cnpj || '') : (f.cpf || ''),
     PRODUTO_LABELS[f.produto] || f.produto,
     f.status,
-    f.retorno_enviado ? 'Sim' : 'Não',
+    f.retorno_enviado ? 'Sim' : 'NÃ£o',
     f.status === 'emitido'  ? 'Emitida'  :
     f.status === 'expirada' ? 'Expirada' :
     f.status === 'recusado' ? 'Recusada' :
     f.status === 'aprovado' ? 'Aprovada' : 'Pendente',
-    f.status === 'cancelado' ? 'Sim' : 'Não',
+    f.status === 'cancelado' ? 'Sim' : 'NÃ£o',
     f.orcamentista_forms || '',
     new Date(f.created_at).toLocaleDateString('pt-BR'),
   ])
   const csv = [headers, ...rows]
     .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
     .join('\n')
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const blob = new Blob(['ï»¿' + csv], { type: 'text/csv;charset=utf-8;' })
   const url  = URL.createObjectURL(blob)
   const a    = Object.assign(document.createElement('a'), {
     href: url,
@@ -109,7 +110,7 @@ function exportarCSV(fichas, mes, ano, resolverNome) {
   URL.revokeObjectURL(url)
 }
 
-// ── Totalizador por imobiliária ───────────────────────────────────────────────
+// â”€â”€ Totalizador por imobiliÃ¡ria â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function TotalizadorImob({ fichas }) {
   const enviadas   = fichas.filter(f => f.retorno_enviado).length
@@ -121,12 +122,12 @@ function TotalizadorImob({ fichas }) {
       <span>Enviadas: <strong className="text-dark-text">{enviadas}</strong></span>
       <span>Emitidas: <strong className="text-status-success">{emitidas}</strong></span>
       <span>Expiradas: <strong className="text-dark-muted">{expiradas}</strong></span>
-      <span>Desistências: <strong className="text-dark-text">{desistiu}</strong></span>
+      <span>DesistÃªncias: <strong className="text-dark-text">{desistiu}</strong></span>
     </div>
   )
 }
 
-// ── Tabela por imobiliária ────────────────────────────────────────────────────
+// â”€â”€ Tabela por imobiliÃ¡ria â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function TabelaImob({ nome, fichas }) {
   return (
@@ -143,7 +144,7 @@ function TabelaImob({ nome, fichas }) {
           <table className="table-table text-xs">
             <thead className="table-thead border-b border-dark-border">
               <tr>
-                {['Nome','Doc','Produto','Enviada','Resultado','Desistiu','Orçamentista'].map(h => (
+                {['Nome','Doc','Produto','Enviada','Resultado','Desistiu','OrÃ§amentista'].map(h => (
                   <th key={h} className="th whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -157,7 +158,7 @@ function TabelaImob({ nome, fichas }) {
                   <td className="td">{f.retorno_enviado ? <Sim /> : <Nao />}</td>
                   <td className="td"><ResultadoFinal status={f.status} /></td>
                   <td className="td">{f.status === 'cancelado' ? <Sim /> : <Dash />}</td>
-                  <td className="td text-dark-muted max-w-[120px] truncate">{f.orcamentista_forms || '—'}</td>
+                  <td className="td text-dark-muted max-w-[120px] truncate">{f.orcamentista_forms || 'â€”'}</td>
                 </tr>
               ))}
             </tbody>
@@ -168,7 +169,7 @@ function TabelaImob({ nome, fichas }) {
   )
 }
 
-// ── Rodapé geral ─────────────────────────────────────────────────────────────
+// â”€â”€ RodapÃ© geral â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Rodape({ fichas }) {
   const total    = fichas.length
@@ -182,14 +183,14 @@ function Rodape({ fichas }) {
 
   return (
     <div className="card p-5 mt-6">
-      <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-4">Total do Mês</p>
+      <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-4">Total do MÃªs</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
           { label: 'Total de fichas', val: total,    color: BRAND.primary, pct: null },
           { label: 'Enviadas',        val: enviadas,  color: PRODUTO_COLORS.comercial_pf.color, pct: pct(enviadas) },
           { label: 'Emitidas',        val: emitidas,  color: PRODUTO_COLORS.residencial_pf.color, pct: pct(emitidas) },
           { label: 'Expiradas',       val: expiras,   color: '#6B7280', pct: pct(expiras) },
-          { label: 'Desistências',    val: desist,    color: BRAND.gold, pct: pct(desist) },
+          { label: 'DesistÃªncias',    val: desist,    color: BRAND.gold, pct: pct(desist) },
           { label: 'Recusadas',       val: recusadas, color: '#EF4444', pct: pct(recusadas) },
         ].map(({ label, val, color, pct: p }) => (
           <div key={label} className="text-center">
@@ -203,7 +204,7 @@ function Rodape({ fichas }) {
   )
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function RelatorioMensal({ onClose }) {
   const agora = new Date()
@@ -232,9 +233,9 @@ export default function RelatorioMensal({ onClose }) {
     setAno(na)
   }
 
-  // Agrupar por imobiliária
+  // Agrupar por imobiliÃ¡ria
   const porImobiliaria = fichas.reduce((acc, f) => {
-    const imob = resolverNome(f.imobiliaria) || 'Sem Imobiliária'
+    const imob = resolverNome(f.imobiliaria) || 'Sem ImobiliÃ¡ria'
     if (!acc[imob]) acc[imob] = []
     acc[imob].push(f)
     return acc
@@ -253,7 +254,7 @@ export default function RelatorioMensal({ onClose }) {
             <div className="w-9 h-9 rounded-xl bg-brand-accent/15 flex items-center justify-center">
               <FileText className="w-5 h-5 text-brand-accent" />
             </div>
-            <h2 className="font-bold text-dark-text">Relatório Mensal de Fichas</h2>
+            <h2 className="font-bold text-dark-text">RelatÃ³rio Mensal de Fichas</h2>
           </div>
           <button onClick={onClose} className="text-dark-muted hover:text-dark-text transition-colors">
             <X className="w-5 h-5" />
@@ -262,7 +263,7 @@ export default function RelatorioMensal({ onClose }) {
 
         {/* Controles */}
         <div className="px-6 py-4 border-b border-dark-border flex flex-wrap items-center gap-4">
-          {/* Seletor de mês */}
+          {/* Seletor de mÃªs */}
           <div className="flex items-center gap-2">
             <button onClick={() => mudarMes(-1)}
                     className="p-1.5 rounded-lg border border-dark-border hover:border-brand-accent/50 text-dark-muted hover:text-dark-text transition-colors">
@@ -329,3 +330,4 @@ export default function RelatorioMensal({ onClose }) {
     </div>
   )
 }
+

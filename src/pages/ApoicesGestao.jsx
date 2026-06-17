@@ -4,14 +4,15 @@ import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDragg
 import {
   fetchApolicesKanban, criarApolice, moverStatusApolice,
   buscarFichasParaEmissao,
-  STATUS_EMISSAO_LABELS, SEGURADORAS_APOLICE, FORMA_PAGAMENTO_LABELS,
+  STATUS_EMISSAO_LABELS,
+  calculatePremioTotal, calculateValorComissao, formatMoneyBR, toNumber,
 } from '../lib/apolices'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { Select } from '../components/ui/Select'
 import { DatePicker } from '../components/ui/DatePicker'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
-import { PRODUTO_LABELS } from '../lib/fichas'
+import { PRODUTO_LABELS, STATUS_LABELS } from '../lib/fichas'
 import {
   Plus, ChevronLeft, ChevronRight, RefreshCw,
   Search, Home, Briefcase, Building, LayoutGrid, X, Check, ArrowLeft,
@@ -24,6 +25,7 @@ import { Avatar } from '../components/ui'
 import { supabase } from '../lib/supabase'
 import { KanbanSkeleton } from '../components/Skeleton'
 import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/kanbanDnd'
+import { normalizeDisplayText } from '../lib/text'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -127,10 +129,11 @@ function SelectField({ label, value, onChange, options, required }) {
 // ── Helpers nomes ─────────────────────────────────────────────────────────────
 
 function nomeApolice(apolice) {
-  return apolice.fichas?.nome_empresa
-      || apolice.fichas?.nome_interessado
-      || apolice.nome_interessado
-      || '—'
+  return normalizeDisplayText(
+    apolice.fichas?.nome_empresa
+    || apolice.fichas?.nome_interessado
+    || apolice.nome_interessado
+  ) || '—'
 }
 
 function produtoApolice(apolice) {
@@ -397,6 +400,10 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
   const [numeroOrcamento, setNumeroOrcamento] = useState('')
   const [endereco,        setEndereco]        = useState('')
   const [valorParcela,    setValorParcela]    = useState('')
+  const [premioLiquido,   setPremioLiquido]   = useState('')
+  const [pctComissao,     setPctComissao]     = useState('')
+  const [pctDesconto,     setPctDesconto]     = useState('')
+  const [parcelamento,    setParcelamento]    = useState('')
 
   useEffect(() => {
     if (!busca.trim() && !imobFiltro) { setFichasEncontradas([]); return }
@@ -424,11 +431,19 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     setEndereco(f.cep || '')
     // Pré-preenche número do orçamento com número da apólice da ficha (se houver)
     setNumeroOrcamento(f.numero_apolice || '')
+    setPctComissao(f.pct_comissao ?? '')
+    setPctDesconto(f.pct_desconto ?? '')
+    setParcelamento(f.parcelamento ?? '')
   }
 
   async function criar() {
     if (!fichaSelecionada) return
     setCriando(true)
+    const premioLiquidoNum = toNumber(premioLiquido)
+    const pctComissaoNum = pctComissao === '' ? null : pctComissao
+    const pctDescontoNum = pctDesconto === '' ? null : pctDesconto
+    const parcelamentoNum = toNumber(parcelamento)
+    const valorParcelaNum = toNumber(valorParcela)
     const { error } = await criarApolice({
       ficha_id:         fichaSelecionada.id,
       imobiliaria:      fichaSelecionada.imobiliaria,
@@ -438,13 +453,20 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
       nome_interessado: fichaSelecionada.nome_empresa || fichaSelecionada.nome_interessado,
       // Campos preenchidos no modal
       numero_proposta:  numeroOrcamento.trim() || null,
-      valor_parcela:    valorParcela.trim() || null,
+      valor_parcela:    valorParcelaNum,
       endereco:         endereco.trim() || null,
       emitido_por:      emitidoPor || user?.id || null,
       // Defaults obrigatórios no banco enquanto migração 09 não for rodada
       numero_apolice:   '',
       seguradora:       'Outras',
-      data_emissao:     new Date().toISOString().slice(0, 10),
+      data_emissao:     null,
+      pct_comissao:     pctComissaoNum,
+      pct_desconto:     pctDescontoNum,
+      parcelamento:     parcelamentoNum,
+      premio_liquido:   premioLiquidoNum || null,
+      premio_total:     null,
+      valor_producao:   null,
+      valor_comissao:   null,
     })
     setCriando(false)
     if (error) { toast({ type: 'error', title: 'Erro ao criar', message: error.message }); return }
@@ -488,7 +510,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
               <div className="rounded-xl bg-status-success/10 border border-status-success/25 overflow-hidden">
                 <div className="flex items-center justify-between px-3 py-2.5 border-b border-status-success/20">
                   <p className="text-sm font-semibold text-dark-text truncate">
-                    {fichaSelecionada.nome_empresa || fichaSelecionada.nome_interessado}
+                    {normalizeDisplayText(fichaSelecionada.nome_empresa || fichaSelecionada.nome_interessado) || '—'}
                   </p>
                   <button
                     onClick={() => { setFichaSelecionada(null); setNumeroOrcamento(''); setEndereco(''); setValorParcela(''); setEmitidoPor(user?.id || '') }}
@@ -592,9 +614,16 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                   onClick={() => selecionarFicha(f)}
                   className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-dark-surface2 transition-colors border border-transparent hover:border-dark-border"
                 >
-                  <p className="text-sm font-medium text-dark-text truncate">
-                    {f.nome_empresa || f.nome_interessado}
-                  </p>
+                  <div className="flex items-center justify-between gap-2 mb-0.5">
+                    <p className="text-sm font-medium text-dark-text truncate">
+                      {normalizeDisplayText(f.nome_empresa || f.nome_interessado) || '—'}
+                    </p>
+                    {f.status && STATUS_LABELS[f.status] && (
+                      <span className={`badge text-[9px] flex-shrink-0 ${STATUS_LABELS[f.status].color}`}>
+                        {STATUS_LABELS[f.status].label}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-[10px] text-dark-muted font-mono">{f.cpf || f.cnpj || '—'}</span>
                     <span className="text-[10px] text-dark-muted">·</span>
@@ -642,22 +671,28 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
   const [fimVigencia,       setFimVigencia]        = useState(apolice?.fim_vigencia || '')
   const [valorParcela,      setValorParcela]       = useState(apolice?.valor_parcela || '')
   const [parcelamento,      setParcelamento]       = useState(apolice?.parcelamento || '')
+  const [premioLiquido,     setPremioLiquido]      = useState(apolice?.premio_liquido || '')
+  const [pctComissao,       setPctComissao]        = useState(apolice?.pct_comissao || '')
+  const [pctDesconto,       setPctDesconto]        = useState(apolice?.pct_desconto || '')
   const [formaPagamento,    setFormaPagamento]     = useState(apolice?.forma_pagamento || '')
   const [seguradora,        setSeguradora]         = useState(apolice?.seguradora || '')
   const [salvando,          setSalvando]           = useState(false)
 
   const meses = calcularMeses(inicioVigencia, fimVigencia)
-  const qtdParcelas = Number(parcelamento) || 0
-  const valorParcelaNum = Number(valorParcela) || 0
-  const valorTotalSeguro = qtdParcelas > 0 && valorParcelaNum > 0 ? qtdParcelas * valorParcelaNum : null
+  const qtdParcelas = toNumber(parcelamento) || 0
+  const valorParcelaNum = toNumber(valorParcela) || 0
+  const premioLiquidoNum = toNumber(premioLiquido) || 0
+  const premioTotal = calculatePremioTotal(valorParcelaNum, qtdParcelas)
+  const valorComissao = calculateValorComissao(premioLiquidoNum, pctComissao)
 
   const obrigatoriosOK = proprietarioNome.trim() && numeroApolice.trim()
     && inicioVigencia && fimVigencia && parcelamento && valorParcela && formaPagamento && seguradora
+    && premioLiquido !== '' && pctComissao !== '' && pctDesconto !== ''
 
   async function confirmar() {
     if (!obrigatoriosOK) return
     setSalvando(true)
-    const err = await moverStatusApolice(apoliceId, 'enviada', {
+    const err = await moverStatusApolice(apoliceId, 'emitida', {
       proprietario_nome:    proprietarioNome.trim(),
       proprietario_cel:     proprietarioCel.trim() || null,
       numero_apolice:       numeroApolice.trim(),
@@ -666,14 +701,21 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
       inicio_vigencia:      inicioVigencia,
       fim_vigencia:         fimVigencia,
       tempo_vigencia_meses: meses,
-      parcelamento:         parcelamento ? Number(parcelamento) : null,
-      valor_parcela:        parseFloat(valorParcela),
+      parcelamento:         qtdParcelas || null,
+      valor_parcela:        valorParcelaNum || null,
       forma_pagamento:      formaPagamento,
       seguradora,
+      premio_liquido:      premioLiquidoNum || null,
+      pct_comissao:        pctComissao === '' ? null : pctComissao,
+      pct_desconto:        pctDesconto === '' ? null : pctDesconto,
+      premio_total:        premioTotal,
+      valor_producao:      premioTotal,
+      valor_comissao:      valorComissao,
+      data_emissao:        new Date().toISOString().slice(0, 10),
     })
     setSalvando(false)
-    if (err) { toast({ type: 'error', title: 'Erro ao finalizar' }); return }
-    toast({ type: 'success', title: 'Apólice enviada!' })
+    if (err) { toast({ type: 'error', title: 'Erro ao emitir' }); return }
+    toast({ type: 'success', title: 'Apólice emitida!' })
     onFinalizado()
     onClose()
   }
@@ -695,7 +737,7 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
           <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <h2 className="font-bold text-dark-text">Finalizar Apólice</h2>
+          <h2 className="font-bold text-dark-text">Emitir Apólice</h2>
         </div>
 
         <div className="px-6 py-5 space-y-4">
@@ -715,9 +757,16 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
             </div>
             <EditField label="Parcelamento (vezes)" type="number" value={parcelamento} onChange={setParcelamento} placeholder="Ex: 12" required />
             <EditField label="Valor da Parcela (R$)" type="number" value={valorParcela} onChange={setValorParcela} placeholder="0,00" required />
+            <EditField label="Prêmio Líquido (R$)" type="number" value={premioLiquido} onChange={setPremioLiquido} placeholder="0,00" required />
+            <EditField label="% Comissão" type="number" value={pctComissao} onChange={setPctComissao} placeholder="Ex: 10" required />
+            <EditField label="% Desconto" type="number" value={pctDesconto} onChange={setPctDesconto} placeholder="Ex: 5" required />
             <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Valor total do seguro</p>
-              <p className="mt-1 font-semibold">{valorTotalSeguro ? `R$ ${Number(valorTotalSeguro).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Prêmio total</p>
+              <p className="mt-1 font-semibold">{premioTotal != null ? formatMoneyBR(premioTotal) : '—'}</p>
+            </div>
+            <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Comissão calculada</p>
+              <p className="mt-1 font-semibold">{valorComissao != null ? formatMoneyBR(valorComissao) : '—'}</p>
             </div>
             <SelectField
               label="Forma de Pagamento"
@@ -740,7 +789,7 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-dark-border">
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
           <button onClick={confirmar} disabled={!obrigatoriosOK || salvando} className="btn-primary text-sm">
-            {salvando ? 'Salvando...' : 'Confirmar Envio'}
+            {salvando ? 'Salvando...' : 'Confirmar Emissão'}
           </button>
         </div>
       </div>
@@ -842,7 +891,7 @@ export default function ApoicesGestao() {
     if (!apolice || apolice.status_emissao === novoStatus) return
     if (!COLUNAS.some(c => c.id === novoStatus)) return
 
-    if (novoStatus === 'enviada') {
+    if (novoStatus === 'emitida') {
       setPendingMove({ id, fromStatus: apolice.status_emissao })
       setModalFinalizar({ id, apolice })
       return
@@ -997,7 +1046,7 @@ export default function ApoicesGestao() {
                       <div className="p-1.5 rounded-b-xl border border-t-0 min-h-[60px]" style={{ background: col.color + '06', borderColor: col.color + '30' }}>
                         {(groups[cid] || []).slice(0, 3).map(a => (
                           <div key={a.id} className="text-[10px] text-dark-muted truncate py-1 px-2 rounded-lg mb-1" style={{ background: 'rgb(var(--color-surface2) / 0.6)' }}>
-                            {a.fichas?.nome_interessado || a.nome_interessado || '—'}
+                            {normalizeDisplayText(a.fichas?.nome_interessado || a.nome_interessado) || '—'}
                           </div>
                         ))}
                       </div>

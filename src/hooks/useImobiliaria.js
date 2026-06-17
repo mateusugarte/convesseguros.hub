@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
+import { normalizeDisplayText } from '../lib/text'
 
 // Módulo-level cache — compartilhado entre todas as instâncias do hook
 let _aliasMap = null   // { alias_lower → nome_canonico }
@@ -53,9 +54,10 @@ export function useImobiliaria() {
   // useCallback garante referência estável → não causa loops em dependências
   const resolverNome = useCallback((nomeOriginal) => {
     if (!nomeOriginal) return '—'
-    const chave = nomeOriginal.toLowerCase().trim()
+    const nomeLimpo = normalizeDisplayText(nomeOriginal) || nomeOriginal
+    const chave = nomeLimpo.toLowerCase().trim()
     if (aliasMap[chave]) return aliasMap[chave]
-    return normalizeImobiliaria(nomeOriginal) || nomeOriginal
+    return normalizeImobiliaria(nomeLimpo) || nomeLimpo
   }, [aliasMap])
 
   const resolverImobiliariaInfo = useCallback((nomeOriginal) => {

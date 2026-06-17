@@ -7,6 +7,7 @@ import { X, Pencil, Trash2, ChevronDown, ChevronUp, ExternalLink } from 'lucide-
 import { useNavigate } from 'react-router-dom'
 import ImobiliariaIdentity from './ImobiliariaIdentity'
 import { Avatar } from './ui'
+import { normalizeDisplayText } from '../lib/text'
 
 function fmt(v) { if (v === null || v === undefined) return '—'; return String(v) }
 function fmtBRL(v) {
@@ -86,7 +87,9 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
         <div className="px-6 py-4 border-b border-dark-border flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h2 className="font-bold text-dark-text truncate">
-              {isPJ ? (ficha.nome_empresa || ficha.nome_interessado || 'Sem nome') : (ficha.nome_interessado || 'Sem nome')}
+              {isPJ
+                ? (normalizeDisplayText(ficha.nome_empresa || ficha.nome_interessado) || 'Sem nome')
+                : (normalizeDisplayText(ficha.nome_interessado) || 'Sem nome')}
             </h2>
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
               <span className={`badge ${si.color}`}>{si.label}</span>
@@ -142,7 +145,7 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
           <Section title={isPJ ? 'Empresa' : 'Interessado'}>
             {isPJ ? (
               <>
-                <Field label="Nome da Empresa" value={ficha.nome_empresa} />
+                <Field label="Nome da Empresa" value={normalizeDisplayText(ficha.nome_empresa)} />
                 <Field label="CNPJ"            value={ficha.cnpj} />
                 <Field label="CPF dos Sócios"  value={ficha.cpf_socios} />
               </>
@@ -188,12 +191,15 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
 
           <Section title="Controle Interno">
             <Field label="Orç. (Forms)"    value={ficha.orcamentista_forms} />
+            <Field label="% Comissão"      value={ficha.pct_comissao != null ? `${ficha.pct_comissao}%` : null} />
+            <Field label="% Desconto"      value={ficha.pct_desconto != null ? `${ficha.pct_desconto}%` : null} />
+            <Field label="Parcelamento"    value={ficha.parcelamento} />
             <div className="col-span-2">
               <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wider mb-1">Assumida por</p>
               {ficha.profiles?.nome ? (
                 <div className="flex items-center gap-2">
                   <Avatar name={ficha.profiles.nome} src={ficha.profiles.avatar_url || ''} size="sm" />
-                  <span className="text-sm text-dark-text">{ficha.profiles.nome}</span>
+                  <span className="text-sm text-dark-text">{normalizeDisplayText(ficha.profiles.nome) || ficha.profiles.nome}</span>
                 </div>
               ) : (
                 <p className="text-sm text-dark-text">Livre</p>

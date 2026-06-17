@@ -3,6 +3,15 @@ import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
+const ADMIN_EMAILS = new Set([
+  'atendimento2@convesseguros.com',
+  'atendimento@convesseguros.com',
+])
+
+function resolveAdminFlag(email, profileAdmin) {
+  return Boolean(profileAdmin) || ADMIN_EMAILS.has(String(email || '').toLowerCase())
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null)
   const [profile, setProfile] = useState(null)
@@ -27,10 +36,12 @@ export function AuthProvider({ children }) {
   async function loadProfile(userId) {
     const { data } = await supabase
       .from('profiles')
-      .select('id, nome, orcamentista_label, avatar_url')
+      .select('id, nome, orcamentista_label, avatar_url, is_admin')
       .eq('id', userId)
       .single()
-    setProfile(data)
+
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    setProfile(data ? { ...data, is_admin: resolveAdminFlag(currentUser?.email, data.is_admin) } : data)
     setLoading(false)
   }
 

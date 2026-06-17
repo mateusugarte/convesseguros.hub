@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { normalizeImobiliaria } from './normalizeImobiliaria'
+import { normalizeDisplayText } from './text'
 
 export { normalizeImobiliaria }
 
@@ -148,6 +149,58 @@ export async function fetchDistribuicaoStatus(inicioFiltro, fimFiltro) {
     .map((s, i) => ({ status: s, label: STATUS_LABELS[s]?.label ?? s, value: results[i].count || 0 }))
     .filter(x => x.value > 0)
     .sort((a, b) => b.value - a.value)
+}
+
+const APROVACAO_SEGURADORAS = [
+  'Porto',
+  'Tokio',
+  'Too',
+  'Pottencial',
+  'Junto',
+  'Não informado',
+]
+
+function normalizeSeguradoraAprovacao(seguradora) {
+  const raw = normalizeDisplayText(seguradora) || ''
+  if (!raw) return 'Não informado'
+
+  const text = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+  if (text.includes('porto')) return 'Porto'
+  if (text.includes('tokio')) return 'Tokio'
+  if (text.includes('too')) return 'Too'
+  if (text.includes('pottencial') || text.includes('potencial')) return 'Pottencial'
+  if (text.includes('junto')) return 'Junto'
+
+  return 'Não informado'
+}
+
+export async function fetchAprovacoesPorSeguradora(inicioFiltro, fimFiltro) {
+  const data = await fetchAllRows(() => {
+    let q = supabase
+      .from('fichas')
+      .select('seguradora')
+      .eq('status', 'aprovado')
+
+    if (inicioFiltro) q = q.gte('created_at', inicioFiltro)
+    if (fimFiltro) q = q.lte('created_at', fimFiltro)
+    return q
+  })
+
+  const contagem = Object.fromEntries(APROVACAO_SEGURADORAS.map(nome => [nome, 0]))
+  let total = 0
+
+  data.forEach(item => {
+    const bucket = normalizeSeguradoraAprovacao(item.seguradora)
+    contagem[bucket] = (contagem[bucket] || 0) + 1
+    total += 1
+  })
+
+  return APROVACAO_SEGURADORAS.map(seguradora => ({
+    seguradora,
+    total: contagem[seguradora] || 0,
+    value: total ? Math.round(((contagem[seguradora] || 0) / total) * 100) : 0,
+  }))
 }
 
 export async function fetchFichasPorProdutoMes() {

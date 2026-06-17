@@ -56,6 +56,12 @@ function validarFicha(form) {
   if (!form.produto) return 'Produto é obrigatório'
   if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
     return 'E-mail inválido'
+  if (form.pct_comissao === '' || form.pct_comissao === null || form.pct_comissao === undefined)
+    return 'Percentual de comissão é obrigatório'
+  if (form.pct_desconto === '' || form.pct_desconto === null || form.pct_desconto === undefined)
+    return 'Percentual de desconto é obrigatório'
+  if (!String(form.parcelamento || '').trim())
+    return 'Parcelamento é obrigatório'
   return null
 }
 
@@ -109,6 +115,9 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
     capital_social:     ficha?.capital_social     ?? '',
     motivo_locacao:     ficha?.motivo_locacao     ?? '',
     vigencia:           ficha?.vigencia           ?? '',
+    pct_comissao:       ficha?.pct_comissao       ?? '',
+    pct_desconto:       ficha?.pct_desconto       ?? '',
+    parcelamento:       ficha?.parcelamento       ?? '',
     status:             ficha?.status             ?? 'pendente',
     seguradora:         ficha?.seguradora         ?? '',
     orcamentista_forms: ficha?.orcamentista_forms ?? '',
@@ -143,6 +152,9 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
       capital_social:     ficha?.capital_social     ?? '',
       motivo_locacao:     ficha?.motivo_locacao     ?? '',
       vigencia:           ficha?.vigencia           ?? '',
+      pct_comissao:       ficha?.pct_comissao       ?? '',
+      pct_desconto:       ficha?.pct_desconto       ?? '',
+      parcelamento:       ficha?.parcelamento       ?? '',
       status:             ficha?.status             ?? 'pendente',
       seguradora:         ficha?.seguradora         ?? '',
       orcamentista_forms: ficha?.orcamentista_forms ?? '',
@@ -181,6 +193,9 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
       nome_interessado: isPJ ? null : form.nome_interessado || null,
       nome_empresa:     isPJ ? form.nome_empresa || null : null,
       cpf_socios:       isPJ ? form.cpf_socios || null : null,
+      pct_comissao:     form.pct_comissao === '' ? null : form.pct_comissao,
+      pct_desconto:     form.pct_desconto === '' ? null : form.pct_desconto,
+      parcelamento:     form.parcelamento === '' ? null : Number(form.parcelamento),
     }
 
     const editResult   = isEdit  ? await editarFicha(ficha.id, dados, user?.id) : null
@@ -350,6 +365,40 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
               )}
             </Sec>
           )}
+
+          <Sec title="Financeiro da Ficha">
+            <Field label="% Comissão" required>
+              <input
+                type="number"
+                step="0.01"
+                value={form.pct_comissao}
+                onChange={e => set('pct_comissao', e.target.value)}
+                className="input"
+                placeholder="Ex: 10"
+              />
+            </Field>
+            <Field label="% Desconto" required>
+              <input
+                type="number"
+                step="0.01"
+                value={form.pct_desconto}
+                onChange={e => set('pct_desconto', e.target.value)}
+                className="input"
+                placeholder="Ex: 5"
+              />
+            </Field>
+            <Field label="Parcelamento" required>
+              <input
+                type="number"
+                step="1"
+                min="1"
+                value={form.parcelamento}
+                onChange={e => set('parcelamento', e.target.value)}
+                className="input"
+                placeholder="Ex: 12"
+              />
+            </Field>
+          </Sec>
 
           {/* ── Controle Interno ── */}
           <Sec title="Controle Interno">

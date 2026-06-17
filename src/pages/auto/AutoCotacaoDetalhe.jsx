@@ -530,7 +530,7 @@ export default function AutoCotacaoDetalhe() {
       {confirmDelete && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center px-4">
           <div className="modal-backdrop" onClick={() => setConfirmDelete(false)} />
-          <div className="relative z-10 w-full max-w-md rounded-3xl border border-dark-border/70 bg-white p-6 shadow-2xl">
+          <div className="relative z-10 w-full max-w-md rounded-3xl border border-dark-border/70 bg-white p-6">
             <p className="text-lg font-semibold text-dark-text">Excluir cotacao?</p>
             <p className="mt-2 text-sm text-dark-muted">
               Essa acao remove o registro e nao pode ser desfeita.

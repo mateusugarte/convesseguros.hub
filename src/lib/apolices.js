@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { normalizeDisplayText } from './text'
 
 export const STATUS_EMISSAO_LABELS = {
   recebida:             { label: 'Recebida',             color: '#3B82F6' },
@@ -17,6 +18,39 @@ export const SEGURADORAS_APOLICE = [
   'Porto Seguro', 'Pottencial Seguros', 'TOO Seguros', 'Junto Seguros', 'Tokio Marine', 'Outras',
 ]
 
+export function toNumber(value) {
+  if (value === null || value === undefined || value === '') return null
+  const parsed = typeof value === 'number'
+    ? value
+    : Number(String(value).replace(/\./g, '').replace(',', '.'))
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+export function normalizePercent(value) {
+  const parsed = toNumber(value)
+  if (parsed === null) return null
+  return parsed > 1 ? parsed / 100 : parsed
+}
+
+export function calculatePremioTotal(valorParcela, parcelamento) {
+  const parcela = toNumber(valorParcela)
+  const parcelas = toNumber(parcelamento)
+  if (!parcela || !parcelas) return null
+  return parcela * parcelas
+}
+
+export function calculateValorComissao(premioLiquido, pctComissao) {
+  const premio = toNumber(premioLiquido)
+  const pct = normalizePercent(pctComissao)
+  if (!premio || pct === null) return null
+  return premio * pct
+}
+
+export function formatMoneyBR(v) {
+  if (v === null || v === undefined || v === '') return '—'
+  return `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+}
+
 // ── KPIs ─────────────────────────────────────────────────────────────────────
 
 export async function fetchKPIsApolices(inicioMes, fimMes) {
@@ -27,12 +61,16 @@ export async function fetchKPIsApolices(inicioMes, fimMes) {
   const fimMesAnt    = new Date(new Date(inicioMes).getFullYear(), new Date(inicioMes).getMonth(), 0, 23, 59, 59).toISOString()
 
   const [mesSel, ult90, total, mesAnt] = await Promise.all([
-    supabase.from('apolices').select('*', { count: 'exact', head: true })
+    supabase.from('apolices').select('id', { count: 'exact', head: true })
+      .in('status_emissao', ['emitida', 'enviada'])
       .gte('data_emissao', inicioMes).lte('data_emissao', fimMes),
-    supabase.from('apolices').select('*', { count: 'exact', head: true })
+    supabase.from('apolices').select('id', { count: 'exact', head: true })
+      .in('status_emissao', ['emitida', 'enviada'])
       .gte('data_emissao', inicio90.toISOString()),
-    supabase.from('apolices').select('*', { count: 'exact', head: true }),
-    supabase.from('apolices').select('*', { count: 'exact', head: true })
+    supabase.from('apolices').select('id', { count: 'exact', head: true })
+      .in('status_emissao', ['emitida', 'enviada']),
+    supabase.from('apolices').select('id', { count: 'exact', head: true })
+      .in('status_emissao', ['emitida', 'enviada'])
       .gte('data_emissao', inicioMesAnt).lte('data_emissao', fimMesAnt),
   ])
 
@@ -42,11 +80,25 @@ export async function fetchKPIsApolices(inicioMes, fimMes) {
     ? Math.round(((mesSelecionado - mesAnterior) / mesAnterior) * 100)
     : null
 
+  const [producaoMes, comissaoMes] = await Promise.all([
+    supabase.from('apolices').select('valor_producao', { count: 'exact' })
+      .in('status_emissao', ['emitida', 'enviada'])
+      .gte('data_emissao', inicioMes).lte('data_emissao', fimMes),
+    supabase.from('apolices').select('valor_comissao', { count: 'exact' })
+      .in('status_emissao', ['emitida', 'enviada'])
+      .gte('data_emissao', inicioMes).lte('data_emissao', fimMes),
+  ])
+
+  const totalProducao = (producaoMes.data || []).reduce((sum, item) => sum + (toNumber(item.valor_producao) || 0), 0)
+  const totalComissao = (comissaoMes.data || []).reduce((sum, item) => sum + (toNumber(item.valor_comissao) || 0), 0)
+
   return {
     mesSelecionado,
     ultimos90:  ult90.count  || 0,
     totalGeral: total.count  || 0,
     variacaoMes,
+    totalProducao,
+    totalComissao,
   }
 }
 
@@ -54,6 +106,7 @@ export async function fetchApolicesPorDia(inicioMes, fimMes) {
   const { data } = await supabase
     .from('apolices')
     .select('data_emissao')
+    .in('status_emissao', ['emitida', 'enviada'])
     .gte('data_emissao', inicioMes)
     .lte('data_emissao', fimMes)
     .not('data_emissao', 'is', null)
@@ -81,6 +134,7 @@ export async function fetchTopImobiliariasApolices(inicioMes, fimMes, limite = 5
   const { data } = await supabase
     .from('apolices')
     .select('imobiliaria')
+    .in('status_emissao', ['emitida', 'enviada'])
     .gte('data_emissao', inicioMes)
     .lte('data_emissao', fimMes)
     .not('imobiliaria', 'is', null)
@@ -92,19 +146,23 @@ export async function fetchTopImobiliariasApolices(inicioMes, fimMes, limite = 5
     .map(([nome, total]) => ({ nome, total }))
 }
 
-export async function fetchPorSeguradora(inicioMes, fimMes) {
+export async function fetchProducaoPorSeguradora(inicioMes, fimMes) {
   let q = supabase
     .from('apolices')
-    .select('seguradora')
+    .select('seguradora, valor_producao')
+    .in('status_emissao', ['emitida', 'enviada'])
     .not('seguradora', 'is', null)
     .neq('seguradora', '')
-  if (inicioMes) q = q.gte('created_at', inicioMes)
-  if (fimMes)    q = q.lte('created_at', fimMes)
+    .not('valor_producao', 'is', null)
+  if (inicioMes) q = q.gte('data_emissao', inicioMes)
+  if (fimMes)    q = q.lte('data_emissao', fimMes)
   const { data } = await q
   if (!data) return []
   const cnt = {}
-  data.forEach(a => { cnt[a.seguradora] = (cnt[a.seguradora] || 0) + 1 })
-  return Object.entries(cnt).sort((a, b) => b[1] - a[1]).map(([seguradora, value]) => ({ seguradora, value }))
+  data.forEach(a => { cnt[a.seguradora] = (cnt[a.seguradora] || 0) + (toNumber(a.valor_producao) || 0) })
+  return Object.entries(cnt)
+    .sort((a, b) => b[1] - a[1])
+    .map(([seguradora, value]) => ({ seguradora, value }))
 }
 
 // ── Kanban ────────────────────────────────────────────────────────────────────
@@ -114,7 +172,8 @@ export async function fetchApolicesKanban({ dateFrom, dateTo, imobiliarias } = {
     .from('apolices')
     .select(`
       id, status_emissao, created_at, data_transmissao,
-      imobiliaria, numero_apolice, seguradora, valor_parcela,
+      imobiliaria, numero_apolice, seguradora, valor_parcela, parcelamento,
+      premio_liquido, premio_total, valor_producao, valor_comissao, pct_comissao, pct_desconto,
       proprietario_nome, inicio_vigencia, fim_vigencia, produto,
       nome_interessado, emitido_por,
       fichas!ficha_id(nome_interessado, nome_empresa, cpf, cnpj, produto, celular, cep, tipo_imovel),
@@ -137,7 +196,8 @@ export async function fetchApolicesLista({ dateFrom, dateTo, imobiliarias, segur
     .from('apolices')
     .select(`
       id, data_emissao, imobiliaria, numero_apolice,
-      seguradora, status_emissao, valor_parcela, created_at,
+      seguradora, status_emissao, valor_parcela, parcelamento, premio_liquido,
+      premio_total, valor_producao, valor_comissao, pct_comissao, pct_desconto, created_at,
       nome_interessado, emitido_por,
       fichas!ficha_id(nome_interessado, nome_empresa, cpf, cnpj),
       profiles!emitido_por(nome, avatar_url)
@@ -167,6 +227,20 @@ export async function fetchApoliceDetalhe(id) {
   return data
 }
 
+export async function fetchFinanceiroComissoes({ inicio, fim, seguradora } = {}) {
+  let q = supabase
+    .from('apolices_comissoes')
+    .select('*')
+    .order('data_emissao', { ascending: false })
+
+  if (inicio) q = q.gte('data_emissao', inicio)
+  if (fim) q = q.lte('data_emissao', fim)
+  if (seguradora) q = q.eq('seguradora', seguradora)
+
+  const { data } = await q
+  return data || []
+}
+
 // ── Imobiliárias distintas nas apólices ──────────────────────────────────────
 
 export async function fetchImobiliariasApolices() {
@@ -183,9 +257,10 @@ export async function fetchImobiliariasApolices() {
 export async function buscarFichasParaEmissao(nome, imobiliarias) {
   let q = supabase
     .from('fichas')
-    .select('id, nome_interessado, nome_empresa, cpf, cnpj, produto, imobiliaria, valor_aluguel, celular, cep, tipo_imovel, numero_apolice, vigencia, vencimento, origem_lead, observacoes')
-    .in('status', ['aprovado', 'emitido'])
-    .limit(15)
+    .select('id, nome_interessado, nome_empresa, cpf, cnpj, produto, imobiliaria, valor_aluguel, celular, cep, tipo_imovel, numero_apolice, vigencia, vencimento, origem_lead, observacoes, pct_comissao, pct_desconto, parcelamento, status')
+    .not('status', 'in', '("recusado","cancelado","cpf_invalido","expirada")')
+    .order('created_at', { ascending: false })
+    .limit(20)
 
   if (nome?.trim()) {
     q = q.or(`nome_interessado.ilike.%${nome.trim()}%,nome_empresa.ilike.%${nome.trim()}%`)
@@ -212,6 +287,84 @@ export async function atualizarApolice(id, dados) {
 export async function excluirApolice(id) {
   const { error } = await supabase.from('apolices').delete().eq('id', id)
   return error
+}
+
+export async function registrarApoliceDaFicha({
+  ficha,
+  numeroApolice,
+  seguradora,
+  dataEmissao,
+  inicioVigencia,
+  fimVigencia,
+  valorParcela,
+  observacoes,
+}) {
+  if (!ficha?.id) return { error: new Error('Ficha invalida') }
+
+  const nomeInteressado = normalizeDisplayText(
+    ficha.nome_empresa || ficha.nome_interessado || ficha.raw_data?.nome_empresa || ficha.raw_data?.nome_interessado || ''
+  ) || ficha.nome_empresa || ficha.nome_interessado || null
+
+  const apolicePayload = {
+    ficha_id: ficha.id,
+    imobiliaria: ficha.imobiliaria || null,
+    produto: ficha.produto || null,
+    nome_interessado: nomeInteressado,
+    numero_apolice: numeroApolice?.trim() || null,
+    seguradora: seguradora?.trim() || null,
+    status_emissao: 'emitida',
+    data_emissao: dataEmissao || new Date().toISOString().slice(0, 10),
+    inicio_vigencia: inicioVigencia || null,
+    fim_vigencia: fimVigencia || null,
+    valor_parcela: valorParcela ?? null,
+  }
+
+  const { data: existente, error: buscaError } = await supabase
+    .from('apolices')
+    .select('id')
+    .eq('ficha_id', ficha.id)
+    .maybeSingle()
+
+  if (buscaError) return { error: buscaError }
+
+  let apolice
+  if (existente?.id) {
+    const { data, error } = await supabase
+      .from('apolices')
+      .update(apolicePayload)
+      .eq('id', existente.id)
+      .select()
+      .single()
+    if (error) return { error }
+    apolice = data
+  } else {
+    const { data, error } = await supabase
+      .from('apolices')
+      .insert(apolicePayload)
+      .select()
+      .single()
+    if (error) return { error }
+    apolice = data
+  }
+
+  const fichaUpdate = {
+    status: 'emitido',
+    numero_apolice: numeroApolice?.trim() || null,
+    seguradora: seguradora?.trim() || null,
+    data_emissao: dataEmissao || new Date().toISOString().slice(0, 10),
+  }
+
+  if (observacoes !== undefined) {
+    fichaUpdate.observacoes = observacoes?.trim() || null
+  }
+  if (inicioVigencia !== undefined) fichaUpdate.inicio_vigencia = inicioVigencia || null
+  if (fimVigencia !== undefined) fichaUpdate.fim_vigencia = fimVigencia || null
+  if (valorParcela !== undefined) fichaUpdate.valor_parcela = valorParcela ?? null
+
+  const { error: fichaError } = await supabase.from('fichas').update(fichaUpdate).eq('id', ficha.id)
+  if (fichaError) return { error: fichaError, apolice }
+
+  return { apolice, error: null }
 }
 
 export async function moverStatusApolice(id, novoStatus, dadosExtras = {}) {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { findSeguradoraMetaByNome } from '../lib/seguradoras'
 import { getEntityImageUrl } from '../lib/entityMedia'
+import { normalizeDisplayText } from '../lib/text'
 
 const PALETTE = [
   { bg: '#1D4ED8', fg: '#DBEAFE' },
@@ -50,7 +51,7 @@ export default function SeguradoraBadge({ nome, logoUrl, logoPath, size = 'sm', 
     }
 
     setResolvedLogo(null)
-    findSeguradoraMetaByNome(nome)
+    findSeguradoraMetaByNome(normalizeDisplayText(nome) || nome)
       .then(meta => {
         if (active) setResolvedLogo(getEntityImageUrl(meta?.logo_path, meta?.logo_url || null))
       })
@@ -64,15 +65,16 @@ export default function SeguradoraBadge({ nome, logoUrl, logoPath, size = 'sm', 
   if (!nome) return null
 
   const { dim, rounded, text, nameText } = SIZE[size] || SIZE.sm
-  const { bg, fg } = paleta(nome)
+  const displayNome = normalizeDisplayText(nome) || nome
+  const { bg, fg } = paleta(displayNome)
 
   return (
-    <div className={`flex items-center gap-1.5 min-w-0 ${className}`} title={nome}>
+    <div className={`flex items-center gap-1.5 min-w-0 ${className}`} title={displayNome}>
       {resolvedLogo && !imgError ? (
         <div className={`${dim} ${rounded} flex-shrink-0 overflow-hidden bg-white border border-dark-border/30`}>
           <img
             src={resolvedLogo}
-            alt={nome}
+            alt={displayNome}
             className="w-full h-full object-contain"
             onError={() => setImgError(true)}
             loading="lazy"
@@ -88,7 +90,7 @@ export default function SeguradoraBadge({ nome, logoUrl, logoPath, size = 'sm', 
         </div>
       )}
       {showName && (
-        <span className={`${nameText} text-dark-text truncate`}>{nome}</span>
+        <span className={`${nameText} text-dark-text truncate`}>{displayNome}</span>
       )}
     </div>
   )

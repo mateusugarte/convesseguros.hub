@@ -9,7 +9,7 @@ import { ptBR } from 'date-fns/locale'
 import {
   fetchKPIs, fetchEmitidas, fetchFichasPorDia, fetchTopImobiliarias,
   fetchDistribuicaoStatus, fetchFichasPorProdutoMes, fetchMetricas,
-  fetchAtividadeRecente, fetchFichasDoOrcamentista, STATUS_LABELS, PRODUTO_LABELS,
+  fetchAtividadeRecente, fetchFichasDoOrcamentista, fetchAprovacoesPorSeguradora, STATUS_LABELS, PRODUTO_LABELS,
 } from '../lib/fichas'
 import { AVATAR_COLORS, STATUS_CHART_COLORS } from '../design-system/tokens'
 import { useAuth } from '../contexts/AuthContext'
@@ -32,6 +32,21 @@ import {
 
 const LS_KEY = 'dashboard-periodo'
 const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+const APPROVAL_PERIODS = [
+  { key: 'mes_atual', label: 'Mês atual' },
+  { key: 'ultimos_3', label: 'Últimos 3 meses' },
+  { key: 'ultimos_6', label: 'Últimos 6 meses' },
+  { key: 'ano_atual', label: 'Ano atual' },
+]
+
+const APPROVAL_SEG_COLORS = {
+  Porto: '#000079',
+  Tokio: '#2247aa',
+  Too: '#4b6cc2',
+  Pottencial: '#7fbec4',
+  Junto: '#0f766e',
+  'Não informado': '#6B7280',
+}
 
 function stringColor(str) {
   let hash = 0
@@ -239,6 +254,21 @@ function DashboardTooltip({ active, payload, label, dateLabel }) {
   )
 }
 
+function ApprovalSegTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null
+  const item = payload[0]?.payload
+  if (!item) return null
+
+  return (
+    <div className="glass-panel px-3 py-2.5 text-xs">
+      <p className="text-dark-text font-semibold">{item.seguradora}</p>
+      <p className="mt-1 text-dark-muted">
+        {item.value}% · {item.total} ficha{item.total === 1 ? '' : 's'} aprovadas
+      </p>
+    </div>
+  )
+}
+
 function AlertCard({ alert }) {
   const tones = {
     success: {
@@ -288,6 +318,7 @@ export default function Dashboard() {
 
   const [filterYear, setFilterYear] = useState(stored?.ano ?? now.getFullYear())
   const [filterMonth, setFilterMonth] = useState(stored?.mes ?? now.getMonth() + 1)
+  const [approvalPeriod, setApprovalPeriod] = useState('mes_atual')
 
   useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify({ ano: filterYear, mes: filterMonth }))
@@ -295,6 +326,26 @@ export default function Dashboard() {
 
   const rangeStart = new Date(filterYear, filterMonth - 1, 1).toISOString()
   const rangeEnd = new Date(filterYear, filterMonth, 0, 23, 59, 59).toISOString()
+  const approvalRange = useMemo(() => {
+    const end = new Date()
+    const start = new Date(end)
+    if (approvalPeriod === 'mes_atual') {
+      start.setDate(1)
+      start.setHours(0, 0, 0, 0)
+    } else if (approvalPeriod === 'ultimos_3') {
+      start.setMonth(start.getMonth() - 2)
+      start.setDate(1)
+      start.setHours(0, 0, 0, 0)
+    } else if (approvalPeriod === 'ultimos_6') {
+      start.setMonth(start.getMonth() - 5)
+      start.setDate(1)
+      start.setHours(0, 0, 0, 0)
+    } else {
+      start.setMonth(0, 1)
+      start.setHours(0, 0, 0, 0)
+    }
+    return { start: start.toISOString(), end: end.toISOString() }
+  }, [approvalPeriod])
 
   const query = useQuery({
     queryKey: ['dashboard', user?.id, filterYear, filterMonth],
@@ -325,6 +376,11 @@ export default function Dashboard() {
     },
   })
 
+  const approvalQuery = useQuery({
+    queryKey: ['dashboard-aprovacao-seguradora', approvalPeriod],
+    queryFn: () => fetchAprovacoesPorSeguradora(approvalRange.start, approvalRange.end),
+  })
+
   const data = query.data
   const kpis = data?.kpis ?? null
   const emitted = data?.emitted ?? 0
@@ -335,6 +391,7 @@ export default function Dashboard() {
   const metrics = data?.metrics ?? null
   const activity = data?.activity ?? []
   const mine = data?.mine ?? []
+  const approvalSeg = approvalQuery.data ?? []
 
   const chartTheme = useMemo(() => {
     const isDark = theme === 'dark'
@@ -515,6 +572,78 @@ export default function Dashboard() {
           </div>
         </DataCard>
       </div>
+
+      <DataCard
+        title="Aprovação por seguradora"
+        subtitle="Distribuição das fichas aprovadas na janela escolhida."
+        actions={(
+          <div className="flex flex-wrap items-center gap-1.5">
+            {APPROVAL_PERIODS.map(period => (
+              <button
+                key={period.key}
+                onClick={() => setApprovalPeriod(period.key)}
+                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-medium transition-all ${
+                  approvalPeriod === period.key
+                    ? 'bg-brand-secondary text-white shadow-sm'
+                    : 'border border-dark-border text-dark-muted hover:text-dark-text hover:border-brand-accent/40'
+                }`}
+              >
+                {period.label}
+              </button>
+            ))}
+          </div>
+        )}
+      >
+        {approvalQuery.isLoading ? (
+          <div className="h-[280px] flex items-center justify-center text-sm text-dark-muted">Carregando aprovações...</div>
+        ) : approvalSeg.every(item => item.value === 0) ? (
+          <EmptyState
+            title="Sem aprovações para o período"
+            description="Ajuste a janela temporal para visualizar a distribuição por seguradora."
+            icon={<Sparkles className="w-6 h-6" />}
+          />
+        ) : (
+          <div className="grid gap-5 lg:grid-cols-[1.15fr,0.85fr]">
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={approvalSeg} layout="vertical" margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={chartTheme.grid} />
+                  <XAxis type="number" tick={{ fill: chartTheme.tick, fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 100]} />
+                  <YAxis
+                    type="category"
+                    dataKey="seguradora"
+                    tick={{ fill: chartTheme.tick, fontSize: 11 }}
+                    width={110}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip content={<ApprovalSegTooltip />} />
+                  <Bar dataKey="value" name="% aprovadas" radius={[0, 8, 8, 0]}>
+                    {approvalSeg.map(item => (
+                      <Cell key={item.seguradora} fill={APPROVAL_SEG_COLORS[item.seguradora] || chartTheme.accent} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="space-y-2">
+              {approvalSeg.map(item => (
+                <div key={item.seguradora} className="rounded-2xl border border-dark-border/60 bg-dark-surface2/25 px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: APPROVAL_SEG_COLORS[item.seguradora] || chartTheme.accent }} />
+                      <span className="text-sm font-medium text-dark-text truncate">{item.seguradora}</span>
+                    </div>
+                    <span className="text-lg font-semibold text-dark-text font-mono">{item.value}%</span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-dark-muted">{item.total} ficha{item.total === 1 ? '' : 's'} aprovadas no período.</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </DataCard>
 
       <div className="grid gap-6 xl:grid-cols-12">
         <DataCard

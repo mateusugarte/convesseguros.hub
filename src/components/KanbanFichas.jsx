@@ -23,6 +23,7 @@ import { Avatar } from './ui'
 import { KanbanSkeleton } from './Skeleton'
 import { DatePicker } from './ui/DatePicker'
 import { AVATAR_COLORS, PRODUTO_COLORS } from '../design-system/tokens'
+import { normalizeDisplayText } from '../lib/text'
 
 // â”€â”€ Colunas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -84,16 +85,16 @@ function getColumnId(ficha, userId) {
   return ficha.status
 }
 
-function groupFichas(fichas, userId) {
+function groupFichas(fichas, userId, sortOrder = 'recentes') {
   const cols = Object.fromEntries(COLUMNS.map(c => [c.id, []]))
   fichas.forEach(f => {
     const colId = getColumnId(f, userId)
     if (cols[colId] !== undefined) cols[colId].push(f)
   })
-  for (const colId of ['aprovado', 'recusado']) {
-    cols[colId].sort((a, b) =>
-      new Date(b.finalizada_em || b.created_at) - new Date(a.finalizada_em || a.created_at)
-    )
+  const direction = sortOrder === 'antigas' ? 1 : -1
+  const getTime = f => new Date(f.created_at || 0).getTime()
+  for (const colId of Object.keys(cols)) {
+    cols[colId].sort((a, b) => (getTime(a) - getTime(b)) * direction)
   }
   return cols
 }
@@ -122,16 +123,17 @@ function initials(n) {
 function nomePrincipal(ficha) {
   const rd = ficha.raw_data || {}
   if (ficha.produto === 'pessoa_juridica') {
-    return ficha.nome_empresa
+    return normalizeDisplayText(
+      ficha.nome_empresa
       || ficha.nome_interessado
       || rd.nome_empresa
       || rd.razao_social
       || rd.empresa
       || rd.nome_fantasia
       || rd.nome
-      || 'â€”'
+    ) || '—'
   }
-  return ficha.nome_interessado || rd.nome || rd.nome_interessado || 'â€”'
+  return normalizeDisplayText(ficha.nome_interessado || rd.nome || rd.nome_interessado) || '—'
 }
 
 // â”€â”€ FichaCard (visual puro, sem lÃ³gica de drag) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -524,6 +526,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   const [periodo,   setPeriodo]   = useState('hoje')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo,   setCustomTo]   = useState('')
+  const [sortOrder,  setSortOrder]  = useState('recentes')
   const [collapsed,  setCollapsed]  = useState(new Set())
   const [newIds,     setNewIds]     = useState(new Set())
 
@@ -552,10 +555,10 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     }
     const data = await fetchFichasKanban({ produto, dateFrom, dateTo })
     setFichas(data)
-    const cols = groupFichas(data, user?.id)
+    const cols = groupFichas(data, user?.id, sortOrder)
     setCollapsed(new Set(COLUMNS.filter(c => cols[c.id].length === 0).map(c => c.id)))
     setLoading(false)
-  }, [produto, periodo, customFrom, customTo, user?.id, useExternal, externalDateFrom, externalDateTo])
+  }, [produto, periodo, customFrom, customTo, user?.id, useExternal, externalDateFrom, externalDateTo, sortOrder])
 
   useEffect(() => { load() }, [load])
 
@@ -612,7 +615,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     scrollRef.current?.scrollBy({ left: dir === 'left' ? -280 : 280, behavior: 'smooth' })
   }
 
-  const cols       = groupFichas(fichas, user?.id)
+  const cols       = groupFichas(fichas, user?.id, sortOrder)
   const activeCard = activeId ? fichas.find(f => f.id === activeId) : null
 
   async function handleAssumir(fichaId) {
@@ -798,6 +801,29 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
               <DatePicker value={customTo} onChange={v => setCustomTo(v)} />
             </div>
           )}
+          <div className="flex items-center gap-1 rounded-lg border border-dark-border/70 bg-dark-surface2/60 p-0.5">
+            <span className="px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Ordenar por</span>
+            <button
+              onClick={() => setSortOrder('recentes')}
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                sortOrder === 'recentes'
+                  ? 'bg-brand-secondary text-white shadow-sm'
+                  : 'text-dark-muted hover:text-dark-text'
+              }`}
+            >
+              Mais recentes
+            </button>
+            <button
+              onClick={() => setSortOrder('antigas')}
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                sortOrder === 'antigas'
+                  ? 'bg-brand-secondary text-white shadow-sm'
+                  : 'text-dark-muted hover:text-dark-text'
+              }`}
+            >
+              Mais antigas
+            </button>
+          </div>
           <div className="ml-auto flex items-center gap-2 text-xs text-dark-muted">
             <span>{fichas.length} ficha{fichas.length !== 1 ? 's' : ''}</span>
             <button onClick={load} className="flex items-center gap-1 hover:text-dark-text transition-colors">

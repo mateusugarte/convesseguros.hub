@@ -229,7 +229,12 @@ export default function Layout() {
     <div className={`relative flex h-screen overflow-hidden ${shellClassName} ${!isMobile ? 'lg:gap-4' : ''}`}>
       {isMobile && sidebarOpen && (
         <div
-          className="fixed inset-0 z-[300] bg-black/35 backdrop-blur-sm"
+          className="fixed inset-0 z-[300]"
+          style={{
+            background: 'rgba(248, 250, 255, 0.92)',
+            backdropFilter: 'blur(64px) saturate(140%)',
+            WebkitBackdropFilter: 'blur(64px) saturate(140%)',
+          }}
           onClick={() => setSidebarOpen(false)}
         />
       )}

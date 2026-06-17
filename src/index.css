@@ -655,10 +655,10 @@ html.dark {
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.10), transparent 42%),
-      var(--modal-backdrop-tint, rgba(255,255,255,0.10));
-    -webkit-backdrop-filter: var(--modal-backdrop-blur, blur(98px) saturate(180%));
-    backdrop-filter: var(--modal-backdrop-blur, blur(98px) saturate(180%));
+      radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.16), transparent 36%),
+      var(--modal-backdrop-tint, rgba(248,250,255,0.94));
+    -webkit-backdrop-filter: var(--modal-backdrop-blur, blur(64px) saturate(140%));
+    backdrop-filter: var(--modal-backdrop-blur, blur(64px) saturate(140%));
     transition: opacity 220ms ease;
   }
 
@@ -1412,17 +1412,17 @@ html.dark .glass-modal {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.10), transparent 42%),
-    var(--modal-backdrop-tint, rgba(255,255,255,0.10));
-  -webkit-backdrop-filter: var(--modal-backdrop-blur, blur(98px) saturate(180%));
-  backdrop-filter: var(--modal-backdrop-blur, blur(98px) saturate(180%));
+    radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.16), transparent 36%),
+    var(--modal-backdrop-tint, rgba(248,250,255,0.94));
+  -webkit-backdrop-filter: var(--modal-backdrop-blur, blur(64px) saturate(140%));
+  backdrop-filter: var(--modal-backdrop-blur, blur(64px) saturate(140%));
   transition: opacity 220ms ease;
 }
 
 html.dark .modal-backdrop {
   background:
-    radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.14), transparent 42%),
-    var(--modal-backdrop-tint, rgba(10,14,24,0.52));
+    radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.18), transparent 32%),
+    var(--modal-backdrop-tint, rgba(10,14,24,0.96));
 }
 
 .modal-shell-header {

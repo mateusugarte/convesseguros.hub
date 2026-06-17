@@ -14,7 +14,7 @@ export default function CrmSegmentedControl({ options, value, onChange, classNam
             onClick={() => onChange(option.value)}
             className={cx(
               'rounded-xl px-3.5 py-2 text-xs font-semibold transition-all',
-              active ? 'bg-dark-text text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
+              active  'bg-dark-text text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
             )}
           >
             {option.label}

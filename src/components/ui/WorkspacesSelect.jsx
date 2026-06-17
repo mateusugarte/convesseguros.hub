@@ -10,7 +10,7 @@ import { getEntityImageUrl } from '../../lib/entityMedia'
  * Props:
  *   value        — valor selecionado (string)
  *   onChange     — (string) => void
- *   options      — [{ value, label, sublabel?, color?, initials?, icon? }]
+ *   options      — [{ value, label, sublabel, color, initials, icon }]
  *   placeholder  — texto quando nenhum selecionado
  *   label        — título do cabeçalho do dropdown
  *   disabled     — boolean
@@ -102,21 +102,21 @@ export function WorkspacesSelect({
 
   // Avatar: prioridade → color prop → hash da string
   function avatarColor(opt) {
-    if (opt?.color) return opt.color
+    if (opt.color) return opt.color
     const palette = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#2B5BA8','#EF4444']
-    const str = opt?.label || ''
+    const str = opt.label || ''
     let h = 0; for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h)
     return palette[Math.abs(h) % palette.length]
   }
 
   function avatarInitials(opt) {
-    if (opt?.initials) return opt.initials
-    return (opt?.label || '').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?'
+    if (opt.initials) return opt.initials
+    return (opt.label || '').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || ''
   }
 
   function avatarSource(opt) {
-    if (opt?.icon) return { type: 'icon', value: opt.icon }
-    const src = getEntityImageUrl(opt?.imagePath || opt?.image_path || null, opt?.imageUrl || opt?.image_url || null)
+    if (opt.icon) return { type: 'icon', value: opt.icon }
+    const src = getEntityImageUrl(opt.imagePath || opt.image_path || null, opt.imageUrl || opt.image_url || null)
     if (src) return { type: 'image', value: src }
     return { type: 'initials', value: avatarInitials(opt) }
   }

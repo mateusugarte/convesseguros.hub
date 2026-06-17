@@ -22,15 +22,15 @@ import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/ka
 import { normalizeDisplayText } from '../lib/text'
 import SeguradoraSelect from '../components/SeguradoraSelect'
 
-const MESES_FULL = ['Janeiro', 'Fevereiro', 'MarÃ§o', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+const MESES_FULL = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
 const COLUNAS = [
   { id: 'aprovada', label: 'Aprovada', color: '#0f766e' },
   { id: 'emitida', label: 'Emitida', color: '#000079' },
-  { id: 'enviado_cobranca', label: 'Enviado CobranÃ§a', color: '#2247aa' },
+  { id: 'enviado_cobranca', label: 'Enviado Cobrança', color: '#2247aa' },
   { id: 'recuperados', label: 'RECUPERADOS (emitidas)', color: '#4b6cc2' },
-  { id: 'desistiu', label: 'Desistiu da LocaÃ§Ã£o', color: '#a2d6da' },
+  { id: 'desistiu', label: 'Desistiu da Locação', color: '#a2d6da' },
   { id: 'expirada', label: 'Expirada', color: '#6B7280' },
 ]
 
@@ -91,7 +91,7 @@ function stringColor(str) {
 }
 
 function initials(n) {
-  return (n || '').split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase() || '?'
+  return (n || '').split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase() || ''
 }
 
 function RelatorioCard({ ficha, onClick, dragListeners, dragAttributes, isDragOverlay = false }) {
@@ -99,7 +99,7 @@ function RelatorioCard({ ficha, onClick, dragListeners, dragAttributes, isDragOv
   const doc = docMask(ficha)
   const nome = nomePrincipal(ficha)
   const orc = ficha.orcamentista_forms
-  const imobiliaria = ficha.imobiliaria || 'Imobiliaria nao informada'
+  const imobiliaria = ficha.imobiliaria || 'Imobili?ria n?o informada'
 
   return (
     <div
@@ -149,7 +149,7 @@ function RelatorioCard({ ficha, onClick, dragListeners, dragAttributes, isDragOv
               className="rounded-full px-2 py-1 text-[10px] font-mono"
               style={{ background: '#2247aa15', color: '#2247aa' }}
             >
-            ApÃ³lice: {ficha.numero_apolice}
+            Apólice: {ficha.numero_apolice}
             </span>
         )}
 
@@ -248,10 +248,12 @@ function MesPicker({ mes, mesesDisp, onMes }) {
             key={m}
             onClick={() => has && onMes(m)}
             disabled={!has}
-            title={!has ? 'Sem fichas neste mes' : MESES_FULL[i]}
+            title={!has ? 'Sem fichas neste mês' : MESES_FULL[i]}
             className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              active ? 'bg-brand-secondary text-white shadow-sm'
-                : has ? 'text-dark-text hover:bg-dark-surface2'
+              active
+                ? 'bg-brand-secondary text-white shadow-sm'
+                : has
+                  ? 'text-dark-text hover:bg-dark-surface2'
                   : 'text-dark-muted/35 cursor-not-allowed'
             }`}
           >
@@ -280,21 +282,21 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
       <div className="relative glass-modal w-full max-w-2xl overflow-hidden border border-dark-border">
         <div className="px-6 py-4 border-b border-dark-border flex items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">EmissÃ£o pelo relatÃ³rio mensal</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Emissão pelo relatório mensal</p>
             <h3 className="mt-1 text-lg font-semibold text-dark-text">
               {normalizeDisplayText(ficha.nome_interessado || ficha.nome_empresa) || 'Ficha selecionada'}
             </h3>
           </div>
-          <button onClick={onCancelar} className="text-dark-muted hover:text-dark-text" disabled={salvando}>Ã—</button>
+          <button onClick={onCancelar} className="text-dark-muted hover:text-dark-text" disabled={salvando}>×</button>
         </div>
         <div className="px-6 py-5 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="space-y-1">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">NÃºmero da apÃ³lice *</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Número da apólice *</span>
               <input className="input" value={numeroApolice} onChange={e => setNumeroApolice(e.target.value)} placeholder="000000000" />
             </label>
             <label className="space-y-1">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Data de emissÃ£o *</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Data de emissão *</span>
               <DatePicker value={dataEmissao} onChange={setDataEmissao} className="w-full" />
             </label>
             <label className="space-y-1 sm:col-span-2">
@@ -302,11 +304,11 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
               <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={ficha.produto} required />
             </label>
             <label className="space-y-1">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">InÃ­cio da vigÃªncia *</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Início da vigência *</span>
               <DatePicker value={inicioVigencia} onChange={setInicioVigencia} className="w-full" />
             </label>
             <label className="space-y-1">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Fim da vigÃªncia *</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Fim da vigência *</span>
               <DatePicker value={fimVigencia} onChange={setFimVigencia} className="w-full" />
             </label>
             <label className="space-y-1">
@@ -314,7 +316,7 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
               <input type="number" step="0.01" min="0" className="input" value={valorParcela} onChange={e => setValorParcela(e.target.value)} placeholder="0,00" />
             </label>
             <label className="space-y-1 sm:col-span-2">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">ObservaÃ§Ãµes</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Observações</span>
               <textarea className="input min-h-[100px] resize-y" value={observacoes} onChange={e => setObservacoes(e.target.value)} placeholder="Opcional" />
             </label>
           </div>
@@ -334,7 +336,7 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
             disabled={!valido || salvando}
             className="btn-primary"
           >
-            {salvando ? 'Salvando...' : 'Confirmar emissÃ£o'}
+            {salvando ? 'Salvando...' : 'Confirmar emissão'}
           </button>
         </div>
       </div>
@@ -468,12 +470,12 @@ export default function Relatorio() {
     })
     setSalvandoEmissao(false)
     if (error) {
-      toast({ type: 'error', title: 'Erro ao registrar emissÃ£o', message: error.message })
+      toast({ type: 'error', title: 'Erro ao registrar emissão', message: error.message })
       setPendingEmissao(null)
       carregarFichas()
       return
     }
-    toast({ type: 'success', title: 'EmissÃ£o registrada' })
+    toast({ type: 'success', title: 'Emissão registrada' })
     setPendingEmissao(null)
     carregarFichas()
   }
@@ -495,9 +497,9 @@ export default function Relatorio() {
   return (
     <div className="space-y-5 animate-fade-in">
       <PageHeader
-        eyebrow="RelatÃ³rio operacional"
-        title="RelatÃ³rio por ImobiliÃ¡ria"
-        description="Fichas finalizadas filtradas por imobiliÃ¡ria e perÃ­odo, com fluxo Kanban preservado."
+        eyebrow="Relatório operacional"
+        title="Relatório por Imobiliária"
+        description="Fichas finalizadas filtradas por imobiliária e período, com fluxo Kanban preservado."
         actions={
           <div style={{ minWidth: '220px' }}>
             <ImobiliariaSelect value={imobiliaria} onChange={setImobiliaria} />
@@ -505,7 +507,7 @@ export default function Relatorio() {
         }
       />
 
-      <DataCard title="Filtros" description="Ano, mÃªs e imobiliÃ¡ria controlam o recorte mensal exibido abaixo." className="space-y-3">
+      <DataCard title="Filtros" description="Ano, mês e imobiliária controlam o recorte mensal exibido abaixo." className="space-y-3">
         <div className="flex flex-wrap items-center gap-4">
           <Select
             value={String(ano)}
@@ -528,8 +530,8 @@ export default function Relatorio() {
         </div>
 
         <p className="text-xs text-dark-muted">
-          <span className="font-medium text-dark-text">{imobiliaria || 'Todas as imobiliÃ¡rias'}</span>
-          {' '}Â· {MESES_FULL[mes - 1]} {ano}
+          <span className="font-medium text-dark-text">{imobiliaria || 'Todas as imobiliárias'}</span>
+          {' '}· {MESES_FULL[mes - 1]} {ano}
         </p>
       </DataCard>
 
@@ -546,7 +548,7 @@ export default function Relatorio() {
           <div className="flex flex-col items-center justify-center gap-2 text-dark-muted">
             <BarChart2 className="w-8 h-8 opacity-30" />
             <p className="text-sm">
-              Nenhuma ficha encontrada para {imobiliaria || 'todas as imobiliÃ¡rias'} em {MESES_FULL[mes - 1]} {ano}
+              Nenhuma ficha encontrada para {imobiliaria || 'todas as imobiliárias'} em {MESES_FULL[mes - 1]} {ano}
             </p>
           </div>
         </DataCard>
@@ -554,15 +556,15 @@ export default function Relatorio() {
         <div className="space-y-4">
           <DataCard title="Indicadores" description="Resumo do recorte selecionado." className="overflow-hidden">
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-              <MetricCard label="Total no perÃ­odo" value={fichas.length} />
+              <MetricCard label="Total no período" value={fichas.length} />
               <MetricCard label="Aprovadas" value={totalAprovadas} />
-              <MetricCard label="Aguardando emissÃ£o" value={pendentesEmissao} />
-              <MetricCard label="ApÃ³lices emitidas" value={totalEmitidas} />
+              <MetricCard label="Aguardando emissão" value={pendentesEmissao} />
+              <MetricCard label="Apólices emitidas" value={totalEmitidas} />
               <MetricCard label="Recuperados" value={totalRecuperados} />
-              <MetricCard label="Taxa recuperaÃ§Ã£o" value={`${taxaRecuperacao}%`} />
+              <MetricCard label="Taxa recuperação" value={`${taxaRecuperacao}%`} />
             </div>
             <p className="mt-3 text-xs text-dark-muted">
-              {desistiram} ficha{desistiram !== 1 ? 's' : ''} desistiram no perÃ­odo.
+              {desistiram} ficha{desistiram !== 1 ? 's' : ''} desistiram no período.
             </p>
           </DataCard>
 

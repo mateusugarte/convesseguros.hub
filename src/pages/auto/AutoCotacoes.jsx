@@ -104,7 +104,7 @@ function sortByRecency(items) {
 }
 
 function ChartTip({ active, payload, label }) {
-  if (!active || !payload?.length) return null
+  if (!active || !payload.length) return null
   return (
     <div className="rounded-2xl border border-dark-border bg-white px-3 py-2 shadow-lg">
       <p className="text-xs text-dark-muted">{label}</p>
@@ -180,7 +180,7 @@ export default function AutoCotacoes() {
       await invalidar()
       setTab('lista')
     },
-    onError: err => setErro(err?.message || 'Erro ao salvar cotacao.'),
+    onError: err => setErro(err.message || 'Erro ao salvar cotacao.'),
   })
 
   const { mutateAsync: salvarRenovacao, isPending: salvandoRenovacao } = useMutation({
@@ -206,7 +206,7 @@ export default function AutoCotacoes() {
       await invalidar()
       setTab('lista')
     },
-    onError: err => setErro(err?.message || 'Erro ao salvar renovacao.'),
+    onError: err => setErro(err.message || 'Erro ao salvar renovacao.'),
   })
 
   const cotacoesOrdenadas = useMemo(() => sortByRecency(cotacoes), [cotacoes])
@@ -215,7 +215,7 @@ export default function AutoCotacoes() {
     const hoje = new Date()
     const limitePeriodo = (() => {
       if (filtroPeriodo === 'todo') return null
-      const dias = filtroPeriodo === '30d' ? 30 : filtroPeriodo === '90d' ? 90 : 180
+      const dias = filtroPeriodo === '30d'  30 : filtroPeriodo === '90d'  90 : 180
       const ref = new Date(hoje)
       ref.setDate(ref.getDate() - dias)
       return ref
@@ -241,8 +241,8 @@ export default function AutoCotacoes() {
         item.placa,
         item.condutor_nome,
         item.condutor_cpf,
-        item.seguradora_preferencial?.nome,
-        item.seguradora_mais_barata?.nome,
+        item.seguradora_preferencial.nome,
+        item.seguradora_mais_barata.nome,
         item.origem_lead,
       ].filter(Boolean).join(' ').toLowerCase()
 
@@ -262,51 +262,51 @@ export default function AutoCotacoes() {
 
   const convertidas = cotacoesMes.filter(item => item.status === 'convertida').length
   const perdidas = cotacoesMes.filter(item => item.status === 'perdida').length
-  const taxa = cotacoesMes.length > 0 ? Math.round((convertidas / cotacoesMes.length) * 100) : 0
+  const taxa = cotacoesMes.length > 0  Math.round((convertidas / cotacoesMes.length) * 100) : 0
 
   const metrics = [
-    { key: 'total', label: 'Cotacoes no periodo', value: resumo?.total ?? 0, icon: BadgeDollarSign, tone: 'accent' },
-    { key: 'mes', label: 'Cotacoes no mes', value: resumo?.mesAtual ?? 0, icon: Sparkles, tone: 'warning' },
-    { key: 'convertidas', label: 'Convertidas', value: resumo?.convertidas ?? 0, icon: CircleCheckBig, tone: 'success' },
+    { key: 'total', label: 'Cotacoes no periodo', value: resumo.total  0, icon: BadgeDollarSign, tone: 'accent' },
+    { key: 'mes', label: 'Cotacoes no mes', value: resumo.mesAtual  0, icon: Sparkles, tone: 'warning' },
+    { key: 'convertidas', label: 'Convertidas', value: resumo.convertidas  0, icon: CircleCheckBig, tone: 'success' },
     { key: 'taxa', label: 'Taxa de conversao', value: `${taxa}%`, icon: TrendingUp, tone: 'secondary' },
   ]
 
   const resumoLateral = useMemo(() => [
     {
       label: 'Mais recente',
-      value: cotacoesOrdenadas[0]?.nome_cliente || cotacoesOrdenadas[0]?.cpf_cliente || 'Sem identificacao',
-      hint: formatDateTimeBR(cotacoesOrdenadas[0]?.updated_at || cotacoesOrdenadas[0]?.created_at),
+      value: cotacoesOrdenadas[0].nome_cliente || cotacoesOrdenadas[0].cpf_cliente || 'Sem identificacao',
+      hint: formatDateTimeBR(cotacoesOrdenadas[0].updated_at || cotacoesOrdenadas[0].created_at),
     },
     {
       label: 'Atualizacao',
       value: cotacoesOrdenadas.find(item => item.updated_at && item.updated_at !== item.created_at)
-        ? 'Ha registros editados'
+         'Ha registros editados'
         : 'Somente criacoes',
       hint: 'ordenacao usa updated_at quando existir',
     },
     {
       label: 'Pendentes',
-      value: `${resumo?.pendentes ?? 0} cotações`,
+      value: `${resumo.pendentes  0} cotações`,
       hint: 'aguardando tratativa',
     },
     {
       label: 'Convertidas',
-      value: `${resumo?.convertidas ?? 0}`,
+      value: `${resumo.convertidas  0}`,
       hint: 'status convertido',
     },
     {
       label: 'Perdidas',
-      value: `${resumo?.perdidas ?? 0}`,
+      value: `${resumo.perdidas  0}`,
       hint: 'status perdido',
     },
   ], [cotacoesOrdenadas, resumo])
 
   const tabs = LISTA_TABS.map(item => ({
     ...item,
-    count: item.value === 'lista' ? cotacoes.length : 0,
+    count: item.value === 'lista'  cotacoes.length : 0,
   }))
 
-  const resumoAtivo = resumo?.taxaConversao ? Math.round((resumo.taxaConversao ?? 0) * 100) : taxa
+  const resumoAtivo = resumo.taxaConversao  Math.round((resumo.taxaConversao  0) * 100) : taxa
 
   return (
     <div className="space-y-6">
@@ -344,7 +344,7 @@ export default function AutoCotacoes() {
               <div className="mt-5 flex flex-wrap gap-2">
                 <span className="badge badge-info">{cotacoes.length} registros</span>
                 <span className="badge badge-success">{resumoAtivo}% conversao</span>
-                <span className="badge badge-muted">{cotacoesOrdenadas.length ? 'Mais recente no topo' : 'Sem registros ainda'}</span>
+                <span className="badge badge-muted">{cotacoesOrdenadas.length  'Mais recente no topo' : 'Sem registros ainda'}</span>
               </div>
             </div>
           </div>
@@ -368,7 +368,7 @@ export default function AutoCotacoes() {
             onClick={() => { setTab(item.value); setErro(null) }}
             className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-colors ${
               tab === item.value
-                ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                 'border-brand-accent bg-brand-accent/10 text-brand-accent'
                 : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
             }`}
           >
@@ -386,13 +386,13 @@ export default function AutoCotacoes() {
             </div>
           )}
 
-          {tab === 'lista' ? (
+          {tab === 'lista'  (
             <DataCard
               title="Todas as cotacoes"
               subtitle="Organizadas da mais recente para a mais antiga, com os dados principais e o ultimo momento de atualizacao."
               actions={(
                 <span className="badge badge-muted">
-                  {cotacoesFiltradas.length} resultado{cotacoesFiltradas.length !== 1 ? 's' : ''}
+                  {cotacoesFiltradas.length} resultado{cotacoesFiltradas.length !== 1  's' : ''}
                 </span>
               )}
               bodyClassName="p-0"
@@ -415,7 +415,7 @@ export default function AutoCotacoes() {
                         onClick={() => setFiltroPeriodo(item.value)}
                         className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                           filtroPeriodo === item.value
-                            ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                             'border-brand-accent bg-brand-accent/10 text-brand-accent'
                             : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
                         }`}
                       >
@@ -432,7 +432,7 @@ export default function AutoCotacoes() {
                       onClick={() => setFiltroStatus(item.value)}
                       className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                         filtroStatus === item.value
-                          ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                           'border-brand-accent bg-brand-accent/10 text-brand-accent'
                           : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
                       }`}
                     >
@@ -450,7 +450,7 @@ export default function AutoCotacoes() {
                       onClick={() => setFiltroTipo(item.value)}
                       className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                         filtroTipo === item.value
-                          ? 'border-brand-secondary bg-brand-secondary/10 text-brand-secondary'
+                           'border-brand-secondary bg-brand-secondary/10 text-brand-secondary'
                           : 'border-dark-border text-dark-muted hover:border-brand-secondary/40 hover:text-dark-text'
                       }`}
                     >
@@ -460,9 +460,9 @@ export default function AutoCotacoes() {
                 </div>
               </div>
 
-              {loadingLista ? (
+              {loadingLista  (
                 <div className="px-5 py-10 text-center text-sm text-dark-muted">Carregando cotacoes...</div>
-              ) : cotacoesFiltradas.length === 0 ? (
+              ) : cotacoesFiltradas.length === 0  (
                 <div className="px-5 py-8">
                   <EmptyState
                     icon={<Car className="h-5 w-5" />}
@@ -487,8 +487,8 @@ export default function AutoCotacoes() {
                                 {item.nome_cliente || item.cpf_cliente || 'Sem identificacao'}
                               </p>
                               <QuoteStatusBadge status={item.status} />
-                              <span className={`badge ${item.tipo === 'novo' ? 'badge-info' : 'badge-muted'}`}>
-                                {item.tipo === 'novo' ? 'Seguro novo' : 'Renovacao'}
+                              <span className={`badge ${item.tipo === 'novo'  'badge-info' : 'badge-muted'}`}>
+                                {item.tipo === 'novo'  'Seguro novo' : 'Renovacao'}
                               </span>
                             </div>
 
@@ -499,14 +499,14 @@ export default function AutoCotacoes() {
                               </div>
                               <div>
                                 <span className="block uppercase tracking-widest text-[10px]">Veiculo</span>
-                                <span>{item.modelo_veiculo || 'Nao informado'}{item.placa ? ` - ${item.placa}` : ''}</span>
+                                <span>{item.modelo_veiculo || 'Nao informado'}{item.placa  ` - ${item.placa}` : ''}</span>
                               </div>
                               <div>
                                 <span className="block uppercase tracking-widest text-[10px]">Seguradora</span>
-                                <span>{item.seguradora_preferencial?.nome || item.seguradora_mais_barata?.nome || 'Sem vinculacao'}</span>
+                                <span>{item.seguradora_preferencial.nome || item.seguradora_mais_barata.nome || 'Sem vinculacao'}</span>
                               </div>
                               <div>
-                                <span className="block uppercase tracking-widest text-[10px]">{updated ? 'Atualizada em' : 'Criada em'}</span>
+                                <span className="block uppercase tracking-widest text-[10px]">{updated  'Atualizada em' : 'Criada em'}</span>
                                 <span>{formatDateTimeBR(item.updated_at || item.created_at)}</span>
                               </div>
                             </div>
@@ -524,7 +524,7 @@ export default function AutoCotacoes() {
                 </div>
               )}
             </DataCard>
-          ) : tab === 'novo' ? (
+          ) : tab === 'novo'  (
             <DataCard title="Nova cotacao" subtitle="Cadastro simples do segurado e do veiculo.">
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label={iconLabel(UserRound, 'Nome completo')} value={novo.nome_completo} onChange={value => setNovo(prev => ({ ...prev, nome_completo: value }))} />
@@ -558,7 +558,7 @@ export default function AutoCotacoes() {
                   disabled={salvandoNovo || !novo.cpf}
                   className="btn-primary"
                 >
-                  {salvandoNovo ? 'Salvando...' : 'Salvar cotacao'}
+                  {salvandoNovo  'Salvando...' : 'Salvar cotacao'}
                 </button>
                 <button type="button" onClick={() => setTab('lista')} className="btn-secondary">
                   Voltar para lista
@@ -618,7 +618,7 @@ export default function AutoCotacoes() {
                   disabled={salvandoRenovacao || !renovacao.cpf}
                   className="btn-primary"
                 >
-                  {salvandoRenovacao ? 'Salvando...' : 'Salvar renovacao'}
+                  {salvandoRenovacao  'Salvando...' : 'Salvar renovacao'}
                 </button>
                 <button type="button" onClick={() => setTab('lista')} className="btn-secondary">
                   Voltar para lista
@@ -630,9 +630,9 @@ export default function AutoCotacoes() {
 
         <div className="space-y-4 xl:sticky xl:top-24 self-start">
           <DataCard title="Tendencia" subtitle="Volume mensal da base completa">
-            {loadingSerie || loadingResumo ? (
+            {loadingSerie || loadingResumo  (
               <div className="py-10 text-center text-sm text-dark-muted">Carregando serie...</div>
-            ) : serieMensal.some(item => item.total > 0 || item.convertidas > 0 || item.perdidas > 0) ? (
+            ) : serieMensal.some(item => item.total > 0 || item.convertidas > 0 || item.perdidas > 0)  (
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={serieMensal} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(15, 23, 42, 0.08)" />
@@ -654,9 +654,9 @@ export default function AutoCotacoes() {
           </DataCard>
 
           <DataCard title="Ultimas cotacoes" subtitle="Registros mais recentes da base" bodyClassName="p-0">
-            {loadingLista ? (
+            {loadingLista  (
               <div className="px-5 py-10 text-center text-sm text-dark-muted">Carregando ultimas cotacoes...</div>
-            ) : cotacoesRecentes.length === 0 ? (
+            ) : cotacoesRecentes.length === 0  (
               <div className="px-5 py-5">
                 <EmptyState
                   icon={<ShieldHalf className="h-5 w-5" />}
@@ -679,13 +679,13 @@ export default function AutoCotacoes() {
                           {item.nome_cliente || item.cpf_cliente || 'Sem identificacao'}
                         </p>
                         <p className="truncate text-xs text-dark-muted">
-                          {item.celular_cliente ? `${item.celular_cliente} · ` : ''}{formatDateTimeBR(item.updated_at || item.created_at)}
+                          {item.celular_cliente  `${item.celular_cliente} · ` : ''}{formatDateTimeBR(item.updated_at || item.created_at)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <QuoteStatusBadge status={item.status} />
-                        <span className={`badge ${item.tipo === 'novo' ? 'badge-info' : 'badge-muted'}`}>
-                          {item.tipo === 'novo' ? 'Seguro novo' : 'Renovacao'}
+                        <span className={`badge ${item.tipo === 'novo'  'badge-info' : 'badge-muted'}`}>
+                          {item.tipo === 'novo'  'Seguro novo' : 'Renovacao'}
                         </span>
                       </div>
                     </div>

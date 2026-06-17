@@ -56,7 +56,7 @@ function MonthView({ date, events, selectedDay, onDaySelect, onEventClick, delet
     return events
       .filter(e => !deletingIds.has(e.id))
       .filter(e => { try { return isSameDay(parseISO(e.data), d) } catch { return false } })
-      .sort((a, b) => a.data > b.data ? 1 : -1)
+      .sort((a, b) => a.data > b.data  1 : -1)
   }
 
   return (
@@ -79,11 +79,11 @@ function MonthView({ date, events, selectedDay, onDaySelect, onEventClick, delet
           return (
             <div key={i} onClick={() => onDaySelect(day)}
               className={`min-h-[110px] p-2 border-r border-b border-dark-border/20 cursor-pointer transition-colors
-                ${!inMonth  ? 'opacity-25' : 'hover:bg-white/45'}
-                ${selected  ? 'bg-brand-accent/5 border-brand-accent/30' : ''}`}
-              style={selected ? { boxShadow: 'inset 0 0 0 1.5px rgba(74,144,217,0.35)' } : {}}>
+                ${!inMonth   'opacity-25' : 'hover:bg-white/45'}
+                ${selected   'bg-brand-accent/5 border-brand-accent/30' : ''}`}
+              style={selected  { boxShadow: 'inset 0 0 0 1.5px rgba(74,144,217,0.35)' } : {}}>
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mb-1 flex-shrink-0
-                ${todayDay ? 'bg-brand-accent text-white' : selected ? 'text-brand-accent' : 'text-dark-muted'}`}>
+                ${todayDay  'bg-brand-accent text-white' : selected  'text-brand-accent' : 'text-dark-muted'}`}>
                 {format(day, 'd')}
               </div>
               <div className="space-y-0.5">
@@ -133,9 +133,9 @@ function WeekView({ date, events, onDaySelect, onSlotClick, onEventClick, deleti
           {days.map(d => (
             <button key={d.toString()} onClick={() => onDaySelect(d)}
               className={`px-2 py-2.5 text-center border-l border-dark-border/30 hover:bg-dark-surface2 transition-colors
-                ${isToday(d) ? 'bg-brand-accent/5' : ''}`}>
+                ${isToday(d)  'bg-brand-accent/5' : ''}`}>
               <p className="text-[10px] text-dark-muted capitalize">{format(d, 'EEE', { locale: ptBR })}</p>
-              <p className={`text-sm font-bold ${isToday(d) ? 'text-brand-accent' : 'text-dark-text'}`}>{format(d, 'd')}</p>
+              <p className={`text-sm font-bold ${isToday(d)  'text-brand-accent' : 'text-dark-text'}`}>{format(d, 'd')}</p>
             </button>
           ))}
         </div>
@@ -147,7 +147,7 @@ function WeekView({ date, events, onDaySelect, onSlotClick, onEventClick, deleti
               return (
                 <div key={d.toString()} onClick={() => onSlotClick(d, h)}
                   className={`border-l border-dark-border/20 p-1 cursor-pointer hover:bg-white/45 transition-colors min-h-[44px]
-                    ${isToday(d) ? 'bg-brand-accent/[0.03]' : ''}`}>
+                    ${isToday(d)  'bg-brand-accent/[0.03]' : ''}`}>
                   {evs.map(e => <EventPill key={e.id} evento={e} onClick={onEventClick} />)}
                 </div>
               )
@@ -189,7 +189,7 @@ function DayView({ date, events, onSlotClick, onEventClick, deletingIds }) {
                 {String(hour).padStart(2, '0')}:00
               </button>
               <div className="px-3 py-3">
-                {slotEvents.length > 0 ? (
+                {slotEvents.length > 0  (
                   <div className="space-y-2">
                     {slotEvents.map(event => (
                       <EventPill key={event.id} evento={event} onClick={onEventClick} />
@@ -239,7 +239,7 @@ function EventCard({ evento, lead, openMenuId, setOpenMenuId, onEdit, onDelete, 
             {evento.tipo}
           </span>
           <div ref={ref} className="relative flex-shrink-0">
-            <button onClick={() => setOpenMenuId(open ? null : evento.id)}
+            <button onClick={() => setOpenMenuId(open  null : evento.id)}
               className="p-1 rounded-lg text-dark-muted hover:text-dark-text hover:bg-dark-surface3 transition-colors opacity-0 group-hover:opacity-100">
               <MoreHorizontal className="w-3.5 h-3.5" />
             </button>
@@ -289,7 +289,7 @@ function PainelDia({ selectedDay, events, leads, deletingIds, pendingUndo, onAdd
   const dayEvents = useMemo(() => (events || [])
     .filter(e => !deletingIds.has(e.id))
     .filter(e => { try { return isSameDay(parseISO(e.data), selectedDay) } catch { return false } })
-    .sort((a, b) => a.data > b.data ? 1 : -1),
+    .sort((a, b) => a.data > b.data  1 : -1),
     [events, selectedDay, deletingIds]
   )
 
@@ -327,7 +327,7 @@ function PainelDia({ selectedDay, events, leads, deletingIds, pendingUndo, onAdd
 
       {/* Events list */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {dayEvents.length === 0 ? (
+        {dayEvents.length === 0  (
           <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
             <Calendar className="w-8 h-8 text-dark-muted opacity-25" />
             <p className="text-sm text-dark-muted">Nenhum evento neste dia</p>
@@ -376,7 +376,7 @@ function leadInitials(nome) {
     .split(' ')
     .filter(Boolean)
     .slice(0, 2)
-    .map(part => part[0]?.toUpperCase())
+    .map(part => part[0].toUpperCase())
     .join('') || 'LD'
 }
 
@@ -403,7 +403,7 @@ function EventLeadSelect({ leads, value, onChange }) {
   useEffect(() => {
     if (!open) return
     function handleClickOutside(event) {
-      if (!ref.current?.contains(event.target)) {
+      if (!ref.current.contains(event.target)) {
         setOpen(false)
       }
     }
@@ -424,11 +424,11 @@ function EventLeadSelect({ leads, value, onChange }) {
         onClick={() => setOpen(current => !current)}
         className={`w-full rounded-2xl border px-3 py-3 text-left transition-all ${
           open
-            ? 'border-brand-accent/50 bg-brand-accent/5 shadow-[0_0_0_3px_rgba(59,130,246,0.12)]'
+             'border-brand-accent/50 bg-brand-accent/5 shadow-[0_0_0_3px_rgba(59,130,246,0.12)]'
             : 'border-dark-border/70 bg-white/75 hover:border-brand-accent/35'
         }`}
       >
-        {selectedLead ? (
+        {selectedLead  (
           <div className="flex items-center gap-3">
             <span
               className="flex h-9 w-9 items-center justify-center rounded-xl text-[11px] font-bold text-white"
@@ -466,7 +466,7 @@ function EventLeadSelect({ leads, value, onChange }) {
               type="button"
               onClick={() => handleSelect('')}
               className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left transition-colors ${
-                !value ? 'bg-brand-accent/10 text-brand-accent' : 'hover:bg-dark-surface2/70'
+                !value  'bg-brand-accent/10 text-brand-accent' : 'hover:bg-dark-surface2/70'
               }`}
             >
               <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-dark-surface2 text-[10px] font-bold text-dark-muted">
@@ -487,18 +487,18 @@ function EventLeadSelect({ leads, value, onChange }) {
                   type="button"
                   onClick={() => handleSelect(lead.id)}
                   className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left transition-colors ${
-                    active ? 'bg-brand-accent/10 text-brand-accent' : 'hover:bg-dark-surface2/70'
+                    active  'bg-brand-accent/10 text-brand-accent' : 'hover:bg-dark-surface2/70'
                   }`}
                 >
                   <span
                     className="flex h-8 w-8 items-center justify-center rounded-xl text-[10px] font-bold text-white"
-                    style={{ background: active ? 'linear-gradient(135deg, #2563EB, #4F46E5)' : 'linear-gradient(135deg, #64748B, #475569)' }}
+                    style={{ background: active  'linear-gradient(135deg, #2563EB, #4F46E5)' : 'linear-gradient(135deg, #64748B, #475569)' }}
                   >
                     {leadInitials(lead.nome)}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{lead.nome}</p>
-                    <p className={`truncate text-xs ${active ? 'text-brand-accent/80' : 'text-dark-muted'}`}>
+                    <p className={`truncate text-xs ${active  'text-brand-accent/80' : 'text-dark-muted'}`}>
                       {lead.imobiliaria || 'Sem imobiliária'}
                     </p>
                   </div>
@@ -520,16 +520,16 @@ function EventLeadSelect({ leads, value, onChange }) {
 }
 
 function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
-  const isEdit = !!evento?.id
+  const isEdit = !!evento.id
 
-  const localStr = isEdit ? isoToLocal(evento.data) : (evento?.data || '')
+  const localStr = isEdit  isoToLocal(evento.data) : (evento.data || '')
   const [form, setForm] = useState({
-    nome:      isEdit ? (evento.nome      || '') : '',
-    tipo:      isEdit ? (evento.tipo      || 'Reunião') : 'Reunião',
+    nome:      isEdit  (evento.nome      || '') : '',
+    tipo:      isEdit  (evento.tipo      || 'Reunião') : 'Reunião',
     date:      localStr.slice(0, 10) || '',
     time:      localStr.slice(11, 16) || '09:00',
-    descricao: isEdit ? (evento.descricao || '') : '',
-    leadId:    isEdit ? (evento.leadId    || '') : '',
+    descricao: isEdit  (evento.descricao || '') : '',
+    leadId:    isEdit  (evento.leadId    || '') : '',
   })
 
   const set    = (k, v) => setForm(p => ({ ...p, [k]: v }))
@@ -542,7 +542,7 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
   }
 
   const dateFmt = form.date
-    ? (() => { try { return format(parseISO(form.date), "EEEE, d 'de' MMMM", { locale: ptBR }) } catch { return form.date } })()
+     (() => { try { return format(parseISO(form.date), "EEEE, d 'de' MMMM", { locale: ptBR }) } catch { return form.date } })()
     : 'Sem data'
 
   const corTipo = corEvento(form.tipo)
@@ -556,7 +556,7 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
         {/* Header */}
         <div className="modal-shell-header flex items-center justify-between px-5 py-4 border-b border-dark-border/60">
           <div>
-            <h2 className="font-bold text-dark-text">{isEdit ? 'Editar Evento' : 'Novo Evento'}</h2>
+            <h2 className="font-bold text-dark-text">{isEdit  'Editar Evento' : 'Novo Evento'}</h2>
             <p className="text-xs mt-0.5 capitalize" style={{ color: 'var(--glass-text-muted)' }}>
               <Calendar className="inline w-3 h-3 mr-1 -mt-px" />{dateFmt}
             </p>
@@ -596,7 +596,7 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
                 </p>
                 <p className="mt-1 text-xs text-dark-muted">
                   {form.tipo} às {form.time}
-                  {selectedLead ? ` com ${selectedLead.nome}` : ' sem lead vinculado'}
+                  {selectedLead  ` com ${selectedLead.nome}` : ' sem lead vinculado'}
                 </p>
               </div>
               <span
@@ -621,14 +621,14 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
                     onClick={() => set('tipo', tipo)}
                     className="rounded-2xl border px-3 py-3 text-left transition-all"
                     style={{
-                      borderColor: active ? `${color}80` : 'var(--glass-border)',
-                      background: active ? `${color}18` : 'rgba(255,255,255,0.7)',
-                      boxShadow: active ? `0 0 0 2px ${color}20` : 'none',
+                      borderColor: active  `${color}80` : 'var(--glass-border)',
+                      background: active  `${color}18` : 'rgba(255,255,255,0.7)',
+                      boxShadow: active  `0 0 0 2px ${color}20` : 'none',
                     }}
                   >
                     <div className="flex items-center gap-2">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
-                      <p className="text-sm font-semibold" style={{ color: active ? color : 'var(--glass-text-primary)' }}>
+                      <p className="text-sm font-semibold" style={{ color: active  color : 'var(--glass-text-primary)' }}>
                         {tipo}
                       </p>
                     </div>
@@ -684,14 +684,14 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
                       padding: '9px 4px',
                       borderRadius: 12,
                       fontSize: 11,
-                      fontWeight: active ? 700 : 400,
+                      fontWeight: active  700 : 400,
                       border: active
-                        ? `1.5px solid ${corTipo}90`
+                         `1.5px solid ${corTipo}90`
                         : '1.5px solid var(--glass-border)',
                       background: active
-                        ? corTipo + '22'
+                         corTipo + '22'
                         : 'transparent',
-                      color: active ? corTipo : 'var(--glass-text-primary)',
+                      color: active  corTipo : 'var(--glass-text-primary)',
                       cursor: 'pointer',
                       transition: 'all 0.12s ease',
                     }}
@@ -738,7 +738,7 @@ function ModalEvento({ evento, leads, onClose, onSave, onDelete }) {
           )}
           <button onClick={onClose} className="btn-secondary flex-1 text-sm">Cancelar</button>
           <button onClick={handleSave} disabled={!valido} className="btn-primary flex-1 text-sm">
-            {isEdit ? 'Salvar' : 'Criar Evento'}
+            {isEdit  'Salvar' : 'Criar Evento'}
           </button>
         </div>
       </div>
@@ -785,11 +785,11 @@ export default function Calendario() {
 
   function nav(dir) {
     if (view === 'Dia') {
-      setDate(d => dir > 0 ? addDays(d, 1) : subDays(d, 1))
-      setSelectedDay(d => dir > 0 ? addDays(d, 1) : subDays(d, 1))
+      setDate(d => dir > 0  addDays(d, 1) : subDays(d, 1))
+      setSelectedDay(d => dir > 0  addDays(d, 1) : subDays(d, 1))
     }
-    if (view === 'Mês')    setDate(d => dir > 0 ? addMonths(d, 1) : subMonths(d, 1))
-    if (view === 'Semana') setDate(d => dir > 0 ? addWeeks(d, 1)  : subWeeks(d, 1))
+    if (view === 'Mês')    setDate(d => dir > 0  addMonths(d, 1) : subMonths(d, 1))
+    if (view === 'Semana') setDate(d => dir > 0  addWeeks(d, 1)  : subWeeks(d, 1))
   }
 
   function openNew(day, hour = 9) {
@@ -801,9 +801,9 @@ export default function Calendario() {
 
   async function handleSave(form) {
     try {
-      if (modal?.id) await eventUpdate(modal.id, form)
+      if (modal.id) await eventUpdate(modal.id, form)
       else           await eventAdd(form)
-      toast({ type: 'success', title: modal?.id ? 'Evento atualizado' : 'Evento criado' })
+      toast({ type: 'success', title: modal.id  'Evento atualizado' : 'Evento criado' })
     } catch {
       toast({ type: 'error', title: 'Erro ao salvar' })
     }

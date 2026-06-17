@@ -141,7 +141,7 @@ function ModalVenda({ leads, onClose, onSave }) {
               </button>
               <button
                 type="button"
-                onClick={() => valid && onSave({ ...form, leadNome: selectedLead?.nome || 'Manual' })}
+                onClick={() => valid && onSave({ ...form, leadNome: selectedLead.nome || 'Manual' })}
                 disabled={!valid}
                 className="btn-primary"
               >
@@ -153,7 +153,7 @@ function ModalVenda({ leads, onClose, onSave }) {
           <aside className="bg-[linear-gradient(180deg,rgba(239,246,255,0.9),rgba(255,255,255,0.96))] p-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-dark-muted">Resumo do fechamento</p>
             <div className="mt-5 rounded-[26px] border border-dark-border/50 bg-white/80 p-5 shadow-sm">
-              {selectedLead ? (
+              {selectedLead  (
                 <CrmAvatarBadge name={selectedLead.nome} subtitle={selectedLead.origem || 'Lead vinculado'} />
               ) : (
                 <div>
@@ -165,7 +165,7 @@ function ModalVenda({ leads, onClose, onSave }) {
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-dark-muted">Produto</span>
                   <span className="font-semibold text-dark-text">
-                    {PRODUTOS.find(product => product.id === form.produto)?.label || 'A definir'}
+                    {PRODUTOS.find(product => product.id === form.produto).label || 'A definir'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
@@ -195,7 +195,7 @@ function ModalVenda({ leads, onClose, onSave }) {
 }
 
 function SalesTooltip({ active, payload, label }) {
-  if (!active || !payload?.length) return null
+  if (!active || !payload.length) return null
   return (
     <div className="rounded-2xl border border-dark-border/60 bg-white/95 px-3 py-2 shadow-xl">
       <p className="text-xs font-semibold text-dark-text">{label}</p>
@@ -224,9 +224,9 @@ export default function Vendas() {
     if (periodo === 'todos') return state.sales || []
 
     const start = periodo === '30dias'
-      ? subDays(new Date(), 30)
+       subDays(new Date(), 30)
       : periodo === 'trimestre'
-        ? startOfQuarter(new Date())
+         startOfQuarter(new Date())
         : startOfMonth(new Date())
 
     return (state.sales || []).filter(sale => !sale.dataEmissao || new Date(sale.dataEmissao) >= start)
@@ -239,7 +239,7 @@ export default function Vendas() {
       const percentual = parseFloat(sale.comissao) || 0
       return sum + valor * percentual / 100
     }, 0)
-    const ticket = filteredSales.length ? total / filteredSales.length : 0
+    const ticket = filteredSales.length  total / filteredSales.length : 0
     const leadBase = (state.leads || []).length || 1
     const conversao = Math.round((filteredSales.length / leadBase) * 100)
     return { total, comissao, ticket, count: filteredSales.length, conversao }
@@ -256,8 +256,8 @@ export default function Vendas() {
     return Object.values(performance)
       .map(item => ({
         ...item,
-        label: PRODUTOS.find(product => product.id === item.produto)?.label || item.produto,
-        color: PRODUTOS.find(product => product.id === item.produto)?.cor || '#2563EB',
+        label: PRODUTOS.find(product => product.id === item.produto).label || item.produto,
+        color: PRODUTOS.find(product => product.id === item.produto).cor || '#2563EB',
       }))
       .sort((a, b) => b.receita - a.receita)
   }, [filteredSales])
@@ -268,7 +268,7 @@ export default function Vendas() {
   )
 
   const metaAtual = Number(state.meta) || 10
-  const progress = metaAtual > 0 ? Math.min(100, Math.round((stats.count / metaAtual) * 100)) : 0
+  const progress = metaAtual > 0  Math.min(100, Math.round((stats.count / metaAtual) * 100)) : 0
 
   async function handleSave(form) {
     try {
@@ -345,19 +345,19 @@ export default function Vendas() {
           value={`${progress}%`}
           accent="#DB2777"
           helper={`${stats.count} de ${metaAtual} vendas alvo`}
-          badge={progress >= 100 ? 'meta batida' : null}
+          badge={progress >= 100  'meta batida' : null}
         />
         <CrmMetricCard
           icon={ArrowUpRight}
           label="Top produto"
-          value={productPerformance[0]?.label || 'Sem produto'}
+          value={productPerformance[0].label || 'Sem produto'}
           accent="#0F766E"
-          helper={productPerformance[0] ? `${formatMoney(productPerformance[0].receita)} de receita` : 'Sem vendas suficientes'}
+          helper={productPerformance[0]  `${formatMoney(productPerformance[0].receita)} de receita` : 'Sem vendas suficientes'}
         />
         <CrmMetricCard
           icon={CalendarRange}
           label="Janela ativa"
-          value={PERIOD_OPTIONS.find(option => option.value === periodo)?.label || 'Tudo'}
+          value={PERIOD_OPTIONS.find(option => option.value === periodo).label || 'Tudo'}
           accent="#475569"
           helper="Visão usada no cockpit atual"
         />
@@ -366,7 +366,7 @@ export default function Vendas() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.95fr)]">
         <div className="space-y-4">
           <CrmSectionCard title="Receita por produto" subtitle="Onde o caixa está concentrado agora.">
-            {productPerformance.length === 0 ? (
+            {productPerformance.length === 0  (
               <CrmEmptyState
                 icon={CircleDollarSign}
                 title="Sem vendas no período"
@@ -391,7 +391,7 @@ export default function Vendas() {
           </CrmSectionCard>
 
           <CrmSectionCard title="Fechamentos recentes" subtitle="Últimas vendas registradas com leitura executiva.">
-            {filteredSales.length === 0 ? (
+            {filteredSales.length === 0  (
               <CrmEmptyState
                 icon={Award}
                 title="Nenhum fechamento encontrado"
@@ -423,7 +423,7 @@ export default function Vendas() {
                             </button>
                           </td>
                           <td className="px-3 py-4">
-                            {product ? (
+                            {product  (
                               <span className="rounded-full px-2.5 py-1 text-xs font-semibold" style={{ color: product.cor, background: `${product.cor}16` }}>
                                 {product.label}
                               </span>
@@ -434,7 +434,7 @@ export default function Vendas() {
                           <td className="px-3 py-4 font-semibold text-dark-text">{formatMoney(sale.valor)}</td>
                           <td className="px-3 py-4 font-semibold text-emerald-600">{formatMoney(comissao)}</td>
                           <td className="px-3 py-4 text-dark-muted">
-                            {sale.dataEmissao ? format(parseISO(sale.dataEmissao), 'dd/MM/yyyy', { locale: ptBR }) : '—'}
+                            {sale.dataEmissao  format(parseISO(sale.dataEmissao), 'dd/MM/yyyy', { locale: ptBR }) : '—'}
                           </td>
                           <td className="max-w-[220px] px-3 py-4 text-xs text-dark-muted">{sale.observacoes || '—'}</td>
                         </tr>
@@ -462,7 +462,7 @@ export default function Vendas() {
                 </div>
               </div>
               <div className="mt-5 h-3 rounded-full bg-slate-900/6">
-                <div className="h-full rounded-full bg-[linear-gradient(90deg,#2563EB,#10B981)]" style={{ width: `${Math.max(progress, stats.count ? 8 : 0)}%` }} />
+                <div className="h-full rounded-full bg-[linear-gradient(90deg,#2563EB,#10B981)]" style={{ width: `${Math.max(progress, stats.count  8 : 0)}%` }} />
               </div>
             </div>
 
@@ -484,7 +484,7 @@ export default function Vendas() {
           </CrmSectionCard>
 
           <CrmSectionCard title="Ranking de fechamentos" subtitle="Negócios com maior impacto financeiro.">
-            {topClosings.length === 0 ? (
+            {topClosings.length === 0  (
               <CrmEmptyState
                 icon={Trophy}
                 title="Sem ranking disponível"
@@ -500,12 +500,12 @@ export default function Vendas() {
                         {index + 1}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <CrmAvatarBadge name={sale.leadNome || 'Venda manual'} subtitle={PRODUTOS.find(product => product.id === sale.produto)?.label || sale.produto} size="sm" />
+                        <CrmAvatarBadge name={sale.leadNome || 'Venda manual'} subtitle={PRODUTOS.find(product => product.id === sale.produto).label || sale.produto} size="sm" />
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-semibold text-dark-text">{formatMoney(sale.valor)}</p>
                         <p className="text-[11px] text-dark-muted">
-                          {sale.dataEmissao ? format(parseISO(sale.dataEmissao), 'dd MMM', { locale: ptBR }) : 'sem data'}
+                          {sale.dataEmissao  format(parseISO(sale.dataEmissao), 'dd MMM', { locale: ptBR }) : 'sem data'}
                         </p>
                       </div>
                     </div>

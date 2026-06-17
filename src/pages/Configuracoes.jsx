@@ -30,15 +30,15 @@ export default function Configuracoes() {
   const fileRef = useRef(null)
 
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
-  const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || '')
+  const [avatarPreview, setAvatarPreview] = useState(profile.avatar_url || '')
 
   useEffect(() => {
-    setAvatarPreview(profile?.avatar_url || '')
-  }, [profile?.avatar_url])
+    setAvatarPreview(profile.avatar_url || '')
+  }, [profile.avatar_url])
 
   async function handleAvatarUpload(event) {
-    const file = event.target.files?.[0]
-    if (!file || !user?.id) return
+    const file = event.target.files.[0]
+    if (!file || !user.id) return
 
     const localPreview = URL.createObjectURL(file)
     setAvatarPreview(localPreview)
@@ -51,7 +51,7 @@ export default function Configuracoes() {
     })
 
     if (uploaded.error) {
-      setAvatarPreview(profile?.avatar_url || '')
+      setAvatarPreview(profile.avatar_url || '')
       setUploadingAvatar(false)
       toast({ type: 'error', title: 'Erro ao enviar foto', message: uploaded.error.message })
       return
@@ -65,12 +65,12 @@ export default function Configuracoes() {
     setUploadingAvatar(false)
 
     if (error) {
-      setAvatarPreview(profile?.avatar_url || '')
+      setAvatarPreview(profile.avatar_url || '')
       toast({ type: 'error', title: 'Erro ao salvar foto', message: error.message })
       return
     }
 
-    await refreshProfile?.()
+    await refreshProfile.()
     toast({ type: 'success', title: 'Foto de perfil atualizada' })
   }
 
@@ -91,8 +91,8 @@ export default function Configuracoes() {
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
               <div className="relative">
                 <Avatar
-                  name={profile?.nome || 'Usuario'}
-                  src={avatarPreview || profile?.avatar_url || ''}
+                  name={profile.nome || 'Usuario'}
+                  src={avatarPreview || profile.avatar_url || ''}
                   size="lg"
                   className="ring-1 ring-dark-border/60"
                 />
@@ -100,26 +100,26 @@ export default function Configuracoes() {
 
               <div className="min-w-0 flex-1 space-y-3">
                 <div>
-                  <p className="text-sm font-semibold text-dark-text">{profile?.nome || 'Usuario'}</p>
+                  <p className="text-sm font-semibold text-dark-text">{profile.nome || 'Usuario'}</p>
                   <p className="mt-1 text-sm text-dark-muted">
-                    {profile?.orcamentista_label || 'Sem rotulo definido'}
+                    {profile.orcamentista_label || 'Sem rotulo definido'}
                   </p>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => fileRef.current?.click()}
+                    onClick={() => fileRef.current.click()}
                     disabled={uploadingAvatar}
                     className="btn-secondary flex items-center gap-2 disabled:opacity-50"
                   >
                     <Upload className="h-4 w-4" />
-                    {uploadingAvatar ? 'Enviando...' : 'Enviar foto'}
+                    {uploadingAvatar  'Enviando...' : 'Enviar foto'}
                   </button>
                   {avatarPreview && (
                     <button
                       type="button"
-                      onClick={() => setAvatarPreview(profile?.avatar_url || '')}
+                      onClick={() => setAvatarPreview(profile.avatar_url || '')}
                       className="rounded-2xl border border-dark-border px-3 py-2 text-sm font-medium text-dark-muted transition-colors hover:text-dark-text"
                     >
                       Restaurar
@@ -156,13 +156,13 @@ export default function Configuracoes() {
                     onClick={() => setTheme(option.key)}
                     className={`rounded-3xl border p-5 text-left transition-all ${
                       active
-                        ? 'border-brand-accent bg-brand-accent/10 shadow-sm'
+                         'border-brand-accent bg-brand-accent/10 shadow-sm'
                         : 'border-dark-border hover:border-brand-accent/40 hover:bg-dark-surface2/40'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${active ? 'bg-brand-accent/15 text-brand-accent' : 'bg-dark-surface2 text-dark-muted'}`}>
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${active  'bg-brand-accent/15 text-brand-accent' : 'bg-dark-surface2 text-dark-muted'}`}>
                           <Icon className="h-5 w-5" />
                         </div>
                         <div>

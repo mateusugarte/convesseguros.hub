@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+﻿import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { fetchFichaDetalhe, editarFicha, deletarFicha, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
@@ -16,19 +16,20 @@ import ModalFicha from '../components/ModalFicha'
 import ModalAssumir from '../components/ModalAssumir'
 import ModalFinalizar from '../components/ModalFinalizar'
 import SecaoDocumentos from '../components/SecaoDocumentos'
+import { normalizeDisplayText } from '../lib/text'
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function fmtDt(v) {
   if (!v) return null
-  try { return format(parseISO(v), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) } catch { return v }
+  try { return format(parseISO(v), "dd/MM/yyyy 'Ã s' HH:mm", { locale: ptBR }) } catch { return v }
 }
 function fmtBRL(v) {
   if (v === null || v === undefined || v === '') return null
   return String(v)
 }
 
-// ── InlineField — campo editável com click ────────────────────────────────────
+// â”€â”€ InlineField â€” campo editÃ¡vel com click â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function InlineField({ label, value, onSave, type = 'text', rows }) {
   const [editing, setEditing] = useState(false)
@@ -95,7 +96,7 @@ function InlineField({ label, value, onSave, type = 'text', rows }) {
           onClick={() => { setDraft(value || ''); setEditing(true) }}
           className="text-sm text-dark-text cursor-pointer group flex items-center gap-1.5 hover:text-brand-accent transition-colors"
         >
-          <span>{value || <span className="text-dark-muted/40 italic">—</span>}</span>
+          <span>{value || <span className="text-dark-muted/40 italic">â€”</span>}</span>
           <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-40 flex-shrink-0 transition-opacity" />
         </p>
       )}
@@ -103,7 +104,7 @@ function InlineField({ label, value, onSave, type = 'text', rows }) {
   )
 }
 
-// ── ReadField — campo read-only ───────────────────────────────────────────────
+// â”€â”€ ReadField â€” campo read-only â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ReadField({ label, value }) {
   if (!value && value !== 0 && value !== false) return null
@@ -115,21 +116,21 @@ function ReadField({ label, value }) {
   )
 }
 
-// ── Timeline ──────────────────────────────────────────────────────────────────
+// â”€â”€ Timeline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Timeline({ ficha }) {
   const events = []
 
   events.push({
     label: 'Ficha recebida',
-    sub: ficha.imobiliaria ? `via ${ficha.imobiliaria}` : null,
+    sub: ficha.imobiliaria ? `via ${normalizeDisplayText(ficha.imobiliaria)}` : null,
     ts: ficha.created_at,
     color: '#3B82F6',
   })
 
   if (ficha.assumida_em) {
     events.push({
-      label: `Assumida por ${ficha.profiles?.nome || 'desconhecido'}`,
+      label: `Assumida por ${normalizeDisplayText(ficha.profiles?.nome) || 'desconhecido'}`,
       sub: 'Status → Em Cotação',
       ts: ficha.assumida_em,
       color: '#F59E0B',
@@ -140,7 +141,7 @@ function Timeline({ ficha }) {
     const si = STATUS_LABELS[ficha.status]
     events.push({
       label: `Finalizada — ${si?.label || ficha.status}`,
-      sub: ficha.seguradora ? `Seguradora: ${ficha.seguradora}` : null,
+      sub: ficha.seguradora ? `Seguradora: ${normalizeDisplayText(ficha.seguradora)}` : null,
       ts: ficha.finalizada_em,
       color: ficha.status === 'aprovado' ? '#10B981' : ficha.status === 'recusado' ? '#EF4444' : '#4A90D9',
     })
@@ -167,7 +168,7 @@ function Timeline({ ficha }) {
   )
 }
 
-// ── ProdutoBadge ──────────────────────────────────────────────────────────────
+// â”€â”€ ProdutoBadge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const PROD_COLORS = {
   residencial_pf:  { bg: 'rgba(74,144,217,0.15)',  text: '#4A90D9',  border: 'rgba(74,144,217,0.3)' },
@@ -175,7 +176,7 @@ const PROD_COLORS = {
   pessoa_juridica: { bg: 'rgba(139,92,246,0.15)',  text: '#8B5CF6',  border: 'rgba(139,92,246,0.3)' },
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function FichaDetalhePage() {
   const { id }    = useParams()
@@ -206,7 +207,7 @@ export default function FichaDetalhePage() {
     const prev = ficha
     // Optimistic update
     setFicha(f => ({ ...f, [field]: value }))
-    const err = await editarFicha(id, { [field]: value }, user?.id)
+    const err = await editarFicha(id, { [field]: value }, user.id)
     if (err) {
       setFicha(prev)
       toast({ type: 'error', title: 'Erro ao salvar campo' })
@@ -222,7 +223,7 @@ export default function FichaDetalhePage() {
       setDeleting(false)
       toast({ type: 'error', title: 'Erro ao excluir ficha' })
     } else {
-      toast({ type: 'success', title: 'Ficha excluída' })
+      toast({ type: 'success', title: 'Ficha excluÃ­da' })
       navigate('/fichas')
     }
   }
@@ -242,8 +243,8 @@ export default function FichaDetalhePage() {
   if (!ficha) {
     return (
       <div className="text-center py-20">
-        <p className="text-dark-muted">Ficha não encontrada</p>
-        <button onClick={() => navigate('/fichas')} className="btn-secondary mt-4">← Voltar</button>
+        <p className="text-dark-muted">Ficha nÃ£o encontrada</p>
+        <button onClick={() => navigate('/fichas')} className="btn-secondary mt-4">â† Voltar</button>
       </div>
     )
   }
@@ -252,10 +253,12 @@ export default function FichaDetalhePage() {
   const prodColor = PROD_COLORS[ficha.produto] || PROD_COLORS.residencial_pf
   const isPJ      = ficha.produto === 'pessoa_juridica'
   const isComPlus = ficha.produto === 'comercial_pf' || isPJ
-  const isMe      = ficha.orcamentista_id === user?.id
+  const isMe      = ficha.orcamentista_id === user.id
   const canAssumir  = !ficha.assumida && ficha.status === 'pendente'
   const canFinalizar = isMe && ficha.status === 'em_cotacao'
-  const nomePrincipal = isPJ ? (ficha.nome_empresa || ficha.nome_interessado || 'Sem nome') : (ficha.nome_interessado || 'Sem nome')
+  const nomePrincipal = normalizeDisplayText(
+    isPJ ? (ficha.nome_empresa || ficha.nome_interessado || 'Sem nome') : (ficha.nome_interessado || 'Sem nome')
+  )
 
   if (editar) return (
     <ModalFicha ficha={ficha} onClose={() => setEditar(false)} onSuccess={() => { setEditar(false); load() }} />
@@ -272,17 +275,16 @@ export default function FichaDetalhePage() {
       <PageHeader
         eyebrow="Ficha individual"
         title={nomePrincipal}
-        description={`Detalhe completo de ${ficha.imobiliaria || 'imobiliária não informada'}. Mantenha a edição, a finalização e os documentos no mesmo fluxo.`}
+        description={`Detalhe completo de ${ficha.imobiliaria || 'imobiliÃ¡ria nÃ£o informada'}. Mantenha a ediÃ§Ã£o, a finalizaÃ§Ã£o e os documentos no mesmo fluxo.`}
         actions={(
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <button
               onClick={() => {
-                const state = location.state
-                if (state?.from === '/fichas') {
-                  navigate('/fichas', { replace: true, state: { restoreKanban: true, ...state } })
-                } else {
-                  navigate('/fichas')
+                if (window.history.length > 1) {
+                  navigate(-1)
+                  return
                 }
+                navigate('/fichas')
               }}
               className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
             >
@@ -317,7 +319,7 @@ export default function FichaDetalhePage() {
               </button>
             ) : (
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-status-danger font-medium">Confirmar?</span>
+                <span className="text-xs text-status-danger font-medium">Confirmar</span>
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
@@ -329,7 +331,7 @@ export default function FichaDetalhePage() {
                   onClick={() => setConfirm(false)}
                   className="px-2.5 py-1.5 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text transition-colors"
                 >
-                  Não
+                  NÃ£o
                 </button>
               </div>
             )}
@@ -347,13 +349,13 @@ export default function FichaDetalhePage() {
             <MetricCard
               label="Produto"
               value={PRODUTO_LABELS[ficha.produto] ?? ficha.produto}
-              hint="linha de negócio"
+              hint="linha de negÃ³cio"
               tone="secondary"
               icon={<Building2 className="w-4 h-4" />}
             />
             <MetricCard
-              label="Responsável"
-              value={ficha.profiles?.nome || 'Livre'}
+              label="ResponsÃ¡vel"
+              value={normalizeDisplayText(ficha.profiles?.nome) || 'Livre'}
               hint={ficha.assumida_em ? 'já assumida' : 'aguardando ação'}
               tone={isMe ? 'success' : 'warning'}
               icon={<UserRound className="w-4 h-4" />}
@@ -369,20 +371,20 @@ export default function FichaDetalhePage() {
         )}
       />
 
-      {/* ── Body: 2 colunas ── */}
+      {/* â”€â”€ Body: 2 colunas â”€â”€ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-        {/* ── Coluna Esquerda: Dados ── */}
+        {/* â”€â”€ Coluna Esquerda: Dados â”€â”€ */}
         <div className="lg:col-span-2 space-y-4">
 
-          {/* Identificação */}
+          {/* IdentificaÃ§Ã£o */}
           <DataCard title={isPJ ? 'Empresa' : 'Interessado'} bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
             {isPJ ? (
               <>
                 <ReadField label="Nome da Empresa" value={ficha.nome_empresa} />
                 <ReadField label="CNPJ" value={ficha.cnpj} />
                 <div className="col-span-2">
-                  <ReadField label="CPF dos Sócios" value={ficha.cpf_socios} />
+                  <ReadField label="CPF dos SÃ³cios" value={ficha.cpf_socios} />
                 </div>
               </>
             ) : (
@@ -395,26 +397,26 @@ export default function FichaDetalhePage() {
             <ReadField label="E-mail" value={ficha.email} />
           </DataCard>
 
-          {/* Imóvel */}
-          <DataCard title="Dados do Imóvel" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
+          {/* ImÃ³vel */}
+          <DataCard title="Dados do ImÃ³vel" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
             <div className="col-span-2">
               <ImobiliariaIdentity
                 nome={resolverNome(ficha.imobiliaria) || ficha.imobiliaria}
-                imagemUrl={resolverImobiliariaInfo(ficha.imobiliaria)?.imagem_url}
-                imagemPath={resolverImobiliariaInfo(ficha.imobiliaria)?.imagem_path}
+                imagemUrl={resolverImobiliariaInfo(ficha.imobiliaria).imagem_url}
+                imagemPath={resolverImobiliariaInfo(ficha.imobiliaria).imagem_path}
                 size="lg"
                 emphasis
               />
             </div>
-            <ReadField label="Imobiliária" value={resolverNome(ficha.imobiliaria) || ficha.imobiliaria} />
+            <ReadField label="ImobiliÃ¡ria" value={resolverNome(ficha.imobiliaria) || ficha.imobiliaria} />
             <ReadField label="Tipo" value={ficha.tipo_imovel} />
             <ReadField label="CEP" value={ficha.cep} />
             <ReadField label="Aluguel" value={fmtBRL(ficha.valor_aluguel)} />
             <ReadField label="IPTU" value={fmtBRL(ficha.valor_iptu)} />
-            <ReadField label="Condomínio" value={fmtBRL(ficha.valor_condominio)} />
+            <ReadField label="CondomÃ­nio" value={fmtBRL(ficha.valor_condominio)} />
             <div className="col-span-2">
               <InlineField
-                label="Observações"
+                label="ObservaÃ§Ãµes"
                 value={ficha.observacoes}
                 onSave={v => updateField('observacoes', v)}
                 rows={3}
@@ -422,23 +424,23 @@ export default function FichaDetalhePage() {
             </div>
           </DataCard>
 
-          {/* Campos extras — Comercial PF e PJ */}
+          {/* Campos extras â€” Comercial PF e PJ */}
           {isComPlus && (
             <DataCard title="Dados Complementares" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
               <ReadField label="Atividade" value={ficha.atividade} />
               <ReadField label="Total de Rendimentos" value={fmtBRL(ficha.total_rendimentos)} />
               <ReadField label="Capital Social" value={fmtBRL(ficha.capital_social)} />
-              <ReadField label="Motivo da Locação" value={ficha.motivo_locacao} />
-              <ReadField label="Vigência" value={ficha.vigencia} />
-              {isPJ && <ReadField label="Opção Tributária" value={ficha.opcao_tributaria} />}
+              <ReadField label="Motivo da LocaÃ§Ã£o" value={ficha.motivo_locacao} />
+              <ReadField label="VigÃªncia" value={ficha.vigencia} />
+              {isPJ && <ReadField label="OpÃ§Ã£o TributÃ¡ria" value={ficha.opcao_tributaria} />}
             </DataCard>
           )}
 
-          {/* Controle interno — campos editáveis */}
+          {/* Controle interno â€” campos editÃ¡veis */}
           <DataCard title="Controle Interno" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
-            <ReadField label="Orçamentista (Forms)" value={ficha.orcamentista_forms} />
+            <ReadField label="OrÃ§amentista (Forms)" value={ficha.orcamentista_forms} />
             <InlineField
-              label="% Comissão"
+              label="% ComissÃ£o"
               value={ficha.pct_comissao != null ? String(ficha.pct_comissao) : ''}
               type="number"
               onSave={v => updateField('pct_comissao', v ? parseFloat(v) : null)}
@@ -467,10 +469,10 @@ export default function FichaDetalhePage() {
               )}
             </div>
             <ReadField label="Assumida em" value={fmtDt(ficha.assumida_em)} />
-            {/* Número do orçamento — exibido quando aprovado */}
+            {/* NÃºmero do orÃ§amento â€” exibido quando aprovado */}
             {(ficha.status === 'aprovado' || ficha.numero_orcamento) && (
               <InlineField
-                label="Número do Orçamento"
+                label="NÃºmero do OrÃ§amento"
                 value={ficha.numero_orcamento}
                 onSave={v => updateField('numero_orcamento', v)}
               />
@@ -490,11 +492,11 @@ export default function FichaDetalhePage() {
           </DataCard>
         </div>
 
-        {/* ── Coluna Direita: Timeline + Meta ── */}
+        {/* â”€â”€ Coluna Direita: Timeline + Meta â”€â”€ */}
         <div className="space-y-4">
 
           {/* Meta info */}
-          <DataCard title="Informações" bodyClassName="space-y-3">
+          <DataCard title="InformaÃ§Ãµes" bodyClassName="space-y-3">
             <div className="space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-dark-muted">Recebida em</span>
@@ -518,7 +520,7 @@ export default function FichaDetalhePage() {
           </DataCard>
 
           {/* Timeline */}
-          <DataCard title="Histórico">
+          <DataCard title="HistÃ³rico">
             <Timeline ficha={ficha} />
           </DataCard>
 
@@ -529,7 +531,7 @@ export default function FichaDetalhePage() {
           />
 
           {/* Seguradora + Parcela */}
-          <DataCard title="Cotação" bodyClassName="space-y-4">
+          <DataCard title="CotaÃ§Ã£o" bodyClassName="space-y-4">
             <div>
               <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wider mb-1.5">Seguradora</p>
               <SeguradoraSelect
@@ -551,3 +553,4 @@ export default function FichaDetalhePage() {
     </div>
   )
 }
+

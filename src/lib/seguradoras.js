@@ -65,8 +65,8 @@ let catalogPromise = null
 function normalizeSeguradora(seg) {
   return {
     ...seg,
-    aliases: seg.seguradora_aliases?.map(item => item.alias) || [],
-    produtos: seg.seguradora_produtos?.map(item => normalizeProduto(item.produto)) || [],
+    aliases: seg.seguradora_aliases.map(item => item.alias) || [],
+    produtos: seg.seguradora_produtos.map(item => normalizeProduto(item.produto)) || [],
   }
 }
 

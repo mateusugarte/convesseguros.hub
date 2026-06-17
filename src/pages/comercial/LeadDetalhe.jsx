@@ -28,7 +28,7 @@ function avatarColor(name) {
   return AVATAR_COLORS[(name || '').charCodeAt(0) % AVATAR_COLORS.length]
 }
 function initials(name) {
-  return (name || '?').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+  return (name || '').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
 }
 function fmtDate(iso) {
   try { return format(parseISO(iso), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) } catch { return '—' }
@@ -58,7 +58,7 @@ const QUALIFICATION_STORAGE_KEY = 'comercial_lead_qualification'
 function readLeadQualification(leadId) {
   try {
     const raw = localStorage.getItem(QUALIFICATION_STORAGE_KEY)
-    const parsed = raw ? JSON.parse(raw) : {}
+    const parsed = raw  JSON.parse(raw) : {}
     return parsed[leadId] || ''
   } catch {
     return ''
@@ -68,7 +68,7 @@ function readLeadQualification(leadId) {
 function writeLeadQualification(leadId, value) {
   try {
     const raw = localStorage.getItem(QUALIFICATION_STORAGE_KEY)
-    const parsed = raw ? JSON.parse(raw) : {}
+    const parsed = raw  JSON.parse(raw) : {}
     parsed[leadId] = value
     localStorage.setItem(QUALIFICATION_STORAGE_KEY, JSON.stringify(parsed))
   } catch {}
@@ -122,7 +122,7 @@ function ModalEditLead({ lead, onClose, toast }) {
                 {['PF','PJ'].map(t => (
                   <button key={t} onClick={() => set('tipo', t)}
                     className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all
-                      ${form.tipo === t ? 'border-brand-accent bg-brand-accent/10 text-brand-accent' : 'border-dark-border text-dark-muted hover:border-dark-text/40'}`}>
+                      ${form.tipo === t  'border-brand-accent bg-brand-accent/10 text-brand-accent' : 'border-dark-border text-dark-muted hover:border-dark-text/40'}`}>
                     {t}
                   </button>
                 ))}
@@ -158,7 +158,7 @@ function ModalEditLead({ lead, onClose, toast }) {
         <div className="flex gap-2 px-5 py-4 border-t border-dark-border">
           <button onClick={onClose} className="btn-secondary flex-1 text-sm">Cancelar</button>
           <button onClick={handleSave} disabled={saving} className="btn-primary flex-1 text-sm">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Salvar'}
+            {saving  <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Salvar'}
           </button>
         </div>
       </div>
@@ -181,29 +181,29 @@ function PipelineFunnel({ lead, onMove }) {
             <div key={col.id} className="flex items-center flex-1 min-w-0">
               {i > 0 && (
                 <div className="flex-1 h-px flex-shrink-0"
-                  style={{ background: isPast ? '#10B981' : 'var(--glass-border)', minWidth: 8 }} />
+                  style={{ background: isPast  '#10B981' : 'var(--glass-border)', minWidth: 8 }} />
               )}
               <button
                 onClick={() => !isCurrent && onMove(col, i)}
                 disabled={isCurrent}
                 title={col.label}
-                className={`flex flex-col items-center gap-1 group flex-shrink-0 ${isCurrent ? 'cursor-default' : 'cursor-pointer'}`}>
+                className={`flex flex-col items-center gap-1 group flex-shrink-0 ${isCurrent  'cursor-default' : 'cursor-pointer'}`}>
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center transition-all
-                    ${isCurrent ? 'ring-2 ring-offset-2 ring-brand-accent' : 'group-hover:ring-1 group-hover:ring-brand-accent/40'}
-                    ${isCurrent ? 'animate-pulse' : ''}`}
+                    ${isCurrent  'ring-2 ring-offset-2 ring-brand-accent' : 'group-hover:ring-1 group-hover:ring-brand-accent/40'}
+                    ${isCurrent  'animate-pulse' : ''}`}
                   style={{
-                    background: isPast ? '#10B981' : isCurrent ? col.color : 'var(--glass-bg)',
-                    border: !isPast && !isCurrent ? '1px solid var(--glass-border)' : 'none',
+                    background: isPast  '#10B981' : isCurrent  col.color : 'var(--glass-bg)',
+                    border: !isPast && !isCurrent  '1px solid var(--glass-border)' : 'none',
                   }}>
                   {isPast
-                    ? <Check className="w-3.5 h-3.5 text-white" />
+                     <Check className="w-3.5 h-3.5 text-white" />
                     : isCurrent
-                      ? <div className="w-3 h-3 rounded-full bg-white" />
+                       <div className="w-3 h-3 rounded-full bg-white" />
                       : <div className="w-2 h-2 rounded-full" style={{ background: col.color + '60' }} />}
                 </div>
                 <span className={`text-[9px] font-medium text-center leading-tight whitespace-nowrap
-                  ${isCurrent ? 'text-dark-text font-bold' : 'text-dark-muted'}`}>
+                  ${isCurrent  'text-dark-text font-bold' : 'text-dark-muted'}`}>
                   {col.label}
                 </span>
               </button>
@@ -220,9 +220,9 @@ function PipelineFunnel({ lead, onMove }) {
 function CardTemperatura({ lead }) {
   const score = calcScore(lead)
   const f     = scoreFaixa(score)
-  const dias  = lead.ultimaAtividade ? diffDias(lead.ultimaAtividade) : null
-  const diasP = lead.criadoEm       ? diffDias(lead.criadoEm)        : null
-  const TempIcon = score > 60 ? Flame : score > 30 ? Sun : Snowflake
+  const dias  = lead.ultimaAtividade  diffDias(lead.ultimaAtividade) : null
+  const diasP = lead.criadoEm        diffDias(lead.criadoEm)        : null
+  const TempIcon = score > 60  Flame : score > 30  Sun : Snowflake
 
   return (
     <div className="card p-4 space-y-3">
@@ -239,8 +239,8 @@ function CardTemperatura({ lead }) {
       {dias !== null && (
         <div className="flex items-center justify-between text-xs">
           <span className="text-dark-muted">Último contato</span>
-          <span className={`font-medium ${dias >= 10 ? 'text-status-error' : dias >= 5 ? 'text-status-warning' : 'text-dark-text'}`}>
-            {dias === 0 ? 'Hoje' : `${dias}d atrás`}
+          <span className={`font-medium ${dias >= 10  'text-status-error' : dias >= 5  'text-status-warning' : 'text-dark-text'}`}>
+            {dias === 0  'Hoje' : `${dias}d atrás`}
           </span>
         </div>
       )}
@@ -269,7 +269,7 @@ function CardProximaAcao({ lead }) {
   return (
     <div className="card p-4 space-y-2">
       <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Próxima Ação</p>
-      {editing ? (
+      {editing  (
         <div className="space-y-2">
           <input value={value} onChange={e => setValue(e.target.value)}
             className="input text-sm" placeholder="Ex: Ligar amanhã" autoFocus
@@ -277,7 +277,7 @@ function CardProximaAcao({ lead }) {
           <div className="flex gap-2">
             <button onClick={save} disabled={saving}
               className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1 flex-1 justify-center">
-              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Salvar
+              {saving  <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Salvar
             </button>
             <button onClick={() => { setEditing(false); setValue(lead.proximaAcao || '') }}
               className="btn-secondary text-xs px-3 py-1.5">Cancelar</button>
@@ -286,7 +286,7 @@ function CardProximaAcao({ lead }) {
       ) : (
         <button onClick={() => setEditing(true)} className="w-full text-left">
           {lead.proximaAcao
-            ? <p className="text-sm text-brand-accent hover:underline">{lead.proximaAcao}</p>
+             <p className="text-sm text-brand-accent hover:underline">{lead.proximaAcao}</p>
             : <p className="text-sm text-dark-muted/60 italic flex items-center gap-1.5">
                 <Plus className="w-3.5 h-3.5" /> Agendar ação
               </p>}
@@ -299,7 +299,7 @@ function CardProximaAcao({ lead }) {
 function CardResumo({ lead, events }) {
   const tarefas  = events.filter(e => e.tipo === 'Tarefa').length
   const contatos = events.filter(e => e.tipo !== 'Tarefa').length
-  const diasP    = lead.criadoEm ? diffDias(lead.criadoEm) : 0
+  const diasP    = lead.criadoEm  diffDias(lead.criadoEm) : 0
 
   return (
     <div className="card p-4 space-y-3">
@@ -387,7 +387,7 @@ function TabTimeline({ lead, events, toast }) {
         <div className="flex justify-end">
           <button onClick={add} disabled={saving || !form.descricao.trim()}
             className="btn-primary text-sm flex items-center gap-2">
-            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />} Salvar
+            {saving  <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />} Salvar
           </button>
         </div>
       </div>
@@ -456,7 +456,7 @@ function TabNotas({ lead, events, toast }) {
           rows={3} className="input resize-none text-sm" placeholder="Escreva uma nota..." />
         <div className="flex justify-end">
           <button onClick={add} disabled={saving || !descricao.trim()} className="btn-primary text-sm flex items-center gap-2">
-            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />} Salvar Nota
+            {saving  <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />} Salvar Nota
           </button>
         </div>
       </div>
@@ -497,8 +497,8 @@ function TabTarefas({ lead, events, toast }) {
   }
 
   async function toggleDone(ev) {
-    const done = ev.nome?.startsWith('[DONE] ')
-    await eventUpdate(ev.id, { nome: done ? ev.nome.replace('[DONE] ', '') : `[DONE] ${ev.nome}` })
+    const done = ev.nome.startsWith('[DONE] ')
+    await eventUpdate(ev.id, { nome: done  ev.nome.replace('[DONE] ', '') : `[DONE] ${ev.nome}` })
   }
 
   return (
@@ -512,28 +512,28 @@ function TabTarefas({ lead, events, toast }) {
         </div>
         <button onClick={add} disabled={saving || !form.descricao.trim()}
           className="btn-primary text-sm flex items-center gap-2">
-          {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />} Criar Tarefa
+          {saving  <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />} Criar Tarefa
         </button>
       </div>
 
       <div className="space-y-2">
         {tarefas.length === 0 && <p className="text-sm text-dark-muted text-center py-8">Nenhuma tarefa</p>}
         {tarefas.map(ev => {
-          const done = ev.nome?.startsWith('[DONE] ')
+          const done = ev.nome.startsWith('[DONE] ')
           const vencida = ev.data && !done && diffDias(ev.data) < 0
           return (
             <div key={ev.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all
-              ${done ? 'border-dark-border/40 opacity-60' : 'border-dark-border bg-dark-surface'}`}>
+              ${done  'border-dark-border/40 opacity-60' : 'border-dark-border bg-dark-surface'}`}>
               <button onClick={() => toggleDone(ev)} className="flex-shrink-0 text-dark-muted hover:text-brand-accent transition-colors">
-                {done ? <CheckSquare className="w-4 h-4 text-brand-accent" /> : <Square className="w-4 h-4" />}
+                {done  <CheckSquare className="w-4 h-4 text-brand-accent" /> : <Square className="w-4 h-4" />}
               </button>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm ${done ? 'line-through text-dark-muted' : 'text-dark-text'}`}>
-                  {ev.nome?.replace('[DONE] ', '')}
+                <p className={`text-sm ${done  'line-through text-dark-muted' : 'text-dark-text'}`}>
+                  {ev.nome.replace('[DONE] ', '')}
                 </p>
                 {ev.data && (
-                  <p className={`text-[10px] mt-0.5 ${vencida ? 'text-status-error font-semibold' : 'text-dark-muted'}`}>
-                    {vencida ? 'Vencida — ' : ''}{fmtDateShort(ev.data)}
+                  <p className={`text-[10px] mt-0.5 ${vencida  'text-status-error font-semibold' : 'text-dark-muted'}`}>
+                    {vencida  'Vencida — ' : ''}{fmtDateShort(ev.data)}
                   </p>
                 )}
               </div>
@@ -566,7 +566,7 @@ function TabQualificacao({ lead, tags, toast }) {
 
   const leadTags = lead.tags || []
   function toggleTag(tid) {
-    const next = leadTags.includes(tid) ? leadTags.filter(t => t !== tid) : [...leadTags, tid]
+    const next = leadTags.includes(tid)  leadTags.filter(t => t !== tid) : [...leadTags, tid]
     leadUpdate(lead.id, { tags: next })
   }
 
@@ -602,16 +602,16 @@ function TabQualificacao({ lead, tags, toast }) {
           {SCORE_CONVES.map(s => (
             <button key={s.id} onClick={() => handleQualificationChange(s.id)}
               className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1 transition-all
-                ${scoring === s.id ? 'border-current' : 'border-dark-border hover:border-dark-text/30'}`}
-              style={scoring === s.id ? { borderColor: s.color, background: s.bg, color: s.color } : {}}>
+                ${scoring === s.id  'border-current' : 'border-dark-border hover:border-dark-text/30'}`}
+              style={scoring === s.id  { borderColor: s.color, background: s.bg, color: s.color } : {}}>
               <span className="text-xl font-black">{s.id}</span>
-              <span className="text-[9px] font-semibold">{s.id === 'A' ? 'Máxima' : s.id === 'B' ? 'Alta' : s.id === 'C' ? 'Média' : 'Baixa'}</span>
+              <span className="text-[9px] font-semibold">{s.id === 'A'  'Máxima' : s.id === 'B'  'Alta' : s.id === 'C'  'Média' : 'Baixa'}</span>
             </button>
           ))}
         </div>
         {scoring && (
-          <p className="text-xs text-dark-muted" style={{ color: SCORE_CONVES.find(s => s.id === scoring)?.color }}>
-            {SCORE_CONVES.find(s => s.id === scoring)?.desc}
+          <p className="text-xs text-dark-muted" style={{ color: SCORE_CONVES.find(s => s.id === scoring).color }}>
+            {SCORE_CONVES.find(s => s.id === scoring).desc}
           </p>
         )}
         <p className="text-[10px] text-dark-muted/50 flex items-center gap-1">
@@ -627,7 +627,7 @@ function TabQualificacao({ lead, tags, toast }) {
             <button key={t.id} onClick={() => toggleTag(t.id)}
               className="px-2.5 py-1 rounded text-xs font-medium border transition-all"
               style={leadTags.includes(t.id)
-                ? { borderColor: t.cor, background: t.cor + '22', color: t.cor }
+                 { borderColor: t.cor, background: t.cor + '22', color: t.cor }
                 : { borderColor: 'var(--glass-border)', color: 'var(--glass-text-muted)' }}>
               {t.label}
             </button>
@@ -641,8 +641,8 @@ function TabQualificacao({ lead, tags, toast }) {
           <label className={LBL}>Apólice Ativa</label>
           <button onClick={() => leadUpdate(lead.id, { apoliceAtiva: !lead.apoliceAtiva })}
             className={`px-3 py-2 rounded-xl border text-sm font-medium transition-all w-full
-              ${lead.apoliceAtiva ? 'border-brand-accent bg-brand-accent/10 text-brand-accent' : 'border-dark-border text-dark-muted hover:border-dark-text'}`}>
-            {lead.apoliceAtiva ? 'Sim — com apólice' : 'Não — sem apólice'}
+              ${lead.apoliceAtiva  'border-brand-accent bg-brand-accent/10 text-brand-accent' : 'border-dark-border text-dark-muted hover:border-dark-text'}`}>
+            {lead.apoliceAtiva  'Sim — com apólice' : 'Não — sem apólice'}
           </button>
         </div>
         <div>
@@ -709,11 +709,11 @@ function TabApolices({ lead, navigate, toast }) {
 
   return (
     <div className="space-y-3">
-      {loading ? (
+      {loading  (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-5 h-5 animate-spin text-dark-muted" />
         </div>
-      ) : fichas.length === 0 ? (
+      ) : fichas.length === 0  (
         <div className="text-center py-12 space-y-3">
           <p className="text-sm text-dark-muted">Nenhuma apólice ou ficha vinculada</p>
           <button onClick={() => navigate('/fichas')}
@@ -754,7 +754,7 @@ function ReadOnlyWorkflowNode({ data }) {
   const isCondition = tipo === 'control_condicao'
   return (
     <div
-      style={{ borderColor: highlighted ? '#4A90D9' : color, minWidth: 140, boxShadow: highlighted ? '0 0 0 3px #4A90D9' : undefined }}
+      style={{ borderColor: highlighted  '#4A90D9' : color, minWidth: 140, boxShadow: highlighted  '0 0 0 3px #4A90D9' : undefined }}
       className="rounded-xl border-2 overflow-hidden"
     >
       {!isTrigger && (
@@ -790,7 +790,7 @@ function TabJornada({ lead, journeys, events, toast }) {
   const [salvando,     setSalvando]     = useState(false)
   const [modalAvancar, setModalAvancar] = useState(false)
 
-  const jornada = lead.jornada_id ? journeys.find(j => j.id === lead.jornada_id) : null
+  const jornada = lead.jornada_id  journeys.find(j => j.id === lead.jornada_id) : null
 
   async function handleAplicar() {
     if (!jornadaSelecionada) return
@@ -812,7 +812,7 @@ function TabJornada({ lead, journeys, events, toast }) {
       await leadUpdate(lead.id, { jornada_etapa_atual: novoNode.id })
       await eventAdd({
         tipo: 'Nota',
-        nome: 'Jornada: avançou para ' + (novoNode.data?.label || novoNode.id),
+        nome: 'Jornada: avançou para ' + (novoNode.data.label || novoNode.id),
         leadId: lead.id,
         data: new Date().toISOString(),
         auto: true,
@@ -844,7 +844,7 @@ function TabJornada({ lead, journeys, events, toast }) {
         />
         <button onClick={handleAplicar} disabled={!jornadaSelecionada || salvando}
           className="btn-primary text-sm w-full flex items-center justify-center gap-2">
-          {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+          {salvando  <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
           Aplicar Jornada
         </button>
       </div>
@@ -861,8 +861,8 @@ function TabJornada({ lead, journeys, events, toast }) {
   }
 
   const etapasData = jornada.etapas || {}
-  const rawNodes   = Array.isArray(etapasData) ? [] : (etapasData.nodes || [])
-  const rawEdges   = Array.isArray(etapasData) ? [] : (etapasData.edges || [])
+  const rawNodes   = Array.isArray(etapasData)  [] : (etapasData.nodes || [])
+  const rawEdges   = Array.isArray(etapasData)  [] : (etapasData.edges || [])
 
   const nodesComDestaque = rawNodes.map(n => ({
     ...n,
@@ -888,7 +888,7 @@ function TabJornada({ lead, journeys, events, toast }) {
     <div className="space-y-4">
       <div className="card p-3 space-y-2">
         <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">{jornada.nome}</p>
-        {rawNodes.length > 0 ? (
+        {rawNodes.length > 0  (
           <div style={{ height: 320, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--dark-border)' }}>
             <ReactFlowProvider>
               <ReactFlow
@@ -917,7 +917,7 @@ function TabJornada({ lead, journeys, events, toast }) {
           <div>
             <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Etapa atual</p>
             <p className="text-sm text-dark-text mt-0.5">
-              {etapaAtualNode ? (etapaAtualNode.data?.label || 'Etapa sem nome') : 'Nenhuma etapa iniciada'}
+              {etapaAtualNode  (etapaAtualNode.data.label || 'Etapa sem nome') : 'Nenhuma etapa iniciada'}
             </p>
           </div>
           <button onClick={() => setModalAvancar(true)}
@@ -957,12 +957,12 @@ function TabJornada({ lead, journeys, events, toast }) {
               </button>
             </div>
             <div className="px-5 py-4 space-y-2">
-              {nextNodes.length === 0 ? (
+              {nextNodes.length === 0  (
                 <p className="text-sm text-dark-muted">Nenhuma próxima etapa disponível.</p>
               ) : nextNodes.map(n => (
                 <button key={n.id} onClick={() => handleAvancar(n)}
                   className="w-full flex items-center gap-3 p-3 rounded-xl border border-dark-border hover:bg-dark-surface2 transition-colors text-left">
-                  <span className="text-sm font-semibold text-dark-text">{n.data?.label || n.id}</span>
+                  <span className="text-sm font-semibold text-dark-text">{n.data.label || n.id}</span>
                 </button>
               ))}
             </div>
@@ -994,7 +994,7 @@ export default function LeadDetalhe() {
   const [editOpen, setEditOpen]         = useState(false)
   const moveRef                         = useRef(null)
 
-  const lead   = state.leads?.find(l => l.id === id)
+  const lead   = state.leads.find(l => l.id === id)
   const events = (state.events || []).filter(e => e.leadId === id)
   const tags   = state.tags || []
 
@@ -1014,8 +1014,8 @@ export default function LeadDetalhe() {
     const currentIdx = PIPELINE_COLS.findIndex(c => c.id === lead.coluna)
     if (colIdx === currentIdx) return
     const msg = colIdx < currentIdx
-      ? `Regredir para "${col.label}"? Descreva o motivo:`
-      : `Avançar para "${col.label}"?`
+       `Regredir para "${col.label}" Descreva o motivo:`
+      : `Avançar para "${col.label}"`
     if (colIdx < currentIdx) {
       const motivo = window.prompt(msg)
       if (motivo === null) return
@@ -1054,7 +1054,7 @@ export default function LeadDetalhe() {
   const qualificationMeta = SCORE_CONVES.find(item => item.id === qualification)
   const taskCount  = events.filter(e => e.tipo === 'Tarefa').length
   const noteCount  = events.filter(e => e.tipo === 'Nota').length
-  const daysIdle   = lead.ultimaAtividade ? diffDias(lead.ultimaAtividade) : null
+  const daysIdle   = lead.ultimaAtividade  diffDias(lead.ultimaAtividade) : null
 
   return (
     <div className="space-y-5 animate-fade-in pb-8">
@@ -1087,9 +1087,9 @@ export default function LeadDetalhe() {
             <div ref={moveRef} className="relative">
               <button onClick={() => setMoveOpen(o => !o)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-sm text-dark-muted hover:text-dark-text hover:border-dark-text/40 transition-colors">
-                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: currentCol?.color }} />
-                {currentCol?.label}
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${moveOpen ? 'rotate-180' : ''}`} />
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: currentCol.color }} />
+                {currentCol.label}
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${moveOpen  'rotate-180' : ''}`} />
               </button>
               {moveOpen && (
                 <div className="absolute right-0 top-full mt-1.5 w-48 glass-modal rounded-xl shadow-none z-[300] py-1 overflow-hidden">
@@ -1097,7 +1097,7 @@ export default function LeadDetalhe() {
                     <button key={col.id} onClick={() => handleMoveDropdown(col)}
                       disabled={col.id === lead.coluna}
                       className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors
-                        ${col.id === lead.coluna ? 'text-dark-muted cursor-default' : 'text-dark-text hover:bg-dark-surface2'}`}>
+                        ${col.id === lead.coluna  'text-dark-muted cursor-default' : 'text-dark-text hover:bg-dark-surface2'}`}>
                       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: col.color }} />
                       {col.label}
                       {col.id === lead.coluna && <Check className="w-3 h-3 ml-auto" />}
@@ -1112,7 +1112,7 @@ export default function LeadDetalhe() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <CrmMetricCard icon={Flame} label="Score" value={`${score}/100`} accent={scoreBand.color} helper={scoreBand.label} />
-        <CrmMetricCard icon={Clock} label="Último contato" value={daysIdle === null ? '—' : daysIdle === 0 ? 'Hoje' : `${daysIdle}d`} accent={daysIdle >= 7 ? '#D97706' : '#2563EB'} helper="Tempo desde a última atividade" />
+        <CrmMetricCard icon={Clock} label="Último contato" value={daysIdle === null  '—' : daysIdle === 0  'Hoje' : `${daysIdle}d`} accent={daysIdle >= 7  '#D97706' : '#2563EB'} helper="Tempo desde a última atividade" />
         <CrmMetricCard icon={CheckSquare} label="Tarefas" value={taskCount} accent="#7C3AED" helper="Eventos do tipo tarefa" />
         <CrmMetricCard icon={FileText} label="Notas" value={noteCount} accent="#0F766E" helper="Registros escritos no lead" />
       </div>
@@ -1143,7 +1143,7 @@ export default function LeadDetalhe() {
                 <button key={tab.id} onClick={() => setTab(tab.id)}
                   className={`px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px
                     ${activeTab === tab.id
-                      ? 'border-brand-accent text-brand-accent'
+                       'border-brand-accent text-brand-accent'
                       : 'border-transparent text-dark-muted hover:text-dark-text'}`}>
                   {tab.label}
                 </button>

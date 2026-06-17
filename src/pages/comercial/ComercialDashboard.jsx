@@ -65,7 +65,7 @@ function inRange(iso, range) {
 }
 
 function deltaPct(current, previous) {
-  if (!previous) return current > 0 ? 100 : 0
+  if (!previous) return current > 0  100 : 0
   return Math.round(((current - previous) / previous) * 100)
 }
 
@@ -118,7 +118,7 @@ function buildTrendData(leads, sales, range) {
       if (bucket >= 0) buckets[bucket].leads += 1
     }
     if (lead.coluna === 'recusou') {
-      const lastRefusal = (lead.historico || []).slice().reverse().find(item => item.desc?.toLowerCase().includes('recus'))
+      const lastRefusal = (lead.historico || []).slice().reverse().find(item => item.desc.toLowerCase().includes('recus'))
       if (lastRefusal && inRange(lastRefusal.data, range)) {
         const bucket = findBucket(lastRefusal.data)
         if (bucket >= 0) buckets[bucket].recusas += 1
@@ -143,7 +143,7 @@ function buildOrigins(leads) {
   })).filter(item => item.total > 0)
 
   return counts.length > 0
-    ? counts.sort((a, b) => b.total - a.total)
+     counts.sort((a, b) => b.total - a.total)
     : [{ origem: 'Sem origem definida', total: leads.filter(lead => !lead.origem).length || 0 }]
 }
 
@@ -156,7 +156,7 @@ function buildPipelineOverview(leads) {
     .map(column => {
       const stageLeads = activeLeads.filter(lead => lead.coluna === column.id)
       const averageAge = stageLeads.length
-        ? Math.round(stageLeads.reduce((sum, lead) => sum + (lead.ultimaAtividade ? diffDias(lead.ultimaAtividade) : 0), 0) / stageLeads.length)
+         Math.round(stageLeads.reduce((sum, lead) => sum + (lead.ultimaAtividade  diffDias(lead.ultimaAtividade) : 0), 0) / stageLeads.length)
         : 0
       const stale = stageLeads.filter(lead => lead.ultimaAtividade && diffDias(lead.ultimaAtividade) >= 7).length
       return {
@@ -195,9 +195,9 @@ function buildPriorityItems(leads, events) {
       id: lead.id,
       kind: 'lead',
       title: lead.nome,
-      subtitle: PIPELINE_COLS.find(column => column.id === lead.coluna)?.label || 'Pipeline',
+      subtitle: PIPELINE_COLS.find(column => column.id === lead.coluna).label || 'Pipeline',
       meta: `${diffDias(lead.ultimaAtividade)}d sem atividade`,
-      accent: diffDias(lead.ultimaAtividade) >= 10 ? '#EF4444' : '#F59E0B',
+      accent: diffDias(lead.ultimaAtividade) >= 10  '#EF4444' : '#F59E0B',
       leadId: lead.id,
     }))
 
@@ -226,7 +226,7 @@ function LegendToggle({ hiddenSeries, onToggle }) {
             key={key}
             type="button"
             onClick={() => onToggle(key)}
-            className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-opacity ${hidden ? 'opacity-35' : 'opacity-100'}`}
+            className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-opacity ${hidden  'opacity-35' : 'opacity-100'}`}
           >
             <span className="h-2.5 w-2.5 rounded-full" style={{ background: meta.color }} />
             {meta.label}
@@ -238,7 +238,7 @@ function LegendToggle({ hiddenSeries, onToggle }) {
 }
 
 function TrendTooltip({ active, payload, label }) {
-  if (!active || !payload?.length) return null
+  if (!active || !payload.length) return null
 
   return (
     <div className="rounded-2xl border border-dark-border/60 bg-white/95 px-3 py-2 shadow-xl">
@@ -248,7 +248,7 @@ function TrendTooltip({ active, payload, label }) {
           <div key={item.dataKey} className="flex items-center justify-between gap-5 text-xs">
             <span className="inline-flex items-center gap-2 text-dark-muted">
               <span className="h-2 w-2 rounded-full" style={{ background: item.color }} />
-              {SERIES_META[item.dataKey]?.label || item.dataKey}
+              {SERIES_META[item.dataKey].label || item.dataKey}
             </span>
             <span className="font-semibold text-dark-text">{item.value}</span>
           </div>
@@ -282,10 +282,10 @@ export default function ComercialDashboard() {
     () => (state.leads || []).filter(lead => ['oferta', 'negociando', 'followup'].includes(lead.coluna) || lead.propostaEnviada).length,
     [state.leads]
   )
-  const conversion = filteredLeads.length ? Math.round((filteredSales.length / filteredLeads.length) * 100) : 0
-  const prevConversion = prevLeads.length ? Math.round((prevSales.length / prevLeads.length) * 100) : 0
+  const conversion = filteredLeads.length  Math.round((filteredSales.length / filteredLeads.length) * 100) : 0
+  const prevConversion = prevLeads.length  Math.round((prevSales.length / prevLeads.length) * 100) : 0
   const revenue = filteredSales.reduce((sum, sale) => sum + (parseFloat(sale.valor) || 0), 0)
-  const ticketMedio = filteredSales.length ? revenue / filteredSales.length : 0
+  const ticketMedio = filteredSales.length  revenue / filteredSales.length : 0
   const ranking = useMemo(() => buildRanking(filteredSales), [filteredSales])
   const topRanking = ranking[0]
   const priorityItems = useMemo(() => buildPriorityItems(state.leads || [], state.events || []), [state.leads, state.events])
@@ -300,7 +300,7 @@ export default function ComercialDashboard() {
   )
 
   const periodLabel = format(range.ate, "MMMM 'de' yyyy", { locale: ptBR })
-  const displayName = profile?.nome?.split(' ')[0] || 'time'
+  const displayName = profile.nome.split(' ')[0] || 'time'
   const leadGoals = remainingBusinessDays()
 
   function toggleSeries(key) {
@@ -394,7 +394,7 @@ export default function ComercialDashboard() {
           label="Ticket médio"
           value={formatMoney(ticketMedio)}
           accent="#0F766E"
-          change={deltaPct(ticketMedio, prevSales.length ? prevSales.reduce((sum, sale) => sum + (parseFloat(sale.valor) || 0), 0) / prevSales.length : 0)}
+          change={deltaPct(ticketMedio, prevSales.length  prevSales.reduce((sum, sale) => sum + (parseFloat(sale.valor) || 0), 0) / prevSales.length : 0)}
           helper="Receita média por fechamento"
         />
         <CrmMetricCard
@@ -402,15 +402,15 @@ export default function ComercialDashboard() {
           label="Atividades hoje"
           value={todayEventsCount}
           accent="#2563EB"
-          badge={todayEventsCount > 0 ? 'ao vivo' : null}
+          badge={todayEventsCount > 0  'ao vivo' : null}
           helper="Agenda operacional do dia"
         />
         <CrmMetricCard
           icon={TrendingUp}
           label="Ranking comercial"
-          value={topRanking ? topRanking.nome : 'Sem ranking'}
+          value={topRanking  topRanking.nome : 'Sem ranking'}
           accent="#DB2777"
-          helper={topRanking ? `${formatMoney(topRanking.valor)} em ${topRanking.produto}` : 'Sem vendas no período'}
+          helper={topRanking  `${formatMoney(topRanking.valor)} em ${topRanking.produto}` : 'Sem vendas no período'}
         />
       </div>
 
@@ -421,7 +421,7 @@ export default function ComercialDashboard() {
             subtitle="Visão da cadência de aquisição, conversão e perda."
             action={<LegendToggle hiddenSeries={hiddenSeries} onToggle={toggleSeries} />}
           >
-            {trendData.length === 0 ? (
+            {trendData.length === 0  (
               <CrmEmptyState
                 icon={TrendingUp}
                 title="Sem volume no período"
@@ -461,7 +461,7 @@ export default function ComercialDashboard() {
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
             <CrmSectionCard title="Origem dos leads" subtitle="Canais que mais alimentam o pipeline atual.">
-              {origins.every(item => item.total === 0) ? (
+              {origins.every(item => item.total === 0)  (
                 <CrmEmptyState
                   icon={Users}
                   title="Sem origens mapeadas"
@@ -478,7 +478,7 @@ export default function ComercialDashboard() {
                       <Tooltip cursor={{ fill: 'rgba(37,99,235,0.06)' }} />
                       <Bar dataKey="total" radius={[0, 12, 12, 0]}>
                         {origins.map(item => (
-                          <Cell key={item.origem} fill={item.origem === 'Seguro Fiança' ? '#2563EB' : item.origem === 'Indicação' ? '#10B981' : '#7C3AED'} />
+                          <Cell key={item.origem} fill={item.origem === 'Seguro Fiança'  '#2563EB' : item.origem === 'Indicação'  '#10B981' : '#7C3AED'} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -488,7 +488,7 @@ export default function ComercialDashboard() {
             </CrmSectionCard>
 
             <CrmSectionCard title="Ranking comercial" subtitle="Fechamentos com maior impacto financeiro no período.">
-              {ranking.length === 0 ? (
+              {ranking.length === 0  (
                 <CrmEmptyState
                   icon={CircleDollarSign}
                   title="Sem vendas fechadas"
@@ -533,7 +533,7 @@ export default function ComercialDashboard() {
               </button>
             )}
           >
-            {priorityItems.length === 0 ? (
+            {priorityItems.length === 0  (
               <CrmEmptyState
                 icon={CalendarClock}
                 title="Operação limpa"
@@ -546,7 +546,7 @@ export default function ComercialDashboard() {
                   <button
                     key={`${item.kind}-${item.id}`}
                     type="button"
-                    onClick={() => item.leadId ? navigate(`/comercial/leads/${item.leadId}`) : navigate('/comercial/calendario')}
+                    onClick={() => item.leadId  navigate(`/comercial/leads/${item.leadId}`) : navigate('/comercial/calendario')}
                     className="flex w-full items-start gap-3 rounded-[22px] border border-dark-border/50 bg-white/65 px-3 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <span className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: item.accent }} />
@@ -581,7 +581,7 @@ export default function ComercialDashboard() {
                 <div className="rounded-[22px] border border-dark-border/50 bg-white/55 p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-dark-muted">Próxima frente</p>
                   <p className="mt-2 text-xl font-black text-dark-text">
-                    {pipelineOverview.find(stage => stage.total > 0)?.label || 'Pipeline vazio'}
+                    {pipelineOverview.find(stage => stage.total > 0).label || 'Pipeline vazio'}
                   </p>
                   <p className="mt-1 text-xs text-dark-muted">Maior densidade operacional agora.</p>
                 </div>
@@ -618,7 +618,7 @@ export default function ComercialDashboard() {
                   <p className="text-xs text-dark-muted">leads na etapa</p>
                 </div>
                 <div className="h-2 flex-1 rounded-full bg-slate-900/6">
-                  <div className="h-full rounded-full" style={{ width: `${Math.max(stage.ratio, stage.total ? 14 : 0)}%`, background: stage.color }} />
+                  <div className="h-full rounded-full" style={{ width: `${Math.max(stage.ratio, stage.total  14 : 0)}%`, background: stage.color }} />
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
@@ -628,7 +628,7 @@ export default function ComercialDashboard() {
                 </div>
                 <div className="rounded-[18px] bg-slate-900/[0.035] p-3">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Parados</p>
-                  <p className={`mt-2 text-lg font-black ${stage.stale > 0 ? 'text-amber-600' : 'text-dark-text'}`}>{stage.stale}</p>
+                  <p className={`mt-2 text-lg font-black ${stage.stale > 0  'text-amber-600' : 'text-dark-text'}`}>{stage.stale}</p>
                 </div>
               </div>
             </article>

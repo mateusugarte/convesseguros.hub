@@ -9,7 +9,7 @@ function nameToColor(str) {
 }
 
 function initials(name) {
-  if (!name) return '??'
+  if (!name) return ''
   return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
 }
 
@@ -29,10 +29,10 @@ export function Avatar({ name, src, size = 'md', className = '' }) {
   return (
     <div
       className={`${SIZES[size]} rounded-full flex items-center justify-center font-bold text-white flex-shrink-0 overflow-hidden ${className}`}
-      style={!src ? { background: nameToColor(name) } : undefined}
+      style={!src  { background: nameToColor(name) } : undefined}
     >
       {src && !imageError
-        ? <img src={src} alt={name} className="w-full h-full object-cover" onError={() => setImageError(true)} />
+         <img src={src} alt={name} className="w-full h-full object-cover" onError={() => setImageError(true)} />
         : initials(name)
       }
     </div>

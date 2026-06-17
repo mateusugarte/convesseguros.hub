@@ -4,7 +4,7 @@ export const ENTITY_MEDIA_BUCKET = 'cadastros-media'
 export const ENTITY_DOCS_BUCKET = 'entidade-documentos'
 
 function isDirectImageUrl(value) {
-  return typeof value === 'string' && /^(https?:\/\/|data:|blob:|file:)/i.test(value.trim())
+  return typeof value === 'string' && /^(https:\/\/|data:|blob:|file:)/i.test(value.trim())
 }
 
 function slugify(value) {
@@ -19,7 +19,7 @@ function slugify(value) {
 
 function uniqueName(fileName) {
   const parts = String(fileName || 'arquivo').split('.')
-  const ext = parts.length > 1 ? `.${parts.pop()}` : ''
+  const ext = parts.length > 1  `.${parts.pop()}` : ''
   const base = slugify(parts.join('.')) || 'arquivo'
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${base}${ext}`
 }
@@ -37,7 +37,7 @@ export async function uploadEntityImage({ file, entityType, entityId }) {
   return {
     error: null,
     path,
-    url: data?.publicUrl || null,
+    url: data.publicUrl || null,
   }
 }
 
@@ -46,7 +46,7 @@ export function getEntityImageUrl(path, fallbackUrl = null) {
   if (isDirectImageUrl(path)) return path
   if (path) {
     const { data } = supabase.storage.from(ENTITY_MEDIA_BUCKET).getPublicUrl(path)
-    return data?.publicUrl || fallbackUrl
+    return data.publicUrl || fallbackUrl
   }
   return fallbackUrl
 }
@@ -85,7 +85,7 @@ export async function fetchEntityDocuments({ tipoEntidade, entidadeId }) {
 
     return {
       ...doc,
-      url: signed?.signedUrl || null,
+      url: signed.signedUrl || null,
     }
   }))
 
@@ -104,7 +104,7 @@ export async function uploadEntityDocument({ file, tipoEntidade, entidadeId, tit
   const { error: dbError } = await supabase.from('entidade_documentos').insert({
     tipo_entidade: tipoEntidade,
     entidade_id: entidadeId,
-    titulo: titulo?.trim() || file.name,
+    titulo: titulo.trim() || file.name,
     nome_arquivo: file.name,
     storage_path: path,
     tamanho_bytes: file.size,
@@ -124,7 +124,7 @@ export async function deleteEntityDocument(id) {
 
   if (error) return error
 
-  if (data?.storage_path) {
+  if (data.storage_path) {
     await removeStorageObject(ENTITY_DOCS_BUCKET, data.storage_path)
   }
 

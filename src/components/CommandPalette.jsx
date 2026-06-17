@@ -14,7 +14,7 @@ export default function CommandPalette({ open, onClose, onOpenFicha }) {
   useEffect(() => {
     if (open) {
       setQuery(''); setResults([])
-      setTimeout(() => inputRef.current?.focus(), 50)
+      setTimeout(() => inputRef.current.focus(), 50)
     }
   }, [open])
 
@@ -80,7 +80,7 @@ export default function CommandPalette({ open, onClose, onOpenFicha }) {
         {results.length > 0 && (
           <div className="py-1 max-h-96 overflow-y-auto">
             {results.map(f => {
-              const si = STATUS_LABELS[f.status] ?? { label: f.status, color: '' }
+              const si = STATUS_LABELS[f.status]  { label: f.status, color: '' }
               return (
                 <button
                   key={f.id}
@@ -90,7 +90,7 @@ export default function CommandPalette({ open, onClose, onOpenFicha }) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-dark-text truncate">
                       {f.produto === 'pessoa_juridica'
-                        ? (f.nome_empresa || f.nome_interessado || 'Sem nome')
+                         (f.nome_empresa || f.nome_interessado || 'Sem nome')
                         : (f.nome_interessado || 'Sem nome')}
                     </p>
                     <p className="text-xs text-dark-muted mt-0.5 truncate">

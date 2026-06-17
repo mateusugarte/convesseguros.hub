@@ -11,7 +11,7 @@ import { ChevronLeft, ChevronRight, Download, X, FileText, CheckCircle2, XCircle
 function maskCpf(cpf) {
   if (!cpf) return 'â€”'
   const d = cpf.replace(/\D/g, '')
-  if (d.length === 11) return `***.${d.slice(3, 6)}-**`
+  if (d.length === 11) return `***.${d.slice(3, 6)}.${d.slice(6, 9)}-**`
   return cpf
 }
 
@@ -81,19 +81,19 @@ function ResultadoFinal({ status }) {
 // â”€â”€ ExportaÃ§Ã£o CSV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function exportarCSV(fichas, mes, ano, resolverNome) {
-  const headers = ['ImobiliÃ¡ria','Nome','Doc','Produto','Status','Enviada','Resultado','Desistiu','OrÃ§amentista','Data']
+  const headers = ['Imobiliária','Nome','Doc','Produto','Status','Enviada','Resultado','Desistiu','Orçamentista','Data']
   const rows = fichas.map(f => [
     (resolverNome ? resolverNome(f.imobiliaria) : null) || f.imobiliaria || '',
     nomePrincipal(f),
     f.produto === 'pessoa_juridica' ? (f.cnpj || '') : (f.cpf || ''),
     PRODUTO_LABELS[f.produto] || f.produto,
     f.status,
-    f.retorno_enviado ? 'Sim' : 'NÃ£o',
-    f.status === 'emitido'  ? 'Emitida'  :
+    f.retorno_enviado ? 'Sim' : 'Não',
+    f.status === 'emitido' ? 'Emitida' :
     f.status === 'expirada' ? 'Expirada' :
     f.status === 'recusado' ? 'Recusada' :
     f.status === 'aprovado' ? 'Aprovada' : 'Pendente',
-    f.status === 'cancelado' ? 'Sim' : 'NÃ£o',
+    f.status === 'cancelado' ? 'Sim' : 'Não',
     f.orcamentista_forms || '',
     new Date(f.created_at).toLocaleDateString('pt-BR'),
   ])
@@ -158,7 +158,7 @@ function TabelaImob({ nome, fichas }) {
                   <td className="td">{f.retorno_enviado ? <Sim /> : <Nao />}</td>
                   <td className="td"><ResultadoFinal status={f.status} /></td>
                   <td className="td">{f.status === 'cancelado' ? <Sim /> : <Dash />}</td>
-                  <td className="td text-dark-muted max-w-[120px] truncate">{f.orcamentista_forms || 'â€”'}</td>
+                  <td className="td text-dark-muted max-w-[120px] truncate">{f.orcamentista_forms || '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -183,14 +183,14 @@ function Rodape({ fichas }) {
 
   return (
     <div className="card p-5 mt-6">
-      <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-4">Total do MÃªs</p>
+      <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-4">Total do Mês</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
           { label: 'Total de fichas', val: total,    color: BRAND.primary, pct: null },
           { label: 'Enviadas',        val: enviadas,  color: PRODUTO_COLORS.comercial_pf.color, pct: pct(enviadas) },
           { label: 'Emitidas',        val: emitidas,  color: PRODUTO_COLORS.residencial_pf.color, pct: pct(emitidas) },
           { label: 'Expiradas',       val: expiras,   color: '#6B7280', pct: pct(expiras) },
-          { label: 'DesistÃªncias',    val: desist,    color: BRAND.gold, pct: pct(desist) },
+          { label: 'Desistências',    val: desist,    color: BRAND.gold, pct: pct(desist) },
           { label: 'Recusadas',       val: recusadas, color: '#EF4444', pct: pct(recusadas) },
         ].map(({ label, val, color, pct: p }) => (
           <div key={label} className="text-center">
@@ -235,7 +235,7 @@ export default function RelatorioMensal({ onClose }) {
 
   // Agrupar por imobiliÃ¡ria
   const porImobiliaria = fichas.reduce((acc, f) => {
-    const imob = resolverNome(f.imobiliaria) || 'Sem ImobiliÃ¡ria'
+    const imob = resolverNome(f.imobiliaria) || 'Sem Imobiliária'
     if (!acc[imob]) acc[imob] = []
     acc[imob].push(f)
     return acc
@@ -254,7 +254,7 @@ export default function RelatorioMensal({ onClose }) {
             <div className="w-9 h-9 rounded-xl bg-brand-accent/15 flex items-center justify-center">
               <FileText className="w-5 h-5 text-brand-accent" />
             </div>
-            <h2 className="font-bold text-dark-text">RelatÃ³rio Mensal de Fichas</h2>
+            <h2 className="font-bold text-dark-text">Relatório Mensal de Fichas</h2>
           </div>
           <button onClick={onClose} className="text-dark-muted hover:text-dark-text transition-colors">
             <X className="w-5 h-5" />
@@ -263,7 +263,7 @@ export default function RelatorioMensal({ onClose }) {
 
         {/* Controles */}
         <div className="px-6 py-4 border-b border-dark-border flex flex-wrap items-center gap-4">
-          {/* Seletor de mÃªs */}
+          {/* Seletor de mês */}
           <div className="flex items-center gap-2">
             <button onClick={() => mudarMes(-1)}
                     className="p-1.5 rounded-lg border border-dark-border hover:border-brand-accent/50 text-dark-muted hover:text-dark-text transition-colors">

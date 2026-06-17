@@ -1,7 +1,7 @@
 const AVATAR_COLORS = ['#4A90D9', '#10B981', '#F59E0B', '#8B5CF6', '#2B5BA8', '#EC4899', '#06B6D4', '#EF4444']
 
 function initials(name) {
-  return (name || '?')
+  return (name || '')
     .split(' ')
     .map(part => part[0])
     .slice(0, 2)
@@ -14,7 +14,7 @@ function avatarColor(name) {
 }
 
 export default function CrmAvatarBadge({ name, subtitle, size = 'md' }) {
-  const avatarSize = size === 'sm' ? 'h-9 w-9 text-xs' : 'h-11 w-11 text-sm'
+  const avatarSize = size === 'sm'  'h-9 w-9 text-xs' : 'h-11 w-11 text-sm'
 
   return (
     <div className="flex min-w-0 items-center gap-3">

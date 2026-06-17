@@ -12,7 +12,7 @@ export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
     try {
       const stored = localStorage.getItem('theme')
-      return stored === 'dark' || stored === 'light' ? stored : DEFAULT_THEME
+      return stored === 'dark' || stored === 'light'  stored : DEFAULT_THEME
     } catch {
       return DEFAULT_THEME
     }
@@ -27,7 +27,7 @@ export function ThemeProvider({ children }) {
   }, [theme])
 
   function toggleTheme() {
-    setTheme(t => t === 'dark' ? 'light' : 'dark')
+    setTheme(t => t === 'dark'  'light' : 'dark')
   }
 
   return <ThemeCtx.Provider value={{ theme, setTheme, toggleTheme }}>{children}</ThemeCtx.Provider>

@@ -34,12 +34,12 @@ function countBy(items, accessor) {
 }
 
 export function getEmissaoColuna(item) {
-  const raw = item?.coluna
+  const raw = item.coluna
   if (typeof raw !== 'string') return 'pendentes'
   const trimmed = raw.trim()
   if (!trimmed) return 'pendentes'
   if (trimmed === 'pendente') return 'pendentes'
-  if (trimmed === 'cotacao_feita' && !item?.resultado) {
+  if (trimmed === 'cotacao_feita' && !item.resultado) {
     return 'pendentes'
   }
   return trimmed
@@ -96,7 +96,7 @@ export async function getCotacoesAuto({ tipo, status, seguradora, inicio, fim } 
 
   const { data, error } = await q
   if (error) throw error
-  return data ?? []
+  return data  []
 }
 
 export async function criarCotacaoAuto(payload) {
@@ -151,7 +151,7 @@ export async function deletarCotacaoAuto(id) {
     .eq('cotacao_id', id)
   if (emissoesError) throw emissoesError
 
-  const emissaoIds = (emissoes ?? []).map(item => item.id).filter(Boolean)
+  const emissaoIds = (emissoes  []).map(item => item.id).filter(Boolean)
 
   if (emissaoIds.length) {
     const { error: apolicesError } = await supabase
@@ -180,7 +180,7 @@ async function sincronizarEmissoesPendentes() {
     .from('cotacoes_auto')
     .select('id, cliente_id, tipo, created_at')
   if (cotacoesError) throw cotacoesError
-  if (!cotacoes?.length) return
+  if (!cotacoes.length) return
 
   const cotacaoIds = cotacoes.map(item => item.id).filter(Boolean)
   if (!cotacaoIds.length) return
@@ -192,7 +192,7 @@ async function sincronizarEmissoesPendentes() {
 
   if (emissoesError) throw emissoesError
 
-  const existentes = new Set((emissoesExistentes ?? []).map(item => item.cotacao_id).filter(Boolean))
+  const existentes = new Set((emissoesExistentes  []).map(item => item.cotacao_id).filter(Boolean))
   const faltantes = cotacoes.filter(item => !existentes.has(item.id))
 
   if (!faltantes.length) return
@@ -226,7 +226,7 @@ export async function getEmissoesAuto({ inicio, fim } = {}) {
 
   const { data, error } = await q
   if (error) throw error
-  return data ?? []
+  return data  []
 }
 
 export async function moverEmissaoColuna(id, coluna) {
@@ -243,7 +243,7 @@ export async function salvarResultadoCotacao(id, { resultado, seguradoras_cotada
     .update({
       coluna: 'cotacao_feita',
       resultado,
-      seguradoras_cotadas: seguradoras_cotadas ?? [],
+      seguradoras_cotadas: seguradoras_cotadas  [],
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
@@ -257,7 +257,7 @@ export async function emitirApoliceAuto(payload) {
   const valorComissao = premioLiquido * pctComissao
 
   const valorRepasse = payload.tem_repasse && payload.pct_repasse
-    ? valorComissao * parseFloat(payload.pct_repasse)
+     valorComissao * parseFloat(payload.pct_repasse)
     : null
 
   const { data, error } = await supabase
@@ -278,7 +278,7 @@ export async function criarEmissaoManualAuto(payload) {
   const pctComissao = parseFloat(payload.pct_comissao) || 0
   const valorComissao = premioLiquido * pctComissao
   const valorRepasse = payload.tem_repasse && payload.pct_repasse
-    ? valorComissao * parseFloat(payload.pct_repasse)
+     valorComissao * parseFloat(payload.pct_repasse)
     : null
 
   const clienteId = payload.cliente_id || `${(payload.cpf_cliente || '').replace(/\D/g, '') || 'manual'}_${new Date().toISOString().split('T')[0]}`
@@ -305,9 +305,9 @@ export async function criarEmissaoManualAuto(payload) {
     forma_pagamento: payload.forma_pagamento || null,
     parcelamento: payload.parcelamento || null,
     tem_repasse: !!payload.tem_repasse,
-    pct_repasse: payload.tem_repasse ? parseFloat(payload.pct_repasse) || null : null,
-    nome_repasse: payload.tem_repasse ? payload.nome_repasse || null : null,
-    valor_repasse: payload.tem_repasse ? valorRepasse : null,
+    pct_repasse: payload.tem_repasse  parseFloat(payload.pct_repasse) || null : null,
+    nome_repasse: payload.tem_repasse  payload.nome_repasse || null : null,
+    valor_repasse: payload.tem_repasse  valorRepasse : null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }
@@ -335,9 +335,9 @@ export async function criarEmissaoManualAuto(payload) {
     responsavel: payload.responsavel || null,
     eh_renovacao: !!payload.eh_renovacao,
     tem_repasse: !!payload.tem_repasse,
-    pct_repasse: payload.tem_repasse ? parseFloat(payload.pct_repasse) || null : null,
-    nome_repasse: payload.tem_repasse ? payload.nome_repasse || null : null,
-    valor_repasse: payload.tem_repasse ? valorRepasse : null,
+    pct_repasse: payload.tem_repasse  parseFloat(payload.pct_repasse) || null : null,
+    nome_repasse: payload.tem_repasse  payload.nome_repasse || null : null,
+    valor_repasse: payload.tem_repasse  valorRepasse : null,
     nome_cliente: payload.nome_cliente || null,
     cpf_cliente: payload.cpf_cliente || null,
     celular_cliente: payload.celular_cliente || null,
@@ -377,7 +377,7 @@ export async function getRenovacoesAuto({ periodo } = {}) {
 
   const { data, error } = await q
   if (error) throw error
-  return data ?? []
+  return data  []
 }
 
 export async function atualizarStatusRenovacao(id, campos) {
@@ -401,19 +401,19 @@ export async function getApolicesAuto({ search, inicio, fim } = {}) {
   const { data, error } = await q
   if (error) throw error
 
-  let result = data ?? []
+  let result = data  []
   if (search) {
     const term = search.toLowerCase()
     result = result.filter(item =>
-      item.nome_cliente?.toLowerCase().includes(term) ||
-      item.cpf_cliente?.toLowerCase().includes(term) ||
-      item.celular_cliente?.toLowerCase().includes(term) ||
-      item.condutor_nome?.toLowerCase().includes(term) ||
-      item.condutor_cpf?.toLowerCase().includes(term) ||
-      item.modelo_veiculo?.toLowerCase().includes(term) ||
-      item.placa?.toLowerCase().includes(term) ||
-      item.numero_apolice?.toLowerCase().includes(term) ||
-      item.seguradora?.toLowerCase().includes(term)
+      item.nome_cliente.toLowerCase().includes(term) ||
+      item.cpf_cliente.toLowerCase().includes(term) ||
+      item.celular_cliente.toLowerCase().includes(term) ||
+      item.condutor_nome.toLowerCase().includes(term) ||
+      item.condutor_cpf.toLowerCase().includes(term) ||
+      item.modelo_veiculo.toLowerCase().includes(term) ||
+      item.placa.toLowerCase().includes(term) ||
+      item.numero_apolice.toLowerCase().includes(term) ||
+      item.seguradora.toLowerCase().includes(term)
     )
   }
   return result
@@ -433,12 +433,12 @@ export async function getAutoCarteiraClientes({ search, seguradora, inicio, fim 
   const { data, error } = await q
   if (error) throw error
 
-  let result = data ?? []
+  let result = data  []
   if (search) {
     const term = search.toLowerCase().trim()
     if (term) {
       result = result.filter(item => {
-        const c = item.emissoes_auto?.cotacoes_auto || {}
+        const c = item.emissoes_auto.cotacoes_auto || {}
         const text = [
           item.nome_cliente,
           item.cpf_cliente,
@@ -449,7 +449,7 @@ export async function getAutoCarteiraClientes({ search, seguradora, inicio, fim 
           item.placa,
           item.numero_apolice,
           item.seguradora,
-          item.emissoes_auto?.numero_apolice,
+          item.emissoes_auto.numero_apolice,
           c.nome_cliente,
           c.cpf_cliente,
           c.celular_cliente,
@@ -496,20 +496,20 @@ export async function getDashboardAutoMetrics() {
     supabase.from('renovacoes_auto').select('id').neq('status_cotacao', 'cotada_enviada'),
   ])
 
-  const totalCotacoesMes = cotacoesMes.data?.length ?? 0
-  const totalConvertidas = cotacoesConvertidas.data?.length ?? 0
-  const comissaoTotal = (apolicesMes.data ?? []).reduce((sum, item) => sum + (item.valor_comissao || 0), 0)
-  const taxaConversao = totalCotacoesMes > 0 ? Math.round((totalConvertidas / totalCotacoesMes) * 100) : 0
+  const totalCotacoesMes = cotacoesMes.data.length  0
+  const totalConvertidas = cotacoesConvertidas.data.length  0
+  const comissaoTotal = (apolicesMes.data  []).reduce((sum, item) => sum + (item.valor_comissao || 0), 0)
+  const taxaConversao = totalCotacoesMes > 0  Math.round((totalConvertidas / totalCotacoesMes) * 100) : 0
 
   return {
-    novosNoMes: emissoes.data?.filter(item => !item.eh_renovacao).length ?? 0,
-    renovacoesNoMes: emissoes.data?.filter(item => item.eh_renovacao).length ?? 0,
+    novosNoMes: emissoes.data.filter(item => !item.eh_renovacao).length  0,
+    renovacoesNoMes: emissoes.data.filter(item => item.eh_renovacao).length  0,
     cotacoesNoMes: totalCotacoesMes,
-    renovacoesConcluidas: renovadasMes.data?.length ?? 0,
-    vencendoProximoMes: vencendoProximoMes.data?.length ?? 0,
+    renovacoesConcluidas: renovadasMes.data.length  0,
+    vencendoProximoMes: vencendoProximoMes.data.length  0,
     comissaoTotal,
     taxaConversao,
-    renovacoesPendentes: renovacoesPendentes.data?.length ?? 0,
+    renovacoesPendentes: renovacoesPendentes.data.length  0,
   }
 }
 
@@ -518,7 +518,7 @@ export async function getGraficoEmissoesMensais(meses = 6) {
     .from('apolices_auto')
     .select('id, eh_renovacao, created_at')
 
-  const lista = apolices.data ?? []
+  const lista = apolices.data  []
   return toMonthSeries(lista, {
     meses,
     getDate: item => item.created_at,
@@ -562,7 +562,7 @@ export async function getAutoEmissoesResumo() {
     pendentes: emissoes.filter(item => getEmissaoColuna(item) === 'pendentes').length,
     emitidas: emissoes.filter(item => getEmissaoColuna(item) === 'emitida').length,
     porColuna: countBy(emissoes, item => getEmissaoColuna(item)),
-    porTipo: countBy(emissoes, item => item.cotacoes_auto?.tipo || item.tipo || 'novo'),
+    porTipo: countBy(emissoes, item => item.cotacoes_auto.tipo || item.tipo || 'novo'),
   }
 }
 
@@ -594,7 +594,7 @@ export async function getAutoCotacoesResumo({ tipo, inicio, fim } = {}) {
     abertas: cotacoes.filter(item => item.status === 'pendente' || item.status === 'aberta').length,
     convertidas: cotacoes.filter(item => item.status === 'convertida').length,
     perdidas: cotacoes.filter(item => item.status === 'perdida').length,
-    taxaConversao: cotacoes.length > 0 ? cotacoes.filter(item => item.status === 'convertida').length / cotacoes.length : 0,
+    taxaConversao: cotacoes.length > 0  cotacoes.filter(item => item.status === 'convertida').length / cotacoes.length : 0,
     porStatus: countBy(cotacoes, item => item.status || 'pendente'),
     serieMensal,
   }

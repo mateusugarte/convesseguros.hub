@@ -21,7 +21,7 @@ export function Card({
   hoverable,
   ...props
 }) {
-  const isHoverable = hoverable ?? Boolean(onClick)
+  const isHoverable = hoverable  Boolean(onClick)
 
   return (
     <div
@@ -30,7 +30,7 @@ export function Card({
       className={[
         SURFACES[surface] || SURFACES.default,
         PADDING[padding] || PADDING.md,
-        isHoverable ? 'cursor-pointer card-hover' : '',
+        isHoverable  'cursor-pointer card-hover' : '',
         className,
       ].filter(Boolean).join(' ')}
     >

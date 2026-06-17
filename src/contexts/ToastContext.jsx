@@ -66,7 +66,7 @@ const CONFIG = {
 }
 
 function Toast({ type = 'info', title, message, action, duration, onRemove }) {
-  const cfg = CONFIG[type] ?? CONFIG.info
+  const cfg = CONFIG[type]  CONFIG.info
   const { Icon } = cfg
 
   return (

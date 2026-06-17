@@ -7,11 +7,11 @@ import { atualizarApoliceAuto, getAutoCarteiraClientes } from '../../lib/auto'
 import { formatDateBR } from './autoShared'
 
 function clientKey(item) {
-  return item.cliente_id || item.cpf_cliente || item.nome_cliente || item.emissoes_auto?.cliente_id || item.id
+  return item.cliente_id || item.cpf_cliente || item.nome_cliente || item.emissoes_auto.cliente_id || item.id
 }
 
 function clientName(item) {
-  const c = item.emissoes_auto?.cotacoes_auto || {}
+  const c = item.emissoes_auto.cotacoes_auto || {}
   return (
     item.nome_cliente ||
     c.nome_cliente ||
@@ -23,7 +23,7 @@ function clientName(item) {
 }
 
 function clientCpf(item) {
-  const c = item.emissoes_auto?.cotacoes_auto || {}
+  const c = item.emissoes_auto.cotacoes_auto || {}
   return item.cpf_cliente || c.cpf_cliente || ''
 }
 
@@ -58,16 +58,16 @@ function ApoliceEditor({ apolice, onSave, saving }) {
         className="inline-flex items-center justify-center gap-1.5 rounded-2xl bg-brand-secondary px-3 py-2 text-xs font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
       >
         <Save className="h-3.5 w-3.5" />
-        {saving ? 'Salvando...' : 'Salvar'}
+        {saving  'Salvando...' : 'Salvar'}
       </button>
     </div>
   )
 }
 
 function EmissionRow({ apolice, onSaveNumero, savingId, onOpen }) {
-  const lead = apolice.emissoes_auto?.cotacoes_auto || {}
-  const vigInicio = apolice.vigencia_inicio ? formatDateBR(apolice.vigencia_inicio) : 'Sem início'
-  const vigFim = apolice.vigencia_fim ? formatDateBR(apolice.vigencia_fim) : 'Sem fim'
+  const lead = apolice.emissoes_auto.cotacoes_auto || {}
+  const vigInicio = apolice.vigencia_inicio  formatDateBR(apolice.vigencia_inicio) : 'Sem início'
+  const vigFim = apolice.vigencia_fim  formatDateBR(apolice.vigencia_fim) : 'Sem fim'
   const isSaving = savingId === apolice.id
 
   return (
@@ -79,7 +79,7 @@ function EmissionRow({ apolice, onSaveNumero, savingId, onOpen }) {
               {lead.nome_cliente || apolice.nome_cliente || 'Cliente sem nome'}
             </p>
             <span className="badge badge-info">{apolice.seguradora || 'Sem seguradora'}</span>
-            {apolice.numero_apolice ? (
+            {apolice.numero_apolice  (
               <span className="badge badge-success">{apolice.numero_apolice}</span>
             ) : (
               <span className="badge badge-warning">Sem numero</span>
@@ -92,12 +92,12 @@ function EmissionRow({ apolice, onSaveNumero, savingId, onOpen }) {
             <span><strong className="text-dark-text">Placa:</strong> {lead.placa || '—'}</span>
           </div>
           <div className="mt-2 text-xs text-dark-muted">
-            {lead.origem_lead ? `Origem: ${lead.origem_lead}` : 'Origem não informada'}
-            {lead.condutor_nome ? ` · Condutor: ${lead.condutor_nome}` : ''}
+            {lead.origem_lead  `Origem: ${lead.origem_lead}` : 'Origem não informada'}
+            {lead.condutor_nome  ` · Condutor: ${lead.condutor_nome}` : ''}
           </div>
         </div>
 
-        {apolice.emissoes_auto?.cotacao_id && (
+        {apolice.emissoes_auto.cotacao_id && (
           <button
             type="button"
             onClick={() => onOpen(apolice.emissoes_auto.cotacao_id)}
@@ -186,7 +186,7 @@ export default function AutoClientes() {
   const metrics = useMemo(() => {
     const totalClientes = grouped.length
     const totalApolices = apolices.length
-    const comNumero = apolices.filter(item => Boolean(item.numero_apolice?.trim())).length
+    const comNumero = apolices.filter(item => Boolean(item.numero_apolice.trim())).length
     const multiEmissao = grouped.filter(group => group.items.length > 1).length
     return { totalClientes, totalApolices, comNumero, multiEmissao }
   }, [apolices, grouped])
@@ -199,7 +199,7 @@ export default function AutoClientes() {
     return Array.from(set).sort((a, b) => a.localeCompare(b))
   }, [apolices])
 
-  const savingId = isPending ? variables?.id : null
+  const savingId = isPending  variables.id : null
 
   return (
     <div className="space-y-6">
@@ -261,9 +261,9 @@ export default function AutoClientes() {
         </div>
       </FilterBar>
 
-      {isLoading ? (
+      {isLoading  (
         <div className="py-16 text-center text-sm text-dark-muted">Carregando carteira...</div>
-      ) : grouped.length === 0 ? (
+      ) : grouped.length === 0  (
         <EmptyState
           icon={<Car className="h-5 w-5" />}
           title="Nenhuma emissão encontrada"
@@ -276,7 +276,7 @@ export default function AutoClientes() {
               key={group.key}
               title={group.name}
               subtitle={`${group.items.length} emissão(ões)`}
-              actions={group.cpf ? <span className="badge badge-muted">{group.cpf}</span> : null}
+              actions={group.cpf  <span className="badge badge-muted">{group.cpf}</span> : null}
             >
               <div className="space-y-3">
                 {group.items.map(item => (

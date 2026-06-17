@@ -122,14 +122,14 @@ function condutorEmissao(emissao) {
 }
 
 function seguradoraEmissao(emissao) {
-  return emissao.seguradora || emissao.cotacoes_auto?.seguradora_preferencial?.nome || emissao.cotacoes_auto?.seguradora_mais_barata?.nome || '—'
+  return emissao.seguradora || emissao.cotacoes_auto.seguradora_preferencial.nome || emissao.cotacoes_auto.seguradora_mais_barata.nome || '—'
 }
 
 // ─── Card ───────────────────────────────────────────────────────────────────
 
 function CardEmissao({ emissao, onDragStart, onClick }) {
   const coluna = getEmissaoColuna(emissao)
-  const tipo = emissao.cotacoes_auto?.tipo || emissao.tipo
+  const tipo = emissao.cotacoes_auto.tipo || emissao.tipo
   const isRenovacao = tipo === 'renovacao'
   const isRecusada = emissao.resultado === 'recusada'
   const isAprovada = emissao.resultado === 'aprovada'
@@ -149,14 +149,14 @@ function CardEmissao({ emissao, onDragStart, onClick }) {
     borderClass = 'border-brand-secondary/25'
     bgClass = 'bg-brand-secondary/5'
     accentGradient = coluna === 'pendentes'
-      ? 'from-brand-accent to-brand-secondary'
+       'from-brand-accent to-brand-secondary'
       : 'from-brand-secondary to-brand-accent'
-    shadowClass = coluna === 'pendentes' ? 'shadow-[0_8px_24px_rgba(202,138,4,0.08)]' : ''
+    shadowClass = coluna === 'pendentes'  'shadow-[0_8px_24px_rgba(202,138,4,0.08)]' : ''
   }
 
   const nome = nomeEmissao(emissao)
-  const veiculo = emissao.modelo_veiculo || emissao.cotacoes_auto?.modelo_veiculo || 'Modelo nao informado'
-  const placa = emissao.placa || emissao.cotacoes_auto?.placa
+  const veiculo = emissao.modelo_veiculo || emissao.cotacoes_auto.modelo_veiculo || 'Modelo nao informado'
+  const placa = emissao.placa || emissao.cotacoes_auto.placa
 
   return (
     <button
@@ -173,7 +173,7 @@ function CardEmissao({ emissao, onDragStart, onClick }) {
           <p className="truncate text-sm font-semibold text-dark-text">{nome}</p>
           <p className="mt-1 truncate text-xs text-dark-muted">{veiculo}</p>
           <p className="mt-2 text-[11px] text-dark-muted">
-            {placa ? `Placa ${placa}` : 'Sem placa'}
+            {placa  `Placa ${placa}` : 'Sem placa'}
           </p>
           <p className="mt-2 text-[11px] text-dark-muted">
             {cpfEmissao(emissao)} · {celularEmissao(emissao)}
@@ -192,18 +192,18 @@ function CardEmissao({ emissao, onDragStart, onClick }) {
           {!emissao.resultado && (
             <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
               coluna === 'pendentes'
-                ? 'bg-status-warning/10 text-status-warning'
+                 'bg-status-warning/10 text-status-warning'
                 : 'bg-dark-surface2/75 text-dark-muted'
             }`}>
-              {coluna === 'pendentes' ? 'Pendente' : 'Em andamento'}
+              {coluna === 'pendentes'  'Pendente' : 'Em andamento'}
             </span>
           )}
           <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
             isRenovacao
-              ? 'bg-status-success/10 text-status-success'
+               'bg-status-success/10 text-status-success'
               : 'bg-brand-secondary/10 text-brand-secondary'
           }`}>
-            {isRenovacao ? 'Renovacao' : 'Novo'}
+            {isRenovacao  'Renovacao' : 'Novo'}
           </span>
         </div>
       </div>
@@ -229,9 +229,9 @@ function BoolRow({ label, value }) {
     <div className="flex items-center justify-between py-1">
       <p className="text-sm text-dark-muted">{label}</p>
       <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-        value ? 'bg-status-success/10 text-status-success' : 'bg-dark-border/60 text-dark-muted'
+        value  'bg-status-success/10 text-status-success' : 'bg-dark-border/60 text-dark-muted'
       }`}>
-        {value ? 'Sim' : 'Nao'}
+        {value  'Sim' : 'Nao'}
       </span>
     </div>
   )
@@ -242,11 +242,11 @@ function BoolRow({ label, value }) {
 function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice }) {
   const c = emissao.cotacoes_auto || {}
   const nome = nomeEmissao(emissao)
-  const tipo = (c.tipo || emissao.tipo) === 'renovacao' ? 'Renovacao' : 'Novo'
-  const seguradoras = Array.isArray(emissao.seguradoras_cotadas) ? emissao.seguradoras_cotadas : []
+  const tipo = (c.tipo || emissao.tipo) === 'renovacao'  'Renovacao' : 'Novo'
+  const seguradoras = Array.isArray(emissao.seguradoras_cotadas)  emissao.seguradoras_cotadas : []
   const temFicha = Boolean(c.nome_cliente || c.cpf_cliente || c.modelo_veiculo || c.estado_civil_cliente || c.profissao_cliente || c.origem_lead)
   const etapaAtual = emissao.resultado
-    ? (emissao.resultado === 'aprovada' ? 'Cotacao aprovada' : 'Cotacao recusada')
+     (emissao.resultado === 'aprovada'  'Cotacao aprovada' : 'Cotacao recusada')
     : 'Aguardando resultado'
   const colunaAtual = getEmissaoColuna(emissao)
 
@@ -260,21 +260,21 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
               <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">Detalhe do cliente</span>
               <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                 (c.tipo || emissao.tipo) === 'renovacao'
-                  ? 'bg-status-success/10 text-status-success'
+                   'bg-status-success/10 text-status-success'
                   : 'bg-brand-secondary/10 text-brand-secondary'
               }`}>{tipo}</span>
               {emissao.resultado && (
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                   emissao.resultado === 'aprovada'
-                    ? 'bg-status-success/10 text-status-success'
+                     'bg-status-success/10 text-status-success'
                     : 'bg-red-100 text-red-600'
-                }`}>{emissao.resultado === 'aprovada' ? 'Aprovada' : 'Recusada'}</span>
+                }`}>{emissao.resultado === 'aprovada'  'Aprovada' : 'Recusada'}</span>
               )}
             </div>
             <h2 className="mt-2 text-xl font-semibold text-dark-text">{nome}</h2>
             <p className="mt-1 text-sm text-dark-muted">
               {emissao.modelo_veiculo || c.modelo_veiculo || 'Veiculo nao informado'}
-              {(emissao.placa || c.placa) ? ` · Placa ${emissao.placa || c.placa}` : ''}
+              {(emissao.placa || c.placa)  ` · Placa ${emissao.placa || c.placa}` : ''}
             </p>
           </div>
           <button onClick={onClose} className="rounded-full p-2 hover:bg-dark-border/40 transition-colors shrink-0">
@@ -306,7 +306,7 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
               </div>
             </div>
 
-            {temFicha ? (
+            {temFicha  (
               <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
                 <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Dados complementares da ficha</p>
                 <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
@@ -379,13 +379,13 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
             <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
               <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Emissao manual</p>
               <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-                <InfoRow label="Seguradora" value={emissao.seguradora || c.seguradora_preferencial?.nome || c.seguradora_mais_barata?.nome} />
+                <InfoRow label="Seguradora" value={emissao.seguradora || c.seguradora_preferencial.nome || c.seguradora_mais_barata.nome} />
                 <InfoRow label="Numero da apolice" value={emissao.numero_apolice} />
-                <InfoRow label="Vigencia" value={emissao.vigencia_inicio || emissao.vigencia_fim ? `${emissao.vigencia_inicio || '—'} a ${emissao.vigencia_fim || '—'}` : null} />
-                <InfoRow label="Parcelamento" value={emissao.parcelamento ? `${emissao.parcelamento} vezes` : null} />
-                <InfoRow label="Premio liquido" value={emissao.premio_liquido ? formatMoney(emissao.premio_liquido) : null} />
-                <InfoRow label="% Comissao" value={emissao.pct_comissao ?? null} />
-                <InfoRow label="Repasse" value={emissao.tem_repasse ? 'Sim' : 'Nao'} />
+                <InfoRow label="Vigencia" value={emissao.vigencia_inicio || emissao.vigencia_fim  `${emissao.vigencia_inicio || '—'} a ${emissao.vigencia_fim || '—'}` : null} />
+                <InfoRow label="Parcelamento" value={emissao.parcelamento  `${emissao.parcelamento} vezes` : null} />
+                <InfoRow label="Premio liquido" value={emissao.premio_liquido  formatMoney(emissao.premio_liquido) : null} />
+                <InfoRow label="% Comissao" value={emissao.pct_comissao  null} />
+                <InfoRow label="Repasse" value={emissao.tem_repasse  'Sim' : 'Nao'} />
               </div>
             </div>
           </div>
@@ -414,7 +414,7 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
               <div className="mt-4 space-y-3">
                 <button
                   type="button"
-                  onClick={() => onRegistrarResultado?.(emissao)}
+                  onClick={() => onRegistrarResultado.(emissao)}
                   className="w-full rounded-2xl border border-brand-secondary/20 bg-white/75 px-4 py-3 text-left transition-colors hover:border-brand-secondary/40 hover:bg-white"
                 >
                   <p className="text-sm font-semibold text-dark-text">Registrar resultado da cotacao</p>
@@ -422,7 +422,7 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
                 </button>
                 <button
                   type="button"
-                  onClick={() => onEmitirApolice?.(emissao)}
+                  onClick={() => onEmitirApolice.(emissao)}
                   className="w-full rounded-2xl border border-status-success/20 bg-status-success/5 px-4 py-3 text-left transition-colors hover:border-status-success/40 hover:bg-status-success/10"
                 >
                   <p className="text-sm font-semibold text-dark-text">Seguir para emissao</p>
@@ -518,10 +518,10 @@ function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
           <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Comissao (calculada)</label>
           <div className={`w-full rounded-2xl border px-3 py-2 text-sm font-medium ${
             valorComissao > 0
-              ? 'border-status-success/30 bg-status-success/10 text-status-success'
+               'border-status-success/30 bg-status-success/10 text-status-success'
               : 'border-dark-border/40 bg-dark-surface2/40 text-dark-muted'
           }`}>
-            {valorComissao > 0 ? formatMoney(valorComissao) : '—'}
+            {valorComissao > 0  formatMoney(valorComissao) : '—'}
           </div>
         </div>
         <div>
@@ -563,7 +563,7 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
   )
 
   function updateSeg(idx, campo, valor) {
-    setSeguradoras(prev => prev.map((s, i) => i === idx ? { ...s, [campo]: valor } : s))
+    setSeguradoras(prev => prev.map((s, i) => i === idx  { ...s, [campo]: valor } : s))
   }
 
   function addSeg() {
@@ -576,7 +576,7 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
 
   function handleSave() {
     const seguradasFinal = resultado === 'aprovada'
-      ? seguradoras.map(s => ({
+       seguradoras.map(s => ({
           nome: s.nome,
           valor_total: parseFloat(s.valor_total) || 0,
           premio_liquido: parseFloat(s.premio_liquido) || 0,
@@ -599,7 +599,7 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
             <h2 className="mt-2 text-xl font-semibold text-dark-text">{nome}</h2>
             <p className="mt-1 text-sm text-dark-muted">
               {c.modelo_veiculo || 'Veiculo nao informado'}
-              {c.placa ? ` · ${c.placa}` : ''}
+              {c.placa  ` · ${c.placa}` : ''}
             </p>
           </div>
           <button onClick={onClose} className="rounded-full p-2 hover:bg-dark-border/40 transition-colors shrink-0">
@@ -614,7 +614,7 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
             onClick={() => setResultado('aprovada')}
             className={`flex-1 rounded-2xl border py-3 text-sm font-semibold transition-all ${
               resultado === 'aprovada'
-                ? 'border-status-success bg-status-success/10 text-status-success shadow-sm'
+                 'border-status-success bg-status-success/10 text-status-success shadow-sm'
                 : 'border-dark-border bg-white/60 text-dark-muted hover:border-status-success/40'
             }`}
           >
@@ -625,7 +625,7 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
             onClick={() => setResultado('recusada')}
             className={`flex-1 rounded-2xl border py-3 text-sm font-semibold transition-all ${
               resultado === 'recusada'
-                ? 'border-red-300 bg-red-50 text-red-600 shadow-sm'
+                 'border-red-300 bg-red-50 text-red-600 shadow-sm'
                 : 'border-dark-border bg-white/60 text-dark-muted hover:border-red-200'
             }`}
           >
@@ -672,7 +672,7 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
             disabled={!canSave || isSaving}
             className="btn-primary flex-1 disabled:opacity-50"
           >
-            {isSaving ? 'Salvando...' : 'Salvar resultado'}
+            {isSaving  'Salvando...' : 'Salvar resultado'}
           </button>
         </div>
       </div>
@@ -741,9 +741,9 @@ function ModalApolices({ onClose }) {
           </div>
         </div>
 
-        {isLoading ? (
+        {isLoading  (
           <div className="py-12 text-center text-sm text-dark-muted">Carregando apolices...</div>
-        ) : apolices.length === 0 ? (
+        ) : apolices.length === 0  (
           <EmptyState
             icon={<FileText className="w-6 h-6" />}
             title="Nenhuma apolice encontrada"
@@ -769,7 +769,7 @@ function ModalApolices({ onClose }) {
                     <td className="py-3 pr-4 text-dark-muted">{item.numero_apolice || '—'}</td>
                     <td className="py-3 pr-4 text-dark-muted">{item.seguradora || '—'}</td>
                     <td className="py-3 pr-4 text-dark-muted">
-                      {item.vigencia_inicio ? formatDateBR(item.vigencia_inicio) : '—'} — {item.vigencia_fim ? formatDateBR(item.vigencia_fim) : '—'}
+                      {item.vigencia_inicio  formatDateBR(item.vigencia_inicio) : '—'} — {item.vigencia_fim  formatDateBR(item.vigencia_fim) : '—'}
                     </td>
                     <td className="py-3 pr-4 text-dark-muted">{formatMoney(item.premio_liquido)}</td>
                     <td className="py-3 font-medium text-status-success">{formatMoney(item.valor_comissao)}</td>
@@ -882,14 +882,14 @@ export default function AutoEmissoes() {
     } else if (colunaDestino === 'emitida') {
       setModalEmissao(dragging)
     } else {
-      mover({ id: dragging.id, coluna: colunaDestino === 'pendentes' ? null : colunaDestino })
+      mover({ id: dragging.id, coluna: colunaDestino === 'pendentes'  null : colunaDestino })
     }
     setDragging(null)
     setDragOver(null)
   }
 
   function abrirDetalhe(item) {
-    const cotacaoId = item?.cotacoes_auto?.id || item?.cotacao_id
+    const cotacaoId = item.cotacoes_auto.id || item.cotacao_id
     if (!cotacaoId) {
       setModalResultado(null)
       setModalEmissao(null)
@@ -907,19 +907,19 @@ export default function AutoEmissoes() {
   const premioLiquido = parseFloat(form.premio_liquido) || 0
   const pctComissao = parseFloat(form.pct_comissao) || 0
   const valorComissao = premioLiquido * pctComissao
-  const valorRepasse = form.tem_repasse ? valorComissao * (parseFloat(form.pct_repasse) || 0) : 0
+  const valorRepasse = form.tem_repasse  valorComissao * (parseFloat(form.pct_repasse) || 0) : 0
 
   function handleEmitir() {
     emitir({
       emissao_id: modalEmissao.id,
       cliente_id: modalEmissao.cliente_id,
-      nome_cliente: modalEmissao.cotacoes_auto?.nome_cliente || modalEmissao.nome_cliente || null,
-      cpf_cliente: modalEmissao.cotacoes_auto?.cpf_cliente || modalEmissao.cpf_cliente || null,
-      celular_cliente: modalEmissao.cotacoes_auto?.celular_cliente || modalEmissao.celular_cliente || null,
-      condutor_nome: modalEmissao.cotacoes_auto?.condutor_nome || modalEmissao.condutor_nome || null,
-      condutor_cpf: modalEmissao.cotacoes_auto?.condutor_cpf || modalEmissao.condutor_cpf || null,
-      modelo_veiculo: modalEmissao.cotacoes_auto?.modelo_veiculo || modalEmissao.modelo_veiculo || null,
-      placa: modalEmissao.cotacoes_auto?.placa || modalEmissao.placa || null,
+      nome_cliente: modalEmissao.cotacoes_auto.nome_cliente || modalEmissao.nome_cliente || null,
+      cpf_cliente: modalEmissao.cotacoes_auto.cpf_cliente || modalEmissao.cpf_cliente || null,
+      celular_cliente: modalEmissao.cotacoes_auto.celular_cliente || modalEmissao.celular_cliente || null,
+      condutor_nome: modalEmissao.cotacoes_auto.condutor_nome || modalEmissao.condutor_nome || null,
+      condutor_cpf: modalEmissao.cotacoes_auto.condutor_cpf || modalEmissao.condutor_cpf || null,
+      modelo_veiculo: modalEmissao.cotacoes_auto.modelo_veiculo || modalEmissao.modelo_veiculo || null,
+      placa: modalEmissao.cotacoes_auto.placa || modalEmissao.placa || null,
       seguradora: form.seguradora,
       numero_apolice: form.numero_apolice,
       vigencia_inicio: form.vigencia_inicio,
@@ -930,12 +930,12 @@ export default function AutoEmissoes() {
       forma_pagamento: form.forma_pagamento,
       parcelamento: form.parcelamento,
       tipo_producao: form.tipo_producao,
-      responsavel: form.tipo_producao === 'individual' ? form.responsavel : null,
+      responsavel: form.tipo_producao === 'individual'  form.responsavel : null,
       eh_renovacao: form.eh_renovacao,
       tem_repasse: form.tem_repasse,
-      pct_repasse: form.tem_repasse ? parseFloat(form.pct_repasse) : null,
-      nome_repasse: form.tem_repasse ? form.nome_repasse : null,
-      valor_repasse: form.tem_repasse ? valorRepasse : null,
+      pct_repasse: form.tem_repasse  parseFloat(form.pct_repasse) : null,
+      nome_repasse: form.tem_repasse  form.nome_repasse : null,
+      valor_repasse: form.tem_repasse  valorRepasse : null,
     })
     mover({ id: modalEmissao.id, coluna: 'emitida' })
   }
@@ -956,8 +956,8 @@ export default function AutoEmissoes() {
       premio_liquido: manualForm.premio_liquido,
       pct_comissao: manualForm.pct_comissao,
       tem_repasse: manualForm.tem_repasse,
-      pct_repasse: manualForm.tem_repasse ? manualForm.pct_repasse : null,
-      nome_repasse: manualForm.tem_repasse ? manualForm.nome_repasse : null,
+      pct_repasse: manualForm.tem_repasse  manualForm.pct_repasse : null,
+      nome_repasse: manualForm.tem_repasse  manualForm.nome_repasse : null,
       forma_pagamento: manualForm.forma_pagamento,
       parcelamento: manualForm.parcelamento,
       responsavel: manualForm.responsavel,
@@ -969,7 +969,7 @@ export default function AutoEmissoes() {
   const metricas = useMemo(() => ({
     total: emissoes.length,
     pendentes: emissoes.filter(item => getEmissaoColuna(item) === 'pendentes').length,
-    renovacoes: emissoes.filter(item => (item.cotacoes_auto?.tipo || item.tipo) === 'renovacao').length,
+    renovacoes: emissoes.filter(item => (item.cotacoes_auto.tipo || item.tipo) === 'renovacao').length,
     emitidas: emissoes.filter(item => getEmissaoColuna(item) === 'emitida').length,
   }), [emissoes])
 
@@ -980,12 +980,12 @@ export default function AutoEmissoes() {
     { label: 'Emitidas', value: metricas.emitidas, tone: 'accent' },
   ]
 
-  const modalEmissaoResumo = modalEmissao ? {
-    cliente: modalEmissao.cotacoes_auto?.nome_cliente || modalEmissao.cotacoes_auto?.cpf_cliente || '—',
-    cpf: modalEmissao.cotacoes_auto?.cpf_cliente || '—',
-    veiculo: modalEmissao.cotacoes_auto?.modelo_veiculo || 'Modelo nao informado',
-    placa: modalEmissao.cotacoes_auto?.placa || 'Sem placa',
-    tipo: (modalEmissao.cotacoes_auto?.tipo || modalEmissao.tipo) === 'renovacao' ? 'Renovacao' : 'Novo',
+  const modalEmissaoResumo = modalEmissao  {
+    cliente: modalEmissao.cotacoes_auto.nome_cliente || modalEmissao.cotacoes_auto.cpf_cliente || '—',
+    cpf: modalEmissao.cotacoes_auto.cpf_cliente || '—',
+    veiculo: modalEmissao.cotacoes_auto.modelo_veiculo || 'Modelo nao informado',
+    placa: modalEmissao.cotacoes_auto.placa || 'Sem placa',
+    tipo: (modalEmissao.cotacoes_auto.tipo || modalEmissao.tipo) === 'renovacao'  'Renovacao' : 'Novo',
     coluna: getEmissaoColuna(modalEmissao),
   } : null
 
@@ -1071,7 +1071,7 @@ export default function AutoEmissoes() {
                   type="button"
                   onClick={() => handlePeriodoChange(option.value)}
                   className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
-                    active ? 'bg-dark-text text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
+                    active  'bg-dark-text text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
                   }`}
                 >
                   {option.label}
@@ -1120,7 +1120,7 @@ export default function AutoEmissoes() {
               key={coluna.id}
               title={coluna.label}
               subtitle={`${cards.length} item(ns)`}
-              className={dragOver === coluna.id ? 'ring-2 ring-brand-accent/20' : ''}
+              className={dragOver === coluna.id  'ring-2 ring-brand-accent/20' : ''}
               bodyClassName="pt-4"
             >
               <div
@@ -1129,12 +1129,12 @@ export default function AutoEmissoes() {
                 onDragLeave={() => setDragOver(null)}
                 className="min-h-[240px] space-y-3"
               >
-                {cards.length === 0 ? (
+                {cards.length === 0  (
                   <EmptyState
                     icon={<Car className="w-6 h-6" />}
-                    title={coluna.id === 'pendentes' ? 'Sem pendencias' : 'Coluna vazia'}
+                    title={coluna.id === 'pendentes'  'Sem pendencias' : 'Coluna vazia'}
                     description={coluna.id === 'pendentes'
-                      ? 'As cotacoes criadas pelo formulario aparecem aqui primeiro.'
+                       'As cotacoes criadas pelo formulario aparecem aqui primeiro.'
                       : 'Arraste um card para avancar no fluxo.'}
                     className="py-8"
                   />
@@ -1178,24 +1178,24 @@ export default function AutoEmissoes() {
                     Emissao selecionada
                   </div>
                   <h2 className="mt-4 text-2xl font-semibold text-dark-text">Emitir apolice</h2>
-                  <p className="mt-2 text-sm leading-6 text-dark-muted">{modalEmissaoResumo?.cliente}</p>
+                  <p className="mt-2 text-sm leading-6 text-dark-muted">{modalEmissaoResumo.cliente}</p>
 
                   <div className="mt-6 space-y-3">
                     <div className="rounded-3xl border border-white/40 bg-white/70 p-4 shadow-sm">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Cliente</p>
-                      <p className="mt-2 text-sm font-semibold text-dark-text">{modalEmissaoResumo?.cliente}</p>
-                      <p className="mt-1 text-xs text-dark-muted">CPF {modalEmissaoResumo?.cpf}</p>
+                      <p className="mt-2 text-sm font-semibold text-dark-text">{modalEmissaoResumo.cliente}</p>
+                      <p className="mt-1 text-xs text-dark-muted">CPF {modalEmissaoResumo.cpf}</p>
                     </div>
                     <div className="rounded-3xl border border-white/40 bg-white/70 p-4 shadow-sm">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Veiculo</p>
-                      <p className="mt-2 text-sm font-semibold text-dark-text">{modalEmissaoResumo?.veiculo}</p>
-                      <p className="mt-1 text-xs text-dark-muted">{modalEmissaoResumo?.placa}</p>
+                      <p className="mt-2 text-sm font-semibold text-dark-text">{modalEmissaoResumo.veiculo}</p>
+                      <p className="mt-1 text-xs text-dark-muted">{modalEmissaoResumo.placa}</p>
                     </div>
                     <div className="rounded-3xl border border-white/40 bg-white/70 p-4 shadow-sm">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Contexto</p>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        <span className="badge badge-info">{modalEmissaoResumo?.tipo}</span>
-                        <span className="badge badge-muted">{modalEmissaoResumo?.coluna}</span>
+                        <span className="badge badge-info">{modalEmissaoResumo.tipo}</span>
+                        <span className="badge badge-muted">{modalEmissaoResumo.coluna}</span>
                       </div>
                     </div>
                   </div>
@@ -1268,7 +1268,7 @@ export default function AutoEmissoes() {
                         checked={form.eh_renovacao}
                         onChange={e => setField('eh_renovacao', e.target.checked)}
                       />
-                      E renovacao da carteira?
+                      E renovacao da carteira
                     </label>
                     <label className="flex items-center gap-2 text-sm text-dark-text">
                       <input
@@ -1276,7 +1276,7 @@ export default function AutoEmissoes() {
                         checked={form.tem_repasse}
                         onChange={e => setField('tem_repasse', e.target.checked)}
                       />
-                      Existe repasse?
+                      Existe repasse
                     </label>
                   </div>
 
@@ -1305,7 +1305,7 @@ export default function AutoEmissoes() {
                     disabled={isPending || !form.vigencia_fim}
                     className="btn-primary flex-1 disabled:opacity-50"
                   >
-                    {isPending ? 'Emitindo...' : 'Confirmar emissao'}
+                    {isPending  'Emitindo...' : 'Confirmar emissao'}
                   </button>
                 </div>
               </div>
@@ -1345,8 +1345,8 @@ export default function AutoEmissoes() {
                     <div className="rounded-3xl border border-white/40 bg-white/70 p-4 shadow-sm">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Financeiro</p>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        <span className="badge badge-info">{manualForm.eh_renovacao ? 'Renovacao' : 'Novo'}</span>
-                        <span className="badge badge-muted">{manualForm.tem_repasse ? 'Com repasse' : 'Sem repasse'}</span>
+                        <span className="badge badge-info">{manualForm.eh_renovacao  'Renovacao' : 'Novo'}</span>
+                        <span className="badge badge-muted">{manualForm.tem_repasse  'Com repasse' : 'Sem repasse'}</span>
                       </div>
                     </div>
                   </div>
@@ -1412,7 +1412,7 @@ export default function AutoEmissoes() {
                           checked={manualForm.eh_renovacao}
                           onChange={e => setManualField('eh_renovacao', e.target.checked)}
                         />
-                        E renovacao?
+                        E renovacao
                       </label>
                     </div>
                   </div>
@@ -1424,7 +1424,7 @@ export default function AutoEmissoes() {
                         checked={manualForm.tem_repasse}
                         onChange={e => setManualField('tem_repasse', e.target.checked)}
                       />
-                      Tem repasse?
+                      Tem repasse
                     </label>
 
                     {manualForm.tem_repasse && (
@@ -1459,7 +1459,7 @@ export default function AutoEmissoes() {
                       }
                       className="btn-primary flex-1 disabled:opacity-50"
                     >
-                      {isCreatingManual ? 'Salvando...' : 'Salvar emissao manual'}
+                      {isCreatingManual  'Salvando...' : 'Salvar emissao manual'}
                     </button>
                   </div>
                 </div>

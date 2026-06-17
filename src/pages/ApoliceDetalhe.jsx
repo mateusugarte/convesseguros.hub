@@ -61,7 +61,7 @@ function FieldShell({ label, required, children }) {
 function EditField({ label, value, onChange, type = 'text', placeholder, required }) {
   return (
     <FieldShell label={label} required={required}>
-      {type === 'date' ? (
+      {type === 'date'  (
         <DatePicker value={value || ''} onChange={onChange} className="w-full" />
       ) : (
         <input
@@ -77,7 +77,7 @@ function EditField({ label, value, onChange, type = 'text', placeholder, require
 }
 
 function SelectField({ label, value, onChange, options, required }) {
-  const normalized = options.map(o => (typeof o === 'string' ? { value: o, label: o } : o))
+  const normalized = options.map(o => (typeof o === 'string'  { value: o, label: o } : o))
   return (
     <FieldShell label={label} required={required}>
       <Select value={value || ''} onChange={onChange} options={normalized} placeholder="Selecione..." className="w-full" />
@@ -152,11 +152,11 @@ export default function ApoliceDetalhe() {
       setEndereco(data.endereco || '')
       setInicioVigencia(data.inicio_vigencia || '')
       setFimVigencia(data.fim_vigencia || '')
-      setValorParcela(data.valor_parcela !== null && data.valor_parcela !== undefined ? String(data.valor_parcela) : '')
-      setParcelamento(data.parcelamento !== null && data.parcelamento !== undefined ? String(data.parcelamento) : '')
-      setPremioLiquido(data.premio_liquido !== null && data.premio_liquido !== undefined ? String(data.premio_liquido) : '')
-      setPctComissao(data.pct_comissao !== null && data.pct_comissao !== undefined ? String(data.pct_comissao) : '')
-      setPctDesconto(data.pct_desconto !== null && data.pct_desconto !== undefined ? String(data.pct_desconto) : '')
+      setValorParcela(data.valor_parcela !== null && data.valor_parcela !== undefined  String(data.valor_parcela) : '')
+      setParcelamento(data.parcelamento !== null && data.parcelamento !== undefined  String(data.parcelamento) : '')
+      setPremioLiquido(data.premio_liquido !== null && data.premio_liquido !== undefined  String(data.premio_liquido) : '')
+      setPctComissao(data.pct_comissao !== null && data.pct_comissao !== undefined  String(data.pct_comissao) : '')
+      setPctDesconto(data.pct_desconto !== null && data.pct_desconto !== undefined  String(data.pct_desconto) : '')
       setFormaPagamento(data.forma_pagamento || '')
     }
     setLoading(false)
@@ -172,7 +172,7 @@ export default function ApoliceDetalhe() {
     const premioLiquidoNum = toNumber(premioLiquido)
     const premioTotal = calculatePremioTotal(parcelaNum, parcelasNum)
     const valorComissao = calculateValorComissao(premioLiquidoNum, pctComissao)
-    const dataEmissao = ['emitida', 'enviada'].includes(statusEmissao) ? (apolice?.data_emissao || new Date().toISOString().slice(0, 10)) : null
+    const dataEmissao = ['emitida', 'enviada'].includes(statusEmissao)  (apolice.data_emissao || new Date().toISOString().slice(0, 10)) : null
     const err = await atualizarApolice(id, {
       numero_apolice: numeroApolice.trim() || null,
       numero_proposta: numeroProposta.trim() || null,
@@ -188,8 +188,8 @@ export default function ApoliceDetalhe() {
       valor_parcela: parcelaNum || null,
       forma_pagamento: formaPagamento || null,
       premio_liquido: premioLiquidoNum || null,
-      pct_comissao: pctComissao === '' ? null : pctComissao,
-      pct_desconto: pctDesconto === '' ? null : pctDesconto,
+      pct_comissao: pctComissao === ''  null : pctComissao,
+      pct_desconto: pctDesconto === ''  null : pctDesconto,
       premio_total: premioTotal,
       valor_producao: premioTotal,
       valor_comissao: valorComissao,
@@ -238,7 +238,7 @@ export default function ApoliceDetalhe() {
   const premioTotal = calculatePremioTotal(valorParcelaNum, qtdParcelas)
   const valorComissao = calculateValorComissao(premioLiquidoNum, pctComissao)
   const siStatus = STATUS_EMISSAO_LABELS[apolice.status_emissao] || { label: apolice.status_emissao, color: '#6B7280' }
-  const nomePrincipal = normalizeDisplayText(ficha?.nome_empresa || ficha?.nome_interessado || apolice.nome_interessado) || 'Apólice'
+  const nomePrincipal = normalizeDisplayText(ficha.nome_empresa || ficha.nome_interessado || apolice.nome_interessado) || 'Apólice'
 
   return (
     <div className="space-y-5 pb-8 animate-fade-in">
@@ -249,7 +249,7 @@ export default function ApoliceDetalhe() {
         actions={(
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/apolices/lista')}
+              onClick={() => window.history.length > 1  navigate(-1) : navigate('/apolices/lista')}
               className="flex items-center gap-1.5 rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted transition-colors hover:border-brand-accent/50 hover:text-dark-text"
             >
               <ArrowLeft className="h-3.5 w-3.5" /> Voltar
@@ -259,9 +259,9 @@ export default function ApoliceDetalhe() {
               disabled={salvando}
               className="flex items-center gap-1.5 rounded-2xl bg-brand-secondary px-3 py-2 text-xs font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
             >
-              <Save className="h-3.5 w-3.5" /> {salvando ? 'Salvando...' : 'Salvar'}
+              <Save className="h-3.5 w-3.5" /> {salvando  'Salvando...' : 'Salvar'}
             </button>
-            {!confirm ? (
+            {!confirm  (
               <button
                 onClick={() => setConfirm(true)}
                 className="flex items-center gap-1.5 rounded-2xl border border-status-danger/30 px-3 py-2 text-xs text-status-danger transition-colors hover:bg-status-danger/10"
@@ -270,13 +270,13 @@ export default function ApoliceDetalhe() {
               </button>
             ) : (
               <div className="flex items-center gap-1.5 rounded-2xl border border-status-danger/30 bg-status-danger/5 px-3 py-2">
-                <span className="text-xs font-medium text-status-danger">Confirmar?</span>
+                <span className="text-xs font-medium text-status-danger">Confirmar</span>
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
                   className="rounded-xl bg-status-danger px-2.5 py-1.5 text-xs font-medium text-white disabled:opacity-50"
                 >
-                  {deleting ? '...' : 'Sim'}
+                  {deleting  '...' : 'Sim'}
                 </button>
                 <button
                   onClick={() => setConfirm(false)}
@@ -292,34 +292,34 @@ export default function ApoliceDetalhe() {
           <>
             <MetricCard label="Status" value={siStatus.label} hint="situação atual" tone="accent" icon={<ShieldCheck className="h-4 w-4" />} />
             <MetricCard label="Seguradora" value={apolice.seguradora || '—'} hint="origem da emissão" tone="secondary" icon={<Building2 className="h-4 w-4" />} />
-            <MetricCard label="Vigência" value={meses > 0 ? `${meses} meses` : '—'} hint="tempo contratado" tone="success" icon={<CalendarDays className="h-4 w-4" />} />
-            <MetricCard label="Prêmio total" value={premioTotal != null ? formatMoneyBR(premioTotal) : '—'} hint="parcelas x valor da parcela" tone="warning" icon={<Clock3 className="h-4 w-4" />} />
+            <MetricCard label="Vigência" value={meses > 0  `${meses} meses` : '—'} hint="tempo contratado" tone="success" icon={<CalendarDays className="h-4 w-4" />} />
+            <MetricCard label="Prêmio total" value={premioTotal != null  formatMoneyBR(premioTotal) : '—'} hint="parcelas x valor da parcela" tone="warning" icon={<Clock3 className="h-4 w-4" />} />
           </>
         )}
       />
 
       <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
         <div className="space-y-5">
-          {ficha ? (
+          {ficha  (
             <DataCard title="Dados da Ficha" subtitle="Base de origem da apólice." bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
               <div className="col-span-2"><ReadField label="Nome" value={normalizeDisplayText(ficha.nome_empresa || ficha.nome_interessado)} /></div>
-              <ReadField label={ficha.cnpj ? 'CNPJ' : 'CPF'} value={ficha.cpf || ficha.cnpj} />
+              <ReadField label={ficha.cnpj  'CNPJ' : 'CPF'} value={ficha.cpf || ficha.cnpj} />
               <ReadField label="Celular" value={ficha.celular} />
               <ReadField label="Produto" value={PRODUTO_LABELS[ficha.produto] || ficha.produto} />
               <ReadField label="Tipo de Imóvel" value={ficha.tipo_imovel} />
               <ReadField label="CEP" value={ficha.cep} />
-              <ReadField label="Valor do Aluguel" value={ficha.valor_aluguel ? `R$ ${Number(ficha.valor_aluguel).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null} />
+              <ReadField label="Valor do Aluguel" value={ficha.valor_aluguel  `R$ ${Number(ficha.valor_aluguel).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null} />
               <ReadField label="Imobiliária" value={resolverNome(apolice.imobiliaria)} />
               <ReadField label="Seguradora da Ficha" value={ficha.seguradora} />
               <ReadField label="Status" value={ficha.status} />
               <ReadField label="Vigência" value={ficha.vigencia} />
-              <ReadField label="% Comissão" value={ficha.pct_comissao != null ? `${ficha.pct_comissao}%` : null} />
-              <ReadField label="% Desconto" value={ficha.pct_desconto != null ? `${ficha.pct_desconto}%` : null} />
+              <ReadField label="% Comissão" value={ficha.pct_comissao != null  `${ficha.pct_comissao}%` : null} />
+              <ReadField label="% Desconto" value={ficha.pct_desconto != null  `${ficha.pct_desconto}%` : null} />
               <ReadField label="Parcelamento" value={ficha.parcelamento} />
               <ReadField label="Vencimento" value={ficha.vencimento} />
               <ReadField label="Origem" value={ficha.origem_lead} />
               <ReadField label="Observações" value={ficha.observacoes} />
-              {apolice.profiles?.nome && (
+              {apolice.profiles.nome && (
                 <div className="col-span-2">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted mb-1">Emissor</p>
                   <div className="flex items-center gap-2">
@@ -350,7 +350,7 @@ export default function ApoliceDetalhe() {
             <EditField label="Número da Proposta" value={numeroProposta} onChange={setNumeroProposta} placeholder="Opcional" />
             <div>
               <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Seguradora<span className="ml-0.5 text-status-danger">*</span></label>
-              <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={apolice.produto || ficha?.produto} required />
+              <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={apolice.produto || ficha.produto} required />
             </div>
             <SelectField
               label="Status"
@@ -365,7 +365,7 @@ export default function ApoliceDetalhe() {
             <EditField label="Fim da Vigência" type="date" value={fimVigencia} onChange={setFimVigencia} required />
             <div>
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Tempo de Vigência</p>
-              <p className="text-sm text-dark-text">{meses > 0 ? `${meses} meses` : '—'}</p>
+              <p className="text-sm text-dark-text">{meses > 0  `${meses} meses` : '—'}</p>
             </div>
             <EditField label="Parcelamento (vezes)" type="number" value={parcelamento} onChange={setParcelamento} placeholder="Ex: 12" required />
             <EditField label="Valor da Parcela (R$)" type="number" value={valorParcela} onChange={setValorParcela} placeholder="0,00" required />
@@ -374,11 +374,11 @@ export default function ApoliceDetalhe() {
             <EditField label="% Desconto" type="number" value={pctDesconto} onChange={setPctDesconto} placeholder="Ex: 5" required />
             <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Valor total do seguro</p>
-              <p className="mt-1 font-semibold">{premioTotal != null ? formatMoneyBR(premioTotal) : '—'}</p>
+              <p className="mt-1 font-semibold">{premioTotal != null  formatMoneyBR(premioTotal) : '—'}</p>
             </div>
             <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Comissão calculada</p>
-              <p className="mt-1 font-semibold">{valorComissao != null ? formatMoneyBR(valorComissao) : '—'}</p>
+              <p className="mt-1 font-semibold">{valorComissao != null  formatMoneyBR(valorComissao) : '—'}</p>
             </div>
             <SelectField
               label="Forma de Pagamento"
@@ -395,7 +395,7 @@ export default function ApoliceDetalhe() {
 
           <SecaoDocumentos
             apoliceId={apolice.id}
-            cpfCnpj={apolice.fichas?.cpf || apolice.fichas?.cnpj}
+            cpfCnpj={apolice.fichas.cpf || apolice.fichas.cnpj}
           />
         </div>
       </div>

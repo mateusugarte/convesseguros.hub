@@ -24,17 +24,17 @@ function ProductChooser({ value, onChange }) {
   function toggle(produto) {
     onChange(
       value.includes(produto)
-        ? value.filter(item => item !== produto)
+         value.filter(item => item !== produto)
         : [...value, produto]
     )
   }
 
   function toggleFianca() {
-    const fiancaValues = SEGURADORA_PRODUTOS.find(grupo => grupo.value === 'fianca')?.subprodutos.map(item => item.value) || []
+    const fiancaValues = SEGURADORA_PRODUTOS.find(grupo => grupo.value === 'fianca').subprodutos.map(item => item.value) || []
     const hasAll = fiancaValues.every(produto => value.includes(produto))
     onChange(
       hasAll
-        ? value.filter(produto => !fiancaValues.includes(produto))
+         value.filter(produto => !fiancaValues.includes(produto))
         : Array.from(new Set([...value, ...fiancaValues]))
     )
   }
@@ -51,14 +51,14 @@ function ProductChooser({ value, onChange }) {
             <div key={grupo.value} className="rounded-2xl border border-dark-border/70 bg-white/60 p-3">
               <button
                 type="button"
-                onClick={isFianca ? toggleFianca : () => toggle(grupo.value)}
+                onClick={isFianca  toggleFianca : () => toggle(grupo.value)}
                 className={`w-full rounded-xl px-3 py-2 text-left text-sm font-semibold transition-all ${
                   isFianca
-                    ? (grupo.subprodutos.every(sub => value.includes(sub.value))
-                      ? 'border border-brand-accent bg-brand-accent/10 text-brand-accent'
+                     (grupo.subprodutos.every(sub => value.includes(sub.value))
+                       'border border-brand-accent bg-brand-accent/10 text-brand-accent'
                       : 'border border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text')
                     : value.includes(grupo.value)
-                      ? 'border border-brand-accent bg-brand-accent/10 text-brand-accent'
+                       'border border-brand-accent bg-brand-accent/10 text-brand-accent'
                       : 'border border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
                 }`}
               >
@@ -76,7 +76,7 @@ function ProductChooser({ value, onChange }) {
                         onClick={() => toggle(sub.value)}
                         className={`rounded-xl border px-3 py-2 text-sm transition-all ${
                           active
-                            ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                             'border-brand-accent bg-brand-accent/10 text-brand-accent'
                             : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
                         }`}
                       >
@@ -139,24 +139,24 @@ function PendingDocs({ docs, onTitleChange, onRemove }) {
 }
 
 function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
-  const ehEditar = modal?.mode === 'editar'
-  const segAtual = modal?.seg
-  const variacoes = modal?.variacoes || []
+  const ehEditar = modal.mode === 'editar'
+  const segAtual = modal.seg
+  const variacoes = modal.variacoes || []
 
   const [modo, setModo] = useState('nova')
   const [segExistente, setSegExistente] = useState('')
   const [buscaExistente, setBuscaExistente] = useState('')
-  const [nome, setNome] = useState(segAtual?.nome_canonico || '')
-  const [aliases, setAliases] = useState(segAtual?.aliases || variacoes)
-  const [produtos, setProdutos] = useState(segAtual?.produtos || [])
-  const [logoPreview, setLogoPreview] = useState(getEntityImageUrl(segAtual?.logo_path, segAtual?.logo_url || ''))
+  const [nome, setNome] = useState(segAtual.nome_canonico || '')
+  const [aliases, setAliases] = useState(segAtual.aliases || variacoes)
+  const [produtos, setProdutos] = useState(segAtual.produtos || [])
+  const [logoPreview, setLogoPreview] = useState(getEntityImageUrl(segAtual.logo_path, segAtual.logo_url || ''))
   const [logoPreviewError, setLogoPreviewError] = useState(false)
   const [logoFile, setLogoFile] = useState(null)
   const [pendingDocs, setPendingDocs] = useState([])
   const [salvando, setSalvando] = useState(false)
 
   const cadastradasFiltradas = buscaExistente.trim()
-    ? cadastradas.filter(seg => seg.nome_canonico.toLowerCase().includes(buscaExistente.toLowerCase()))
+     cadastradas.filter(seg => seg.nome_canonico.toLowerCase().includes(buscaExistente.toLowerCase()))
     : cadastradas
 
   function removerAlias(alias) {
@@ -164,7 +164,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
   }
 
   function handleLogoChange(event) {
-    const file = event.target.files?.[0]
+    const file = event.target.files.[0]
     if (!file) return
     setLogoFile(file)
     setLogoPreviewError(false)
@@ -187,7 +187,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
 
   function updatePendingDocTitle(id, title) {
     setPendingDocs(prev => prev.map(doc => (
-      doc.id === id ? { ...doc, title } : doc
+      doc.id === id  { ...doc, title } : doc
     )))
   }
 
@@ -209,7 +209,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
         .eq('nome_canonico', nome.trim())
         .maybeSingle()
 
-      if (existe?.id) return existe
+      if (existe.id) return existe
 
       const { data: novo, error } = await supabase
         .from('seguradoras')
@@ -220,14 +220,14 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
       return novo
     }
 
-    return { id: segId, logo_path: segAtual?.logo_path || null }
+    return { id: segId, logo_path: segAtual.logo_path || null }
   }
 
   async function salvar() {
     setSalvando(true)
     try {
-      let segId = segAtual?.id || null
-      let currentLogoPath = segAtual?.logo_path || null
+      let segId = segAtual.id || null
+      let currentLogoPath = segAtual.logo_path || null
 
       if (ehEditar || modo === 'nova') {
         if (!nome.trim()) {
@@ -303,10 +303,10 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
     }
   }
 
-  const nomeSelecionado = cadastradas.find(seg => seg.id === segExistente)?.nome_canonico
+  const nomeSelecionado = cadastradas.find(seg => seg.id === segExistente).nome_canonico
   const modoCompleto = ehEditar || modo === 'nova'
   const podeSalvar = modoCompleto
-    ? !!nome.trim() && produtos.length > 0
+     !!nome.trim() && produtos.length > 0
     : !!segExistente && aliases.length > 0
 
   return (
@@ -317,7 +317,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
             <ArrowLeft className="w-4 h-4" />
           </button>
           <h2 className="font-bold text-dark-text text-base">
-            {ehEditar ? 'Editar Seguradora' : 'Configurar Seguradora'}
+            {ehEditar  'Editar Seguradora' : 'Configurar Seguradora'}
           </h2>
         </div>
 
@@ -326,20 +326,20 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
             <div className="flex rounded-lg border border-dark-border overflow-hidden text-sm font-medium">
               <button
                 onClick={() => setModo('nova')}
-                className={`flex-1 py-2 transition-colors ${modo === 'nova' ? 'bg-brand-accent text-white' : 'text-dark-muted hover:text-dark-text'}`}
+                className={`flex-1 py-2 transition-colors ${modo === 'nova'  'bg-brand-accent text-white' : 'text-dark-muted hover:text-dark-text'}`}
               >
                 Criar nova
               </button>
               <button
                 onClick={() => setModo('existente')}
-                className={`flex-1 py-2 transition-colors ${modo === 'existente' ? 'bg-brand-accent text-white' : 'text-dark-muted hover:text-dark-text'}`}
+                className={`flex-1 py-2 transition-colors ${modo === 'existente'  'bg-brand-accent text-white' : 'text-dark-muted hover:text-dark-text'}`}
               >
                 Incluir em existente
               </button>
             </div>
           )}
 
-          {!modoCompleto ? (
+          {!modoCompleto  (
             <div>
               <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
                 Selecionar seguradora *
@@ -362,7 +362,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
                     onClick={() => setSegExistente(seg.id)}
                     className={`w-full flex items-center gap-2 px-3 py-2.5 text-left transition-colors ${
                       segExistente === seg.id
-                        ? 'bg-brand-accent/10 text-brand-accent'
+                         'bg-brand-accent/10 text-brand-accent'
                         : 'text-dark-text hover:bg-white/55'
                     }`}
                   >
@@ -399,7 +399,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
                 <div className="flex items-center gap-4 flex-wrap">
                   <div className="space-y-1">
                     <div className="w-20 h-20 rounded-2xl border border-dark-border bg-white/70 overflow-hidden flex items-center justify-center">
-                    {logoPreview ? (
+                    {logoPreview  (
                       <img
                         src={logoPreview}
                         alt={nome || 'Seguradora'}
@@ -433,7 +433,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
             <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
               Variacoes mapeadas
             </label>
-            {aliases.length === 0 ? (
+            {aliases.length === 0  (
               <p className="text-xs text-dark-muted italic mb-2">Nenhuma variacao adicionada</p>
             ) : (
               <div className="rounded-xl border border-dark-border divide-y divide-dark-border overflow-hidden mb-2 max-h-44 overflow-y-auto">
@@ -473,7 +473,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
             </>
           )}
 
-          {ehEditar && segAtual?.id && (
+          {ehEditar && segAtual.id && (
             <EntityDocumentsSection tipoEntidade="seguradora" entidadeId={segAtual.id} title="Documentos da seguradora" />
           )}
         </div>
@@ -481,7 +481,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
         <div className="modal-shell-footer flex justify-end gap-3 px-6 py-4 border-t border-dark-border/60">
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
           <button onClick={salvar} disabled={!podeSalvar || salvando} className="btn-primary text-sm">
-            {salvando ? 'Salvando...' : 'Salvar Configuracao'}
+            {salvando  'Salvando...' : 'Salvar Configuracao'}
           </button>
         </div>
       </div>
@@ -492,7 +492,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
 function TabCadastradas({ seguradoras, onEditar, onExcluir, confirmExcluir, setConfirmExcluir }) {
   const [busca, setBusca] = useState('')
   const filtradas = busca.trim()
-    ? seguradoras.filter(seg =>
+     seguradoras.filter(seg =>
         seg.nome_canonico.toLowerCase().includes(busca.toLowerCase()) ||
         seg.aliases.some(alias => alias.toLowerCase().includes(busca.toLowerCase()))
       )
@@ -535,7 +535,7 @@ function TabCadastradas({ seguradoras, onEditar, onExcluir, confirmExcluir, setC
                   ))}
                 </div>
                 <p className="text-xs text-dark-muted">
-                  {seg.aliases.length} variacao{seg.aliases.length !== 1 ? 'oes' : ''}
+                  {seg.aliases.length} variacao{seg.aliases.length !== 1  'oes' : ''}
                   {!seg.ativa && <span className="ml-2 text-status-warning">· Inativa</span>}
                 </p>
                 {seg.aliases.length > 0 && (
@@ -552,9 +552,9 @@ function TabCadastradas({ seguradoras, onEditar, onExcluir, confirmExcluir, setC
                 >
                   <Pencil className="w-3.5 h-3.5" /> Editar
                 </button>
-                {confirmExcluir === seg.id ? (
+                {confirmExcluir === seg.id  (
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-status-danger font-medium">Confirmar?</span>
+                    <span className="text-xs text-status-danger font-medium">Confirmar</span>
                     <button onClick={() => onExcluir(seg.id)} className="px-2 py-1 rounded bg-status-danger text-white text-xs hover:opacity-90">Sim</button>
                     <button onClick={() => setConfirmExcluir(null)} className="px-2 py-1 rounded border border-dark-border text-xs text-dark-muted hover:text-dark-text">Nao</button>
                   </div>
@@ -578,7 +578,7 @@ function TabCadastradas({ seguradoras, onEditar, onExcluir, confirmExcluir, setC
 function TabNaoMapeadas({ naoMapeadas, selecionados, setSelecionados, onAgrupar }) {
   const [busca, setBusca] = useState('')
   const filtradas = busca.trim()
-    ? naoMapeadas.filter(item => item.nome.toLowerCase().includes(busca.toLowerCase()))
+     naoMapeadas.filter(item => item.nome.toLowerCase().includes(busca.toLowerCase()))
     : naoMapeadas
 
   function toggle(nome) {
@@ -593,7 +593,7 @@ function TabNaoMapeadas({ naoMapeadas, selecionados, setSelecionados, onAgrupar 
   function toggleTodos() {
     setSelecionados(
       selecionados.size === filtradas.length
-        ? new Set()
+         new Set()
         : new Set(filtradas.map(item => item.nome))
     )
   }
@@ -648,7 +648,7 @@ function TabNaoMapeadas({ naoMapeadas, selecionados, setSelecionados, onAgrupar 
             <label
               key={item.nome}
               className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
-                selecionados.has(item.nome) ? 'bg-brand-accent/5' : 'hover:bg-white/50'
+                selecionados.has(item.nome)  'bg-brand-accent/5' : 'hover:bg-white/50'
               }`}
             >
               <input
@@ -689,23 +689,23 @@ export default function Seguradoras() {
     ])
 
     const contagem = {}
-    fichasData?.forEach(item => {
+    fichasData.forEach(item => {
       if (item.seguradora) contagem[item.seguradora] = (contagem[item.seguradora] || 0) + 1
     })
-    apolicesData?.forEach(item => {
+    apolicesData.forEach(item => {
       if (item.seguradora) contagem[item.seguradora] = (contagem[item.seguradora] || 0) + 1
     })
 
     const mapeados = new Set()
-    segsData?.forEach(seg => {
+    segsData.forEach(seg => {
       mapeados.add(seg.nome_canonico.toLowerCase())
-      seg.seguradora_aliases?.forEach(alias => mapeados.add(alias.alias.toLowerCase()))
+      seg.seguradora_aliases.forEach(alias => mapeados.add(alias.alias.toLowerCase()))
     })
 
     const segs = (segsData || []).map(seg => ({
       ...seg,
-      aliases: seg.seguradora_aliases?.map(item => item.alias) || [],
-      produtos: seg.seguradora_produtos?.map(item => item.produto) || [],
+      aliases: seg.seguradora_aliases.map(item => item.alias) || [],
+      produtos: seg.seguradora_produtos.map(item => item.produto) || [],
     }))
 
     const naoMap = Object.entries(contagem)
@@ -755,7 +755,7 @@ export default function Seguradoras() {
     )
   }
 
-  const totalAliases = seguradoras.reduce((acc, seg) => acc + (seg.aliases?.length || 0), 0)
+  const totalAliases = seguradoras.reduce((acc, seg) => acc + (seg.aliases.length || 0), 0)
   const ativas = seguradoras.filter(seg => seg.ativa !== false).length
   const totalProdutos = seguradoras.reduce((acc, seg) => acc + seg.produtos.length, 0)
 
@@ -794,7 +794,7 @@ export default function Seguradoras() {
               onClick={() => { setTab(key); setSelecionados(new Set()) }}
               className={`px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
                 tab === key
-                  ? 'border-brand-accent text-brand-accent'
+                   'border-brand-accent text-brand-accent'
                   : 'border-transparent text-dark-muted hover:text-dark-text'
               }`}
             >
@@ -804,7 +804,7 @@ export default function Seguradoras() {
         </div>
 
         <div className="pt-5">
-          {loading ? (
+          {loading  (
             <div className="flex items-center justify-center h-48 gap-2 text-dark-muted text-sm">
               <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -812,7 +812,7 @@ export default function Seguradoras() {
               </svg>
               Carregando...
             </div>
-          ) : tab === 'cadastradas' ? (
+          ) : tab === 'cadastradas'  (
             <TabCadastradas
               seguradoras={seguradoras}
               onEditar={seg => setModal({ mode: 'editar', seg, variacoes: seg.aliases })}

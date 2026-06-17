@@ -56,13 +56,13 @@ const Configuracoes      = lazy(() => import('./pages/Configuracoes'))
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return <PageLoader />
-  return user ? children : <Navigate to="/login" replace />
+  return user  children : <Navigate to="/login" replace />
 }
 
 function AdminRoute({ children }) {
   const { profile, loading } = useAuth()
   if (loading) return <PageLoader />
-  if (!profile?.is_admin) return <Navigate to="/" replace />
+  if (!profile.is_admin) return <Navigate to="/" replace />
   return children
 }
 
@@ -71,7 +71,7 @@ function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        <Route path="/login" element={user ? <Navigate to="/" replace /> : <LazyLogin />} />
+        <Route path="/login" element={user  <Navigate to="/" replace /> : <LazyLogin />} />
         <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route index         element={<Dashboard />} />
           <Route path="fichas" element={<Fichas />} />

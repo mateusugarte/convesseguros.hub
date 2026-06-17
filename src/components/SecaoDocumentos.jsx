@@ -20,8 +20,8 @@ export default function SecaoDocumentos({ fichaId, apoliceId, cpfCnpj }) {
       const data = await fetchDocumentos({ fichaId, apoliceId })
       setDocs(data)
     } catch (err) {
-      if (err?.code !== '42P01') {
-        toast({ type: 'error', title: 'Erro ao carregar documentos', message: err?.message })
+      if (err.code !== '42P01') {
+        toast({ type: 'error', title: 'Erro ao carregar documentos', message: err.message })
       }
       setDocs([])
     }
@@ -33,7 +33,7 @@ export default function SecaoDocumentos({ fichaId, apoliceId, cpfCnpj }) {
   }, [fichaId, apoliceId])
 
   async function handleUpload(e) {
-    const file = e.target.files?.[0]
+    const file = e.target.files.[0]
     if (!file) return
     if (file.type !== 'application/pdf') {
       toast({ type: 'error', title: 'Apenas arquivos PDF são aceitos' })
@@ -46,7 +46,7 @@ export default function SecaoDocumentos({ fichaId, apoliceId, cpfCnpj }) {
       return
     }
     setUploading(true)
-    const { error } = await uploadDocumento({ file, fichaId, apoliceId, cpfCnpj, userId: user?.id })
+    const { error } = await uploadDocumento({ file, fichaId, apoliceId, cpfCnpj, userId: user.id })
     setUploading(false)
     if (inputRef.current) inputRef.current.value = ''
     if (error) {
@@ -58,7 +58,7 @@ export default function SecaoDocumentos({ fichaId, apoliceId, cpfCnpj }) {
   }
 
   async function handleDeletar(doc) {
-    if (!confirm(`Excluir "${doc.nome_arquivo}"?`)) return
+    if (!confirm(`Excluir "${doc.nome_arquivo}"`)) return
     const error = await deletarDocumento(doc.id, doc.url)
     if (error) { toast({ type: 'error', title: 'Erro ao excluir' }); return }
     toast({ type: 'success', title: 'Documento excluído' })
@@ -82,9 +82,9 @@ export default function SecaoDocumentos({ fichaId, apoliceId, cpfCnpj }) {
             <span className="text-[10px] font-mono text-dark-muted">({docs.length})</span>
           )}
         </div>
-        <label className={`btn-secondary text-xs cursor-pointer flex items-center gap-1.5 px-3 py-1.5 ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+        <label className={`btn-secondary text-xs cursor-pointer flex items-center gap-1.5 px-3 py-1.5 ${uploading  'opacity-50 pointer-events-none' : ''}`}>
           <Upload className="w-3.5 h-3.5" />
-          {uploading ? 'Enviando...' : 'Enviar PDF'}
+          {uploading  'Enviando...' : 'Enviar PDF'}
           <input
             ref={inputRef}
             type="file"
@@ -96,9 +96,9 @@ export default function SecaoDocumentos({ fichaId, apoliceId, cpfCnpj }) {
         </label>
       </div>
 
-      {loading ? (
+      {loading  (
         <p className="text-xs text-dark-muted text-center py-3">Carregando...</p>
-      ) : docs.length === 0 ? (
+      ) : docs.length === 0  (
         <p className="text-xs text-dark-muted/40 text-center py-4">Nenhum documento anexado</p>
       ) : (
         <div className="space-y-2">
@@ -111,12 +111,12 @@ export default function SecaoDocumentos({ fichaId, apoliceId, cpfCnpj }) {
                 <p className="text-xs font-medium text-dark-text truncate">{d.nome_arquivo}</p>
                 <p className="text-[10px] text-dark-muted">
                   {formatBytes(d.tamanho_bytes)}
-                  {d.profiles?.nome && ` · ${d.profiles.nome.split(' ')[0]}`}
+                  {d.profiles.nome && ` · ${d.profiles.nome.split(' ')[0]}`}
                   {' · '}{format(parseISO(d.created_at), 'dd/MM/yy', { locale: ptBR })}
                 </p>
               </div>
               <a href={d.signedUrl || '#'} target="_blank" rel="noreferrer"
-                className={`transition-colors p-1 ${d.signedUrl ? 'text-dark-muted hover:text-brand-accent' : 'text-dark-muted/30 pointer-events-none'}`}>
+                className={`transition-colors p-1 ${d.signedUrl  'text-dark-muted hover:text-brand-accent' : 'text-dark-muted/30 pointer-events-none'}`}>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
               <button onClick={() => handleDeletar(d)}

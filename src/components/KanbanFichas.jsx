@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+﻿import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
@@ -19,17 +19,18 @@ import {
 } from 'lucide-react'
 import SeguradoraBadge from './SeguradoraBadge'
 import SeguradoraSelect from './SeguradoraSelect'
+import { Avatar } from './ui'
 import { KanbanSkeleton } from './Skeleton'
 import { DatePicker } from './ui/DatePicker'
 import { AVATAR_COLORS, PRODUTO_COLORS } from '../design-system/tokens'
 
-// ── Colunas ───────────────────────────────────────────────────────────────────
+// â”€â”€ Colunas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const COLUMNS = [
   { id: 'pendente',   label: 'Pendentes',     color: '#4c67b0' },
   { id: 'assumidas',  label: 'Assumidas',     color: '#000079' },
   { id: 'minhas',     label: 'Minhas Fichas', color: '#a2d6da' },
-  { id: 'em_analise', label: 'Em Análise',    color: '#4b6cc2' },
+  { id: 'em_analise', label: 'Em AnÃ¡lise',    color: '#4b6cc2' },
   { id: 'aprovado',   label: 'Aprovadas',     color: '#0f766e' },
   { id: 'recusado',   label: 'Recusadas',     color: '#8b1e4e' },
   { id: 'emitido',    label: 'Emitidas',      color: '#2247aa' },
@@ -53,11 +54,11 @@ const PRODUTO_ABBR  = { residencial_pf: 'Res. PF', comercial_pf: 'Com. PF', pess
 const PERIODOS = [
   { key: 'hoje',   label: 'Hoje' },
   { key: 'semana', label: 'Semana' },
-  { key: 'mes',    label: 'Mês' },
+  { key: 'mes',    label: 'MÃªs' },
   { key: 'custom', label: 'Personalizado' },
 ]
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function getPeriodDates(periodo, customFrom, customTo) {
   const now = new Date()
@@ -128,12 +129,12 @@ function nomePrincipal(ficha) {
       || rd.empresa
       || rd.nome_fantasia
       || rd.nome
-      || '—'
+      || 'â€”'
   }
-  return ficha.nome_interessado || rd.nome || rd.nome_interessado || '—'
+  return ficha.nome_interessado || rd.nome || rd.nome_interessado || 'â€”'
 }
 
-// ── FichaCard (visual puro, sem lógica de drag) ───────────────────────────────
+// â”€â”€ FichaCard (visual puro, sem lÃ³gica de drag) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isDragOverlay, isNew, resolverNome, resolveImobiliariaInfo }) {
   const ProdIcon  = PRODUTO_ICON[ficha.produto] || LayoutGrid
@@ -168,9 +169,9 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
           {nomePrincipal(ficha)}
         </p>
 
-        {/* Imobiliária */}
+        {/* ImobiliÃ¡ria */}
         <ImobiliariaIdentity
-          nome={(resolverNome ? resolverNome(ficha.imobiliaria) : ficha.imobiliaria) || '�'}
+          nome={(resolverNome ? resolverNome(ficha.imobiliaria) : ficha.imobiliaria) || '—'}
           imagemUrl={imobiliaria?.imagem_url}
           imagemPath={imobiliaria?.imagem_path}
           size="sm"
@@ -184,17 +185,11 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
           </div>
         )}
 
-        {/* Rodapé: orçamentista + ações */}
+        {/* RodapÃ©: orÃ§amentista + aÃ§Ãµes */}
         <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-dark-border/40 mt-auto">
           {nome ? (
             <div className="flex items-center gap-1.5 min-w-0">
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0"
-                style={{ background: stringColor(nome) }}
-                title={nome}
-              >
-                {initials(nome)}
-              </div>
+              <Avatar name={nome} src={ficha.profiles?.avatar_url || ''} size="sm" />
               <span className="text-[10px] text-dark-muted font-medium truncate max-w-[72px]">
                 {nome.split(' ')[0]}
               </span>
@@ -225,7 +220,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
           </div>
         </div>
 
-        {/* Botão retorno — visível em todos exceto pendente */}
+        {/* BotÃ£o retorno â€” visÃ­vel em todos exceto pendente */}
         {showRetorno && !isDragOverlay && (
           <button
             onPointerDown={e => e.stopPropagation()}
@@ -247,8 +242,8 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
   )
 }
 
-// ── DraggableCard ─────────────────────────────────────────────────────────────
-// O drag fica no handle para manter o overlay estável durante o movimento
+// â”€â”€ DraggableCard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// O drag fica no handle para manter o overlay estÃ¡vel durante o movimento
 
 function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onToggleRetorno, isNew, resolverNome, resolveImobiliariaInfo }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ficha.id })
@@ -280,7 +275,7 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onTog
   )
 }
 
-// ── DroppableColumn ───────────────────────────────────────────────────────────
+// â”€â”€ DroppableColumn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function DroppableColumn({
   column, fichas, userId, onDetalhe, onAssumir, onFinalizar, onToggleRetorno,
@@ -303,7 +298,7 @@ function DroppableColumn({
       >
         <button
           onClick={onToggleCollapse}
-          title={`${column.label} (${fichas.length}) — expandir`}
+          title={`${column.label} (${fichas.length}) â€” expandir`}
           className="flex flex-col items-center gap-1.5 py-3 px-1.5 rounded-t-xl border border-b-0 hover:opacity-80 transition-opacity"
           style={{ background: column.color + '14', borderColor: column.color + '45' }}
         >
@@ -363,7 +358,7 @@ function DroppableColumn({
         </div>
       </div>
 
-      {/* Body — zona de drop */}
+      {/* Body â€” zona de drop */}
       <div
         ref={setNodeRef}
         className="kanban-col-body flex-1 p-1.5 space-y-1.5 overflow-y-auto"
@@ -402,7 +397,7 @@ function DroppableColumn({
   )
 }
 
-// ── ModalConfirmarRecusado ────────────────────────────────────────────────────
+// â”€â”€ ModalConfirmarRecusado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ModalConfirmarRecusado({ onConfirmar, salvando }) {
   const [retorno, setRetorno] = useState(null)
@@ -413,7 +408,7 @@ function ModalConfirmarRecusado({ onConfirmar, salvando }) {
         <p className="text-xs text-dark-muted">O retorno foi enviado ao cliente?</p>
         <div className="flex gap-3">
           {[{ v: true, l: 'Sim', cls: 'border-status-success text-status-success bg-status-success/20' },
-            { v: false, l: 'Não', cls: 'border-status-danger text-status-danger bg-status-danger/20' }].map(({ v, l, cls }) => (
+            { v: false, l: 'NÃ£o', cls: 'border-status-danger text-status-danger bg-status-danger/20' }].map(({ v, l, cls }) => (
             <button key={l} onClick={() => setRetorno(v)}
               className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
                 retorno === v ? cls : 'border-dark-border text-dark-muted hover:border-dark-text'
@@ -434,7 +429,7 @@ function ModalConfirmarRecusado({ onConfirmar, salvando }) {
   )
 }
 
-// ── ModalConfirmarAprovado ────────────────────────────────────────────────────
+// â”€â”€ ModalConfirmarAprovado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
   const [seguradora,      setSeguradora]      = useState('')
@@ -446,7 +441,7 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
   return (
     <div className="glass-panel rounded-2xl overflow-hidden animate-fade-in">
       <div className="px-6 py-4 border-b border-dark-border">
-        <p className="font-semibold text-dark-text">Confirmar Aprovação</p>
+        <p className="font-semibold text-dark-text">Confirmar AprovaÃ§Ã£o</p>
       </div>
       <div className="px-6 py-5 space-y-4">
         <div>
@@ -468,7 +463,7 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
           </div>
           <div>
             <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
-              N° Orçamento <span className="text-status-danger">*</span>
+              NÂ° OrÃ§amento <span className="text-status-danger">*</span>
             </label>
             <input
               value={numeroOrcamento} onChange={e => setNumeroOrcamento(e.target.value)}
@@ -482,7 +477,7 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
           </label>
           <div className="flex gap-3">
             {[{ v: true, l: 'Sim', cls: 'border-status-success text-status-success bg-status-success/20' },
-              { v: false, l: 'Não', cls: 'border-status-danger text-status-danger bg-status-danger/20' }].map(({ v, l, cls }) => (
+              { v: false, l: 'NÃ£o', cls: 'border-status-danger text-status-danger bg-status-danger/20' }].map(({ v, l, cls }) => (
               <button key={l} onClick={() => setRetornoEnviado(v)}
                 className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
                   retornoEnviado === v ? cls : 'border-dark-border text-dark-muted hover:border-dark-text'
@@ -503,14 +498,14 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
           disabled={!valido || salvando}
           className="btn-primary text-sm"
         >
-          {salvando ? 'Salvando...' : 'Confirmar Aprovação'}
+          {salvando ? 'Salvando...' : 'Confirmar AprovaÃ§Ã£o'}
         </button>
       </div>
     </div>
   )
 }
 
-// ── KanbanFichas ──────────────────────────────────────────────────────────────
+// â”€â”€ KanbanFichas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function KanbanFichas({ produto, externalDateFrom, externalDateTo, contextState }) {
   const { user }         = useAuth()
@@ -721,13 +716,13 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     const novoStatus = COL_TO_STATUS[targetCol]
     if (!novoStatus) return
 
-    // Drag para recusado → pede confirmação
+    // Drag para recusado â†’ pede confirmaÃ§Ã£o
     if (targetCol === 'recusado') {
       setPendingRecusado({ fichaId, fichaOriginal: ficha })
       return
     }
 
-    // Drag para aprovado → pede seguradora, parcela, orçamento
+    // Drag para aprovado â†’ pede seguradora, parcela, orÃ§amento
     if (targetCol === 'aprovado') {
       setPendingAprovado({ fichaId, fichaOriginal: ficha })
       return
@@ -777,7 +772,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
   return (
     <div className="space-y-3">
-      {/* Filtro de período */}
+      {/* Filtro de perÃ­odo */}
       {!useExternal && (
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-0.5 bg-dark-surface2/60 border border-dark-border rounded-lg p-0.5">
@@ -799,7 +794,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
             <div className="flex items-center gap-1.5 text-xs text-dark-muted">
               <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
               <DatePicker value={customFrom} onChange={v => setCustomFrom(v)} />
-              <span>—</span>
+              <span>â€”</span>
               <DatePicker value={customTo} onChange={v => setCustomTo(v)} />
             </div>
           )}
@@ -814,7 +809,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
       {useExternal && (
         <div className="flex items-center justify-between text-xs text-dark-muted">
-          <span>{fichas.length} ficha{fichas.length !== 1 ? 's' : ''} neste período</span>
+          <span>{fichas.length} ficha{fichas.length !== 1 ? 's' : ''} neste perÃ­odo</span>
           <button onClick={load} className="flex items-center gap-1 hover:text-dark-text transition-colors">
             <RefreshCw className="w-3.5 h-3.5" /> Atualizar
           </button>
@@ -906,6 +901,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     </div>
   )
 }
+
 
 
 

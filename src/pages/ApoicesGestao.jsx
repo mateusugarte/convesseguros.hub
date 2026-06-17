@@ -20,6 +20,8 @@ import {
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import SeguradoraSelect from '../components/SeguradoraSelect'
 import ImobiliariaSelect from '../components/ImobiliariaSelect'
+import { Avatar } from '../components/ui'
+import { supabase } from '../lib/supabase'
 import { KanbanSkeleton } from '../components/Skeleton'
 import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/kanbanDnd'
 
@@ -207,13 +209,7 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, 
         <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-dark-border/40 mt-auto">
           {emissor ? (
             <div className="flex items-center gap-1.5 min-w-0">
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0"
-                style={{ background: stringColor(emissor) }}
-                title={emissor}
-              >
-                {initials(emissor)}
-              </div>
+              <Avatar name={emissor} src={apolice.profiles?.avatar_url || ''} size="sm" />
               <span className="text-[10px] text-dark-muted font-medium truncate max-w-[72px]">
                 {emissor.split(' ')[0]}
               </span>
@@ -388,12 +384,14 @@ function DroppableColumn({ col, apolices, onDetalhe, resolverNome, colIndex, col
 function ModalIniciarEmissao({ onClose, onCriado, toast }) {
   const { getAliases } = useImobiliaria()
   const { user } = useAuth()
+  const [profiles,          setProfiles]          = useState([])
   const [imobFiltro,        setImobFiltro]        = useState('')
   const [busca,             setBusca]             = useState('')
   const [fichasEncontradas, setFichasEncontradas] = useState([])
   const [fichaSelecionada,  setFichaSelecionada]  = useState(null)
   const [buscando,          setBuscando]          = useState(false)
   const [criando,           setCriando]           = useState(false)
+  const [emitidoPor,        setEmitidoPor]        = useState(user?.id || '')
 
   // Campos adicionais preenchidos ao iniciar emissão
   const [numeroOrcamento, setNumeroOrcamento] = useState('')
@@ -415,6 +413,10 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     }, 300)
     return () => clearTimeout(t)
   }, [busca, imobFiltro, getAliases])
+
+  useEffect(() => {
+    supabase.from('profiles').select('id, nome, avatar_url').order('nome').then(({ data }) => setProfiles(data || []))
+  }, [])
 
   function selecionarFicha(f) {
     setFichaSelecionada(f)
@@ -438,8 +440,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
       numero_proposta:  numeroOrcamento.trim() || null,
       valor_parcela:    valorParcela.trim() || null,
       endereco:         endereco.trim() || null,
-      // Emissor: usuário logado que iniciou a emissão
-      emitido_por:      user?.id || null,
+      emitido_por:      emitidoPor || user?.id || null,
       // Defaults obrigatórios no banco enquanto migração 09 não for rodada
       numero_apolice:   '',
       seguradora:       'Outras',
@@ -490,7 +491,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                     {fichaSelecionada.nome_empresa || fichaSelecionada.nome_interessado}
                   </p>
                   <button
-                    onClick={() => { setFichaSelecionada(null); setNumeroOrcamento(''); setEndereco(''); setValorParcela('') }}
+                    onClick={() => { setFichaSelecionada(null); setNumeroOrcamento(''); setEndereco(''); setValorParcela(''); setEmitidoPor(user?.id || '') }}
                     className="flex-shrink-0 ml-2 text-dark-muted hover:text-dark-text"
                   >
                     <X className="w-4 h-4" />
@@ -559,6 +560,15 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                     onChange={setValorParcela}
                     placeholder="0,00"
                   />
+                  <div className="col-span-2">
+                    <SelectField
+                      label="Emissor"
+                      value={emitidoPor}
+                      onChange={setEmitidoPor}
+                      options={profiles.map(p => ({ value: p.id, label: p.nome }))}
+                      required
+                    />
+                  </div>
                   <div className="col-span-2">
                     <EditField
                       label="Endereço do Imóvel"

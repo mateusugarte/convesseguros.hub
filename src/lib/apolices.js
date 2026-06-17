@@ -118,7 +118,7 @@ export async function fetchApolicesKanban({ dateFrom, dateTo, imobiliarias } = {
       proprietario_nome, inicio_vigencia, fim_vigencia, produto,
       nome_interessado, emitido_por,
       fichas!ficha_id(nome_interessado, nome_empresa, cpf, cnpj, produto, celular, cep, tipo_imovel),
-      profiles!emitido_por(nome)
+      profiles!emitido_por(nome, avatar_url)
     `)
     .order('created_at', { ascending: false })
 
@@ -140,7 +140,7 @@ export async function fetchApolicesLista({ dateFrom, dateTo, imobiliarias, segur
       seguradora, status_emissao, valor_parcela, created_at,
       nome_interessado, emitido_por,
       fichas!ficha_id(nome_interessado, nome_empresa, cpf, cnpj),
-      profiles!emitido_por(nome)
+      profiles!emitido_por(nome, avatar_url)
     `, { count: 'exact' })
     .order('data_emissao', { ascending: false, nullsLast: true })
     .range(page * pageSize, (page + 1) * pageSize - 1)
@@ -161,7 +161,7 @@ export async function fetchApolicesLista({ dateFrom, dateTo, imobiliarias, segur
 export async function fetchApoliceDetalhe(id) {
   const { data } = await supabase
     .from('apolices')
-    .select(`*, fichas!ficha_id(*), profiles!emitido_por(nome)`)
+    .select(`*, fichas!ficha_id(*), profiles!emitido_por(nome, avatar_url)`)
     .eq('id', id)
     .single()
   return data

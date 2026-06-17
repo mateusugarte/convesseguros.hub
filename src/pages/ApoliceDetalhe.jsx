@@ -11,7 +11,7 @@ import SeguradoraSelect from '../components/SeguradoraSelect'
 import SecaoDocumentos from '../components/SecaoDocumentos'
 import { DatePicker } from '../components/ui/DatePicker'
 import { Select } from '../components/ui/Select'
-import { PageHeader, MetricCard, DataCard } from '../components/ui'
+import { PageHeader, MetricCard, DataCard, Avatar } from '../components/ui'
 
 function fmtDt(v) {
   if (!v) return null
@@ -294,7 +294,15 @@ export default function ApoliceDetalhe() {
               <ReadField label="Vencimento" value={ficha.vencimento} />
               <ReadField label="Origem" value={ficha.origem_lead} />
               <ReadField label="Observações" value={ficha.observacoes} />
-              {apolice.profiles?.nome && <ReadField label="Emissor" value={apolice.profiles.nome} />}
+              {apolice.profiles?.nome && (
+                <div className="col-span-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted mb-1">Emissor</p>
+                  <div className="flex items-center gap-2">
+                    <Avatar name={apolice.profiles.nome} src={apolice.profiles.avatar_url || ''} size="sm" />
+                    <span className="text-sm text-dark-text">{apolice.profiles.nome}</span>
+                  </div>
+                </div>
+              )}
             </DataCard>
           ) : (
             <DataCard title="Dados da Ficha" subtitle="Apólice anexada manualmente." bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">

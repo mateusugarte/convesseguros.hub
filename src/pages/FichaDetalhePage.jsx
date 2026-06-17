@@ -8,6 +8,7 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ArrowLeft, Pencil, Trash2, Check, X, CalendarDays, Building2, UserRound, Clock3 } from 'lucide-react'
 import { PageHeader, MetricCard, DataCard } from '../components/ui'
+import { Avatar } from '../components/ui'
 import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import SeguradoraSelect from '../components/SeguradoraSelect'
@@ -436,7 +437,17 @@ export default function FichaDetalhePage() {
           {/* Controle interno — campos editáveis */}
           <DataCard title="Controle Interno" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
             <ReadField label="Orçamentista (Forms)" value={ficha.orcamentista_forms} />
-            <ReadField label="Assumida por" value={ficha.profiles?.nome} />
+            <div>
+              <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-dark-muted">Assumida por</p>
+              {ficha.profiles?.nome ? (
+                <div className="flex items-center gap-2">
+                  <Avatar name={ficha.profiles.nome} src={ficha.profiles.avatar_url || ''} size="sm" />
+                  <span className="text-sm text-dark-text">{ficha.profiles.nome}</span>
+                </div>
+              ) : (
+                <p className="text-sm text-dark-text">Livre</p>
+              )}
+            </div>
             <ReadField label="Assumida em" value={fmtDt(ficha.assumida_em)} />
             {/* Número do orçamento — exibido quando aprovado */}
             {(ficha.status === 'aprovado' || ficha.numero_orcamento) && (

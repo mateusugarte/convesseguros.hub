@@ -2,6 +2,18 @@
 
 > Visao consolidada do projeto. Mantem o que esta pronto, o que esta planejado e o que ainda depende de execucao.
 
+## Prioridades imediatas
+
+- [ ] **Cerebro Obsidian** — base de conhecimento interna da Conves (produto, processos, clientes, playbooks). A ser construido em momento separado.
+- [x] **Fase 0** — CRM base: status owner, contatos nas imobiliarias, codigo imob por seguradora. Concluido.
+- [x] **Fase 1** — Dashboard comercial com metricas reais (conversao ficha→apolice, ranking imobiliarias). Concluido.
+- [ ] **Fase 2** — Jornadas: redesign visual (node-based estilo n8n), novo node tipo Etapa, aba "Jornada do Cliente" no detalhe do lead. Em execucao.
+- [ ] **Fase 3** — Campanhas: area completa + banner no dashboard + strip no pipeline + aba no lead. Em execucao.
+- [ ] **Fase 4** — Redesign visual completo do sistema. Em execucao.
+- [ ] **Fase 5** — Forecasting: projecao de apolices/comissao a partir do pipeline. Proxima.
+- [ ] **Fase 6** — Aquisicao estruturada: outreach automatizado + materiais comerciais. Futuro.
+- [ ] **Fase 7** — WhatsApp Business integration. Futuro.
+
 ## Visao geral
 
 - Plataforma interna para fichas, apolices, imobiliarias, seguradoras e area comercial.

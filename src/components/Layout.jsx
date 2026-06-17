@@ -114,6 +114,7 @@ export default function Layout() {
   const [abertasCount, setAbertasCount] = useState(0)
   const [cmdOpen, setCmdOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [hideWorkspaceTopbar, setHideWorkspaceTopbar] = useState(false)
   const [expandedItems, setExpandedItems] = useState(() => {
     const initial = new Set()
     if (location.pathname.startsWith('/fichas')) initial.add('/fichas')
@@ -179,6 +180,15 @@ export default function Layout() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
+  }, [])
+
+  useEffect(() => {
+    function onToggleShell(event) {
+      setHideWorkspaceTopbar(Boolean(event?.detail?.hidden))
+    }
+
+    window.addEventListener('workspace-shell-toggle', onToggleShell)
+    return () => window.removeEventListener('workspace-shell-toggle', onToggleShell)
   }, [])
 
   useEffect(() => {
@@ -404,7 +414,8 @@ export default function Layout() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
-        <header className="shell-topbar sticky top-3 z-[300] h-16 flex items-center justify-between px-5 flex-shrink-0 topbar-glass rounded-[28px]" style={shellTopbarStyle}>
+        {!hideWorkspaceTopbar && (
+          <header className="shell-topbar sticky top-3 z-[300] h-16 flex items-center justify-between px-5 flex-shrink-0 topbar-glass rounded-[28px]" style={shellTopbarStyle}>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(o => !o)}
@@ -509,9 +520,10 @@ export default function Layout() {
               )}
             </div>
           </div>
-        </header>
+          </header>
+        )}
 
-        <main className="flex-1 overflow-y-auto bg-transparent pt-4">
+        <main className={`flex-1 overflow-y-auto bg-transparent ${hideWorkspaceTopbar ? 'pt-0' : 'pt-4'}`}>
           <div className="mx-auto w-full min-w-0 max-w-[1720px] pb-20">
             <PageTransition>
               <Outlet />

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+﻿import { useState, useCallback } from 'react'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, useDraggable } from '@dnd-kit/core'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -13,11 +13,12 @@ import {
 } from 'lucide-react'
 import SeguradoraBadge from './SeguradoraBadge'
 import ImobiliariaIdentity from './ImobiliariaIdentity'
+import { Avatar } from './ui'
 
 const COLS = [
   { id: 'pendentes',   label: 'Pendentes',      color: '#4c67b0' },
-  { id: 'assumidas',   label: 'Em Cotação',      color: '#3B82F6' },
-  { id: 'em_analise',  label: 'Em Análise',      color: '#4b6cc2' },
+  { id: 'assumidas',   label: 'Em CotaÃ§Ã£o',      color: '#3B82F6' },
+  { id: 'em_analise',  label: 'Em AnÃ¡lise',      color: '#4b6cc2' },
   { id: 'aprovados',   label: 'Aprovados',       color: '#0f766e' },
   { id: 'recusados',   label: 'Recusados',       color: '#EF4444' },
   { id: 'finalizadas', label: 'Finalizadas',     color: '#6B7280' },
@@ -64,7 +65,7 @@ function getCol(ficha) {
   return 'pendentes'
 }
 
-// ── Card visual ────────────────────────────────────────────────────────────────
+// â”€â”€ Card visual â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function FichaCardContent({
   ficha, userId, onAssumir, onFinalizar, onDetalhe,
@@ -114,10 +115,10 @@ function FichaCardContent({
 
         {/* Nome */}
         <p className="text-[12.5px] font-semibold text-dark-text leading-snug truncate mb-0.5">
-          {ficha.nome_empresa || ficha.nome_interessado || '—'}
+          {ficha.nome_empresa || ficha.nome_interessado || 'â€”'}
         </p>
 
-        {/* Imobiliária */}
+        {/* ImobiliÃ¡ria */}
         {ficha.imobiliaria && (
           <ImobiliariaIdentity
             nome={ficha.imobiliaria}
@@ -133,17 +134,11 @@ function FichaCardContent({
           </div>
         )}
 
-        {/* Footer: orcamentista + ação */}
+        {/* Footer: orcamentista + aÃ§Ã£o */}
         <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-dark-border/40 mt-auto">
           {nome ? (
             <div className="flex items-center gap-1.5 min-w-0">
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0"
-                style={{ background: stringColor(nome) }}
-                title={nome}
-              >
-                {initials(nome)}
-              </div>
+              <Avatar name={nome} src={apolice.profiles?.avatar_url || ''} size="sm" />
               <span className="text-[10px] text-dark-muted font-medium truncate max-w-[72px]">
                 {nome.split(' ')[0]}
               </span>
@@ -182,7 +177,7 @@ function FichaCardContent({
   )
 }
 
-// ── DraggableCard ──────────────────────────────────────────────────────────────
+// â”€â”€ DraggableCard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function KanbanCard({ ficha, userId, onAssumir, onFinalizar, onDetalhe }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ficha.id })
@@ -204,7 +199,7 @@ function KanbanCard({ ficha, userId, onAssumir, onFinalizar, onDetalhe }) {
   )
 }
 
-// ── Column ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Column â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function DroppableColumn({ col, fichas, userId, onAssumir, onFinalizar, onDetalhe, collapsed, onToggleCollapse, colIndex }) {
   const { isOver, setNodeRef: setDropRef } = useDroppable({ id: col.id })
@@ -307,7 +302,7 @@ function DroppableColumn({ col, fichas, userId, onAssumir, onFinalizar, onDetalh
   )
 }
 
-// ── Main ───────────────────────────────────────────────────────────────────────
+// â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar, onDetalhe }) {
   const { user }  = useAuth()
@@ -425,7 +420,7 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
             <div className="p-1.5 rounded-b-xl border border-t-0 min-h-[60px]" style={{ background: activeCol.color + '06', borderColor: activeCol.color + '30' }}>
               {(grouped[activeColId] || []).slice(0, 3).map(f => (
                 <div key={f.id} className="text-[10px] text-dark-muted truncate py-1 px-2 rounded-lg mb-1" style={{ background: 'rgb(var(--color-surface2) / 0.6)' }}>
-                  {f.nome_empresa || f.nome_interessado || '—'}
+                  {f.nome_empresa || f.nome_interessado || 'â€”'}
                 </div>
               ))}
             </div>
@@ -439,3 +434,4 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
     </DndContext>
   )
 }
+

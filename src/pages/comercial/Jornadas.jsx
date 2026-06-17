@@ -1242,6 +1242,17 @@ export default function Jornadas() {
   const visibleJourneys = state.journeys.filter(j => getStatus(j) !== 'arquivada')
 
   const editorJourney = editorId ? state.journeys.find(j => j.id === editorId) : null
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('workspace-shell-toggle', {
+      detail: { hidden: Boolean(editorJourney) },
+    }))
+    return () => {
+      window.dispatchEvent(new CustomEvent('workspace-shell-toggle', {
+        detail: { hidden: false },
+      }))
+    }
+  }, [editorJourney])
+
   if (editorJourney) {
     return <EditorJornada journey={editorJourney} onBack={() => setEditorId(null)} toast={toast} />
   }

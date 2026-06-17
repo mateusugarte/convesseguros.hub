@@ -6,6 +6,7 @@ import { ptBR } from 'date-fns/locale'
 import { X, Pencil, Trash2, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import ImobiliariaIdentity from './ImobiliariaIdentity'
+import { Avatar } from './ui'
 
 function fmt(v) { if (v === null || v === undefined) return '—'; return String(v) }
 function fmtBRL(v) {
@@ -187,7 +188,17 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
 
           <Section title="Controle Interno">
             <Field label="Orç. (Forms)"    value={ficha.orcamentista_forms} />
-            <Field label="Assumida por"    value={ficha.profiles?.nome} />
+            <div className="col-span-2">
+              <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wider mb-1">Assumida por</p>
+              {ficha.profiles?.nome ? (
+                <div className="flex items-center gap-2">
+                  <Avatar name={ficha.profiles.nome} src={ficha.profiles.avatar_url || ''} size="sm" />
+                  <span className="text-sm text-dark-text">{ficha.profiles.nome}</span>
+                </div>
+              ) : (
+                <p className="text-sm text-dark-text">Livre</p>
+              )}
+            </div>
             <Field label="Assumida em"     value={fmtDt(ficha.assumida_em)} />
             <Field label="Seguradora"      value={ficha.seguradora} />
             <Field label="Retorno enviado" value={ficha.retorno_enviado ? 'Sim' : null} />

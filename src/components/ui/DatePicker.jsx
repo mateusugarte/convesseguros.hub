@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   format, parse, isValid, addMonths, subMonths,
   startOfMonth, endOfMonth, startOfWeek, endOfWeek,
@@ -21,15 +21,30 @@ export function DatePicker({
 }) {
   const [open,        setOpen]        = useState(false)
   const [pos,         setPos]         = useState(null)
+  const [draft,       setDraft]       = useState('')
   const [currentDate, setCurrentDate] = useState(() => {
     if (value) { try { const d = parse(value, 'yyyy-MM-dd', new Date()); if (isValid(d)) return d } catch {} }
     return new Date()
   })
   const wrapRef = useRef(null)
 
-  const selected = value
-    ? (() => { try { const d = parse(value, 'yyyy-MM-dd', new Date()); return isValid(d) ? d : null } catch { return null } })()
-    : null
+  const selected = useMemo(() => {
+    if (!value) return null
+    try {
+      const d = parse(value, 'yyyy-MM-dd', new Date())
+      return isValid(d) ? d : null
+    } catch {
+      return null
+    }
+  }, [value])
+
+  useEffect(() => {
+    if (selected) {
+      setDraft(format(selected, 'dd/MM/yyyy'))
+      return
+    }
+    setDraft('')
+  }, [selected])
 
   const calcPos = useCallback(() => {
     if (!wrapRef.current) return
@@ -75,7 +90,34 @@ export function DatePicker({
     }
   }, [value])
 
-  function selectDay(day) { onChange(format(day, 'yyyy-MM-dd')); setOpen(false) }
+  function selectDay(day) {
+    const next = format(day, 'yyyy-MM-dd')
+    setDraft(format(day, 'dd/MM/yyyy'))
+    onChange(next)
+    setOpen(false)
+  }
+
+  function commitDraft() {
+    const normalized = draft.trim()
+    if (!normalized) {
+      onChange('')
+      return
+    }
+
+    const candidates = ['dd/MM/yyyy', 'dd-MM-yyyy', 'yyyy-MM-dd', 'd/M/yyyy']
+    for (const pattern of candidates) {
+      try {
+        const d = parse(normalized, pattern, new Date())
+        if (isValid(d)) {
+          const next = format(d, 'yyyy-MM-dd')
+          onChange(next)
+          setDraft(format(d, 'dd/MM/yyyy'))
+          setCurrentDate(d)
+          return
+        }
+      } catch {}
+    }
+  }
 
   function buildCalendarDays() {
     const start = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 0 })
@@ -90,59 +132,57 @@ export function DatePicker({
 
   return (
     <div ref={wrapRef} className={`relative ${className}`}>
-
-      {/* Trigger */}
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => !disabled && setOpen(o => !o)}
+      <div
         className="dp-trigger w-full"
         style={{
-          opacity: disabled ? 0.45 : 1,
-          cursor:  disabled ? 'not-allowed' : 'pointer',
+          opacity: disabled ? 0.55 : 1,
+          cursor: disabled ? 'not-allowed' : 'text',
           ...(open ? {
             borderColor: 'rgb(var(--brand-primary-rgb) / 0.52)',
-            boxShadow:   '0 0 0 3px rgb(var(--brand-primary-rgb) / 0.14)',
-            background:  'var(--glass-bg-active)',
+            boxShadow: '0 0 0 3px rgb(var(--brand-primary-rgb) / 0.14)',
+            background: 'var(--glass-bg-active)',
           } : {}),
         }}
-        onMouseEnter={e => {
-          if (!open && !disabled) {
-            e.currentTarget.style.borderColor = 'rgb(var(--brand-primary-rgb) / 0.32)'
-            e.currentTarget.style.background  = 'var(--glass-bg-hover)'
-          }
-        }}
-        onMouseLeave={e => {
-          if (!open) {
-            e.currentTarget.style.borderColor = ''
-            e.currentTarget.style.background  = ''
-          }
-        }}
       >
-        <Calendar
-          className="w-3.5 h-3.5 flex-shrink-0"
-          style={{ color: selected ? 'rgb(var(--brand-primary-rgb))' : 'var(--glass-text-muted)' }}
-        />
-        <span
-          className="flex-1 text-left text-sm truncate"
-          style={{ color: selected ? 'var(--glass-text-primary)' : 'var(--glass-text-muted)' }}
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => !disabled && setOpen(o => !o)}
+          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-transparent text-dark-muted transition-colors hover:border-brand-accent/20 hover:text-dark-text"
+          aria-label="Abrir calendario"
         >
-          {selected
-            ? format(selected, "dd 'de' MMM, yyyy", { locale: ptBR })
-            : placeholder}
-        </span>
-        {clearable && selected && (
-          <span
-            role="button"
-            tabIndex={-1}
-            onPointerDown={e => { e.stopPropagation(); e.preventDefault() }}
-            onClick={e => { e.stopPropagation(); onChange('') }}
-            className="flex-shrink-0 p-0.5 rounded text-dark-muted hover:text-dark-text transition-colors"
+          <Calendar
+            className="w-3.5 h-3.5 flex-shrink-0"
+            style={{ color: selected ? 'rgb(var(--brand-primary-rgb))' : 'var(--glass-text-muted)' }}
+          />
+        </button>
+
+        <input
+          type="text"
+          disabled={disabled}
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={commitDraft}
+          onKeyDown={e => {
+            if (e.key === 'Enter') commitDraft()
+            if (e.key === 'Escape') setOpen(false)
+          }}
+          placeholder={placeholder}
+          className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-dark-muted"
+          style={{ color: selected ? 'var(--glass-text-primary)' : 'var(--glass-text-muted)' }}
+        />
+
+        {clearable && (selected || draft) && !disabled && (
+          <button
+            type="button"
+            onClick={() => { setDraft(''); onChange('') }}
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-dark-muted transition-colors hover:text-dark-text"
+            aria-label="Limpar data"
           >
-            <X className="w-3 h-3" />
-          </span>
+            <X className="h-3 w-3" />
+          </button>
         )}
-      </button>
+      </div>
 
       {/* Calendar popup */}
       {open && pos && (

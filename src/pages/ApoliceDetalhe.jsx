@@ -6,7 +6,7 @@ import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useToast } from '../contexts/ToastContext'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ArrowLeft, Save, Trash2, Clock3, Building2, ShieldCheck, CalendarDays } from 'lucide-react'
+import { ArrowLeft, Save, Trash2, Clock3, Building2, ShieldCheck, CalendarDays, Pencil } from 'lucide-react'
 import SeguradoraSelect from '../components/SeguradoraSelect'
 import SecaoDocumentos from '../components/SecaoDocumentos'
 import { DatePicker } from '../components/ui/DatePicker'
@@ -38,36 +38,49 @@ function ReadField({ label, value }) {
   )
 }
 
-function EditField({ label, value, onChange, type = 'text', placeholder, required }) {
+function FieldShell({ label, required, children }) {
   return (
-    <div>
+    <div className="group relative rounded-3xl border border-transparent px-2 py-1.5 transition-all hover:border-brand-accent/20 hover:bg-dark-surface2/20">
       <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-dark-muted">
         {label}{required && <span className="ml-0.5 text-status-danger">*</span>}
       </label>
+      <div className="relative">
+        {children}
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-dark-border/70 bg-white px-2 py-1 text-[10px] font-semibold text-dark-muted opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+          <span className="inline-flex items-center gap-1">
+            <Pencil className="h-3 w-3" />
+            Editar
+          </span>
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function EditField({ label, value, onChange, type = 'text', placeholder, required }) {
+  return (
+    <FieldShell label={label} required={required}>
       {type === 'date' ? (
-        <DatePicker value={value || ''} onChange={onChange} />
+        <DatePicker value={value || ''} onChange={onChange} className="w-full" />
       ) : (
         <input
           type={type}
           value={value || ''}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
-          className="input text-sm"
+          className="input text-sm pr-20"
         />
       )}
-    </div>
+    </FieldShell>
   )
 }
 
 function SelectField({ label, value, onChange, options, required }) {
   const normalized = options.map(o => (typeof o === 'string' ? { value: o, label: o } : o))
   return (
-    <div>
-      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-dark-muted">
-        {label}{required && <span className="ml-0.5 text-status-danger">*</span>}
-      </label>
-      <Select value={value || ''} onChange={onChange} options={normalized} placeholder="Selecione..." />
-    </div>
+    <FieldShell label={label} required={required}>
+      <Select value={value || ''} onChange={onChange} options={normalized} placeholder="Selecione..." className="w-full" />
+    </FieldShell>
   )
 }
 
@@ -118,6 +131,7 @@ export default function ApoliceDetalhe() {
   const [inicioVigencia, setInicioVigencia] = useState('')
   const [fimVigencia, setFimVigencia] = useState('')
   const [valorParcela, setValorParcela] = useState('')
+  const [parcelamento, setParcelamento] = useState('')
   const [formaPagamento, setFormaPagamento] = useState('')
 
   const load = useCallback(async () => {
@@ -135,6 +149,7 @@ export default function ApoliceDetalhe() {
       setInicioVigencia(data.inicio_vigencia || '')
       setFimVigencia(data.fim_vigencia || '')
       setValorParcela(data.valor_parcela !== null && data.valor_parcela !== undefined ? String(data.valor_parcela) : '')
+      setParcelamento(data.parcelamento !== null && data.parcelamento !== undefined ? String(data.parcelamento) : '')
       setFormaPagamento(data.forma_pagamento || '')
     }
     setLoading(false)
@@ -156,6 +171,7 @@ export default function ApoliceDetalhe() {
       inicio_vigencia: inicioVigencia || null,
       fim_vigencia: fimVigencia || null,
       tempo_vigencia_meses: meses || null,
+      parcelamento: parcelamento ? Number(parcelamento) : null,
       valor_parcela: valorParcela ? parseFloat(valorParcela) : null,
       forma_pagamento: formaPagamento || null,
     })
@@ -196,6 +212,9 @@ export default function ApoliceDetalhe() {
 
   const ficha = apolice.fichas
   const meses = calcularMeses(inicioVigencia, fimVigencia)
+  const qtdParcelas = Number(parcelamento) || 0
+  const valorParcelaNum = Number(valorParcela) || 0
+  const valorTotalSeguro = qtdParcelas > 0 && valorParcelaNum > 0 ? qtdParcelas * valorParcelaNum : null
   const siStatus = STATUS_EMISSAO_LABELS[apolice.status_emissao] || { label: apolice.status_emissao, color: '#6B7280' }
   const nomePrincipal = ficha?.nome_empresa || ficha?.nome_interessado || apolice.nome_interessado || 'Apólice'
 
@@ -252,14 +271,14 @@ export default function ApoliceDetalhe() {
             <MetricCard label="Status" value={siStatus.label} hint="situação atual" tone="accent" icon={<ShieldCheck className="h-4 w-4" />} />
             <MetricCard label="Seguradora" value={apolice.seguradora || '—'} hint="origem da emissão" tone="secondary" icon={<Building2 className="h-4 w-4" />} />
             <MetricCard label="Vigência" value={meses > 0 ? `${meses} meses` : '—'} hint="tempo contratado" tone="success" icon={<CalendarDays className="h-4 w-4" />} />
-            <MetricCard label="Parcela" value={valorParcela ? `R$ ${Number(valorParcela).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'} hint="valor mensal" tone="warning" icon={<Clock3 className="h-4 w-4" />} />
+            <MetricCard label="Total do seguro" value={valorTotalSeguro ? `R$ ${Number(valorTotalSeguro).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'} hint="parcelas x valor da parcela" tone="warning" icon={<Clock3 className="h-4 w-4" />} />
           </>
         )}
       />
 
       <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
         <div className="space-y-5">
-          {ficha && (
+          {ficha ? (
             <DataCard title="Dados da Ficha" subtitle="Base de origem da apólice." bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
               <div className="col-span-2"><ReadField label="Nome" value={ficha.nome_empresa || ficha.nome_interessado} /></div>
               <ReadField label={ficha.cnpj ? 'CNPJ' : 'CPF'} value={ficha.cpf || ficha.cnpj} />
@@ -270,7 +289,16 @@ export default function ApoliceDetalhe() {
               <ReadField label="Valor do Aluguel" value={ficha.valor_aluguel ? `R$ ${Number(ficha.valor_aluguel).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null} />
               <ReadField label="Imobiliária" value={resolverNome(apolice.imobiliaria)} />
               <ReadField label="Seguradora da Ficha" value={ficha.seguradora} />
+              <ReadField label="Status" value={ficha.status} />
+              <ReadField label="Vigência" value={ficha.vigencia} />
+              <ReadField label="Vencimento" value={ficha.vencimento} />
+              <ReadField label="Origem" value={ficha.origem_lead} />
+              <ReadField label="Observações" value={ficha.observacoes} />
               {apolice.profiles?.nome && <ReadField label="Emissor" value={apolice.profiles.nome} />}
+            </DataCard>
+          ) : (
+            <DataCard title="Dados da Ficha" subtitle="Apólice anexada manualmente." bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
+              <div className="col-span-2 rounded-3xl border border-dashed border-dark-border/70 bg-dark-surface2/30 px-4 py-6 text-sm text-dark-muted">Apólice anexada manualmente</div>
             </DataCard>
           )}
 
@@ -306,7 +334,12 @@ export default function ApoliceDetalhe() {
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Tempo de Vigência</p>
               <p className="text-sm text-dark-text">{meses > 0 ? `${meses} meses` : '—'}</p>
             </div>
+            <EditField label="Parcelamento (vezes)" type="number" value={parcelamento} onChange={setParcelamento} placeholder="Ex: 12" required />
             <EditField label="Valor da Parcela (R$)" type="number" value={valorParcela} onChange={setValorParcela} placeholder="0,00" required />
+            <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Valor total do seguro</p>
+              <p className="mt-1 font-semibold">{valorTotalSeguro ? `R$ ${Number(valorTotalSeguro).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}</p>
+            </div>
             <SelectField
               label="Forma de Pagamento"
               value={formaPagamento}

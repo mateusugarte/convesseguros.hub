@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { fetchFichaDetalhe, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
+import { useImobiliaria } from '../hooks/useImobiliaria'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { X, Pencil, Trash2, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import ImobiliariaIdentity from './ImobiliariaIdentity'
 
 function fmt(v) { if (v === null || v === undefined) return '—'; return String(v) }
 function fmtBRL(v) {
@@ -50,6 +52,7 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
   const [confirm,  setConfirm]  = useState(false)
   const [deleting, setDeleting] = useState(false)
   const navigate = useNavigate()
+  const { resolverNome, resolverImobiliariaInfo } = useImobiliaria()
 
   useEffect(() => { fetchFichaDetalhe(id).then(setFicha) }, [id])
 
@@ -152,7 +155,16 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
           </Section>
 
           <Section title="Dados do Imóvel">
-            <Field label="Imobiliária"  value={ficha.imobiliaria} />
+            <div className="col-span-2">
+              <ImobiliariaIdentity
+                nome={resolverNome(ficha.imobiliaria) || ficha.imobiliaria}
+                imagemUrl={resolverImobiliariaInfo(ficha.imobiliaria)?.imagem_url}
+                imagemPath={resolverImobiliariaInfo(ficha.imobiliaria)?.imagem_path}
+                size="md"
+                emphasis
+              />
+            </div>
+            <Field label="Imobiliária"  value={resolverNome(ficha.imobiliaria) || ficha.imobiliaria} />
             <Field label="Tipo"         value={ficha.tipo_imovel} />
             <Field label="CEP"          value={ficha.cep} />
             <Field label="Aluguel"      value={fmtBRL(ficha.valor_aluguel)} />

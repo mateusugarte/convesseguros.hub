@@ -243,6 +243,7 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
   const nome = nomeEmissao(emissao)
   const tipo = (c.tipo || emissao.tipo) === 'renovacao' ? 'Renovacao' : 'Novo'
   const seguradoras = Array.isArray(emissao.seguradoras_cotadas) ? emissao.seguradoras_cotadas : []
+  const temFicha = Boolean(c.nome_cliente || c.cpf_cliente || c.modelo_veiculo || c.estado_civil_cliente || c.profissao_cliente || c.origem_lead)
   const etapaAtual = emissao.resultado
     ? (emissao.resultado === 'aprovada' ? 'Cotacao aprovada' : 'Cotacao recusada')
     : 'Aguardando resultado'
@@ -289,8 +290,6 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
                 <InfoRow label="CPF" value={emissao.cpf_cliente || c.cpf_cliente} />
                 <InfoRow label="Celular" value={emissao.celular_cliente || c.celular_cliente} />
                 <InfoRow label="Email" value={c.email_cliente} />
-                <InfoRow label="Estado civil" value={c.estado_civil_cliente} />
-                <InfoRow label="Profissao" value={c.profissao_cliente} />
               </div>
             </div>
 
@@ -304,6 +303,24 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
                 <InfoRow label="CEP pernoite" value={c.cep_pernoite} />
               </div>
             </div>
+
+            {temFicha ? (
+              <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Dados complementares da ficha</p>
+                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                  <InfoRow label="Estado civil" value={c.estado_civil_cliente} />
+                  <InfoRow label="Profissão" value={c.profissao_cliente} />
+                  <InfoRow label="Origem do lead" value={c.origem_lead} />
+                  <InfoRow label="Vigência início" value={c.vigencia_inicio} />
+                  <InfoRow label="Vigência fim" value={c.vigencia_fim} />
+                  <InfoRow label="Condutor" value={c.condutor_nome} />
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-dashed border-dark-border/70 bg-dark-surface2/30 p-4 text-sm text-dark-muted">
+                Apolice anexada manualmente
+              </div>
+            )}
 
             {/* Condutor */}
             {(emissao.condutor_nome || c.condutor_nome || emissao.condutor_cpf || c.condutor_cpf) && (
@@ -363,6 +380,7 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
                 <InfoRow label="Seguradora" value={emissao.seguradora || c.seguradora_preferencial?.nome || c.seguradora_mais_barata?.nome} />
                 <InfoRow label="Numero da apolice" value={emissao.numero_apolice} />
                 <InfoRow label="Vigencia" value={emissao.vigencia_inicio || emissao.vigencia_fim ? `${emissao.vigencia_inicio || '—'} a ${emissao.vigencia_fim || '—'}` : null} />
+                <InfoRow label="Parcelamento" value={emissao.parcelamento ? `${emissao.parcelamento} vezes` : null} />
                 <InfoRow label="Premio liquido" value={emissao.premio_liquido ? formatMoney(emissao.premio_liquido) : null} />
                 <InfoRow label="% Comissao" value={emissao.pct_comissao ?? null} />
                 <InfoRow label="Repasse" value={emissao.tem_repasse ? 'Sim' : 'Nao'} />
@@ -1210,7 +1228,7 @@ export default function AutoEmissoes() {
                     <CampoTexto label="Premio liquido" campo="premio_liquido" value={form.premio_liquido} onChange={setField} type="number" />
                     <CampoTexto label="% Comissao" campo="pct_comissao" value={form.pct_comissao} onChange={setField} type="number" />
                     <CampoTexto label="Forma de pagamento" campo="forma_pagamento" value={form.forma_pagamento} onChange={setField} />
-                    <CampoTexto label="Parcelamento" campo="parcelamento" value={form.parcelamento} onChange={setField} />
+                    <CampoTexto label="Parcelamento (vezes)" campo="parcelamento" value={form.parcelamento} onChange={setField} />
                   </div>
 
                   <div className="grid gap-4 lg:grid-cols-2">
@@ -1360,7 +1378,7 @@ export default function AutoEmissoes() {
                     <CampoTexto label="Premio liquido" campo="premio_liquido" value={manualForm.premio_liquido} onChange={setManualField} type="number" />
                     <CampoTexto label="% Comissao" campo="pct_comissao" value={manualForm.pct_comissao} onChange={setManualField} type="number" />
                     <CampoTexto label="Forma de pagamento" campo="forma_pagamento" value={manualForm.forma_pagamento} onChange={setManualField} />
-                    <CampoTexto label="Parcelamento" campo="parcelamento" value={manualForm.parcelamento} onChange={setManualField} />
+                    <CampoTexto label="Parcelamento (vezes)" campo="parcelamento" value={manualForm.parcelamento} onChange={setManualField} />
                   </div>
 
                   <div className="grid gap-4 lg:grid-cols-2">

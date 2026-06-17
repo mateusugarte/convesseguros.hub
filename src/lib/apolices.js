@@ -183,7 +183,7 @@ export async function fetchImobiliariasApolices() {
 export async function buscarFichasParaEmissao(nome, imobiliarias) {
   let q = supabase
     .from('fichas')
-    .select('id, nome_interessado, nome_empresa, cpf, cnpj, produto, imobiliaria, valor_aluguel, celular, cep, tipo_imovel, numero_apolice')
+    .select('id, nome_interessado, nome_empresa, cpf, cnpj, produto, imobiliaria, valor_aluguel, celular, cep, tipo_imovel, numero_apolice, vigencia, vencimento, origem_lead, observacoes')
     .in('status', ['aprovado', 'emitido'])
     .limit(15)
 

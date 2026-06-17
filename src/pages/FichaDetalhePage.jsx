@@ -2,11 +2,13 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { fetchFichaDetalhe, editarFicha, deletarFicha, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
+import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useToast } from '../contexts/ToastContext'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ArrowLeft, Pencil, Trash2, Check, X, CalendarDays, Building2, UserRound, Clock3 } from 'lucide-react'
 import { PageHeader, MetricCard, DataCard } from '../components/ui'
+import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import SeguradoraSelect from '../components/SeguradoraSelect'
 import ModalFicha from '../components/ModalFicha'
@@ -179,6 +181,7 @@ export default function FichaDetalhePage() {
   const navigate  = useNavigate()
   const location  = useLocation()
   const { user }  = useAuth()
+  const { resolverNome, resolverImobiliariaInfo } = useImobiliaria()
   const toast     = useToast()
 
   const [ficha,    setFicha]    = useState(null)
@@ -393,7 +396,16 @@ export default function FichaDetalhePage() {
 
           {/* Imóvel */}
           <DataCard title="Dados do Imóvel" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
-            <ReadField label="Imobiliária" value={ficha.imobiliaria} />
+            <div className="col-span-2">
+              <ImobiliariaIdentity
+                nome={resolverNome(ficha.imobiliaria) || ficha.imobiliaria}
+                imagemUrl={resolverImobiliariaInfo(ficha.imobiliaria)?.imagem_url}
+                imagemPath={resolverImobiliariaInfo(ficha.imobiliaria)?.imagem_path}
+                size="lg"
+                emphasis
+              />
+            </div>
+            <ReadField label="Imobiliária" value={resolverNome(ficha.imobiliaria) || ficha.imobiliaria} />
             <ReadField label="Tipo" value={ficha.tipo_imovel} />
             <ReadField label="CEP" value={ficha.cep} />
             <ReadField label="Aluguel" value={fmtBRL(ficha.valor_aluguel)} />

@@ -12,6 +12,7 @@ import {
   GripVertical, ChevronsLeft,
 } from 'lucide-react'
 import SeguradoraBadge from './SeguradoraBadge'
+import ImobiliariaIdentity from './ImobiliariaIdentity'
 
 const COLS = [
   { id: 'pendentes',   label: 'Pendentes',      color: '#4c67b0' },
@@ -118,9 +119,11 @@ function FichaCardContent({
 
         {/* Imobiliária */}
         {ficha.imobiliaria && (
-          <p className="text-[10px] text-dark-muted truncate leading-none mb-1.5">
-            {ficha.imobiliaria}
-          </p>
+          <ImobiliariaIdentity
+            nome={ficha.imobiliaria}
+            size="sm"
+            className="mb-1.5"
+          />
         )}
 
         {/* Seguradora */}

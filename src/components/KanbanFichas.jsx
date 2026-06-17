@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { supabase } from '../lib/supabase'
 import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/kanbanDnd'
+import ImobiliariaIdentity from './ImobiliariaIdentity'
 import ModalFinalizar from './ModalFinalizar'
 import {
   Home, Briefcase, Building, LayoutGrid, RefreshCw,
@@ -134,12 +135,13 @@ function nomePrincipal(ficha) {
 
 // ── FichaCard (visual puro, sem lógica de drag) ───────────────────────────────
 
-function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isDragOverlay, isNew, resolverNome }) {
+function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isDragOverlay, isNew, resolverNome, resolveImobiliariaInfo }) {
   const ProdIcon  = PRODUTO_ICON[ficha.produto] || LayoutGrid
   const prodColor = PRODUTO_COLOR[ficha.produto] || '#000079'
   const since     = ficha.assumida_em || ficha.created_at
   const nome      = ficha.profiles?.nome
   const showRetorno = ficha.status !== 'pendente'
+  const imobiliaria = resolveImobiliariaInfo?.(ficha.imobiliaria)
 
   return (
     <div
@@ -167,9 +169,13 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
         </p>
 
         {/* Imobiliária */}
-        <p className="text-[10px] text-dark-muted truncate leading-none mb-1.5">
-          {(resolverNome ? resolverNome(ficha.imobiliaria) : ficha.imobiliaria) || '—'}
-        </p>
+        <ImobiliariaIdentity
+          nome={(resolverNome ? resolverNome(ficha.imobiliaria) : ficha.imobiliaria) || '�'}
+          imagemUrl={imobiliaria?.imagem_url}
+          imagemPath={imobiliaria?.imagem_path}
+          size="sm"
+          className="mb-1.5"
+        />
 
         {/* Seguradora */}
         {ficha.seguradora && (
@@ -244,7 +250,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
 // ── DraggableCard ─────────────────────────────────────────────────────────────
 // O drag fica no handle para manter o overlay estável durante o movimento
 
-function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onToggleRetorno, isNew, resolverNome }) {
+function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onToggleRetorno, isNew, resolverNome, resolveImobiliariaInfo }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ficha.id })
 
   return (
@@ -268,6 +274,7 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onTog
         onToggleRetorno={onToggleRetorno}
         isNew={isNew}
         resolverNome={resolverNome}
+        resolveImobiliariaInfo={resolveImobiliariaInfo}
       />
     </div>
   )
@@ -277,7 +284,7 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onTog
 
 function DroppableColumn({
   column, fichas, userId, onDetalhe, onAssumir, onFinalizar, onToggleRetorno,
-  collapsed, onToggleCollapse, newIds, colIndex, resolverNome,
+  collapsed, onToggleCollapse, newIds, colIndex, resolverNome, resolveImobiliariaInfo,
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: column.id })
 
@@ -387,6 +394,7 @@ function DroppableColumn({
             onToggleRetorno={onToggleRetorno}
             isNew={newIds?.has(f.id)}
             resolverNome={resolverNome}
+                  resolveImobiliariaInfo={resolveImobiliariaInfo}
           />
         ))}
       </div>
@@ -508,7 +516,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   const { user }         = useAuth()
   const toast            = useToast()
   const navigate         = useNavigate()
-  const { resolverNome } = useImobiliaria()
+  const { resolverNome, resolverImobiliariaInfo: resolveImobiliariaInfo } = useImobiliaria()
 
   const useExternal = !!(externalDateFrom || externalDateTo)
 
@@ -879,6 +887,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
                     newIds={newIds}
                     colIndex={i}
                     resolverNome={resolverNome}
+                  resolveImobiliariaInfo={resolveImobiliariaInfo}
                   />
                 ))}
               </div>
@@ -887,7 +896,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
             <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
               {activeCard && (
                 <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', '--kanban-accent': PRODUTO_COLOR[activeCard?.produto] || '#000079', cursor: 'grabbing' }}>
-                  <FichaCard ficha={activeCard} isDragOverlay resolverNome={resolverNome} />
+                  <FichaCard ficha={activeCard} isDragOverlay resolverNome={resolverNome} resolveImobiliariaInfo={resolveImobiliariaInfo} />
                 </div>
               )}
             </DragOverlay>
@@ -897,3 +906,12 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     </div>
   )
 }
+
+
+
+
+
+
+
+
+

@@ -28,7 +28,7 @@ export function useImobiliaria() {
           .select('alias, imobiliarias!imobiliaria_id(id, nome_canonico)'),
         supabase
           .from('imobiliarias')
-          .select('id, nome_canonico, ativa')
+          .select('id, nome_canonico, ativa, imagem_url, imagem_path')
           .eq('ativa', true)
           .order('nome_canonico'),
       ]).then(([{ data: aliasesData }, { data: gruposData }]) => {
@@ -58,6 +58,24 @@ export function useImobiliaria() {
     return normalizeImobiliaria(nomeOriginal) || nomeOriginal
   }, [aliasMap])
 
+  const resolverImobiliariaInfo = useCallback((nomeOriginal) => {
+    if (!nomeOriginal) return null
+
+    const nomeResolvido = resolverNome(nomeOriginal)
+    const grupo = grupos.find(g => (g.nome_canonico || '').toLowerCase().trim() === nomeResolvido.toLowerCase().trim())
+
+    if (!grupo) {
+      return {
+        nome_canonico: nomeResolvido,
+        imagem_url: null,
+        imagem_path: null,
+        ativa: null,
+      }
+    }
+
+    return grupo
+  }, [grupos, resolverNome])
+
   // Estável: [] de dependências → referência nunca muda
   const getAliases = useCallback(async (nomeCanônico) => {
     const { data } = await supabase
@@ -74,5 +92,5 @@ export function useImobiliaria() {
     return carregar(true)
   }
 
-  return { resolverNome, getAliases, grupos, aliasMap, loading, recarregar }
+  return { resolverNome, resolverImobiliariaInfo, getAliases, grupos, aliasMap, loading, recarregar }
 }

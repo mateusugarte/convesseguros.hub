@@ -34,6 +34,11 @@ export function AuthProvider({ children }) {
     setLoading(false)
   }
 
+  async function refreshProfile() {
+    if (!user?.id) return
+    await loadProfile(user.id)
+  }
+
   async function signIn(email, password) {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return error
@@ -44,7 +49,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

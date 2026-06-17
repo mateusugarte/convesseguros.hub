@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, BadgeDollarSign, CalendarDays, Car, Check, Pencil, ShieldCheck, UserRound, X, Mail, Heart, Phone, Briefcase } from 'lucide-react'
+import { ArrowLeft, BadgeDollarSign, CalendarDays, Car, Check, Pencil, ShieldCheck, UserRound, X, Mail, Heart, Phone } from 'lucide-react'
 import { DataCard, EmptyState, MetricCard, PageHeader } from '../../components/ui'
 import SeguradoraSelect from '../../components/SeguradoraSelect'
 import { deletarCotacaoAuto, getCotacaoAutoPorId, atualizarCotacaoAuto } from '../../lib/auto'
@@ -383,8 +383,6 @@ export default function AutoCotacaoDetalhe() {
               <DetailField label={<span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5" /> CPF do segurado</span>} value={cotacao.cpf_cliente} onSave={value => salvarCampo({ field: 'cpf_cliente', value })} />
               <DetailField label={<span className="inline-flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> Celular</span>} value={cotacao.celular_cliente} onSave={value => salvarCampo({ field: 'celular_cliente', value })} />
               <DetailField label={<span className="inline-flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> E-mail</span>} value={cotacao.email_cliente} onSave={value => salvarCampo({ field: 'email_cliente', value })} />
-              <DetailField label={<span className="inline-flex items-center gap-1.5"><Heart className="h-3.5 w-3.5" /> Estado civil</span>} value={cotacao.estado_civil_cliente} onSave={value => salvarCampo({ field: 'estado_civil_cliente', value })} />
-              <DetailField label={<span className="inline-flex items-center gap-1.5"><Briefcase className="h-3.5 w-3.5" /> Profissão</span>} value={cotacao.profissao_cliente} onSave={value => salvarCampo({ field: 'profissao_cliente', value })} />
               <DetailField label={<span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Vigência início</span>} value={cotacao.vigencia_inicio} onSave={value => salvarCampo({ field: 'vigencia_inicio', value })} type="date" />
               <DetailField label={<span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Vigência fim</span>} value={cotacao.vigencia_fim} onSave={value => salvarCampo({ field: 'vigencia_fim', value })} type="date" />
             </div>

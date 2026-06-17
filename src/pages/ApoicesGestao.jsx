@@ -15,7 +15,7 @@ import { PRODUTO_LABELS } from '../lib/fichas'
 import {
   Plus, ChevronLeft, ChevronRight, RefreshCw,
   Search, Home, Briefcase, Building, LayoutGrid, X, Check, ArrowLeft,
-  GripVertical, ChevronsLeft,
+  GripVertical, ChevronsLeft, Pencil,
 } from 'lucide-react'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import SeguradoraSelect from '../components/SeguradoraSelect'
@@ -74,6 +74,52 @@ function getPeriodDates(filtro) {
 function calcularMeses(inicio, fim) {
   if (!inicio || !fim) return 0
   return Math.max(0, Math.round((new Date(fim) - new Date(inicio)) / (1000 * 60 * 60 * 24 * 30)))
+}
+
+function FieldShell({ label, required, children }) {
+  return (
+    <div className="group relative rounded-3xl border border-transparent px-2 py-1.5 transition-all hover:border-brand-accent/20 hover:bg-dark-surface2/20">
+      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-dark-muted">
+        {label}{required && <span className="ml-0.5 text-status-danger">*</span>}
+      </label>
+      <div className="relative">
+        {children}
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-dark-border/70 bg-white px-2 py-1 text-[10px] font-semibold text-dark-muted opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+          <span className="inline-flex items-center gap-1">
+            <Pencil className="h-3 w-3" />
+            Editar
+          </span>
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function EditField({ label, value, onChange, type = 'text', placeholder, required }) {
+  return (
+    <FieldShell label={label} required={required}>
+      {type === 'date' ? (
+        <DatePicker value={value || ''} onChange={onChange} className="w-full" />
+      ) : (
+        <input
+          type={type}
+          value={value || ''}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="input text-sm pr-20"
+        />
+      )}
+    </FieldShell>
+  )
+}
+
+function SelectField({ label, value, onChange, options, required }) {
+  const normalized = options.map(o => (typeof o === 'string' ? { value: o, label: o } : o))
+  return (
+    <FieldShell label={label} required={required}>
+      <Select value={value || ''} onChange={onChange} options={normalized} placeholder="Selecione..." className="w-full" />
+    </FieldShell>
+  )
 }
 
 // ── Helpers nomes ─────────────────────────────────────────────────────────────
@@ -418,24 +464,22 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
         </div>
 
         <div className="px-6 py-5 space-y-4">
-          <div>
-            <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Imobiliária</label>
-            <ImobiliariaSelect value={imobFiltro} onChange={setImobFiltro} />
-          </div>
+          <FieldShell label="Imobiliária">
+            <ImobiliariaSelect value={imobFiltro} onChange={setImobFiltro} className="w-full" />
+          </FieldShell>
 
-          <div>
-            <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Buscar locatário</label>
+          <FieldShell label="Buscar locatário">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted" />
               <input
                 value={busca}
                 onChange={e => setBusca(e.target.value)}
                 placeholder="Nome do locatário..."
-                className="input pl-9"
+                className="input pl-9 pr-20"
                 disabled={!!fichaSelecionada}
               />
             </div>
-          </div>
+          </FieldShell>
 
           {fichaSelecionada ? (
             <>
@@ -479,6 +523,22 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                     <span className="text-dark-muted">Produto</span>
                     <p className="text-dark-text">{PRODUTO_LABELS[fichaSelecionada.produto] || fichaSelecionada.produto || '—'}</p>
                   </div>
+                  <div>
+                    <span className="text-dark-muted">Vigência</span>
+                    <p className="text-dark-text">{fichaSelecionada.vigencia || '—'}</p>
+                  </div>
+                  <div>
+                    <span className="text-dark-muted">Vencimento</span>
+                    <p className="text-dark-text">{fichaSelecionada.vencimento || '—'}</p>
+                  </div>
+                  <div>
+                    <span className="text-dark-muted">Origem</span>
+                    <p className="text-dark-text">{fichaSelecionada.origem_lead || '—'}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-dark-muted">Observações</span>
+                    <p className="text-dark-text line-clamp-2">{fichaSelecionada.observacoes || '—'}</p>
+                  </div>
                 </div>
               </div>
 
@@ -486,40 +546,25 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
               <div className="space-y-3">
                 <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Dados da Emissão</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
-                      N° do Orçamento
-                    </label>
-                    <input
-                      value={numeroOrcamento}
-                      onChange={e => setNumeroOrcamento(e.target.value)}
-                      placeholder="Ex: 12345"
-                      className="input text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
-                      Valor da Parcela (R$)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={valorParcela}
-                      onChange={e => setValorParcela(e.target.value)}
-                      placeholder="0,00"
-                      className="input text-sm"
-                    />
-                  </div>
+                  <EditField
+                    label="N° do Orçamento"
+                    value={numeroOrcamento}
+                    onChange={setNumeroOrcamento}
+                    placeholder="Ex: 12345"
+                  />
+                  <EditField
+                    label="Valor da Parcela (R$)"
+                    type="number"
+                    value={valorParcela}
+                    onChange={setValorParcela}
+                    placeholder="0,00"
+                  />
                   <div className="col-span-2">
-                    <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
-                      Endereço do Imóvel
-                    </label>
-                    <input
+                    <EditField
+                      label="Endereço do Imóvel"
                       value={endereco}
-                      onChange={e => setEndereco(e.target.value)}
+                      onChange={setEndereco}
                       placeholder="Rua, número, bairro, cidade"
-                      className="input text-sm"
                     />
                   </div>
                 </div>
@@ -586,14 +631,18 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
   const [inicioVigencia,    setInicioVigencia]     = useState(apolice?.inicio_vigencia || '')
   const [fimVigencia,       setFimVigencia]        = useState(apolice?.fim_vigencia || '')
   const [valorParcela,      setValorParcela]       = useState(apolice?.valor_parcela || '')
+  const [parcelamento,      setParcelamento]       = useState(apolice?.parcelamento || '')
   const [formaPagamento,    setFormaPagamento]     = useState(apolice?.forma_pagamento || '')
   const [seguradora,        setSeguradora]         = useState(apolice?.seguradora || '')
   const [salvando,          setSalvando]           = useState(false)
 
   const meses = calcularMeses(inicioVigencia, fimVigencia)
+  const qtdParcelas = Number(parcelamento) || 0
+  const valorParcelaNum = Number(valorParcela) || 0
+  const valorTotalSeguro = qtdParcelas > 0 && valorParcelaNum > 0 ? qtdParcelas * valorParcelaNum : null
 
   const obrigatoriosOK = proprietarioNome.trim() && numeroApolice.trim()
-    && inicioVigencia && fimVigencia && valorParcela && formaPagamento && seguradora
+    && inicioVigencia && fimVigencia && parcelamento && valorParcela && formaPagamento && seguradora
 
   async function confirmar() {
     if (!obrigatoriosOK) return
@@ -607,6 +656,7 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
       inicio_vigencia:      inicioVigencia,
       fim_vigencia:         fimVigencia,
       tempo_vigencia_meses: meses,
+      parcelamento:         parcelamento ? Number(parcelamento) : null,
       valor_parcela:        parseFloat(valorParcela),
       forma_pagamento:      formaPagamento,
       seguradora,
@@ -640,60 +690,40 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
 
         <div className="px-6 py-5 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <LabelReq>Nome do Proprietário</LabelReq>
-              <input value={proprietarioNome} onChange={e => setProprietarioNome(e.target.value)} className="input" placeholder="João da Silva" />
-            </div>
-            <div>
-              <LabelOpt>Celular do Proprietário</LabelOpt>
-              <input value={proprietarioCel} onChange={e => setProprietarioCel(e.target.value)} className="input" placeholder="(11) 99999-9999" />
-            </div>
-            <div>
-              <LabelReq>Número da Apólice</LabelReq>
-              <input value={numeroApolice} onChange={e => setNumeroApolice(e.target.value)} className="input" placeholder="000000000" />
-            </div>
-            <div>
-              <LabelOpt>Número da Proposta</LabelOpt>
-              <input value={numeroProposta} onChange={e => setNumeroProposta(e.target.value)} className="input" placeholder="Opcional" />
-            </div>
+            <EditField label="Nome do Proprietário" value={proprietarioNome} onChange={setProprietarioNome} placeholder="João da Silva" required />
+            <EditField label="Celular do Proprietário" value={proprietarioCel} onChange={setProprietarioCel} placeholder="(11) 99999-9999" />
+            <EditField label="Número da Apólice" value={numeroApolice} onChange={setNumeroApolice} placeholder="000000000" required />
+            <EditField label="Número da Proposta" value={numeroProposta} onChange={setNumeroProposta} placeholder="Opcional" />
             <div className="sm:col-span-2">
-              <LabelOpt>Endereço do Imóvel</LabelOpt>
-              <input value={endereco} onChange={e => setEndereco(e.target.value)} className="input" placeholder="Rua, número, bairro, cidade" />
+              <EditField label="Endereço do Imóvel" value={endereco} onChange={setEndereco} placeholder="Rua, número, bairro, cidade" />
             </div>
-            <div>
-              <LabelReq>Início da Vigência</LabelReq>
-              <DatePicker value={inicioVigencia} onChange={v => setInicioVigencia(v)} />
-            </div>
-            <div>
-              <LabelReq>Fim da Vigência</LabelReq>
-              <DatePicker value={fimVigencia} onChange={v => setFimVigencia(v)} />
-            </div>
+            <EditField label="Início da Vigência" type="date" value={inicioVigencia} onChange={setInicioVigencia} required />
+            <EditField label="Fim da Vigência" type="date" value={fimVigencia} onChange={setFimVigencia} required />
             <div>
               <LabelOpt>Tempo de Vigência</LabelOpt>
               <div className="input text-sm text-dark-muted bg-dark-surface2/50">{meses > 0 ? `${meses} meses` : '—'}</div>
             </div>
-            <div>
-              <LabelReq>Valor da Parcela (R$)</LabelReq>
-              <input type="number" step="0.01" min="0" value={valorParcela} onChange={e => setValorParcela(e.target.value)} className="input" placeholder="0,00" />
+            <EditField label="Parcelamento (vezes)" type="number" value={parcelamento} onChange={setParcelamento} placeholder="Ex: 12" required />
+            <EditField label="Valor da Parcela (R$)" type="number" value={valorParcela} onChange={setValorParcela} placeholder="0,00" required />
+            <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Valor total do seguro</p>
+              <p className="mt-1 font-semibold">{valorTotalSeguro ? `R$ ${Number(valorTotalSeguro).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}</p>
             </div>
-            <div>
-              <LabelReq>Forma de Pagamento</LabelReq>
-              <Select
-                value={formaPagamento}
-                onChange={setFormaPagamento}
-                placeholder="Selecione..."
-                options={[
-                  { value: '', label: 'Selecione...' },
-                  { value: 'fatura_sem_entrada', label: 'Fatura sem entrada' },
-                  { value: 'fatura_com_entrada', label: 'Fatura com entrada' },
-                  { value: 'cartao_credito', label: 'Cartão de crédito' },
-                ]}
-              />
-            </div>
-            <div>
-              <LabelReq>Seguradora</LabelReq>
+            <SelectField
+              label="Forma de Pagamento"
+              value={formaPagamento}
+              onChange={setFormaPagamento}
+              options={[
+                { value: '', label: 'Selecione...' },
+                { value: 'fatura_sem_entrada', label: 'Fatura sem entrada' },
+                { value: 'fatura_com_entrada', label: 'Fatura com entrada' },
+                { value: 'cartao_credito', label: 'Cartão de crédito' },
+              ]}
+              required
+            />
+            <FieldShell label="Seguradora" required>
               <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={apolice?.produto || apolice?.fichas?.produto} required />
-            </div>
+            </FieldShell>
           </div>
         </div>
 

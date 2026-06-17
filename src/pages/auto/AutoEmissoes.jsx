@@ -8,6 +8,7 @@ import {
   salvarResultadoCotacao, getEmissaoColuna, getApolicesAuto, criarEmissaoManualAuto,
 } from '../../lib/auto'
 import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../components/ui'
+import SeguradoraSelect from '../../components/SeguradoraSelect'
 import { formatDateBR, formatMoney } from './autoShared'
 
 const COLUNAS = [
@@ -250,8 +251,9 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
   const colunaAtual = getEmissaoColuna(emissao)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/45 p-4 pt-8 backdrop-blur-sm overflow-y-auto">
-      <div className="glass-modal w-full max-w-6xl rounded-[32px] p-6">
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 overflow-y-auto">
+      <div className="modal-backdrop" onClick={onClose} />
+      <div className="relative z-10 glass-modal w-full max-w-6xl rounded-[32px] p-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -472,11 +474,11 @@ function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="sm:col-span-2 lg:col-span-3">
           <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Nome da seguradora</label>
-          <input
+          <SeguradoraSelect
             value={seg.nome}
-            onChange={e => onChange('nome', e.target.value)}
-            className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
-            placeholder="Porto Seguro, Bradesco, Suhai..."
+            onChange={value => onChange('nome', value)}
+            produto="auto"
+            placeholder="Selecionar seguradora"
           />
         </div>
         <div>
@@ -588,8 +590,9 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/45 p-4 pt-8 backdrop-blur-sm overflow-y-auto">
-      <div className="glass-modal w-full max-w-2xl rounded-[32px] p-6">
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 overflow-y-auto">
+      <div className="modal-backdrop" onClick={onClose} />
+      <div className="relative z-10 glass-modal w-full max-w-2xl rounded-[32px] p-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">Resultado da cotacao</p>
@@ -690,8 +693,9 @@ function ModalApolices({ onClose }) {
   })
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/45 p-4 pt-8 backdrop-blur-sm overflow-y-auto">
-      <div className="glass-modal w-full max-w-5xl rounded-[28px] p-6">
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 overflow-y-auto">
+      <div className="modal-backdrop" onClick={onClose} />
+      <div className="relative z-10 glass-modal w-full max-w-5xl rounded-[28px] p-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h2 className="title-section text-dark-text">Apolices emitidas</h2>
@@ -1162,8 +1166,9 @@ export default function AutoEmissoes() {
 
       {/* Modal: emitir apolice (drag para emitida) */}
       {modalEmissao && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-          <div className="glass-modal w-full max-w-6xl overflow-hidden rounded-[32px]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="modal-backdrop" onClick={() => { setModalEmissao(null); setForm(FORM_EMISSAO_VAZIO) }} />
+          <div className="relative z-10 glass-modal w-full max-w-6xl overflow-hidden rounded-[32px]">
             <div className="grid gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
               <aside className="relative overflow-hidden bg-gradient-to-br from-brand-secondary/12 via-dark-surface2/70 to-brand-accent/10 p-6 md:p-7">
                 <div className="absolute right-0 top-0 h-28 w-28 rounded-full bg-white/40 blur-3xl" />
@@ -1221,7 +1226,15 @@ export default function AutoEmissoes() {
 
                 <div className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
-                    <CampoTexto label="Seguradora" campo="seguradora" value={form.seguradora} onChange={setField} />
+                    <div>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora</label>
+                      <SeguradoraSelect
+                        value={form.seguradora}
+                        onChange={value => setField('seguradora', value)}
+                        produto="auto"
+                        placeholder="Selecionar seguradora"
+                      />
+                    </div>
                     <CampoTexto label="Numero da apolice" campo="numero_apolice" value={form.numero_apolice} onChange={setField} />
                     <CampoTexto label="Vigencia inicio" campo="vigencia_inicio" value={form.vigencia_inicio} onChange={setField} type="date" />
                     <CampoTexto label="Vigencia fim" campo="vigencia_fim" value={form.vigencia_fim} onChange={setField} type="date" />
@@ -1302,8 +1315,9 @@ export default function AutoEmissoes() {
       )}
 
       {manualOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-          <div className="glass-modal w-full max-w-6xl overflow-hidden rounded-[32px]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="modal-backdrop" onClick={() => { setManualOpen(false); setManualForm(FORM_MANUAL_VAZIO) }} />
+          <div className="relative z-10 glass-modal w-full max-w-6xl overflow-hidden rounded-[32px]">
             <div className="grid gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
               <aside className="relative overflow-hidden bg-gradient-to-br from-brand-secondary/12 via-dark-surface2/70 to-brand-accent/10 p-6 md:p-7">
                 <div className="absolute right-0 top-0 h-28 w-28 rounded-full bg-white/40 blur-3xl" />
@@ -1371,7 +1385,15 @@ export default function AutoEmissoes() {
                     <CampoTexto label="CPF do condutor" campo="condutor_cpf" value={manualForm.condutor_cpf} onChange={setManualField} />
                     <CampoTexto label="Modelo do veiculo" campo="modelo_veiculo" value={manualForm.modelo_veiculo} onChange={setManualField} />
                     <CampoTexto label="Placa" campo="placa" value={manualForm.placa} onChange={setManualField} />
-                    <CampoTexto label="Seguradora" campo="seguradora" value={manualForm.seguradora} onChange={setManualField} />
+                    <div>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora</label>
+                      <SeguradoraSelect
+                        value={manualForm.seguradora}
+                        onChange={value => setManualField('seguradora', value)}
+                        produto="auto"
+                        placeholder="Selecionar seguradora"
+                      />
+                    </div>
                     <CampoTexto label="Numero da apolice" campo="numero_apolice" value={manualForm.numero_apolice} onChange={setManualField} />
                     <CampoTexto label="Vigencia inicio" campo="vigencia_inicio" value={manualForm.vigencia_inicio} onChange={setManualField} type="date" />
                     <CampoTexto label="Vigencia fim" campo="vigencia_fim" value={manualForm.vigencia_fim} onChange={setManualField} type="date" />

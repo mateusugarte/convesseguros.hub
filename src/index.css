@@ -1413,10 +1413,16 @@ html.dark .glass-modal {
   inset: 0;
   background:
     radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.12), transparent 45%),
-    var(--modal-backdrop-tint, rgba(15,23,42,0.10));
+    linear-gradient(180deg, rgba(248,250,255,0.76), rgba(237,242,250,0.68));
   -webkit-backdrop-filter: var(--modal-backdrop-blur, blur(24px) saturate(180%));
   backdrop-filter: var(--modal-backdrop-blur, blur(24px) saturate(180%));
   transition: opacity 220ms ease;
+}
+
+html.dark .modal-backdrop {
+  background:
+    radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.16), transparent 42%),
+    linear-gradient(180deg, rgba(10,14,24,0.72), rgba(12,18,31,0.64));
 }
 
 .modal-shell-header {

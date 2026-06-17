@@ -54,7 +54,7 @@ function ModalVenda({ leads, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 z-[450] flex items-center justify-center p-4 animate-fade-in">
-      <div className="absolute inset-0 bg-slate-950/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="modal-backdrop" onClick={onClose} />
       <div className="relative z-10 w-full max-w-4xl overflow-hidden rounded-[32px] border border-dark-border/60 bg-white shadow-[0_36px_120px_rgba(15,23,42,0.22)]">
         <div className="grid lg:grid-cols-[minmax(0,1.1fr)_340px]">
           <div className="border-b border-dark-border/50 p-6 lg:border-b-0 lg:border-r">

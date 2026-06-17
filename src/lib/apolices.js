@@ -255,21 +255,46 @@ export async function fetchImobiliariasApolices() {
 // ── Busca de fichas para o modal iniciar emissão ──────────────────────────────
 
 export async function buscarFichasParaEmissao(nome, imobiliarias) {
+  const term = nome?.trim()
   let q = supabase
     .from('fichas')
-    .select('id, nome_interessado, nome_empresa, cpf, cnpj, produto, imobiliaria, valor_aluguel, celular, cep, tipo_imovel, numero_apolice, vigencia, vencimento, origem_lead, observacoes, pct_comissao, pct_desconto, parcelamento, status')
-    .not('status', 'in', '("recusado","cancelado","cpf_invalido","expirada")')
+    .select('id, nome_interessado, nome_empresa, cpf, cnpj, produto, imobiliaria, valor_aluguel, celular, cep, tipo_imovel, numero_apolice, vigencia, vencimento, origem_lead, observacoes, pct_comissao, pct_desconto, parcelamento, status, created_at')
+    .not('status', 'in', '("recusado","cancelado","cpf_invalido","expirada","emitido")')
     .order('created_at', { ascending: false })
-    .limit(20)
+    .limit(100)
 
-  if (nome?.trim()) {
-    q = q.or(`nome_interessado.ilike.%${nome.trim()}%,nome_empresa.ilike.%${nome.trim()}%`)
+  if (term) {
+    // A busca precisa bater no nome do locatário enquanto ele digita.
+    q = q.or(`nome_interessado.ilike.%${term}%,nome_empresa.ilike.%${term}%`)
   }
   if (Array.isArray(imobiliarias) && imobiliarias.length) q = q.in('imobiliaria', imobiliarias)
   else if (typeof imobiliarias === 'string' && imobiliarias) q = q.eq('imobiliaria', imobiliarias)
 
-  const { data } = await q
-  return data || []
+  const { data, error } = await q
+  if (error) {
+    console.error('buscarFichasParaEmissao:fichas', error)
+    return []
+  }
+
+  const fichas = data || []
+  if (!fichas.length) return []
+
+  const fichaIds = fichas.map(f => f.id).filter(Boolean)
+  if (!fichaIds.length) return fichas
+
+  const { data: apolices, error: apolicesError } = await supabase
+    .from('apolices')
+    .select('ficha_id')
+    .in('ficha_id', fichaIds)
+    .not('ficha_id', 'is', null)
+
+  if (apolicesError) {
+    console.error('buscarFichasParaEmissao:apolices', apolicesError)
+    return fichas
+  }
+
+  const fichasComApolice = new Set((apolices || []).map(a => a.ficha_id))
+  return fichas.filter(f => !fichasComApolice.has(f.id))
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────

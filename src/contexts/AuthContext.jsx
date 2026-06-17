@@ -19,14 +19,14 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session.user  null)
-      if (session.user) loadProfile(session.user.id)
+      setUser(session?.user ?? null)
+      if (session?.user) loadProfile(session.user.id)
       else setLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session.user  null)
-      if (session.user) loadProfile(session.user.id)
+      setUser(session?.user ?? null)
+      if (session?.user) loadProfile(session.user.id)
       else { setProfile(null); setLoading(false) }
     })
 
@@ -41,7 +41,7 @@ export function AuthProvider({ children }) {
       .single()
 
     const { data: { user: currentUser } } = await supabase.auth.getUser()
-    setProfile(data  { ...data, is_admin: resolveAdminFlag(currentUser.email, data.is_admin) } : data)
+    setProfile(data ? { ...data, is_admin: resolveAdminFlag(currentUser.email, data.is_admin) } : data)
     setLoading(false)
   }
 

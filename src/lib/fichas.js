@@ -355,6 +355,33 @@ export async function fetchFichas({ produto, ano, mes, tipo, search, imobiliaria
   return { data: data || [], count: count || 0 }
 }
 
+export async function fetchFichasAprovadasEmissao({ search, imobiliarias } = {}) {
+  let q = supabase
+    .from('fichas')
+    .select('id,created_at,produto,imobiliaria,nome_interessado,nome_empresa,cpf,cnpj,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,raw_data,profiles!orcamentista_id(nome, avatar_url)')
+    .eq('status', 'aprovado')
+    .order('created_at', { ascending: false })
+
+  if (Array.isArray(imobiliarias) && imobiliarias.length) {
+    q = q.in('imobiliaria', imobiliarias)
+  }
+
+  const term = search?.trim()
+  if (term) {
+    q = q.or(
+      `nome_interessado.ilike.%${term}%,` +
+      `nome_empresa.ilike.%${term}%,` +
+      `cpf.ilike.%${term}%,` +
+      `cnpj.ilike.%${term}%,` +
+      `imobiliaria.ilike.%${term}%,` +
+      `seguradora.ilike.%${term}%`
+    )
+  }
+
+  const data = await fetchAllRows(() => q)
+  return data || []
+}
+
 export async function fetchFichaDetalhe(id) {
   const { data } = await supabase.from('fichas').select('*, profiles!orcamentista_id(nome, orcamentista_label, avatar_url)').eq('id', id).single()
   return data

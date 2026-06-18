@@ -4,6 +4,7 @@ import {
   STATUS_LABELS, PRODUTO_LABELS, SEGURADORAS,
 } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
+import { toNumber } from '../lib/apolices'
 import { ArrowLeft, Plus, Save } from 'lucide-react'
 import SeguradoraBadge from './SeguradoraBadge'
 import SeguradoraSelect from './SeguradoraSelect'
@@ -93,7 +94,7 @@ function validarFicha(form) {
   const cotacoes = normalizarCotacoes(form.cotacoes)
   const aprovadas = cotacoes.filter(c => c.status === 'aprovado')
   for (const c of aprovadas) {
-    if (c.valor_parcela === '' || c.pct_desconto === '' || c.parcelamento === '' || c.pct_comissao === '') {
+    if (c.valor_parcela === '' || c.parcelamento === '' || c.pct_comissao === '') {
       return `Preencha os campos da seguradora ${c.seguradora} quando o status for Aprovado`
     }
   }
@@ -249,10 +250,10 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
         cotacoes: cotacoes.map(c => ({
           seguradora: c.seguradora,
           status: c.status || '',
-          valor_parcela: c.valor_parcela === '' ? null : Number(c.valor_parcela),
-          pct_desconto: c.pct_desconto === '' ? null : Number(c.pct_desconto),
-          parcelamento: c.parcelamento === '' ? null : Number(c.parcelamento),
-          pct_comissao: c.pct_comissao === '' ? null : Number(c.pct_comissao),
+          valor_parcela: c.valor_parcela === '' ? null : toNumber(c.valor_parcela),
+          pct_desconto: c.pct_desconto === '' ? null : toNumber(c.pct_desconto),
+          parcelamento: c.parcelamento === '' ? null : toNumber(c.parcelamento),
+          pct_comissao: c.pct_comissao === '' ? null : toNumber(c.pct_comissao),
         })),
       },
     }

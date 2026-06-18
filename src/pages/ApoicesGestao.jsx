@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core'
 import {
   fetchApolicesKanban, criarApolice, moverStatusApolice,
-  buscarFichasParaEmissao,
   STATUS_EMISSAO_LABELS,
   calculatePremioTotal, calculateValorComissao, formatMoneyBR, toNumber,
 } from '../lib/apolices'
@@ -13,6 +12,7 @@ import { DatePicker } from '../components/ui/DatePicker'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { PRODUTO_LABELS, STATUS_LABELS } from '../lib/fichas'
+import { fetchFichasAprovadasEmissao } from '../lib/fichas'
 import {
   Plus, ChevronLeft, ChevronRight, RefreshCw,
   Search, Home, Briefcase, Building, LayoutGrid, X, Check, ArrowLeft,
@@ -391,7 +391,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
   const [profiles,          setProfiles]          = useState([])
   const [imobFiltro,        setImobFiltro]        = useState('')
   const [busca,             setBusca]             = useState('')
-  const [modoBusca,         setModoBusca]         = useState('nome')
+  const [debouncedBusca,    setDebouncedBusca]    = useState('')
   const [fichasEncontradas, setFichasEncontradas] = useState([])
   const [fichaSelecionada,  setFichaSelecionada]  = useState(null)
   const [buscando,          setBuscando]          = useState(false)
@@ -406,31 +406,39 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
   const [pctComissao,     setPctComissao]     = useState('')
   const [pctDesconto,     setPctDesconto]     = useState('')
   const [parcelamento,    setParcelamento]    = useState('')
-
-  async function executarBusca() {
-    const termo = busca.trim()
-    setBuscando(true)
-    try {
-      let aliasesFilter = null
-      if (imobFiltro) {
-        const aliases = await getAliases(imobFiltro)
-        aliasesFilter = aliases.length ? aliases : [imobFiltro]
-      }
-
-      const data = await buscarFichasParaEmissao(termo, aliasesFilter, modoBusca)
-      setFichasEncontradas(data)
-    } finally {
-      setBuscando(false)
-    }
-  }
+  const [seguradora,      setSeguradora]      = useState('')
 
   useEffect(() => {
     supabase.from('profiles').select('id, nome, avatar_url').order('nome').then(({ data }) => setProfiles(data || []))
   }, [])
 
   useEffect(() => {
-    executarBusca()
-  }, [imobFiltro])
+    const t = setTimeout(() => setDebouncedBusca(busca.trim()), 400)
+    return () => clearTimeout(t)
+  }, [busca])
+
+  useEffect(() => {
+    let cancelled = false
+    async function carregarFichas() {
+      setBuscando(true)
+      try {
+        let aliasesFilter = null
+        if (imobFiltro) {
+          const aliases = await getAliases(imobFiltro)
+          aliasesFilter = aliases.length ? aliases : [imobFiltro]
+        }
+        const data = await fetchFichasAprovadasEmissao({
+          search: debouncedBusca,
+          imobiliarias: aliasesFilter,
+        })
+        if (!cancelled) setFichasEncontradas(data)
+      } finally {
+        if (!cancelled) setBuscando(false)
+      }
+    }
+    carregarFichas()
+    return () => { cancelled = true }
+  }, [debouncedBusca, imobFiltro, getAliases])
 
   function selecionarFicha(f) {
     setFichaSelecionada(f)
@@ -438,17 +446,18 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     setEndereco(f.cep || '')
     // Pré-preenche número do orçamento com número da apólice da ficha (se houver)
     setNumeroOrcamento(f.numero_apolice || '')
+    setValorParcela(f.valor_parcela ?? f.valor_aluguel ?? '')
     setPctComissao(f.pct_comissao ?? '')
     setPctDesconto(f.pct_desconto ?? '')
     setParcelamento(f.parcelamento ?? '')
+    setSeguradora(f.seguradora || '')
   }
 
   function limparFiltro() {
     setImobFiltro('')
     setBusca('')
-    setModoBusca('nome')
+    setDebouncedBusca('')
     setFichaSelecionada(null)
-    setFichasEncontradas([])
     setNumeroOrcamento('')
     setEndereco('')
     setValorParcela('')
@@ -456,6 +465,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     setPctComissao('')
     setPctDesconto('')
     setParcelamento('')
+    setSeguradora('')
     setEmitidoPor(user?.id || '')
   }
 
@@ -481,7 +491,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
       emitido_por:      emitidoPor || user?.id || null,
       // Defaults obrigatórios no banco enquanto migração 09 não for rodada
       numero_apolice:   '',
-      seguradora:       'Outras',
+      seguradora:       seguradora || 'Outras',
       data_emissao:     null,
       pct_comissao:     pctComissaoNum,
       pct_desconto:     pctDescontoNum,
@@ -527,57 +537,39 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
               <ImobiliariaSelect value={imobFiltro} onChange={setImobFiltro} className="w-full" />
             </FieldShell>
 
-            <div className="grid grid-cols-1 sm:grid-cols-[170px_1fr_auto] gap-3">
-              <FieldShell label="Modo de busca">
-                <select
-                  value={modoBusca}
-                  onChange={e => setModoBusca(e.target.value)}
-                  className="input text-sm"
-                  disabled={!!fichaSelecionada}
-                >
-                  <option value="nome">Nome do locatário</option>
-                  <option value="cpf">CPF</option>
-                  <option value="cnpj">CNPJ</option>
-                </select>
-              </FieldShell>
-
-              <FieldShell label="Termo de busca">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted" />
-                  <input
-                    value={busca}
-                    onChange={e => setBusca(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); executarBusca() } }}
-                    placeholder={
-                      modoBusca === 'cpf'
-                        ? 'Digite o CPF'
-                        : modoBusca === 'cnpj'
-                          ? 'Digite o CNPJ'
-                          : 'Nome do locatário...'
-                    }
-                    className="input pl-9"
-                    disabled={!!fichaSelecionada}
-                  />
-                </div>
-              </FieldShell>
-
-              <div className="flex items-end gap-2">
-                <button
-                  type="button"
-                  onClick={executarBusca}
-                  disabled={buscando || !!fichaSelecionada}
-                  className="btn-primary text-sm w-full sm:w-auto"
-                >
-                  {buscando ? 'Pesquisando...' : 'Pesquisar'}
-                </button>
-                <button
-                  type="button"
-                  onClick={limparFiltro}
-                  className="btn-secondary text-sm w-full sm:w-auto"
-                >
-                  Limpar
-                </button>
+            <div className="flex flex-col gap-1 flex-1 min-w-[220px]">
+              <div className={`flex items-center gap-2 bg-dark-surface2 border rounded-2xl px-3 py-2.5 transition-colors ${
+                busca && busca !== debouncedBusca ? 'border-brand-accent/50' : 'border-dark-border'
+              }`}>
+                {busca && busca !== debouncedBusca ? (
+                  <svg className="w-4 h-4 animate-spin text-brand-accent flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                ) : (
+                  <Search className="w-4 h-4 text-dark-muted flex-shrink-0" />
+                )}
+                <input
+                  type="text"
+                  placeholder="Nome, CPF, CNPJ, imobiliária ou seguradora..."
+                  value={busca}
+                  onChange={e => setBusca(e.target.value)}
+                  className="text-sm flex-1 outline-none bg-transparent text-dark-text placeholder-dark-muted"
+                />
+                {busca && (
+                  <button
+                    onClick={limparFiltro}
+                    className="text-dark-muted hover:text-dark-text transition-colors flex-shrink-0 text-xs"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
+              {debouncedBusca && (
+                <span className="text-[10px] text-brand-accent/70 pl-1">
+                  Buscando em fichas aprovadas · {fichasEncontradas.length} resultado{fichasEncontradas.length !== 1 ? 's' : ''}
+                </span>
+              )}
             </div>
           </div>
 
@@ -587,13 +579,9 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                 <p className="text-sm font-semibold text-dark-text">Fichas aprovadas</p>
                 <p className="text-xs text-dark-muted">Selecione uma ficha para preencher a emissão.</p>
               </div>
-              <button
-                type="button"
-                onClick={executarBusca}
-                className="text-xs font-medium text-brand-accent hover:underline"
-              >
-                Atualizar resultados
-              </button>
+              <span className="text-xs text-dark-muted">
+                {buscando ? 'Carregando...' : `${fichasEncontradas.length} ficha${fichasEncontradas.length !== 1 ? 's' : ''}`}
+              </span>
             </div>
 
             <div className="max-h-72 overflow-y-auto p-3">
@@ -716,6 +704,13 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                 onChange={setValorParcela}
                 placeholder="0,00"
               />
+              <EditField
+                label="Parcelamento (vezes)"
+                type="number"
+                value={parcelamento}
+                onChange={setParcelamento}
+                placeholder="Ex: 12"
+              />
               <div className="sm:col-span-2">
                 <SelectField
                   label="Emissor"
@@ -724,6 +719,16 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                   options={profiles.map(p => ({ value: p.id, label: p.nome }))}
                   required
                 />
+              </div>
+              <div className="sm:col-span-2">
+                <FieldShell label="Seguradora aprovada" required>
+                  <SeguradoraSelect
+                    value={seguradora}
+                    onChange={setSeguradora}
+                    produto={fichaSelecionada?.produto}
+                    required
+                  />
+                </FieldShell>
               </div>
               <div className="sm:col-span-2">
                 <EditField

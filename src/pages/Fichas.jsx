@@ -79,12 +79,12 @@ const tooltipStyle = (theme) => ({
 const PRODUTOS = [
   { key: 'residencial_pf',  label: 'Residencial PF', Icon: Home,        accent: BRAND.primary, bg: 'rgba(0,0,121,0.08)',  border: 'rgba(0,0,121,0.25)' },
   { key: 'comercial_pf',    label: 'Comercial PF',   Icon: Briefcase,   accent: PRODUTO_COLORS.comercial_pf.color, bg: 'rgba(34,71,170,0.08)',  border: 'rgba(34,71,170,0.25)' },
-  { key: 'pessoa_juridica', label: 'Pessoa JurÃ­dica', Icon: Building,   accent: PRODUTO_COLORS.pessoa_juridica.color, bg: 'rgba(127,190,196,0.10)', border: 'rgba(127,190,196,0.28)' },
+  { key: 'pessoa_juridica', label: 'Pessoa Jurídica', Icon: Building,   accent: PRODUTO_COLORS.pessoa_juridica.color, bg: 'rgba(127,190,196,0.10)', border: 'rgba(127,190,196,0.28)' },
   { key: 'todos',           label: 'Todos',           Icon: LayoutGrid, accent: BRAND.accent, bg: 'rgba(220,255,255,0.18)',  border: 'rgba(195,240,242,0.40)' },
 ]
 
 const MESES_ABBR = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-const MESES_FULL = ['Janeiro','Fevereiro','MarÃ§o','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 
 const FICHA_ROUTE_TO_PRODUTO = {
   '/fichas/residencial': 'residencial_pf',
@@ -119,7 +119,7 @@ function stringColor(str) {
 function initials(n) { return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || '?' }
 
 function AvatarOrcamentista({ nome }) {
-  if (!nome) return <span className="text-xs text-dark-muted">â€”</span>
+  if (!nome) return <span className="text-xs text-dark-muted">—</span>
   return (
     <div className="flex items-center gap-1.5">
       <div
@@ -152,13 +152,13 @@ function OrcBadge({ nome, isMe }) {
     }`}>
       <span className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
             style={{ background: color }}>{initials(nome)}</span>
-      {isMe ? `${nome} (VocÃª)` : nome}
+      {isMe ? `${nome} (Você)` : nome}
     </span>
   )
 }
 
 function exportCSV(fichas, filename, resolverNome) {
-  const headers = ['Data','ImobiliÃ¡ria','Nome','CPF','Produto','Status','OrÃ§amentista','Seguradora']
+  const headers = ['Data','Imobiliária','Nome','CPF','Produto','Status','Orçamentista','Seguradora']
   const rows = fichas.map(f => [
     format(parseISO(f.created_at), 'dd/MM/yyyy'),
     (resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || f.imobiliaria || '',
@@ -210,7 +210,7 @@ function Pagination({ page, total, pageSize, onPage }) {
         })}
         <button onClick={() => onPage(page + 1)} disabled={page >= pages - 1}
                 className="px-2.5 py-1 rounded-lg border border-dark-border hover:border-brand-accent/50 disabled:opacity-30 transition-colors">
-          PrÃ³ximo â†’
+          Próximo â†’
         </button>
       </div>
     </div>
@@ -236,7 +236,7 @@ function ViewToggle({ view, onChange }) {
   )
 }
 
-// â”€â”€ Tooltip para os grÃ¡ficos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ Tooltip para os gráficos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function DarkTip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -255,7 +255,7 @@ function DarkTip({ active, payload, label }) {
   )
 }
 
-// â”€â”€ VisÃ£o Geral â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ Visão Geral â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFichasCount }) {
   const { theme }                  = useTheme()
@@ -263,7 +263,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
   const [statusDist, setStatusDist] = useState([])
   const [fichasPorDia, setDia]    = useState([])
 
-  // Filtro de perÃ­odo â€” padrÃ£o = mÃªs/ano atual
+  // Filtro de período — padrão = mês/ano atual
   const now = new Date()
   const [filtroAno, setFiltroAno] = useState(now.getFullYear())
   const [filtroMes, setFiltroMes] = useState(now.getMonth() + 1)
@@ -285,11 +285,11 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
   }, [inicioFiltro, fimFiltro])
 
   const kpiCards = [
-    { label: 'Total do mÃªs', value: kpis?.totalMes ?? 'â€”', hint: kpis?.variacaoMes !== undefined && kpis?.variacaoMes !== null ? `${kpis.variacaoMes >= 0 ? '+' : ''}${kpis.variacaoMes}% vs mÃªs anterior` : 'Janela atual', tone: 'accent', icon: <TrendingUp className="w-4 h-4" /> },
-    { label: 'Hoje', value: kpis?.hoje ?? 'â€”', hint: 'Entrada do dia', tone: 'success', icon: <Clock className="w-4 h-4" /> },
-    { label: 'Esta semana', value: kpis?.semana ?? 'â€”', hint: 'Volume recente', tone: 'secondary', icon: <CheckCircle2 className="w-4 h-4" /> },
-    { label: 'Pendentes', value: kpis?.pendentes ?? 'â€”', hint: 'Aguardando aÃ§Ã£o', tone: 'warning', icon: <AlertCircle className="w-4 h-4" /> },
-    { label: 'Em cotaÃ§Ã£o', value: kpis?.emCotacao ?? 'â€”', hint: 'JÃ¡ assumidas', tone: 'accent', icon: <FileText className="w-4 h-4" /> },
+    { label: 'Total do mês', value: kpis?.totalMes ?? '—', hint: kpis?.variacaoMes !== undefined && kpis?.variacaoMes !== null ? `${kpis.variacaoMes >= 0 ? '+' : ''}${kpis.variacaoMes}% vs mês anterior` : 'Janela atual', tone: 'accent', icon: <TrendingUp className="w-4 h-4" /> },
+    { label: 'Hoje', value: kpis?.hoje ?? '—', hint: 'Entrada do dia', tone: 'success', icon: <Clock className="w-4 h-4" /> },
+    { label: 'Esta semana', value: kpis?.semana ?? '—', hint: 'Volume recente', tone: 'secondary', icon: <CheckCircle2 className="w-4 h-4" /> },
+    { label: 'Pendentes', value: kpis?.pendentes ?? '—', hint: 'Aguardando ação', tone: 'warning', icon: <AlertCircle className="w-4 h-4" /> },
+    { label: 'Em cotação', value: kpis?.emCotacao ?? '—', hint: 'Já assumidas', tone: 'accent', icon: <FileText className="w-4 h-4" /> },
   ]
 
   return (
@@ -297,7 +297,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
       <PageHeader
         eyebrow="Mesa operacional"
         title="Fichas"
-        description={`VisÃ£o geral da operaÃ§Ã£o em ${mesLabel}. Acompanhe volume, status e entrada por produto sem sair da mesa.`}
+        description={`Visão geral da operação em ${mesLabel}. Acompanhe volume, status e entrada por produto sem sair da mesa.`}
         actions={(
           <div className="flex flex-wrap items-center justify-end gap-3">
             <div className="flex items-center gap-2">
@@ -330,7 +330,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
               onClick={onRelatorio}
               className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
             >
-              <BarChart2 className="w-3.5 h-3.5" /> RelatÃ³rio Mensal
+              <BarChart2 className="w-3.5 h-3.5" /> Relatório Mensal
             </button>
             <button onClick={onCriar} className="btn-primary flex items-center gap-2 text-sm">
               <Plus className="w-4 h-4" /> Nova Ficha
@@ -340,32 +340,32 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
         stats={(
           <>
             <MetricCard
-              label="Total do mÃªs"
-              value={kpis?.totalMes ?? 'â€”'}
-              hint={kpis?.variacaoMes != null ? `${kpis.variacaoMes >= 0 ? '+' : ''}${kpis.variacaoMes}% vs mÃªs anterior` : 'Volume do perÃ­odo'}
+              label="Total do mês"
+              value={kpis?.totalMes ?? '—'}
+              hint={kpis?.variacaoMes != null ? `${kpis.variacaoMes >= 0 ? '+' : ''}${kpis.variacaoMes}% vs mês anterior` : 'Volume do período'}
               tone="accent"
             />
             <MetricCard
               label="Hoje"
-              value={kpis?.hoje ?? 'â€”'}
+              value={kpis?.hoje ?? '—'}
               hint="entrada no dia"
               tone="success"
             />
             <MetricCard
               label="Esta semana"
-              value={kpis?.semana ?? 'â€”'}
+              value={kpis?.semana ?? '—'}
               hint="janela operacional"
               tone="secondary"
             />
             <MetricCard
               label="Pendentes"
-              value={kpis?.pendentes ?? 'â€”'}
-              hint="aguardando aÃ§Ã£o"
+              value={kpis?.pendentes ?? '—'}
+              hint="aguardando ação"
               tone="warning"
             />
             <MetricCard
-              label="Em cotaÃ§Ã£o"
-              value={kpis?.emCotacao ?? 'â€”'}
+              label="Em cotação"
+              value={kpis?.emCotacao ?? '—'}
               hint="carteira ativa"
               tone="accent"
             />
@@ -377,7 +377,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
         <DataCard
           className="xl:col-span-2"
           title="Entrada recente"
-          subtitle="Fichas recebidas nos Ãºltimos 14 dias"
+          subtitle="Fichas recebidas nos últimos 14 dias"
           bodyClassName="pt-4"
         >
           {fichasPorDia.length > 0 ? (
@@ -401,13 +401,13 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[180px] flex items-center justify-center text-dark-muted text-sm">Sem dados para o perÃ­odo</div>
+            <div className="h-[180px] flex items-center justify-center text-dark-muted text-sm">Sem dados para o período</div>
           )}
         </DataCard>
 
         <DataCard
           title="Mix por status"
-          subtitle="DistribuiÃ§Ã£o consolidada no mÃªs selecionado"
+          subtitle="Distribuição consolidada no mês selecionado"
           bodyClassName="pt-4"
         >
           {statusDist.length > 0 ? (
@@ -441,14 +441,14 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
               </div>
             </div>
           ) : (
-            <div className="h-[180px] flex items-center justify-center text-dark-muted text-sm">Sem dados para o perÃ­odo</div>
+            <div className="h-[180px] flex items-center justify-center text-dark-muted text-sm">Sem dados para o período</div>
           )}
         </DataCard>
       </div>
 
       <DataCard
         title="Selecionar produto"
-        subtitle="Abra a mesa operacional por linha de negÃ³cio"
+        subtitle="Abra a mesa operacional por linha de negócio"
         bodyClassName="pt-4"
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -494,13 +494,13 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-dark-muted">Total</span>
                     <span className="text-sm font-bold font-mono" style={{ color: p.accent }}>
-                      {contagem[p.key]?.total ?? 'â€”'}
+                      {contagem[p.key]?.total ?? '—'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-dark-muted">Em aberto</span>
                     <span className="text-sm font-bold font-mono text-status-warning">
-                      {contagem[p.key]?.emAberto ?? 'â€”'}
+                      {contagem[p.key]?.emAberto ?? '—'}
                     </span>
                   </div>
                 </div>
@@ -513,7 +513,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
   )
 }
 
-// â”€â”€ Seletor de MÃªs/Ano â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ Seletor de Mês/Ano â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function MesAnoSelector({ ano, anos, mes, mesesComFichas, onAnoChange, onMesChange }) {
   const currentYear  = new Date().getFullYear()
@@ -529,7 +529,7 @@ function MesAnoSelector({ ano, anos, mes, mesesComFichas, onAnoChange, onMesChan
         className="w-24"
       />
 
-      {/* Pills de mÃªs */}
+      {/* Pills de mês */}
       <div className="flex items-center gap-1 flex-wrap">
         {MESES_ABBR.map((label, i) => {
           const monthNum   = i + 1
@@ -542,7 +542,7 @@ function MesAnoSelector({ ano, anos, mes, mesesComFichas, onAnoChange, onMesChan
               key={monthNum}
               onClick={() => onMesChange(monthNum)}
               disabled={!hasData && !isActive}
-              title={!hasData ? 'Sem fichas neste mÃªs' : MESES_FULL[i]}
+              title={!hasData ? 'Sem fichas neste mês' : MESES_FULL[i]}
               className={`relative px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                 isActive
                   ? 'bg-brand-secondary text-white shadow-sm'
@@ -552,7 +552,7 @@ function MesAnoSelector({ ano, anos, mes, mesesComFichas, onAnoChange, onMesChan
               }`}
             >
               {label}
-              {/* Ponto indicador do mÃªs atual */}
+              {/* Ponto indicador do mês atual */}
               {isCurrMes && !isActive && (
                 <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-brand-accent" />
               )}
@@ -571,7 +571,7 @@ function TabelaAberta({ fichas, user, navigate, onDetalhe, onAssumir, onFinaliza
     <table className="table-table w-full text-sm">
       <thead className="table-thead border-b border-dark-border">
         <tr>
-          {['Data','ImobiliÃ¡ria','Nome','Status','OrÃ§amentista','Tempo',''].map(h => (
+          {['Data','Imobiliária','Nome','Status','Orçamentista','Tempo',''].map(h => (
             <th key={h} className="th whitespace-nowrap">{h}</th>
           ))}
         </tr>
@@ -584,17 +584,17 @@ function TabelaAberta({ fichas, user, navigate, onDetalhe, onAssumir, onFinaliza
           const canFin = isMe && f.status === 'em_cotacao'
           const rd     = f.raw_data || {}
           const nome   = f.produto === 'pessoa_juridica'
-            ? (f.nome_empresa || f.nome_interessado || rd.nome_empresa || rd.razao_social || rd.empresa || rd.nome || 'â€”')
-            : (f.nome_interessado || rd.nome || 'â€”')
+            ? (f.nome_empresa || f.nome_interessado || rd.nome_empresa || rd.razao_social || rd.empresa || rd.nome || '—')
+            : (f.nome_interessado || rd.nome || '—')
           return (
             <tr key={f.id} className="table-row" onClick={() => navigate(`/fichas/${f.id}`)}>
               <td className="td text-dark-muted text-xs whitespace-nowrap font-mono">
                 {format(parseISO(f.created_at), 'dd/MM/yy', { locale: ptBR })}
               </td>
               <td className="td font-medium text-dark-text max-w-[150px] truncate">
-                {(resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || 'â€”'}
+                {(resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || '—'}
               </td>
-              <td className="td text-dark-text max-w-[150px] truncate">{nome || 'â€”'}</td>
+              <td className="td text-dark-text max-w-[150px] truncate">{nome || '—'}</td>
               <td className="td"><span className={`badge ${si.color}`}>{si.label}</span></td>
               <td className="td">
                 {f.profiles?.nome ? <OrcBadge nome={f.profiles.nome} isMe={isMe} /> : <span className="text-xs text-status-warning font-medium">Livre</span>}
@@ -633,7 +633,7 @@ function TabelaPassadas({ fichas, user, navigate, onEditar, resolverNome }) {
     <table className="table-table w-full text-sm">
       <thead className="table-thead border-b border-dark-border">
         <tr>
-          {['Data','ImobiliÃ¡ria','Nome','Status','OrÃ§amentista','Seguradora',''].map(h => (
+          {['Data','Imobiliária','Nome','Status','Orçamentista','Seguradora',''].map(h => (
             <th key={h} className="th whitespace-nowrap">{h}</th>
           ))}
         </tr>
@@ -651,11 +651,11 @@ function TabelaPassadas({ fichas, user, navigate, onEditar, resolverNome }) {
               <td className="td text-dark-muted text-xs whitespace-nowrap font-mono">
                 {format(parseISO(f.created_at), 'dd/MM/yy', { locale: ptBR })}
               </td>
-              <td className="td font-medium text-dark-text max-w-[130px] truncate">{(resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || 'â€”'}</td>
-              <td className="td text-dark-text max-w-[130px] truncate">{nome || 'â€”'}</td>
+              <td className="td font-medium text-dark-text max-w-[130px] truncate">{(resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || '—'}</td>
+              <td className="td text-dark-text max-w-[130px] truncate">{nome || '—'}</td>
               <td className="td"><span className={`badge ${si.color}`}>{si.label}</span></td>
               <td className="td"><AvatarOrcamentista nome={f.profiles?.nome} /></td>
-              <td className="td text-dark-muted text-xs">{f.seguradora || 'â€”'}</td>
+              <td className="td text-dark-muted text-xs">{f.seguradora || '—'}</td>
               <td className="td" onClick={e => e.stopPropagation()}>
                 <button onClick={() => onEditar(f)} className="p-1.5 rounded-lg text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-colors">
                   <Pencil className="w-3.5 h-3.5" />
@@ -677,7 +677,7 @@ function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, 
       <PageHeader
         eyebrow="Mesa operacional"
         title={prodInfo?.label || 'Fichas'}
-        description={anoLabel ? `${mesLabel} ${anoLabel} Â· lista e kanban da linha de negÃ³cio selecionada.` : 'Mesa operacional com lista, kanban e drill-down.'}
+        description={anoLabel ? `${mesLabel} ${anoLabel} · lista e kanban da linha de negócio selecionada.` : 'Mesa operacional com lista, kanban e drill-down.'}
         actions={(
           <div className="flex flex-wrap items-center justify-end gap-3">
             <button
@@ -685,14 +685,14 @@ function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, 
               className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
             >
               <Home className="w-3.5 h-3.5" />
-              VisÃ£o geral
+              Visão geral
             </button>
             {viewToggle}
             <button
               onClick={onRelatorio}
               className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
             >
-              <BarChart2 className="w-3.5 h-3.5" /> RelatÃ³rio
+              <BarChart2 className="w-3.5 h-3.5" /> Relatório
             </button>
             <button onClick={onCreate} className="btn-primary flex items-center gap-2 text-sm">
               <Plus className="w-4 h-4" /> Nova Ficha
@@ -703,7 +703,7 @@ function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, 
 
       <DataCard
         title="Recorte de trabalho"
-        subtitle="Use o perÃ­odo para refinar o lote exibido na mesa operacional"
+        subtitle="Use o período para refinar o lote exibido na mesa operacional"
       >
         {selectorSlot}
       </DataCard>
@@ -743,7 +743,7 @@ export default function Fichas() {
 
   const PAGE_SIZE = 30
 
-  // Debounce: dispara query 400ms apÃ³s o usuÃ¡rio parar de digitar
+  // Debounce: dispara query 400ms após o usuário parar de digitar
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 400)
     return () => clearTimeout(t)
@@ -782,13 +782,13 @@ export default function Fichas() {
     fetchContagemProdutos().then(setContagem)
   }, [])
 
-  // Contagem de fichas abertas do usuÃ¡rio logado (badge do botÃ£o)
+  // Contagem de fichas abertas do usuário logado (badge do botão)
   useEffect(() => {
     if (!user?.id) return
     fetchContagemAbertaOrcamentista(user.id).then(setMinhasFichasCount)
   }, [user?.id])
 
-  // Realtime â€” atualiza contagens de produto e "minhas fichas" automaticamente (debounce 500ms p/ bursts)
+  // Realtime — atualiza contagens de produto e "minhas fichas" automaticamente (debounce 500ms p/ bursts)
   useEffect(() => {
     let timer
     const debouncedRefresh = () => {
@@ -808,7 +808,7 @@ export default function Fichas() {
     }
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Ao selecionar produto: carregar anos disponÃ­veis e auto-selecionar o atual
+  // Ao selecionar produto: carregar anos disponíveis e auto-selecionar o atual
   useEffect(() => {
     if (!produto) return
     fetchAnosDisponiveis(produto).then(years => {
@@ -820,17 +820,17 @@ export default function Fichas() {
     })
   }, [produto])
 
-  // Ao mudar produto ou ano: carregar quais meses tÃªm fichas
+  // Ao mudar produto ou ano: carregar quais meses têm fichas
   useEffect(() => {
     if (!produto) return
     fetchMesesDisponiveis(produto, ano).then(setMesesComFichas)
   }, [produto, ano])
 
-  // Datas calculadas do mÃªs/ano selecionados
+  // Datas calculadas do mês/ano selecionados
   const dateFrom = ano && mes ? new Date(ano, mes - 1, 1).toISOString() : null
   const dateTo   = ano && mes ? new Date(ano, mes, 0, 23, 59, 59).toISOString() : null
 
-  // Query de tabela (sÃ³ usada no modo lista)
+  // Query de tabela (só usada no modo lista)
   const loadFichas = useCallback(async () => {
     if (!produto) return
     if (view === 'kanban' && produto !== 'todos') return
@@ -856,7 +856,7 @@ export default function Fichas() {
   function changeProduto(p) {
     setFichas([]); setTotal(0)
     setView(p === 'todos' ? 'lista' : 'kanban')
-    // Reset para mÃªs/ano atual
+    // Reset para mês/ano atual
     setAno(agora.getFullYear())
     setMes(agora.getMonth() + 1)
     setProduto(p)
@@ -875,7 +875,7 @@ export default function Fichas() {
   async function onDelete(id) {
     await deletarFicha(id)
     setDetalhe(null)
-    toast({ type: 'success', title: 'Ficha excluÃ­da' })
+    toast({ type: 'success', title: 'Ficha excluída' })
     refresh()
   }
 
@@ -888,7 +888,7 @@ export default function Fichas() {
     return { aprovadas, recusadas, emitidas, taxa }
   }, [tab, fichas])
 
-  // â”€â”€ View: VisÃ£o Geral (sem produto) â”€â”€
+  // â”€â”€ View: Visão Geral (sem produto) â”€â”€
   if (!produto) {
     if (criar) return (
       <ModalFicha ficha={null} onClose={() => setCriar(false)} onSuccess={() => { setCriar(false); fetchContagemProdutos().then(setContagem) }} />
@@ -935,7 +935,7 @@ export default function Fichas() {
       viewToggle={<ViewToggle view={view} onChange={setView} />}
       selectorSlot={selectorSlot}
     >
-      {/* ModalAssumir e ModalFinalizar sÃ£o overlays â€” renderizam sobre o board */}
+      {/* ModalAssumir e ModalFinalizar são overlays — renderizam sobre o board */}
       {assumir && (
         <ModalAssumir id={assumir} onClose={() => setAssumir(null)} onSuccess={() => { setAssumir(null); refresh() }} />
       )}
@@ -1016,7 +1016,7 @@ export default function Fichas() {
                 )}
                 <input
                   type="text"
-                  placeholder="Nome, CPF, CNPJ, imobiliÃ¡ria ou seguradora..."
+                  placeholder="Nome, CPF, CNPJ, imobiliária ou seguradora..."
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(0) }}
                   className="text-sm flex-1 outline-none bg-transparent text-dark-text placeholder-dark-muted"
@@ -1030,7 +1030,7 @@ export default function Fichas() {
               </div>
               {debouncedSearch && (
                 <span className="text-[10px] text-brand-accent/70 pl-1">
-                  Buscando em todos os perÃ­odos Â· {total} resultado{total !== 1 ? 's' : ''}
+                  Buscando em todos os períodos · {total} resultado{total !== 1 ? 's' : ''}
                 </span>
               )}
             </div>

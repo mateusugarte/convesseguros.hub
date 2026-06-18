@@ -263,8 +263,7 @@ export async function buscarFichasParaEmissao(nome, imobiliarias) {
     .limit(200)
 
   if (term) {
-    // A busca precisa bater no nome do locatário enquanto ele digita.
-    q = q.or(`nome_interessado.ilike.%${term}%,nome_empresa.ilike.%${term}%`)
+    q = q.or(`nome_interessado.ilike.%${term}%,nome_empresa.ilike.%${term}%,cpf.ilike.%${term}%,cnpj.ilike.%${term}%`)
   }
   if (Array.isArray(imobiliarias) && imobiliarias.length) q = q.in('imobiliaria', imobiliarias)
   else if (typeof imobiliarias === 'string' && imobiliarias) q = q.eq('imobiliaria', imobiliarias)
@@ -275,25 +274,7 @@ export async function buscarFichasParaEmissao(nome, imobiliarias) {
     return []
   }
 
-  const fichas = (data || []).filter(f => !['recusado', 'cancelado', 'cpf_invalido', 'expirada', 'emitido'].includes(f.status))
-  if (!fichas.length) return []
-
-  const fichaIds = fichas.map(f => f.id).filter(Boolean)
-  if (!fichaIds.length) return fichas
-
-  const { data: apolices, error: apolicesError } = await supabase
-    .from('apolices')
-    .select('ficha_id')
-    .in('ficha_id', fichaIds)
-    .not('ficha_id', 'is', null)
-
-  if (apolicesError) {
-    console.error('buscarFichasParaEmissao:apolices', apolicesError)
-    return fichas
-  }
-
-  const fichasComApolice = new Set((apolices || []).map(a => a.ficha_id))
-  return fichas.filter(f => !fichasComApolice.has(f.id))
+  return data || []
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────

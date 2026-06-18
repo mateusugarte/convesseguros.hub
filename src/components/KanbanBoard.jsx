@@ -17,8 +17,8 @@ import { Avatar } from './ui'
 
 const COLS = [
   { id: 'pendentes',   label: 'Pendentes',      color: '#4c67b0' },
-  { id: 'assumidas',   label: 'Em CotaÃ§Ã£o',      color: '#3B82F6' },
-  { id: 'em_analise',  label: 'Em AnÃ¡lise',      color: '#4b6cc2' },
+  { id: 'assumidas',   label: 'Em Cotação',      color: '#3B82F6' },
+  { id: 'em_analise',  label: 'Em Análise',      color: '#4b6cc2' },
   { id: 'aprovados',   label: 'Aprovados',       color: '#0f766e' },
   { id: 'recusados',   label: 'Recusados',       color: '#EF4444' },
   { id: 'finalizadas', label: 'Finalizadas',     color: '#6B7280' },
@@ -115,10 +115,10 @@ function FichaCardContent({
 
         {/* Nome */}
         <p className="text-[12.5px] font-semibold text-dark-text leading-snug truncate mb-0.5">
-          {ficha.nome_empresa || ficha.nome_interessado || 'â€”'}
+          {ficha.nome_empresa || ficha.nome_interessado || '—'}
         </p>
 
-        {/* ImobiliÃ¡ria */}
+        {/* Imobiliária */}
         {ficha.imobiliaria && (
           <ImobiliariaIdentity
             nome={ficha.imobiliaria}
@@ -134,7 +134,7 @@ function FichaCardContent({
           </div>
         )}
 
-        {/* Footer: orcamentista + aÃ§Ã£o */}
+        {/* Footer: orcamentista + ação */}
         <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-dark-border/40 mt-auto">
           {nome ? (
             <div className="flex items-center gap-1.5 min-w-0">
@@ -420,7 +420,7 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
             <div className="p-1.5 rounded-b-xl border border-t-0 min-h-[60px]" style={{ background: activeCol.color + '06', borderColor: activeCol.color + '30' }}>
               {(grouped[activeColId] || []).slice(0, 3).map(f => (
                 <div key={f.id} className="text-[10px] text-dark-muted truncate py-1 px-2 rounded-lg mb-1" style={{ background: 'rgb(var(--color-surface2) / 0.6)' }}>
-                  {f.nome_empresa || f.nome_interessado || 'â€”'}
+                  {f.nome_empresa || f.nome_interessado || '—'}
                 </div>
               ))}
             </div>

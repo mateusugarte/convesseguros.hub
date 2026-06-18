@@ -89,7 +89,7 @@ export async function fetchKPIsApolices(inicioMes, fimMes) {
       .gte('data_emissao', inicioMes).lte('data_emissao', fimMes),
   ])
 
-  const totalProducao = (producaoMes.data || []).reduce((sum, item) => sum + (toNumber(item.valor_producao) || 0), 0)
+  const totalProducaoPremio = (producaoMes.data || []).reduce((sum, item) => sum + (toNumber(item.premio_total ?? item.valor_producao) || 0), 0)
   const totalComissao = (comissaoMes.data || []).reduce((sum, item) => sum + (toNumber(item.valor_comissao) || 0), 0)
 
   return {
@@ -97,7 +97,7 @@ export async function fetchKPIsApolices(inicioMes, fimMes) {
     ultimos90:  ult90.count  || 0,
     totalGeral: total.count  || 0,
     variacaoMes,
-    totalProducao,
+    totalProducao: totalProducaoPremio || totalProducao,
     totalComissao,
   }
 }
@@ -149,17 +149,19 @@ export async function fetchTopImobiliariasApolices(inicioMes, fimMes, limite = 5
 export async function fetchProducaoPorSeguradora(inicioMes, fimMes) {
   let q = supabase
     .from('apolices')
-    .select('seguradora, valor_producao')
+    .select('seguradora, premio_total, valor_producao')
     .in('status_emissao', ['emitida', 'enviada'])
     .not('seguradora', 'is', null)
     .neq('seguradora', '')
-    .not('valor_producao', 'is', null)
+    .or('premio_total.not.is.null,valor_producao.not.is.null')
   if (inicioMes) q = q.gte('data_emissao', inicioMes)
   if (fimMes)    q = q.lte('data_emissao', fimMes)
   const { data } = await q
   if (!data) return []
   const cnt = {}
-  data.forEach(a => { cnt[a.seguradora] = (cnt[a.seguradora] || 0) + (toNumber(a.valor_producao) || 0) })
+  data.forEach(a => {
+    cnt[a.seguradora] = (cnt[a.seguradora] || 0) + (toNumber(a.premio_total ?? a.valor_producao) || 0)
+  })
   return Object.entries(cnt)
     .sort((a, b) => b[1] - a[1])
     .map(([seguradora, value]) => ({ seguradora, value }))
@@ -283,8 +285,6 @@ export async function buscarFichasParaEmissao(termo, imobiliarias, modo = 'nome'
   const termoNormalizado = modo === 'cpf' || modo === 'cnpj'
     ? onlyDigits(termo)
     : normalizeSearchText(termo?.trim())
-
-  if (!termoNormalizado && !(Array.isArray(imobiliarias) ? imobiliarias.length : imobiliarias)) return []
 
   const imobiliariasFilter = Array.isArray(imobiliarias)
     ? imobiliarias.filter(Boolean)

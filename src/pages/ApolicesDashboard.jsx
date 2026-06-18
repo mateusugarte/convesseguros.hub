@@ -7,11 +7,12 @@ import {
   fetchTopImobiliariasApolices, fetchProducaoPorSeguradora,
   formatMoneyBR,
 } from '../lib/apolices'
+import { findSeguradoraMetaByNome } from '../lib/seguradoras'
 import { useTheme } from '../contexts/ThemeContext'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell,
+  Cell,
 } from 'recharts'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -59,12 +60,14 @@ const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set
 const MESES_FULL = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 const SEG_COLORS = {
-  'Porto Seguro': '#000079',
-  'Tokio Marine': '#2247aa',
-  TOO: '#4b6cc2',
-  'Junto Seguros': '#0f766e',
-  Potencial: '#7fbec4',
-  Outras: '#6B7280',
+  'Porto Seguro': '#003595',
+  'Tokio Marine': '#FBBA00',
+  'TOO': '#38BDF8',
+  'TOO Seguros': '#38BDF8',
+  'Junto Seguros': '#7C3AED',
+  'Pottencial': '#F97316',
+  'Potencial': '#F97316',
+  'Outras': '#6B7280',
 }
 
 function DarkTip({ active, payload, label }) {
@@ -100,6 +103,29 @@ function SegTip({ active, payload }) {
   )
 }
 
+function LogoTick({ x, y, payload, logos }) {
+  const src = logos?.[payload.value]
+  const shortName = (payload.value ?? '').split(' ')[0]
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {src ? (
+        <image
+          href={src}
+          x={-22}
+          y={5}
+          width={44}
+          height={32}
+          preserveAspectRatio="xMidYMid meet"
+        />
+      ) : (
+        <text x={0} y={20} textAnchor="middle" fontSize={9} fill="#9CA3AF">
+          {shortName}
+        </text>
+      )}
+    </g>
+  )
+}
+
 const FILTRO_SEG = [
   { key: 'mes', label: 'Mês' },
   { key: 'q90', label: '90 dias' },
@@ -120,6 +146,7 @@ export default function ApolicesDashboard() {
   const [topImob, setTopImob] = useState([])
   const [producaoSeg, setProducaoSeg] = useState([])
   const [filtroSeg, setFiltroSeg] = useState('mes')
+  const [segLogos, setSegLogos] = useState({})
   const [loading, setLoading] = useState(true)
 
   const inicioMes = new Date(ano, mes - 1, 1).toISOString()
@@ -156,6 +183,16 @@ export default function ApolicesDashboard() {
     const [i, f] = getRangeSeguradora()
     fetchProducaoPorSeguradora(i, f).then(setProducaoSeg)
   }, [getRangeSeguradora])
+
+  useEffect(() => {
+    if (!producaoSeg.length) return
+    Promise.all(
+      producaoSeg.map(async s => {
+        const meta = await findSeguradoraMetaByNome(s.seguradora)
+        return [s.seguradora, meta?.logo_url || null]
+      })
+    ).then(entries => setSegLogos(Object.fromEntries(entries)))
+  }, [producaoSeg])
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -294,29 +331,30 @@ export default function ApolicesDashboard() {
           )}
         >
           {producaoSeg.length > 0 ? (
-            <div className="space-y-2">
-              <ResponsiveContainer width="100%" height={90}>
-                <PieChart>
-                  <Pie data={producaoSeg} dataKey="value" nameKey="seguradora" cx="50%" cy="50%" innerRadius={24} outerRadius={42}>
-                    {producaoSeg.map((entry, i) => (
-                      <Cell key={i} fill={SEG_COLORS[entry.seguradora] || BRAND.gold} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<SegTip />} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="space-y-1">
-                {producaoSeg.slice(0, 4).map(s => (
-                  <div key={s.seguradora} className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: SEG_COLORS[s.seguradora] || BRAND.gold }} />
-                      <span className="text-dark-muted truncate max-w-[90px]">{s.seguradora}</span>
-                    </div>
-                    <span className="font-mono font-semibold text-dark-text">{formatMoneyBR(s.value)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <ResponsiveContainer width="100%" height={190}>
+              <BarChart data={producaoSeg} margin={{ top: 8, right: 4, left: -8, bottom: 48 }}>
+                <XAxis
+                  dataKey="seguradora"
+                  tick={(props) => <LogoTick {...props} logos={segLogos} />}
+                  axisLine={false}
+                  tickLine={false}
+                  interval={0}
+                />
+                <YAxis
+                  tick={{ fontSize: 9, fill: CHART_COLORS[theme].tick }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)}
+                  width={36}
+                />
+                <Tooltip content={<SegTip />} />
+                <Bar dataKey="value" radius={[5, 5, 0, 0]} maxBarSize={52}>
+                  {producaoSeg.map((entry, i) => (
+                    <Cell key={i} fill={SEG_COLORS[entry.seguradora] || BRAND.primary} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           ) : (
             <div className="h-[120px] flex items-center justify-center text-dark-muted text-sm">Sem dados</div>
           )}

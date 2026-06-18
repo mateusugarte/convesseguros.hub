@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { PageHeader, MetricCard, DataCard, EmptyState } from '../components/ui'
 import { Select } from '../components/ui/Select'
 import { useAuth } from '../contexts/AuthContext'
-import { fetchFinanceiroComissoes, formatMoneyBR } from '../lib/apolices'
+import { fetchFinanceiroComissoes, formatMoneyBR, toNumber } from '../lib/apolices'
 import { Coins, ShieldCheck, FileText, TrendingUp } from 'lucide-react'
 
 const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -19,8 +19,8 @@ function groupBySeguradora(items) {
   items.forEach(item => {
     const key = item.seguradora || 'Sem seguradora'
     const current = map.get(key) || { seguradora: key, producao: 0, comissao: 0, apolices: 0 }
-    current.producao += Number(item.valor_producao) || 0
-    current.comissao += Number(item.valor_comissao) || 0
+    current.producao += toNumber(item.premio_total ?? item.valor_producao) || 0
+    current.comissao += toNumber(item.valor_comissao) || 0
     current.apolices += 1
     map.set(key, current)
   })
@@ -51,8 +51,8 @@ export default function Financeiro() {
   }, [inicio, fim, seguradora])
 
   const agrupado = useMemo(() => groupBySeguradora(rows), [rows])
-  const totalProducao = useMemo(() => rows.reduce((sum, item) => sum + (Number(item.valor_producao) || 0), 0), [rows])
-  const totalComissao = useMemo(() => rows.reduce((sum, item) => sum + (Number(item.valor_comissao) || 0), 0), [rows])
+  const totalProducao = useMemo(() => rows.reduce((sum, item) => sum + (toNumber(item.premio_total ?? item.valor_producao) || 0), 0), [rows])
+  const totalComissao = useMemo(() => rows.reduce((sum, item) => sum + (toNumber(item.valor_comissao) || 0), 0), [rows])
   const totalApolices = rows.length
   const ticketMedio = totalApolices ? totalProducao / totalApolices : 0
   const mesLabel = `${MESES_ABBR[mes - 1]} ${ano}`
@@ -173,7 +173,7 @@ export default function Financeiro() {
                       <td className="td text-xs text-dark-muted whitespace-nowrap">{String(row.data_emissao).slice(0, 10)}</td>
                       <td className="td max-w-[160px] truncate">{row.seguradora || '—'}</td>
                       <td className="td font-mono text-xs text-dark-muted">{row.numero_apolice || '—'}</td>
-                      <td className="td font-mono text-xs">{formatMoneyBR(row.valor_producao)}</td>
+                      <td className="td font-mono text-xs">{formatMoneyBR(row.premio_total ?? row.valor_producao)}</td>
                       <td className="td font-mono text-xs">{formatMoneyBR(row.valor_comissao)}</td>
                       <td className="td font-mono text-xs">{row.pct_comissao != null ? `${row.pct_comissao}%` : '—'}</td>
                     </tr>

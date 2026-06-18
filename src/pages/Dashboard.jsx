@@ -495,7 +495,7 @@ export default function Dashboard() {
 
       <div className="grid gap-6 xl:grid-cols-12">
         <DataCard
-          className="xl:col-span-8"
+          className="xl:col-span-8 overflow-hidden"
           title="Main Analytics"
           subtitle="Fichas recebidas nos ultimos 30 dias com leitura paralela de aprovacoes e recusas."
           actions={<div className="ops-kicker">30 dias</div>}
@@ -503,8 +503,13 @@ export default function Dashboard() {
           {byDay.length === 0 ? (
             <EmptyState title="Sem dados para o periodo" description="Nao houve movimentacao suficiente para montar a serie temporal." icon={<Activity className="w-6 h-6" />} />
           ) : (
-            <div className="grid gap-5 lg:grid-cols-[1.4fr,0.8fr]">
-              <div className="h-[320px]">
+            <div className="grid gap-5 lg:grid-cols-[1.35fr,0.85fr] rounded-[28px] border border-brand-accent/10 bg-[radial-gradient(circle_at_top_right,_rgba(74,144,217,0.10),_transparent_42%),radial-gradient(circle_at_bottom_left,_rgba(15,118,110,0.08),_transparent_34%)] p-4">
+              <div className="h-[320px] rounded-[24px] border border-dark-border/60 bg-white/55 p-3 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
+                <div className="mb-3 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em]">
+                  <span className="rounded-full border border-brand-accent/20 bg-brand-accent/10 px-2.5 py-1 text-brand-accent">Total</span>
+                  <span className="rounded-full border border-status-success/20 bg-status-success/10 px-2.5 py-1 text-status-success">Aprovadas</span>
+                  <span className="rounded-full border border-status-danger/20 bg-status-danger/10 px-2.5 py-1 text-status-danger">Recusadas</span>
+                </div>
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={byDay} margin={{ top: 10, right: 10, left: -22, bottom: 0 }}>
                     <defs>
@@ -527,29 +532,29 @@ export default function Dashboard() {
                     />
                     <YAxis tick={{ fill: chartTheme.tick, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                     <Tooltip content={<DashboardTooltip dateLabel />} />
-                    <Area type="monotone" dataKey="total" name="Total" stroke={chartTheme.accent} strokeWidth={2.5} fill="url(#dashboard-total)" dot={false} />
-                    <Area type="monotone" dataKey="aprovadas" name="Aprovadas" stroke={chartTheme.success} strokeWidth={2} fill="url(#dashboard-approved)" dot={false} />
-                    <Area type="monotone" dataKey="recusadas" name="Recusadas" stroke={chartTheme.danger} strokeWidth={1.5} fillOpacity={0} dot={false} />
+                    <Area type="monotone" dataKey="total" name="Total" stroke={chartTheme.accent} strokeWidth={2.75} strokeLinecap="round" strokeLinejoin="round" fill="url(#dashboard-total)" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
+                    <Area type="monotone" dataKey="aprovadas" name="Aprovadas" stroke={chartTheme.success} strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round" fill="url(#dashboard-approved)" dot={false} activeDot={{ r: 3.5, strokeWidth: 0 }} />
+                    <Area type="monotone" dataKey="recusadas" name="Recusadas" stroke={chartTheme.danger} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" fillOpacity={0} dot={false} activeDot={{ r: 3, strokeWidth: 0 }} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
 
-              <div className="space-y-3">
-                <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+              <div className="space-y-3 rounded-[24px] border border-dark-border/60 bg-white/55 p-3 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
+                <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4 backdrop-blur-sm">
                   <p className="metric-label">Pico de entrada</p>
                   <p className="stat-number text-dark-text mt-3">
                     {Math.max(...byDay.map(item => item.total), 0)}
                   </p>
                   <p className="metric-sub mt-2">Maior volume diario observado na janela atual.</p>
                 </div>
-                <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+                <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4 backdrop-blur-sm">
                   <p className="metric-label">Aprovacoes na serie</p>
                   <p className="stat-number text-dark-text mt-3">
                     {byDay.reduce((sum, item) => sum + item.aprovadas, 0)}
                   </p>
                   <p className="metric-sub mt-2">Soma das aprovacoes registradas nos ultimos 30 dias.</p>
                 </div>
-                <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
+                <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4 backdrop-blur-sm">
                   <p className="metric-label">Recusas na serie</p>
                   <p className="stat-number text-dark-text mt-3">
                     {byDay.reduce((sum, item) => sum + item.recusadas, 0)}

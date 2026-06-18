@@ -182,6 +182,7 @@ const COTACAO_STATUS_OPTIONS = [
   { value: 'aprovado', label: 'Aprovado' },
   { value: 'recusado', label: 'Recusado' },
 ]
+const CAMPOS_REPLICAVEIS = new Set(['pct_comissao', 'parcelamento'])
 
 function normalizarCotacoes(cotacoes = []) {
   return SEGURADORAS.map(seguradora => {
@@ -198,6 +199,15 @@ function normalizarCotacoes(cotacoes = []) {
       pct_comissao: atual.pct_comissao ?? '',
     }
   })
+}
+
+function aplicarEmAprovadas(cotacoes, field, value) {
+  if (!CAMPOS_REPLICAVEIS.has(field)) return cotacoes
+  return cotacoes.map(item => (
+    item.status === 'aprovado'
+      ? { ...item, [field]: value }
+      : item
+  ))
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -229,9 +239,20 @@ export default function FichaDetalhePage() {
 
   async function updateField(field, value) {
     const prev = ficha
+    const patch = { [field]: value }
+
+    if (CAMPOS_REPLICAVEIS.has(field)) {
+      const raw = ficha?.raw_data || {}
+      const cotacoes = normalizarCotacoes(raw.cotacoes)
+      patch.raw_data = {
+        ...raw,
+        cotacoes: aplicarEmAprovadas(cotacoes, field, value),
+      }
+    }
+
     // Optimistic update
-    setFicha(f => ({ ...f, [field]: value }))
-    const err = await editarFicha(id, { [field]: value }, user?.id)
+    setFicha(f => ({ ...f, ...patch }))
+    const err = await editarFicha(id, patch, user?.id)
     if (err) {
       setFicha(prev)
       toast({ type: 'error', title: 'Erro ao salvar campo' })
@@ -523,13 +544,13 @@ export default function FichaDetalhePage() {
 
           <DataCard title="Cotação" bodyClassName="space-y-4">
             <p className="text-sm text-dark-muted">
-              Preencha as 5 seguradoras manualmente. Se marcar Aprovado em alguma delas, complete os campos dessa seguradora.
+              Preencha as 5 seguradoras manualmente. Os campos de comissao e parcelamento acima sao espelhados automaticamente nas seguradoras com status Aprovado.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {normalizarCotacoes(ficha.raw_data?.cotacoes).map(cotacao => (
                 <div key={cotacao.seguradora} className="rounded-[28px] border border-dark-border bg-white/85 p-4 shadow-[0_18px_38px_rgba(15,23,42,0.08)] backdrop-blur-sm space-y-4">
                   <div className="flex items-start justify-between gap-3">
-                    <SeguradoraBadge nome={cotacao.seguradora} size="md" showName />
+                    <SeguradoraBadge nome={cotacao.seguradora} size="xl" showName={false} />
                     <span className={`text-[10px] uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border whitespace-nowrap ${
                       cotacao.status === 'aprovado'
                         ? 'border-status-success/30 text-status-success bg-status-success/10'

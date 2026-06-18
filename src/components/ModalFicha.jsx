@@ -13,6 +13,7 @@ import { Select } from './ui/Select'
 
 const STATUS_OPTIONS  = ['pendente','em_cotacao','em_analise','aprovado','recusado','emitido','cancelado','cpf_invalido','expirada']
 const PRODUTO_OPTIONS = ['residencial_pf','comercial_pf','pessoa_juridica']
+const CAMPOS_REPLICAVEIS = new Set(['pct_comissao', 'parcelamento'])
 const COTACAO_STATUS_OPTIONS = [
   { value: '', label: 'Sem status' },
   { value: 'em_analise', label: 'Em análise' },
@@ -62,6 +63,15 @@ function normalizarCotacoes(cotacoes = []) {
       pct_comissao: atual.pct_comissao ?? '',
     }
   })
+}
+
+function aplicarEmAprovadas(cotacoes, field, value) {
+  if (!CAMPOS_REPLICAVEIS.has(field)) return cotacoes
+  return cotacoes.map(item => (
+    item.status === 'aprovado'
+      ? { ...item, [field]: value }
+      : item
+  ))
 }
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -194,7 +204,17 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
     fetchProfiles().then(setProfiles)
   }, [])
 
-  const set    = (k, v) => setForm(p => ({ ...p, [k]: v }))
+  const set = (k, v) => setForm(p => {
+    const next = { ...p, [k]: v }
+    if (CAMPOS_REPLICAVEIS.has(k)) {
+      next.cotacoes = next.cotacoes.map(item => (
+        item.status === 'aprovado'
+          ? { ...item, [k]: v }
+          : item
+      ))
+    }
+    return next
+  })
   const isPJ   = form.produto === 'pessoa_juridica'
   const isPlus = form.produto === 'comercial_pf' || isPJ
 
@@ -445,7 +465,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
               {form.cotacoes.map((cotacao, index) => (
                 <div key={cotacao.seguradora} className="rounded-[28px] border border-dark-border bg-white/85 p-4 shadow-[0_18px_38px_rgba(15,23,42,0.08)] backdrop-blur-sm space-y-4">
                   <div className="flex items-start justify-between gap-3">
-                    <SeguradoraBadge nome={cotacao.seguradora} size="md" showName />
+                    <SeguradoraBadge nome={cotacao.seguradora} size="xl" showName={false} />
                     <span className={`text-[10px] uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border whitespace-nowrap ${
                       cotacao.status === 'aprovado'
                         ? 'border-status-success/30 text-status-success bg-status-success/10'

@@ -99,7 +99,7 @@ function FieldShell({ label, required, children }) {
   )
 }
 
-function EditField({ label, value, onChange, type = 'text', placeholder, required }) {
+function EditField({ label, value, onChange, type = 'text', placeholder, required, inputMode }) {
   return (
     <FieldShell label={label} required={required}>
       {type === 'date' ? (
@@ -107,6 +107,7 @@ function EditField({ label, value, onChange, type = 'text', placeholder, require
       ) : (
         <input
           type={type}
+          inputMode={inputMode}
           value={value || ''}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
@@ -408,11 +409,6 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
 
   async function executarBusca() {
     const termo = busca.trim()
-    if (!termo && !imobFiltro) {
-      setFichasEncontradas([])
-      return
-    }
-
     setBuscando(true)
     try {
       let aliasesFilter = null
@@ -432,6 +428,10 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     supabase.from('profiles').select('id, nome, avatar_url').order('nome').then(({ data }) => setProfiles(data || []))
   }, [])
 
+  useEffect(() => {
+    executarBusca()
+  }, [imobFiltro])
+
   function selecionarFicha(f) {
     setFichaSelecionada(f)
     // Pré-preenche endereço com CEP da ficha
@@ -441,6 +441,22 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     setPctComissao(f.pct_comissao ?? '')
     setPctDesconto(f.pct_desconto ?? '')
     setParcelamento(f.parcelamento ?? '')
+  }
+
+  function limparFiltro() {
+    setImobFiltro('')
+    setBusca('')
+    setModoBusca('nome')
+    setFichaSelecionada(null)
+    setFichasEncontradas([])
+    setNumeroOrcamento('')
+    setEndereco('')
+    setValorParcela('')
+    setPremioLiquido('')
+    setPctComissao('')
+    setPctDesconto('')
+    setParcelamento('')
+    setEmitidoPor(user?.id || '')
   }
 
   async function criar() {
@@ -494,198 +510,231 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
         </div>
 
         <div className="px-6 py-5 space-y-4">
-          <FieldShell label="Imobiliária">
-            <ImobiliariaSelect value={imobFiltro} onChange={setImobFiltro} className="w-full" />
-          </FieldShell>
-
-          <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr_auto] gap-3">
-            <FieldShell label="Modo de busca">
-              <select
-                value={modoBusca}
-                onChange={e => setModoBusca(e.target.value)}
-                className="input text-sm"
-                disabled={!!fichaSelecionada}
-              >
-                <option value="nome">Nome do locatário</option>
-                <option value="cpf">CPF</option>
-                <option value="cnpj">CNPJ</option>
-              </select>
-            </FieldShell>
-
-            <FieldShell label="Termo de busca">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted" />
-                <input
-                  value={busca}
-                  onChange={e => setBusca(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); executarBusca() } }}
-                  placeholder={
-                    modoBusca === 'cpf'
-                      ? 'Digite o CPF'
-                      : modoBusca === 'cnpj'
-                        ? 'Digite o CNPJ'
-                        : 'Nome do locatário...'
-                  }
-                  className="input pl-9"
-                  disabled={!!fichaSelecionada}
-                />
+          <div className="rounded-2xl border border-brand-accent/15 bg-brand-secondary/5 px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Busca de fichas aprovadas</p>
+                <p className="text-sm text-dark-text">Aqui aparecem fichas, não apólices, de todos os produtos.</p>
               </div>
+              <div className="text-xs text-dark-muted">
+                {buscando ? 'Carregando...' : `${fichasEncontradas.length} ficha${fichasEncontradas.length !== 1 ? 's' : ''}`}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-3">
+            <FieldShell label="Imobiliária">
+              <ImobiliariaSelect value={imobFiltro} onChange={setImobFiltro} className="w-full" />
             </FieldShell>
 
-            <div className="flex items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-[170px_1fr_auto] gap-3">
+              <FieldShell label="Modo de busca">
+                <select
+                  value={modoBusca}
+                  onChange={e => setModoBusca(e.target.value)}
+                  className="input text-sm"
+                  disabled={!!fichaSelecionada}
+                >
+                  <option value="nome">Nome do locatário</option>
+                  <option value="cpf">CPF</option>
+                  <option value="cnpj">CNPJ</option>
+                </select>
+              </FieldShell>
+
+              <FieldShell label="Termo de busca">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted" />
+                  <input
+                    value={busca}
+                    onChange={e => setBusca(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); executarBusca() } }}
+                    placeholder={
+                      modoBusca === 'cpf'
+                        ? 'Digite o CPF'
+                        : modoBusca === 'cnpj'
+                          ? 'Digite o CNPJ'
+                          : 'Nome do locatário...'
+                    }
+                    className="input pl-9"
+                    disabled={!!fichaSelecionada}
+                  />
+                </div>
+              </FieldShell>
+
+              <div className="flex items-end gap-2">
+                <button
+                  type="button"
+                  onClick={executarBusca}
+                  disabled={buscando || !!fichaSelecionada}
+                  className="btn-primary text-sm w-full sm:w-auto"
+                >
+                  {buscando ? 'Pesquisando...' : 'Pesquisar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={limparFiltro}
+                  className="btn-secondary text-sm w-full sm:w-auto"
+                >
+                  Limpar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/20 overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-dark-border/70">
+              <div>
+                <p className="text-sm font-semibold text-dark-text">Fichas aprovadas</p>
+                <p className="text-xs text-dark-muted">Selecione uma ficha para preencher a emissão.</p>
+              </div>
               <button
                 type="button"
                 onClick={executarBusca}
-                disabled={buscando || !!fichaSelecionada}
-                className="btn-primary text-sm w-full sm:w-auto"
+                className="text-xs font-medium text-brand-accent hover:underline"
               >
-                {buscando ? 'Pesquisando...' : 'Pesquisar'}
+                Atualizar resultados
               </button>
+            </div>
+
+            <div className="max-h-72 overflow-y-auto p-3">
+              {buscando ? (
+                <p className="text-xs text-dark-muted text-center py-8">Buscando fichas aprovadas...</p>
+              ) : fichasEncontradas.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-dark-border/80 bg-white/60 px-4 py-8 text-center">
+                  <p className="text-sm font-medium text-dark-text">Nenhuma ficha aprovada encontrada</p>
+                  <p className="mt-1 text-xs text-dark-muted">Tente outra imobiliária ou altere o termo de busca.</p>
+                </div>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  {fichasEncontradas.map(f => (
+                    <button
+                      key={f.id}
+                      onClick={() => selecionarFicha(f)}
+                      className={`rounded-2xl border p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                        fichaSelecionada?.id === f.id
+                          ? 'border-brand-accent bg-brand-secondary/10 shadow-sm'
+                          : 'border-dark-border bg-white hover:border-brand-accent/40'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-dark-text">
+                            {normalizeDisplayText(f.nome_empresa || f.nome_interessado) || '—'}
+                          </p>
+                          <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-dark-muted">
+                            {PRODUTO_LABELS[f.produto] || f.produto || '—'}
+                          </p>
+                        </div>
+                        <span className="badge text-[9px] bg-status-success/15 text-status-success">
+                          Aprovada
+                        </span>
+                      </div>
+                      <div className="mt-3 space-y-1.5">
+                        <p className="text-xs text-dark-muted truncate">{f.imobiliaria || '—'}</p>
+                        <p className="text-[10px] font-mono text-dark-muted">{f.cpf || f.cnpj || '—'}</p>
+                        <p className="text-[10px] text-dark-muted truncate">
+                          {f.celular || f.cep || f.tipo_imovel || 'Sem dados extras'}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
           {fichaSelecionada ? (
-            <>
-              {/* Dados da ficha selecionada */}
-              <div className="rounded-xl bg-status-success/10 border border-status-success/25 overflow-hidden">
-                <div className="flex items-center justify-between px-3 py-2.5 border-b border-status-success/20">
-                  <p className="text-sm font-semibold text-dark-text truncate">
-                    {normalizeDisplayText(fichaSelecionada.nome_empresa || fichaSelecionada.nome_interessado) || '—'}
-                  </p>
-                  <button
-                    onClick={() => { setFichaSelecionada(null); setNumeroOrcamento(''); setEndereco(''); setValorParcela(''); setEmitidoPor(user?.id || '') }}
-                    className="flex-shrink-0 ml-2 text-dark-muted hover:text-dark-text"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="px-3 py-2.5 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                  <div>
-                    <span className="text-dark-muted">Imobiliária</span>
-                    <p className="text-dark-text font-medium truncate">{fichaSelecionada.imobiliaria || '—'}</p>
-                  </div>
-                  <div>
-                    <span className="text-dark-muted">Aluguel</span>
-                    <p className="text-dark-text font-medium">
-                      {fichaSelecionada.valor_aluguel ? `R$ ${fichaSelecionada.valor_aluguel}` : '—'}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-dark-muted">{fichaSelecionada.cnpj ? 'CNPJ' : 'CPF'}</span>
-                    <p className="text-dark-text font-mono">{fichaSelecionada.cnpj || fichaSelecionada.cpf || '—'}</p>
-                  </div>
-                  <div>
-                    <span className="text-dark-muted">Celular</span>
-                    <p className="text-dark-text">{fichaSelecionada.celular || '—'}</p>
-                  </div>
-                  <div>
-                    <span className="text-dark-muted">Tipo de Imóvel</span>
-                    <p className="text-dark-text">{fichaSelecionada.tipo_imovel || '—'}</p>
-                  </div>
-                  <div>
-                    <span className="text-dark-muted">Produto</span>
-                    <p className="text-dark-text">{PRODUTO_LABELS[fichaSelecionada.produto] || fichaSelecionada.produto || '—'}</p>
-                  </div>
-                  <div>
-                    <span className="text-dark-muted">Vigência</span>
-                    <p className="text-dark-text">{fichaSelecionada.vigencia || '—'}</p>
-                  </div>
-                  <div>
-                    <span className="text-dark-muted">Vencimento</span>
-                    <p className="text-dark-text">{fichaSelecionada.vencimento || '—'}</p>
-                  </div>
-                  <div>
-                    <span className="text-dark-muted">Origem</span>
-                    <p className="text-dark-text">{fichaSelecionada.origem_lead || '—'}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-dark-muted">Observações</span>
-                    <p className="text-dark-text line-clamp-2">{fichaSelecionada.observacoes || '—'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Campos adicionais da emissão */}
-              <div className="space-y-3">
-                <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Dados da Emissão</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <EditField
-                    label="N° do Orçamento"
-                    value={numeroOrcamento}
-                    onChange={setNumeroOrcamento}
-                    placeholder="Ex: 12345"
-                  />
-                  <EditField
-                    label="Valor da Parcela (R$)"
-                    type="number"
-                    value={valorParcela}
-                    onChange={setValorParcela}
-                    placeholder="0,00"
-                  />
-                  <div className="col-span-2">
-                    <SelectField
-                      label="Emissor"
-                      value={emitidoPor}
-                      onChange={setEmitidoPor}
-                      options={profiles.map(p => ({ value: p.id, label: p.nome }))}
-                      required
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <EditField
-                      label="Endereço do Imóvel"
-                      value={endereco}
-                      onChange={setEndereco}
-                      placeholder="Rua, número, bairro, cidade"
-                    />
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="max-h-60 overflow-y-auto space-y-1">
-              {buscando ? (
-                <p className="text-xs text-dark-muted text-center py-4">Buscando...</p>
-              ) : fichasEncontradas.length === 0 && (busca.trim() || imobFiltro) ? (
-                <p className="text-xs text-dark-muted text-center py-4">Nenhuma ficha encontrada</p>
-              ) : fichasEncontradas.map(f => (
+            <div className="rounded-xl bg-status-success/10 border border-status-success/25 overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2.5 border-b border-status-success/20">
+                <p className="text-sm font-semibold text-dark-text truncate">
+                  {normalizeDisplayText(fichaSelecionada.nome_empresa || fichaSelecionada.nome_interessado) || '—'}
+                </p>
                 <button
-                  key={f.id}
-                  onClick={() => selecionarFicha(f)}
-                  className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-dark-surface2 transition-colors border border-transparent hover:border-dark-border"
+                  onClick={() => { setFichaSelecionada(null); setNumeroOrcamento(''); setEndereco(''); setValorParcela(''); setEmitidoPor(user?.id || '') }}
+                  className="flex-shrink-0 ml-2 text-dark-muted hover:text-dark-text"
                 >
-                  <div className="flex items-center justify-between gap-2 mb-0.5">
-                    <p className="text-sm font-medium text-dark-text truncate">
-                      {normalizeDisplayText(f.nome_empresa || f.nome_interessado) || '—'}
-                    </p>
-                    {f.status && STATUS_LABELS[f.status] && (
-                      <span className={`badge text-[9px] flex-shrink-0 ${STATUS_LABELS[f.status].color}`}>
-                        {STATUS_LABELS[f.status].label}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] text-dark-muted font-mono">{f.cpf || f.cnpj || '—'}</span>
-                    <span className="text-[10px] text-dark-muted">·</span>
-                    <span className="text-[10px] text-dark-muted truncate">{f.imobiliaria}</span>
-                  </div>
-                  {(f.numero_apolice || f.cep) && (
-                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      {f.numero_apolice && (
-                        <span className="text-[10px] font-mono font-semibold" style={{ color: '#2B5BA8' }}>
-                          Orç: {f.numero_apolice}
-                        </span>
-                      )}
-                      {f.numero_apolice && f.cep && <span className="text-[10px] text-dark-muted">·</span>}
-                      {f.cep && (
-                        <span className="text-[10px] text-dark-muted font-mono">CEP: {f.cep}</span>
-                      )}
-                    </div>
-                  )}
+                  <X className="w-4 h-4" />
                 </button>
-              ))}
+              </div>
+              <div className="px-3 py-2.5 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                <div>
+                  <span className="text-dark-muted">Imobiliária</span>
+                  <p className="text-dark-text font-medium truncate">{fichaSelecionada.imobiliaria || '—'}</p>
+                </div>
+                <div>
+                  <span className="text-dark-muted">Produto</span>
+                  <p className="text-dark-text font-medium">{PRODUTO_LABELS[fichaSelecionada.produto] || fichaSelecionada.produto || '—'}</p>
+                </div>
+                <div>
+                  <span className="text-dark-muted">{fichaSelecionada.cnpj ? 'CNPJ' : 'CPF'}</span>
+                  <p className="text-dark-text font-mono">{fichaSelecionada.cnpj || fichaSelecionada.cpf || '—'}</p>
+                </div>
+                <div>
+                  <span className="text-dark-muted">Aluguel</span>
+                  <p className="text-dark-text font-medium">
+                    {fichaSelecionada.valor_aluguel ? `R$ ${fichaSelecionada.valor_aluguel}` : '—'}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-dark-muted">Celular</span>
+                  <p className="text-dark-text">{fichaSelecionada.celular || '—'}</p>
+                </div>
+                <div>
+                  <span className="text-dark-muted">Tipo de Imóvel</span>
+                  <p className="text-dark-text">{fichaSelecionada.tipo_imovel || '—'}</p>
+                </div>
+                <div>
+                  <span className="text-dark-muted">Vigência</span>
+                  <p className="text-dark-text">{fichaSelecionada.vigencia || '—'}</p>
+                </div>
+                <div>
+                  <span className="text-dark-muted">Vencimento</span>
+                  <p className="text-dark-text">{fichaSelecionada.vencimento || '—'}</p>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-dark-muted">Observações</span>
+                  <p className="text-dark-text line-clamp-2">{fichaSelecionada.observacoes || '—'}</p>
+                </div>
+              </div>
             </div>
-          )}
+          ) : null}
+
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Dados da Emissão</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <EditField
+                label="N° do Orçamento"
+                value={numeroOrcamento}
+                onChange={setNumeroOrcamento}
+                placeholder="Ex: 12345"
+              />
+              <EditField
+                label="Valor da Parcela (R$)"
+                type="text"
+                inputMode="decimal"
+                value={valorParcela}
+                onChange={setValorParcela}
+                placeholder="0,00"
+              />
+              <div className="sm:col-span-2">
+                <SelectField
+                  label="Emissor"
+                  value={emitidoPor}
+                  onChange={setEmitidoPor}
+                  options={profiles.map(p => ({ value: p.id, label: p.nome }))}
+                  required
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <EditField
+                  label="Endereço do Imóvel"
+                  value={endereco}
+                  onChange={setEndereco}
+                  placeholder="Rua, número, bairro, cidade"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-dark-border">
@@ -796,8 +845,8 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
               <div className="input text-sm text-dark-muted bg-dark-surface2/50">{meses > 0 ? `${meses} meses` : '—'}</div>
             </div>
             <EditField label="Parcelamento (vezes)" type="number" value={parcelamento} onChange={setParcelamento} placeholder="Ex: 12" required />
-            <EditField label="Valor da Parcela (R$)" type="number" value={valorParcela} onChange={setValorParcela} placeholder="0,00" required />
-            <EditField label="Prêmio Líquido (R$)" type="number" value={premioLiquido} onChange={setPremioLiquido} placeholder="0,00" required />
+              <EditField label="Valor da Parcela (R$)" type="text" inputMode="decimal" value={valorParcela} onChange={setValorParcela} placeholder="0,00" required />
+              <EditField label="Prêmio Líquido (R$)" type="text" inputMode="decimal" value={premioLiquido} onChange={setPremioLiquido} placeholder="0,00" required />
             <EditField label="% Comissão" type="number" value={pctComissao} onChange={setPctComissao} placeholder="Ex: 10" required />
             <EditField label="% Desconto" type="number" value={pctDesconto} onChange={setPctDesconto} placeholder="Ex: 5" required />
             <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">

@@ -19,6 +19,7 @@ import { useImobiliaria } from '../hooks/useImobiliaria'
 import ImobiliariaSelect from '../components/ImobiliariaSelect'
 import { Select } from '../components/ui/Select'
 import { DatePicker } from '../components/ui/DatePicker'
+import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -313,6 +314,9 @@ function SelectField({ label, value, onChange, options, required }) {
 }
 
 function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
+  const { user } = useAuth()
+  const [profiles, setProfiles] = useState([])
+  const [emitidoPor, setEmitidoPor] = useState(user?.id || '')
   const [proprietarioNome, setProprietarioNome] = useState(normalizeDisplayText(ficha.nome_empresa || ficha.nome_interessado) || '')
   const [proprietarioCel, setProprietarioCel] = useState(ficha.celular || '')
   const [numeroApolice, setNumeroApolice] = useState(ficha.numero_apolice || '')
@@ -338,6 +342,10 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
   const obrigatoriosOK = proprietarioNome.trim() && numeroApolice.trim()
     && inicioVigencia && fimVigencia && parcelamento && valorParcela && formaPagamento && seguradora
     && premioLiquido !== '' && pctComissao !== '' && pctDesconto !== ''
+
+  useEffect(() => {
+    supabase.from('profiles').select('id, nome, avatar_url').order('nome').then(({ data }) => setProfiles(data || []))
+  }, [])
 
   return (
     <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 animate-fade-in">
@@ -395,6 +403,15 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
             <FieldShell label="Seguradora" required>
               <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={ficha.produto} required />
             </FieldShell>
+            <div className="sm:col-span-2">
+              <SelectField
+                label="Emissor"
+                value={emitidoPor}
+                onChange={setEmitidoPor}
+                options={profiles.map(p => ({ value: p.id, label: p.nome }))}
+                required
+              />
+            </div>
           </div>
         </div>
         <div className="px-6 py-4 border-t border-dark-border flex items-center justify-end gap-3">
@@ -415,6 +432,7 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
               pctDesconto,
               formaPagamento,
               seguradora,
+              emitidoPor,
             })}
             disabled={!obrigatoriosOK || salvando}
             className="btn-primary text-sm"
@@ -557,6 +575,7 @@ export default function Relatorio() {
       pctComissao: payload.pctComissao,
       pctDesconto: payload.pctDesconto,
       formaPagamento: payload.formaPagamento,
+      emitidoPor: payload.emitidoPor,
     })
     setSalvandoEmissao(false)
     if (error) {

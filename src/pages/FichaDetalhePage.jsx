@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { fetchFichaDetalhe, editarFicha, deletarFicha, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
+import { fetchFichaDetalhe, editarFicha, deletarFicha, STATUS_LABELS, PRODUTO_LABELS, SEGURADORAS } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useToast } from '../contexts/ToastContext'
@@ -175,6 +175,30 @@ const PROD_COLORS = {
   pessoa_juridica: { bg: 'rgba(139,92,246,0.15)',  text: '#8B5CF6',  border: 'rgba(139,92,246,0.3)' },
 }
 
+const COTACAO_STATUS_OPTIONS = [
+  { value: '', label: 'Sem status' },
+  { value: 'em_analise', label: 'Em análise' },
+  { value: 'aprovado', label: 'Aprovado' },
+  { value: 'recusado', label: 'Recusado' },
+]
+
+function normalizarCotacoes(cotacoes = []) {
+  return SEGURADORAS.map(seguradora => {
+    const atual = Array.isArray(cotacoes)
+      ? cotacoes.find(c => c?.seguradora === seguradora) || {}
+      : {}
+
+    return {
+      seguradora,
+      status: atual.status || '',
+      valor_parcela: atual.valor_parcela ?? '',
+      pct_desconto: atual.pct_desconto ?? '',
+      parcelamento: atual.parcelamento ?? '',
+      pct_comissao: atual.pct_comissao ?? '',
+    }
+  })
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function FichaDetalhePage() {
@@ -213,6 +237,13 @@ export default function FichaDetalhePage() {
     } else {
       toast({ type: 'success', title: 'Campo atualizado' })
     }
+  }
+
+  async function updateCotacao(seguradora, field, value) {
+    const raw = ficha?.raw_data || {}
+    const cotacoes = normalizarCotacoes(raw.cotacoes)
+    const nextCotacoes = cotacoes.map(c => (c.seguradora === seguradora ? { ...c, [field]: value } : c))
+    await updateField('raw_data', { ...raw, cotacoes: nextCotacoes })
   }
 
   async function handleDelete() {
@@ -488,6 +519,74 @@ export default function FichaDetalhePage() {
               </label>
             </div>
           </DataCard>
+
+          <DataCard title="Cotação" bodyClassName="space-y-4">
+            <p className="text-sm text-dark-muted">
+              Preencha as 5 seguradoras manualmente. Se marcar Aprovado em alguma delas, complete os campos dessa seguradora.
+            </p>
+            <div className="grid grid-cols-1 gap-4">
+              {normalizarCotacoes(ficha.raw_data?.cotacoes).map(cotacao => (
+                <div key={cotacao.seguradora} className="rounded-2xl border border-dark-border bg-dark-surface2/40 p-4 space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-dark-text">{cotacao.seguradora}</p>
+                      <p className="text-xs text-dark-muted">Status e valores da cotação</p>
+                    </div>
+                    <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full border ${
+                      cotacao.status === 'aprovado'
+                        ? 'border-status-success/30 text-status-success bg-status-success/10'
+                        : cotacao.status === 'recusado'
+                          ? 'border-status-danger/30 text-status-danger bg-status-danger/10'
+                          : 'border-dark-border text-dark-muted bg-dark-surface'
+                    }`}>
+                      {cotacao.status || 'Sem status'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-dark-muted mb-1">Status</p>
+                      <select
+                        value={cotacao.status}
+                        onChange={e => updateCotacao(cotacao.seguradora, 'status', e.target.value)}
+                        className="input"
+                      >
+                        {COTACAO_STATUS_OPTIONS.map(option => (
+                          <option key={option.value || 'empty'} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <InlineField
+                      label="Valor da Parcela"
+                      value={cotacao.valor_parcela !== '' && cotacao.valor_parcela != null ? String(cotacao.valor_parcela) : ''}
+                      type="number"
+                      onSave={v => updateCotacao(cotacao.seguradora, 'valor_parcela', v ? parseFloat(v) : null)}
+                    />
+                    <InlineField
+                      label="% Desconto"
+                      value={cotacao.pct_desconto !== '' && cotacao.pct_desconto != null ? String(cotacao.pct_desconto) : ''}
+                      type="number"
+                      onSave={v => updateCotacao(cotacao.seguradora, 'pct_desconto', v ? parseFloat(v) : null)}
+                    />
+                    <InlineField
+                      label="Qtd. Parcelas"
+                      value={cotacao.parcelamento !== '' && cotacao.parcelamento != null ? String(cotacao.parcelamento) : ''}
+                      type="number"
+                      onSave={v => updateCotacao(cotacao.seguradora, 'parcelamento', v ? parseInt(v, 10) : null)}
+                    />
+                    <div className="sm:col-span-2">
+                      <InlineField
+                        label="% Comissão"
+                        value={cotacao.pct_comissao !== '' && cotacao.pct_comissao != null ? String(cotacao.pct_comissao) : ''}
+                        type="number"
+                        onSave={v => updateCotacao(cotacao.seguradora, 'pct_comissao', v ? parseFloat(v) : null)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </DataCard>
         </div>
 
         {/* ── Coluna Direita: Timeline + Meta ── */}
@@ -527,24 +626,6 @@ export default function FichaDetalhePage() {
             fichaId={ficha.id}
             cpfCnpj={ficha.cpf || ficha.cnpj}
           />
-
-          {/* Seguradora + Parcela */}
-          <DataCard title="Cotação" bodyClassName="space-y-4">
-            <div>
-              <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wider mb-1.5">Seguradora</p>
-              <SeguradoraSelect
-                value={ficha.seguradora || ''}
-                onChange={v => updateField('seguradora', v || null)}
-                produto={ficha.produto}
-              />
-            </div>
-            <InlineField
-              label="Valor da Parcela"
-              value={ficha.valor_parcela != null ? String(ficha.valor_parcela) : ''}
-              type="number"
-              onSave={v => updateField('valor_parcela', v ? parseFloat(v) : null)}
-            />
-          </DataCard>
         </div>
       </div>
 

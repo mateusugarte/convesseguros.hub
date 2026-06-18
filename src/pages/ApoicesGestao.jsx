@@ -390,6 +390,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
   const [profiles,          setProfiles]          = useState([])
   const [imobFiltro,        setImobFiltro]        = useState('')
   const [busca,             setBusca]             = useState('')
+  const [modoBusca,         setModoBusca]         = useState('nome')
   const [fichasEncontradas, setFichasEncontradas] = useState([])
   const [fichaSelecionada,  setFichaSelecionada]  = useState(null)
   const [buscando,          setBuscando]          = useState(false)
@@ -405,21 +406,27 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
   const [pctDesconto,     setPctDesconto]     = useState('')
   const [parcelamento,    setParcelamento]    = useState('')
 
-  useEffect(() => {
-    if (!busca.trim() && !imobFiltro) { setFichasEncontradas([]); return }
-    const t = setTimeout(async () => {
-      setBuscando(true)
-      let aliasesFilter
+  async function executarBusca() {
+    const termo = busca.trim()
+    if (!termo && !imobFiltro) {
+      setFichasEncontradas([])
+      return
+    }
+
+    setBuscando(true)
+    try {
+      let aliasesFilter = null
       if (imobFiltro) {
-        aliasesFilter = await getAliases(imobFiltro)
-        if (!aliasesFilter.length) aliasesFilter = [imobFiltro]
+        const aliases = await getAliases(imobFiltro)
+        aliasesFilter = aliases.length ? aliases : [imobFiltro]
       }
-      const data = await buscarFichasParaEmissao(busca, aliasesFilter)
+
+      const data = await buscarFichasParaEmissao(termo, aliasesFilter, modoBusca)
       setFichasEncontradas(data)
+    } finally {
       setBuscando(false)
-    }, 300)
-    return () => clearTimeout(t)
-  }, [busca, imobFiltro, getAliases])
+    }
+  }
 
   useEffect(() => {
     supabase.from('profiles').select('id, nome, avatar_url').order('nome').then(({ data }) => setProfiles(data || []))
@@ -491,18 +498,51 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
             <ImobiliariaSelect value={imobFiltro} onChange={setImobFiltro} className="w-full" />
           </FieldShell>
 
-          <FieldShell label="Buscar locatário">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted" />
-              <input
-                value={busca}
-                onChange={e => setBusca(e.target.value)}
-                placeholder="Nome do locatário..."
-                className="input pl-9 pr-20"
+          <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr_auto] gap-3">
+            <FieldShell label="Modo de busca">
+              <select
+                value={modoBusca}
+                onChange={e => setModoBusca(e.target.value)}
+                className="input text-sm"
                 disabled={!!fichaSelecionada}
-              />
+              >
+                <option value="nome">Nome do locatário</option>
+                <option value="cpf">CPF</option>
+                <option value="cnpj">CNPJ</option>
+              </select>
+            </FieldShell>
+
+            <FieldShell label="Termo de busca">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted" />
+                <input
+                  value={busca}
+                  onChange={e => setBusca(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); executarBusca() } }}
+                  placeholder={
+                    modoBusca === 'cpf'
+                      ? 'Digite o CPF'
+                      : modoBusca === 'cnpj'
+                        ? 'Digite o CNPJ'
+                        : 'Nome do locatário...'
+                  }
+                  className="input pl-9"
+                  disabled={!!fichaSelecionada}
+                />
+              </div>
+            </FieldShell>
+
+            <div className="flex items-end">
+              <button
+                type="button"
+                onClick={executarBusca}
+                disabled={buscando || !!fichaSelecionada}
+                className="btn-primary text-sm w-full sm:w-auto"
+              >
+                {buscando ? 'Pesquisando...' : 'Pesquisar'}
+              </button>
             </div>
-          </FieldShell>
+          </div>
 
           {fichaSelecionada ? (
             <>

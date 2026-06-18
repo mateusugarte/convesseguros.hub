@@ -694,6 +694,12 @@ function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, 
             >
               <BarChart2 className="w-3.5 h-3.5" /> Relatório
             </button>
+            <button
+              onClick={onProduto}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" /> Ver todas
+            </button>
             <button onClick={onCreate} className="btn-primary flex items-center gap-2 text-sm">
               <Plus className="w-4 h-4" /> Nova Ficha
             </button>
@@ -736,6 +742,7 @@ export default function Fichas() {
   const [search,         setSearch]         = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [semSeguradora,  setSemSeguradora]  = useState(false)
+  const [sortOrderLista, setSortOrderLista] = useState('recentes')
   const [page,           setPage]           = useState(0)
   const [fichas,         setFichas]         = useState([])
   const [total,          setTotal]          = useState(0)
@@ -842,12 +849,13 @@ export default function Fichas() {
       search: debouncedSearch,
       orcamentistaId: tab === 'passadas_por_mim' ? user?.id : undefined,
       semSeguradora: (tab === 'passadas' || tab === 'passadas_por_mim') ? semSeguradora : false,
+      sortOrder: sortOrderLista,
       page, pageSize: PAGE_SIZE,
     })
     setFichas(data)
     setTotal(count)
     setLoading(false)
-  }, [produto, ano, mes, tab, debouncedSearch, semSeguradora, page, user, view])
+  }, [produto, ano, mes, tab, debouncedSearch, semSeguradora, sortOrderLista, page, user, view])
 
   useEffect(() => { loadFichas() }, [loadFichas])
 
@@ -855,7 +863,7 @@ export default function Fichas() {
 
   function changeProduto(p) {
     setFichas([]); setTotal(0)
-    setView(p === 'todos' ? 'lista' : 'kanban')
+    setView(p === 'todos' ? 'kanban' : view)
     // Reset para mês/ano atual
     setAno(agora.getFullYear())
     setMes(agora.getMonth() + 1)
@@ -929,7 +937,7 @@ export default function Fichas() {
       mesLabel={mesLabel}
       anoLabel={ano}
       onHome={() => { setProduto(null); navigate('/fichas') }}
-      onProduto={() => { setProduto(null); navigate('/fichas') }}
+      onProduto={() => { setProduto('todos'); setView('kanban'); navigate('/fichas/todos') }}
       onCreate={() => setCriar(true)}
       onRelatorio={() => setRelatorio(true)}
       viewToggle={<ViewToggle view={view} onChange={setView} />}
@@ -961,6 +969,28 @@ export default function Fichas() {
             className="mb-4"
             actions={(
               <>
+                <div className="flex items-center gap-1 rounded-2xl border border-dark-border/70 bg-dark-surface2/60 p-0.5">
+                  <button
+                    onClick={() => { setSortOrderLista('recentes'); setPage(0) }}
+                    className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                      sortOrderLista === 'recentes'
+                        ? 'bg-brand-secondary text-white shadow-sm'
+                        : 'text-dark-muted hover:text-dark-text'
+                    }`}
+                  >
+                    Mais recentes
+                  </button>
+                  <button
+                    onClick={() => { setSortOrderLista('antigas'); setPage(0) }}
+                    className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                      sortOrderLista === 'antigas'
+                        ? 'bg-brand-secondary text-white shadow-sm'
+                        : 'text-dark-muted hover:text-dark-text'
+                    }`}
+                  >
+                    Mais antigas
+                  </button>
+                </div>
                 {(tab === 'passadas' || tab === 'passadas_por_mim') && (
                   <button
                     onClick={() => { setSemSeguradora(s => !s); setPage(0) }}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   criarFicha, editarFicha, fetchProfiles,
-  STATUS_LABELS, PRODUTO_LABELS,
+  STATUS_LABELS, PRODUTO_LABELS, SEGURADORAS,
 } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { ArrowLeft, Plus, Save } from 'lucide-react'
@@ -12,6 +12,12 @@ import { Select } from './ui/Select'
 
 const STATUS_OPTIONS  = ['pendente','em_cotacao','em_analise','aprovado','recusado','emitido','cancelado','cpf_invalido','expirada']
 const PRODUTO_OPTIONS = ['residencial_pf','comercial_pf','pessoa_juridica']
+const COTACAO_STATUS_OPTIONS = [
+  { value: '', label: 'Sem status' },
+  { value: 'em_analise', label: 'Em análise' },
+  { value: 'aprovado', label: 'Aprovado' },
+  { value: 'recusado', label: 'Recusado' },
+]
 
 // ── Masks ─────────────────────────────────────────────────────────────────────
 
@@ -40,6 +46,23 @@ function maskPhone(v) {
   return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`
 }
 
+function normalizarCotacoes(cotacoes = []) {
+  return SEGURADORAS.map(seguradora => {
+    const atual = Array.isArray(cotacoes)
+      ? cotacoes.find(c => c?.seguradora === seguradora) || {}
+      : {}
+
+    return {
+      seguradora,
+      status: atual.status || '',
+      valor_parcela: atual.valor_parcela ?? '',
+      pct_desconto: atual.pct_desconto ?? '',
+      parcelamento: atual.parcelamento ?? '',
+      pct_comissao: atual.pct_comissao ?? '',
+    }
+  })
+}
+
 // ── Validation ────────────────────────────────────────────────────────────────
 
 function validarFicha(form) {
@@ -56,12 +79,13 @@ function validarFicha(form) {
   if (!form.produto) return 'Produto é obrigatório'
   if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
     return 'E-mail inválido'
-  if (form.pct_comissao === '' || form.pct_comissao === null || form.pct_comissao === undefined)
-    return 'Percentual de comissão é obrigatório'
-  if (form.pct_desconto === '' || form.pct_desconto === null || form.pct_desconto === undefined)
-    return 'Percentual de desconto é obrigatório'
-  if (!String(form.parcelamento || '').trim())
-    return 'Parcelamento é obrigatório'
+  const cotacoes = normalizarCotacoes(form.cotacoes)
+  const aprovadas = cotacoes.filter(c => c.status === 'aprovado')
+  for (const c of aprovadas) {
+    if (c.valor_parcela === '' || c.pct_desconto === '' || c.parcelamento === '' || c.pct_comissao === '') {
+      return `Preencha os campos da seguradora ${c.seguradora} quando o status for Aprovado`
+    }
+  }
   return null
 }
 
@@ -118,6 +142,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
     pct_comissao:       ficha?.pct_comissao       ?? '',
     pct_desconto:       ficha?.pct_desconto       ?? '',
     parcelamento:       ficha?.parcelamento       ?? '',
+    cotacoes:           normalizarCotacoes(ficha?.raw_data?.cotacoes),
     status:             ficha?.status             ?? 'pendente',
     seguradora:         ficha?.seguradora         ?? '',
     orcamentista_forms: ficha?.orcamentista_forms ?? '',
@@ -155,6 +180,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
       pct_comissao:       ficha?.pct_comissao       ?? '',
       pct_desconto:       ficha?.pct_desconto       ?? '',
       parcelamento:       ficha?.parcelamento       ?? '',
+      cotacoes:           normalizarCotacoes(ficha?.raw_data?.cotacoes),
       status:             ficha?.status             ?? 'pendente',
       seguradora:         ficha?.seguradora         ?? '',
       orcamentista_forms: ficha?.orcamentista_forms ?? '',
@@ -180,8 +206,9 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
 
     setSaving(true)
 
+    const { cotacoes, ...formBase } = form
     const dados = {
-      ...form,
+      ...formBase,
       valor_aluguel:     form.valor_aluguel     || null,
       valor_iptu:        form.valor_iptu        || null,
       valor_condominio:  form.valor_condominio  || null,
@@ -196,6 +223,17 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
       pct_comissao:     form.pct_comissao === '' ? null : form.pct_comissao,
       pct_desconto:     form.pct_desconto === '' ? null : form.pct_desconto,
       parcelamento:     form.parcelamento === '' ? null : Number(form.parcelamento),
+      raw_data: {
+        ...(ficha?.raw_data || {}),
+        cotacoes: cotacoes.map(c => ({
+          seguradora: c.seguradora,
+          status: c.status || '',
+          valor_parcela: c.valor_parcela === '' ? null : Number(c.valor_parcela),
+          pct_desconto: c.pct_desconto === '' ? null : Number(c.pct_desconto),
+          parcelamento: c.parcelamento === '' ? null : Number(c.parcelamento),
+          pct_comissao: c.pct_comissao === '' ? null : Number(c.pct_comissao),
+        })),
+      },
     }
 
     const editResult   = isEdit  ? await editarFicha(ficha.id, dados, user?.id) : null
@@ -367,7 +405,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
           )}
 
           <Sec title="Financeiro da Ficha">
-            <Field label="% Comissão" required>
+            <Field label="% Comissão">
               <input
                 type="number"
                 step="0.01"
@@ -377,7 +415,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                 placeholder="Ex: 10"
               />
             </Field>
-            <Field label="% Desconto" required>
+            <Field label="% Desconto">
               <input
                 type="number"
                 step="0.01"
@@ -387,7 +425,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                 placeholder="Ex: 5"
               />
             </Field>
-            <Field label="Parcelamento" required>
+            <Field label="Parcelamento">
               <input
                 type="number"
                 step="1"
@@ -399,6 +437,97 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
               />
             </Field>
           </Sec>
+
+          <div>
+            <p className="eyebrow text-dark-muted mb-3 pb-2 border-b border-dark-border/30">Cotação</p>
+            <div className="grid grid-cols-1 gap-4">
+              {form.cotacoes.map((cotacao, index) => (
+                <div key={cotacao.seguradora} className="rounded-2xl border border-dark-border bg-dark-surface2/40 p-4 space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-dark-text">{cotacao.seguradora}</p>
+                      <p className="text-xs text-dark-muted">Preenchimento opcional por seguradora</p>
+                    </div>
+                    <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full border ${
+                      cotacao.status === 'aprovado'
+                        ? 'border-status-success/30 text-status-success bg-status-success/10'
+                        : cotacao.status === 'recusado'
+                          ? 'border-status-danger/30 text-status-danger bg-status-danger/10'
+                          : 'border-dark-border text-dark-muted bg-dark-surface'
+                    }`}>
+                      {cotacao.status || 'Sem status'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="eyebrow text-dark-muted block mb-1.5">Status</label>
+                      <Select
+                        value={cotacao.status}
+                        onChange={v => set('cotacoes', form.cotacoes.map((item, itemIndex) => (
+                          itemIndex === index ? { ...item, status: v } : item
+                        )))}
+                        options={COTACAO_STATUS_OPTIONS}
+                      />
+                    </div>
+                    <div>
+                      <label className="eyebrow text-dark-muted block mb-1.5">Valor da parcela</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={cotacao.valor_parcela}
+                        onChange={e => set('cotacoes', form.cotacoes.map((item, itemIndex) => (
+                          itemIndex === index ? { ...item, valor_parcela: e.target.value } : item
+                        )))}
+                        className="input"
+                        placeholder="Ex: 150,00"
+                      />
+                    </div>
+                    <div>
+                      <label className="eyebrow text-dark-muted block mb-1.5">% Desconto</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={cotacao.pct_desconto}
+                        onChange={e => set('cotacoes', form.cotacoes.map((item, itemIndex) => (
+                          itemIndex === index ? { ...item, pct_desconto: e.target.value } : item
+                        )))}
+                        className="input"
+                        placeholder="Ex: 5"
+                      />
+                    </div>
+                    <div>
+                      <label className="eyebrow text-dark-muted block mb-1.5">Qtd. parcelas</label>
+                      <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        value={cotacao.parcelamento}
+                        onChange={e => set('cotacoes', form.cotacoes.map((item, itemIndex) => (
+                          itemIndex === index ? { ...item, parcelamento: e.target.value } : item
+                        )))}
+                        className="input"
+                        placeholder="Ex: 12"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="eyebrow text-dark-muted block mb-1.5">% Comissão</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={cotacao.pct_comissao}
+                        onChange={e => set('cotacoes', form.cotacoes.map((item, itemIndex) => (
+                          itemIndex === index ? { ...item, pct_comissao: e.target.value } : item
+                        )))}
+                        className="input"
+                        placeholder="Ex: 10"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* ── Controle Interno ── */}
           <Sec title="Controle Interno">

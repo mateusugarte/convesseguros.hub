@@ -31,10 +31,35 @@ export default function Configuracoes() {
 
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || '')
+  const [nome, setNome] = useState(profile?.nome || '')
+  const [savingNome, setSavingNome] = useState(false)
 
   useEffect(() => {
     setAvatarPreview(profile?.avatar_url || '')
-  }, [profile?.avatar_url])
+    setNome(profile?.nome || '')
+  }, [profile?.avatar_url, profile?.nome])
+
+  async function handleSaveNome() {
+    if (!user?.id || !nome.trim()) return
+    setSavingNome(true)
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        nome: nome.trim(),
+        orcamentista_label: nome.trim().toUpperCase(),
+      })
+      .eq('id', user.id)
+
+    setSavingNome(false)
+
+    if (error) {
+      toast({ type: 'error', title: 'Erro ao salvar nome', message: error.message })
+      return
+    }
+
+    await refreshProfile?.()
+    toast({ type: 'success', title: 'Nome atualizado' })
+  }
 
   async function handleAvatarUpload(event) {
     const file = event.target.files?.[0]
@@ -100,13 +125,28 @@ export default function Configuracoes() {
 
               <div className="min-w-0 flex-1 space-y-3">
                 <div>
-                  <p className="text-sm font-semibold text-dark-text">{profile?.nome || 'Usuario'}</p>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-dark-muted">Nome</label>
+                  <input
+                    type="text"
+                    value={nome}
+                    onChange={e => setNome(e.target.value)}
+                    className="input"
+                    placeholder="Seu nome"
+                  />
                   <p className="mt-1 text-sm text-dark-muted">
                     {profile?.orcamentista_label || 'Sem rotulo definido'}
                   </p>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSaveNome}
+                    disabled={savingNome || !nome.trim()}
+                    className="btn-primary flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {savingNome ? 'Salvando...' : 'Salvar nome'}
+                  </button>
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}

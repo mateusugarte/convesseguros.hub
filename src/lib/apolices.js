@@ -254,23 +254,27 @@ export async function fetchImobiliariasApolices() {
 
 // ── Busca de fichas para o modal iniciar emissão ──────────────────────────────
 
-export async function buscarFichasParaEmissao(nome, imobiliarias) {
-  const term = nome?.trim()
-  let q = supabase
-    .from('fichas')
-    .select('id, nome_interessado, nome_empresa, cpf, cnpj, produto, imobiliaria, valor_aluguel, celular, cep, tipo_imovel, numero_apolice, vigencia, vencimento, origem_lead, observacoes, pct_comissao, pct_desconto, parcelamento, status, created_at')
-    .order('created_at', { ascending: false })
-    .limit(200)
+function onlyDigits(value) {
+  return String(value || '').replace(/\D/g, '')
+}
 
-  if (term) {
-    q = q.or(`nome_interessado.ilike.%${term}%,nome_empresa.ilike.%${term}%,cpf.ilike.%${term}%,cnpj.ilike.%${term}%`)
-  }
-  if (Array.isArray(imobiliarias) && imobiliarias.length) q = q.in('imobiliaria', imobiliarias)
-  else if (typeof imobiliarias === 'string' && imobiliarias) q = q.eq('imobiliaria', imobiliarias)
+export async function buscarFichasParaEmissao(termo, imobiliarias, modo = 'nome') {
+  const termoNormalizado = modo === 'cpf' || modo === 'cnpj'
+    ? onlyDigits(termo)
+    : termo?.trim()
 
-  const { data, error } = await q
+  if (!termoNormalizado && !(Array.isArray(imobiliarias) ? imobiliarias.length : imobiliarias)) return []
+
+  const { data, error } = await supabase.rpc('buscar_fichas_emissao_fianca', {
+    p_termo: termoNormalizado || null,
+    p_modo: modo || 'nome',
+    p_imobiliarias: Array.isArray(imobiliarias)
+      ? imobiliarias
+      : (typeof imobiliarias === 'string' && imobiliarias ? [imobiliarias] : null),
+  })
+
   if (error) {
-    console.error('buscarFichasParaEmissao:fichas', error)
+    console.error('buscarFichasParaEmissao:rpc', error)
     return []
   }
 
@@ -300,6 +304,7 @@ export async function registrarApoliceDaFicha({
   numeroProposta,
   seguradora,
   dataEmissao,
+  emitidoPor,
   proprietarioNome,
   proprietarioCel,
   endereco,
@@ -329,6 +334,7 @@ export async function registrarApoliceDaFicha({
     numero_apolice: numeroApolice?.trim() || null,
     numero_proposta: numeroProposta?.trim() || null,
     seguradora: seguradora?.trim() || null,
+    emitido_por: emitidoPor || null,
     status_emissao: 'emitida',
     data_emissao: dataEmissao || new Date().toISOString().slice(0, 10),
     endereco: endereco?.trim() || null,

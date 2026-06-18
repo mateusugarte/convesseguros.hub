@@ -4,10 +4,12 @@ import { LockKeyhole, Mail, Sparkles } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Login() {
-  const { user, signIn, loading } = useAuth()
+  const { user, signIn, signUp, loading } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [nome, setNome] = useState('')
+  const [mode, setMode] = useState('login')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -33,6 +35,31 @@ export default function Login() {
     event.preventDefault()
     setSubmitting(true)
     setError('')
+
+    if (mode === 'register') {
+      const trimmedName = nome.trim()
+      if (!trimmedName) {
+        setError('Informe seu nome para criar o perfil')
+        setSubmitting(false)
+        return
+      }
+
+      const result = await signUp({ nome: trimmedName, email: email.trim(), password })
+      if (result?.error) {
+        setError(result.error.message || 'Nao foi possivel criar a conta')
+        setSubmitting(false)
+        return
+      }
+
+      if (!result?.data?.session) {
+        setError('Conta criada. Verifique seu email para confirmar o acesso.')
+        setSubmitting(false)
+        return
+      }
+
+      navigate('/', { replace: true })
+      return
+    }
 
     const authError = await signIn(email.trim(), password)
     if (authError) {
@@ -83,6 +110,19 @@ export default function Login() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === 'register' && (
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-dark-muted">Nome</label>
+                <input
+                  type="text"
+                  value={nome}
+                  onChange={e => setNome(e.target.value)}
+                  className="input"
+                  placeholder="Seu nome completo"
+                  autoComplete="name"
+                />
+              </div>
+            )}
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-dark-muted">Email</label>
               <div className="relative">
@@ -120,7 +160,18 @@ export default function Login() {
             )}
 
             <button type="submit" disabled={submitting} className="btn-primary w-full">
-              {submitting ? 'Entrando...' : 'Entrar'}
+              {submitting ? (mode === 'register' ? 'Criando...' : 'Entrando...') : (mode === 'register' ? 'Criar conta' : 'Entrar')}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMode(mode === 'login' ? 'register' : 'login')
+                setError('')
+              }}
+              className="w-full rounded-2xl border border-dark-border px-4 py-3 text-sm font-medium text-dark-muted transition-colors hover:text-dark-text hover:border-brand-accent/40"
+            >
+              {mode === 'login' ? 'Quero me cadastrar' : 'Já tenho conta'}
             </button>
           </form>
         </section>

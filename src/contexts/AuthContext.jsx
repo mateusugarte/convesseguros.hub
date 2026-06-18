@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { normalizeDisplayText } from '../lib/text'
 
 const AuthContext = createContext(null)
 
@@ -10,6 +11,11 @@ const ADMIN_EMAILS = new Set([
 
 function resolveAdminFlag(email, profileAdmin) {
   return Boolean(profileAdmin) || ADMIN_EMAILS.has(String(email || '').toLowerCase())
+}
+
+function buildOrcamentistaLabel(nome, email) {
+  const base = normalizeDisplayText(nome) || normalizeDisplayText(email?.split('@')?.[0]) || 'ORCAMENTISTA'
+  return base.toUpperCase()
 }
 
 export function AuthProvider({ children }) {
@@ -41,6 +47,31 @@ export function AuthProvider({ children }) {
       .single()
 
     const { data: { user: currentUser } } = await supabase.auth.getUser()
+
+    if (!data && currentUser?.id) {
+      const nomeBase = normalizeDisplayText(currentUser.user_metadata?.nome || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email?.split('@')?.[0]) || 'Usuario'
+      const payload = {
+        id: currentUser.id,
+        nome: nomeBase,
+        orcamentista_label: buildOrcamentistaLabel(nomeBase, currentUser.email),
+        avatar_url: null,
+        areas_atuacao: [],
+        is_admin: resolveAdminFlag(currentUser.email, false),
+      }
+
+      const { data: created, error: createError } = await supabase
+        .from('profiles')
+        .insert(payload)
+        .select('id, nome, orcamentista_label, avatar_url, is_admin')
+        .single()
+
+      if (!createError && created) {
+        setProfile({ ...created, is_admin: resolveAdminFlag(currentUser.email, created.is_admin) })
+        setLoading(false)
+        return
+      }
+    }
+
     setProfile(data ? { ...data, is_admin: resolveAdminFlag(currentUser?.email, data.is_admin) } : data)
     setLoading(false)
   }
@@ -55,12 +86,45 @@ export function AuthProvider({ children }) {
     return error
   }
 
+  async function signUp({ nome, email, password }) {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { nome },
+      },
+    })
+
+    if (error) return { error }
+
+    const signedUser = data?.user
+    if (signedUser?.id) {
+      const nomeBase = normalizeDisplayText(nome) || normalizeDisplayText(email?.split('@')?.[0]) || 'Usuario'
+      const payload = {
+        id: signedUser.id,
+        nome: nomeBase,
+        orcamentista_label: buildOrcamentistaLabel(nomeBase, email),
+        avatar_url: null,
+        areas_atuacao: [],
+        is_admin: resolveAdminFlag(email, false),
+      }
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert(payload, { onConflict: 'id' })
+
+      if (profileError) return { error: profileError }
+    }
+
+    return { data }
+  }
+
   async function signOut() {
     await supabase.auth.signOut()
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

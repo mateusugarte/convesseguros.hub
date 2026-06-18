@@ -304,11 +304,11 @@ export async function fetchContagemAbertaOrcamentista(orcamentistaId) {
 
 // ── Main fichas query ─────────────────────────────────────────────────────────
 
-export async function fetchFichas({ produto, ano, mes, tipo, search, imobiliaria, orcamentistaId, semSeguradora, page = 0, pageSize = 30 }) {
+export async function fetchFichas({ produto, ano, mes, tipo, search, imobiliaria, orcamentistaId, semSeguradora, page = 0, pageSize = 30, sortOrder = 'recentes' }) {
   let q = supabase
     .from('fichas')
     .select('id,created_at,produto,imobiliaria,nome_interessado,nome_empresa,cpf,cnpj,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,raw_data,profiles!orcamentista_id(nome, avatar_url)', { count: 'exact' })
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: sortOrder === 'antigas' })
 
   if (produto && produto !== 'todos') q = q.eq('produto', produto)
 

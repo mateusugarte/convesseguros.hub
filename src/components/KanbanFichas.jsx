@@ -53,6 +53,7 @@ const PRODUTO_COLOR = {
 const PRODUTO_ABBR  = { residencial_pf: 'Res. PF', comercial_pf: 'Com. PF', pessoa_juridica: 'PJ' }
 
 const PERIODOS = [
+  { key: 'todos',  label: 'Todas' },
   { key: 'hoje',   label: 'Hoje' },
   { key: 'semana', label: 'Semana' },
   { key: 'mes',    label: 'Mês' },
@@ -63,6 +64,7 @@ const PERIODOS = [
 
 function getPeriodDates(periodo, customFrom, customTo) {
   const now = new Date()
+  if (periodo === 'todos') return [null, null]
   if (periodo === 'hoje') {
     const s = new Date(now); s.setHours(0, 0, 0, 0)
     return [s.toISOString(), now.toISOString()]

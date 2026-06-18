@@ -16,6 +16,7 @@ import {
   Home, Briefcase, Building, LayoutGrid, RefreshCw,
   ChevronLeft, ChevronRight, Calendar,
   ChevronsLeft, ArrowRight, CheckCircle, Clock,
+  ArrowUpDown,
 } from 'lucide-react'
 import SeguradoraBadge from './SeguradoraBadge'
 import SeguradoraSelect from './SeguradoraSelect'
@@ -58,11 +59,6 @@ const PERIODOS = [
   { key: 'semana', label: 'Semana' },
   { key: 'mes',    label: 'Mês' },
   { key: 'custom', label: 'Personalizado' },
-]
-
-const SORT_ORDER_OPTIONS = [
-  { value: 'recentes', label: 'Mais recentes' },
-  { value: 'antigas', label: 'Mais antigas' },
 ]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -297,6 +293,7 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onTog
 function DroppableColumn({
   column, fichas, userId, onDetalhe, onAssumir, onFinalizar, onToggleRetorno,
   collapsed, onToggleCollapse, newIds, colIndex, resolverNome, resolveImobiliariaInfo,
+  sortOrder, onToggleSortOrder,
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: column.id })
 
@@ -313,21 +310,34 @@ function DroppableColumn({
         className="animate-fade-in flex flex-col flex-shrink-0"
         style={{ width: '52px', ...animStyle }}
       >
-        <button
-          onClick={onToggleCollapse}
-          title={`${column.label} (${fichas.length}) — expandir`}
-          className="flex flex-col items-center gap-1.5 py-3 px-1.5 rounded-t-xl border border-b-0 hover:opacity-80 transition-opacity"
+        <div
+          className="flex flex-col items-center gap-1.5 py-3 px-1.5 rounded-t-xl border border-b-0"
           style={{ background: column.color + '14', borderColor: column.color + '45' }}
         >
-          <div
-            className="w-1.5 h-1.5 rounded-full"
-            style={{ background: column.color, boxShadow: `0 0 5px ${column.color}80` }}
-          />
-          <span className="text-[10px] font-mono font-bold" style={{ color: column.color }}>
-            {fichas.length}
-          </span>
-          <ArrowRight className="w-3 h-3 opacity-40" style={{ color: column.color }} />
-        </button>
+          <button
+            onClick={onToggleCollapse}
+            title={`${column.label} (${fichas.length}) — expandir`}
+            className="flex flex-col items-center gap-1.5 hover:opacity-80 transition-opacity"
+          >
+            <div
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ background: column.color, boxShadow: `0 0 5px ${column.color}80` }}
+            />
+            <span className="text-[10px] font-mono font-bold" style={{ color: column.color }}>
+              {fichas.length}
+            </span>
+            <ArrowRight className="w-3 h-3 opacity-40" style={{ color: column.color }} />
+          </button>
+          <button
+            onClick={onToggleSortOrder}
+            title={`Ordem atual: ${sortOrder === 'recentes' ? 'mais recentes' : 'mais antigas'}`}
+            className="mt-1 flex h-5 items-center gap-1 rounded-full border px-1.5 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors hover:bg-white/40"
+            style={{ color: column.color, borderColor: column.color + '35' }}
+          >
+            <ArrowUpDown className="w-3 h-3" />
+            <span>{sortOrder === 'recentes' ? '↑ recentes' : '↓ antigas'}</span>
+          </button>
+        </div>
         <div
           className="flex-1 rounded-b-xl border transition-colors duration-150"
           style={{
@@ -364,6 +374,17 @@ function DroppableColumn({
           >
             {fichas.length}
           </span>
+          <button
+            onClick={onToggleSortOrder}
+            title={`Ordem atual: ${sortOrder === 'recentes' ? 'mais recentes' : 'mais antigas'}`}
+            className="kanban-col-collapse flex items-center gap-1 px-2"
+            style={{ color: column.color }}
+          >
+            <ArrowUpDown className="w-3.5 h-3.5" />
+            <span className="text-[9px] font-semibold uppercase tracking-[0.08em]">
+              {sortOrder === 'recentes' ? '↑ recentes' : '↓ antigas'}
+            </span>
+          </button>
           <button
             onClick={onToggleCollapse}
             title="Colapsar coluna"
@@ -816,24 +837,6 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
               <DatePicker value={customTo} onChange={v => setCustomTo(v)} />
             </div>
           )}
-          <div className="flex items-center gap-2 rounded-2xl border border-dark-border/70 bg-dark-surface2/60 px-3 py-2">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Ordem de envio</span>
-            <div className="flex items-center gap-1 rounded-xl border border-dark-border/70 bg-dark-surface p-0.5">
-              {SORT_ORDER_OPTIONS.map(option => (
-                <button
-                  key={option.value}
-                  onClick={() => setSortOrder(option.value)}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    sortOrder === option.value
-                      ? 'bg-brand-secondary text-white shadow-sm'
-                      : 'text-dark-muted hover:text-dark-text'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
           <div className="ml-auto flex items-center gap-2 text-xs text-dark-muted">
             <span>{fichas.length} ficha{fichas.length !== 1 ? 's' : ''}</span>
             <button onClick={load} className="flex items-center gap-1 hover:text-dark-text transition-colors">
@@ -918,6 +921,8 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
                     newIds={newIds}
                     colIndex={i}
                     resolverNome={resolverNome}
+                    sortOrder={sortOrder}
+                    onToggleSortOrder={() => setSortOrder(prev => (prev === 'recentes' ? 'antigas' : 'recentes'))}
                   resolveImobiliariaInfo={resolveImobiliariaInfo}
                   />
                 ))}

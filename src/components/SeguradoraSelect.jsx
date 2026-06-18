@@ -45,7 +45,7 @@ export default function SeguradoraSelect({
     value: seg.nome_canonico,
     label: seg.nome_canonico,
     color: segColor(seg.nome_canonico),
-    initials: seg.nome_canonico.split(' ').map(word => word[0]).slice(0, 2).join('').toUpperCase() || '',
+    initials: seg.nome_canonico.split(' ').map(word => word[0]).slice(0, 2).join('').toUpperCase() || '?',
     icon: logoIcon(seg.nome_canonico, seg.logo_url, seg.logo_path),
   }))
 
@@ -63,7 +63,7 @@ export default function SeguradoraSelect({
       className={className}
       clearable={!required && !!value}
       searchable={seguradoras.length > 8}
-      emptyText={produto  'Nenhuma seguradora para este produto' : 'Nenhuma seguradora cadastrada'}
+      emptyText={produto ? 'Nenhuma seguradora para este produto' : 'Nenhuma seguradora cadastrada'}
     />
   )
 }

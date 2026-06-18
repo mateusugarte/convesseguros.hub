@@ -321,7 +321,7 @@ export const leadAdd = async (lead) => {
 
 export const leadUpdate = async (id, changes) => {
   const now = new Date().toISOString()
-  setState(s => ({ ...s, leads: s.leads.map(l => l.id === id  { ...l, ...changes, ultimaAtividade: now } : l) }))
+  setState(s => ({ ...s, leads: s.leads.map(l => l.id === id ? { ...l, ...changes, ultimaAtividade: now } : l) }))
   const { error } = await supabase.from('comercial_leads')
     .update({ ...leadChangesToRow(changes), ultima_atividade: now })
     .eq('id', id)
@@ -330,13 +330,13 @@ export const leadUpdate = async (id, changes) => {
 
 export const leadMover = async (id, coluna, extra = {}) => {
   const now     = new Date().toISOString()
-  const colLabel = PIPELINE_COLS.find(c => c.id === coluna).label || coluna
+  const colLabel = PIPELINE_COLS.find(c => c.id === coluna)?.label || coluna
   const lead    = _state.leads.find(l => l.id === id)
-  const newHist = [...(lead.historico || []), { data: now, desc: `Movido para ${colLabel}` }]
+  const newHist = [...(lead?.historico || []), { data: now, desc: `Movido para ${colLabel}` }]
   setState(s => ({
     ...s,
     leads: s.leads.map(l => l.id === id
-       { ...l, coluna, ultimaAtividade: now, historico: newHist, ...extra }
+      ? { ...l, coluna, ultimaAtividade: now, historico: newHist, ...extra }
       : l
     ),
   }))
@@ -376,7 +376,7 @@ export const eventAdd = async (ev) => {
 }
 
 export const eventUpdate = async (id, changes) => {
-  setState(s => ({ ...s, events: s.events.map(e => e.id === id  { ...e, ...changes } : e) }))
+  setState(s => ({ ...s, events: s.events.map(e => e.id === id ? { ...e, ...changes } : e) }))
   const { error } = await supabase.from('comercial_eventos').update(eventChangesToRow(changes)).eq('id', id)
   if (error) console.error('eventUpdate:', error)
 }
@@ -402,7 +402,7 @@ export const journeyAdd = async (j) => {
 }
 
 export const journeyUpdate = async (id, changes) => {
-  setState(s => ({ ...s, journeys: s.journeys.map(j => j.id === id  { ...j, ...changes } : j) }))
+  setState(s => ({ ...s, journeys: s.journeys.map(j => j.id === id ? { ...j, ...changes } : j) }))
   const row = {}
   if ('nome'        in changes) row.nome        = changes.nome
   if ('descricao'   in changes) row.descricao   = changes.descricao

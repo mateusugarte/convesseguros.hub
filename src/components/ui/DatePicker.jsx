@@ -32,7 +32,7 @@ export function DatePicker({
     if (!value) return null
     try {
       const d = parse(value, 'yyyy-MM-dd', new Date())
-      return isValid(d)  d : null
+      return isValid(d) ? d : null
     } catch {
       return null
     }
@@ -58,7 +58,7 @@ export function DatePicker({
     setPos({
       left, width: dropW,
       ...(flipUp
-         { bottom: window.innerHeight - rect.top + 4, top: 'auto' }
+        ? { bottom: window.innerHeight - rect.top + 4, top: 'auto' }
         : { top: rect.bottom + 4, bottom: 'auto' }),
     })
   }, [])
@@ -78,7 +78,7 @@ export function DatePicker({
   useEffect(() => {
     if (!open) return
     function handler(e) {
-      if (!wrapRef.current.contains(e.target)) setOpen(false)
+      if (!wrapRef.current?.contains(e.target)) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -135,9 +135,9 @@ export function DatePicker({
       <div
         className="dp-trigger w-full"
         style={{
-          opacity: disabled  0.55 : 1,
-          cursor: disabled  'not-allowed' : 'text',
-          ...(open  {
+          opacity: disabled ? 0.55 : 1,
+          cursor: disabled ? 'not-allowed' : 'text',
+          ...(open ? {
             borderColor: 'rgb(var(--brand-primary-rgb) / 0.52)',
             boxShadow: '0 0 0 3px rgb(var(--brand-primary-rgb) / 0.14)',
             background: 'var(--glass-bg-active)',
@@ -153,7 +153,7 @@ export function DatePicker({
         >
           <Calendar
             className="w-3.5 h-3.5 flex-shrink-0"
-            style={{ color: selected  'rgb(var(--brand-primary-rgb))' : 'var(--glass-text-muted)' }}
+            style={{ color: selected ? 'rgb(var(--brand-primary-rgb))' : 'var(--glass-text-muted)' }}
           />
         </button>
 
@@ -169,7 +169,7 @@ export function DatePicker({
           }}
           placeholder={placeholder}
           className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-dark-muted"
-          style={{ color: selected  'var(--glass-text-primary)' : 'var(--glass-text-muted)' }}
+          style={{ color: selected ? 'var(--glass-text-primary)' : 'var(--glass-text-muted)' }}
         />
 
         {clearable && (selected || draft) && !disabled && (
@@ -192,7 +192,7 @@ export function DatePicker({
             zIndex:   9999,
             left:     pos.left,
             width:    pos.width,
-            ...(pos.top !== 'auto'  { top: pos.top } : { bottom: pos.bottom }),
+            ...(pos.top !== 'auto' ? { top: pos.top } : { bottom: pos.bottom }),
           }}
         >
           <div
@@ -260,17 +260,17 @@ export function DatePicker({
                     onClick={() => selectDay(day)}
                     className="dp-day"
                     style={{
-                      opacity:    inMonth  1 : 0.25,
+                      opacity:    inMonth ? 1 : 0.25,
                       background: isSel
-                         'rgb(74,144,217)'
-                        : isNow  'rgba(74,144,217,0.12)' : 'transparent',
-                      color: isSel  '#fff'
-                        : isNow  'rgb(74,144,217)'
+                        ? 'rgb(74,144,217)'
+                        : isNow ? 'rgba(74,144,217,0.12)' : 'transparent',
+                      color: isSel ? '#fff'
+                        : isNow ? 'rgb(74,144,217)'
                         : 'var(--glass-text-primary)',
-                      fontWeight:  isSel  700 : isNow  600 : 400,
+                      fontWeight:  isSel ? 700 : isNow ? 600 : 400,
                       borderRadius: 7,
                       border: isNow && !isSel
-                         '1px solid rgba(74,144,217,0.40)'
+                        ? '1px solid rgba(74,144,217,0.40)'
                         : '1px solid transparent',
                     }}
                   >

@@ -15,7 +15,7 @@ import {
 import { PageHeader, MetricCard, DataCard, EmptyState } from '../../components/ui'
 
 function formatMoney(value) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value ?? 0)
 }
 
 const KPI_META = [
@@ -54,17 +54,17 @@ export default function AutoDashboard() {
   const resumoOperacional = [
     {
       label: 'Cotacoes do mes',
-      value: metrics.cotacoesNoMes || 0,
+      value: metrics?.cotacoesNoMes ?? 0,
       hint: 'entrada comercial ativa',
     },
     {
       label: 'Conversao',
-      value: `${metrics.taxaConversao || 0}%`,
+      value: `${metrics?.taxaConversao ?? 0}%`,
       hint: 'cotações que viraram negocio',
     },
     {
       label: 'Pendentes',
-      value: metrics.renovacoesPendentes || 0,
+      value: metrics?.renovacoesPendentes ?? 0,
       hint: 'itens ainda sem tratativa',
     },
   ]
@@ -80,7 +80,7 @@ export default function AutoDashboard() {
             key={item.key}
             label={item.label}
             value={item.format
-              ? item.format(metrics?.[item.key] || 0)
+              ? item.format(metrics?.[item.key] ?? 0)
               : (metrics?.[item.key] ?? (loading ? '...' : 0))}
             hint={item.hint}
             tone={item.tone}
@@ -110,9 +110,9 @@ export default function AutoDashboard() {
                 sem espalhar a informacao por telas diferentes.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
-                <span className="badge badge-info">{metrics.cotacoesNoMes || 0} cotacoes</span>
-                <span className="badge badge-success">{metrics.taxaConversao || 0}% conversao</span>
-                <span className="badge badge-warning">{metrics.renovacoesPendentes || 0} pendencias</span>
+                <span className="badge badge-info">{metrics?.cotacoesNoMes ?? 0} cotacoes</span>
+                <span className="badge badge-success">{metrics?.taxaConversao ?? 0}% conversao</span>
+                <span className="badge badge-warning">{metrics?.renovacoesPendentes ?? 0} pendencias</span>
               </div>
             </div>
           </div>
@@ -197,7 +197,7 @@ export default function AutoDashboard() {
         title="Tendencia de conversao"
         subtitle="Evolucao mensal da taxa de conversao de cotacoes"
       >
-          {loadingCotacoes ? (
+        {loadingCotacoes ? (
           <div className="flex h-[200px] items-center justify-center text-sm text-dark-muted">
             Carregando tendencia...
           </div>

@@ -54,14 +54,14 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
   const isUrgent = dias !== null && dias >= 10
   const isWarn   = dias !== null && dias >= 5
 
-  const initials    = (lead.nome || '').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+  const initials    = (lead.nome || '?').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
   const avatarColor = AVATAR_COLORS[(lead.nome || '').charCodeAt(0) % AVATAR_COLORS.length]
 
   return (
     <div
       className={`kanban-card group ${ghost ? 'opacity-30' : ''} ${selected ? 'ring-2 ring-brand-accent/25' : ''}`}
       style={{
-        '--kanban-accent': col.color || '#4A90D9',
+        '--kanban-accent': col?.color || '#4A90D9',
         background: 'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(241,245,249,0.92))',
         borderColor: selected ? 'rgba(37, 99, 235, 0.28)' : 'rgba(148, 163, 184, 0.2)',
         boxShadow: selected ? '0 18px 38px rgba(37, 99, 235, 0.12)' : '0 12px 28px rgba(15, 23, 42, 0.08)',
@@ -175,10 +175,10 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
 function DraggableCard({ lead, col, tags, activeId, onClick, selected, onSelect }) {
   const { setNodeRef, attributes, listeners, isDragging } = useDraggable({ id: lead.id })
   return (
-      <div ref={setNodeRef}
-        className={isDragging ? 'opacity-50' : ''}
-        style={{ cursor: isDragging ? 'grabbing' : 'default', touchAction: 'none' }}
-        onClick={e => { if (!isDragging) { e.stopPropagation(); onClick(lead.id) } }}>
+    <div ref={setNodeRef}
+      className={isDragging ? 'opacity-50' : ''}
+      style={{ cursor: isDragging ? 'grabbing' : 'default', touchAction: 'none' }}
+      onClick={e => { if (!isDragging) { e.stopPropagation(); onClick(lead.id) } }}>
       <LeadCard
         lead={lead}
         col={col}
@@ -275,9 +275,9 @@ function ModalRecusa({ lead, onClose, onConfirm }) {
           {MOTIVOS_RECUSA.map(m => (
             <button key={m} onClick={() => setMotivo(m)}
               className={`px-3 py-2.5 rounded-xl text-sm font-medium border transition-all text-left ${
-              motivo === m
-                ? 'border-status-error bg-status-error/10 text-status-error'
-                : 'border-dark-border text-dark-muted hover:border-dark-text hover:text-dark-text'
+                motivo === m
+                  ? 'border-status-error bg-status-error/10 text-status-error'
+                  : 'border-dark-border text-dark-muted hover:border-dark-text hover:text-dark-text'
               }`}>
               {m}
             </button>
@@ -306,7 +306,8 @@ function ModalVenda({ lead, onClose, onConfirm }) {
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
   const valido = form.produto && form.valor && form.comissao && form.dataEmissao
   const comissaoCalc = form.valor && form.comissao
-    ? (parseFloat(form.valor) * parseFloat(form.comissao) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    ? (parseFloat(form.valor) * parseFloat(form.comissao) / 100)
+        .toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : '0,00'
 
   return (
@@ -410,8 +411,8 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
     if (jaNoComercial(f.nome_interessado)) return
     try {
       await leadAdd({ nome: f.nome_interessado, telefone: f.celular || '', tipo: 'PF', origem: 'Seguro Fiança', imobiliaria: f.imobiliaria || '', nomeApolice: f.id, tipoLocatario: 'Locatário', proximaAcao: '', resumo: '', tags: [], apoliceAtiva: false })
-      toast({ type: 'success', title: 'Lead importado!' })
-    } catch { toast({ type: 'error', title: 'Erro ao importar lead' }) }
+      toast?.({ type: 'success', title: 'Lead importado!' })
+    } catch { toast?.({ type: 'error', title: 'Erro ao importar lead' }) }
     onClose()
   }
 
@@ -419,8 +420,8 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
     if (jaNoComercial(a.nome_interessado)) return
     try {
       await leadAdd({ nome: a.nome_interessado, telefone: '', tipo: 'PF', origem: 'Seguro Fiança', imobiliaria: a.imobiliaria || '', nomeApolice: a.numero_apolice || '', tipoLocatario: 'Locatário', proximaAcao: '', resumo: '', tags: [], apoliceAtiva: true })
-      toast.({ type: 'success', title: 'Lead importado!' })
-    } catch { toast.({ type: 'error', title: 'Erro ao importar lead' }) }
+      toast?.({ type: 'success', title: 'Lead importado!' })
+    } catch { toast?.({ type: 'error', title: 'Erro ao importar lead' }) }
     onClose()
   }
 
@@ -428,8 +429,8 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
     if (!form.nome.trim()) return
     try {
       await leadAdd(form)
-      toast.({ type: 'success', title: 'Lead criado!' })
-    } catch { toast.({ type: 'error', title: 'Erro ao criar lead' }) }
+      toast?.({ type: 'success', title: 'Lead criado!' })
+    } catch { toast?.({ type: 'error', title: 'Erro ao criar lead' }) }
     onClose()
   }
 
@@ -498,22 +499,22 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
                   ]}
                 />
               </div>
-              {loadingFichas  (
+              {loadingFichas ? (
                 <div className="text-center py-10 text-dark-muted text-sm">Carregando fichas...</div>
-              ) : fichas.length === 0  (
+              ) : fichas.length === 0 ? (
                 <div className="text-center py-10 text-dark-muted text-sm">Nenhuma ficha encontrada</div>
               ) : (
                 <div className="space-y-1.5 max-h-72 overflow-y-auto">
                   {fichas.map(f => {
                     const importado = jaNoComercial(f.nome_interessado)
                     return (
-                      <div key={f.id} className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${importado  'border-dark-border opacity-50' : 'border-dark-border hover:bg-dark-surface2'}`}>
+                      <div key={f.id} className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${importado ? 'border-dark-border opacity-50' : 'border-dark-border hover:bg-dark-surface2'}`}>
                         <div>
                           <p className="font-semibold text-dark-text text-sm">{f.nome_interessado}</p>
                           <p className="text-xs text-dark-muted">{f.imobiliaria || '—'} · {f.status}</p>
                         </div>
                         {importado
-                           <span className="text-xs text-dark-muted">Já importado</span>
+                          ? <span className="text-xs text-dark-muted">Já importado</span>
                           : <button onClick={() => importFicha(f)} className="btn-primary text-xs px-3 py-1.5">Importar</button>}
                       </div>
                     )
@@ -531,22 +532,22 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
                 <input value={apoliceSearch} onChange={e => setApoliceSearch(e.target.value)}
                   placeholder="Buscar por nome..." className="input pl-8 text-sm py-1.5 w-full" autoFocus />
               </div>
-              {loadingApo  (
+              {loadingApo ? (
                 <div className="text-center py-10 text-dark-muted text-sm">Carregando apólices...</div>
-              ) : apolices.length === 0  (
+              ) : apolices.length === 0 ? (
                 <div className="text-center py-10 text-dark-muted text-sm">Nenhuma apólice encontrada</div>
               ) : (
                 <div className="space-y-1.5 max-h-72 overflow-y-auto">
                   {apolices.map(a => {
                     const importado = jaNoComercial(a.nome_interessado)
                     return (
-                      <div key={a.id} className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${importado  'border-dark-border opacity-50' : 'border-dark-border hover:bg-dark-surface2'}`}>
+                      <div key={a.id} className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${importado ? 'border-dark-border opacity-50' : 'border-dark-border hover:bg-dark-surface2'}`}>
                         <div>
                           <p className="font-semibold text-dark-text text-sm">{a.nome_interessado}</p>
                           <p className="text-xs text-dark-muted">{a.numero_apolice || '—'} · {a.imobiliaria || '—'}</p>
                         </div>
                         {importado
-                           <span className="text-xs text-dark-muted">Já importado</span>
+                          ? <span className="text-xs text-dark-muted">Já importado</span>
                           : <button onClick={() => importApolice(a)} className="btn-primary text-xs px-3 py-1.5">Importar</button>}
                       </div>
                     )
@@ -628,10 +629,10 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
                   <div className="flex flex-wrap gap-1.5 mt-1">
                     {tags.map(t => (
                       <button key={t.id}
-                        onClick={() => set('tags', form.tags.includes(t.id)  form.tags.filter(x => x !== t.id) : [...form.tags, t.id])}
+                        onClick={() => set('tags', form.tags.includes(t.id) ? form.tags.filter(x => x !== t.id) : [...form.tags, t.id])}
                         className="px-2 py-1 rounded text-xs font-medium border transition-all"
                         style={form.tags.includes(t.id)
-                           { borderColor: t.cor, background: t.cor + '22', color: t.cor }
+                          ? { borderColor: t.cor, background: t.cor + '22', color: t.cor }
                           : { borderColor: 'var(--glass-border)', color: 'var(--glass-text-muted)' }}>
                         {t.label}
                       </button>
@@ -658,7 +659,7 @@ function SelectionBar({ count, onMover, onArquivar, onClear }) {
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[400] animate-fade-in pointer-events-none">
       <div className="glass-modal px-4 py-3 flex items-center gap-3 rounded-2xl pointer-events-auto">
-        <span className="text-sm font-bold text-dark-text">{count} selecionado{count > 1  's' : ''}</span>
+        <span className="text-sm font-bold text-dark-text">{count} selecionado{count > 1 ? 's' : ''}</span>
         <div className="w-px h-4 bg-dark-border" />
         <button onClick={onMover} className="btn-secondary text-xs px-3 py-1.5">Mover coluna</button>
         <button onClick={onArquivar}
@@ -687,7 +688,7 @@ export default function Pipeline() {
   const [selectedIds, setSelectedIds] = useState(new Set())
 
   const sensors    = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
-  const activeLead = activeId  state.leads.find(l => l.id === activeId) : null
+  const activeLead = activeId ? state.leads.find(l => l.id === activeId) : null
   const leads      = state.leads || []
 
   const filtered = useMemo(() => {
@@ -832,7 +833,7 @@ export default function Pipeline() {
                   ))}
                 </div>
                 <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
-                  {activeLead  (
+                  {activeLead ? (
                     <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.4))' }}>
                       <LeadCard
                         lead={activeLead}
@@ -883,7 +884,7 @@ export default function Pipeline() {
                   >
                     <p className="truncate text-sm font-semibold text-dark-text">{lead.nome}</p>
                     <p className="mt-1 text-xs text-dark-muted">
-                      {PIPELINE_COLS.find(c => c.id === lead.coluna).label || 'Pipeline'} • {diffDias(lead.ultimaAtividade)}d sem contato
+                      {PIPELINE_COLS.find(c => c.id === lead.coluna)?.label || 'Pipeline'} • {diffDias(lead.ultimaAtividade)}d sem contato
                     </p>
                   </button>
                 ))}

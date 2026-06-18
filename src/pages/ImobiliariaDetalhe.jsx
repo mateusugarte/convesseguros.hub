@@ -149,7 +149,7 @@ export default function ImobiliariaDetalhe() {
   }
 
   async function handleImageUpload(event) {
-    const file = event.target.files[0]
+    const file = event.target.files?.[0]
     if (!file || !imob) return
 
     setUploadingImage(true)
@@ -215,7 +215,7 @@ export default function ImobiliariaDetalhe() {
         description="Detalhe da imobiliária com edição inline, variações de nome e códigos por seguradora."
         actions={
           <button
-          onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/imobiliarias'))}
+            onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/imobiliarias'))}
             className="btn-secondary flex items-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -270,11 +270,11 @@ export default function ImobiliariaDetalhe() {
                 <label className="flex items-center gap-3 cursor-pointer w-fit">
                   <div
                     onClick={() => updateField('ativa', !imob.ativa)}
-                      className={`w-9 h-5 rounded-full transition-colors ${imob.ativa ? 'bg-status-success' : 'bg-dark-border'}`}
+                    className={`w-9 h-5 rounded-full transition-colors ${imob.ativa ? 'bg-status-success' : 'bg-dark-border'}`}
                   >
-                      <div className={`w-3.5 h-3.5 bg-white rounded-full transition-transform m-[3px] ${imob.ativa ? 'translate-x-4' : 'translate-x-0'}`} />
+                    <div className={`w-3.5 h-3.5 bg-white rounded-full transition-transform m-[3px] ${imob.ativa ? 'translate-x-4' : 'translate-x-0'}`} />
                   </div>
-                    <span className="text-sm text-dark-text">{imob.ativa ? 'Ativa' : 'Inativa'}</span>
+                  <span className="text-sm text-dark-text">{imob.ativa ? 'Ativa' : 'Inativa'}</span>
                 </label>
               </div>
             </div>
@@ -355,7 +355,7 @@ export default function ImobiliariaDetalhe() {
               )}
               {codigos.map(c => (
                 <div key={c.id} className="flex items-center justify-between gap-3 py-1.5 border-b border-dark-border/50 last:border-0">
-                  <span className="text-xs text-dark-text">{c.seguradoras.nome_canonico || '—'}</span>
+                  <span className="text-xs text-dark-text">{c.seguradoras?.nome_canonico || '—'}</span>
                   <span className="text-xs font-mono text-dark-muted">{c.codigo}</span>
                   <button
                     onClick={async () => {
@@ -383,7 +383,7 @@ export default function ImobiliariaDetalhe() {
                 <input
                   value={novoCodigo.codigo}
                   onChange={e => setNovoCodigo(p => ({ ...p, codigo: e.target.value }))}
-                  onKeyDown={e => e.key === 'Enter' && novoCodigo.seguradora_id && novoCodigo.codigo.trim() && document.getElementById('btn-add-codigo').click()}
+                  onKeyDown={e => e.key === 'Enter' && novoCodigo.seguradora_id && novoCodigo.codigo.trim() && document.getElementById('btn-add-codigo')?.click()}
                   placeholder="Código"
                   className="input text-sm flex-1"
                 />
@@ -401,7 +401,7 @@ export default function ImobiliariaDetalhe() {
                   disabled={!novoCodigo.seguradora_id || !novoCodigo.codigo.trim() || salvandoCod}
                   className="btn-primary text-sm px-3"
                 >
-                    {salvandoCod ? '...' : 'Add'}
+                  {salvandoCod ? '...' : 'Add'}
                 </button>
               </div>
             </div>

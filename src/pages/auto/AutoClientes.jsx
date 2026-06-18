@@ -7,11 +7,11 @@ import { atualizarApoliceAuto, getAutoCarteiraClientes } from '../../lib/auto'
 import { formatDateBR } from './autoShared'
 
 function clientKey(item) {
-  return item.cliente_id || item.cpf_cliente || item.nome_cliente || item.emissoes_auto.cliente_id || item.id
+  return item.cliente_id || item.cpf_cliente || item.nome_cliente || item.emissoes_auto?.cliente_id || item.id
 }
 
 function clientName(item) {
-  const c = item.emissoes_auto.cotacoes_auto || {}
+  const c = item.emissoes_auto?.cotacoes_auto || {}
   return (
     item.nome_cliente ||
     c.nome_cliente ||
@@ -23,7 +23,7 @@ function clientName(item) {
 }
 
 function clientCpf(item) {
-  const c = item.emissoes_auto.cotacoes_auto || {}
+  const c = item.emissoes_auto?.cotacoes_auto || {}
   return item.cpf_cliente || c.cpf_cliente || ''
 }
 
@@ -65,7 +65,7 @@ function ApoliceEditor({ apolice, onSave, saving }) {
 }
 
 function EmissionRow({ apolice, onSaveNumero, savingId, onOpen }) {
-  const lead = apolice.emissoes_auto.cotacoes_auto || {}
+  const lead = apolice.emissoes_auto?.cotacoes_auto || {}
   const vigInicio = apolice.vigencia_inicio ? formatDateBR(apolice.vigencia_inicio) : 'Sem início'
   const vigFim = apolice.vigencia_fim ? formatDateBR(apolice.vigencia_fim) : 'Sem fim'
   const isSaving = savingId === apolice.id
@@ -97,7 +97,7 @@ function EmissionRow({ apolice, onSaveNumero, savingId, onOpen }) {
           </div>
         </div>
 
-        {apolice.emissoes_auto.cotacao_id && (
+        {apolice.emissoes_auto?.cotacao_id && (
           <button
             type="button"
             onClick={() => onOpen(apolice.emissoes_auto.cotacao_id)}
@@ -186,7 +186,7 @@ export default function AutoClientes() {
   const metrics = useMemo(() => {
     const totalClientes = grouped.length
     const totalApolices = apolices.length
-    const comNumero = apolices.filter(item => Boolean(item.numero_apolice.trim())).length
+    const comNumero = apolices.filter(item => Boolean(item.numero_apolice?.trim())).length
     const multiEmissao = grouped.filter(group => group.items.length > 1).length
     return { totalClientes, totalApolices, comNumero, multiEmissao }
   }, [apolices, grouped])
@@ -199,7 +199,7 @@ export default function AutoClientes() {
     return Array.from(set).sort((a, b) => a.localeCompare(b))
   }, [apolices])
 
-    const savingId = isPending ? variables.id : null
+  const savingId = isPending ? variables?.id : null
 
   return (
     <div className="space-y-6">

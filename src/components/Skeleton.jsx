@@ -60,7 +60,7 @@ export function TableSkeleton({ rows = 7, cols = 5 }) {
       <div className="table-shell-body">
         <div className="space-y-2">
           {Array.from({ length: rows }).map((_, rowIndex) => (
-            <div key={rowIndex} className="grid items-center gap-4 py-3 border-b border-dark-border/40" style={{ gridTemplateColumns: cols > 4  '1fr 1.2fr 1.4fr 0.8fr 0.7fr' : '0.9fr 1.2fr 1.6fr 0.8fr' }}>
+            <div key={rowIndex} className="grid items-center gap-4 py-3 border-b border-dark-border/40" style={{ gridTemplateColumns: cols > 4 ? '1fr 1.2fr 1.4fr 0.8fr 0.7fr' : '0.9fr 1.2fr 1.6fr 0.8fr' }}>
               <Block className="h-3 w-16 rounded-full" />
               <Block className="h-3 w-full rounded-full" />
               <Block className="h-3 w-full rounded-full" />

@@ -17,8 +17,8 @@ import { Avatar } from './ui'
 
 const COLS = [
   { id: 'pendentes',   label: 'Pendentes',      color: '#4c67b0' },
-  { id: 'assumidas',   label: 'Em Cotação',      color: '#3B82F6' },
-  { id: 'em_analise',  label: 'Em Análise',      color: '#4b6cc2' },
+  { id: 'assumidas',   label: 'Em CotaÃ§Ã£o',      color: '#3B82F6' },
+  { id: 'em_analise',  label: 'Em AnÃ¡lise',      color: '#4b6cc2' },
   { id: 'aprovados',   label: 'Aprovados',       color: '#0f766e' },
   { id: 'recusados',   label: 'Recusados',       color: '#EF4444' },
   { id: 'finalizadas', label: 'Finalizadas',     color: '#6B7280' },
@@ -52,7 +52,7 @@ function stringColor(str) {
   return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]
 }
 function initials(n) {
-  return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || ''
+  return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || '?'
 }
 
 function getCol(ficha) {
@@ -71,11 +71,11 @@ function FichaCardContent({
   ficha, userId, onAssumir, onFinalizar, onDetalhe,
   isDragOverlay = false, dragListeners, dragAttributes,
 }) {
-  const ProdIcon = PROD_ICON_MAP[ficha.produto] || FileTextIcon
+  const ProdIcon  = PROD_ICON_MAP[ficha.produto] ?? FileTextIcon
   const prodColor = PROD_COLOR[ficha.produto] || '#6B7280'
   const since     = ficha.created_at
-  const nome      = ficha.profiles.nome
-  const statusInfo = STATUS_LABELS[ficha.status] || { label: ficha.status }
+  const nome      = ficha.profiles?.nome
+  const statusInfo = STATUS_LABELS?.[ficha.status] ?? { label: ficha.status }
   const canAssumir = !ficha.assumida && ficha.status === 'pendente'
   const canFinalizar = ficha.orcamentista_id === userId && ficha.status === 'em_cotacao'
 
@@ -98,7 +98,7 @@ function FichaCardContent({
         </button>
       )}
 
-      <div className="kanban-card-body" onClick={() => !isDragOverlay && onDetalhe(ficha.id)}>
+      <div className="kanban-card-body" onClick={() => !isDragOverlay && onDetalhe?.(ficha.id)}>
         {/* Row 1: produto + tempo */}
         <div className="flex items-center justify-between gap-1 mb-1.5">
           <span
@@ -115,10 +115,10 @@ function FichaCardContent({
 
         {/* Nome */}
         <p className="text-[12.5px] font-semibold text-dark-text leading-snug truncate mb-0.5">
-          {ficha.nome_empresa || ficha.nome_interessado || '—'}
+          {ficha.nome_empresa || ficha.nome_interessado || 'â€”'}
         </p>
 
-        {/* Imobiliária */}
+        {/* ImobiliÃ¡ria */}
         {ficha.imobiliaria && (
           <ImobiliariaIdentity
             nome={ficha.imobiliaria}
@@ -134,11 +134,11 @@ function FichaCardContent({
           </div>
         )}
 
-        {/* Footer: orcamentista + ação */}
+        {/* Footer: orcamentista + aÃ§Ã£o */}
         <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-dark-border/40 mt-auto">
           {nome ? (
             <div className="flex items-center gap-1.5 min-w-0">
-                <Avatar name={nome} src={ficha.profiles?.avatar_url || ''} size="sm" />
+              <Avatar name={nome} src={apolice.profiles?.avatar_url || ''} size="sm" />
               <span className="text-[10px] text-dark-muted font-medium truncate max-w-[72px]">
                 {nome.split(' ')[0]}
               </span>
@@ -150,7 +150,7 @@ function FichaCardContent({
             {canAssumir && (
               <button
                 onPointerDown={e => e.stopPropagation()}
-                onClick={e => { e.stopPropagation(); onAssumir(ficha.id) }}
+                onClick={e => { e.stopPropagation(); onAssumir?.(ficha.id) }}
                 className="kanban-action-btn kanban-action-assume"
               >
                 Assumir
@@ -159,7 +159,7 @@ function FichaCardContent({
             {canFinalizar && (
               <button
                 onPointerDown={e => e.stopPropagation()}
-                onClick={e => { e.stopPropagation(); onFinalizar(ficha) }}
+                onClick={e => { e.stopPropagation(); onFinalizar?.(ficha) }}
                 className="kanban-action-btn kanban-action-finish"
               >
                 Finalizar
@@ -323,16 +323,16 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
   const grouped = {}
   for (const col of COLS) grouped[col.id] = fichas.filter(f => getCol(f) === col.id)
 
-  const isColDrag = activeId.startsWith('col::')
+  const isColDrag  = activeId?.startsWith?.('col::')
   const activeColId = isColDrag ? activeId.replace('col::', '') : null
-  const activeCol = activeColId ? COLS.find(c => c.id === activeColId) : null
+  const activeCol   = activeColId ? COLS.find(c => c.id === activeColId) : null
   const activeFicha = !isColDrag && activeId ? fichas.find(f => f.id === activeId) : null
 
   async function handleDragEnd({ active, over }) {
     setActiveId(null)
     if (!over) return
 
-    if (active.data.current.type === 'column') {
+    if (active.data.current?.type === 'column') {
       const fromId = active.data.current.colId
       const toId   = over.id
       if (fromId !== toId && COLS.some(c => c.id === toId)) {
@@ -353,12 +353,12 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
     const dst = over.id
     if (src === dst) return
     if (src === 'pendentes' && dst === 'assumidas') {
-      onAssumir(ficha.id)
-    } else if (src === 'assumidas' && PASSADAS_COLS.includes(dst) && ficha.orcamentista_id === user.id) {
-      onFinalizar(ficha)
+      onAssumir?.(ficha.id)
+    } else if (src === 'assumidas' && PASSADAS_COLS.includes(dst) && ficha.orcamentista_id === user?.id) {
+      onFinalizar?.(ficha)
     } else if (PASSADAS_COLS.includes(src) && dst === 'enviadas') {
       await marcarRetornoEnviado(ficha.id)
-      onRefresh()
+      onRefresh?.()
     }
   }
 
@@ -388,8 +388,8 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
               <DroppableColumn
                 key={col.id}
                 col={col}
-                fichas={grouped[col.id]  []}
-                userId={user.id}
+                fichas={grouped[col.id] ?? []}
+                userId={user?.id}
                 onAssumir={onAssumir}
                 onFinalizar={onFinalizar}
                 onDetalhe={onDetalhe}
@@ -403,7 +403,7 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
       </div>
 
       <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
-        {activeCol  (
+        {activeCol ? (
           <div
             className="kanban-col flex flex-col"
             style={{ transform: 'rotate(2deg)', opacity: 0.9, filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.4))' }}
@@ -414,20 +414,20 @@ export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar,
                 <span className="text-[11px] font-bold" style={{ color: activeCol.color }}>{activeCol.label}</span>
               </div>
               <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md" style={{ background: activeCol.color + '30', color: activeCol.color }}>
-                {grouped[activeColId]?.length || 0}
+                {grouped[activeColId]?.length ?? 0}
               </span>
             </div>
             <div className="p-1.5 rounded-b-xl border border-t-0 min-h-[60px]" style={{ background: activeCol.color + '06', borderColor: activeCol.color + '30' }}>
               {(grouped[activeColId] || []).slice(0, 3).map(f => (
                 <div key={f.id} className="text-[10px] text-dark-muted truncate py-1 px-2 rounded-lg mb-1" style={{ background: 'rgb(var(--color-surface2) / 0.6)' }}>
-                   {f.nome_empresa || f.nome_interessado || '—'}
+                  {f.nome_empresa || f.nome_interessado || 'â€”'}
                 </div>
               ))}
             </div>
           </div>
-        ) : activeFicha  (
-          <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', '--kanban-accent': PROD_COLOR[activeFicha.produto] || '#000079' }}>
-            <FichaCardContent ficha={activeFicha} userId={user.id} isDragOverlay />
+        ) : activeFicha ? (
+          <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', '--kanban-accent': PROD_COLOR[activeFicha?.produto] || '#000079' }}>
+            <FichaCardContent ficha={activeFicha} userId={user?.id} isDragOverlay />
           </div>
         ) : null}
       </DragOverlay>

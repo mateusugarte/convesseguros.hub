@@ -51,15 +51,15 @@ export function Modal({
 
   return createPortal(
     <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 400 }}>
-      <div className="modal-backdrop" style={{ opacity: visible  1 : 0 }} onClick={handleClose} />
+      <div className="modal-backdrop" style={{ opacity: visible ? 1 : 0 }} onClick={handleClose} />
 
       <div
         className={`relative glass-modal w-full ${WIDTHS[maxWidth] || maxWidth} max-h-[90vh] flex flex-col`}
         style={{
-          opacity: visible  1 : 0,
-          transform: visible  'scale(1) translateY(0)' : 'scale(0.96) translateY(20px)',
+          opacity: visible ? 1 : 0,
+          transform: visible ? 'scale(1) translateY(0)' : 'scale(0.96) translateY(20px)',
           transition: visible
-             'opacity 280ms cubic-bezier(0.16,1,0.3,1), transform 280ms cubic-bezier(0.16,1,0.3,1)'
+            ? 'opacity 280ms cubic-bezier(0.16,1,0.3,1), transform 280ms cubic-bezier(0.16,1,0.3,1)'
             : 'opacity 180ms ease-in, transform 180ms ease-in',
         }}
       >

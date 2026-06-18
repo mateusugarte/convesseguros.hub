@@ -62,7 +62,7 @@ function PrivateRoute({ children }) {
 function AdminRoute({ children }) {
   const { profile, loading } = useAuth()
   if (loading) return <PageLoader />
-  if (!profile.is_admin) return <Navigate to="/" replace />
+  if (!profile?.is_admin) return <Navigate to="/" replace />
   return children
 }
 

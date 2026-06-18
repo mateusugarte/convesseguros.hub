@@ -17,8 +17,8 @@ const STATUS_FINAIS = [
 export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSuccess }) {
   const { user } = useAuth()
   const [status,    setStatus]    = useState(defaultStatus || '')
-  const [seguradora,setSeguradora]= useState(ficha.seguradora  '')
-  const [retorno,   setRetorno]   = useState(ficha.retorno_enviado  false)
+  const [seguradora,setSeguradora]= useState(ficha?.seguradora ?? '')
+  const [retorno,   setRetorno]   = useState(ficha?.retorno_enviado ?? false)
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState('')
 
@@ -30,7 +30,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
       status,
       seguradora: seguradora.trim() || null,
       retorno_enviado: retorno,
-      userId: user.id,
+      userId: user?.id,
     })
     if (err) {
       console.error('Erro ao finalizar ficha:', err)
@@ -41,7 +41,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
 
   return (
     <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 animate-fade-in">
-      <div className="modal-backdrop" onClick={!loading  onClose : undefined} />
+      <div className="modal-backdrop" onClick={!loading ? onClose : undefined} />
       <div className="relative glass-modal rounded-[24px] overflow-hidden w-full max-w-md max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="modal-shell-header flex items-center gap-3 px-6 py-4 border-b border-dark-border/60">
@@ -53,7 +53,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
           </div>
           <div>
             <h2 className="font-bold text-dark-text">Finalizar Ficha</h2>
-            {ficha.nome_interessado && (
+            {ficha?.nome_interessado && (
               <p className="text-xs text-dark-muted">{ficha.nome_interessado}</p>
             )}
           </div>
@@ -72,7 +72,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
                   onClick={() => setStatus(s.value)}
                   className={`px-3 py-3 rounded-xl border text-sm font-medium transition-all ${
                     status === s.value
-                       'border-brand-accent bg-brand-accent/10 text-dark-text'
+                      ? 'border-brand-accent bg-brand-accent/10 text-dark-text'
                       : 'border-dark-border bg-dark-surface2 text-dark-muted hover:border-dark-muted'
                   }`}
                 >
@@ -85,7 +85,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
           {/* Seguradora */}
           <div>
             <label className="block text-xs font-medium text-dark-muted mb-1.5 uppercase tracking-wider">Seguradora</label>
-            <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={ficha.produto} />
+            <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={ficha?.produto} />
           </div>
 
           {/* Retorno */}
@@ -109,7 +109,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
         <div className="modal-shell-footer flex gap-3 px-6 pb-5 pt-4 border-t border-dark-border/60">
           <button onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
           <button onClick={handleFinalizar} disabled={loading || !status} className="btn-primary flex-1">
-            {loading  'Salvando...' : 'Finalizar Ficha'}
+            {loading ? 'Salvando...' : 'Finalizar Ficha'}
           </button>
         </div>
       </div>

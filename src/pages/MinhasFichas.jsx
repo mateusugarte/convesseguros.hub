@@ -8,7 +8,7 @@ import ModalFicha from '../components/ModalFicha'
 import DetalhesFicha from '../components/DetalhesFicha'
 import { format, parseISO, startOfDay, startOfWeek, startOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Clock, CheckCircle2, FileText, TrendingUp, ArrowLeftRight, ListFilter } from 'lucide-react'
+import { Clock, CheckCircle2, FileText, TrendingUp, LayoutGrid, ListFilter, ArrowLeftRight } from 'lucide-react'
 import { Select } from '../components/ui/Select'
 import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../components/ui'
 import { TableSkeleton } from '../components/Skeleton'
@@ -58,7 +58,7 @@ function stringColor(str) {
 }
 
 function initials(n) {
-  return (n || '').split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase() || ''
+  return (n || '').split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase() || '?'
 }
 
 function TimeBadge({ since }) {

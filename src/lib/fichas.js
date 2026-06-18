@@ -115,7 +115,7 @@ export async function fetchFichasPorDia(dias = 30) {
   for (let i = dias; i >= 0; i--) {
     const d = new Date(); d.setDate(d.getDate() - i)
     const key = d.toISOString().slice(0, 10)
-    resultado.push({ dia: key, total: contagem[key].total || 0, aprovadas: contagem[key].aprovadas || 0, recusadas: contagem[key].recusadas || 0 })
+    resultado.push({ dia: key, total: contagem[key]?.total || 0, aprovadas: contagem[key]?.aprovadas || 0, recusadas: contagem[key]?.recusadas || 0 })
   }
   return resultado
 }
@@ -312,7 +312,7 @@ export async function fetchFichas({ produto, ano, mes, tipo, search, imobiliaria
 
   if (produto && produto !== 'todos') q = q.eq('produto', produto)
 
-  const term = search.trim()
+  const term = search?.trim()
   if (term) {
     // Busca em todos os campos relevantes; sem filtro de data para encontrar em qualquer período
     q = q.or(
@@ -386,7 +386,7 @@ export async function fetchFichasKanban({ produto, dateFrom, dateTo }) {
   return fetchAllRows(() => {
     let q = supabase
       .from('fichas')
-      .select('id,created_at,finalizada_em,produto,imobiliaria,nome_interessado,nome_empresa,raw_data,cpf,cnpj,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,profiles!orcamentista_id(nome, avatar_url)')
+      .select('id,created_at,finalizada_em,produto,imobiliaria,nome_interessado,cpf,cnpj,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,profiles!orcamentista_id(nome, avatar_url)')
       .order('created_at', { ascending: false })
     if (produto && produto !== 'todos') q = q.eq('produto', produto)
     if (dateFrom) q = q.gte('created_at', dateFrom)
@@ -524,7 +524,7 @@ export async function editarFicha(id, dados, userId) {
   let payload = { ...dados }
   if (userId) {
     const { data: cur } = await supabase.from('fichas').select('raw_data').eq('id', id).single()
-    const raw = cur.raw_data || {}
+    const raw = cur?.raw_data || {}
     const hist = Array.isArray(raw._edit_history) ? raw._edit_history : []
     hist.push({ editado_em: new Date().toISOString(), editado_por: userId })
     payload.raw_data = { ...raw, _edit_history: hist }

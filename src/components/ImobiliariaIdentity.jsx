@@ -1,4 +1,4 @@
-﻿import { Building2 } from 'lucide-react'
+import { Building2 } from 'lucide-react'
 import { getEntityImageUrl } from '../lib/entityMedia'
 import { normalizeDisplayText } from '../lib/text'
 

@@ -41,7 +41,7 @@ export default function EntityDocumentsSection({ tipoEntidade, entidadeId, title
   }, [tipoEntidade, entidadeId])
 
   async function handleUpload(event) {
-    const file = event.target.files.[0]
+    const file = event.target.files?.[0]
     if (!file) return
 
     if (file.size > 15 * 1024 * 1024) {
@@ -56,7 +56,7 @@ export default function EntityDocumentsSection({ tipoEntidade, entidadeId, title
       tipoEntidade,
       entidadeId,
       titulo: titulo.trim() || file.name,
-      userId: user.id,
+      userId: user?.id,
     })
     setUploading(false)
 
@@ -72,7 +72,7 @@ export default function EntityDocumentsSection({ tipoEntidade, entidadeId, title
   }
 
   async function handleDelete(doc) {
-    if (!confirm(`Excluir "${doc.titulo}"`)) return
+    if (!confirm(`Excluir "${doc.titulo}"?`)) return
     const error = await deleteEntityDocument(doc.id)
     if (error) {
       toast({ type: 'error', title: 'Erro ao excluir documento', message: error.message })
@@ -92,9 +92,9 @@ export default function EntityDocumentsSection({ tipoEntidade, entidadeId, title
             <span className="text-[10px] font-mono text-dark-muted">({docs.length})</span>
           )}
         </div>
-        <label className={`btn-secondary text-xs cursor-pointer flex items-center gap-1.5 px-3 py-1.5 ${uploading  'opacity-50 pointer-events-none' : ''}`}>
+        <label className={`btn-secondary text-xs cursor-pointer flex items-center gap-1.5 px-3 py-1.5 ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
           <Upload className="w-3.5 h-3.5" />
-          {uploading  'Enviando...' : 'Anexar arquivo'}
+          {uploading ? 'Enviando...' : 'Anexar arquivo'}
           <input
             ref={inputRef}
             type="file"
@@ -117,9 +117,9 @@ export default function EntityDocumentsSection({ tipoEntidade, entidadeId, title
         />
       </div>
 
-      {loading  (
+      {loading ? (
         <p className="text-xs text-dark-muted text-center py-3">Carregando...</p>
-      ) : docs.length === 0  (
+      ) : docs.length === 0 ? (
         <p className="text-xs text-dark-muted/40 text-center py-4">Nenhum documento anexado</p>
       ) : (
         <div className="space-y-2">
@@ -132,8 +132,8 @@ export default function EntityDocumentsSection({ tipoEntidade, entidadeId, title
                 <p className="text-xs font-medium text-dark-text truncate">{doc.titulo}</p>
                 <p className="text-[10px] text-dark-muted truncate">
                   {doc.nome_arquivo}
-                  {doc.tamanho_bytes  ` · ${formatBytes(doc.tamanho_bytes)}` : ''}
-                  {doc.profiles.nome  ` · ${doc.profiles.nome.split(' ')[0]}` : ''}
+                  {doc.tamanho_bytes ? ` · ${formatBytes(doc.tamanho_bytes)}` : ''}
+                  {doc.profiles?.nome ? ` · ${doc.profiles.nome.split(' ')[0]}` : ''}
                   {` · ${format(parseISO(doc.created_at), 'dd/MM/yy', { locale: ptBR })}`}
                 </p>
               </div>

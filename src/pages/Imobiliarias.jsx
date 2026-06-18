@@ -30,13 +30,13 @@ function ImobiliariaSelector({ mapeadas }) {
   }, [busca])
 
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current.focus(), 50)
+    if (open) setTimeout(() => inputRef.current?.focus(), 50)
     else { setBusca(''); setDebounced('') }
   }, [open])
 
   useEffect(() => {
     if (!open) return
-    function h(e) { if (!wrapRef.current.contains(e.target)) setOpen(false) }
+    function h(e) { if (!wrapRef.current?.contains(e.target)) setOpen(false) }
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [open])
@@ -51,7 +51,7 @@ function ImobiliariaSelector({ mapeadas }) {
   }
 
   function initials(n) {
-    return (n || '').split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase() || ''
+    return (n || '').split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase() || '?'
   }
   function avatarColor(n) {
     const c = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#2B5BA8']
@@ -98,7 +98,7 @@ function ImobiliariaSelector({ mapeadas }) {
           <div className="max-h-64 overflow-y-auto">
             {filtered.length === 0 ? (
               <p className="text-xs text-dark-muted text-center py-5">Nenhuma encontrada</p>
-              ) : filtered.map(imob => {
+            ) : filtered.map(imob => {
               const color = avatarColor(imob.nome_canonico)
               return (
                 <button
@@ -106,7 +106,7 @@ function ImobiliariaSelector({ mapeadas }) {
                   onClick={() => navegar(imob.id)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/55 transition-all text-left"
                 >
-                {getEntityImageUrl(imob.imagem_path, imob.imagem_url) ? (
+                  {getEntityImageUrl(imob.imagem_path, imob.imagem_url) ? (
                     <div className="w-8 h-8 rounded-lg overflow-hidden border border-dark-border/30 bg-white flex items-center justify-center flex-shrink-0">
                       <img src={getEntityImageUrl(imob.imagem_path, imob.imagem_url)} alt={imob.nome_canonico} className="w-full h-full object-cover" />
                     </div>
@@ -146,18 +146,18 @@ function ImobiliariaSelector({ mapeadas }) {
 // ── Modal de Agrupamento / Criação / Edição ───────────────────────────────────
 
 function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toast }) {
-  const ehEditar  = modal.mode === 'editar'
-  const imobAtual = modal.imob
+  const ehEditar  = modal?.mode === 'editar'
+  const imobAtual = modal?.imob
 
   // modo: 'nova' | 'existente' — só relevante quando criando (não editando)
   const [modo,          setModo]          = useState('nova')
   const [imobSelecionada, setImobSelecionada] = useState('')
   const [buscaExistente, setBuscaExistente] = useState('')
 
-  const [nomeCanonoco,  setNomeCanonoco]  = useState(imobAtual.nome_canonico || '')
-  const [aliasesModal,  setAliasesModal]  = useState(modal.variacoes || imobAtual.aliases || [])
+  const [nomeCanonoco,  setNomeCanonoco]  = useState(imobAtual?.nome_canonico || '')
+  const [aliasesModal,  setAliasesModal]  = useState(modal?.variacoes || imobAtual?.aliases || [])
   const [novoAlias,     setNovoAlias]     = useState('')
-  const [imagemPreview, setImagemPreview] = useState(getEntityImageUrl(imobAtual.imagem_path, imobAtual.imagem_url || ''))
+  const [imagemPreview, setImagemPreview] = useState(getEntityImageUrl(imobAtual?.imagem_path, imobAtual?.imagem_url || ''))
   const [imagemPreviewError, setImagemPreviewError] = useState(false)
   const [imagemFile,    setImagemFile]    = useState(null)
   const [salvando,      setSalvando]      = useState(false)
@@ -180,7 +180,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
   }
 
   function handleImagem(event) {
-      const file = event.target.files[0]
+    const file = event.target.files?.[0]
     if (!file) return
     setImagemFile(file)
     setImagemPreviewError(false)
@@ -252,7 +252,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
           file: imagemFile,
           entityType: 'imobiliaria',
           entityId: imobId,
-          previousPath: imobAtual.imagem_path || null,
+          previousPath: imobAtual?.imagem_path || null,
         })
         if (uploaded.error) throw uploaded.error
 
@@ -273,7 +273,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
     }
   }
 
-  const nomeExistenteSelecionado = mapeadas.find(m => m.id === imobSelecionada).nome_canonico
+  const nomeExistenteSelecionado = mapeadas.find(m => m.id === imobSelecionada)?.nome_canonico
 
   const podeSalvar = ehEditar
     ? nomeCanonoco.trim()
@@ -291,7 +291,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
             <ArrowLeft className="w-4 h-4" />
           </button>
           <h2 className="font-bold text-dark-text text-base">
-              {ehEditar ? 'Editar Imobiliária' : 'Configurar Imobiliária'}
+            {ehEditar ? 'Editar Imobiliária' : 'Configurar Imobiliária'}
           </h2>
         </div>
 
@@ -303,9 +303,9 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
               <button
                 onClick={() => setModo('nova')}
                 className={`flex-1 py-2 transition-colors ${
-                    modo === 'nova'
-                      ? 'bg-brand-accent text-white'
-                      : 'text-dark-muted hover:text-dark-text'
+                  modo === 'nova'
+                    ? 'bg-brand-accent text-white'
+                    : 'text-dark-muted hover:text-dark-text'
                 }`}
               >
                 Criar nova imobiliária
@@ -313,9 +313,9 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
               <button
                 onClick={() => setModo('existente')}
                 className={`flex-1 py-2 transition-colors ${
-                    modo === 'existente'
-                      ? 'bg-brand-accent text-white'
-                      : 'text-dark-muted hover:text-dark-text'
+                  modo === 'existente'
+                    ? 'bg-brand-accent text-white'
+                    : 'text-dark-muted hover:text-dark-text'
                 }`}
               >
                 Incluir em existente
@@ -324,7 +324,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
           )}
 
           {/* Seleção de imobiliária existente */}
-          {!ehEditar && modo === 'existente'  (
+          {!ehEditar && modo === 'existente' ? (
             <div>
               <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
                 Selecionar imobiliária *
@@ -349,9 +349,9 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
                       key={m.id}
                       onClick={() => setImobSelecionada(m.id)}
                       className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors ${
-                          imobSelecionada === m.id
-                            ? 'bg-brand-accent/10 text-brand-accent'
-                            : 'text-dark-text hover:bg-dark-surface2/60'
+                        imobSelecionada === m.id
+                          ? 'bg-brand-accent/10 text-brand-accent'
+                          : 'text-dark-text hover:bg-dark-surface2/60'
                       }`}
                     >
                       <span className="text-sm font-medium truncate">{m.nome_canonico}</span>
@@ -395,7 +395,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
                 <div className="flex items-center gap-4 flex-wrap">
                   <div className="space-y-1">
                     <div className="w-20 h-20 rounded-2xl border border-dark-border bg-white/70 overflow-hidden flex items-center justify-center">
-                    {imagemPreview  (
+                    {imagemPreview ? (
                       <img
                         src={imagemPreview}
                         alt={nomeCanonoco || 'Imobiliária'}
@@ -429,7 +429,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
               Variações mapeadas
             </label>
 
-            {aliasesModal.length === 0  (
+            {aliasesModal.length === 0 ? (
               <p className="text-xs text-dark-muted italic">Nenhuma variação adicionada</p>
             ) : (
               <div className="rounded-xl border border-dark-border divide-y divide-dark-border overflow-hidden mb-2">
@@ -439,7 +439,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
                       <span className="font-mono text-xs text-dark-text truncate">{v}</span>
                       {contagemPorNome[v] !== undefined && (
                         <span className="text-[10px] text-dark-muted flex-shrink-0">
-                          ({contagemPorNome[v]} ficha{contagemPorNome[v] !== 1  's' : ''})
+                          ({contagemPorNome[v]} ficha{contagemPorNome[v] !== 1 ? 's' : ''})
                         </span>
                       )}
                     </div>
@@ -473,9 +473,9 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
               <p className="text-xs text-dark-muted mt-2">
                 Total:{' '}
                 <span className="font-semibold text-dark-text">{totalFichas}</span>{' '}
-                ficha{totalFichas !== 1  's' : ''} serão exibidas como{' '}
+                ficha{totalFichas !== 1 ? 's' : ''} serão exibidas como{' '}
                 <span className="text-brand-accent">
-                  "{modo === 'existente'  (nomeExistenteSelecionado || '...') : (nomeCanonoco || '...')}"
+                  "{modo === 'existente' ? (nomeExistenteSelecionado || '...') : (nomeCanonoco || '...')}"
                 </span>
               </p>
             )}
@@ -490,7 +490,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
             disabled={!podeSalvar || salvando}
             className="btn-primary text-sm"
           >
-            {salvando  'Salvando...' : 'Salvar Configuração'}
+            {salvando ? 'Salvando...' : 'Salvar Configuração'}
           </button>
         </div>
       </div>
@@ -519,13 +519,13 @@ function TabMapeadas({ mapeadas, confirmExcluir, setConfirmExcluir, onExcluir, o
         <div key={imob.id} className="glass-panel p-4">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="min-w-0 flex-1 flex items-start gap-3">
-              {getEntityImageUrl(imob.imagem_path, imob.imagem_url)  (
+              {getEntityImageUrl(imob.imagem_path, imob.imagem_url) ? (
                 <div className="w-12 h-12 rounded-xl overflow-hidden border border-dark-border/30 bg-white flex items-center justify-center flex-shrink-0">
                   <img src={getEntityImageUrl(imob.imagem_path, imob.imagem_url)} alt={imob.nome_canonico} className="w-full h-full object-cover" />
                 </div>
               ) : (
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold text-white flex-shrink-0 bg-brand-accent">
-                  {imob.nome_canonico.split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase() || ''}
+                  {imob.nome_canonico.split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase() || '?'}
                 </div>
               )}
               <div className="min-w-0 flex-1">
@@ -537,8 +537,8 @@ function TabMapeadas({ mapeadas, confirmExcluir, setConfirmExcluir, onExcluir, o
                   <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                 </button>
               <p className="text-xs text-dark-muted mt-0.5">
-                {imob.aliases.length} variação{imob.aliases.length !== 1  'ões' : ''}{' '}
-                · {imob.totalFichas} ficha{imob.totalFichas !== 1  's' : ''}
+                {imob.aliases.length} variação{imob.aliases.length !== 1 ? 'ões' : ''}{' '}
+                · {imob.totalFichas} ficha{imob.totalFichas !== 1 ? 's' : ''}
                 {!imob.ativa && <span className="ml-2 text-status-warning">· Inativa</span>}
               </p>
               {imob.aliases.length > 0 && (
@@ -557,9 +557,9 @@ function TabMapeadas({ mapeadas, confirmExcluir, setConfirmExcluir, onExcluir, o
                 <Pencil className="w-3.5 h-3.5" /> Editar
               </button>
 
-              {confirmExcluir === imob.id  (
+              {confirmExcluir === imob.id ? (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-status-danger font-medium">Confirmar</span>
+                  <span className="text-xs text-status-danger font-medium">Confirmar?</span>
                   <button
                     onClick={() => onExcluir(imob.id)}
                     className="px-2 py-1 rounded bg-status-danger text-white text-xs hover:opacity-90"
@@ -595,7 +595,7 @@ function TabNaoMapeadas({ naoMapeadas, selecionados, setSelecionados, onAgrupar 
   const [busca, setBusca] = useState('')
 
   const filtradas = busca.trim()
-     naoMapeadas.filter(n => n.nome.toLowerCase().includes(busca.toLowerCase()))
+    ? naoMapeadas.filter(n => n.nome.toLowerCase().includes(busca.toLowerCase()))
     : naoMapeadas
 
   function toggleSel(nome) {
@@ -677,7 +677,7 @@ function TabNaoMapeadas({ naoMapeadas, selecionados, setSelecionados, onAgrupar 
             <label
               key={n.nome}
               className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
-                selecionados.has(n.nome)  'bg-brand-accent/5' : 'hover:bg-dark-surface2/40'
+                selecionados.has(n.nome) ? 'bg-brand-accent/5' : 'hover:bg-dark-surface2/40'
               }`}
             >
               <input
@@ -714,7 +714,7 @@ function TabNaoMapeadas({ naoMapeadas, selecionados, setSelecionados, onAgrupar 
 function TabCadastros({ mapeadas, seguradoras, vinculacoes, onToggleSeguradora, salvandoVinc }) {
   const [busca, setBusca] = useState('')
   const filtradas = busca.trim()
-     mapeadas.filter(m => m.nome_canonico.toLowerCase().includes(busca.toLowerCase()))
+    ? mapeadas.filter(m => m.nome_canonico.toLowerCase().includes(busca.toLowerCase()))
     : mapeadas
 
   if (mapeadas.length === 0) {
@@ -747,13 +747,13 @@ function TabCadastros({ mapeadas, seguradoras, vinculacoes, onToggleSeguradora, 
             <div key={imob.id} className="glass-panel p-4">
               <p className="font-bold text-dark-text mb-1">{imob.nome_canonico}</p>
               <p className="text-xs text-dark-muted mb-3">
-                {imob.totalFichas} ficha{imob.totalFichas !== 1  's' : ''}
+                {imob.totalFichas} ficha{imob.totalFichas !== 1 ? 's' : ''}
               </p>
               <div>
                 <p className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider mb-2">
                   Seguradoras cadastradas
                 </p>
-                {seguradoras.length === 0  (
+                {seguradoras.length === 0 ? (
                   <p className="text-xs text-dark-muted italic">Nenhuma seguradora cadastrada no sistema</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
@@ -767,11 +767,11 @@ function TabCadastros({ mapeadas, seguradoras, vinculacoes, onToggleSeguradora, 
                           onClick={() => onToggleSeguradora(imob.id, seg.id, ativa)}
                           className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all disabled:opacity-50 ${
                             ativa
-                               'bg-status-success/15 text-status-success border-status-success/30'
+                              ? 'bg-status-success/15 text-status-success border-status-success/30'
                               : 'bg-dark-surface2 text-dark-muted border-dark-border hover:border-dark-muted'
                           }`}
                         >
-                          {ativa  <Check className="w-3.5 h-3.5 mr-1" /> : null}
+                          {ativa ? <Check className="w-3.5 h-3.5 mr-1" /> : null}
                           {seg.nome_canonico}
                         </button>
                       )
@@ -819,10 +819,10 @@ export default function Imobiliarias() {
     ])
 
     const contagem = {}
-    nomesData.forEach(f => {
+    nomesData?.forEach(f => {
       if (f.imobiliaria) contagem[f.imobiliaria] = (contagem[f.imobiliaria] || 0) + 1
     })
-    apolicesData.forEach(a => {
+    apolicesData?.forEach(a => {
       if (a.imobiliaria) contagem[a.imobiliaria] = (contagem[a.imobiliaria] || 0) + 1
     })
 
@@ -834,12 +834,12 @@ export default function Imobiliarias() {
 
     // 3. Conjunto de aliases mapeados (string exata)
     const aliasesMapeados = new Set()
-    imobiData.forEach(imob => {
-      imob.imobiliaria_aliases.forEach(a => aliasesMapeados.add(a.alias))
+    imobiData?.forEach(imob => {
+      imob.imobiliaria_aliases?.forEach(a => aliasesMapeados.add(a.alias))
     })
 
     const mapeadasList = (imobiData || []).map(imob => {
-      const aliases = imob.imobiliaria_aliases.map(a => a.alias) || []
+      const aliases = imob.imobiliaria_aliases?.map(a => a.alias) || []
       const totalFichas = aliases.reduce((s, alias) => s + (contagem[alias] || 0), 0)
       return { ...imob, aliases, totalFichas }
     })
@@ -851,7 +851,7 @@ export default function Imobiliarias() {
 
     // 4. Vinculations map
     const vinc = {}
-    vinculacoesData.forEach(v => {
+    vinculacoesData?.forEach(v => {
       if (!vinc[v.imobiliaria_id]) vinc[v.imobiliaria_id] = []
       vinc[v.imobiliaria_id].push(v.seguradora_id)
     })
@@ -899,7 +899,7 @@ export default function Imobiliarias() {
       const atual = prev[imobId] || []
       return {
         ...prev,
-        [imobId]: estaAtiva  atual.filter(id => id !== segId) : [...atual, segId],
+        [imobId]: estaAtiva ? atual.filter(id => id !== segId) : [...atual, segId],
       }
     })
 
@@ -918,7 +918,7 @@ export default function Imobiliarias() {
         const atual = prev[imobId] || []
         return {
           ...prev,
-          [imobId]: estaAtiva  [...atual, segId] : atual.filter(id => id !== segId),
+          [imobId]: estaAtiva ? [...atual, segId] : atual.filter(id => id !== segId),
         }
       })
       toast({ type: 'error', title: 'Erro ao atualizar vínculo', message: error.message })
@@ -937,8 +937,8 @@ export default function Imobiliarias() {
     />
   )
 
-  const totalAliases = mapeadas.reduce((acc, imob) => acc + (imob.aliases.length || 0), 0)
-  const totalVinculos = Object.values(vinculacoes).reduce((acc, arr) => acc + (arr.length || 0), 0)
+  const totalAliases = mapeadas.reduce((acc, imob) => acc + (imob.aliases?.length || 0), 0)
+  const totalVinculos = Object.values(vinculacoes).reduce((acc, arr) => acc + (arr?.length || 0), 0)
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -981,7 +981,7 @@ export default function Imobiliarias() {
               onClick={() => { setTab(key); setSelecionados(new Set()) }}
               className={`px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
                 tab === key
-                   'border-brand-accent text-brand-accent'
+                  ? 'border-brand-accent text-brand-accent'
                   : 'border-transparent text-dark-muted hover:text-dark-text'
               }`}
             >
@@ -996,7 +996,7 @@ export default function Imobiliarias() {
         </div>
 
         <div className="pt-5">
-          {loading  (
+          {loading ? (
             <div className="flex items-center justify-center h-48 gap-2 text-dark-muted text-sm">
               <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
@@ -1004,7 +1004,7 @@ export default function Imobiliarias() {
               </svg>
               Carregando...
             </div>
-          ) : tab === 'mapeadas'  (
+          ) : tab === 'mapeadas' ? (
             <TabMapeadas
               mapeadas={mapeadas}
               confirmExcluir={confirmExcluir}
@@ -1012,7 +1012,7 @@ export default function Imobiliarias() {
               onExcluir={excluirImobiliaria}
               onEditar={abrirEditar}
             />
-          ) : tab === 'nao_mapeadas'  (
+          ) : tab === 'nao_mapeadas' ? (
             <TabNaoMapeadas
               naoMapeadas={naoMapeadas}
               selecionados={selecionados}

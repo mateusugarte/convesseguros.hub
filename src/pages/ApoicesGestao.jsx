@@ -58,7 +58,7 @@ function stringColor(str) {
   return c[Math.abs(h) % c.length]
 }
 function initials(n) {
-  return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || ''
+  return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || '?'
 }
 
 function getPeriodDates(filtro) {
@@ -130,14 +130,14 @@ function SelectField({ label, value, onChange, options, required }) {
 
 function nomeApolice(apolice) {
   return normalizeDisplayText(
-    apolice.fichas.nome_empresa
-    || apolice.fichas.nome_interessado
+    apolice.fichas?.nome_empresa
+    || apolice.fichas?.nome_interessado
     || apolice.nome_interessado
   ) || '—'
 }
 
 function produtoApolice(apolice) {
-  return apolice.fichas.produto || apolice.produto
+  return apolice.fichas?.produto || apolice.produto
 }
 
 // ── Card ──────────────────────────────────────────────────────────────────────
@@ -148,7 +148,7 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, 
   const prod     = produtoApolice(apolice)
   const ProdIcon = PRODUTO_ICON[prod] || LayoutGrid
   const pColor   = PRODUTO_COLOR[prod] || '#6B7280'
-  const emissor  = apolice.profiles.nome
+  const emissor  = apolice.profiles?.nome
 
   return (
     <div
@@ -212,7 +212,7 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, 
         <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-dark-border/40 mt-auto">
           {emissor ? (
             <div className="flex items-center gap-1.5 min-w-0">
-              <Avatar name={emissor} src={apolice.profiles.avatar_url || ''} size="sm" />
+              <Avatar name={emissor} src={apolice.profiles?.avatar_url || ''} size="sm" />
               <span className="text-[10px] text-dark-muted font-medium truncate max-w-[72px]">
                 {emissor.split(' ')[0]}
               </span>
@@ -236,18 +236,18 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, 
         {/* Seção expansível */}
         {expandido && !isDragOverlay && (
           <div className="space-y-0.5 pt-1.5 mt-1.5 border-t border-dark-border/40 animate-fade-in">
-            {(apolice.fichas.cpf || apolice.fichas.cnpj) && (
+            {(apolice.fichas?.cpf || apolice.fichas?.cnpj) && (
               <p className="text-[9px] text-dark-muted font-mono">
-                  {apolice.fichas.cnpj ? 'CNPJ' : 'CPF'}: {apolice.fichas.cnpj || apolice.fichas.cpf}
+                {apolice.fichas.cnpj ? 'CNPJ' : 'CPF'}: {apolice.fichas.cnpj || apolice.fichas.cpf}
               </p>
             )}
-            {apolice.fichas.celular && (
+            {apolice.fichas?.celular && (
               <p className="text-[9px] text-dark-muted">Tel: {apolice.fichas.celular}</p>
             )}
-            {apolice.fichas.tipo_imovel && (
+            {apolice.fichas?.tipo_imovel && (
               <p className="text-[9px] text-dark-muted">Imóvel: {apolice.fichas.tipo_imovel}</p>
             )}
-            {apolice.fichas.cep && (
+            {apolice.fichas?.cep && (
               <p className="text-[9px] text-dark-muted font-mono">CEP: {apolice.fichas.cep}</p>
             )}
             {apolice.valor_parcela && (
@@ -394,7 +394,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
   const [fichaSelecionada,  setFichaSelecionada]  = useState(null)
   const [buscando,          setBuscando]          = useState(false)
   const [criando,           setCriando]           = useState(false)
-  const [emitidoPor,        setEmitidoPor]        = useState(user.id || '')
+  const [emitidoPor,        setEmitidoPor]        = useState(user?.id || '')
 
   // Campos adicionais preenchidos ao iniciar emissão
   const [numeroOrcamento, setNumeroOrcamento] = useState('')
@@ -431,9 +431,9 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     setEndereco(f.cep || '')
     // Pré-preenche número do orçamento com número da apólice da ficha (se houver)
     setNumeroOrcamento(f.numero_apolice || '')
-    setPctComissao(f.pct_comissao || '')
-    setPctDesconto(f.pct_desconto || '')
-    setParcelamento(f.parcelamento || '')
+    setPctComissao(f.pct_comissao ?? '')
+    setPctDesconto(f.pct_desconto ?? '')
+    setParcelamento(f.parcelamento ?? '')
   }
 
   async function criar() {
@@ -455,7 +455,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
       numero_proposta:  numeroOrcamento.trim() || null,
       valor_parcela:    valorParcelaNum,
       endereco:         endereco.trim() || null,
-      emitido_por:      emitidoPor || user.id || null,
+      emitido_por:      emitidoPor || user?.id || null,
       // Defaults obrigatórios no banco enquanto migração 09 não for rodada
       numero_apolice:   '',
       seguradora:       'Outras',
@@ -513,7 +513,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                     {normalizeDisplayText(fichaSelecionada.nome_empresa || fichaSelecionada.nome_interessado) || '—'}
                   </p>
                   <button
-                    onClick={() => { setFichaSelecionada(null); setNumeroOrcamento(''); setEndereco(''); setValorParcela(''); setEmitidoPor(user.id || '') }}
+                    onClick={() => { setFichaSelecionada(null); setNumeroOrcamento(''); setEndereco(''); setValorParcela(''); setEmitidoPor(user?.id || '') }}
                     className="flex-shrink-0 ml-2 text-dark-muted hover:text-dark-text"
                   >
                     <X className="w-4 h-4" />
@@ -664,18 +664,18 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
 function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
   const [proprietarioNome,  setProprietarioNome]  = useState('')
   const [proprietarioCel,   setProprietarioCel]   = useState('')
-  const [numeroApolice,     setNumeroApolice]      = useState(apolice.numero_apolice || '')
-  const [numeroProposta,    setNumeroProposta]     = useState(apolice.numero_proposta || '')
-  const [endereco,          setEndereco]           = useState(apolice.endereco || '')
-  const [inicioVigencia,    setInicioVigencia]     = useState(apolice.inicio_vigencia || '')
-  const [fimVigencia,       setFimVigencia]        = useState(apolice.fim_vigencia || '')
-  const [valorParcela,      setValorParcela]       = useState(apolice.valor_parcela || '')
-  const [parcelamento,      setParcelamento]       = useState(apolice.parcelamento || '')
-  const [premioLiquido,     setPremioLiquido]      = useState(apolice.premio_liquido || '')
-  const [pctComissao,       setPctComissao]        = useState(apolice.pct_comissao || '')
-  const [pctDesconto,       setPctDesconto]        = useState(apolice.pct_desconto || '')
-  const [formaPagamento,    setFormaPagamento]     = useState(apolice.forma_pagamento || '')
-  const [seguradora,        setSeguradora]         = useState(apolice.seguradora || '')
+  const [numeroApolice,     setNumeroApolice]      = useState(apolice?.numero_apolice || '')
+  const [numeroProposta,    setNumeroProposta]     = useState(apolice?.numero_proposta || '')
+  const [endereco,          setEndereco]           = useState(apolice?.endereco || '')
+  const [inicioVigencia,    setInicioVigencia]     = useState(apolice?.inicio_vigencia || '')
+  const [fimVigencia,       setFimVigencia]        = useState(apolice?.fim_vigencia || '')
+  const [valorParcela,      setValorParcela]       = useState(apolice?.valor_parcela || '')
+  const [parcelamento,      setParcelamento]       = useState(apolice?.parcelamento || '')
+  const [premioLiquido,     setPremioLiquido]      = useState(apolice?.premio_liquido || '')
+  const [pctComissao,       setPctComissao]        = useState(apolice?.pct_comissao || '')
+  const [pctDesconto,       setPctDesconto]        = useState(apolice?.pct_desconto || '')
+  const [formaPagamento,    setFormaPagamento]     = useState(apolice?.forma_pagamento || '')
+  const [seguradora,        setSeguradora]         = useState(apolice?.seguradora || '')
   const [salvando,          setSalvando]           = useState(false)
 
   const meses = calcularMeses(inicioVigencia, fimVigencia)
@@ -781,7 +781,7 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
               required
             />
             <FieldShell label="Seguradora" required>
-              <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={apolice.produto || apolice.fichas.produto} required />
+              <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={apolice?.produto || apolice?.fichas?.produto} required />
             </FieldShell>
           </div>
         </div>
@@ -866,7 +866,7 @@ export default function ApoicesGestao() {
     if (!over) return
 
     // ── Column reorder ──
-    if (active.data.current.type === 'column') {
+    if (active.data.current?.type === 'column') {
       const fromColId = active.data.current.colId
       const toColId   = over.id
       if (fromColId !== toColId && COLUNAS.some(c => c.id === toColId)) {
@@ -984,7 +984,7 @@ export default function ApoicesGestao() {
             <>
               <div className="absolute left-0 top-0 bottom-4 w-16 z-10 pointer-events-none"
                    style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }} />
-              <button onClick={() => scrollRef.current.scrollBy({ left: -280, behavior: 'smooth' })}
+              <button onClick={() => scrollRef.current?.scrollBy({ left: -280, behavior: 'smooth' })}
                       className="absolute left-0.5 top-[60px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-md flex items-center justify-center text-dark-muted hover:text-dark-text transition-all">
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -994,7 +994,7 @@ export default function ApoicesGestao() {
             <>
               <div className="absolute right-0 top-0 bottom-4 w-16 z-10 pointer-events-none"
                    style={{ background: 'linear-gradient(to left, rgb(var(--color-bg)), transparent)' }} />
-              <button onClick={() => scrollRef.current.scrollBy({ left: 280, behavior: 'smooth' })}
+              <button onClick={() => scrollRef.current?.scrollBy({ left: 280, behavior: 'smooth' })}
                       className="absolute right-0.5 top-[60px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-md flex items-center justify-center text-dark-muted hover:text-dark-text transition-all">
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -1028,7 +1028,7 @@ export default function ApoicesGestao() {
                 })}
               </div>
               <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
-                {activeId.startsWith('col::') ? (() => {
+                {activeId?.startsWith?.('col::') ? (() => {
                   const cid = activeId.replace('col::', '')
                   const col = COLUNAS.find(c => c.id === cid)
                   if (!col) return null
@@ -1040,13 +1040,13 @@ export default function ApoicesGestao() {
                           <span className="text-[11px] font-bold" style={{ color: col.color }}>{col.label}</span>
                         </div>
                         <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md" style={{ background: col.color + '30', color: col.color }}>
-                          {groups[cid].length ?? 0}
+                          {groups[cid]?.length ?? 0}
                         </span>
                       </div>
                       <div className="p-1.5 rounded-b-xl border border-t-0 min-h-[60px]" style={{ background: col.color + '06', borderColor: col.color + '30' }}>
                         {(groups[cid] || []).slice(0, 3).map(a => (
                           <div key={a.id} className="text-[10px] text-dark-muted truncate py-1 px-2 rounded-lg mb-1" style={{ background: 'rgb(var(--color-surface2) / 0.6)' }}>
-                            {normalizeDisplayText(a.fichas.nome_interessado || a.nome_interessado) || '—'}
+                            {normalizeDisplayText(a.fichas?.nome_interessado || a.nome_interessado) || '—'}
                           </div>
                         ))}
                       </div>

@@ -35,7 +35,7 @@ export async function fetchDocumentos({ fichaId, apoliceId }) {
 export async function uploadDocumento({ file, fichaId, apoliceId, cpfCnpj, userId }) {
   const ext       = file.name.split('.').pop()
   const nomeUnico = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
-  const pasta     = fichaId  `fichas/${fichaId}` : `apolices/${apoliceId}`
+  const pasta     = fichaId ? `fichas/${fichaId}` : `apolices/${apoliceId}`
   const caminho   = `${pasta}/${nomeUnico}`
 
   const { error: uploadErr } = await supabase.storage

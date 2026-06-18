@@ -138,7 +138,7 @@ export default function AutoRenovacoes() {
             <button
               key={item.value}
               onClick={() => setPeriodo(item.value)}
-                className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-all ${
+              className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-all ${
                 periodo === item.value
                   ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
                   : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
@@ -178,7 +178,7 @@ export default function AutoRenovacoes() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-sm font-semibold text-dark-text">
-                          {item.clientes_auto.nome_completo || '-'}
+                          {item.clientes_auto?.nome_completo || '-'}
                         </h3>
                         <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${statusInfo.badge}`}>
                           {statusInfo.label}
@@ -255,9 +255,9 @@ export default function AutoRenovacoes() {
                 key={f.value}
                 onClick={() => setAcompanharFiltro(f.value)}
                 className={`rounded-2xl border px-3 py-1.5 text-xs font-medium transition-all ${
-                    acompanharFiltro === f.value
-                      ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
-                      : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+                  acompanharFiltro === f.value
+                    ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                    : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
                 }`}
               >
                 {f.label}
@@ -293,7 +293,7 @@ export default function AutoRenovacoes() {
                   return (
                     <tr key={item.id} className="transition-colors hover:bg-brand-accent/5">
                       <td className="py-3 pr-4 font-medium text-dark-text">
-                        {item.clientes_auto.nome_completo || '-'}
+                        {item.clientes_auto?.nome_completo || '-'}
                       </td>
                       <td className="py-3 pr-4 text-dark-muted">
                         {item.seguradora || '-'}

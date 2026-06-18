@@ -18,7 +18,7 @@ import { CrmMetricCard, CrmPageHeader, CrmSectionCard } from '../../components/c
 
 const AVATAR_COLORS = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#2B5BA8','#EC4899','#06B6D4','#EF4444']
 function avatarColor(name) { return AVATAR_COLORS[(name || '').charCodeAt(0) % AVATAR_COLORS.length] }
-function initials(name) { return (name || '').split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase() }
+function initials(name) { return (name || '?').split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase() }
 
 const ORIGEM_COLORS = {
   'Seguro Fiança':   '#3B82F6',
@@ -210,7 +210,7 @@ function FloatingBar({ count, leads, selectedIds, onDeselect, toast }) {
     const header = ['Nome','Imobiliária','Origem','Estágio','Criado em','Apólice']
     const rows = leads.filter(l => selectedIds.has(l.id)).map(l => {
       const col = PIPELINE_COLS.find(c => c.id === l.coluna)
-        return [l.nome, l.imobiliaria || '', l.origem || '', col.label || '', l.criadoEm ? fmtDate(l.criadoEm) : '', l.apoliceAtiva ? 'Sim' : 'Não']
+      return [l.nome, l.imobiliaria || '', l.origem || '', col?.label || '', l.criadoEm ? fmtDate(l.criadoEm) : '', l.apoliceAtiva ? 'Sim' : 'Não']
         .map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')
     })
     const csv  = [header.join(','), ...rows].join('\n')
@@ -225,7 +225,7 @@ function FloatingBar({ count, leads, selectedIds, onDeselect, toast }) {
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[400]
       glass-modal rounded-2xl px-4 py-3 flex items-center gap-3 animate-fade-in border border-dark-border">
-      <span className="text-sm font-semibold text-dark-text whitespace-nowrap">{count} selecionado{count !== 1  's' : ''}</span>
+      <span className="text-sm font-semibold text-dark-text whitespace-nowrap">{count} selecionado{count !== 1 ? 's' : ''}</span>
       <div className="w-px h-4 bg-dark-border" />
       <div className="relative">
         <button onClick={() => setMoverOpen(o => !o)}
@@ -259,9 +259,9 @@ export default function BaseLeads() {
   const dir        = searchParams.get('dir')     || 'desc'
   const page       = parseInt(searchParams.get('page') || '0', 10)
   const pageSize   = parseInt(searchParams.get('size') || '20', 10)
-  const filterCols    = searchParams.get('cols').split(',').filter(Boolean)    || []
-  const filterOrigens = searchParams.get('origens').split(',').filter(Boolean) || []
-  const filterTemp    = searchParams.get('temp').split(',').filter(Boolean)    || []
+  const filterCols    = searchParams.get('cols')?.split(',').filter(Boolean)    || []
+  const filterOrigens = searchParams.get('origens')?.split(',').filter(Boolean) || []
+  const filterTemp    = searchParams.get('temp')?.split(',').filter(Boolean)    || []
   const filterFrom    = searchParams.get('from') || ''
   const filterTo      = searchParams.get('to')   || ''
 
@@ -309,7 +309,7 @@ export default function BaseLeads() {
 
   function toggleSort(col) {
     const next = new URLSearchParams(searchParams)
-    if (sort === col) next.set('dir', dir === 'asc'  'desc' : 'asc')
+    if (sort === col) next.set('dir', dir === 'asc' ? 'desc' : 'asc')
     else { next.set('sort', col); next.set('dir', 'desc') }
     next.set('page', '0')
     setSearchParams(next, { replace: true })
@@ -334,7 +334,7 @@ export default function BaseLeads() {
     if (q) {
       const lq = q.toLowerCase()
       rows = rows.filter(l =>
-        l.nome.toLowerCase().includes(lq) ||
+        l.nome?.toLowerCase().includes(lq) ||
         (l.telefone || '').includes(lq) ||
         (l.imobiliaria || '').toLowerCase().includes(lq)
       )
@@ -344,7 +344,7 @@ export default function BaseLeads() {
     if (filterTemp.length) {
       rows = rows.filter(l => {
         const s   = calcScore(l)
-        const lbl = s > 60  'Quente' : s > 30  'Morno' : 'Frio'
+        const lbl = s > 60 ? 'Quente' : s > 30 ? 'Morno' : 'Frio'
         return filterTemp.includes(lbl)
       })
     }
@@ -353,15 +353,15 @@ export default function BaseLeads() {
 
     rows.sort((a, b) => {
       if (sort === 'nome') {
-        const va = a.nome.toLowerCase() || '', vb = b.nome.toLowerCase() || ''
-        return dir === 'asc'  va.localeCompare(vb) : vb.localeCompare(va)
+        const va = a.nome?.toLowerCase() || '', vb = b.nome?.toLowerCase() || ''
+        return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va)
       }
       if (sort === 'criadoEm') {
         const va = a.criadoEm || '', vb = b.criadoEm || ''
-        return dir === 'asc'  va.localeCompare(vb) : vb.localeCompare(va)
+        return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va)
       }
       const va = calcScore(a), vb = calcScore(b)
-      return dir === 'asc'  va - vb : vb - va
+      return dir === 'asc' ? va - vb : vb - va
     })
     return rows
   }, [state.leads, q, filterCols, filterOrigens, filterTemp, filterFrom, filterTo, sort, dir])
@@ -383,11 +383,11 @@ export default function BaseLeads() {
   }
 
   const activeChips = [
-    ...filterCols.map(id => ({ key: 'cols', val: id, label: PIPELINE_COLS.find(c => c.id === id).label || id })),
+    ...filterCols.map(id => ({ key: 'cols', val: id, label: PIPELINE_COLS.find(c => c.id === id)?.label || id })),
     ...filterOrigens.map(o => ({ key: 'origens', val: o, label: o })),
     ...filterTemp.map(t => ({ key: 'temp', val: t, label: t })),
-    ...(filterFrom  [{ key: 'from', val: filterFrom, label: `De ${fmtDate(filterFrom)}` }] : []),
-    ...(filterTo    [{ key: 'to',   val: filterTo,   label: `Até ${fmtDate(filterTo)}`  }] : []),
+    ...(filterFrom ? [{ key: 'from', val: filterFrom, label: `De ${fmtDate(filterFrom)}` }] : []),
+    ...(filterTo   ? [{ key: 'to',   val: filterTo,   label: `Até ${fmtDate(filterTo)}`  }] : []),
   ]
 
   function removeChip(chip) {
@@ -400,7 +400,7 @@ export default function BaseLeads() {
     }
     next.set('page', '0')
     setSearchParams(next, { replace: true })
-    setPendingFilters(p => chip.key === 'from' || chip.key === 'to'  { ...p, [chip.key]: '' } : { ...p, [chip.key]: (p[chip.key] || []).filter(v => v !== chip.val) })
+    setPendingFilters(p => chip.key === 'from' || chip.key === 'to' ? { ...p, [chip.key]: '' } : { ...p, [chip.key]: (p[chip.key] || []).filter(v => v !== chip.val) })
   }
 
   const hasFilters = activeChips.length > 0
@@ -441,7 +441,7 @@ export default function BaseLeads() {
             <button onClick={() => setShowFilter(o => !o)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm transition-colors
                 ${showFilter || hasFilters
-                   'border-brand-accent text-brand-accent bg-brand-accent/10'
+                  ? 'border-brand-accent text-brand-accent bg-brand-accent/10'
                   : 'border-dark-border text-dark-muted hover:text-dark-text hover:border-dark-text/40'}`}>
               <SlidersHorizontal className="w-3.5 h-3.5" />
               Filtros
@@ -505,8 +505,8 @@ export default function BaseLeads() {
                 <th className="w-10 px-3 py-3">
                   <button onClick={toggleAll}
                     className={`w-4 h-4 rounded border flex items-center justify-center transition-colors
-                      ${allOnPageSelected  'bg-brand-accent border-brand-accent'
-                        : someSelected     'bg-brand-accent/40 border-brand-accent'
+                      ${allOnPageSelected ? 'bg-brand-accent border-brand-accent'
+                        : someSelected    ? 'bg-brand-accent/40 border-brand-accent'
                         : 'border-dark-border hover:border-brand-accent/60'}`}>
                     {(allOnPageSelected || someSelected) && <Check className="w-2.5 h-2.5 text-white" />}
                   </button>
@@ -534,7 +534,7 @@ export default function BaseLeads() {
               </tr>
             </thead>
             <tbody>
-              {pageRows.length === 0  (
+              {pageRows.length === 0 ? (
                 <tr>
                   <td colSpan={9}>
                     <div className="table-empty">
@@ -553,11 +553,11 @@ export default function BaseLeads() {
                 return (
                   <tr key={lead.id}
                     className={`border-b border-dark-border/50 transition-colors cursor-pointer
-                      ${selected  'bg-brand-accent/5' : 'hover:bg-dark-surface2'}`}>
+                      ${selected ? 'bg-brand-accent/5' : 'hover:bg-dark-surface2'}`}>
                     <td className="px-3 py-3.5" onClick={e => { e.stopPropagation(); toggleOne(lead.id) }}>
                       <button
                         className={`w-4 h-4 rounded border flex items-center justify-center transition-colors
-                          ${selected  'bg-brand-accent border-brand-accent' : 'border-dark-border hover:border-brand-accent/60'}`}>
+                          ${selected ? 'bg-brand-accent border-brand-accent' : 'border-dark-border hover:border-brand-accent/60'}`}>
                         {selected && <Check className="w-2.5 h-2.5 text-white" />}
                       </button>
                     </td>
@@ -575,7 +575,7 @@ export default function BaseLeads() {
                     </td>
                     <td className="px-3 py-3.5" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>
                       {lead.imobiliaria
-                         <div className="flex items-center gap-1 text-xs text-dark-muted"><Building2 className="w-3 h-3 flex-shrink-0" />{lead.imobiliaria}</div>
+                        ? <div className="flex items-center gap-1 text-xs text-dark-muted"><Building2 className="w-3 h-3 flex-shrink-0" />{lead.imobiliaria}</div>
                         : <span className="text-dark-muted text-xs">—</span>}
                     </td>
                     <td className="px-3 py-3.5" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>
@@ -586,7 +586,7 @@ export default function BaseLeads() {
                     </td>
                     <td className="px-3 py-3.5 text-xs text-dark-muted whitespace-nowrap" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>
                       {lead.criadoEm
-                         <div className="flex items-center gap-1"><Calendar className="w-3 h-3 flex-shrink-0" />{fmtDate(lead.criadoEm)}</div>
+                        ? <div className="flex items-center gap-1"><Calendar className="w-3 h-3 flex-shrink-0" />{fmtDate(lead.criadoEm)}</div>
                         : '—'}
                     </td>
                     <td className="px-3 py-3.5" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>
@@ -594,7 +594,7 @@ export default function BaseLeads() {
                     </td>
                     <td className="px-3 py-3.5" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>
                       {lead.apoliceAtiva
-                         <span className="inline-flex items-center rounded-full border border-emerald-700/15 bg-emerald-700/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">Ativa</span>
+                        ? <span className="inline-flex items-center rounded-full border border-emerald-700/15 bg-emerald-700/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">Ativa</span>
                         : <span className="text-dark-muted text-xs">—</span>}
                     </td>
                     <td className="px-2 py-3.5" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>
@@ -615,7 +615,7 @@ export default function BaseLeads() {
               {PAGE_SIZES.map(s => (
                 <button key={s} onClick={() => setSize(s)}
                   className={`px-2 py-0.5 rounded-lg transition-colors font-medium
-                    ${pageSize === s  'bg-brand-accent/15 text-brand-accent' : 'hover:bg-dark-surface2 text-dark-muted'}`}>
+                    ${pageSize === s ? 'bg-brand-accent/15 text-brand-accent' : 'hover:bg-dark-surface2 text-dark-muted'}`}>
                   {s}
                 </button>
               ))}
@@ -637,7 +637,7 @@ export default function BaseLeads() {
                 return (
                   <button key={p} onClick={() => setPage(p)}
                     className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors
-                      ${p === safePage  'bg-brand-accent text-white' : 'text-dark-muted hover:bg-dark-surface2'}`}>
+                      ${p === safePage ? 'bg-brand-accent text-white' : 'text-dark-muted hover:bg-dark-surface2'}`}>
                     {p + 1}
                   </button>
                 )

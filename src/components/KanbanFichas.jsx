@@ -118,7 +118,7 @@ function stringColor(str) {
   return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]
 }
 function initials(n) {
-  return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || ''
+  return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || '?'
 }
 function nomePrincipal(ficha) {
   const rd = ficha.raw_data || {}
@@ -142,7 +142,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
   const ProdIcon  = PRODUTO_ICON[ficha.produto] || LayoutGrid
   const prodColor = PRODUTO_COLOR[ficha.produto] || '#000079'
   const since     = ficha.assumida_em || ficha.created_at
-  const nome      = ficha.profiles.nome
+  const nome      = ficha.profiles?.nome
   const showRetorno = ficha.status !== 'pendente'
   const imobiliaria = resolveImobiliariaInfo?.(ficha.imobiliaria)
 
@@ -167,15 +167,15 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
         </div>
 
         {/* Nome */}
-        <p className={`text-[12.5px] font-semibold text-dark-text leading-snug mb-0.5 ${ficha.produto === 'pessoa_juridica' ? 'whitespace-normal break-words' : 'truncate'}`}>
+        <p className="text-[12.5px] font-semibold text-dark-text leading-snug truncate mb-0.5">
           {nomePrincipal(ficha)}
         </p>
 
         {/* ImobiliÃ¡ria */}
         <ImobiliariaIdentity
           nome={(resolverNome ? resolverNome(ficha.imobiliaria) : ficha.imobiliaria) || '—'}
-          imagemUrl={imobiliaria.imagem_url}
-          imagemPath={imobiliaria.imagem_path}
+          imagemUrl={imobiliaria?.imagem_url}
+          imagemPath={imobiliaria?.imagem_path}
           size="sm"
           className="mb-1.5"
         />
@@ -191,7 +191,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
         <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-dark-border/40 mt-auto">
           {nome ? (
             <div className="flex items-center gap-1.5 min-w-0">
-              <Avatar name={nome} src={ficha.profiles.avatar_url || ''} size="sm" />
+              <Avatar name={nome} src={ficha.profiles?.avatar_url || ''} size="sm" />
               <span className="text-[10px] text-dark-muted font-medium truncate max-w-[72px]">
                 {nome.split(' ')[0]}
               </span>
@@ -204,7 +204,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
             {ficha.status === 'pendente' && !ficha.assumida && (
               <button
                 onPointerDown={e => e.stopPropagation()}
-                onClick={e => { e.stopPropagation(); onAssumir(ficha.id) }}
+                onClick={e => { e.stopPropagation(); onAssumir?.(ficha.id) }}
                 className="kanban-action-btn kanban-action-assume"
               >
                 Assumir
@@ -213,7 +213,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
             {ficha.status === 'em_cotacao' && ficha.orcamentista_id === userId && (
               <button
                 onPointerDown={e => e.stopPropagation()}
-                onClick={e => { e.stopPropagation(); onFinalizar(ficha, null) }}
+                onClick={e => { e.stopPropagation(); onFinalizar?.(ficha, null) }}
                 className="kanban-action-btn kanban-action-finish"
               >
                 Finalizar
@@ -226,7 +226,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
         {showRetorno && !isDragOverlay && (
           <button
             onPointerDown={e => e.stopPropagation()}
-            onClick={e => { e.stopPropagation(); onToggleRetorno(ficha) }}
+            onClick={e => { e.stopPropagation(); onToggleRetorno?.(ficha) }}
             className={`w-full flex items-center justify-center gap-1.5 text-[9px] font-semibold px-2 py-1 rounded-lg border transition-all mt-1.5 ${
               ficha.retorno_enviado
                 ? 'bg-status-success/10 text-status-success border-status-success/25 hover:bg-status-success/18'
@@ -300,7 +300,7 @@ function DroppableColumn({
       >
         <button
           onClick={onToggleCollapse}
-          title={`${column.label} (${fichas.length}) — expandir`}
+          title={`${column.label} (${fichas.length}) â€” expandir`}
           className="flex flex-col items-center gap-1.5 py-3 px-1.5 rounded-t-xl border border-b-0 hover:opacity-80 transition-opacity"
           style={{ background: column.color + '14', borderColor: column.color + '45' }}
         >
@@ -389,7 +389,7 @@ function DroppableColumn({
             onAssumir={onAssumir}
             onFinalizar={onFinalizar}
             onToggleRetorno={onToggleRetorno}
-            isNew={newIds.has(f.id)}
+            isNew={newIds?.has(f.id)}
             resolverNome={resolverNome}
                   resolveImobiliariaInfo={resolveImobiliariaInfo}
           />
@@ -407,10 +407,10 @@ function ModalConfirmarRecusado({ onConfirmar, salvando }) {
     <div className="glass-panel rounded-2xl animate-fade-in">
       <div className="px-6 py-5 space-y-4">
         <p className="font-semibold text-dark-text text-sm">Confirmar Recusa</p>
-        <p className="text-xs text-dark-muted">O retorno foi enviado ao cliente</p>
+        <p className="text-xs text-dark-muted">O retorno foi enviado ao cliente?</p>
         <div className="flex gap-3">
           {[{ v: true, l: 'Sim', cls: 'border-status-success text-status-success bg-status-success/20' },
-            { v: false, l: 'N?o', cls: 'border-status-danger text-status-danger bg-status-danger/20' }].map(({ v, l, cls }) => (
+            { v: false, l: 'NÃ£o', cls: 'border-status-danger text-status-danger bg-status-danger/20' }].map(({ v, l, cls }) => (
             <button key={l} onClick={() => setRetorno(v)}
               className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
                 retorno === v ? cls : 'border-dark-border text-dark-muted hover:border-dark-text'
@@ -443,14 +443,14 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
   return (
     <div className="glass-panel rounded-2xl overflow-hidden animate-fade-in">
       <div className="px-6 py-4 border-b border-dark-border">
-        <p className="font-semibold text-dark-text">Confirmar Aprovação</p>
+        <p className="font-semibold text-dark-text">Confirmar AprovaÃ§Ã£o</p>
       </div>
       <div className="px-6 py-5 space-y-4">
         <div>
           <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
             Seguradora <span className="text-status-danger">*</span>
           </label>
-          <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={finalizar.produto} required />
+          <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={finalizar?.produto} required />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -465,7 +465,7 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
           </div>
           <div>
             <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
-              N° Orçamento <span className="text-status-danger">*</span>
+              NÂ° OrÃ§amento <span className="text-status-danger">*</span>
             </label>
             <input
               value={numeroOrcamento} onChange={e => setNumeroOrcamento(e.target.value)}
@@ -475,11 +475,11 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
         </div>
         <div>
           <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
-            Retorno enviado <span className="text-status-danger">*</span>
+            Retorno enviado? <span className="text-status-danger">*</span>
           </label>
           <div className="flex gap-3">
             {[{ v: true, l: 'Sim', cls: 'border-status-success text-status-success bg-status-success/20' },
-              { v: false, l: 'Não', cls: 'border-status-danger text-status-danger bg-status-danger/20' }].map(({ v, l, cls }) => (
+              { v: false, l: 'NÃ£o', cls: 'border-status-danger text-status-danger bg-status-danger/20' }].map(({ v, l, cls }) => (
               <button key={l} onClick={() => setRetornoEnviado(v)}
                 className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
                   retornoEnviado === v ? cls : 'border-dark-border text-dark-muted hover:border-dark-text'
@@ -500,7 +500,7 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
           disabled={!valido || salvando}
           className="btn-primary text-sm"
         >
-          {salvando ? 'Salvando...' : 'Confirmar Aprovação'}
+          {salvando ? 'Salvando...' : 'Confirmar AprovaÃ§Ã£o'}
         </button>
       </div>
     </div>
@@ -555,10 +555,10 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     }
     const data = await fetchFichasKanban({ produto, dateFrom, dateTo })
     setFichas(data)
-    const cols = groupFichas(data, user.id, sortOrder)
+    const cols = groupFichas(data, user?.id, sortOrder)
     setCollapsed(new Set(COLUMNS.filter(c => cols[c.id].length === 0).map(c => c.id)))
     setLoading(false)
-  }, [produto, periodo, customFrom, customTo, user.id, useExternal, externalDateFrom, externalDateTo, sortOrder])
+  }, [produto, periodo, customFrom, customTo, user?.id, useExternal, externalDateFrom, externalDateTo, sortOrder])
 
   useEffect(() => { load() }, [load])
 
@@ -612,10 +612,10 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   }, [loading])
 
   function scrollBy(dir) {
-    scrollRef.current.scrollBy({ left: dir === 'left' ? -280 : 280, behavior: 'smooth' })
+    scrollRef.current?.scrollBy({ left: dir === 'left' ? -280 : 280, behavior: 'smooth' })
   }
 
-  const cols       = groupFichas(fichas, user.id, sortOrder)
+  const cols       = groupFichas(fichas, user?.id, sortOrder)
   const activeCard = activeId ? fichas.find(f => f.id === activeId) : null
 
   async function handleAssumir(fichaId) {
@@ -623,7 +623,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     if (!fichaOriginal) return
     setFichas(prev => prev.map(f =>
       f.id !== fichaId ? f : {
-        ...f, assumida: true, orcamentista_id: user.id,
+        ...f, assumida: true, orcamentista_id: user?.id,
         status: 'em_cotacao', assumida_em: new Date().toISOString(),
       }
     ))
@@ -655,7 +655,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   async function handleConfirmarRecusado(retornoEnviado) {
     if (!pendingRecusado) return
     setSalvandoRecusado(true)
-    const err = await moverFichaStatus(pendingRecusado.fichaId, 'recusado', { userId: user.id })
+    const err = await moverFichaStatus(pendingRecusado.fichaId, 'recusado', { userId: user?.id })
     if (!err) {
       await supabase.from('fichas').update({
         retorno_enviado: retornoEnviado,
@@ -673,7 +673,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   async function handleConfirmarAprovado({ seguradora, valorParcela, numeroOrcamento, retornoEnviado }) {
     if (!pendingAprovado) return
     setSalvandoAprovado(true)
-    const err = await moverFichaStatus(pendingAprovado.fichaId, 'aprovado', { userId: user.id })
+    const err = await moverFichaStatus(pendingAprovado.fichaId, 'aprovado', { userId: user?.id })
     if (!err) {
       await supabase.from('fichas').update({
         seguradora,
@@ -713,19 +713,19 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     const ficha     = fichas.find(f => f.id === fichaId)
     if (!ficha) return
 
-    const sourceCol = getColumnId(ficha, user.id)
+    const sourceCol = getColumnId(ficha, user?.id)
     if (sourceCol === targetCol) return
 
     const novoStatus = COL_TO_STATUS[targetCol]
     if (!novoStatus) return
 
-    // Drag para recusado → pede confirmação
+    // Drag para recusado â†’ pede confirmaÃ§Ã£o
     if (targetCol === 'recusado') {
       setPendingRecusado({ fichaId, fichaOriginal: ficha })
       return
     }
 
-    // Drag para aprovado → pede seguradora, parcela, orçamento
+    // Drag para aprovado â†’ pede seguradora, parcela, orÃ§amento
     if (targetCol === 'aprovado') {
       setPendingAprovado({ fichaId, fichaOriginal: ficha })
       return
@@ -736,17 +736,17 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     setFichas(prev => prev.map(f => {
       if (f.id !== fichaId) return f
       const u = { ...f, status: novoStatus }
-      if (assumirComoAtual) { u.orcamentista_id = user.id; u.assumida = true; u.assumida_em = f.assumida_em || new Date().toISOString() }
+      if (assumirComoAtual) { u.orcamentista_id = user?.id; u.assumida = true; u.assumida_em = f.assumida_em || new Date().toISOString() }
       if (targetCol === 'pendente') { u.orcamentista_id = null; u.assumida = false; u.assumida_em = null }
       return u
     }))
 
-    const err = await moverFichaStatus(fichaId, novoStatus, { assumir: assumirComoAtual, userId: user.id })
+    const err = await moverFichaStatus(fichaId, novoStatus, { assumir: assumirComoAtual, userId: user?.id })
     if (err) {
       toast({ type: 'error', title: 'Erro ao mover ficha' })
       load()
     } else {
-      const colLabel = COLUMNS.find(c => c.id === targetCol).label || targetCol
+      const colLabel = COLUMNS.find(c => c.id === targetCol)?.label ?? targetCol
       toast({ type: 'success', title: `Movida para ${colLabel}` })
     }
   }
@@ -775,7 +775,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
   return (
     <div className="space-y-3">
-      {/* Filtro de período */}
+      {/* Filtro de perÃ­odo */}
       {!useExternal && (
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-0.5 bg-dark-surface2/60 border border-dark-border rounded-lg p-0.5">
@@ -797,7 +797,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
             <div className="flex items-center gap-1.5 text-xs text-dark-muted">
               <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
               <DatePicker value={customFrom} onChange={v => setCustomFrom(v)} />
-              <span>—</span>
+              <span>â€”</span>
               <DatePicker value={customTo} onChange={v => setCustomTo(v)} />
             </div>
           )}
@@ -835,7 +835,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
       {useExternal && (
         <div className="flex items-center justify-between text-xs text-dark-muted">
-          <span>{fichas.length} ficha{fichas.length !== 1 ? 's' : ''} neste período</span>
+          <span>{fichas.length} ficha{fichas.length !== 1 ? 's' : ''} neste perÃ­odo</span>
           <button onClick={load} className="flex items-center gap-1 hover:text-dark-text transition-colors">
             <RefreshCw className="w-3.5 h-3.5" /> Atualizar
           </button>
@@ -898,7 +898,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
                     key={column.id}
                     column={column}
                     fichas={cols[column.id] || []}
-                    userId={user.id}
+                    userId={user?.id}
                     onDetalhe={handleDetalhe}
                     onAssumir={handleAssumir}
                     onFinalizar={handleFinalizar}
@@ -916,7 +916,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
             <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
               {activeCard && (
-                <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', '--kanban-accent': PRODUTO_COLOR[activeCard.produto] || '#000079', cursor: 'grabbing' }}>
+                <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', '--kanban-accent': PRODUTO_COLOR[activeCard?.produto] || '#000079', cursor: 'grabbing' }}>
                   <FichaCard ficha={activeCard} isDragOverlay resolverNome={resolverNome} resolveImobiliariaInfo={resolveImobiliariaInfo} />
                 </div>
               )}

@@ -18,10 +18,10 @@ export function PageTransition({ children }) {
   return (
     <div
       style={{
-        opacity:    visible  1 : 0,
-        transform:  visible  'none' : 'translateY(8px)',
-        transition: visible  'opacity 240ms cubic-bezier(0.16, 1, 0.3, 1), transform 240ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
-        willChange: visible  'auto' : 'opacity, transform',
+        opacity:    visible ? 1 : 0,
+        transform:  visible ? 'none' : 'translateY(8px)',
+        transition: visible ? 'opacity 240ms cubic-bezier(0.16, 1, 0.3, 1), transform 240ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+        willChange: visible ? 'auto' : 'opacity, transform',
       }}
     >
       {children}

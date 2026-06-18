@@ -34,12 +34,12 @@ export function Button({
       className={[
         VARIANTS[variant] || VARIANTS.primary,
         SIZES[size] || SIZES.md,
-        fullWidth  'w-full' : '',
+        fullWidth ? 'w-full' : '',
         'inline-flex items-center justify-center font-semibold cursor-pointer',
         className,
       ].filter(Boolean).join(' ')}
     >
-      {loading  <Loader2 className="w-4 h-4 animate-spin" /> : iconLeft}
+      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : iconLeft}
       {children}
       {!loading && iconRight}
     </button>

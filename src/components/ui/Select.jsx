@@ -36,13 +36,13 @@ export function Select({
   const dropRef = useRef(null)
 
   const normalized = options.map(o => (
-    typeof o === 'string'  { value: o, label: o } : o
+    typeof o === 'string' ? { value: o, label: o } : o
   ))
 
-  const showSearch = searchable  normalized.length > 8
+  const showSearch = searchable ?? normalized.length > 8
 
   const filtered = search.trim()
-     normalized.filter(o => o.label.toLowerCase().includes(search.toLowerCase()))
+    ? normalized.filter(o => o.label.toLowerCase().includes(search.toLowerCase()))
     : normalized
 
   const selected = normalized.find(o => String(o.value) === String(value))
@@ -52,8 +52,8 @@ export function Select({
 
     const rect = wrapRef.current.getBoundingClientRect()
     const itemH = 38
-    const headerH = label  44 : 0
-    const searchH = showSearch  52 : 0
+    const headerH = label ? 44 : 0
+    const searchH = showSearch ? 52 : 0
     const dropH = Math.min(filtered.length * itemH + headerH + searchH + 16, 320)
     const spaceBelow = window.innerHeight - rect.bottom - 8
     const spaceAbove = rect.top - 8
@@ -66,7 +66,7 @@ export function Select({
       left,
       width: minW,
       ...(above
-         { bottom: window.innerHeight - rect.top + 4, top: 'auto' }
+        ? { bottom: window.innerHeight - rect.top + 4, top: 'auto' }
         : { top: rect.bottom + 4, bottom: 'auto' }),
     })
   }, [filtered.length, label, showSearch])
@@ -91,7 +91,7 @@ export function Select({
 
   useEffect(() => {
     if (open && showSearch) {
-      const t = setTimeout(() => searchRef.current.focus(), 60)
+      const t = setTimeout(() => searchRef.current?.focus(), 60)
       return () => clearTimeout(t)
     }
   }, [open, showSearch])
@@ -104,7 +104,7 @@ export function Select({
     if (!open) return
 
     function handler(e) {
-      if (!wrapRef.current.contains(e.target) && !dropRef.current.contains(e.target)) {
+      if (!wrapRef.current?.contains(e.target) && !dropRef.current?.contains(e.target)) {
         setOpen(false)
       }
     }
@@ -120,7 +120,7 @@ export function Select({
 
   return (
     <div ref={wrapRef} className={`relative ${className}`}>
-      {name && <input type="hidden" name={name} value={value  ''} />}
+      {name && <input type="hidden" name={name} value={value ?? ''} />}
 
       <button
         type="button"
@@ -128,10 +128,10 @@ export function Select({
         onClick={() => !disabled && setOpen(o => !o)}
         className="select w-full flex items-center justify-between gap-2 text-left"
         style={{
-          opacity: disabled  0.45 : 1,
-          cursor: disabled  'not-allowed' : 'pointer',
+          opacity: disabled ? 0.45 : 1,
+          cursor: disabled ? 'not-allowed' : 'pointer',
           transition: 'border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease',
-          ...(open  {
+          ...(open ? {
             borderColor: 'rgb(var(--brand-primary-rgb) / 0.52)',
             boxShadow: '0 0 0 3px rgb(var(--brand-primary-rgb) / 0.14)',
             background: 'var(--glass-bg-active)',
@@ -153,16 +153,16 @@ export function Select({
         <span
           className="flex-1 truncate text-sm leading-none"
           style={{
-            color: selected  'var(--glass-text-primary)' : 'var(--glass-text-muted)',
+            color: selected ? 'var(--glass-text-primary)' : 'var(--glass-text-muted)',
           }}
         >
-          {selected  selected.label : placeholder}
+          {selected ? selected.label : placeholder}
         </span>
         <ChevronDown
           className="w-4 h-4 flex-shrink-0"
           style={{
             color: 'var(--glass-text-muted)',
-            transform: open  'rotate(180deg)' : 'rotate(0deg)',
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
             transition: 'transform 0.2s var(--ease-smooth)',
           }}
         />
@@ -176,7 +176,7 @@ export function Select({
             zIndex: 12000,
             left: pos.left,
             width: pos.width,
-            ...(pos.top !== 'auto'  { top: pos.top } : { bottom: pos.bottom }),
+            ...(pos.top !== 'auto' ? { top: pos.top } : { bottom: pos.bottom }),
           }}
         >
           <div
@@ -267,7 +267,7 @@ export function Select({
               ref={listRef}
               style={{ overflowY: 'auto', maxHeight: 256, padding: '4px' }}
             >
-              {filtered.length === 0  (
+              {filtered.length === 0 ? (
                 <p
                   style={{
                     margin: 0,
@@ -277,7 +277,7 @@ export function Select({
                     padding: '16px 12px',
                   }}
                 >
-                  {search  'Nenhum resultado' : 'Sem opcoes'}
+                  {search ? 'Nenhum resultado' : 'Sem opcoes'}
                 </p>
               ) : (
                 filtered.map(opt => {
@@ -322,9 +322,9 @@ function SelectOption({ opt, isSelected, onSelect }) {
         textAlign: 'left',
         transition: 'background 0.1s ease',
         background: isSelected
-           'rgba(74,144,217,0.14)'
+          ? 'rgba(74,144,217,0.14)'
           : hovered
-             'var(--glass-bg-hover)'
+            ? 'var(--glass-bg-hover)'
             : 'transparent',
         position: 'relative',
       }}
@@ -355,8 +355,8 @@ function SelectOption({ opt, isSelected, onSelect }) {
         style={{
           flex: 1,
           fontSize: 13,
-          fontWeight: isSelected  500 : 400,
-          color: isSelected  'rgb(74,144,217)' : 'var(--glass-text-primary)',
+          fontWeight: isSelected ? 500 : 400,
+          color: isSelected ? 'rgb(74,144,217)' : 'var(--glass-text-primary)',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',

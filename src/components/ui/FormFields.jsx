@@ -20,7 +20,7 @@ function FieldShell({ label, error, description, children, labelClassName = '' }
 export function Input({ label, error, description, className = '', labelClassName = '', ...props }) {
   return (
     <FieldShell label={label} error={error} description={description} labelClassName={labelClassName}>
-      <input {...props} className={`input ${error  'border-status-danger focus:ring-status-danger/20' : ''} ${className}`} />
+      <input {...props} className={`input ${error ? 'border-status-danger focus:ring-status-danger/20' : ''} ${className}`} />
     </FieldShell>
   )
 }
@@ -28,7 +28,7 @@ export function Input({ label, error, description, className = '', labelClassNam
 export function Textarea({ label, error, description, className = '', labelClassName = '', ...props }) {
   return (
     <FieldShell label={label} error={error} description={description} labelClassName={labelClassName}>
-      <textarea {...props} className={`input resize-none ${error  'border-status-danger' : ''} ${className}`} />
+      <textarea {...props} className={`input resize-none ${error ? 'border-status-danger' : ''} ${className}`} />
     </FieldShell>
   )
 }
@@ -62,7 +62,7 @@ export function Select({
       setPos({
         left: rect.left,
         width: rect.width,
-        ...(above  { bottom: window.innerHeight - rect.top + 4, top: 'auto' } : { top: rect.bottom + 4, bottom: 'auto' }),
+        ...(above ? { bottom: window.innerHeight - rect.top + 4, top: 'auto' } : { top: rect.bottom + 4, bottom: 'auto' }),
       })
     }
 
@@ -78,14 +78,14 @@ export function Select({
   useEffect(() => {
     if (!open) return
     function handler(e) {
-      if (!triggerRef.current.contains(e.target)) setOpen(false)
+      if (!triggerRef.current?.contains(e.target)) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  const selected = options.find(o => (typeof o === 'object'  o.value : o) === value)
-  const selectedLabel = selected  (typeof selected === 'object'  selected.label : selected) : null
+  const selected = options.find(o => (typeof o === 'object' ? o.value : o) === value)
+  const selectedLabel = selected ? (typeof selected === 'object' ? selected.label : selected) : null
 
   return (
     <FieldShell label={label} error={error} description={description} labelClassName={labelClassName}>
@@ -93,10 +93,10 @@ export function Select({
         ref={triggerRef}
         type="button"
         onClick={() => setOpen(o => !o)}
-        className={`select w-full flex items-center justify-between text-left ${error  'border-status-danger' : ''} ${className}`}
+        className={`select w-full flex items-center justify-between text-left ${error ? 'border-status-danger' : ''} ${className}`}
       >
-        <span className={selectedLabel  'text-dark-text' : 'text-dark-muted/60'}>{selectedLabel  placeholder}</span>
-        <ChevronDown className={`w-4 h-4 text-dark-muted transition-transform ${open  'rotate-180' : ''}`} />
+        <span className={selectedLabel ? 'text-dark-text' : 'text-dark-muted/60'}>{selectedLabel ?? placeholder}</span>
+        <ChevronDown className={`w-4 h-4 text-dark-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && pos && createPortal(
@@ -105,8 +105,8 @@ export function Select({
           style={{ position: 'fixed', zIndex: 300, ...pos, maxHeight: 240, overflowY: 'auto' }}
         >
           {options.map(opt => {
-            const optionValue = typeof opt === 'object'  opt.value : opt
-            const optionLabel = typeof opt === 'object'  opt.label : opt
+            const optionValue = typeof opt === 'object' ? opt.value : opt
+            const optionLabel = typeof opt === 'object' ? opt.label : opt
             return (
               <button
                 key={optionValue}

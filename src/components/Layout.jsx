@@ -186,7 +186,7 @@ export default function Layout() {
 
   useEffect(() => {
     function onToggleShell(event) {
-      setHideWorkspaceTopbar(Boolean(event.detail.hidden))
+      setHideWorkspaceTopbar(Boolean(event?.detail?.hidden))
     }
 
     window.addEventListener('workspace-shell-toggle', onToggleShell)
@@ -297,7 +297,7 @@ export default function Layout() {
               )}
 
               {group.items.map(item => {
-                if (item.adminOnly && !profile.is_admin) return null
+                if (item.adminOnly && !profile?.is_admin) return null
                 const Icon = item.icon
 
                 if (item.subitems) {
@@ -381,14 +381,14 @@ export default function Layout() {
           style={{ borderColor: 'var(--shell-panel-border)' }}
         >
           <Avatar
-            name={profile.nome}
-            src={profile.avatar_url || ''}
+            name={profile?.nome}
+            src={profile?.avatar_url || ''}
             size="md"
             className="ring-1 ring-white/20 shadow-sm"
           />
           {(sidebarOpen || isMobile) && (
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-dark-text truncate">{profile.nome}</p>
+              <p className="text-xs font-semibold text-dark-text truncate">{profile?.nome}</p>
               {abertasCount > 0 && (
                 <p className="text-[10px] mt-0.5">
                   <span
@@ -413,7 +413,10 @@ export default function Layout() {
               boxShadow: 'var(--shell-panel-shadow)',
             }}
           >
-            {sidebarOpen ? <ChevronLeft className="w-3.5 h-3.5 text-dark-muted" /> : <ChevronRight className="w-3.5 h-3.5 text-dark-muted" />}
+            {sidebarOpen
+              ? <ChevronLeft className="w-3.5 h-3.5 text-dark-muted" />
+              : <ChevronRight className="w-3.5 h-3.5 text-dark-muted" />
+            }
           </button>
         )}
       </aside>
@@ -457,11 +460,10 @@ export default function Layout() {
               title={theme === 'dark' ? 'Voltar para o tema claro' : 'Ativar tema escuro'}
               aria-label={theme === 'dark' ? 'Voltar para o tema claro' : 'Ativar tema escuro'}
             >
-              {theme === 'dark' ? (
-                <Sun className="w-4 h-4 text-brand-gold" />
-              ) : (
-                <Moon className="w-4 h-4 text-brand-accent" />
-              )}
+              {theme === 'dark'
+                ? <Sun className="w-4 h-4 text-brand-gold" />
+                : <Moon className="w-4 h-4 text-brand-accent" />
+              }
             </button>
 
             <button className="btn-ghost p-2 relative rounded-lg cursor-pointer" aria-label="Notificacoes">
@@ -478,12 +480,12 @@ export default function Layout() {
                 style={{ borderColor: 'var(--shell-panel-border)' }}
               >
                 <Avatar
-                  name={profile.nome}
-                  src={profile.avatar_url || ''}
+                  name={profile?.nome}
+                  src={profile?.avatar_url || ''}
                   size="sm"
                   className="ring-1 ring-white/20 shadow-sm"
                 />
-                <span className="hidden sm:block text-xs font-medium text-dark-text">{profile.nome.split(' ')[0]}</span>
+                <span className="hidden sm:block text-xs font-medium text-dark-text">{profile?.nome?.split(' ')[0]}</span>
                 <ChevronDown className={`w-3 h-3 text-dark-muted transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -501,7 +503,7 @@ export default function Layout() {
                     }}
                   >
                     <div className="px-4 py-3 border-b border-dark-border">
-                      <p className="text-xs font-semibold text-dark-text truncate">{profile.nome}</p>
+                      <p className="text-xs font-semibold text-dark-text truncate">{profile?.nome}</p>
                       {abertasCount > 0 && (
                         <p className="text-[10px] text-status-warning mt-0.5">{abertasCount} fichas em aberto</p>
                       )}

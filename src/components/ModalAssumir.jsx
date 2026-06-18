@@ -19,7 +19,7 @@ export default function ModalAssumir({ id, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
-      <div className="modal-backdrop" onClick={!loading  onClose : undefined} />
+      <div className="modal-backdrop" onClick={!loading ? onClose : undefined} />
       <div className="relative glass-modal rounded-[24px] p-6 space-y-5 w-full max-w-sm animate-fade-in">
         {/* Header */}
         <div className="modal-shell-header flex items-center gap-3 -mx-6 -mt-6 px-6 py-5 border-b border-dark-border/60">
@@ -50,7 +50,7 @@ export default function ModalAssumir({ id, onClose, onSuccess }) {
         <div className="modal-shell-footer flex gap-3 -mx-6 -mb-6 px-6 py-5 border-t border-dark-border/60">
           <button onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
           <button onClick={handleAssumir} disabled={loading} className="btn-primary flex-1">
-            {loading  'Assumindo...' : 'Confirmar e Assumir'}
+            {loading ? 'Assumindo...' : 'Confirmar e Assumir'}
           </button>
         </div>
       </div>

@@ -45,11 +45,11 @@ function maskPhone(v) {
 function validarFicha(form) {
   const isPJ = form.produto === 'pessoa_juridica'
   if (isPJ) {
-    if (!form.nome_empresa.trim()) return 'Nome da empresa é obrigatório'
+    if (!form.nome_empresa?.trim()) return 'Nome da empresa é obrigatório'
     if (form.cnpj && !/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/.test(form.cnpj))
       return 'CNPJ inválido — formato: 00.000.000/0001-00'
   } else {
-    if (!form.nome_interessado.trim()) return 'Nome do interessado é obrigatório'
+    if (!form.nome_interessado?.trim()) return 'Nome do interessado é obrigatório'
     if (form.cpf && !/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(form.cpf))
       return 'CPF inválido — formato esperado: 000.000.000-00'
   }
@@ -69,7 +69,7 @@ function validarFicha(form) {
 
 function Field({ label, children, span2 = false, required = false }) {
   return (
-    <div className={span2  'col-span-2' : ''}>
+    <div className={span2 ? 'col-span-2' : ''}>
       <label className="eyebrow text-dark-muted block mb-1.5">
         {label}{required && <span className="text-status-danger ml-0.5">*</span>}
       </label>
@@ -94,34 +94,34 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
   const isEdit   = !!ficha
 
   const [form, setForm] = useState({
-    produto:            ficha.produto             'residencial_pf',
-    nome_interessado:   ficha.nome_interessado    '',
-    nome_empresa:       ficha.nome_empresa        '',
-    cpf:                ficha.cpf                 '',
-    cnpj:               ficha.cnpj                '',
-    cpf_socios:         ficha.cpf_socios          '',
-    celular:            ficha.celular             '',
-    email:              ficha.email               '',
-    cep:                ficha.cep                 '',
-    imobiliaria:        ficha.imobiliaria         '',
-    tipo_imovel:        ficha.tipo_imovel         '',
-    valor_aluguel:      ficha.valor_aluguel       '',
-    valor_iptu:         ficha.valor_iptu          '',
-    valor_condominio:   ficha.valor_condominio    '',
-    observacoes:        ficha.observacoes         '',
-    atividade:          ficha.atividade           '',
-    opcao_tributaria:   ficha.opcao_tributaria    '',
-    total_rendimentos:  ficha.total_rendimentos   '',
-    capital_social:     ficha.capital_social      '',
-    motivo_locacao:     ficha.motivo_locacao      '',
-    vigencia:           ficha.vigencia            '',
-    pct_comissao:       ficha.pct_comissao        '',
-    pct_desconto:       ficha.pct_desconto        '',
-    parcelamento:       ficha.parcelamento        '',
-    status:             ficha.status              'pendente',
-    seguradora:         ficha.seguradora          '',
-    orcamentista_forms: ficha.orcamentista_forms  '',
-    retorno_enviado:    ficha.retorno_enviado      false,
+    produto:            ficha?.produto            ?? 'residencial_pf',
+    nome_interessado:   ficha?.nome_interessado   ?? '',
+    nome_empresa:       ficha?.nome_empresa       ?? '',
+    cpf:                ficha?.cpf                ?? '',
+    cnpj:               ficha?.cnpj               ?? '',
+    cpf_socios:         ficha?.cpf_socios         ?? '',
+    celular:            ficha?.celular            ?? '',
+    email:              ficha?.email              ?? '',
+    cep:                ficha?.cep                ?? '',
+    imobiliaria:        ficha?.imobiliaria        ?? '',
+    tipo_imovel:        ficha?.tipo_imovel        ?? '',
+    valor_aluguel:      ficha?.valor_aluguel      ?? '',
+    valor_iptu:         ficha?.valor_iptu         ?? '',
+    valor_condominio:   ficha?.valor_condominio   ?? '',
+    observacoes:        ficha?.observacoes        ?? '',
+    atividade:          ficha?.atividade          ?? '',
+    opcao_tributaria:   ficha?.opcao_tributaria   ?? '',
+    total_rendimentos:  ficha?.total_rendimentos  ?? '',
+    capital_social:     ficha?.capital_social     ?? '',
+    motivo_locacao:     ficha?.motivo_locacao     ?? '',
+    vigencia:           ficha?.vigencia           ?? '',
+    pct_comissao:       ficha?.pct_comissao       ?? '',
+    pct_desconto:       ficha?.pct_desconto       ?? '',
+    parcelamento:       ficha?.parcelamento       ?? '',
+    status:             ficha?.status             ?? 'pendente',
+    seguradora:         ficha?.seguradora         ?? '',
+    orcamentista_forms: ficha?.orcamentista_forms ?? '',
+    retorno_enviado:    ficha?.retorno_enviado     ?? false,
   })
 
   const [saving,   setSaving] = useState(false)
@@ -131,37 +131,37 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
   // Resetar form quando a ficha muda (abre ficha diferente sem desmontar o modal)
   useEffect(() => {
     setForm({
-      produto:            ficha.produto             'residencial_pf',
-      nome_interessado:   ficha.nome_interessado    '',
-      nome_empresa:       ficha.nome_empresa        '',
-      cpf:                ficha.cpf                 '',
-      cnpj:               ficha.cnpj                '',
-      cpf_socios:         ficha.cpf_socios          '',
-      celular:            ficha.celular             '',
-      email:              ficha.email               '',
-      cep:                ficha.cep                 '',
-      imobiliaria:        ficha.imobiliaria         '',
-      tipo_imovel:        ficha.tipo_imovel         '',
-      valor_aluguel:      ficha.valor_aluguel       '',
-      valor_iptu:         ficha.valor_iptu          '',
-      valor_condominio:   ficha.valor_condominio    '',
-      observacoes:        ficha.observacoes         '',
-      atividade:          ficha.atividade           '',
-      opcao_tributaria:   ficha.opcao_tributaria    '',
-      total_rendimentos:  ficha.total_rendimentos   '',
-      capital_social:     ficha.capital_social      '',
-      motivo_locacao:     ficha.motivo_locacao      '',
-      vigencia:           ficha.vigencia            '',
-      pct_comissao:       ficha.pct_comissao        '',
-      pct_desconto:       ficha.pct_desconto        '',
-      parcelamento:       ficha.parcelamento        '',
-      status:             ficha.status              'pendente',
-      seguradora:         ficha.seguradora          '',
-      orcamentista_forms: ficha.orcamentista_forms  '',
-      retorno_enviado:    ficha.retorno_enviado      false,
+      produto:            ficha?.produto            ?? 'residencial_pf',
+      nome_interessado:   ficha?.nome_interessado   ?? '',
+      nome_empresa:       ficha?.nome_empresa       ?? '',
+      cpf:                ficha?.cpf                ?? '',
+      cnpj:               ficha?.cnpj               ?? '',
+      cpf_socios:         ficha?.cpf_socios         ?? '',
+      celular:            ficha?.celular            ?? '',
+      email:              ficha?.email              ?? '',
+      cep:                ficha?.cep                ?? '',
+      imobiliaria:        ficha?.imobiliaria        ?? '',
+      tipo_imovel:        ficha?.tipo_imovel        ?? '',
+      valor_aluguel:      ficha?.valor_aluguel      ?? '',
+      valor_iptu:         ficha?.valor_iptu         ?? '',
+      valor_condominio:   ficha?.valor_condominio   ?? '',
+      observacoes:        ficha?.observacoes        ?? '',
+      atividade:          ficha?.atividade          ?? '',
+      opcao_tributaria:   ficha?.opcao_tributaria   ?? '',
+      total_rendimentos:  ficha?.total_rendimentos  ?? '',
+      capital_social:     ficha?.capital_social     ?? '',
+      motivo_locacao:     ficha?.motivo_locacao     ?? '',
+      vigencia:           ficha?.vigencia           ?? '',
+      pct_comissao:       ficha?.pct_comissao       ?? '',
+      pct_desconto:       ficha?.pct_desconto       ?? '',
+      parcelamento:       ficha?.parcelamento       ?? '',
+      status:             ficha?.status             ?? 'pendente',
+      seguradora:         ficha?.seguradora         ?? '',
+      orcamentista_forms: ficha?.orcamentista_forms ?? '',
+      retorno_enviado:    ficha?.retorno_enviado     ?? false,
     })
     setError(null)
-  }, [ficha.id])
+  }, [ficha?.id])
 
   useEffect(() => {
     fetchProfiles().then(setProfiles)
@@ -188,22 +188,22 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
       total_rendimentos: form.total_rendimentos || null,
       capital_social:    form.capital_social    || null,
       // Limpar campo não usado por produto
-      cpf:  isPJ  null : form.cpf || null,
-      cnpj: isPJ  form.cnpj || null : null,
-      nome_interessado: isPJ  null : form.nome_interessado || null,
-      nome_empresa:     isPJ  form.nome_empresa || null : null,
-      cpf_socios:       isPJ  form.cpf_socios || null : null,
-      pct_comissao:     form.pct_comissao === ''  null : form.pct_comissao,
-      pct_desconto:     form.pct_desconto === ''  null : form.pct_desconto,
-      parcelamento:     form.parcelamento === ''  null : Number(form.parcelamento),
+      cpf:  isPJ ? null : form.cpf || null,
+      cnpj: isPJ ? form.cnpj || null : null,
+      nome_interessado: isPJ ? null : form.nome_interessado || null,
+      nome_empresa:     isPJ ? form.nome_empresa || null : null,
+      cpf_socios:       isPJ ? form.cpf_socios || null : null,
+      pct_comissao:     form.pct_comissao === '' ? null : form.pct_comissao,
+      pct_desconto:     form.pct_desconto === '' ? null : form.pct_desconto,
+      parcelamento:     form.parcelamento === '' ? null : Number(form.parcelamento),
     }
 
-    const editResult   = isEdit   await editarFicha(ficha.id, dados, user.id) : null
-    const createResult = !isEdit  await criarFicha({ ...dados, orcamentista_id: user.id || null }) : null
-    const err = editResult  createResult.error  null
+    const editResult   = isEdit  ? await editarFicha(ficha.id, dados, user?.id) : null
+    const createResult = !isEdit ? await criarFicha({ ...dados, orcamentista_id: user?.id || null }) : null
+    const err = editResult ?? createResult?.error ?? null
 
     setSaving(false)
-    if (err) { setError(typeof err === 'string'  err : err.message); return }
+    if (err) { setError(typeof err === 'string' ? err : err.message); return }
     onSuccess()
   }
 
@@ -216,10 +216,10 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="w-9 h-9 rounded-2xl bg-brand-secondary/20 flex items-center justify-center flex-shrink-0">
-            {isEdit  <Save className="w-4 h-4 text-brand-accent" /> : <Plus className="w-4 h-4 text-brand-accent" />}
+            {isEdit ? <Save className="w-4 h-4 text-brand-accent" /> : <Plus className="w-4 h-4 text-brand-accent" />}
           </div>
           <h2 className="font-bold text-dark-text">
-            {isEdit  `Editar — ${ficha.nome_empresa || ficha.nome_interessado || ''}` : 'Nova Ficha'}
+            {isEdit ? `Editar — ${ficha.nome_empresa || ficha.nome_interessado || ''}` : 'Nova Ficha'}
           </h2>
         </div>
 
@@ -244,7 +244,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
             </Field>
 
             {/* Nome: empresa para PJ, interessado para PF */}
-            {isPJ  (
+            {isPJ ? (
               <Field label="Nome da Empresa" span2 required>
                 <input type="text" value={form.nome_empresa} onChange={e => set('nome_empresa', e.target.value)} className="input" placeholder="Razão social" />
               </Field>
@@ -255,7 +255,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
             )}
 
             {/* CPF para PF, CNPJ + CPF Sócios para PJ */}
-            {isPJ  (
+            {isPJ ? (
               <>
                 <Field label="CNPJ">
                   <input
@@ -337,7 +337,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
 
           {/* ── Campos extras — Comercial PF e PJ ── */}
           {isPlus && (
-            <Sec title={isPJ  'Dados da Empresa' : 'Dados Complementares'}>
+            <Sec title={isPJ ? 'Dados da Empresa' : 'Dados Complementares'}>
               <Field label="Atividade">
                 <input type="text" value={form.atividade} onChange={e => set('atividade', e.target.value)} className="input" placeholder="Atividade no imóvel" />
               </Field>
@@ -406,7 +406,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
               <Select
                 value={form.status}
                 onChange={v => set('status', v)}
-                options={STATUS_OPTIONS.map(s => ({ value: s, label: STATUS_LABELS[s].label  s }))}
+                options={STATUS_OPTIONS.map(s => ({ value: s, label: STATUS_LABELS[s]?.label ?? s }))}
               />
             </Field>
             <Field label="Seguradora">
@@ -434,8 +434,8 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
           <div className="modal-shell-footer flex justify-end gap-3 pt-4 border-t border-dark-border/60">
             <button type="button" onClick={onClose} className="btn-secondary min-h-[44px] sm:min-h-0">Cancelar</button>
             <button type="submit" disabled={saving} className="btn-primary flex items-center gap-2 min-h-[44px] sm:min-h-0">
-              {isEdit  <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-              {saving  'Salvando...' : isEdit  'Salvar Alterações' : 'Criar Ficha'}
+              {isEdit ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              {saving ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Criar Ficha'}
             </button>
           </div>
         </form>

@@ -1,5 +1,6 @@
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { WorkspacesSelect } from './ui/WorkspacesSelect'
+import { Building2 } from 'lucide-react'
 
 function nameToHue(str) {
   let h = 0
@@ -11,21 +12,21 @@ export default function ImobiliariaSelect({
   value,
   onChange,
   placeholder = 'Imobiliária...',
-  required = false,
-  className = '',
-  disabled = false,
-  showAll = true,
-  allLabel = 'Todas as imobiliárias',
+  required    = false,
+  className   = '',
+  disabled    = false,
+  showAll     = true,
+  allLabel    = 'Todas as imobiliárias',
 }) {
   const { grupos, loading } = useImobiliaria()
 
   const options = [
     ...(showAll ? [{ value: '', label: allLabel, color: 'var(--glass-text-muted)', initials: '✓' }] : []),
     ...grupos.map(g => ({
-      value: g.nome_canonico,
-      label: g.nome_canonico,
-      color: `hsl(${nameToHue(g.nome_canonico)}, 50%, 50%)`,
-      initials: g.nome_canonico.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '',
+      value:    g.nome_canonico,
+      label:    g.nome_canonico,
+      color:    `hsl(${nameToHue(g.nome_canonico)}, 50%, 50%)`,
+      initials: g.nome_canonico.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?',
       imageUrl: g.imagem_url || null,
       imagePath: g.imagem_path || null,
     })),

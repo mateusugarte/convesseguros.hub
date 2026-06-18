@@ -30,7 +30,7 @@ function paleta(nome) {
 }
 
 function iniciais(nome) {
-  if (!nome) return ''
+  if (!nome) return '?'
   const words = nome.trim().split(/\s+/).filter(word => !SKIP.has(word.toLowerCase()))
   if (!words.length) return nome.slice(0, 2).toUpperCase()
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
@@ -53,7 +53,7 @@ export default function SeguradoraBadge({ nome, logoUrl, logoPath, size = 'sm', 
     setResolvedLogo(null)
     findSeguradoraMetaByNome(normalizeDisplayText(nome) || nome)
       .then(meta => {
-        if (active) setResolvedLogo(getEntityImageUrl(meta.logo_path, meta.logo_url || null))
+        if (active) setResolvedLogo(getEntityImageUrl(meta?.logo_path, meta?.logo_url || null))
       })
       .catch(() => {
         if (active) setResolvedLogo(null)

@@ -294,9 +294,9 @@ function WorkflowNode({ id, data, selected }) {
       case 'trigger_renovacao':
         return [c.dias ? `${c.dias}d antes` : '', c.produto].filter(Boolean).join(' · ')
       case 'trigger_inatividade':
-        return c.dias  `Sem atividade há ${c.dias} dias` : ''
+        return c.dias ? `Sem atividade há ${c.dias} dias` : ''
       case 'trigger_apolice':
-        return [c.produto, c.proximo_produto  `→ ${c.proximo_produto}` : ''].filter(Boolean).join(' ')
+        return [c.produto, c.proximo_produto ? `→ ${c.proximo_produto}` : ''].filter(Boolean).join(' ')
       case 'trigger_manual':
         return c.motivo || ''
       case 'action_etapa':
@@ -312,7 +312,7 @@ function WorkflowNode({ id, data, selected }) {
       case 'action_cross_sell':
         return [c.produto_sugerido, c.perfil].filter(Boolean).join(' · ')
       case 'action_nota':
-        return c.nota  c.nota.slice(0, 60) : ''
+        return c.nota ? c.nota.slice(0, 60) : ''
       case 'action_mover':
         return [c.coluna, c.motivo].filter(Boolean).join(' · ')
       case 'action_atribuir':
@@ -322,21 +322,21 @@ function WorkflowNode({ id, data, selected }) {
       case 'action_atividade':
         return [c.tipo_atividade, c.resultado].filter(Boolean).join(' · ')
       case 'control_aguardar':
-        return [c.quantidade && c.unidade  `${c.quantidade} ${c.unidade}` : '', c.dias_uteis  '(dias úteis)' : ''].filter(Boolean).join(' ')
+        return [c.quantidade && c.unidade ? `${c.quantidade} ${c.unidade}` : '', c.dias_uteis ? '(dias úteis)' : ''].filter(Boolean).join(' ')
       case 'control_condicao':
       case 'control_parar_se':
         return [c.campo, c.operador, c.valor].filter(Boolean).join(' ')
       case 'control_fim':
-        return [c.resultado, c.proxima_jornada  `→ ${c.proxima_jornada}` : ''].filter(Boolean).join(' · ')
+        return [c.resultado, c.proxima_jornada ? `→ ${c.proxima_jornada}` : ''].filter(Boolean).join(' · ')
       default:
         return Object.values(c).filter(Boolean).slice(0, 2).join(' · ')
     }
   }, [config, tipo])
 
   const shadowStyle = selected
-     `0 0 0 2.5px ${color}55, 0 0 0 5px ${color}18, 0 12px 32px ${color}20, 0 4px 10px rgba(6,10,32,0.10)`
+    ? `0 0 0 2.5px ${color}55, 0 0 0 5px ${color}18, 0 12px 32px ${color}20, 0 4px 10px rgba(6,10,32,0.10)`
     : hovered
-     `0 8px 24px rgba(6,10,32,0.13), 0 2px 6px rgba(6,10,32,0.06), inset 0 1px 0 rgba(255,255,255,0.92)`
+    ? `0 8px 24px rgba(6,10,32,0.13), 0 2px 6px rgba(6,10,32,0.06), inset 0 1px 0 rgba(255,255,255,0.92)`
     : `0 4px 16px rgba(6,10,32,0.08), 0 1px 4px rgba(6,10,32,0.05), inset 0 1px 0 rgba(255,255,255,0.90)`
 
   return (
@@ -350,7 +350,7 @@ function WorkflowNode({ id, data, selected }) {
         borderRadius: 16,
         background: 'linear-gradient(160deg, rgba(255,255,255,0.99) 0%, rgba(248,251,254,0.97) 100%)',
         boxShadow: shadowStyle,
-        transform: selected  'translateY(-1px)' : hovered  'translateY(-1px)' : 'none',
+        transform: selected ? 'translateY(-1px)' : hovered ? 'translateY(-1px)' : 'none',
         transition: 'box-shadow 0.18s ease, transform 0.15s ease',
       }}
       onMouseEnter={() => setHovered(true)}
@@ -415,7 +415,7 @@ function WorkflowNode({ id, data, selected }) {
             {label}
           </span>
           <span className="mt-1 block text-[10px] uppercase tracking-[0.16em] text-dark-muted/70 leading-none">
-            {isTrigger  'Gatilho' : isCondition  'Condição' : isFim  'Fim' : isPararSe  'Parar Se' : isEtapa  'Etapa' : 'Ação'}
+            {isTrigger ? 'Gatilho' : isCondition ? 'Condição' : isFim ? 'Fim' : isPararSe ? 'Parar Se' : isEtapa ? 'Etapa' : 'Ação'}
           </span>
         </div>
         {isInitial && (
@@ -430,7 +430,7 @@ function WorkflowNode({ id, data, selected }) {
 
       {/* Body */}
       <div className="px-3 py-2.5" style={{ minHeight: 52 }}>
-        {isEtapa && config.nome  (
+        {isEtapa && config.nome ? (
           <>
             <p className="text-[12px] font-bold text-dark-text leading-snug">{config.nome}</p>
             {config.prazo && (
@@ -440,7 +440,7 @@ function WorkflowNode({ id, data, selected }) {
               <p className="mt-1 text-[10px] text-dark-muted/70 leading-relaxed line-clamp-2">{configSummary}</p>
             )}
           </>
-        ) : configSummary  (
+        ) : configSummary ? (
           <p className="text-[11px] text-dark-muted leading-relaxed line-clamp-2">{configSummary}</p>
         ) : (
           <p className="text-[11px] italic" style={{ color: 'rgba(78,89,117,0.42)' }}>
@@ -1088,7 +1088,7 @@ function ConfigField({ label, value, onChange, textarea, placeholder }) {
   return (
     <div>
       <label className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider block mb-1">{label}</label>
-      {textarea  (
+      {textarea ? (
         <textarea value={value} onChange={e => onChange(e.target.value)} rows={3}
           className="input w-full text-sm resize-none" placeholder={placeholder} />
       ) : (
@@ -1105,8 +1105,8 @@ function EditorInner({ journey, onBack, toast }) {
 
   const initNodes = useMemo(() => {
     const saved = (wf.nodes || []).map(n => {
-      const info = findNodeInfo(n.data.tipo)
-      const deletable = !(n.data.isInitial || false)
+      const info = findNodeInfo(n.data?.tipo)
+      const deletable = !(n.data?.isInitial || false)
       return { ...n, type: 'workflowNode', deletable, data: { ...n.data, ...info } }
     })
     if (saved.length === 0) {
@@ -1138,7 +1138,7 @@ function EditorInner({ journey, onBack, toast }) {
   const deleteNode = useCallback((nodeId) => {
     setNodes(ns => {
       const node = ns.find(n => n.id === nodeId)
-      if (node.data.isInitial) return ns
+      if (node?.data?.isInitial) return ns
       return ns.filter(n => n.id !== nodeId)
     })
     setEdges(es => es.filter(e => e.source !== nodeId && e.target !== nodeId))
@@ -1170,7 +1170,7 @@ function EditorInner({ journey, onBack, toast }) {
   }, [onEdgesChange])
 
   function updateNodeData(nodeId, patch) {
-    setNodes(ns => ns.map(n => n.id === nodeId  { ...n, data: { ...n.data, ...patch } } : n))
+    setNodes(ns => ns.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n))
     setDirty(true)
   }
 
@@ -1179,7 +1179,7 @@ function EditorInner({ journey, onBack, toast }) {
     const tipo = e.dataTransfer.getData('application/workflow-tipo')
     if (!tipo || !rfInstanceRef.current) return
     const position = rfInstanceRef.current.screenToFlowPosition
-       rfInstanceRef.current.screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      ? rfInstanceRef.current.screenToFlowPosition({ x: e.clientX, y: e.clientY })
       : rfInstanceRef.current.project({ x: e.clientX - wrapperRef.current.getBoundingClientRect().left, y: e.clientY - wrapperRef.current.getBoundingClientRect().top })
     const info = findNodeInfo(tipo)
     setNodes(ns => [...ns, { id: crypto.randomUUID(), type: 'workflowNode', position, data: { ...info, config: {} } }])
@@ -1197,7 +1197,7 @@ function EditorInner({ journey, onBack, toast }) {
       }
       await journeyUpdate(journey.id, { nome, etapas })
       setDirty(false)
-      toast({ type: 'success', title: newStatus === 'ativa'  'Jornada publicada!' : 'Rascunho salvo!' })
+      toast({ type: 'success', title: newStatus === 'ativa' ? 'Jornada publicada!' : 'Rascunho salvo!' })
     } catch {
       toast({ type: 'error', title: 'Erro ao salvar jornada' })
     } finally {
@@ -1206,7 +1206,7 @@ function EditorInner({ journey, onBack, toast }) {
   }
 
   function handleBack() {
-    if (dirty && !window.confirm('Sair sem salvar as alterações')) return
+    if (dirty && !window.confirm('Sair sem salvar as alterações?')) return
     onBack()
   }
 
@@ -1282,7 +1282,7 @@ function EditorInner({ journey, onBack, toast }) {
               className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5 h-8"
             >
               <Save className="w-3.5 h-3.5" />
-              {saving  'Salvando...' : 'Rascunho'}
+              {saving ? 'Salvando...' : 'Rascunho'}
             </button>
 
             <button
@@ -1359,7 +1359,7 @@ function EditorInner({ journey, onBack, toast }) {
               />
               <Controls />
               <MiniMap
-                nodeColor={n => findNodeInfo(n.data.tipo).color || '#2B5BA8'}
+                nodeColor={n => findNodeInfo(n.data?.tipo)?.color || '#2B5BA8'}
                 maskColor="rgba(241,245,249,0.80)"
                 nodeStrokeWidth={0}
               />
@@ -1432,7 +1432,7 @@ function JourneyCard({ journey, leads, onEdit, onDuplicate, onToggle }) {
           )}
           <span className="flex items-center gap-1">
             <GitBranch className="w-3 h-3" />
-            {nodesQty} {nodesQty === 1  'nó' : 'nós'}
+            {nodesQty} {nodesQty === 1 ? 'nó' : 'nós'}
           </span>
           <span className="flex items-center gap-1">
             <Users className="w-3 h-3" />
@@ -1455,13 +1455,13 @@ function JourneyCard({ journey, leads, onEdit, onDuplicate, onToggle }) {
         <button
           onClick={() => onToggle(journey)}
           className={`flex items-center justify-center px-2 py-1.5 rounded-lg text-xs transition-colors ${
-            status === 'ativa'  'text-amber-500 hover:bg-amber-500/10' : 'text-status-success hover:bg-status-success/10'
+            status === 'ativa' ? 'text-amber-500 hover:bg-amber-500/10' : 'text-status-success hover:bg-status-success/10'
           }`}
-          title={status === 'ativa'  'Pausar' : 'Ativar'}
+          title={status === 'ativa' ? 'Pausar' : 'Ativar'}
         >
-          {status === 'ativa'  <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+          {status === 'ativa' ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
         </button>
-        {confirmExcluir  (
+        {confirmExcluir ? (
           <div className="flex items-center gap-1">
             <button onClick={async () => {
               await journeyUpdate(journey.id, { etapas: { ...getWorkflowData(journey), status: 'arquivada' } })
@@ -1502,7 +1502,7 @@ function ScriptCard({ script }) {
           <p className="font-semibold text-dark-text text-sm truncate">{script.titulo}</p>
           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-500">{tipo}</span>
         </div>
-        {open  <ChevronDown className="w-4 h-4 text-dark-muted" /> : <ChevronRight className="w-4 h-4 text-dark-muted" />}
+        {open ? <ChevronDown className="w-4 h-4 text-dark-muted" /> : <ChevronRight className="w-4 h-4 text-dark-muted" />}
       </button>
       {open && (
         <div className="px-4 pb-4 border-t border-dark-border">
@@ -1545,7 +1545,7 @@ function ModalJornada({ onClose, onSave }) {
               {['PF', 'PJ', 'Ambos'].map(t => (
                 <button key={t} onClick={() => set('tipoCliente', t)}
                   className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-all ${
-                    form.tipoCliente === t  'bg-brand-accent text-white border-brand-accent' : 'border-dark-border text-dark-muted hover:border-brand-accent/50'
+                    form.tipoCliente === t ? 'bg-brand-accent text-white border-brand-accent' : 'border-dark-border text-dark-muted hover:border-brand-accent/50'
                   }`}>
                   {t}
                 </button>
@@ -1618,7 +1618,7 @@ export default function Jornadas() {
   const scripts   = state.scripts.filter(s => (s.tipo || s.categoria) !== 'Material')
   const visibleJourneys = state.journeys.filter(j => getStatus(j) !== 'arquivada')
 
-  const editorJourney = editorId  state.journeys.find(j => j.id === editorId) : null
+  const editorJourney = editorId ? state.journeys.find(j => j.id === editorId) : null
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('workspace-shell-toggle', {
       detail: { hidden: Boolean(editorJourney) },
@@ -1665,15 +1665,15 @@ export default function Jornadas() {
 
   async function handleToggle(journey) {
     const wf = getWorkflowData(journey)
-    const newStatus = wf.status === 'ativa'  'pausada' : 'ativa'
+    const newStatus = wf.status === 'ativa' ? 'pausada' : 'ativa'
     await journeyUpdate(journey.id, { etapas: { ...wf, status: newStatus } })
-    toast({ type: 'success', title: newStatus === 'ativa'  'Jornada ativada' : 'Jornada pausada' })
+    toast({ type: 'success', title: newStatus === 'ativa' ? 'Jornada ativada' : 'Jornada pausada' })
   }
 
   return (
     <div className="space-y-4 animate-fade-in">
       {modal === 'Jornadas' && <ModalJornada onClose={() => setModal(null)} onSave={handleAddJornada} />}
-      {modal === 'Scripts'  && <ModalScript  onClose={() => setModal(null)} onSave={f => handleAddScript({ ...f, tipo: tab === 'Materiais'  'Material' : f.tipo })} />}
+      {modal === 'Scripts'  && <ModalScript  onClose={() => setModal(null)} onSave={f => handleAddScript({ ...f, tipo: tab === 'Materiais' ? 'Material' : f.tipo })} />}
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -1684,7 +1684,7 @@ export default function Jornadas() {
         {tab !== 'Materiais' && (
           <button onClick={() => setModal(tab)} className="btn-primary flex items-center gap-2 text-sm">
             <Plus className="w-4 h-4" />
-            {tab === 'Jornadas'  'Nova Jornada' : 'Novo Script'}
+            {tab === 'Jornadas' ? 'Nova Jornada' : 'Novo Script'}
           </button>
         )}
       </div>
@@ -1694,7 +1694,7 @@ export default function Jornadas() {
         {TABS.map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              tab === t  'bg-dark-glass text-dark-text shadow-sm' : 'text-dark-muted hover:text-dark-text'
+              tab === t ? 'bg-dark-glass text-dark-text shadow-sm' : 'text-dark-muted hover:text-dark-text'
             }`}>
             {t}
           </button>
@@ -1703,7 +1703,7 @@ export default function Jornadas() {
 
       {/* Jornadas grid */}
       {tab === 'Jornadas' && (
-        visibleJourneys.length === 0  (
+        visibleJourneys.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-16 h-16 rounded-2xl bg-brand-accent/10 flex items-center justify-center mb-4">
               <GitBranch className="w-8 h-8 text-brand-accent/40" />
@@ -1730,7 +1730,7 @@ export default function Jornadas() {
       {/* Scripts */}
       {tab === 'Scripts' && (
         <div className="space-y-3">
-          {scripts.length === 0  (
+          {scripts.length === 0 ? (
             <div className="text-center py-16 text-dark-muted">
               <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
               <p className="text-sm">Nenhum script cadastrado</p>
@@ -1742,7 +1742,7 @@ export default function Jornadas() {
       {/* Materiais */}
       {tab === 'Materiais' && (
         <div className="space-y-3">
-          {materiais.length === 0  (
+          {materiais.length === 0 ? (
             <div className="text-center py-16 text-dark-muted">
               <Layers className="w-10 h-10 mx-auto mb-2 opacity-30" />
               <p className="text-sm">Nenhum material cadastrado</p>

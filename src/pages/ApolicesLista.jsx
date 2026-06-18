@@ -41,11 +41,7 @@ function fmtBRL(v) {
 
 function fmtData(v) {
   if (!v) return '—'
-  try {
-    return format(parseISO(String(v).slice(0, 10) + 'T12:00:00'), 'dd/MM/yy', { locale: ptBR })
-  } catch {
-    return v
-  }
+  try { return format(parseISO(String(v).slice(0, 10) + 'T12:00:00'), 'dd/MM/yy', { locale: ptBR }) } catch { return v }
 }
 
 function StatusBadge({ status }) {

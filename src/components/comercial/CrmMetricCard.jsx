@@ -59,7 +59,7 @@ export default function CrmMetricCard({
           {negative && <ArrowDownRight className="h-3.5 w-3.5" />}
           {neutral && <Minus className="h-3.5 w-3.5" />}
           <span>
-            {positive  '+' : ''}
+            {positive ? '+' : ''}
             {change}% {changeLabel}
           </span>
         </div>

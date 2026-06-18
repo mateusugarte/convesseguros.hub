@@ -55,14 +55,14 @@ export default function Login() {
             </div>
             <h1 className="title-display text-dark-text">Acesso operacional</h1>
             <p className="max-w-xl text-sm leading-relaxed text-dark-muted">
-              Entre para usar a mesa operacional, o CRM comercial e o módulo Seguro Auto com o shell premium já padronizado no sistema.
+              Entre para usar a mesa operacional, o CRM comercial e o modulo Seguro Auto com o shell premium já padronizado no sistema.
             </p>
           </div>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             <div className="dashboard-hero-chip rounded-2xl p-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Mesa</p>
-              <p className="mt-1 text-sm font-semibold text-dark-text">Fichas e apólices</p>
+              <p className="mt-1 text-sm font-semibold text-dark-text">Fichas e apolices</p>
             </div>
             <div className="dashboard-hero-chip rounded-2xl p-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comercial</p>
@@ -70,7 +70,7 @@ export default function Login() {
             </div>
             <div className="dashboard-hero-chip rounded-2xl p-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Auto</p>
-              <p className="mt-1 text-sm font-semibold text-dark-text">Renovações e emissões</p>
+              <p className="mt-1 text-sm font-semibold text-dark-text">Renovacoes e emissoes</p>
             </div>
           </div>
         </section>

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -6,13 +6,11 @@ import {
 } from 'recharts'
 import { format, parseISO, formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { normalizeDisplayText } from '../lib/text'
 import {
   fetchKPIs, fetchEmitidas, fetchFichasPorDia, fetchTopImobiliarias,
   fetchDistribuicaoStatus, fetchFichasPorProdutoMes, fetchMetricas,
   fetchAtividadeRecente, fetchFichasDoOrcamentista, fetchAprovacoesPorSeguradora, STATUS_LABELS, PRODUTO_LABELS,
 } from '../lib/fichas'
-import { fetchProducaoPorProdutoSeguradora, formatMoneyBR } from '../lib/apolices'
 import { AVATAR_COLORS, STATUS_CHART_COLORS } from '../design-system/tokens'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -22,7 +20,6 @@ import {
   Activity, AlertTriangle, ArrowRight, BarChart3, BellRing, CalendarDays,
   CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Clock3,
   Crown, ShieldCheck, Sparkles, Target, TrendingUp, Users, Zap,
-  Coins,
 } from 'lucide-react'
 import {
   DataCard,
@@ -58,7 +55,7 @@ function stringColor(str) {
 }
 
 function initials(name) {
-  return (name || '').split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase() || ''
+  return (name || '').split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase() || '?'
 }
 
 function toHourAge(dateString) {
@@ -77,7 +74,7 @@ function buildTeamRanking(activity) {
   const summary = new Map()
 
   activity.forEach(item => {
-    const name = normalizeDisplayText(item.profiles?.nome) || 'Sem responsável'
+    const name = item.profiles?.nome || 'Sem responsavel'
     const current = summary.get(name) || {
       name,
       total: 0,
@@ -109,7 +106,7 @@ function buildAlerts({ kpis, metricas, minhasFichas, topImob }) {
       id: 'sem-resposta',
       tone: 'warning',
       title: 'Pendencias acima de 48h',
-      description: `${metricas?.semResposta || 0} ficha(s) aguardando retorno sem resposta recente.`,
+      description: `${metricas.semResposta} ficha(s) aguardando retorno sem resposta recente.`,
     })
   }
 
@@ -118,7 +115,7 @@ function buildAlerts({ kpis, metricas, minhasFichas, topImob }) {
       id: 'backlog',
       tone: 'danger',
       title: 'Backlog operacional elevado',
-      description: `${kpis?.emAberto || 0} fichas em aberto demandando triagem ou conclusao.`,
+      description: `${kpis.emAberto} fichas em aberto demandando triagem ou conclusao.`,
     })
   }
 
@@ -132,7 +129,7 @@ function buildAlerts({ kpis, metricas, minhasFichas, topImob }) {
     })
   }
 
-  if ((topImob.length || 0) === 0) {
+  if ((topImob?.length || 0) === 0) {
     alerts.push({
       id: 'sem-aprovacoes',
       tone: 'neutral',
@@ -167,7 +164,7 @@ function MonthYearPicker({ year, month, onChange }) {
   useEffect(() => {
     if (!open) return
     function handler(event) {
-      if (!wrapRef.current.contains(event.target)) setOpen(false)
+      if (!wrapRef.current?.contains(event.target)) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -236,7 +233,7 @@ function MonthYearPicker({ year, month, onChange }) {
 }
 
 function DashboardTooltip({ active, payload, label, dateLabel }) {
-  if (!active || !payload.length) return null
+  if (!active || !payload?.length) return null
 
   return (
     <div className="glass-panel px-3 py-2.5 min-w-[140px] text-xs">
@@ -258,8 +255,8 @@ function DashboardTooltip({ active, payload, label, dateLabel }) {
 }
 
 function ApprovalSegTooltip({ active, payload }) {
-  if (!active || !payload.length) return null
-  const item = payload[0].payload
+  if (!active || !payload?.length) return null
+  const item = payload[0]?.payload
   if (!item) return null
 
   return (
@@ -270,51 +267,6 @@ function ApprovalSegTooltip({ active, payload }) {
       </p>
     </div>
   )
-}
-
-function ProductRevenueTooltip({ active, payload }) {
-  if (!active || !payload?.length) return null
-  const item = payload[0]?.payload
-  if (!item) return null
-
-  return (
-    <div className="glass-panel px-3 py-2.5 text-xs">
-      <p className="text-dark-text font-semibold">{item.label}</p>
-      <p className="mt-1 text-dark-muted">{item.apolices} apólice{item.apolices === 1 ? '' : 's'}</p>
-      <p className="mt-1 text-dark-text">{formatMoneyBR(item.value)}</p>
-    </div>
-  )
-}
-
-function ProductSegTooltip({ active, payload }) {
-  if (!active || !payload?.length) return null
-  const item = payload[0]?.payload
-  if (!item) return null
-
-  return (
-    <div className="glass-panel px-3 py-2.5 text-xs">
-      <p className="text-dark-text font-semibold">{PRODUTO_LABELS[item.produto] || item.produto || 'Sem produto'}</p>
-      <p className="mt-1 text-dark-muted">{item.seguradora || 'Sem seguradora'}</p>
-      <p className="mt-1 text-dark-text">{formatMoneyBR(item.value)}</p>
-    </div>
-  )
-}
-
-function groupProdutoTotals(rows) {
-  const map = new Map()
-  rows.forEach(row => {
-    const key = row.produto || 'sem_produto'
-    const current = map.get(key) || {
-      produto: key,
-      label: PRODUTO_LABELS[key] || key || 'Sem produto',
-      value: 0,
-      apolices: 0,
-    }
-    current.value += Number(row.value) || 0
-    current.apolices += Number(row.apolices) || 0
-    map.set(key, current)
-  })
-  return [...map.values()].sort((a, b) => b.value - a.value)
 }
 
 function AlertCard({ alert }) {
@@ -364,8 +316,8 @@ export default function Dashboard() {
     try { return JSON.parse(localStorage.getItem(LS_KEY)) } catch { return null }
   })()
 
-  const [filterYear, setFilterYear] = useState(stored.ano ?? now.getFullYear())
-  const [filterMonth, setFilterMonth] = useState(stored.mes ?? now.getMonth() + 1)
+  const [filterYear, setFilterYear] = useState(stored?.ano ?? now.getFullYear())
+  const [filterMonth, setFilterMonth] = useState(stored?.mes ?? now.getMonth() + 1)
   const [approvalPeriod, setApprovalPeriod] = useState('mes_atual')
 
   useEffect(() => {
@@ -396,9 +348,9 @@ export default function Dashboard() {
   }, [approvalPeriod])
 
   const query = useQuery({
-    queryKey: ['dashboard', user.id, filterYear, filterMonth],
+    queryKey: ['dashboard', user?.id, filterYear, filterMonth],
     queryFn: async () => {
-      const [kpis, emitted, byDay, topImob, distribution, byProduct, metrics, activity, mine, prodSeg] = await Promise.all([
+      const [kpis, emitted, byDay, topImob, distribution, byProduct, metrics, activity, mine] = await Promise.all([
         fetchKPIs(rangeStart, rangeEnd),
         fetchEmitidas(rangeStart, rangeEnd),
         fetchFichasPorDia(30),
@@ -408,7 +360,6 @@ export default function Dashboard() {
         fetchMetricas(),
         fetchAtividadeRecente(10),
         user ? fetchFichasDoOrcamentista(user.id) : Promise.resolve([]),
-        fetchProducaoPorProdutoSeguradora(rangeStart, rangeEnd),
       ])
 
       return {
@@ -421,7 +372,6 @@ export default function Dashboard() {
         metrics,
         activity,
         mine,
-        prodSeg,
       }
     },
   })
@@ -432,16 +382,15 @@ export default function Dashboard() {
   })
 
   const data = query.data
-  const kpis = data.kpis ?? null
-  const emitted = data.emitted ?? 0
-  const byDay = data.byDay ?? []
-  const topImob = data.topImob ?? []
-  const distribution = data.distribution ?? []
-  const byProduct = data.byProduct ?? []
-  const metrics = data.metrics ?? null
-  const activity = data.activity ?? []
-  const mine = data.mine ?? []
-  const prodSeg = data.prodSeg ?? []
+  const kpis = data?.kpis ?? null
+  const emitted = data?.emitted ?? 0
+  const byDay = data?.byDay ?? []
+  const topImob = data?.topImob ?? []
+  const distribution = data?.distribution ?? []
+  const byProduct = data?.byProduct ?? []
+  const metrics = data?.metrics ?? null
+  const activity = data?.activity ?? []
+  const mine = data?.mine ?? []
   const approvalSeg = approvalQuery.data ?? []
 
   const chartTheme = useMemo(() => {
@@ -461,24 +410,11 @@ export default function Dashboard() {
 
   const teamRanking = useMemo(() => buildTeamRanking(activity), [activity])
   const alerts = useMemo(() => buildAlerts({ kpis, metricas: metrics, minhasFichas: mine, topImob }), [kpis, metrics, mine, topImob])
-  const productRevenue = useMemo(() => groupProdutoTotals(prodSeg), [prodSeg])
-  const [activeProduct, setActiveProduct] = useState('')
-  const activeProductRows = useMemo(
-    () => prodSeg.filter(item => item.produto === (activeProduct || productRevenue[0]?.produto || '')),
-    [prodSeg, activeProduct, productRevenue],
-  )
   const upcomingDeadlines = useMemo(
     () => [...mine].sort((a, b) => new Date(a.assumida_em || a.created_at) - new Date(b.assumida_em || b.created_at)).slice(0, 5),
     [mine],
   )
   const periodLabel = `${MONTHS[filterMonth - 1]} ${filterYear}`
-
-  useEffect(() => {
-    if (!productRevenue.length) return
-    if (!activeProduct || !productRevenue.some(item => item.produto === activeProduct)) {
-      setActiveProduct(productRevenue[0].produto)
-    }
-  }, [productRevenue, activeProduct])
 
   if (query.isLoading) return <DashboardSkeleton />
 
@@ -553,7 +489,7 @@ export default function Dashboard() {
         </div>
         <div className="rounded-2xl border border-dark-border/70 bg-white/60 px-4 py-3 min-w-[180px]">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Taxa de aprovacao</p>
-          <p className="mt-1 text-lg font-semibold text-dark-text">{metrics?.taxaAprovacao != null ? `${metrics.taxaAprovacao}%` : '—'}</p>
+          <p className="mt-1 text-lg font-semibold text-dark-text">{metrics ? `${metrics.taxaAprovacao}%` : '—'}</p>
         </div>
       </FilterBar>
 
@@ -718,12 +654,12 @@ export default function Dashboard() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
               <p className="metric-label">Volume total do periodo</p>
-      <p className="stat-number text-dark-text mt-3">{kpis?.total ?? '—'}</p>
+              <p className="stat-number text-dark-text mt-3">{kpis?.total ?? '—'}</p>
               <p className="metric-sub mt-2">Base total observada na janela selecionada.</p>
             </div>
             <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
               <p className="metric-label">Taxa de recusa</p>
-              <p className="stat-number text-dark-text mt-3">{metrics?.taxaRecusa != null ? `${metrics.taxaRecusa}%` : '—'}</p>
+              <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaRecusa}%` : '—'}</p>
               <p className="metric-sub mt-2">Leitura de risco para ajustes de triagem e proposta.</p>
             </div>
             <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
@@ -741,103 +677,24 @@ export default function Dashboard() {
 
         <DataCard
           className="xl:col-span-4"
-          title="Produção por produto"
-          subtitle="Valor financeiro emitido por produto no período."
+          title="Production Breakdown"
+          subtitle="Comparativo por produto no mes atual."
         >
-          {productRevenue.length === 0 ? (
-            <EmptyState title="Sem produção por produto" description="Ainda não houve apólices suficientes para montar a visão por produto." icon={<Coins className="w-6 h-6" />} />
+          {byProduct.every(item => item.total === 0) ? (
+            <EmptyState title="Sem producao neste mes" description="Ainda nao houve fichas suficientes para montar o comparativo por produto." icon={<Target className="w-6 h-6" />} />
           ) : (
-            <div className="space-y-3">
-              <div className="h-[240px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={productRevenue} margin={{ top: 12, right: 6, left: -14, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartTheme.grid} />
-                    <XAxis dataKey="label" tick={{ fill: chartTheme.tick, fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: chartTheme.tick, fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <Tooltip content={<ProductRevenueTooltip />} />
-                    <Bar dataKey="value" name="Produção" radius={[8, 8, 0, 0]} fill={chartTheme.accent}>
-                      {productRevenue.map((item, index) => (
-                        <Cell key={item.produto} fill={index === 0 ? chartTheme.accent : index === 1 ? chartTheme.sky : chartTheme.gold} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="space-y-2">
-                {productRevenue.map(item => (
-                  <div key={item.produto} className="rounded-2xl border border-dark-border/60 bg-dark-surface2/25 px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-dark-text">{item.label}</p>
-                        <p className="text-xs text-dark-muted">{item.apolices} apólice{item.apolices === 1 ? '' : 's'}</p>
-                      </div>
-                      <span className="text-sm font-mono font-semibold text-dark-text">{formatMoneyBR(item.value)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </DataCard>
-
-        <DataCard
-          className="xl:col-span-3"
-          title="Produto x seguradora"
-          subtitle="Selecione um produto e veja a produção por seguradora."
-        >
-          {productRevenue.length === 0 ? (
-            <EmptyState title="Sem produção por produto" description="Não há dados suficientes para segmentar por seguradora." icon={<Sparkles className="w-6 h-6" />} />
-          ) : (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-1.5">
-                {productRevenue.map(item => (
-                  <button
-                    key={item.produto}
-                    onClick={() => setActiveProduct(item.produto)}
-                    className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
-                      activeProduct === item.produto
-                        ? 'bg-brand-secondary text-white'
-                        : 'border border-dark-border text-dark-muted hover:text-dark-text hover:border-brand-accent/40'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="h-[240px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={activeProductRows} layout="vertical" margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={chartTheme.grid} />
-                    <XAxis type="number" tick={{ fill: chartTheme.tick, fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis type="category" dataKey="seguradora" width={110} tick={{ fill: chartTheme.tick, fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <Tooltip content={<ProductSegTooltip />} />
-                    <Bar dataKey="value" radius={[0, 8, 8, 0]} fill={chartTheme.accent}>
-                      {activeProductRows.map((item, index) => (
-                        <Cell key={item.seguradora} fill={index % 2 === 0 ? chartTheme.accent : chartTheme.sky} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div className="space-y-2">
-                {activeProductRows.length > 0 ? (
-                  activeProductRows.map(item => (
-                    <div key={item.seguradora} className="rounded-2xl border border-dark-border/60 bg-dark-surface2/25 px-4 py-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-dark-text">{item.seguradora}</p>
-                          <p className="text-xs text-dark-muted">{item.apolices} apólice{item.apolices === 1 ? '' : 's'}</p>
-                        </div>
-                        <span className="text-sm font-mono font-semibold text-dark-text">{formatMoneyBR(item.value)}</span>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-dark-muted">Sem produção para o produto selecionado.</p>
-                )}
-              </div>
+            <div className="h-[260px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={byProduct} margin={{ top: 12, right: 6, left: -14, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartTheme.grid} />
+                  <XAxis dataKey="name" tick={{ fill: chartTheme.tick, fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: chartTheme.tick, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip content={<DashboardTooltip />} />
+                  <Bar dataKey="total" name="Total" radius={[8, 8, 0, 0]} fill={chartTheme.accent} />
+                  <Bar dataKey="aprovadas" name="Aprovadas" radius={[8, 8, 0, 0]} fill={chartTheme.success} />
+                  <Bar dataKey="recusadas" name="Recusadas" radius={[8, 8, 0, 0]} fill={chartTheme.danger} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           )}
         </DataCard>
@@ -921,7 +778,7 @@ export default function Dashboard() {
               {activity.map(item => {
                 const statusMeta = STATUS_LABELS[item.status] ?? { label: item.status }
                 const chip = timeChip(item.created_at)
-                const owner = normalizeDisplayText(item.profiles?.nome) || 'Livre'
+                const owner = item.profiles?.nome || 'Livre'
 
                 return (
                   <div key={item.id} className="rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-4 py-3">
@@ -934,11 +791,11 @@ export default function Dashboard() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-semibold text-dark-text truncate">{normalizeDisplayText(item.nome_interessado) || 'Sem nome'}</p>
+                          <p className="text-sm font-semibold text-dark-text truncate">{item.nome_interessado || 'Sem nome'}</p>
                           <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${chip.className}`}>{chip.label}</span>
                         </div>
                         <p className="mt-1 text-xs text-dark-muted truncate">
-                          {normalizeDisplayText(item.imobiliaria) || 'Sem imobiliária'} · {PRODUTO_LABELS[item.produto] || item.produto} · {owner}
+                          {item.imobiliaria || 'Sem imobiliaria'} · {PRODUTO_LABELS[item.produto] || item.produto} · {owner}
                         </p>
                       </div>
                       <div className="text-right flex-shrink-0">
@@ -1004,18 +861,18 @@ export default function Dashboard() {
               {upcomingDeadlines.map(item => {
                 const since = item.assumida_em || item.created_at
                 const chip = timeChip(since)
-                const owner = normalizeDisplayText(item.profiles?.nome) || 'Sem responsável'
+                const owner = item.profiles?.nome || 'Sem responsavel'
 
                 return (
                   <div key={item.id} className="rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-4 py-3">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-semibold text-dark-text truncate">{normalizeDisplayText(item.nome_interessado) || 'Sem nome'}</p>
+                          <p className="text-sm font-semibold text-dark-text truncate">{item.nome_interessado || 'Sem nome'}</p>
                           <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${chip.className}`}>{chip.label}</span>
                         </div>
                         <p className="mt-1 text-xs text-dark-muted truncate">
-                          {normalizeDisplayText(item.imobiliaria) || 'Sem imobiliária'} · {normalizeDisplayText(item.seguradora) || 'Seguradora pendente'} · {owner}
+                          {item.imobiliaria || 'Sem imobiliaria'} · {item.seguradora || 'Seguradora pendente'} · {owner}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1046,7 +903,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="metric-label">Taxa de aprovacao</p>
-                <p className="stat-number text-dark-text mt-3">{metrics?.taxaAprovacao != null ? `${metrics.taxaAprovacao}%` : '—'}</p>
+                <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaAprovacao}%` : '—'}</p>
               </div>
               <Target className="w-5 h-5 text-status-success" />
             </div>
@@ -1057,7 +914,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="metric-label">Taxa de recusa</p>
-                <p className="stat-number text-dark-text mt-3">{metrics?.taxaRecusa != null ? `${metrics.taxaRecusa}%` : '—'}</p>
+                <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaRecusa}%` : '—'}</p>
               </div>
               <CircleAlert className="w-5 h-5 text-status-danger" />
             </div>

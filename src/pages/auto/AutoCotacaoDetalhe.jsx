@@ -144,7 +144,7 @@ function DetailSelect({ label, value, onSave, options }) {
           onClick={() => setEditing(true)}
           className="mt-2 flex w-full items-center justify-between gap-3 text-left"
         >
-          <span className="min-w-0 truncate text-sm text-dark-text">{options.find(opt => opt.value === value).label || value || '—'}</span>
+          <span className="min-w-0 truncate text-sm text-dark-text">{options.find(opt => opt.value === value)?.label || value || '—'}</span>
           <Pencil className="h-3.5 w-3.5 shrink-0 text-dark-muted/50 opacity-0 transition-opacity group-hover:opacity-100" />
         </button>
       )}
@@ -172,7 +172,7 @@ function SummaryGrid({ cotacao }) {
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Status</p>
             <CalendarDays className="h-5 w-5 text-brand-accent/40" />
           </div>
-          <p className="text-2xl font-semibold text-dark-text">{COTACAO_STATUS[cotacao.status].label || cotacao.status || '—'}</p>
+          <p className="text-2xl font-semibold text-dark-text">{COTACAO_STATUS[cotacao.status]?.label || cotacao.status || '—'}</p>
           <p className="mt-2 text-xs text-dark-muted">estado atual da cotacao</p>
         </div>
         <div className="border-b border-dark-border/60 p-5 lg:border-b-0 lg:border-r">
@@ -181,7 +181,7 @@ function SummaryGrid({ cotacao }) {
             <ShieldCheck className="h-5 w-5 text-brand-accent/40" />
           </div>
           <p className="text-2xl font-semibold text-dark-text">Seguro Auto</p>
-            <p className="mt-2 text-xs text-dark-muted">{cotacao.tipo === 'renovacao' ? 'renovacao' : 'novo negocio'}</p>
+          <p className="mt-2 text-xs text-dark-muted">{cotacao.tipo === 'renovacao' ? 'renovacao' : 'novo negocio'}</p>
         </div>
         <div className="border-b border-dark-border/60 p-5 lg:border-b-0 lg:border-r">
           <div className="mb-3 flex items-center justify-between">
@@ -223,9 +223,9 @@ function HistoricoCotacao({ cotacao }) {
             <div className={`mt-1 h-2.5 w-2.5 rounded-full ${cotacao.status === 'perdida' ? 'bg-status-danger' : 'bg-status-success'}`} />
           </div>
           <div>
-            <p className="text-sm font-medium text-dark-text">Status atual: {COTACAO_STATUS[cotacao.status].label || cotacao.status || '—'}</p>
+            <p className="text-sm font-medium text-dark-text">Status atual: {COTACAO_STATUS[cotacao.status]?.label || cotacao.status || '—'}</p>
             <p className="text-xs text-dark-muted">
-              {cotacao.seguradora_preferencial.nome || cotacao.seguradora_mais_barata.nome
+              {cotacao.seguradora_preferencial?.nome || cotacao.seguradora_mais_barata?.nome
                 ? 'Seguradoras ja vinculadas na cotacao.'
                 : 'Aguardando definicao de seguradoras.'}
             </p>
@@ -261,13 +261,13 @@ export default function AutoCotacaoDetalhe() {
       await qc.invalidateQueries({ queryKey: ['auto-dashboard-cotacoes-resumo'] })
     },
     onError: error => {
-      setActionError(error.message || 'Erro ao salvar a cotacao.')
+      setActionError(error?.message || 'Erro ao salvar a cotacao.')
     },
   })
 
   const { mutateAsync: salvarSeguradora } = useMutation({
     mutationFn: async ({ field, value }) => {
-      const atual = cotacao[field] || {}
+      const atual = cotacao?.[field] || {}
       return atualizarCotacaoAuto(id, {
         [field]: {
           ...atual,
@@ -282,7 +282,7 @@ export default function AutoCotacaoDetalhe() {
       await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
     },
     onError: error => {
-      setActionError(error.message || 'Erro ao salvar a seguradora.')
+      setActionError(error?.message || 'Erro ao salvar a seguradora.')
     },
   })
 
@@ -296,7 +296,7 @@ export default function AutoCotacaoDetalhe() {
       navigate('/auto/cotacoes')
     },
     onError: error => {
-      setActionError(error.message || 'Erro ao excluir a cotacao.')
+      setActionError(error?.message || 'Erro ao excluir a cotacao.')
     },
   })
 
@@ -304,13 +304,13 @@ export default function AutoCotacaoDetalhe() {
     setConfirmDelete(false)
   }, [id])
 
-  const backTo = location.state.from || '/auto/cotacoes'
+  const backTo = location.state?.from || '/auto/cotacoes'
 
   const metrics = useMemo(() => [
-    { key: 'status', label: 'Status', value: cotacao.status  (COTACAO_STATUS[cotacao.status].label || cotacao.status) : '—', tone: 'accent' },
-    { key: 'tipo', label: 'Tipo', value: cotacao.tipo === 'renovacao'  'Renovacao' : 'Seguro novo', tone: 'secondary' },
-    { key: 'cliente', label: 'Cliente', value: cotacao.nome_cliente || cotacao.cpf_cliente || 'Sem nome', tone: 'success' },
-    { key: 'celular', label: 'Celular', value: cotacao.celular_cliente || '—', tone: 'warning' },
+    { key: 'status', label: 'Status', value: cotacao?.status ? (COTACAO_STATUS[cotacao.status]?.label || cotacao.status) : '—', tone: 'accent' },
+    { key: 'tipo', label: 'Tipo', value: cotacao?.tipo === 'renovacao' ? 'Renovacao' : 'Seguro novo', tone: 'secondary' },
+    { key: 'cliente', label: 'Cliente', value: cotacao?.nome_cliente || cotacao?.cpf_cliente || 'Sem nome', tone: 'success' },
+    { key: 'celular', label: 'Celular', value: cotacao?.celular_cliente || '—', tone: 'warning' },
   ], [cotacao])
 
   if (isLoading) {
@@ -431,7 +431,7 @@ export default function AutoCotacaoDetalhe() {
                     </button>
                   </div>
                   <SeguradoraSelect
-                    value={cotacao.[section.key].nome || ''}
+                    value={cotacao?.[section.key]?.nome || ''}
                     onChange={value => { void salvarSeguradora({ field: section.key, value }).catch(() => {}) }}
                     produto="auto"
                     placeholder="Selecionar seguradora"
@@ -440,11 +440,11 @@ export default function AutoCotacaoDetalhe() {
                     <DetailField
                       label={<span className="inline-flex items-center gap-1.5"><BadgeDollarSign className="h-3.5 w-3.5" /> Premio total</span>}
                       type="number"
-                      value={cotacao.[section.key].premio_total}
+                      value={cotacao?.[section.key]?.premio_total}
                       onSave={value => salvarCampo({
                         field: section.key,
                         value: {
-                          ...(cotacao.[section.key] || {}),
+                          ...(cotacao?.[section.key] || {}),
                           premio_total: value,
                         },
                       })}
@@ -452,11 +452,11 @@ export default function AutoCotacaoDetalhe() {
                     <DetailField
                       label={<span className="inline-flex items-center gap-1.5"><BadgeDollarSign className="h-3.5 w-3.5" /> Premio liquido</span>}
                       type="number"
-                      value={cotacao.[section.key].premio_liquido}
+                      value={cotacao?.[section.key]?.premio_liquido}
                       onSave={value => salvarCampo({
                         field: section.key,
                         value: {
-                          ...(cotacao.[section.key] || {}),
+                          ...(cotacao?.[section.key] || {}),
                           premio_liquido: value,
                         },
                       })}
@@ -464,11 +464,11 @@ export default function AutoCotacaoDetalhe() {
                     <DetailField
                       label={<span className="inline-flex items-center gap-1.5"><BadgeDollarSign className="h-3.5 w-3.5" /> % Comissao</span>}
                       type="number"
-                      value={cotacao.[section.key].pct_comissao}
+                      value={cotacao?.[section.key]?.pct_comissao}
                       onSave={value => salvarCampo({
                         field: section.key,
                         value: {
-                          ...(cotacao.[section.key] || {}),
+                          ...(cotacao?.[section.key] || {}),
                           pct_comissao: value,
                         },
                       })}
@@ -476,7 +476,7 @@ export default function AutoCotacaoDetalhe() {
                     <div className="rounded-2xl border border-brand-accent/15 bg-brand-accent/6 p-4">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissao estimada</p>
                       <p className="mt-2 text-sm font-semibold text-dark-text">
-                        {formatMoney(Number(cotacao.[section.key].premio_liquido || 0) * Number(cotacao.[section.key].pct_comissao || 0))}
+                        {formatMoney(Number(cotacao?.[section.key]?.premio_liquido || 0) * Number(cotacao?.[section.key]?.pct_comissao || 0))}
                       </p>
                     </div>
                   </div>
@@ -505,8 +505,8 @@ export default function AutoCotacaoDetalhe() {
               <p><span className="font-medium text-dark-text">Celular:</span> {cotacao.celular_cliente || '—'}</p>
               <p><span className="font-medium text-dark-text">Veiculo:</span> {cotacao.modelo_veiculo || '—'}</p>
               <p><span className="font-medium text-dark-text">Placa:</span> {cotacao.placa || '—'}</p>
-              <p><span className="font-medium text-dark-text">Seguradora preferencial:</span> {cotacao.seguradora_preferencial.nome || '—'}</p>
-              <p><span className="font-medium text-dark-text">Seguradora mais barata:</span> {cotacao.seguradora_mais_barata.nome || '—'}</p>
+              <p><span className="font-medium text-dark-text">Seguradora preferencial:</span> {cotacao.seguradora_preferencial?.nome || '—'}</p>
+              <p><span className="font-medium text-dark-text">Seguradora mais barata:</span> {cotacao.seguradora_mais_barata?.nome || '—'}</p>
             </div>
           </DataCard>
 
@@ -517,9 +517,9 @@ export default function AutoCotacaoDetalhe() {
               <QuoteStatusBadge status={cotacao.status} />
               <p className="text-sm text-dark-muted">
                 {cotacao.status === 'pendente'
-                   'Cotacao aguardando andamento comercial.'
+                  ? 'Cotacao aguardando andamento comercial.'
                   : cotacao.status === 'convertida'
-                     'Cotacao marcada como convertida.'
+                    ? 'Cotacao marcada como convertida.'
                     : 'Cotacao marcada como perdida.'}
               </p>
             </div>
@@ -531,7 +531,7 @@ export default function AutoCotacaoDetalhe() {
         <div className="fixed inset-0 z-[80] flex items-center justify-center px-4">
           <div className="modal-backdrop" onClick={() => setConfirmDelete(false)} />
           <div className="relative z-10 w-full max-w-md rounded-3xl border border-dark-border/70 bg-white p-6">
-            <p className="text-lg font-semibold text-dark-text">Excluir cotacao</p>
+            <p className="text-lg font-semibold text-dark-text">Excluir cotacao?</p>
             <p className="mt-2 text-sm text-dark-muted">
               Essa acao remove o registro e nao pode ser desfeita.
             </p>
@@ -544,7 +544,7 @@ export default function AutoCotacaoDetalhe() {
                 disabled={deleting}
                 className="rounded-2xl bg-status-danger px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
               >
-                {deleting  'Excluindo...' : 'Excluir'}
+                {deleting ? 'Excluindo...' : 'Excluir'}
               </button>
             </div>
           </div>

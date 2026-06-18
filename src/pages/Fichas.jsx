@@ -79,12 +79,12 @@ const tooltipStyle = (theme) => ({
 const PRODUTOS = [
   { key: 'residencial_pf',  label: 'Residencial PF', Icon: Home,        accent: BRAND.primary, bg: 'rgba(0,0,121,0.08)',  border: 'rgba(0,0,121,0.25)' },
   { key: 'comercial_pf',    label: 'Comercial PF',   Icon: Briefcase,   accent: PRODUTO_COLORS.comercial_pf.color, bg: 'rgba(34,71,170,0.08)',  border: 'rgba(34,71,170,0.25)' },
-  { key: 'pessoa_juridica', label: 'Pessoa Jurídica', Icon: Building,   accent: PRODUTO_COLORS.pessoa_juridica.color, bg: 'rgba(127,190,196,0.10)', border: 'rgba(127,190,196,0.28)' },
+  { key: 'pessoa_juridica', label: 'Pessoa JurÃ­dica', Icon: Building,   accent: PRODUTO_COLORS.pessoa_juridica.color, bg: 'rgba(127,190,196,0.10)', border: 'rgba(127,190,196,0.28)' },
   { key: 'todos',           label: 'Todos',           Icon: LayoutGrid, accent: BRAND.accent, bg: 'rgba(220,255,255,0.18)',  border: 'rgba(195,240,242,0.40)' },
 ]
 
 const MESES_ABBR = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+const MESES_FULL = ['Janeiro','Fevereiro','MarÃ§o','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 
 const FICHA_ROUTE_TO_PRODUTO = {
   '/fichas/residencial': 'residencial_pf',
@@ -116,10 +116,10 @@ function stringColor(str) {
   let h = 0; for (let i = 0; i < (str||'').length; i++) h = str.charCodeAt(i) + ((h << 5) - h)
   return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]
 }
-function initials(n) { return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || '' }
+function initials(n) { return (n||'').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() || '?' }
 
 function AvatarOrcamentista({ nome }) {
-  if (!nome) return <span className="text-xs text-dark-muted">—</span>
+  if (!nome) return <span className="text-xs text-dark-muted">â€”</span>
   return (
     <div className="flex items-center gap-1.5">
       <div
@@ -152,25 +152,25 @@ function OrcBadge({ nome, isMe }) {
     }`}>
       <span className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
             style={{ background: color }}>{initials(nome)}</span>
-      {isMe ? `${nome} (Você)` : nome}
+      {isMe ? `${nome} (VocÃª)` : nome}
     </span>
   )
 }
 
 function exportCSV(fichas, filename, resolverNome) {
-  const headers = ['Data','Imobiliária','Nome','CPF','Produto','Status','Orçamentista','Seguradora']
+  const headers = ['Data','ImobiliÃ¡ria','Nome','CPF','Produto','Status','OrÃ§amentista','Seguradora']
   const rows = fichas.map(f => [
     format(parseISO(f.created_at), 'dd/MM/yyyy'),
     (resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || f.imobiliaria || '',
     f.nome_interessado || f.nome_empresa || '',
     f.cpf || f.cnpj || '',
     PRODUTO_LABELS[f.produto] || f.produto,
-    STATUS_LABELS[f.status].label || f.status,
-    f.profiles.nome || '',
+    STATUS_LABELS[f.status]?.label || f.status,
+    f.profiles?.nome || '',
     f.seguradora || '',
   ])
   const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n')
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+  const blob = new Blob(['ï»¿' + csv], { type: 'text/csv;charset=utf-8;' })
   const url  = URL.createObjectURL(blob)
   const a    = Object.assign(document.createElement('a'), { href: url, download: filename })
   a.click(); URL.revokeObjectURL(url)
@@ -192,11 +192,11 @@ function Pagination({ page, total, pageSize, onPage }) {
   const from = page * pageSize + 1, to = Math.min((page + 1) * pageSize, total)
   return (
     <div className="flex items-center justify-between px-4 py-3 border-t border-dark-border text-xs text-dark-muted">
-      <span>Mostrando {from}–{to} de {total}</span>
+      <span>Mostrando {from}â€“{to} de {total}</span>
       <div className="flex items-center gap-1">
         <button onClick={() => onPage(page - 1)} disabled={page === 0}
                 className="px-2.5 py-1 rounded-lg border border-dark-border hover:border-brand-accent/50 disabled:opacity-30 transition-colors">
-          ← Anterior
+          â† Anterior
         </button>
         {Array.from({ length: Math.min(5, pages) }, (_, i) => {
           const p = page < 3 ? i : page - 2 + i
@@ -210,7 +210,7 @@ function Pagination({ page, total, pageSize, onPage }) {
         })}
         <button onClick={() => onPage(page + 1)} disabled={page >= pages - 1}
                 className="px-2.5 py-1 rounded-lg border border-dark-border hover:border-brand-accent/50 disabled:opacity-30 transition-colors">
-          Próximo →
+          PrÃ³ximo â†’
         </button>
       </div>
     </div>
@@ -239,7 +239,7 @@ function ViewToggle({ view, onChange }) {
 // â”€â”€ Tooltip para os grÃ¡ficos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function DarkTip({ active, payload, label }) {
-  if (!active || !payload.length) return null
+  if (!active || !payload?.length) return null
   return (
     <div className="bg-dark-surface2 border border-dark-border rounded-xl px-3 py-2 shadow-2xl text-xs">
       {label && <p className="text-dark-muted mb-1">
@@ -285,11 +285,11 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
   }, [inicioFiltro, fimFiltro])
 
   const kpiCards = [
-    { label: 'Total do mês', value: kpis.totalMes ?? '—', hint: kpis.variacaoMes !== undefined && kpis.variacaoMes !== null ? `${kpis.variacaoMes >= 0 ? '+' : ''}${kpis.variacaoMes}% vs mês anterior` : 'Janela atual', tone: 'accent', icon: <TrendingUp className="w-4 h-4" /> },
-    { label: 'Hoje', value: kpis.hoje ?? '—', hint: 'Entrada do dia', tone: 'success', icon: <Clock className="w-4 h-4" /> },
-    { label: 'Esta semana', value: kpis.semana ?? '—', hint: 'Volume recente', tone: 'secondary', icon: <CheckCircle2 className="w-4 h-4" /> },
-    { label: 'Pendentes', value: kpis.pendentes ?? '—', hint: 'Aguardando ação', tone: 'warning', icon: <AlertCircle className="w-4 h-4" /> },
-    { label: 'Em cotação', value: kpis.emCotacao ?? '—', hint: 'Já assumidas', tone: 'accent', icon: <FileText className="w-4 h-4" /> },
+    { label: 'Total do mÃªs', value: kpis?.totalMes ?? 'â€”', hint: kpis?.variacaoMes !== undefined && kpis?.variacaoMes !== null ? `${kpis.variacaoMes >= 0 ? '+' : ''}${kpis.variacaoMes}% vs mÃªs anterior` : 'Janela atual', tone: 'accent', icon: <TrendingUp className="w-4 h-4" /> },
+    { label: 'Hoje', value: kpis?.hoje ?? 'â€”', hint: 'Entrada do dia', tone: 'success', icon: <Clock className="w-4 h-4" /> },
+    { label: 'Esta semana', value: kpis?.semana ?? 'â€”', hint: 'Volume recente', tone: 'secondary', icon: <CheckCircle2 className="w-4 h-4" /> },
+    { label: 'Pendentes', value: kpis?.pendentes ?? 'â€”', hint: 'Aguardando aÃ§Ã£o', tone: 'warning', icon: <AlertCircle className="w-4 h-4" /> },
+    { label: 'Em cotaÃ§Ã£o', value: kpis?.emCotacao ?? 'â€”', hint: 'JÃ¡ assumidas', tone: 'accent', icon: <FileText className="w-4 h-4" /> },
   ]
 
   return (
@@ -297,7 +297,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
       <PageHeader
         eyebrow="Mesa operacional"
         title="Fichas"
-        description={`Visão geral da operação em ${mesLabel}. Acompanhe volume, status e entrada por produto sem sair da mesa.`}
+        description={`VisÃ£o geral da operaÃ§Ã£o em ${mesLabel}. Acompanhe volume, status e entrada por produto sem sair da mesa.`}
         actions={(
           <div className="flex flex-wrap items-center justify-end gap-3">
             <div className="flex items-center gap-2">
@@ -330,7 +330,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
               onClick={onRelatorio}
               className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
             >
-              <BarChart2 className="w-3.5 h-3.5" /> Relatório Mensal
+              <BarChart2 className="w-3.5 h-3.5" /> RelatÃ³rio Mensal
             </button>
             <button onClick={onCriar} className="btn-primary flex items-center gap-2 text-sm">
               <Plus className="w-4 h-4" /> Nova Ficha
@@ -340,32 +340,32 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
         stats={(
           <>
             <MetricCard
-              label="Total do mês"
-              value={kpis.totalMes ?? '—'}
-              hint={kpis.variacaoMes != null ? `${kpis.variacaoMes >= 0 ? '+' : ''}${kpis.variacaoMes}% vs mês anterior` : 'Volume do período'}
+              label="Total do mÃªs"
+              value={kpis?.totalMes ?? 'â€”'}
+              hint={kpis?.variacaoMes != null ? `${kpis.variacaoMes >= 0 ? '+' : ''}${kpis.variacaoMes}% vs mÃªs anterior` : 'Volume do perÃ­odo'}
               tone="accent"
             />
             <MetricCard
               label="Hoje"
-              value={kpis.hoje ?? '—'}
+              value={kpis?.hoje ?? 'â€”'}
               hint="entrada no dia"
               tone="success"
             />
             <MetricCard
               label="Esta semana"
-              value={kpis.semana ?? '—'}
+              value={kpis?.semana ?? 'â€”'}
               hint="janela operacional"
               tone="secondary"
             />
             <MetricCard
               label="Pendentes"
-              value={kpis.pendentes ?? '—'}
-              hint="aguardando ação"
+              value={kpis?.pendentes ?? 'â€”'}
+              hint="aguardando aÃ§Ã£o"
               tone="warning"
             />
             <MetricCard
-              label="Em cotação"
-              value={kpis.emCotacao ?? '—'}
+              label="Em cotaÃ§Ã£o"
+              value={kpis?.emCotacao ?? 'â€”'}
               hint="carteira ativa"
               tone="accent"
             />
@@ -377,7 +377,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
         <DataCard
           className="xl:col-span-2"
           title="Entrada recente"
-          subtitle="Fichas recebidas nos últimos 14 dias"
+          subtitle="Fichas recebidas nos Ãºltimos 14 dias"
           bodyClassName="pt-4"
         >
           {fichasPorDia.length > 0 ? (
@@ -401,13 +401,13 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[180px] flex items-center justify-center text-dark-muted text-sm">Sem dados para o período</div>
+            <div className="h-[180px] flex items-center justify-center text-dark-muted text-sm">Sem dados para o perÃ­odo</div>
           )}
         </DataCard>
 
         <DataCard
           title="Mix por status"
-          subtitle="Distribuição consolidada no mês selecionado"
+          subtitle="DistribuiÃ§Ã£o consolidada no mÃªs selecionado"
           bodyClassName="pt-4"
         >
           {statusDist.length > 0 ? (
@@ -419,13 +419,13 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
                       <Cell key={i} fill={TOKEN_STATUS_CHART_COLORS[entry.status] || BRAND.primary} />
                     ))}
                   </Pie>
-                <Tooltip content={({ active, payload }) => (active && payload.length ? (
+                  <Tooltip content={({ active, payload }) => active && payload?.length ? (
                     <div style={tooltipStyle(theme)} className="px-2 py-1.5 text-xs">
-                      <span style={{ color: TOKEN_STATUS_CHART_COLORS[payload[0].payload.status] || BRAND.primary }}>
-                        {payload[0].payload.label}: {payload[0].value}
+                      <span style={{ color: TOKEN_STATUS_CHART_COLORS[payload[0]?.payload?.status] || BRAND.primary }}>
+                        {payload[0]?.payload?.label}: {payload[0]?.value}
                       </span>
                     </div>
-                  ) : null)} />
+                  ) : null} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="space-y-1.5">
@@ -441,14 +441,14 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
               </div>
             </div>
           ) : (
-            <div className="h-[180px] flex items-center justify-center text-dark-muted text-sm">Sem dados para o período</div>
+            <div className="h-[180px] flex items-center justify-center text-dark-muted text-sm">Sem dados para o perÃ­odo</div>
           )}
         </DataCard>
       </div>
 
       <DataCard
         title="Selecionar produto"
-        subtitle="Abra a mesa operacional por linha de negócio"
+        subtitle="Abra a mesa operacional por linha de negÃ³cio"
         bodyClassName="pt-4"
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -494,13 +494,13 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-dark-muted">Total</span>
                     <span className="text-sm font-bold font-mono" style={{ color: p.accent }}>
-                      {contagem[p.key].total ?? '—'}
+                      {contagem[p.key]?.total ?? 'â€”'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-dark-muted">Em aberto</span>
                     <span className="text-sm font-bold font-mono text-status-warning">
-                      {contagem[p.key].emAberto ?? '—'}
+                      {contagem[p.key]?.emAberto ?? 'â€”'}
                     </span>
                   </div>
                 </div>
@@ -529,7 +529,7 @@ function MesAnoSelector({ ano, anos, mes, mesesComFichas, onAnoChange, onMesChan
         className="w-24"
       />
 
-      {/* Pills de mês */}
+      {/* Pills de mÃªs */}
       <div className="flex items-center gap-1 flex-wrap">
         {MESES_ABBR.map((label, i) => {
           const monthNum   = i + 1
@@ -542,7 +542,7 @@ function MesAnoSelector({ ano, anos, mes, mesesComFichas, onAnoChange, onMesChan
               key={monthNum}
               onClick={() => onMesChange(monthNum)}
               disabled={!hasData && !isActive}
-              title={!hasData ? 'Sem fichas neste mês' : MESES_FULL[i]}
+              title={!hasData ? 'Sem fichas neste mÃªs' : MESES_FULL[i]}
               className={`relative px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                 isActive
                   ? 'bg-brand-secondary text-white shadow-sm'
@@ -552,7 +552,7 @@ function MesAnoSelector({ ano, anos, mes, mesesComFichas, onAnoChange, onMesChan
               }`}
             >
               {label}
-              {/* Ponto indicador do mês atual */}
+              {/* Ponto indicador do mÃªs atual */}
               {isCurrMes && !isActive && (
                 <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-brand-accent" />
               )}
@@ -571,33 +571,33 @@ function TabelaAberta({ fichas, user, navigate, onDetalhe, onAssumir, onFinaliza
     <table className="table-table w-full text-sm">
       <thead className="table-thead border-b border-dark-border">
         <tr>
-          {['Data','Imobiliária','Nome','Status','Orçamentista','Tempo',''].map(h => (
+          {['Data','ImobiliÃ¡ria','Nome','Status','OrÃ§amentista','Tempo',''].map(h => (
             <th key={h} className="th whitespace-nowrap">{h}</th>
           ))}
         </tr>
       </thead>
       <tbody className="divide-y divide-dark-border">
         {fichas.map(f => {
-            const si = STATUS_LABELS[f.status] || { label: f.status, color: '' }
-          const isMe   = f.orcamentista_id === user.id
+          const si     = STATUS_LABELS[f.status] ?? { label: f.status, color: '' }
+          const isMe   = f.orcamentista_id === user?.id
           const canAss = !f.assumida && f.status === 'pendente'
           const canFin = isMe && f.status === 'em_cotacao'
           const rd     = f.raw_data || {}
           const nome   = f.produto === 'pessoa_juridica'
-            ? (f.nome_empresa || f.nome_interessado || rd.nome_empresa || rd.razao_social || rd.empresa || rd.nome || '—')
-            : (f.nome_interessado || rd.nome || '—')
+            ? (f.nome_empresa || f.nome_interessado || rd.nome_empresa || rd.razao_social || rd.empresa || rd.nome || 'â€”')
+            : (f.nome_interessado || rd.nome || 'â€”')
           return (
             <tr key={f.id} className="table-row" onClick={() => navigate(`/fichas/${f.id}`)}>
               <td className="td text-dark-muted text-xs whitespace-nowrap font-mono">
                 {format(parseISO(f.created_at), 'dd/MM/yy', { locale: ptBR })}
               </td>
               <td className="td font-medium text-dark-text max-w-[150px] truncate">
-                {(resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || '—'}
+                {(resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || 'â€”'}
               </td>
-              <td className="td text-dark-text max-w-[150px] truncate">{nome || '—'}</td>
+              <td className="td text-dark-text max-w-[150px] truncate">{nome || 'â€”'}</td>
               <td className="td"><span className={`badge ${si.color}`}>{si.label}</span></td>
               <td className="td">
-                {f.profiles.nome ? <OrcBadge nome={f.profiles.nome} isMe={isMe} /> : <span className="text-xs text-status-warning font-medium">Livre</span>}
+                {f.profiles?.nome ? <OrcBadge nome={f.profiles.nome} isMe={isMe} /> : <span className="text-xs text-status-warning font-medium">Livre</span>}
               </td>
               <td className="td"><TimeBadge since={f.created_at} /></td>
               <td className="td whitespace-nowrap" onClick={e => e.stopPropagation()}>
@@ -633,15 +633,15 @@ function TabelaPassadas({ fichas, user, navigate, onEditar, resolverNome }) {
     <table className="table-table w-full text-sm">
       <thead className="table-thead border-b border-dark-border">
         <tr>
-          {['Data','Imobiliária','Nome','Status','Orçamentista','Seguradora',''].map(h => (
+          {['Data','ImobiliÃ¡ria','Nome','Status','OrÃ§amentista','Seguradora',''].map(h => (
             <th key={h} className="th whitespace-nowrap">{h}</th>
           ))}
         </tr>
       </thead>
       <tbody className="divide-y divide-dark-border">
         {fichas.map(f => {
-            const si = STATUS_LABELS[f.status] || { label: f.status, color: '' }
-          const isMe = f.orcamentista_id === user.id
+          const si   = STATUS_LABELS[f.status] ?? { label: f.status, color: '' }
+          const isMe = f.orcamentista_id === user?.id
           const rd2  = f.raw_data || {}
           const nome = f.produto === 'pessoa_juridica'
             ? (normalizeDisplayText(f.nome_empresa || f.nome_interessado || rd2.nome_empresa || rd2.razao_social || rd2.empresa || rd2.nome) || '—')
@@ -651,11 +651,11 @@ function TabelaPassadas({ fichas, user, navigate, onEditar, resolverNome }) {
               <td className="td text-dark-muted text-xs whitespace-nowrap font-mono">
                 {format(parseISO(f.created_at), 'dd/MM/yy', { locale: ptBR })}
               </td>
-              <td className="td font-medium text-dark-text max-w-[130px] truncate">{(resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || '—'}</td>
-              <td className="td text-dark-text max-w-[130px] truncate">{nome || '—'}</td>
+              <td className="td font-medium text-dark-text max-w-[130px] truncate">{(resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || 'â€”'}</td>
+              <td className="td text-dark-text max-w-[130px] truncate">{nome || 'â€”'}</td>
               <td className="td"><span className={`badge ${si.color}`}>{si.label}</span></td>
-              <td className="td"><AvatarOrcamentista nome={f.profiles.nome} /></td>
-              <td className="td text-dark-muted text-xs">{f.seguradora || '—'}</td>
+              <td className="td"><AvatarOrcamentista nome={f.profiles?.nome} /></td>
+              <td className="td text-dark-muted text-xs">{f.seguradora || 'â€”'}</td>
               <td className="td" onClick={e => e.stopPropagation()}>
                 <button onClick={() => onEditar(f)} className="p-1.5 rounded-lg text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-colors">
                   <Pencil className="w-3.5 h-3.5" />
@@ -676,8 +676,8 @@ function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, 
     <div className="space-y-5 animate-fade-in">
       <PageHeader
         eyebrow="Mesa operacional"
-        title={prodInfo.label || 'Fichas'}
-        description={anoLabel ? `${mesLabel} ${anoLabel} · lista e kanban da linha de negócio selecionada.` : 'Mesa operacional com lista, kanban e drill-down.'}
+        title={prodInfo?.label || 'Fichas'}
+        description={anoLabel ? `${mesLabel} ${anoLabel} Â· lista e kanban da linha de negÃ³cio selecionada.` : 'Mesa operacional com lista, kanban e drill-down.'}
         actions={(
           <div className="flex flex-wrap items-center justify-end gap-3">
             <button
@@ -685,14 +685,14 @@ function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, 
               className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
             >
               <Home className="w-3.5 h-3.5" />
-              Visão geral
+              VisÃ£o geral
             </button>
             {viewToggle}
             <button
               onClick={onRelatorio}
               className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
             >
-              <BarChart2 className="w-3.5 h-3.5" /> Relatório
+              <BarChart2 className="w-3.5 h-3.5" /> RelatÃ³rio
             </button>
             <button onClick={onCreate} className="btn-primary flex items-center gap-2 text-sm">
               <Plus className="w-4 h-4" /> Nova Ficha
@@ -703,7 +703,7 @@ function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, 
 
       <DataCard
         title="Recorte de trabalho"
-        subtitle="Use o período para refinar o lote exibido na mesa operacional"
+        subtitle="Use o perÃ­odo para refinar o lote exibido na mesa operacional"
       >
         {selectorSlot}
       </DataCard>
@@ -743,7 +743,7 @@ export default function Fichas() {
 
   const PAGE_SIZE = 30
 
-  // Debounce: dispara query 400ms após o usuário parar de digitar
+  // Debounce: dispara query 400ms apÃ³s o usuÃ¡rio parar de digitar
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 400)
     return () => clearTimeout(t)
@@ -760,7 +760,7 @@ export default function Fichas() {
   // Restaurar Kanban ao voltar de /fichas/:id
   useEffect(() => {
     const state = location.state
-    if (!state.restoreKanban) return
+    if (!state?.restoreKanban) return
     if (state.produto) setProduto(state.produto)
     if (state.mes)     setMes(state.mes)
     if (state.ano)     setAno(state.ano)
@@ -782,11 +782,11 @@ export default function Fichas() {
     fetchContagemProdutos().then(setContagem)
   }, [])
 
-  // Contagem de fichas abertas do usuário logado (badge do botão)
+  // Contagem de fichas abertas do usuÃ¡rio logado (badge do botÃ£o)
   useEffect(() => {
-    if (!user.id) return
+    if (!user?.id) return
     fetchContagemAbertaOrcamentista(user.id).then(setMinhasFichasCount)
-  }, [user.id])
+  }, [user?.id])
 
   // Realtime â€” atualiza contagens de produto e "minhas fichas" automaticamente (debounce 500ms p/ bursts)
   useEffect(() => {
@@ -795,7 +795,7 @@ export default function Fichas() {
       clearTimeout(timer)
       timer = setTimeout(() => {
         fetchContagemProdutos().then(setContagem)
-        if (user.id) fetchContagemAbertaOrcamentista(user.id).then(setMinhasFichasCount)
+        if (user?.id) fetchContagemAbertaOrcamentista(user.id).then(setMinhasFichasCount)
       }, 500)
     }
     const ch = supabase.channel('fichas-page-contagem')
@@ -806,9 +806,9 @@ export default function Fichas() {
       supabase.removeChannel(ch)
       clearTimeout(timer)
     }
-  }, [user.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Ao selecionar produto: carregar anos disponíveis e auto-selecionar o atual
+  // Ao selecionar produto: carregar anos disponÃ­veis e auto-selecionar o atual
   useEffect(() => {
     if (!produto) return
     fetchAnosDisponiveis(produto).then(years => {
@@ -820,7 +820,7 @@ export default function Fichas() {
     })
   }, [produto])
 
-  // Ao mudar produto ou ano: carregar quais meses têm fichas
+  // Ao mudar produto ou ano: carregar quais meses tÃªm fichas
   useEffect(() => {
     if (!produto) return
     fetchMesesDisponiveis(produto, ano).then(setMesesComFichas)
@@ -830,7 +830,7 @@ export default function Fichas() {
   const dateFrom = ano && mes ? new Date(ano, mes - 1, 1).toISOString() : null
   const dateTo   = ano && mes ? new Date(ano, mes, 0, 23, 59, 59).toISOString() : null
 
-  // Query de tabela (só usada no modo lista)
+  // Query de tabela (sÃ³ usada no modo lista)
   const loadFichas = useCallback(async () => {
     if (!produto) return
     if (view === 'kanban' && produto !== 'todos') return
@@ -840,7 +840,7 @@ export default function Fichas() {
       ano, mes,
       tipo: tab,
       search: debouncedSearch,
-      orcamentistaId: tab === 'passadas_por_mim' ? user.id : undefined,
+      orcamentistaId: tab === 'passadas_por_mim' ? user?.id : undefined,
       semSeguradora: (tab === 'passadas' || tab === 'passadas_por_mim') ? semSeguradora : false,
       page, pageSize: PAGE_SIZE,
     })
@@ -875,7 +875,7 @@ export default function Fichas() {
   async function onDelete(id) {
     await deletarFicha(id)
     setDetalhe(null)
-    toast({ type: 'success', title: 'Ficha excluída' })
+    toast({ type: 'success', title: 'Ficha excluÃ­da' })
     refresh()
   }
 
@@ -935,7 +935,7 @@ export default function Fichas() {
       viewToggle={<ViewToggle view={view} onChange={setView} />}
       selectorSlot={selectorSlot}
     >
-      {/* ModalAssumir e ModalFinalizar são overlays — renderizam sobre o board */}
+      {/* ModalAssumir e ModalFinalizar sÃ£o overlays â€” renderizam sobre o board */}
       {assumir && (
         <ModalAssumir id={assumir} onClose={() => setAssumir(null)} onSuccess={() => { setAssumir(null); refresh() }} />
       )}
@@ -1016,7 +1016,7 @@ export default function Fichas() {
                 )}
                 <input
                   type="text"
-                  placeholder="Nome, CPF, CNPJ, imobiliária ou seguradora..."
+                  placeholder="Nome, CPF, CNPJ, imobiliÃ¡ria ou seguradora..."
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(0) }}
                   className="text-sm flex-1 outline-none bg-transparent text-dark-text placeholder-dark-muted"
@@ -1025,12 +1025,12 @@ export default function Fichas() {
                   <button
                     onClick={() => { setSearch(''); setDebouncedSearch(''); setPage(0) }}
                     className="text-dark-muted hover:text-dark-text transition-colors flex-shrink-0 text-xs"
-                  >×</button>
+                  >âœ•</button>
                 )}
               </div>
               {debouncedSearch && (
                 <span className="text-[10px] text-brand-accent/70 pl-1">
-                  Buscando em todos os períodos · {total} resultado{total !== 1 ? 's' : ''}
+                  Buscando em todos os perÃ­odos Â· {total} resultado{total !== 1 ? 's' : ''}
                 </span>
               )}
             </div>

@@ -74,8 +74,8 @@ export async function fetchKPIsApolices(inicioMes, fimMes) {
       .gte('data_emissao', inicioMesAnt).lte('data_emissao', fimMesAnt),
   ])
 
-  const mesSelecionado = mesSel.count || 0
-  const mesAnterior = mesAnt.count || 0
+  const mesSelecionado = mesSel.count  || 0
+  const mesAnterior    = mesAnt.count  || 0
   const variacaoMes    = mesAnterior > 0
     ? Math.round(((mesSelecionado - mesAnterior) / mesAnterior) * 100)
     : null
@@ -163,37 +163,6 @@ export async function fetchProducaoPorSeguradora(inicioMes, fimMes) {
   return Object.entries(cnt)
     .sort((a, b) => b[1] - a[1])
     .map(([seguradora, value]) => ({ seguradora, value }))
-}
-
-export async function fetchProducaoPorProdutoSeguradora(inicioMes, fimMes) {
-  let q = supabase
-    .from('apolices')
-    .select('produto, seguradora, valor_producao')
-    .in('status_emissao', ['emitida', 'enviada'])
-    .not('valor_producao', 'is', null)
-    .neq('valor_producao', 0)
-
-  if (inicioMes) q = q.gte('data_emissao', inicioMes)
-  if (fimMes)    q = q.lte('data_emissao', fimMes)
-
-  const { data } = await q
-  if (!data) return []
-
-  return data.reduce((acc, item) => {
-    const produto = item.produto || 'sem_produto'
-    const seguradora = item.seguradora || 'Sem seguradora'
-    let bucket = acc.find(entry => entry.produto === produto && entry.seguradora === seguradora)
-    if (!bucket) {
-      bucket = { produto, seguradora, value: 0, apolices: 0 }
-      acc.push(bucket)
-    }
-    bucket.value += toNumber(item.valor_producao) || 0
-    bucket.apolices += 1
-    return acc
-  }, []).sort((a, b) => {
-    if (a.produto === b.produto) return b.value - a.value
-    return a.produto.localeCompare(b.produto)
-  })
 }
 
 // ── Kanban ────────────────────────────────────────────────────────────────────

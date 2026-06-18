@@ -41,12 +41,12 @@ export function AuthProvider({ children }) {
       .single()
 
     const { data: { user: currentUser } } = await supabase.auth.getUser()
-    setProfile(data ? { ...data, is_admin: resolveAdminFlag(currentUser.email, data.is_admin) } : data)
+    setProfile(data ? { ...data, is_admin: resolveAdminFlag(currentUser?.email, data.is_admin) } : data)
     setLoading(false)
   }
 
   async function refreshProfile() {
-    if (!user.id) return
+    if (!user?.id) return
     await loadProfile(user.id)
   }
 

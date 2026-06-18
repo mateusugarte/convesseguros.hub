@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { fetchFichaDetalhe, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { format, parseISO } from 'date-fns'
@@ -9,14 +9,14 @@ import ImobiliariaIdentity from './ImobiliariaIdentity'
 import { Avatar } from './ui'
 import { normalizeDisplayText } from '../lib/text'
 
-function fmt(v) { if (v === null || v === undefined) return 'â€”'; return String(v) }
+function fmt(v) { if (v === null || v === undefined) return '—'; return String(v) }
 function fmtBRL(v) {
-  if (v === null || v === undefined || v === '') return 'â€”'
+  if (v === null || v === undefined || v === '') return '—'
   return String(v)
 }
 function fmtDt(v) {
-  if (!v) return 'â€”'
-  try { return format(parseISO(v), "dd/MM/yyyy 'Ã s' HH:mm", { locale: ptBR }) } catch { return v }
+  if (!v) return '—'
+  try { return format(parseISO(v), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) } catch { return v }
 }
 
 function Field({ label, value, clamp = false }) {
@@ -98,11 +98,11 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
           </div>
 
           <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
-            {/* Link para pÃ¡gina completa */}
+            {/* Link para página completa */}
             <button
               onClick={() => { onClose(); navigate(`/fichas/${ficha.id}`) }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-brand-accent hover:border-brand-accent/50 transition-colors"
-              title="Abrir pÃ¡gina completa"
+              title="Abrir página completa"
             >
               <ExternalLink className="w-3.5 h-3.5" /> Abrir
             </button>
@@ -117,39 +117,37 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
                 onClick={() => setConfirm(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-status-danger/30 text-xs text-status-danger hover:bg-status-danger/10 transition-colors"
               >
-                <Trash2 className="w-3.5 h-3.5" /> Excluir
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
             ) : (
               <div className="flex items-center gap-1">
                 <span className="text-xs text-status-danger font-medium">Confirmar?</span>
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="px-2.5 py-1 rounded-lg bg-status-danger text-white text-xs font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
-                >
+                <button onClick={handleDelete} disabled={deleting}
+                        className="px-2.5 py-1 rounded-lg bg-status-danger text-white text-xs font-medium hover:opacity-90 disabled:opacity-50 transition-opacity">
                   {deleting ? '...' : 'Sim'}
                 </button>
-                <button
-                  onClick={() => setConfirm(false)}
-                  className="px-2.5 py-1 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text transition-colors"
-                >
+                <button onClick={() => setConfirm(false)}
+                        className="px-2.5 py-1 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text transition-colors">
                   Não
                 </button>
               </div>
             )}
+            <button onClick={onClose} className="text-dark-muted hover:text-dark-text transition-colors ml-1">
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto">
 
-          {/* IdentificaÃ§Ã£o */}
+          {/* Identificação */}
           <Section title={isPJ ? 'Empresa' : 'Interessado'}>
             {isPJ ? (
               <>
                 <Field label="Nome da Empresa" value={normalizeDisplayText(ficha.nome_empresa)} />
                 <Field label="CNPJ"            value={ficha.cnpj} />
-                <Field label="CPF dos SÃ³cios"  value={ficha.cpf_socios} />
+                <Field label="CPF dos Sócios"  value={ficha.cpf_socios} />
               </>
             ) : (
               <>
@@ -160,23 +158,23 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
             <Field label="E-mail"  value={ficha.email} />
           </Section>
 
-          <Section title="Dados do ImÃ³vel">
+          <Section title="Dados do Imóvel">
             <div className="col-span-2">
               <ImobiliariaIdentity
                 nome={resolverNome(ficha.imobiliaria) || ficha.imobiliaria}
-                imagemUrl={resolverImobiliariaInfo(ficha.imobiliaria).imagem_url}
-                imagemPath={resolverImobiliariaInfo(ficha.imobiliaria).imagem_path}
+                imagemUrl={resolverImobiliariaInfo(ficha.imobiliaria)?.imagem_url}
+                imagemPath={resolverImobiliariaInfo(ficha.imobiliaria)?.imagem_path}
                 size="md"
                 emphasis
               />
             </div>
-            <Field label="ImobiliÃ¡ria"  value={resolverNome(ficha.imobiliaria) || ficha.imobiliaria} />
+            <Field label="Imobiliária"  value={resolverNome(ficha.imobiliaria) || ficha.imobiliaria} />
             <Field label="Tipo"         value={ficha.tipo_imovel} />
             <Field label="CEP"          value={ficha.cep} />
             <Field label="Aluguel"      value={fmtBRL(ficha.valor_aluguel)} />
             <Field label="IPTU"         value={fmtBRL(ficha.valor_iptu)} />
-            <Field label="CondomÃ­nio"   value={fmtBRL(ficha.valor_condominio)} />
-            <Field label="ObservaÃ§Ãµes"  value={ficha.observacoes || 'â€”'} clamp />
+            <Field label="Condomínio"   value={fmtBRL(ficha.valor_condominio)} />
+            <Field label="Observações"  value={ficha.observacoes || '—'} clamp />
           </Section>
 
           {/* Campos extras para Comercial PF e PJ */}
@@ -185,7 +183,7 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
               <Field label="Atividade"         value={ficha.atividade} />
               <Field label="Total Rendimentos" value={fmtBRL(ficha.total_rendimentos)} />
               <Field label="Capital Social"    value={fmtBRL(ficha.capital_social)} />
-              <Field label="Motivo LocaÃ§Ã£o"    value={ficha.motivo_locacao} />
+              <Field label="Motivo Locação"    value={ficha.motivo_locacao} />
               <Field label="Vigência"          value={ficha.vigencia} />
               {isPJ && <Field label="Opção Tributária" value={ficha.opcao_tributaria} />}
             </Section>

@@ -8,7 +8,7 @@ export default function CrmEmptyState({
   return (
     <div
       className={`flex flex-col items-center justify-center rounded-[24px] border border-dashed border-dark-border/70 bg-white/50 text-center ${
-        compact  'px-4 py-8' : 'px-6 py-12'
+        compact ? 'px-4 py-8' : 'px-6 py-12'
       }`}
     >
       {Icon && (

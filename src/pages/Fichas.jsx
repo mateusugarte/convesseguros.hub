@@ -35,7 +35,7 @@ import {
   AlignJustify, Pencil, TrendingUp, TrendingDown, BarChart2, UserSquare2, AlertCircle,
 } from 'lucide-react'
 
-// â”€â”€ Chart theme constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Chart theme constants ─────────────────────────────────────────────────────
 
 const CHART_COLORS = {
   light: {
@@ -74,7 +74,7 @@ const tooltipStyle = (theme) => ({
   boxShadow:           '0 8px 32px rgba(0,0,0,0.18)',
 })
 
-// â”€â”€ Constantes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Constantes ────────────────────────────────────────────────────────────────
 
 const PRODUTOS = [
   { key: 'residencial_pf',  label: 'Residencial PF', Icon: Home,        accent: BRAND.primary, bg: 'rgba(0,0,121,0.08)',  border: 'rgba(0,0,121,0.25)' },
@@ -110,7 +110,7 @@ function resolvePathFromProduto(produto) {
 }
 
 
-// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function stringColor(str) {
   let h = 0; for (let i = 0; i < (str||'').length; i++) h = str.charCodeAt(i) + ((h << 5) - h)
@@ -176,7 +176,7 @@ function exportCSV(fichas, filename, resolverNome) {
   a.click(); URL.revokeObjectURL(url)
 }
 
-// â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 function Crumb({ onClick, children, active }) {
   return (
@@ -236,7 +236,7 @@ function ViewToggle({ view, onChange }) {
   )
 }
 
-// â”€â”€ Tooltip para os gráficos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Tooltip para os gráficos ──────────────────────────────────────────────────
 
 function DarkTip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -255,7 +255,7 @@ function DarkTip({ active, payload, label }) {
   )
 }
 
-// â”€â”€ Visão Geral â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Visão Geral ───────────────────────────────────────────────────────────────
 
 function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFichasCount }) {
   const { theme }                  = useTheme()
@@ -513,7 +513,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
   )
 }
 
-// â”€â”€ Seletor de Mês/Ano â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Seletor de Mês/Ano ────────────────────────────────────────────────────────
 
 function MesAnoSelector({ ano, anos, mes, mesesComFichas, onAnoChange, onMesChange }) {
   const currentYear  = new Date().getFullYear()
@@ -564,7 +564,7 @@ function MesAnoSelector({ ano, anos, mes, mesesComFichas, onAnoChange, onMesChan
   )
 }
 
-// â”€â”€ Tabelas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Tabelas ───────────────────────────────────────────────────────────────────
 
 function TabelaAberta({ fichas, user, navigate, onDetalhe, onAssumir, onFinalizar, onEditar, resolverNome }) {
   return (
@@ -669,7 +669,7 @@ function TabelaPassadas({ fichas, user, navigate, onEditar, resolverNome }) {
   )
 }
 
-// â”€â”€ PageShell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── PageShell ─────────────────────────────────────────────────────────────────
 
 function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, onRelatorio, viewToggle, selectorSlot, children }) {
   return (
@@ -713,7 +713,7 @@ function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, 
   )
 }
 
-// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Main Component ────────────────────────────────────────────────────────────
 
 export default function Fichas() {
   const { user }         = useAuth()
@@ -888,7 +888,7 @@ export default function Fichas() {
     return { aprovadas, recusadas, emitidas, taxa }
   }, [tab, fichas])
 
-  // â”€â”€ View: Visão Geral (sem produto) â”€â”€
+  // ── View: Visão Geral (sem produto) ──
   if (!produto) {
     if (criar) return (
       <ModalFicha ficha={null} onClose={() => setCriar(false)} onSuccess={() => { setCriar(false); fetchContagemProdutos().then(setContagem) }} />

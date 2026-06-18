@@ -7,7 +7,13 @@ import {
   fetchFichasRelatorio,
   PRODUTO_LABELS,
 } from '../lib/fichas'
-import { registrarApoliceDaFicha } from '../lib/apolices'
+import {
+  registrarApoliceDaFicha,
+  calculatePremioTotal,
+  calculateValorComissao,
+  formatMoneyBR,
+  toNumber,
+} from '../lib/apolices'
 import { supabase } from '../lib/supabase'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import ImobiliariaSelect from '../components/ImobiliariaSelect'
@@ -263,16 +269,75 @@ function MesPicker({ mes, mesesDisp, onMes }) {
   )
 }
 
+function calcularMeses(inicio, fim) {
+  if (!inicio || !fim) return 0
+  return Math.max(0, Math.round((new Date(fim) - new Date(inicio)) / (1000 * 60 * 60 * 24 * 30)))
+}
+
+function FieldShell({ label, required, children }) {
+  return (
+    <div className="group relative rounded-3xl border border-transparent px-2 py-1.5 transition-all hover:border-brand-accent/20 hover:bg-dark-surface2/20">
+      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-dark-muted">
+        {label}{required && <span className="ml-0.5 text-status-danger">*</span>}
+      </label>
+      <div className="relative">{children}</div>
+    </div>
+  )
+}
+
+function EditField({ label, value, onChange, type = 'text', placeholder, required }) {
+  return (
+    <FieldShell label={label} required={required}>
+      {type === 'date' ? (
+        <DatePicker value={value || ''} onChange={onChange} className="w-full" />
+      ) : (
+        <input
+          type={type}
+          value={value || ''}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="input text-sm"
+        />
+      )}
+    </FieldShell>
+  )
+}
+
+function SelectField({ label, value, onChange, options, required }) {
+  const normalized = options.map(o => (typeof o === 'string' ? { value: o, label: o } : o))
+  return (
+    <FieldShell label={label} required={required}>
+      <Select value={value || ''} onChange={onChange} options={normalized} placeholder="Selecione..." className="w-full" />
+    </FieldShell>
+  )
+}
+
 function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
+  const [proprietarioNome, setProprietarioNome] = useState(normalizeDisplayText(ficha.nome_empresa || ficha.nome_interessado) || '')
+  const [proprietarioCel, setProprietarioCel] = useState(ficha.celular || '')
   const [numeroApolice, setNumeroApolice] = useState(ficha.numero_apolice || '')
-  const [seguradora, setSeguradora] = useState(ficha.seguradora || '')
-  const [dataEmissao, setDataEmissao] = useState(ficha.data_emissao || new Date().toISOString().slice(0, 10))
+  const [numeroProposta, setNumeroProposta] = useState('')
+  const [endereco, setEndereco] = useState(ficha.cep || '')
   const [inicioVigencia, setInicioVigencia] = useState('')
   const [fimVigencia, setFimVigencia] = useState('')
   const [valorParcela, setValorParcela] = useState(ficha.valor_aluguel ? String(ficha.valor_aluguel) : '')
-  const [observacoes, setObservacoes] = useState(ficha.observacoes || '')
+  const [parcelamento, setParcelamento] = useState(ficha.parcelamento ? String(ficha.parcelamento) : '')
+  const [premioLiquido, setPremioLiquido] = useState('')
+  const [pctComissao, setPctComissao] = useState(ficha.pct_comissao ?? '')
+  const [pctDesconto, setPctDesconto] = useState(ficha.pct_desconto ?? '')
+  const [formaPagamento, setFormaPagamento] = useState('')
+  const [seguradora, setSeguradora] = useState(ficha.seguradora || '')
 
-  const valido = numeroApolice.trim() && seguradora && dataEmissao && inicioVigencia && fimVigencia && valorParcela
+  const meses = calcularMeses(inicioVigencia, fimVigencia)
+  const qtdParcelas = toNumber(parcelamento) || 0
+  const valorParcelaNum = toNumber(valorParcela) || 0
+  const premioLiquidoNum = toNumber(premioLiquido) || 0
+  const premioTotal = calculatePremioTotal(valorParcelaNum, qtdParcelas)
+  const valorComissao = calculateValorComissao(premioLiquidoNum, pctComissao)
+
+  const obrigatoriosOK = proprietarioNome.trim() && numeroApolice.trim()
+    && inicioVigencia && fimVigencia && parcelamento && valorParcela && formaPagamento && seguradora
+    && premioLiquido !== '' && pctComissao !== '' && pctDesconto !== ''
 
   return (
     <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 animate-fade-in">
@@ -289,52 +354,72 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
         </div>
         <div className="px-6 py-5 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <label className="space-y-1">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Número da apólice *</span>
-              <input className="input" value={numeroApolice} onChange={e => setNumeroApolice(e.target.value)} placeholder="000000000" />
-            </label>
-            <label className="space-y-1">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Data de emissão *</span>
-              <DatePicker value={dataEmissao} onChange={setDataEmissao} className="w-full" />
-            </label>
-            <label className="space-y-1 sm:col-span-2">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora *</span>
+            <EditField label="Nome do Proprietário" value={proprietarioNome} onChange={setProprietarioNome} placeholder="João da Silva" required />
+            <EditField label="Celular do Proprietário" value={proprietarioCel} onChange={setProprietarioCel} placeholder="(11) 99999-9999" />
+            <EditField label="Número da Apólice" value={numeroApolice} onChange={setNumeroApolice} placeholder="000000000" required />
+            <EditField label="Número da Proposta" value={numeroProposta} onChange={setNumeroProposta} placeholder="Opcional" />
+            <div className="sm:col-span-2">
+              <EditField label="Endereço do Imóvel" value={endereco} onChange={setEndereco} placeholder="Rua, número, bairro, cidade" />
+            </div>
+            <EditField label="Início da Vigência" type="date" value={inicioVigencia} onChange={setInicioVigencia} required />
+            <EditField label="Fim da Vigência" type="date" value={fimVigencia} onChange={setFimVigencia} required />
+            <div>
+              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Tempo de Vigência</label>
+              <div className="input text-sm text-dark-muted bg-dark-surface2/50">{meses > 0 ? `${meses} meses` : '—'}</div>
+            </div>
+            <EditField label="Parcelamento (vezes)" type="number" value={parcelamento} onChange={setParcelamento} placeholder="Ex: 12" required />
+            <EditField label="Valor da Parcela (R$)" type="number" value={valorParcela} onChange={setValorParcela} placeholder="0,00" required />
+            <EditField label="Prêmio Líquido (R$)" type="number" value={premioLiquido} onChange={setPremioLiquido} placeholder="0,00" required />
+            <EditField label="% Comissão" type="number" value={pctComissao} onChange={setPctComissao} placeholder="Ex: 10" required />
+            <EditField label="% Desconto" type="number" value={pctDesconto} onChange={setPctDesconto} placeholder="Ex: 5" required />
+            <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Prêmio total</p>
+              <p className="mt-1 font-semibold">{premioTotal != null ? formatMoneyBR(premioTotal) : '—'}</p>
+            </div>
+            <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Comissão calculada</p>
+              <p className="mt-1 font-semibold">{valorComissao != null ? formatMoneyBR(valorComissao) : '—'}</p>
+            </div>
+            <SelectField
+              label="Forma de Pagamento"
+              value={formaPagamento}
+              onChange={setFormaPagamento}
+              options={[
+                { value: '', label: 'Selecione...' },
+                { value: 'fatura_sem_entrada', label: 'Fatura sem entrada' },
+                { value: 'fatura_com_entrada', label: 'Fatura com entrada' },
+                { value: 'cartao_credito', label: 'Cartão de crédito' },
+              ]}
+              required
+            />
+            <FieldShell label="Seguradora" required>
               <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={ficha.produto} required />
-            </label>
-            <label className="space-y-1">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Início da vigência *</span>
-              <DatePicker value={inicioVigencia} onChange={setInicioVigencia} className="w-full" />
-            </label>
-            <label className="space-y-1">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Fim da vigência *</span>
-              <DatePicker value={fimVigencia} onChange={setFimVigencia} className="w-full" />
-            </label>
-            <label className="space-y-1">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Valor da parcela *</span>
-              <input type="number" step="0.01" min="0" className="input" value={valorParcela} onChange={e => setValorParcela(e.target.value)} placeholder="0,00" />
-            </label>
-            <label className="space-y-1 sm:col-span-2">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Observações</span>
-              <textarea className="input min-h-[100px] resize-y" value={observacoes} onChange={e => setObservacoes(e.target.value)} placeholder="Opcional" />
-            </label>
+            </FieldShell>
           </div>
         </div>
         <div className="px-6 py-4 border-t border-dark-border flex items-center justify-end gap-3">
-          <button onClick={onCancelar} className="btn-secondary" disabled={salvando}>Cancelar</button>
+          <button onClick={onCancelar} className="btn-secondary text-sm" disabled={salvando}>Cancelar</button>
           <button
-            onClick={() => valido && onConfirmar({
+            onClick={() => obrigatoriosOK && onConfirmar({
+              proprietarioNome,
+              proprietarioCel,
               numeroApolice,
-              seguradora,
-              dataEmissao,
+              numeroProposta,
+              endereco,
               inicioVigencia,
               fimVigencia,
-              valorParcela: parseFloat(valorParcela),
-              observacoes,
+              parcelamento,
+              valorParcela: valorParcelaNum,
+              premioLiquido: premioLiquidoNum,
+              pctComissao,
+              pctDesconto,
+              formaPagamento,
+              seguradora,
             })}
-            disabled={!valido || salvando}
-            className="btn-primary"
+            disabled={!obrigatoriosOK || salvando}
+            className="btn-primary text-sm"
           >
-            {salvando ? 'Salvando...' : 'Confirmar emissão'}
+            {salvando ? 'Salvando...' : 'Confirmar Emissão'}
           </button>
         </div>
       </div>
@@ -458,13 +543,20 @@ export default function Relatorio() {
     setSalvandoEmissao(true)
     const { error } = await registrarApoliceDaFicha({
       ficha: pendingEmissao.ficha,
+      proprietarioNome: payload.proprietarioNome,
+      proprietarioCel: payload.proprietarioCel,
       numeroApolice: payload.numeroApolice,
+      numeroProposta: payload.numeroProposta,
+      endereco: payload.endereco,
       seguradora: payload.seguradora,
-      dataEmissao: payload.dataEmissao,
       inicioVigencia: payload.inicioVigencia,
       fimVigencia: payload.fimVigencia,
+      parcelamento: payload.parcelamento,
       valorParcela: payload.valorParcela,
-      observacoes: payload.observacoes,
+      premioLiquido: payload.premioLiquido,
+      pctComissao: payload.pctComissao,
+      pctDesconto: payload.pctDesconto,
+      formaPagamento: payload.formaPagamento,
     })
     setSalvandoEmissao(false)
     if (error) {

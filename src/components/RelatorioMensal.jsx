@@ -6,7 +6,7 @@ import { useImobiliaria } from '../hooks/useImobiliaria'
 import { AVATAR_COLORS, BRAND, PRODUTO_COLORS, STATUS_CHART_COLORS } from '../design-system/tokens'
 import { ChevronLeft, ChevronRight, Download, X, FileText, CheckCircle2, XCircle, MinusCircle, AlertTriangle, Clock } from 'lucide-react'
 
-// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function maskCpf(cpf) {
   if (!cpf) return '—'
@@ -44,7 +44,7 @@ const PRODUTOS_FILTRO = [
   { key: 'pessoa_juridica',label: 'PJ' },
 ]
 
-// â”€â”€ Badge de produto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Badge de produto ──────────────────────────────────────────────────────────
 
 const PRODUTO_COLOR = {
   residencial_pf:  { bg: PRODUTO_COLORS.residencial_pf.bg,  color: PRODUTO_COLORS.residencial_pf.color },
@@ -62,7 +62,7 @@ function ProdutoBadge({ produto }) {
   )
 }
 
-// â”€â”€ Indicadores booleanos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Indicadores booleanos ────────────────────────────────────────────────────
 
 function Sim() { return <span className="inline-flex items-center gap-1 text-status-success font-medium"><CheckCircle2 className="w-3.5 h-3.5" /> Sim</span> }
 function Nao() { return <span className="inline-flex items-center gap-1 text-status-danger font-medium"><XCircle className="w-3.5 h-3.5" /> Não</span> }
@@ -78,7 +78,7 @@ function ResultadoFinal({ status }) {
   return <Dash />
 }
 
-// â”€â”€ Exportação CSV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Exportação CSV ────────────────────────────────────────────────────────────
 
 function exportarCSV(fichas, mes, ano, resolverNome) {
   const headers = ['Imobiliária','Nome','Doc','Produto','Status','Enviada','Resultado','Desistiu','Orçamentista','Data']
@@ -110,7 +110,7 @@ function exportarCSV(fichas, mes, ano, resolverNome) {
   URL.revokeObjectURL(url)
 }
 
-// â”€â”€ Totalizador por imobiliária â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Totalizador por imobiliária ───────────────────────────────────────────────
 
 function TotalizadorImob({ fichas }) {
   const enviadas   = fichas.filter(f => f.retorno_enviado).length
@@ -127,7 +127,7 @@ function TotalizadorImob({ fichas }) {
   )
 }
 
-// â”€â”€ Tabela por imobiliária â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Tabela por imobiliária ────────────────────────────────────────────────────
 
 function TabelaImob({ nome, fichas }) {
   return (
@@ -169,7 +169,7 @@ function TabelaImob({ nome, fichas }) {
   )
 }
 
-// â”€â”€ Rodapé geral â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Rodapé geral ─────────────────────────────────────────────────────────────
 
 function Rodape({ fichas }) {
   const total    = fichas.length
@@ -204,7 +204,7 @@ function Rodape({ fichas }) {
   )
 }
 
-// â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function RelatorioMensal({ onClose }) {
   const agora = new Date()

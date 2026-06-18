@@ -297,11 +297,20 @@ export async function excluirApolice(id) {
 export async function registrarApoliceDaFicha({
   ficha,
   numeroApolice,
+  numeroProposta,
   seguradora,
   dataEmissao,
+  proprietarioNome,
+  proprietarioCel,
+  endereco,
   inicioVigencia,
   fimVigencia,
+  parcelamento,
   valorParcela,
+  premioLiquido,
+  pctComissao,
+  pctDesconto,
+  formaPagamento,
   observacoes,
 }) {
   if (!ficha?.id) return { error: new Error('Ficha invalida') }
@@ -315,13 +324,28 @@ export async function registrarApoliceDaFicha({
     imobiliaria: ficha.imobiliaria || null,
     produto: ficha.produto || null,
     nome_interessado: nomeInteressado,
+    proprietario_nome: proprietarioNome?.trim() || null,
+    proprietario_cel: proprietarioCel?.trim() || null,
     numero_apolice: numeroApolice?.trim() || null,
+    numero_proposta: numeroProposta?.trim() || null,
     seguradora: seguradora?.trim() || null,
     status_emissao: 'emitida',
     data_emissao: dataEmissao || new Date().toISOString().slice(0, 10),
+    endereco: endereco?.trim() || null,
     inicio_vigencia: inicioVigencia || null,
     fim_vigencia: fimVigencia || null,
+    tempo_vigencia_meses: inicioVigencia && fimVigencia
+      ? Math.max(0, Math.round((new Date(fimVigencia) - new Date(inicioVigencia)) / (1000 * 60 * 60 * 24 * 30)))
+      : null,
+    parcelamento: parcelamento ? toNumber(parcelamento) : null,
     valor_parcela: valorParcela ?? null,
+    premio_liquido: premioLiquido ? toNumber(premioLiquido) : null,
+    pct_comissao: pctComissao === '' || pctComissao === undefined ? null : pctComissao,
+    pct_desconto: pctDesconto === '' || pctDesconto === undefined ? null : pctDesconto,
+    forma_pagamento: formaPagamento?.trim() || null,
+    premio_total: valorParcela && parcelamento ? toNumber(valorParcela) * toNumber(parcelamento) : null,
+    valor_producao: valorParcela && parcelamento ? toNumber(valorParcela) * toNumber(parcelamento) : null,
+    valor_comissao: premioLiquido && pctComissao !== '' ? calculateValorComissao(premioLiquido, pctComissao) : null,
   }
 
   const { data: existente, error: buscaError } = await supabase
@@ -357,11 +381,9 @@ export async function registrarApoliceDaFicha({
     numero_apolice: numeroApolice?.trim() || null,
     seguradora: seguradora?.trim() || null,
     data_emissao: dataEmissao || new Date().toISOString().slice(0, 10),
+    ...(observacoes !== undefined ? { observacoes: observacoes?.trim() || null } : {}),
   }
 
-  if (observacoes !== undefined) {
-    fichaUpdate.observacoes = observacoes?.trim() || null
-  }
   if (inicioVigencia !== undefined) fichaUpdate.inicio_vigencia = inicioVigencia || null
   if (fimVigencia !== undefined) fichaUpdate.fim_vigencia = fimVigencia || null
   if (valorParcela !== undefined) fichaUpdate.valor_parcela = valorParcela ?? null

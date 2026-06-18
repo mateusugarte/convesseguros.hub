@@ -25,7 +25,7 @@ import { DatePicker } from './ui/DatePicker'
 import { AVATAR_COLORS, PRODUTO_COLORS } from '../design-system/tokens'
 import { normalizeDisplayText } from '../lib/text'
 
-// â”€â”€ Colunas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Colunas ───────────────────────────────────────────────────────────────────
 
 const COLUMNS = [
   { id: 'pendente',   label: 'Pendentes',     color: '#4c67b0' },
@@ -59,7 +59,7 @@ const PERIODOS = [
   { key: 'custom', label: 'Personalizado' },
 ]
 
-// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getPeriodDates(periodo, customFrom, customTo) {
   const now = new Date()
@@ -136,7 +136,7 @@ function nomePrincipal(ficha) {
   return normalizeDisplayText(ficha.nome_interessado || rd.nome || rd.nome_interessado) || '—'
 }
 
-// â”€â”€ FichaCard (visual puro, sem lógica de drag) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── FichaCard (visual puro, sem lógica de drag) ───────────────────────────────
 
 function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isDragOverlay, isNew, resolverNome, resolveImobiliariaInfo }) {
   const ProdIcon  = PRODUTO_ICON[ficha.produto] || LayoutGrid
@@ -244,7 +244,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
   )
 }
 
-// â”€â”€ DraggableCard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── DraggableCard ─────────────────────────────────────────────────────────────
 // O drag fica no handle para manter o overlay estável durante o movimento
 
 function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onToggleRetorno, isNew, resolverNome, resolveImobiliariaInfo }) {
@@ -277,7 +277,7 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onTog
   )
 }
 
-// â”€â”€ DroppableColumn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── DroppableColumn ───────────────────────────────────────────────────────────
 
 function DroppableColumn({
   column, fichas, userId, onDetalhe, onAssumir, onFinalizar, onToggleRetorno,
@@ -399,7 +399,7 @@ function DroppableColumn({
   )
 }
 
-// â”€â”€ ModalConfirmarRecusado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── ModalConfirmarRecusado ────────────────────────────────────────────────────
 
 function ModalConfirmarRecusado({ onConfirmar, salvando }) {
   const [retorno, setRetorno] = useState(null)
@@ -431,7 +431,7 @@ function ModalConfirmarRecusado({ onConfirmar, salvando }) {
   )
 }
 
-// â”€â”€ ModalConfirmarAprovado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── ModalConfirmarAprovado ────────────────────────────────────────────────────
 
 function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
   const [seguradora,      setSeguradora]      = useState('')
@@ -507,7 +507,7 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
   )
 }
 
-// â”€â”€ KanbanFichas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── KanbanFichas ──────────────────────────────────────────────────────────────
 
 export default function KanbanFichas({ produto, externalDateFrom, externalDateTo, contextState }) {
   const { user }         = useAuth()

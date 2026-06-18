@@ -65,7 +65,7 @@ function getCol(ficha) {
   return 'pendentes'
 }
 
-// â”€â”€ Card visual â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Card visual ────────────────────────────────────────────────────────────────
 
 function FichaCardContent({
   ficha, userId, onAssumir, onFinalizar, onDetalhe,
@@ -177,7 +177,7 @@ function FichaCardContent({
   )
 }
 
-// â”€â”€ DraggableCard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── DraggableCard ──────────────────────────────────────────────────────────────
 
 function KanbanCard({ ficha, userId, onAssumir, onFinalizar, onDetalhe }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ficha.id })
@@ -199,7 +199,7 @@ function KanbanCard({ ficha, userId, onAssumir, onFinalizar, onDetalhe }) {
   )
 }
 
-// â”€â”€ Column â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Column ─────────────────────────────────────────────────────────────────────
 
 function DroppableColumn({ col, fichas, userId, onAssumir, onFinalizar, onDetalhe, collapsed, onToggleCollapse, colIndex }) {
   const { isOver, setNodeRef: setDropRef } = useDroppable({ id: col.id })
@@ -302,7 +302,7 @@ function DroppableColumn({ col, fichas, userId, onAssumir, onFinalizar, onDetalh
   )
 }
 
-// â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Main ───────────────────────────────────────────────────────────────────────
 
 export default function KanbanBoard({ fichas, onRefresh, onAssumir, onFinalizar, onDetalhe }) {
   const { user }  = useAuth()

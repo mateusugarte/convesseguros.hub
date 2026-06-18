@@ -9,8 +9,18 @@ const ADMIN_EMAILS = new Set([
   'atendimento@convesseguros.com',
 ])
 
+const COMMON_OPERATIONAL_EMAILS = new Set([
+  'renovacaofianca@convesseguros.com',
+])
+
 function resolveAdminFlag(email, profileAdmin) {
   return Boolean(profileAdmin) || ADMIN_EMAILS.has(String(email || '').toLowerCase())
+}
+
+function resolveAreasAtuacao(email, currentAreas = []) {
+  const normalizedEmail = String(email || '').toLowerCase()
+  if (COMMON_OPERATIONAL_EMAILS.has(normalizedEmail)) return ['orcamentista']
+  return Array.isArray(currentAreas) ? currentAreas : []
 }
 
 function buildOrcamentistaLabel(nome, email) {
@@ -55,7 +65,7 @@ export function AuthProvider({ children }) {
         nome: nomeBase,
         orcamentista_label: buildOrcamentistaLabel(nomeBase, currentUser.email),
         avatar_url: null,
-        areas_atuacao: [],
+        areas_atuacao: resolveAreasAtuacao(currentUser.email, []),
         is_admin: resolveAdminFlag(currentUser.email, false),
       }
 
@@ -72,7 +82,11 @@ export function AuthProvider({ children }) {
       }
     }
 
-    setProfile(data ? { ...data, is_admin: resolveAdminFlag(currentUser?.email, data.is_admin) } : data)
+    setProfile(data ? {
+      ...data,
+      areas_atuacao: resolveAreasAtuacao(currentUser?.email, data.areas_atuacao),
+      is_admin: resolveAdminFlag(currentUser?.email, data.is_admin),
+    } : data)
     setLoading(false)
   }
 
@@ -105,7 +119,7 @@ export function AuthProvider({ children }) {
         nome: nomeBase,
         orcamentista_label: buildOrcamentistaLabel(nomeBase, email),
         avatar_url: null,
-        areas_atuacao: [],
+        areas_atuacao: resolveAreasAtuacao(email, []),
         is_admin: resolveAdminFlag(email, false),
       }
 

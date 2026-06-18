@@ -42,6 +42,11 @@ const ROLE_OPTIONS = [
   { value: 'gestor', label: 'Gestor' },
 ]
 
+const ADMIN_EMAILS = new Set([
+  'atendimento2@convesseguros.com',
+  'atendimento@convesseguros.com',
+])
+
 function toggleItem(list, value) {
   return list.includes(value) ? list.filter(item => item !== value) : [...list, value]
 }
@@ -81,7 +86,8 @@ export default function Configuracoes() {
   })
   const [creatingUser, setCreatingUser] = useState(false)
 
-  const isAdmin = Boolean(profile?.is_admin)
+  const isAdmin = Boolean(profile?.is_admin || ADMIN_EMAILS.has(String(user?.email || '').toLowerCase()))
+  const adminSource = profile?.is_admin ? 'perfil' : ADMIN_EMAILS.has(String(user?.email || '').toLowerCase()) ? 'email' : null
 
   useEffect(() => {
     setAvatarPreview(profile?.avatar_url || '')
@@ -228,6 +234,32 @@ export default function Configuracoes() {
         description="Ajustes globais de experiencia, tema e perfil do usuario."
       />
 
+      {isAdmin && (
+        <div className="rounded-[28px] border border-brand-accent/20 bg-gradient-to-r from-brand-accent/10 via-white to-brand-secondary/10 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-accent/15 text-brand-accent">
+                <Users2 className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-semibold text-dark-text">Conta administrativa ativa</p>
+                  <span className="badge badge-success">Admin</span>
+                </div>
+                <p className="mt-1 text-sm text-dark-muted">
+                  Este perfil tem acesso ao painel de usuários, criação de contas e gerenciamento de funções.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="badge badge-blue">Usuarios</span>
+              <span className="badge badge-info">Funcoes</span>
+              <span className="badge badge-success">Permissoes elevadas</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
         <div className="space-y-4">
           <DataCard
@@ -328,6 +360,12 @@ export default function Configuracoes() {
                 <p className="max-w-md text-xs text-dark-muted">
                   Use uma foto quadrada para melhor resultado. A imagem aparece no topo do workspace e nas areas de identificacao do usuario.
                 </p>
+                {isAdmin && (
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="badge badge-success">Admin ativo</span>
+                    {adminSource && <span className="text-dark-muted">via {adminSource}</span>}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -415,9 +453,15 @@ export default function Configuracoes() {
 
           {isAdmin && (
             <DataCard
-              title="Criar usuario"
-              subtitle="Admin pode cadastrar usuarios com mais de uma funcao"
+              title="Administracao de usuarios"
+              subtitle="Criacao e consulta de contas com funcoes combinadas"
             >
+              <div className="mb-4 rounded-2xl border border-brand-accent/15 bg-brand-accent/5 p-4">
+                <p className="text-sm font-medium text-dark-text">Voce esta usando um perfil com permissao administrativa.</p>
+                <p className="mt-1 text-sm text-dark-muted">
+                  Aqui voce cria outros usuarios, atribui mais de uma funcao e identifica rapidamente quem tambem e admin.
+                </p>
+              </div>
               <form className="space-y-4" onSubmit={handleCreateUser}>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1.5">
@@ -501,14 +545,11 @@ export default function Configuracoes() {
                   {creatingUser ? 'Criando...' : 'Criar usuario'}
                 </button>
               </form>
-            </DataCard>
-          )}
-
-          {isAdmin && (
-            <DataCard
-              title="Usuarios cadastrados"
-              subtitle="Perfis ativos no sistema e suas funcoes"
-            >
+              <div className="mt-6 border-t border-dark-border/60 pt-5">
+                <div className="mb-3 flex items-center gap-2">
+                  <Users2 className="h-4 w-4 text-brand-accent" />
+                  <p className="text-sm font-semibold text-dark-text">Usuarios cadastrados</p>
+                </div>
               {loadingProfiles ? (
                 <p className="text-sm text-dark-muted">Carregando usuarios...</p>
               ) : (
@@ -534,6 +575,7 @@ export default function Configuracoes() {
                   )}
                 </div>
               )}
+              </div>
             </DataCard>
           )}
         </div>

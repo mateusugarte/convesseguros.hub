@@ -349,9 +349,9 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
                       key={m.id}
                       onClick={() => setImobSelecionada(m.id)}
                       className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors ${
-                        imobSelecionada === m.id
-                           'bg-brand-accent/10 text-brand-accent'
-                          : 'text-dark-text hover:bg-dark-surface2/60'
+                          imobSelecionada === m.id
+                            ? 'bg-brand-accent/10 text-brand-accent'
+                            : 'text-dark-text hover:bg-dark-surface2/60'
                       }`}
                     >
                       <span className="text-sm font-medium truncate">{m.nome_canonico}</span>

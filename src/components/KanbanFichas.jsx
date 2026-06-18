@@ -460,7 +460,7 @@ function ModalConfirmarRecusado({ onConfirmar, salvando }) {
 
 // ── ModalConfirmarAprovado ────────────────────────────────────────────────────
 
-function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
+function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) {
   const [seguradora,      setSeguradora]      = useState('')
   const [valorParcela,    setValorParcela]    = useState('')
   const [numeroOrcamento, setNumeroOrcamento] = useState('')
@@ -477,7 +477,7 @@ function ModalConfirmarAprovado({ onConfirmar, onCancelar, salvando }) {
           <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
             Seguradora <span className="text-status-danger">*</span>
           </label>
-          <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={finalizar?.produto} required />
+          <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={produto} required />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -702,21 +702,27 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     setSalvandoAprovado(true)
     const err = await moverFichaStatus(pendingAprovado.fichaId, 'aprovado', { userId: user?.id })
     if (!err) {
-      await supabase.from('fichas').update({
+      const patch = {
         seguradora,
         valor_parcela: valorParcela,
         numero_orcamento: numeroOrcamento,
         retorno_enviado: retornoEnviado,
         finalizada_em: new Date().toISOString(),
-      }).eq('id', pendingAprovado.fichaId)
+      }
+      setFichas(prev => prev.map(f => (
+        f.id === pendingAprovado.fichaId
+          ? { ...f, status: 'aprovado', ...patch }
+          : f
+      )))
+      await supabase.from('fichas').update(patch).eq('id', pendingAprovado.fichaId)
       toast({ type: 'success', title: 'Ficha aprovada!' })
+      setPendingAprovado(null)
       load()
     } else {
       setFichas(prev => prev.map(f => f.id === pendingAprovado.fichaId ? pendingAprovado.fichaOriginal : f))
       toast({ type: 'error', title: 'Erro ao aprovar ficha' })
     }
     setSalvandoAprovado(false)
-    setPendingAprovado(null)
   }
 
   function handleCancelarAprovado() {
@@ -859,88 +865,98 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
         </div>
       )}
 
-      {/* Modais inline */}
-      {(finalizar || pendingRecusado || pendingAprovado) ? (
-        <>
-          {finalizar && (
-            <ModalFinalizar
-              ficha={finalizar}
-              defaultStatus={finalizarDefaultStatus}
-              onClose={() => { setFinalizar(null); setFinalizarDefaultStatus(null) }}
-              onSuccess={() => { setFinalizar(null); setFinalizarDefaultStatus(null); load() }}
-            />
-          )}
-          {pendingRecusado && (
-            <ModalConfirmarRecusado onConfirmar={handleConfirmarRecusado} salvando={salvandoRecusado} />
-          )}
-          {pendingAprovado && (
-            <ModalConfirmarAprovado onConfirmar={handleConfirmarAprovado} onCancelar={handleCancelarAprovado} salvando={salvandoAprovado} />
-          )}
-        </>
-      ) : (
-        <div className="relative">
-          {/* Sombras de scroll */}
-          {canScrollL && (
-            <div className="absolute left-0 top-0 bottom-4 w-14 z-10 pointer-events-none"
-              style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }} />
-          )}
-          {canScrollR && (
-            <div className="absolute right-0 top-0 bottom-4 w-14 z-10 pointer-events-none"
-              style={{ background: 'linear-gradient(to left, rgb(var(--color-bg)), transparent)' }} />
-          )}
-          {canScrollL && (
-            <button onClick={() => scrollBy('left')}
-              className="absolute left-0.5 top-[54px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-lg flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-all">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          )}
-          {canScrollR && (
-            <button onClick={() => scrollBy('right')}
-              className="absolute right-0.5 top-[54px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-lg flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-all">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          )}
+      <div className="relative">
+        {/* Sombras de scroll */}
+        {canScrollL && (
+          <div className="absolute left-0 top-0 bottom-4 w-14 z-10 pointer-events-none"
+            style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }} />
+        )}
+        {canScrollR && (
+          <div className="absolute right-0 top-0 bottom-4 w-14 z-10 pointer-events-none"
+            style={{ background: 'linear-gradient(to left, rgb(var(--color-bg)), transparent)' }} />
+        )}
+        {canScrollL && (
+          <button onClick={() => scrollBy('left')}
+            className="absolute left-0.5 top-[54px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-lg flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-all">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        )}
+        {canScrollR && (
+          <button onClick={() => scrollBy('right')}
+            className="absolute right-0.5 top-[54px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-lg flex items-center justify-center text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-all">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
 
-    <DndContext
-      sensors={sensors}
-      collisionDetection={kanbanPointerCollision}
-      onDragStart={({ active }) => setActiveId(active.id)}
-      onDragEnd={handleDragEnd}
-      onDragCancel={() => setActiveId(null)}
-          >
-            <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
-              <div className="flex gap-3 min-w-max px-1">
-                {COLUMNS.map((column, i) => (
-                  <DroppableColumn
-                    key={column.id}
-                    column={column}
-                    fichas={cols[column.id] || []}
-                    userId={user?.id}
-                    onDetalhe={handleDetalhe}
-                    onAssumir={handleAssumir}
-                    onFinalizar={handleFinalizar}
-                    onToggleRetorno={handleToggleRetorno}
-                    collapsed={collapsed.has(column.id)}
-                    onToggleCollapse={() => toggleCollapse(column.id)}
-                    newIds={newIds}
-                    colIndex={i}
-                    resolverNome={resolverNome}
-                    sortOrder={sortOrder}
-                    onToggleSortOrder={() => setSortOrder(prev => (prev === 'recentes' ? 'antigas' : 'recentes'))}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={kanbanPointerCollision}
+          onDragStart={({ active }) => setActiveId(active.id)}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => setActiveId(null)}
+        >
+          <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
+            <div className="flex gap-3 min-w-max px-1">
+              {COLUMNS.map((column, i) => (
+                <DroppableColumn
+                  key={column.id}
+                  column={column}
+                  fichas={cols[column.id] || []}
+                  userId={user?.id}
+                  onDetalhe={handleDetalhe}
+                  onAssumir={handleAssumir}
+                  onFinalizar={handleFinalizar}
+                  onToggleRetorno={handleToggleRetorno}
+                  collapsed={collapsed.has(column.id)}
+                  onToggleCollapse={() => toggleCollapse(column.id)}
+                  newIds={newIds}
+                  colIndex={i}
+                  resolverNome={resolverNome}
+                  sortOrder={sortOrder}
+                  onToggleSortOrder={() => setSortOrder(prev => (prev === 'recentes' ? 'antigas' : 'recentes'))}
                   resolveImobiliariaInfo={resolveImobiliariaInfo}
-                  />
-                ))}
-              </div>
+                />
+              ))}
             </div>
+          </div>
 
-            <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
-              {activeCard && (
-                <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', '--kanban-accent': PRODUTO_COLOR[activeCard?.produto] || '#000079', cursor: 'grabbing' }}>
-                  <FichaCard ficha={activeCard} isDragOverlay resolverNome={resolverNome} resolveImobiliariaInfo={resolveImobiliariaInfo} />
-                </div>
-              )}
-            </DragOverlay>
-          </DndContext>
+          <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
+            {activeCard && (
+              <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', '--kanban-accent': PRODUTO_COLOR[activeCard?.produto] || '#000079', cursor: 'grabbing' }}>
+                <FichaCard ficha={activeCard} isDragOverlay resolverNome={resolverNome} resolveImobiliariaInfo={resolveImobiliariaInfo} />
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
+      </div>
+
+      {finalizar && (
+        <ModalFinalizar
+          ficha={finalizar}
+          defaultStatus={finalizarDefaultStatus}
+          onClose={() => { setFinalizar(null); setFinalizarDefaultStatus(null) }}
+          onSuccess={() => { setFinalizar(null); setFinalizarDefaultStatus(null); load() }}
+        />
+      )}
+      {pendingRecusado && (
+        <div className="fixed inset-0 z-[390] flex items-center justify-center p-4">
+          <div className="modal-backdrop" onClick={() => setPendingRecusado(null)} />
+          <div className="relative z-10 w-full max-w-md">
+            <ModalConfirmarRecusado onConfirmar={handleConfirmarRecusado} salvando={salvandoRecusado} />
+          </div>
+        </div>
+      )}
+      {pendingAprovado && (
+        <div className="fixed inset-0 z-[390] flex items-center justify-center p-4">
+          <div className="modal-backdrop" onClick={handleCancelarAprovado} />
+          <div className="relative z-10 w-full max-w-lg">
+            <ModalConfirmarAprovado
+              produto={pendingAprovado.fichaOriginal?.produto}
+              onConfirmar={handleConfirmarAprovado}
+              onCancelar={handleCancelarAprovado}
+              salvando={salvandoAprovado}
+            />
+          </div>
         </div>
       )}
     </div>

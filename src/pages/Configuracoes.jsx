@@ -71,7 +71,7 @@ export default function Configuracoes() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || '')
   const [nome, setNome] = useState(profile?.nome || '')
-  const [areasAtuacao, setAreasAtuacao] = useState(profile?.areas_atuacao || [])
+  const [areasAtuacao, setAreasAtuacao] = useState([])
   const [savingPerfil, setSavingPerfil] = useState(false)
 
   const [profiles, setProfiles] = useState([])
@@ -85,6 +85,7 @@ export default function Configuracoes() {
     is_admin: false,
   })
   const [creatingUser, setCreatingUser] = useState(false)
+  const [syncingUsers, setSyncingUsers] = useState(false)
 
   const isAdmin = Boolean(profile?.is_admin || ADMIN_EMAILS.has(String(user?.email || '').toLowerCase()))
   const adminSource = profile?.is_admin ? 'perfil' : ADMIN_EMAILS.has(String(user?.email || '').toLowerCase()) ? 'email' : null
@@ -92,8 +93,8 @@ export default function Configuracoes() {
   useEffect(() => {
     setAvatarPreview(profile?.avatar_url || '')
     setNome(profile?.nome || '')
-    setAreasAtuacao(profile?.areas_atuacao || [])
-  }, [profile?.avatar_url, profile?.nome, profile?.areas_atuacao])
+    setAreasAtuacao([])
+  }, [profile?.avatar_url, profile?.nome])
 
   useEffect(() => {
     if (!isAdmin) return
@@ -108,7 +109,7 @@ export default function Configuracoes() {
     setLoadingProfiles(true)
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, nome, orcamentista_label, avatar_url, areas_atuacao, is_admin, created_at')
+      .select('id, nome, orcamentista_label, avatar_url, is_admin, created_at')
       .order('nome')
 
     setLoadingProfiles(false)
@@ -130,7 +131,6 @@ export default function Configuracoes() {
       .update({
         nome: nome.trim(),
         orcamentista_label: normalizeLabel(nome),
-        areas_atuacao: areasAtuacao,
       })
       .eq('id', user.id)
 
@@ -205,7 +205,6 @@ export default function Configuracoes() {
           nome: newUser.nome.trim(),
           email: newUser.email.trim(),
           password: newUser.password,
-          areas_atuacao: newUser.roles,
           is_admin: newUser.is_admin,
         }),
       })
@@ -223,6 +222,41 @@ export default function Configuracoes() {
       toast({ type: 'error', title: 'Erro ao criar usuario', message: error.message })
     } finally {
       setCreatingUser(false)
+    }
+  }
+
+  async function handleSyncUsers() {
+    setSyncingUsers(true)
+
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError || !sessionData?.session?.access_token) {
+        throw new Error('Nao foi possivel validar sua sessao de admin.')
+      }
+
+      const response = await fetch('/api/sync-users', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
+      })
+
+      const payload = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Nao foi possivel sincronizar os usuarios.')
+      }
+
+      toast({
+        type: 'success',
+        title: 'Usuarios sincronizados',
+        message: `${payload?.synced || 0} de ${payload?.total || 0} perfis atualizados.`,
+      })
+      await loadProfiles()
+    } catch (error) {
+      toast({ type: 'error', title: 'Erro ao sincronizar usuarios', message: error.message })
+    } finally {
+      setSyncingUsers(false)
     }
   }
 
@@ -462,6 +496,17 @@ export default function Configuracoes() {
                   Aqui voce cria outros usuarios, atribui mais de uma funcao e identifica rapidamente quem tambem e admin.
                 </p>
               </div>
+              <div className="mb-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleSyncUsers}
+                  disabled={syncingUsers}
+                  className="btn-secondary flex items-center gap-2 disabled:opacity-50"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  {syncingUsers ? 'Sincronizando...' : 'Sincronizar usuarios do Auth'}
+                </button>
+              </div>
               <form className="space-y-4" onSubmit={handleCreateUser}>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1.5">
@@ -563,9 +608,6 @@ export default function Configuracoes() {
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {item.is_admin && <span className="badge badge-success">Admin</span>}
-                          {(item.areas_atuacao || []).map(role => (
-                            <span key={role} className="badge badge-muted">{roleLabel(role)}</span>
-                          ))}
                         </div>
                       </div>
                     </div>

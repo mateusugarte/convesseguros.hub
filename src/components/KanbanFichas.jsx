@@ -60,6 +60,11 @@ const PERIODOS = [
   { key: 'custom', label: 'Personalizado' },
 ]
 
+const SORT_ORDER_OPTIONS = [
+  { value: 'recentes', label: 'Mais recentes' },
+  { value: 'antigas', label: 'Mais antigas' },
+]
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getPeriodDates(periodo, customFrom, customTo) {
@@ -99,6 +104,14 @@ function groupFichas(fichas, userId, sortOrder = 'recentes') {
     cols[colId].sort((a, b) => (getTime(a) - getTime(b)) * direction)
   }
   return cols
+}
+
+function upsertFicha(list, nova) {
+  const idx = list.findIndex(item => item.id === nova.id)
+  if (idx === -1) return [nova, ...list]
+  const next = [...list]
+  next[idx] = { ...next[idx], ...nova }
+  return next
 }
 
 function timeSince(dateStr) {
@@ -569,7 +582,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'fichas' }, p => {
         const nova = p.new
         if (produto && produto !== 'todos' && nova.produto !== produto) return
-        setFichas(prev => [nova, ...prev])
+        setFichas(prev => upsertFicha(prev, nova))
         setCollapsed(prev => { const next = new Set(prev); next.delete('pendente'); return next })
         setNewIds(prev => new Set([...prev, nova.id]))
         const t = setTimeout(() => {
@@ -803,28 +816,23 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
               <DatePicker value={customTo} onChange={v => setCustomTo(v)} />
             </div>
           )}
-          <div className="flex items-center gap-1 rounded-lg border border-dark-border/70 bg-dark-surface2/60 p-0.5">
-            <span className="px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Ordenar por</span>
-            <button
-              onClick={() => setSortOrder('recentes')}
-              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
-                sortOrder === 'recentes'
-                  ? 'bg-brand-secondary text-white shadow-sm'
-                  : 'text-dark-muted hover:text-dark-text'
-              }`}
-            >
-              Mais recentes
-            </button>
-            <button
-              onClick={() => setSortOrder('antigas')}
-              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
-                sortOrder === 'antigas'
-                  ? 'bg-brand-secondary text-white shadow-sm'
-                  : 'text-dark-muted hover:text-dark-text'
-              }`}
-            >
-              Mais antigas
-            </button>
+          <div className="flex items-center gap-2 rounded-2xl border border-dark-border/70 bg-dark-surface2/60 px-3 py-2">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Ordem de envio</span>
+            <div className="flex items-center gap-1 rounded-xl border border-dark-border/70 bg-dark-surface p-0.5">
+              {SORT_ORDER_OPTIONS.map(option => (
+                <button
+                  key={option.value}
+                  onClick={() => setSortOrder(option.value)}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    sortOrder === option.value
+                      ? 'bg-brand-secondary text-white shadow-sm'
+                      : 'text-dark-muted hover:text-dark-text'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="ml-auto flex items-center gap-2 text-xs text-dark-muted">
             <span>{fichas.length} ficha{fichas.length !== 1 ? 's' : ''}</span>

@@ -100,6 +100,11 @@ const FICHA_PRODUTO_TO_ROUTE = {
   todos: '/fichas/todos',
 }
 
+const SORT_ORDER_OPTIONS = [
+  { value: 'recentes', label: 'Mais recentes' },
+  { value: 'antigas', label: 'Mais antigas' },
+]
+
 function resolveProdutoFromPathname(pathname) {
   if (pathname === '/fichas') return null
   return FICHA_ROUTE_TO_PRODUTO[pathname] ?? null
@@ -965,31 +970,27 @@ export default function Fichas() {
         />
       ) : (
         <>
-          <FilterBar
+              <FilterBar
             className="mb-4"
             actions={(
               <>
-                <div className="flex items-center gap-1 rounded-2xl border border-dark-border/70 bg-dark-surface2/60 p-0.5">
-                  <button
-                    onClick={() => { setSortOrderLista('recentes'); setPage(0) }}
-                    className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                      sortOrderLista === 'recentes'
-                        ? 'bg-brand-secondary text-white shadow-sm'
-                        : 'text-dark-muted hover:text-dark-text'
-                    }`}
-                  >
-                    Mais recentes
-                  </button>
-                  <button
-                    onClick={() => { setSortOrderLista('antigas'); setPage(0) }}
-                    className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                      sortOrderLista === 'antigas'
-                        ? 'bg-brand-secondary text-white shadow-sm'
-                        : 'text-dark-muted hover:text-dark-text'
-                    }`}
-                  >
-                    Mais antigas
-                  </button>
+                <div className="flex items-center gap-2 rounded-2xl border border-dark-border/70 bg-dark-surface2/60 px-3 py-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Ordem de envio</span>
+                  <div className="flex items-center gap-1 rounded-xl border border-dark-border/70 bg-dark-surface p-0.5">
+                    {SORT_ORDER_OPTIONS.map(option => (
+                      <button
+                        key={option.value}
+                        onClick={() => { setSortOrderLista(option.value); setPage(0) }}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                          sortOrderLista === option.value
+                            ? 'bg-brand-secondary text-white shadow-sm'
+                            : 'text-dark-muted hover:text-dark-text'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 {(tab === 'passadas' || tab === 'passadas_por_mim') && (
                   <button

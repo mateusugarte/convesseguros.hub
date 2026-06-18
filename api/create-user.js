@@ -7,10 +7,40 @@ function json(res, status, body) {
   res.status(status).json(body)
 }
 
-function normalizeArray(value) {
-  return Array.isArray(value)
-    ? value.map(item => String(item || '').trim()).filter(Boolean)
-    : []
+function buildOrcamentistaLabel(nome, email) {
+  const base = String(nome || '').trim() || String(email || '').split('@')[0] || 'USUARIO'
+  return base.toUpperCase()
+}
+
+async function findAuthUserByEmail(adminClient, email) {
+  let page = 1
+  const perPage = 100
+  while (true) {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage })
+    if (error) throw error
+    const users = data?.users || []
+    const found = users.find(u => String(u.email || '').toLowerCase() === email)
+    if (found) return found
+    if (users.length < perPage) return null
+    page += 1
+  }
+}
+
+async function upsertProfile(adminClient, { userId, nome, email, isAdmin }) {
+  const profilePayload = {
+    id: userId,
+    nome,
+    orcamentista_label: buildOrcamentistaLabel(nome, email),
+    avatar_url: null,
+    is_admin: isAdmin,
+  }
+
+  const { error } = await adminClient
+    .from('profiles')
+    .upsert(profilePayload, { onConflict: 'id' })
+
+  if (error) throw error
+  return profilePayload
 }
 
 export default async function handler(req, res) {
@@ -58,46 +88,61 @@ export default async function handler(req, res) {
   const nome = String(body.nome || '').trim()
   const email = String(body.email || '').trim().toLowerCase()
   const password = String(body.password || '')
-  const areasAtuacao = normalizeArray(body.areas_atuacao)
   const isAdmin = Boolean(body.is_admin)
 
   if (!nome || !email || !password) {
     return json(res, 400, { error: 'Nome, email e senha sao obrigatorios' })
   }
 
-  const { data: createdUser, error: createUserError } = await adminClient.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { nome },
-  })
+  let userRecord = await findAuthUserByEmail(adminClient, email)
 
-  if (createUserError || !createdUser?.user?.id) {
-    return json(res, 400, { error: createUserError?.message || 'Nao foi possivel criar o usuario' })
+  if (userRecord?.id) {
+    const { data: updatedUser, error: updateUserError } = await adminClient.auth.admin.updateUserById(userRecord.id, {
+      password,
+      email_confirm: true,
+      user_metadata: { nome },
+    })
+
+    if (updateUserError || !updatedUser?.user?.id) {
+      return json(res, 400, { error: updateUserError?.message || 'Nao foi possivel atualizar o usuario' })
+    }
+
+    userRecord = updatedUser.user
+  } else {
+    const { data: createdUser, error: createUserError } = await adminClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { nome },
+    })
+
+    if (createUserError || !createdUser?.user?.id) {
+      if (createUserError?.message?.toLowerCase().includes('already been registered')) {
+        userRecord = await findAuthUserByEmail(adminClient, email)
+      } else {
+        return json(res, 400, { error: createUserError?.message || 'Nao foi possivel criar o usuario' })
+      }
+    } else {
+      userRecord = createdUser.user
+    }
   }
 
-  const profilePayload = {
-    id: createdUser.user.id,
+  if (!userRecord?.id) {
+    return json(res, 400, { error: 'Nao foi possivel localizar o usuario no Auth' })
+  }
+
+  const profilePayload = await upsertProfile(adminClient, {
+    userId: userRecord.id,
     nome,
-    orcamentista_label: nome.toUpperCase(),
-    avatar_url: null,
-    areas_atuacao: areasAtuacao,
-    is_admin: isAdmin,
-  }
-
-  const { error: profileUpsertError } = await adminClient
-    .from('profiles')
-    .upsert(profilePayload, { onConflict: 'id' })
-
-  if (profileUpsertError) {
-    return json(res, 400, { error: profileUpsertError.message })
-  }
+    email,
+    isAdmin,
+  })
 
   return json(res, 200, {
     ok: true,
     user: {
-      id: createdUser.user.id,
-      email,
+      id: userRecord.id,
+      email: userRecord.email || email,
     },
     profile: profilePayload,
   })

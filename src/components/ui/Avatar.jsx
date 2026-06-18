@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { getEntityImageUrl } from '../../lib/entityMedia'
 
 const PALETTE = ['#F5582A','#10B981','#F97316','#8B5CF6','#EC4899','#06B6D4','#2B5BA8']
 
@@ -21,6 +22,7 @@ const SIZES = {
 
 export function Avatar({ name, src, size = 'md', className = '' }) {
   const [imageError, setImageError] = useState(false)
+  const resolvedSrc = src ? getEntityImageUrl(src, src) : ''
 
   useEffect(() => {
     setImageError(false)
@@ -29,10 +31,10 @@ export function Avatar({ name, src, size = 'md', className = '' }) {
   return (
     <div
       className={`${SIZES[size]} rounded-full flex items-center justify-center font-bold text-white flex-shrink-0 overflow-hidden ${className}`}
-      style={!src ? { background: nameToColor(name) } : undefined}
+      style={!resolvedSrc ? { background: nameToColor(name) } : undefined}
     >
-      {src && !imageError
-        ? <img src={src} alt={name} className="w-full h-full object-cover" onError={() => setImageError(true)} />
+      {resolvedSrc && !imageError
+        ? <img src={resolvedSrc} alt={name} className="w-full h-full object-cover" onError={() => setImageError(true)} />
         : initials(name)
       }
     </div>

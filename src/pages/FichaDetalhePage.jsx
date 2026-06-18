@@ -16,6 +16,7 @@ import ModalFicha from '../components/ModalFicha'
 import ModalAssumir from '../components/ModalAssumir'
 import ModalFinalizar from '../components/ModalFinalizar'
 import SecaoDocumentos from '../components/SecaoDocumentos'
+import { Select } from '../components/ui/Select'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -524,15 +525,12 @@ export default function FichaDetalhePage() {
             <p className="text-sm text-dark-muted">
               Preencha as 5 seguradoras manualmente. Se marcar Aprovado em alguma delas, complete os campos dessa seguradora.
             </p>
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {normalizarCotacoes(ficha.raw_data?.cotacoes).map(cotacao => (
-                <div key={cotacao.seguradora} className="rounded-2xl border border-dark-border bg-dark-surface2/40 p-4 space-y-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-dark-text">{cotacao.seguradora}</p>
-                      <p className="text-xs text-dark-muted">Status e valores da cotação</p>
-                    </div>
-                    <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full border ${
+                <div key={cotacao.seguradora} className="rounded-[28px] border border-dark-border bg-white/85 p-4 shadow-[0_18px_38px_rgba(15,23,42,0.08)] backdrop-blur-sm space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <SeguradoraBadge nome={cotacao.seguradora} size="md" showName />
+                    <span className={`text-[10px] uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border whitespace-nowrap ${
                       cotacao.status === 'aprovado'
                         ? 'border-status-success/30 text-status-success bg-status-success/10'
                         : cotacao.status === 'recusado'
@@ -546,15 +544,13 @@ export default function FichaDetalhePage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <p className="text-[10px] font-medium uppercase tracking-wider text-dark-muted mb-1">Status</p>
-                      <select
+                      <Select
                         value={cotacao.status}
-                        onChange={e => updateCotacao(cotacao.seguradora, 'status', e.target.value)}
-                        className="input"
-                      >
-                        {COTACAO_STATUS_OPTIONS.map(option => (
-                          <option key={option.value || 'empty'} value={option.value}>{option.label}</option>
-                        ))}
-                      </select>
+                        onChange={value => updateCotacao(cotacao.seguradora, 'status', value)}
+                        options={COTACAO_STATUS_OPTIONS}
+                        placeholder="Sem status"
+                        label="Status"
+                      />
                     </div>
                     <InlineField
                       label="Valor da Parcela"

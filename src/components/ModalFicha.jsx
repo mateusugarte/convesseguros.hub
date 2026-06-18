@@ -5,6 +5,7 @@ import {
 } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { ArrowLeft, Plus, Save } from 'lucide-react'
+import SeguradoraBadge from './SeguradoraBadge'
 import SeguradoraSelect from './SeguradoraSelect'
 import ImobiliariaSelect from './ImobiliariaSelect'
 import { Select } from './ui/Select'
@@ -440,15 +441,12 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
 
           <div>
             <p className="eyebrow text-dark-muted mb-3 pb-2 border-b border-dark-border/30">Cotação</p>
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {form.cotacoes.map((cotacao, index) => (
-                <div key={cotacao.seguradora} className="rounded-2xl border border-dark-border bg-dark-surface2/40 p-4 space-y-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-dark-text">{cotacao.seguradora}</p>
-                      <p className="text-xs text-dark-muted">Preenchimento opcional por seguradora</p>
-                    </div>
-                    <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full border ${
+                <div key={cotacao.seguradora} className="rounded-[28px] border border-dark-border bg-white/85 p-4 shadow-[0_18px_38px_rgba(15,23,42,0.08)] backdrop-blur-sm space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <SeguradoraBadge nome={cotacao.seguradora} size="md" showName />
+                    <span className={`text-[10px] uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border whitespace-nowrap ${
                       cotacao.status === 'aprovado'
                         ? 'border-status-success/30 text-status-success bg-status-success/10'
                         : cotacao.status === 'recusado'
@@ -468,6 +466,8 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                           itemIndex === index ? { ...item, status: v } : item
                         )))}
                         options={COTACAO_STATUS_OPTIONS}
+                        label="Status"
+                        placeholder="Sem status"
                       />
                     </div>
                     <div>

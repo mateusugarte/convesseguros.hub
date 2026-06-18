@@ -258,27 +258,85 @@ function onlyDigits(value) {
   return String(value || '').replace(/\D/g, '')
 }
 
+function normalizeSearchText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+async function fetchAllRows(queryFactory, pageSize = 500) {
+  let all = []
+  let offset = 0
+  while (true) {
+    const { data, error } = await queryFactory().range(offset, offset + pageSize - 1)
+    if (error) throw error
+    if (!data || data.length === 0) break
+    all = all.concat(data)
+    if (data.length < pageSize) break
+    offset += pageSize
+  }
+  return all
+}
+
 export async function buscarFichasParaEmissao(termo, imobiliarias, modo = 'nome') {
   const termoNormalizado = modo === 'cpf' || modo === 'cnpj'
     ? onlyDigits(termo)
-    : termo?.trim()
+    : normalizeSearchText(termo?.trim())
 
   if (!termoNormalizado && !(Array.isArray(imobiliarias) ? imobiliarias.length : imobiliarias)) return []
 
-  const { data, error } = await supabase.rpc('buscar_fichas_emissao_fianca', {
-    p_termo: termoNormalizado || null,
-    p_modo: modo || 'nome',
-    p_imobiliarias: Array.isArray(imobiliarias)
-      ? imobiliarias
-      : (typeof imobiliarias === 'string' && imobiliarias ? [imobiliarias] : null),
+  const imobiliariasFilter = Array.isArray(imobiliarias)
+    ? imobiliarias.filter(Boolean)
+    : (typeof imobiliarias === 'string' && imobiliarias ? [imobiliarias] : null)
+
+  const data = await fetchAllRows(() => {
+    let q = supabase
+      .from('fichas')
+      .select('id, nome_interessado, nome_empresa, cpf, cnpj, produto, imobiliaria, valor_aluguel, celular, cep, tipo_imovel, numero_apolice, vigencia, vencimento, origem_lead, observacoes, pct_comissao, pct_desconto, parcelamento, status, raw_data, created_at')
+      .eq('status', 'aprovado')
+      .order('created_at', { ascending: false })
+
+    if (imobiliariasFilter?.length) q = q.in('imobiliaria', imobiliariasFilter)
+    return q
+  })
+  if (!data.length) return []
+
+  const term = modo === 'cpf' || modo === 'cnpj'
+    ? termoNormalizado
+    : termoNormalizado
+
+  const filtered = data.filter(f => {
+    if (!term) return true
+
+    if (modo === 'cpf') {
+      return onlyDigits(f.cpf) === term
+    }
+
+    if (modo === 'cnpj') {
+      return onlyDigits(f.cnpj) === term
+    }
+
+    const rd = f.raw_data || {}
+    const haystack = [
+      f.nome_interessado,
+      f.nome_empresa,
+      rd.nome,
+      rd.nome_interessado,
+      rd.nome_empresa,
+      rd.razao_social,
+      rd.empresa,
+      rd.nome_fantasia,
+      f.imobiliaria,
+      f.seguradora,
+    ]
+      .map(normalizeSearchText)
+      .join(' ')
+
+    return haystack.includes(term)
   })
 
-  if (error) {
-    console.error('buscarFichasParaEmissao:rpc', error)
-    return []
-  }
-
-  return data || []
+  return filtered
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────

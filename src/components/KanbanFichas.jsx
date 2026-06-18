@@ -331,11 +331,10 @@ function DroppableColumn({
           <button
             onClick={onToggleSortOrder}
             title={`Ordem atual: ${sortOrder === 'recentes' ? 'mais recentes' : 'mais antigas'}`}
-            className="mt-1 flex h-5 items-center gap-1 rounded-full border px-1.5 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors hover:bg-white/40"
+            className="mt-1 flex h-5 w-5 items-center justify-center rounded-full border transition-colors hover:bg-white/40"
             style={{ color: column.color, borderColor: column.color + '35' }}
           >
             <ArrowUpDown className="w-3 h-3" />
-            <span>{sortOrder === 'recentes' ? '↑ recentes' : '↓ antigas'}</span>
           </button>
         </div>
         <div

@@ -65,7 +65,7 @@ function inRange(iso, range) {
 }
 
 function deltaPct(current, previous) {
-  if (!previous) return current > 0  100 : 0
+  if (!previous) return current > 0 ? 100 : 0
   return Math.round(((current - previous) / previous) * 100)
 }
 
@@ -143,7 +143,7 @@ function buildOrigins(leads) {
   })).filter(item => item.total > 0)
 
   return counts.length > 0
-     counts.sort((a, b) => b.total - a.total)
+    ? counts.sort((a, b) => b.total - a.total)
     : [{ origem: 'Sem origem definida', total: leads.filter(lead => !lead.origem).length || 0 }]
 }
 
@@ -156,7 +156,7 @@ function buildPipelineOverview(leads) {
     .map(column => {
       const stageLeads = activeLeads.filter(lead => lead.coluna === column.id)
       const averageAge = stageLeads.length
-         Math.round(stageLeads.reduce((sum, lead) => sum + (lead.ultimaAtividade  diffDias(lead.ultimaAtividade) : 0), 0) / stageLeads.length)
+        ? Math.round(stageLeads.reduce((sum, lead) => sum + (lead.ultimaAtividade ? diffDias(lead.ultimaAtividade) : 0), 0) / stageLeads.length)
         : 0
       const stale = stageLeads.filter(lead => lead.ultimaAtividade && diffDias(lead.ultimaAtividade) >= 7).length
       return {

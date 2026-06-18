@@ -56,7 +56,7 @@ function MonthView({ date, events, selectedDay, onDaySelect, onEventClick, delet
     return events
       .filter(e => !deletingIds.has(e.id))
       .filter(e => { try { return isSameDay(parseISO(e.data), d) } catch { return false } })
-      .sort((a, b) => a.data > b.data  1 : -1)
+      .sort((a, b) => a.data > b.data ? 1 : -1)
   }
 
   return (
@@ -79,11 +79,11 @@ function MonthView({ date, events, selectedDay, onDaySelect, onEventClick, delet
           return (
             <div key={i} onClick={() => onDaySelect(day)}
               className={`min-h-[110px] p-2 border-r border-b border-dark-border/20 cursor-pointer transition-colors
-                ${!inMonth   'opacity-25' : 'hover:bg-white/45'}
-                ${selected   'bg-brand-accent/5 border-brand-accent/30' : ''}`}
-              style={selected  { boxShadow: 'inset 0 0 0 1.5px rgba(74,144,217,0.35)' } : {}}>
+                ${!inMonth ? 'opacity-25' : 'hover:bg-white/45'}
+                ${selected ? 'bg-brand-accent/5 border-brand-accent/30' : ''}`}
+              style={selected ? { boxShadow: 'inset 0 0 0 1.5px rgba(74,144,217,0.35)' } : {}}>
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mb-1 flex-shrink-0
-                ${todayDay  'bg-brand-accent text-white' : selected  'text-brand-accent' : 'text-dark-muted'}`}>
+                ${todayDay ? 'bg-brand-accent text-white' : selected ? 'text-brand-accent' : 'text-dark-muted'}`}>
                 {format(day, 'd')}
               </div>
               <div className="space-y-0.5">
@@ -133,9 +133,9 @@ function WeekView({ date, events, onDaySelect, onSlotClick, onEventClick, deleti
           {days.map(d => (
             <button key={d.toString()} onClick={() => onDaySelect(d)}
               className={`px-2 py-2.5 text-center border-l border-dark-border/30 hover:bg-dark-surface2 transition-colors
-                ${isToday(d)  'bg-brand-accent/5' : ''}`}>
+                ${isToday(d) ? 'bg-brand-accent/5' : ''}`}>
               <p className="text-[10px] text-dark-muted capitalize">{format(d, 'EEE', { locale: ptBR })}</p>
-              <p className={`text-sm font-bold ${isToday(d)  'text-brand-accent' : 'text-dark-text'}`}>{format(d, 'd')}</p>
+              <p className={`text-sm font-bold ${isToday(d) ? 'text-brand-accent' : 'text-dark-text'}`}>{format(d, 'd')}</p>
             </button>
           ))}
         </div>

@@ -49,7 +49,7 @@ const AVATAR_COLORS = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#2B5BA8','#EC489
 
 function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSelect, dragListeners, dragAttributes }) {
   const score    = calcScore(lead)
-  const dias     = lead.ultimaAtividade  diffDias(lead.ultimaAtividade) : null
+  const dias     = lead.ultimaAtividade ? diffDias(lead.ultimaAtividade) : null
   const leadTags = (lead.tags || []).map(tid => tags.find(t => t.id === tid)).filter(Boolean)
   const isUrgent = dias !== null && dias >= 10
   const isWarn   = dias !== null && dias >= 5
@@ -59,12 +59,12 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
 
   return (
     <div
-      className={`kanban-card group ${ghost  'opacity-30' : ''} ${selected  'ring-2 ring-brand-accent/25' : ''}`}
+      className={`kanban-card group ${ghost ? 'opacity-30' : ''} ${selected ? 'ring-2 ring-brand-accent/25' : ''}`}
       style={{
         '--kanban-accent': col.color || '#4A90D9',
         background: 'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(241,245,249,0.92))',
-        borderColor: selected  'rgba(37, 99, 235, 0.28)' : 'rgba(148, 163, 184, 0.2)',
-        boxShadow: selected  '0 18px 38px rgba(37, 99, 235, 0.12)' : '0 12px 28px rgba(15, 23, 42, 0.08)',
+        borderColor: selected ? 'rgba(37, 99, 235, 0.28)' : 'rgba(148, 163, 184, 0.2)',
+        boxShadow: selected ? '0 18px 38px rgba(37, 99, 235, 0.12)' : '0 12px 28px rgba(15, 23, 42, 0.08)',
       }}
     >
       <div className="kanban-card-body pl-2 pr-1">
@@ -83,8 +83,8 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
             </button>
           )}
           <div className="relative flex-shrink-0 cursor-pointer"
-            onClick={e => { e.stopPropagation(); onSelect.() }}>
-            {selected  (
+            onClick={e => { e.stopPropagation(); onSelect?.() }}>
+            {selected ? (
               <div className="w-7 h-7 rounded-full bg-brand-accent flex items-center justify-center">
                 <Check className="w-3.5 h-3.5 text-white" />
               </div>
@@ -152,7 +152,7 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
           <div className="rounded-xl border border-slate-300/55 bg-white/80 px-2 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
             <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Última atividade</p>
             <div className={`mt-1 inline-flex items-center gap-1 text-[10px] font-semibold ${
-              isUrgent  'text-status-error' : isWarn  'text-status-warning' : 'text-dark-text'
+              isUrgent ? 'text-status-error' : isWarn ? 'text-status-warning' : 'text-dark-text'
             }`}>
               <Clock className="h-3 w-3 flex-shrink-0" />
               <span>{fmtIdleDays(dias)}</span>
@@ -175,10 +175,10 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
 function DraggableCard({ lead, col, tags, activeId, onClick, selected, onSelect }) {
   const { setNodeRef, attributes, listeners, isDragging } = useDraggable({ id: lead.id })
   return (
-    <div ref={setNodeRef}
-      className={isDragging  'opacity-50' : ''}
-      style={{ cursor: isDragging  'grabbing' : 'default', touchAction: 'none' }}
-      onClick={e => { if (!isDragging) { e.stopPropagation(); onClick(lead.id) } }}>
+      <div ref={setNodeRef}
+        className={isDragging ? 'opacity-50' : ''}
+        style={{ cursor: isDragging ? 'grabbing' : 'default', touchAction: 'none' }}
+        onClick={e => { if (!isDragging) { e.stopPropagation(); onClick(lead.id) } }}>
       <LeadCard
         lead={lead}
         col={col}
@@ -200,7 +200,7 @@ function DroppableLane({ colId, children }) {
   return (
     <div
       ref={setNodeRef}
-      className={`flex-1 flex flex-col min-h-0 overflow-hidden transition-colors duration-150 ${isOver  'bg-brand-accent/5' : ''}`}
+      className={`flex-1 flex flex-col min-h-0 overflow-hidden transition-colors duration-150 ${isOver ? 'bg-brand-accent/5' : ''}`}
     >
       {children}
     </div>
@@ -227,7 +227,7 @@ function SwimLane({ col, leads, tags, activeId, onCardClick, selectedIds, onSele
 
       <DroppableLane colId={col.id}>
         <div className="kanban-col-body flex flex-col gap-2 p-3 overflow-y-auto flex-1">
-          {leads.length === 0  (
+          {leads.length === 0 ? (
             <div className="flex items-center justify-center h-20 rounded-2xl border-2 border-dashed border-dark-border/40 text-[11px] text-dark-muted bg-white/40">
               Soltar aqui
             </div>
@@ -275,9 +275,9 @@ function ModalRecusa({ lead, onClose, onConfirm }) {
           {MOTIVOS_RECUSA.map(m => (
             <button key={m} onClick={() => setMotivo(m)}
               className={`px-3 py-2.5 rounded-xl text-sm font-medium border transition-all text-left ${
-                motivo === m
-                   'border-status-error bg-status-error/10 text-status-error'
-                  : 'border-dark-border text-dark-muted hover:border-dark-text hover:text-dark-text'
+              motivo === m
+                ? 'border-status-error bg-status-error/10 text-status-error'
+                : 'border-dark-border text-dark-muted hover:border-dark-text hover:text-dark-text'
               }`}>
               {m}
             </button>
@@ -306,8 +306,7 @@ function ModalVenda({ lead, onClose, onConfirm }) {
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
   const valido = form.produto && form.valor && form.comissao && form.dataEmissao
   const comissaoCalc = form.valor && form.comissao
-     (parseFloat(form.valor) * parseFloat(form.comissao) / 100)
-        .toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    ? (parseFloat(form.valor) * parseFloat(form.comissao) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : '0,00'
 
   return (
@@ -411,8 +410,8 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
     if (jaNoComercial(f.nome_interessado)) return
     try {
       await leadAdd({ nome: f.nome_interessado, telefone: f.celular || '', tipo: 'PF', origem: 'Seguro Fiança', imobiliaria: f.imobiliaria || '', nomeApolice: f.id, tipoLocatario: 'Locatário', proximaAcao: '', resumo: '', tags: [], apoliceAtiva: false })
-      toast.({ type: 'success', title: 'Lead importado!' })
-    } catch { toast.({ type: 'error', title: 'Erro ao importar lead' }) }
+      toast({ type: 'success', title: 'Lead importado!' })
+    } catch { toast({ type: 'error', title: 'Erro ao importar lead' }) }
     onClose()
   }
 

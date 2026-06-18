@@ -14,26 +14,26 @@ function QuoteStatusBadge({ status }) {
 
 function DetailField({ label, value, onSave, type = 'text', rows, placeholder, readOnly = false }) {
   const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(value  '')
+  const [draft, setDraft] = useState(value ?? '')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (!editing) setDraft(value  '')
+    if (!editing) setDraft(value ?? '')
   }, [editing, value])
 
   const cancel = useCallback(() => {
     setEditing(false)
-    setDraft(value  '')
+    setDraft(value ?? '')
   }, [value])
 
   const save = useCallback(async () => {
-    if ((draft  '') === (value  '')) {
+    if ((draft ?? '') === (value ?? '')) {
       setEditing(false)
       return
     }
     setSaving(true)
     try {
-      await onSave(draft === ''  null : draft)
+      await onSave(draft === '' ? null : draft)
       setEditing(false)
     } finally {
       setSaving(false)
@@ -54,9 +54,9 @@ function DetailField({ label, value, onSave, type = 'text', rows, placeholder, r
   return (
     <div className="group rounded-2xl border border-dark-border/60 bg-white/70 p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{label}</p>
-      {editing  (
+      {editing ? (
         <div className="mt-2 flex items-start gap-2">
-          {rows  (
+          {rows ? (
             <textarea
               value={draft}
               onChange={e => setDraft(e.target.value)}
@@ -93,7 +93,7 @@ function DetailField({ label, value, onSave, type = 'text', rows, placeholder, r
         <button
           type="button"
           onClick={() => {
-            setDraft(value  '')
+            setDraft(value ?? '')
             setEditing(true)
           }}
           className="mt-2 flex w-full items-center justify-between gap-3 text-left"
@@ -112,7 +112,7 @@ function DetailSelect({ label, value, onSave, options }) {
   return (
     <div className="group rounded-2xl border border-dark-border/60 bg-white/70 p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{label}</p>
-      {editing  (
+      {editing ? (
         <div className="mt-2 flex items-center gap-2">
           <select
             value={value || ''}
@@ -181,7 +181,7 @@ function SummaryGrid({ cotacao }) {
             <ShieldCheck className="h-5 w-5 text-brand-accent/40" />
           </div>
           <p className="text-2xl font-semibold text-dark-text">Seguro Auto</p>
-          <p className="mt-2 text-xs text-dark-muted">{cotacao.tipo === 'renovacao'  'renovacao' : 'novo negocio'}</p>
+            <p className="mt-2 text-xs text-dark-muted">{cotacao.tipo === 'renovacao' ? 'renovacao' : 'novo negocio'}</p>
         </div>
         <div className="border-b border-dark-border/60 p-5 lg:border-b-0 lg:border-r">
           <div className="mb-3 flex items-center justify-between">
@@ -220,13 +220,13 @@ function HistoricoCotacao({ cotacao }) {
         </div>
         <div className="flex gap-3">
           <div className="flex flex-col items-center flex-shrink-0">
-            <div className={`mt-1 h-2.5 w-2.5 rounded-full ${cotacao.status === 'perdida'  'bg-status-danger' : 'bg-status-success'}`} />
+            <div className={`mt-1 h-2.5 w-2.5 rounded-full ${cotacao.status === 'perdida' ? 'bg-status-danger' : 'bg-status-success'}`} />
           </div>
           <div>
             <p className="text-sm font-medium text-dark-text">Status atual: {COTACAO_STATUS[cotacao.status].label || cotacao.status || '—'}</p>
             <p className="text-xs text-dark-muted">
               {cotacao.seguradora_preferencial.nome || cotacao.seguradora_mais_barata.nome
-                 'Seguradoras ja vinculadas na cotacao.'
+                ? 'Seguradoras ja vinculadas na cotacao.'
                 : 'Aguardando definicao de seguradoras.'}
             </p>
           </div>
@@ -267,7 +267,7 @@ export default function AutoCotacaoDetalhe() {
 
   const { mutateAsync: salvarSeguradora } = useMutation({
     mutationFn: async ({ field, value }) => {
-      const atual = cotacao.[field] || {}
+      const atual = cotacao[field] || {}
       return atualizarCotacaoAuto(id, {
         [field]: {
           ...atual,

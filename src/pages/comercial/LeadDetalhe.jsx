@@ -58,7 +58,7 @@ const QUALIFICATION_STORAGE_KEY = 'comercial_lead_qualification'
 function readLeadQualification(leadId) {
   try {
     const raw = localStorage.getItem(QUALIFICATION_STORAGE_KEY)
-    const parsed = raw  JSON.parse(raw) : {}
+    const parsed = raw ? JSON.parse(raw) : {}
     return parsed[leadId] || ''
   } catch {
     return ''
@@ -68,7 +68,7 @@ function readLeadQualification(leadId) {
 function writeLeadQualification(leadId, value) {
   try {
     const raw = localStorage.getItem(QUALIFICATION_STORAGE_KEY)
-    const parsed = raw  JSON.parse(raw) : {}
+    const parsed = raw ? JSON.parse(raw) : {}
     parsed[leadId] = value
     localStorage.setItem(QUALIFICATION_STORAGE_KEY, JSON.stringify(parsed))
   } catch {}
@@ -122,7 +122,7 @@ function ModalEditLead({ lead, onClose, toast }) {
                 {['PF','PJ'].map(t => (
                   <button key={t} onClick={() => set('tipo', t)}
                     className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all
-                      ${form.tipo === t  'border-brand-accent bg-brand-accent/10 text-brand-accent' : 'border-dark-border text-dark-muted hover:border-dark-text/40'}`}>
+                        ${form.tipo === t ? 'border-brand-accent bg-brand-accent/10 text-brand-accent' : 'border-dark-border text-dark-muted hover:border-dark-text/40'}`}>
                     {t}
                   </button>
                 ))}
@@ -158,7 +158,7 @@ function ModalEditLead({ lead, onClose, toast }) {
         <div className="flex gap-2 px-5 py-4 border-t border-dark-border">
           <button onClick={onClose} className="btn-secondary flex-1 text-sm">Cancelar</button>
           <button onClick={handleSave} disabled={saving} className="btn-primary flex-1 text-sm">
-            {saving  <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Salvar'}
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Salvar'}
           </button>
         </div>
       </div>

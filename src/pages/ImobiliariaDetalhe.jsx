@@ -149,7 +149,7 @@ export default function ImobiliariaDetalhe() {
   }
 
   async function handleImageUpload(event) {
-    const file = event.target.files.[0]
+    const file = event.target.files[0]
     if (!file || !imob) return
 
     setUploadingImage(true)
@@ -215,7 +215,7 @@ export default function ImobiliariaDetalhe() {
         description="Detalhe da imobiliária com edição inline, variações de nome e códigos por seguradora."
         actions={
           <button
-            onClick={() => (window.history.length > 1  navigate(-1) : navigate('/imobiliarias'))}
+          onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/imobiliarias'))}
             className="btn-secondary flex items-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -223,7 +223,7 @@ export default function ImobiliariaDetalhe() {
           </button>
         }
         stats={[
-          <MetricCard key="status" label="Status" value={imob.ativa  'Ativa' : 'Inativa'} />,
+          <MetricCard key="status" label="Status" value={imob.ativa ? 'Ativa' : 'Inativa'} />,
           <MetricCard key="variacoes" label="Variações" value={aliases.length} />,
           <MetricCard key="codigos" label="Códigos" value={totalCodigos} />,
           <MetricCard key="cadastro" label="Cadastrada em" value={new Date(imob.created_at).toLocaleDateString('pt-BR')} />,
@@ -236,7 +236,7 @@ export default function ImobiliariaDetalhe() {
             <div className="flex items-center gap-4 flex-wrap">
               <div className="space-y-1">
                 <div className="w-24 h-24 rounded-2xl border border-dark-border bg-white/70 overflow-hidden flex items-center justify-center">
-                {getEntityImageUrl(imob.imagem_path, imob.imagem_url)  (
+                {getEntityImageUrl(imob.imagem_path, imob.imagem_url) ? (
                   <img
                     src={getEntityImageUrl(imob.imagem_path, imob.imagem_url)}
                     alt={imob.nome_canonico}
@@ -254,9 +254,9 @@ export default function ImobiliariaDetalhe() {
                   </p>
                 )}
               </div>
-              <label className={`btn-secondary text-sm cursor-pointer flex items-center gap-2 ${uploadingImage  'opacity-50 pointer-events-none' : ''}`}>
+              <label className={`btn-secondary text-sm cursor-pointer flex items-center gap-2 ${uploadingImage ? 'opacity-50 pointer-events-none' : ''}`}>
                 <Upload className="w-4 h-4" />
-                {uploadingImage  'Enviando...' : 'Enviar imagem'}
+                {uploadingImage ? 'Enviando...' : 'Enviar imagem'}
                 <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
               </label>
             </div>
@@ -270,11 +270,11 @@ export default function ImobiliariaDetalhe() {
                 <label className="flex items-center gap-3 cursor-pointer w-fit">
                   <div
                     onClick={() => updateField('ativa', !imob.ativa)}
-                    className={`w-9 h-5 rounded-full transition-colors ${imob.ativa  'bg-status-success' : 'bg-dark-border'}`}
+                      className={`w-9 h-5 rounded-full transition-colors ${imob.ativa ? 'bg-status-success' : 'bg-dark-border'}`}
                   >
-                    <div className={`w-3.5 h-3.5 bg-white rounded-full transition-transform m-[3px] ${imob.ativa  'translate-x-4' : 'translate-x-0'}`} />
+                      <div className={`w-3.5 h-3.5 bg-white rounded-full transition-transform m-[3px] ${imob.ativa ? 'translate-x-4' : 'translate-x-0'}`} />
                   </div>
-                  <span className="text-sm text-dark-text">{imob.ativa  'Ativa' : 'Inativa'}</span>
+                    <span className="text-sm text-dark-text">{imob.ativa ? 'Ativa' : 'Inativa'}</span>
                 </label>
               </div>
             </div>
@@ -401,7 +401,7 @@ export default function ImobiliariaDetalhe() {
                   disabled={!novoCodigo.seguradora_id || !novoCodigo.codigo.trim() || salvandoCod}
                   className="btn-primary text-sm px-3"
                 >
-                  {salvandoCod  '...' : 'Add'}
+                    {salvandoCod ? '...' : 'Add'}
                 </button>
               </div>
             </div>

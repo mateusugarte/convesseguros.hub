@@ -122,7 +122,7 @@ export default function AutoRenovacoes() {
               <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-white/75 p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{item.label}</p>
-                  <span className={`h-2.5 w-2.5 rounded-full ${item.tone === 'success'  'bg-status-success' : item.tone === 'warning'  'bg-status-warning' : item.tone === 'danger'  'bg-status-danger' : 'bg-brand-accent'}`} />
+                  <span className={`h-2.5 w-2.5 rounded-full ${item.tone === 'success' ? 'bg-status-success' : item.tone === 'warning' ? 'bg-status-warning' : item.tone === 'danger' ? 'bg-status-danger' : 'bg-brand-accent'}`} />
                 </div>
                 <p className="mt-2 text-2xl font-semibold text-dark-text">{item.value}</p>
                 <p className="mt-2 text-xs text-dark-muted">{item.hint}</p>
@@ -138,9 +138,9 @@ export default function AutoRenovacoes() {
             <button
               key={item.value}
               onClick={() => setPeriodo(item.value)}
-              className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-all ${
+                className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-all ${
                 periodo === item.value
-                   'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                  ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
                   : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
               }`}
             >
@@ -155,9 +155,9 @@ export default function AutoRenovacoes() {
         subtitle="Ajuste o status de cotacao sem sair da mesa operacional"
         className="overflow-hidden"
       >
-        {isLoading  (
+        {isLoading ? (
           <div className="py-12 text-center text-sm text-dark-muted">Carregando renovacoes...</div>
-        ) : renovacoes.length === 0  (
+        ) : renovacoes.length === 0 ? (
           <EmptyState
             icon={<RefreshCw className="w-6 h-6" />}
             title="Nenhuma renovacao no recorte"
@@ -255,9 +255,9 @@ export default function AutoRenovacoes() {
                 key={f.value}
                 onClick={() => setAcompanharFiltro(f.value)}
                 className={`rounded-2xl border px-3 py-1.5 text-xs font-medium transition-all ${
-                  acompanharFiltro === f.value
-                     'border-brand-accent bg-brand-accent/10 text-brand-accent'
-                    : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+                    acompanharFiltro === f.value
+                      ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                      : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
                 }`}
               >
                 {f.label}
@@ -266,9 +266,9 @@ export default function AutoRenovacoes() {
           </div>
         )}
       >
-        {loadingTodas  (
+        {loadingTodas ? (
           <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
-        ) : acompanharLista.length === 0  (
+        ) : acompanharLista.length === 0 ? (
           <EmptyState
             icon={<RefreshCw className="w-6 h-6" />}
             title="Nenhuma renovacao encontrada"

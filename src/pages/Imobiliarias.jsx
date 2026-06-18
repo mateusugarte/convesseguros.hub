@@ -42,7 +42,7 @@ function ImobiliariaSelector({ mapeadas }) {
   }, [open])
 
   const filtered = debounced.trim()
-     mapeadas.filter(m => m.nome_canonico.toLowerCase().includes(debounced.toLowerCase()))
+    ? mapeadas.filter(m => m.nome_canonico.toLowerCase().includes(debounced.toLowerCase()))
     : mapeadas.slice(0, 8)
 
   function navegar(id) {
@@ -69,7 +69,7 @@ function ImobiliariaSelector({ mapeadas }) {
       >
         <Search className="w-3.5 h-3.5 text-dark-muted flex-shrink-0" />
         <span className="flex-1 text-dark-muted text-sm">Ir para imobiliária...</span>
-        <ChevronDown className={`w-3.5 h-3.5 text-dark-muted transition-transform duration-200 ${open  'rotate-180' : ''}`} />
+        <ChevronDown className={`w-3.5 h-3.5 text-dark-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown */}
@@ -96,9 +96,9 @@ function ImobiliariaSelector({ mapeadas }) {
 
           {/* Lista */}
           <div className="max-h-64 overflow-y-auto">
-            {filtered.length === 0  (
+            {filtered.length === 0 ? (
               <p className="text-xs text-dark-muted text-center py-5">Nenhuma encontrada</p>
-            ) : filtered.map(imob => {
+              ) : filtered.map(imob => {
               const color = avatarColor(imob.nome_canonico)
               return (
                 <button
@@ -106,7 +106,7 @@ function ImobiliariaSelector({ mapeadas }) {
                   onClick={() => navegar(imob.id)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/55 transition-all text-left"
                 >
-                  {getEntityImageUrl(imob.imagem_path, imob.imagem_url)  (
+                {getEntityImageUrl(imob.imagem_path, imob.imagem_url) ? (
                     <div className="w-8 h-8 rounded-lg overflow-hidden border border-dark-border/30 bg-white flex items-center justify-center flex-shrink-0">
                       <img src={getEntityImageUrl(imob.imagem_path, imob.imagem_url)} alt={imob.nome_canonico} className="w-full h-full object-cover" />
                     </div>
@@ -121,7 +121,7 @@ function ImobiliariaSelector({ mapeadas }) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-dark-text truncate">{imob.nome_canonico}</p>
                     <p className="text-[10px] text-dark-muted">
-                      {imob.totalFichas} ficha{imob.totalFichas !== 1  's' : ''} · {imob.aliases.length} variação{imob.aliases.length !== 1  'ões' : ''}
+                      {imob.totalFichas} ficha{imob.totalFichas !== 1 ? 's' : ''} · {imob.aliases.length} variação{imob.aliases.length !== 1 ? 'ões' : ''}
                     </p>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-dark-muted flex-shrink-0 opacity-50" />
@@ -165,7 +165,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
   const totalFichas = aliasesModal.reduce((s, v) => s + (contagemPorNome[v] || 0), 0)
 
   const mapeadasFiltradas = buscaExistente.trim()
-     mapeadas.filter(m => m.nome_canonico.toLowerCase().includes(buscaExistente.toLowerCase()))
+    ? mapeadas.filter(m => m.nome_canonico.toLowerCase().includes(buscaExistente.toLowerCase()))
     : mapeadas
 
   function removerAlias(v) {
@@ -180,7 +180,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
   }
 
   function handleImagem(event) {
-    const file = event.target.files.[0]
+      const file = event.target.files[0]
     if (!file) return
     setImagemFile(file)
     setImagemPreviewError(false)
@@ -276,9 +276,9 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
   const nomeExistenteSelecionado = mapeadas.find(m => m.id === imobSelecionada).nome_canonico
 
   const podeSalvar = ehEditar
-     nomeCanonoco.trim()
+    ? nomeCanonoco.trim()
     : modo === 'existente'
-       !!imobSelecionada && aliasesModal.length > 0
+      ? !!imobSelecionada && aliasesModal.length > 0
       : nomeCanonoco.trim()
 
   return (
@@ -291,7 +291,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
             <ArrowLeft className="w-4 h-4" />
           </button>
           <h2 className="font-bold text-dark-text text-base">
-            {ehEditar  'Editar Imobiliária' : 'Configurar Imobiliária'}
+              {ehEditar ? 'Editar Imobiliária' : 'Configurar Imobiliária'}
           </h2>
         </div>
 
@@ -303,9 +303,9 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
               <button
                 onClick={() => setModo('nova')}
                 className={`flex-1 py-2 transition-colors ${
-                  modo === 'nova'
-                     'bg-brand-accent text-white'
-                    : 'text-dark-muted hover:text-dark-text'
+                    modo === 'nova'
+                      ? 'bg-brand-accent text-white'
+                      : 'text-dark-muted hover:text-dark-text'
                 }`}
               >
                 Criar nova imobiliária
@@ -313,9 +313,9 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
               <button
                 onClick={() => setModo('existente')}
                 className={`flex-1 py-2 transition-colors ${
-                  modo === 'existente'
-                     'bg-brand-accent text-white'
-                    : 'text-dark-muted hover:text-dark-text'
+                    modo === 'existente'
+                      ? 'bg-brand-accent text-white'
+                      : 'text-dark-muted hover:text-dark-text'
                 }`}
               >
                 Incluir em existente
@@ -341,7 +341,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
                 />
               </div>
               <div className="rounded-xl border border-dark-border divide-y divide-dark-border overflow-hidden max-h-40 overflow-y-auto">
-                {mapeadasFiltradas.length === 0  (
+                {mapeadasFiltradas.length === 0 ? (
                   <p className="text-center py-4 text-xs text-dark-muted">Nenhuma encontrada</p>
                 ) : (
                   mapeadasFiltradas.map(m => (

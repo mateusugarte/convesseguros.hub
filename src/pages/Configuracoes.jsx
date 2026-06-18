@@ -37,7 +37,7 @@ export default function Configuracoes() {
   }, [profile.avatar_url])
 
   async function handleAvatarUpload(event) {
-    const file = event.target.files.[0]
+    const file = event.target.files[0]
     if (!file || !user.id) return
 
     const localPreview = URL.createObjectURL(file)
@@ -70,7 +70,7 @@ export default function Configuracoes() {
       return
     }
 
-    await refreshProfile.()
+    await refreshProfile()
     toast({ type: 'success', title: 'Foto de perfil atualizada' })
   }
 
@@ -114,7 +114,7 @@ export default function Configuracoes() {
                     className="btn-secondary flex items-center gap-2 disabled:opacity-50"
                   >
                     <Upload className="h-4 w-4" />
-                    {uploadingAvatar  'Enviando...' : 'Enviar foto'}
+                    {uploadingAvatar ? 'Enviando...' : 'Enviar foto'}
                   </button>
                   {avatarPreview && (
                     <button
@@ -156,13 +156,13 @@ export default function Configuracoes() {
                     onClick={() => setTheme(option.key)}
                     className={`rounded-3xl border p-5 text-left transition-all ${
                       active
-                         'border-brand-accent bg-brand-accent/10 shadow-sm'
+                        ? 'border-brand-accent bg-brand-accent/10 shadow-sm'
                         : 'border-dark-border hover:border-brand-accent/40 hover:bg-dark-surface2/40'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${active  'bg-brand-accent/15 text-brand-accent' : 'bg-dark-surface2 text-dark-muted'}`}>
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${active ? 'bg-brand-accent/15 text-brand-accent' : 'bg-dark-surface2 text-dark-muted'}`}>
                           <Icon className="h-5 w-5" />
                         </div>
                         <div>

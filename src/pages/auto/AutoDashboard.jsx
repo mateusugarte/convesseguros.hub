@@ -15,7 +15,7 @@ import {
 import { PageHeader, MetricCard, DataCard, EmptyState } from '../../components/ui'
 
 function formatMoney(value) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value  0)
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
 }
 
 const KPI_META = [
@@ -54,17 +54,17 @@ export default function AutoDashboard() {
   const resumoOperacional = [
     {
       label: 'Cotacoes do mes',
-      value: metrics.cotacoesNoMes  0,
+      value: metrics.cotacoesNoMes || 0,
       hint: 'entrada comercial ativa',
     },
     {
       label: 'Conversao',
-      value: `${metrics.taxaConversao  0}%`,
+      value: `${metrics.taxaConversao || 0}%`,
       hint: 'cotações que viraram negocio',
     },
     {
       label: 'Pendentes',
-      value: metrics.renovacoesPendentes  0,
+      value: metrics.renovacoesPendentes || 0,
       hint: 'itens ainda sem tratativa',
     },
   ]
@@ -80,8 +80,8 @@ export default function AutoDashboard() {
             key={item.key}
             label={item.label}
             value={item.format
-               item.format(metrics.[item.key]  0)
-              : (metrics.[item.key]  (loading  '...' : 0))}
+              ? item.format(metrics?.[item.key] || 0)
+              : (metrics?.[item.key] ?? (loading ? '...' : 0))}
             hint={item.hint}
             tone={item.tone}
             icon={item.icon}
@@ -110,9 +110,9 @@ export default function AutoDashboard() {
                 sem espalhar a informacao por telas diferentes.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
-                <span className="badge badge-info">{metrics.cotacoesNoMes  0} cotacoes</span>
-                <span className="badge badge-success">{metrics.taxaConversao  0}% conversao</span>
-                <span className="badge badge-warning">{metrics.renovacoesPendentes  0} pendencias</span>
+                <span className="badge badge-info">{metrics.cotacoesNoMes || 0} cotacoes</span>
+                <span className="badge badge-success">{metrics.taxaConversao || 0}% conversao</span>
+                <span className="badge badge-warning">{metrics.renovacoesPendentes || 0} pendencias</span>
               </div>
             </div>
           </div>
@@ -134,11 +134,11 @@ export default function AutoDashboard() {
           title="Emissoes mensais"
           subtitle="Novos negocios vs renovacoes nos ultimos 6 meses"
         >
-          {loadingEmissoes  (
+          {loadingEmissoes ? (
             <div className="flex h-[280px] items-center justify-center text-sm text-dark-muted">
               Carregando emissoes...
             </div>
-          ) : graficoEmissoes.length === 0 || graficoEmissoes.every(item => item.novos === 0 && item.renovacoes === 0)  (
+          ) : graficoEmissoes.length === 0 || graficoEmissoes.every(item => item.novos === 0 && item.renovacoes === 0) ? (
             <EmptyState
               icon={<BarChart3 className="w-6 h-6" />}
               title="Sem emissao suficiente"
@@ -164,11 +164,11 @@ export default function AutoDashboard() {
           title="Funil de cotacoes"
           subtitle="Pendentes, convertidas e perdidas nos ultimos 6 meses"
         >
-          {loadingCotacoes  (
+          {loadingCotacoes ? (
             <div className="flex h-[280px] items-center justify-center text-sm text-dark-muted">
               Carregando cotacoes...
             </div>
-          ) : graficoCotacoes.length === 0 || graficoCotacoes.every(item => item.abertas === 0 && item.convertidas === 0 && item.perdidas === 0)  (
+          ) : graficoCotacoes.length === 0 || graficoCotacoes.every(item => item.abertas === 0 && item.convertidas === 0 && item.perdidas === 0) ? (
             <EmptyState
               icon={<TrendingUp className="w-6 h-6" />}
               title="Sem cotacoes suficientes"
@@ -197,11 +197,11 @@ export default function AutoDashboard() {
         title="Tendencia de conversao"
         subtitle="Evolucao mensal da taxa de conversao de cotacoes"
       >
-        {loadingCotacoes  (
+          {loadingCotacoes ? (
           <div className="flex h-[200px] items-center justify-center text-sm text-dark-muted">
             Carregando tendencia...
           </div>
-          ) : graficoCotacoes.every(item => item.convertidas === 0 && item.abertas === 0 && item.perdidas === 0)  (
+          ) : graficoCotacoes.every(item => item.convertidas === 0 && item.abertas === 0 && item.perdidas === 0) ? (
           <EmptyState
             icon={<Percent className="w-5 h-5" />}
             title="Sem dados de conversao"
@@ -215,7 +215,7 @@ export default function AutoDashboard() {
                   const total = item.abertas + item.convertidas + item.perdidas
                   return {
                     ...item,
-                    taxa: total > 0  Math.round((item.convertidas / total) * 100) : 0,
+                    taxa: total > 0 ? Math.round((item.convertidas / total) * 100) : 0,
                   }
                 })}
                 margin={{ top: 8, right: 8, left: -18, bottom: 0 }}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Car, CheckCircle2, FileText, RefreshCw, Search, X, Plus } from 'lucide-react'
@@ -149,9 +149,9 @@ function CardEmissao({ emissao, onDragStart, onClick }) {
     borderClass = 'border-brand-secondary/25'
     bgClass = 'bg-brand-secondary/5'
     accentGradient = coluna === 'pendentes'
-       'from-brand-accent to-brand-secondary'
+      ? 'from-brand-accent to-brand-secondary'
       : 'from-brand-secondary to-brand-accent'
-    shadowClass = coluna === 'pendentes'  'shadow-[0_8px_24px_rgba(202,138,4,0.08)]' : ''
+    shadowClass = coluna === 'pendentes' ? 'shadow-[0_8px_24px_rgba(202,138,4,0.08)]' : ''
   }
 
   const nome = nomeEmissao(emissao)
@@ -173,7 +173,7 @@ function CardEmissao({ emissao, onDragStart, onClick }) {
           <p className="truncate text-sm font-semibold text-dark-text">{nome}</p>
           <p className="mt-1 truncate text-xs text-dark-muted">{veiculo}</p>
           <p className="mt-2 text-[11px] text-dark-muted">
-            {placa  `Placa ${placa}` : 'Sem placa'}
+            {placa ? `Placa ${placa}` : 'Sem placa'}
           </p>
           <p className="mt-2 text-[11px] text-dark-muted">
             {cpfEmissao(emissao)} · {celularEmissao(emissao)}
@@ -192,18 +192,18 @@ function CardEmissao({ emissao, onDragStart, onClick }) {
           {!emissao.resultado && (
             <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
               coluna === 'pendentes'
-                 'bg-status-warning/10 text-status-warning'
+                ? 'bg-status-warning/10 text-status-warning'
                 : 'bg-dark-surface2/75 text-dark-muted'
             }`}>
-              {coluna === 'pendentes'  'Pendente' : 'Em andamento'}
+              {coluna === 'pendentes' ? 'Pendente' : 'Em andamento'}
             </span>
           )}
           <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
             isRenovacao
-               'bg-status-success/10 text-status-success'
+              ? 'bg-status-success/10 text-status-success'
               : 'bg-brand-secondary/10 text-brand-secondary'
           }`}>
-            {isRenovacao  'Renovacao' : 'Novo'}
+            {isRenovacao ? 'Renovacao' : 'Novo'}
           </span>
         </div>
       </div>
@@ -229,9 +229,9 @@ function BoolRow({ label, value }) {
     <div className="flex items-center justify-between py-1">
       <p className="text-sm text-dark-muted">{label}</p>
       <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-        value  'bg-status-success/10 text-status-success' : 'bg-dark-border/60 text-dark-muted'
+        value ? 'bg-status-success/10 text-status-success' : 'bg-dark-border/60 text-dark-muted'
       }`}>
-        {value  'Sim' : 'Nao'}
+        {value ? 'Sim' : 'Nao'}
       </span>
     </div>
   )
@@ -242,11 +242,11 @@ function BoolRow({ label, value }) {
 function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice }) {
   const c = emissao.cotacoes_auto || {}
   const nome = nomeEmissao(emissao)
-  const tipo = (c.tipo || emissao.tipo) === 'renovacao'  'Renovacao' : 'Novo'
-  const seguradoras = Array.isArray(emissao.seguradoras_cotadas)  emissao.seguradoras_cotadas : []
+  const tipo = (c.tipo || emissao.tipo) === 'renovacao' ? 'Renovacao' : 'Novo'
+  const seguradoras = Array.isArray(emissao.seguradoras_cotadas) ? emissao.seguradoras_cotadas : []
   const temFicha = Boolean(c.nome_cliente || c.cpf_cliente || c.modelo_veiculo || c.estado_civil_cliente || c.profissao_cliente || c.origem_lead)
   const etapaAtual = emissao.resultado
-     (emissao.resultado === 'aprovada'  'Cotacao aprovada' : 'Cotacao recusada')
+    ? (emissao.resultado === 'aprovada' ? 'Cotacao aprovada' : 'Cotacao recusada')
     : 'Aguardando resultado'
   const colunaAtual = getEmissaoColuna(emissao)
 
@@ -259,16 +259,12 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">Detalhe do cliente</span>
               <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                (c.tipo || emissao.tipo) === 'renovacao'
-                   'bg-status-success/10 text-status-success'
-                  : 'bg-brand-secondary/10 text-brand-secondary'
+                (c.tipo || emissao.tipo) === 'renovacao' ? 'bg-status-success/10 text-status-success' : 'bg-brand-secondary/10 text-brand-secondary'
               }`}>{tipo}</span>
               {emissao.resultado && (
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                  emissao.resultado === 'aprovada'
-                     'bg-status-success/10 text-status-success'
-                    : 'bg-red-100 text-red-600'
-                }`}>{emissao.resultado === 'aprovada'  'Aprovada' : 'Recusada'}</span>
+                  emissao.resultado === 'aprovada' ? 'bg-status-success/10 text-status-success' : 'bg-red-100 text-red-600'
+                }`}>{emissao.resultado === 'aprovada' ? 'Aprovada' : 'Recusada'}</span>
               )}
             </div>
             <h2 className="mt-2 text-xl font-semibold text-dark-text">{nome}</h2>
@@ -1473,3 +1469,4 @@ export default function AutoEmissoes() {
     </div>
   )
 }
+

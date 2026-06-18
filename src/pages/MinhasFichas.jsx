@@ -8,7 +8,7 @@ import ModalFicha from '../components/ModalFicha'
 import DetalhesFicha from '../components/DetalhesFicha'
 import { format, parseISO, startOfDay, startOfWeek, startOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Clock, CheckCircle2, FileText, TrendingUp, LayoutGrid, ListFilter, ArrowLeftRight } from 'lucide-react'
+import { Clock, CheckCircle2, FileText, TrendingUp, ArrowLeftRight, ListFilter } from 'lucide-react'
 import { Select } from '../components/ui/Select'
 import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../components/ui'
 import { TableSkeleton } from '../components/Skeleton'
@@ -29,7 +29,7 @@ function QuickDateFilter({ value, onChange }) {
           key={o.key}
           onClick={() => onChange(o.key)}
           className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-            value === o.key  'bg-brand-secondary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
+            value === o.key ? 'bg-brand-secondary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
           }`}
         >
           {o.label}
@@ -43,9 +43,9 @@ function applyDateFilter(fichas, filtro) {
   if (filtro === 'todos') return fichas
   const now = new Date()
   const from = filtro === 'hoje'
-     startOfDay(now)
+    ? startOfDay(now)
     : filtro === 'semana'
-       startOfWeek(now, { weekStartsOn: 1 })
+      ? startOfWeek(now, { weekStartsOn: 1 })
       : startOfMonth(now)
   return fichas.filter(f => new Date(f.created_at) >= from)
 }
@@ -64,9 +64,9 @@ function initials(n) {
 function TimeBadge({ since }) {
   const h = Math.floor((Date.now() - new Date(since).getTime()) / (1000 * 60 * 60))
   const [cls, label] = h < 4
-     ['bg-status-success/15 text-status-success', h < 1  '<1h' : `${h}h`]
+    ? ['bg-status-success/15 text-status-success', h < 1 ? '<1h' : `${h}h`]
     : h < 24
-       ['bg-status-warning/15 text-status-warning', `${h}h`]
+      ? ['bg-status-warning/15 text-status-warning', `${h}h`]
       : ['bg-status-danger/15 text-status-danger', `${Math.floor(h / 24)}d`]
   return <span className={`badge ${cls} font-mono`}>{label}</span>
 }
@@ -84,23 +84,23 @@ export default function MinhasFichas() {
   const [filtroRapido, setFiltroRapido] = useState('todos')
 
   const queryClient = useQueryClient()
-  const avatarColor = stringColor(profile.nome || '')
+  const avatarColor = stringColor(profile?.nome || '')
 
   const { data: fichasData, isLoading } = useQuery({
-    queryKey: ['minhas-fichas', user.id, filtroAno, filtroMes],
+    queryKey: ['minhas-fichas', user?.id, filtroAno, filtroMes],
     queryFn: () => Promise.all([
       fetchFichasDoOrcamentista(user.id),
       fetchFichas({ tipo: 'passadas_por_mim', orcamentistaId: user.id, pageSize: 500, ano: filtroAno, mes: filtroMes }),
     ]).then(([ab, { data }]) => ({ abertas: ab, passadas: data })),
-    enabled: !!user.id,
+    enabled: !!user?.id,
   })
 
-  const abertasRaw = fichasData.abertas  []
-  const passadas = fichasData.passadas  []
+  const abertasRaw = fichasData?.abertas ?? []
+  const passadas = fichasData?.passadas ?? []
   const abertas = useMemo(() => applyDateFilter(abertasRaw, filtroRapido), [abertasRaw, filtroRapido])
 
   function refresh() {
-    queryClient.invalidateQueries({ queryKey: ['minhas-fichas', user.id] })
+    queryClient.invalidateQueries({ queryKey: ['minhas-fichas', user?.id] })
   }
 
   async function handleEditar(fichaId) {
@@ -112,7 +112,7 @@ export default function MinhasFichas() {
     aprovadas: passadas.filter(f => f.status === 'aprovado').length,
     recusadas: passadas.filter(f => f.status === 'recusado').length,
     emitidas: passadas.filter(f => f.status === 'emitido').length,
-    taxaAprovacao: passadas.length  Math.round((passadas.filter(f => f.status === 'aprovado').length / passadas.length) * 100) : 0,
+    taxaAprovacao: passadas.length ? Math.round((passadas.filter(f => f.status === 'aprovado').length / passadas.length) * 100) : 0,
   }
 
   const anoOptions = [agora.getFullYear(), agora.getFullYear() - 1].map(y => ({ value: String(y), label: String(y) }))
@@ -169,7 +169,7 @@ export default function MinhasFichas() {
             onClick={() => setTab('abertas')}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl border text-sm font-medium transition-all ${
               tab === 'abertas'
-                 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
                 : 'border-dark-border text-dark-muted hover:text-dark-text hover:border-dark-muted'
             }`}
           >
@@ -181,7 +181,7 @@ export default function MinhasFichas() {
             onClick={() => setTab('passadas')}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl border text-sm font-medium transition-all ${
               tab === 'passadas'
-                 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
                 : 'border-dark-border text-dark-muted hover:text-dark-text hover:border-dark-muted'
             }`}
           >
@@ -196,19 +196,19 @@ export default function MinhasFichas() {
       </FilterBar>
 
       <DataCard
-        title={tab === 'abertas'  'Carteira em cotação' : 'Histórico finalizado'}
+        title={tab === 'abertas' ? 'Carteira em cotação' : 'Histórico finalizado'}
         subtitle={tab === 'abertas'
-           `Mostrando ${abertas.length} ficha${abertas.length !== 1  's' : ''} sob sua responsabilidade`
-          : `Mostrando ${passadas.length} ficha${passadas.length !== 1  's' : ''} no período selecionado`}
+          ? `Mostrando ${abertas.length} ficha${abertas.length !== 1 ? 's' : ''} sob sua responsabilidade`
+          : `Mostrando ${passadas.length} ficha${passadas.length !== 1 ? 's' : ''} no período selecionado`}
       >
-        {isLoading  (
-          <TableSkeleton rows={6} cols={tab === 'abertas'  5 : 6} />
+        {isLoading ? (
+          <TableSkeleton rows={6} cols={tab === 'abertas' ? 5 : 6} />
         ) : (
           <div className="overflow-x-auto">
             <table className="table-table text-sm">
               <thead className="table-thead border-b border-dark-border">
                 <tr>
-                  {tab === 'abertas'  (
+                  {tab === 'abertas' ? (
                     <>
                       <th className="th hidden sm:table-cell">Data</th>
                       <th className="th">Imobiliária</th>
@@ -230,22 +230,22 @@ export default function MinhasFichas() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-border">
-                {(tab === 'abertas'  abertas : passadas).length === 0  (
+                {(tab === 'abertas' ? abertas : passadas).length === 0 ? (
                   <tr>
                     <td colSpan={6} className="td py-0">
                       <EmptyState
-                        title={tab === 'abertas'  'Nenhuma ficha em cotação' : 'Nenhuma ficha finalizada'}
+                        title={tab === 'abertas' ? 'Nenhuma ficha em cotação' : 'Nenhuma ficha finalizada'}
                         description={tab === 'abertas'
-                           'Quando novas fichas entrarem na sua fila, elas aparecerão aqui.'
+                          ? 'Quando novas fichas entrarem na sua fila, elas aparecerão aqui.'
                           : 'O histórico desse período ainda está vazio.'}
                         icon={<FileText className="w-6 h-6" />}
                         className="py-12"
                       />
                     </td>
                   </tr>
-                ) : (tab === 'abertas'  abertas : passadas).map(f => {
-                  const si = STATUS_LABELS[f.status]  { label: f.status, color: '' }
-                  const nome = f.produto === 'pessoa_juridica'  (f.nome_empresa || f.nome_interessado) : f.nome_interessado
+                ) : (tab === 'abertas' ? abertas : passadas).map(f => {
+                  const si = STATUS_LABELS[f.status] ?? { label: f.status, color: '' }
+                  const nome = f.produto === 'pessoa_juridica' ? (f.nome_empresa || f.nome_interessado) : f.nome_interessado
                   return (
                     <tr key={f.id} className="table-row" onClick={() => setDetalhe(f.id)}>
                       <td className="td text-dark-muted text-xs font-mono whitespace-nowrap hidden sm:table-cell">
@@ -254,7 +254,7 @@ export default function MinhasFichas() {
                       <td className="td font-medium text-dark-text max-w-[140px] truncate">{f.imobiliaria || '—'}</td>
                       <td className="td text-dark-text max-w-[140px] truncate">{nome || '—'}</td>
                       <td className="td text-dark-muted text-xs hidden sm:table-cell">{PRODUTO_LABELS[f.produto]}</td>
-                      {tab === 'abertas'  (
+                      {tab === 'abertas' ? (
                         <>
                           <td className="td"><TimeBadge since={f.assumida_em || f.created_at} /></td>
                           <td className="td text-right" onClick={e => e.stopPropagation()}>

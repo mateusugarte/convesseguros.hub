@@ -215,7 +215,7 @@ export default function AutoCotacoes() {
     const hoje = new Date()
     const limitePeriodo = (() => {
       if (filtroPeriodo === 'todo') return null
-      const dias = filtroPeriodo === '30d'  30 : filtroPeriodo === '90d'  90 : 180
+      const dias = filtroPeriodo === '30d' ? 30 : filtroPeriodo === '90d' ? 90 : 180
       const ref = new Date(hoje)
       ref.setDate(ref.getDate() - dias)
       return ref
@@ -262,12 +262,12 @@ export default function AutoCotacoes() {
 
   const convertidas = cotacoesMes.filter(item => item.status === 'convertida').length
   const perdidas = cotacoesMes.filter(item => item.status === 'perdida').length
-  const taxa = cotacoesMes.length > 0  Math.round((convertidas / cotacoesMes.length) * 100) : 0
+    const taxa = cotacoesMes.length > 0 ? Math.round((convertidas / cotacoesMes.length) * 100) : 0
 
   const metrics = [
-    { key: 'total', label: 'Cotacoes no periodo', value: resumo.total  0, icon: BadgeDollarSign, tone: 'accent' },
-    { key: 'mes', label: 'Cotacoes no mes', value: resumo.mesAtual  0, icon: Sparkles, tone: 'warning' },
-    { key: 'convertidas', label: 'Convertidas', value: resumo.convertidas  0, icon: CircleCheckBig, tone: 'success' },
+      { key: 'total', label: 'Cotacoes no periodo', value: resumo.total || 0, icon: BadgeDollarSign, tone: 'accent' },
+      { key: 'mes', label: 'Cotacoes no mes', value: resumo.mesAtual || 0, icon: Sparkles, tone: 'warning' },
+      { key: 'convertidas', label: 'Convertidas', value: resumo.convertidas || 0, icon: CircleCheckBig, tone: 'success' },
     { key: 'taxa', label: 'Taxa de conversao', value: `${taxa}%`, icon: TrendingUp, tone: 'secondary' },
   ]
 
@@ -279,24 +279,24 @@ export default function AutoCotacoes() {
     },
     {
       label: 'Atualizacao',
-      value: cotacoesOrdenadas.find(item => item.updated_at && item.updated_at !== item.created_at)
-         'Ha registros editados'
-        : 'Somente criacoes',
+        value: cotacoesOrdenadas.find(item => item.updated_at && item.updated_at !== item.created_at)
+          ? 'Ha registros editados'
+          : 'Somente criacoes',
       hint: 'ordenacao usa updated_at quando existir',
     },
     {
       label: 'Pendentes',
-      value: `${resumo.pendentes  0} cotações`,
+      value: `${resumo.pendentes || 0} cotações`,
       hint: 'aguardando tratativa',
     },
     {
       label: 'Convertidas',
-      value: `${resumo.convertidas  0}`,
+      value: `${resumo.convertidas || 0}`,
       hint: 'status convertido',
     },
     {
       label: 'Perdidas',
-      value: `${resumo.perdidas  0}`,
+      value: `${resumo.perdidas || 0}`,
       hint: 'status perdido',
     },
   ], [cotacoesOrdenadas, resumo])

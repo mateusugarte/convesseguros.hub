@@ -241,9 +241,9 @@ function DeletableEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition,
       <BaseEdge
         path={edgePath}
         style={{
-          strokeWidth: selected  2.5 : 2,
-          stroke: selected  '#1A3A6B' : '#2B5BA8',
-          opacity: selected  1 : 0.72,
+          strokeWidth: selected ? 2.5 : 2,
+          stroke: selected ? '#1A3A6B' : '#2B5BA8',
+          opacity: selected ? 1 : 0.72,
           ...style,
         }}
       />
@@ -288,11 +288,11 @@ function WorkflowNode({ id, data, selected }) {
     switch (tipo) {
       case 'trigger_ficha':
       case 'trigger_lead':
-        return [c.perfil, c.segmento  `Seg.${c.segmento}` : '', c.produto].filter(Boolean).join(' · ')
+        return [c.perfil, c.segmento ? `Seg.${c.segmento}` : '', c.produto].filter(Boolean).join(' · ')
       case 'trigger_movido':
         return [c.de, c.para].filter(Boolean).join(' → ')
       case 'trigger_renovacao':
-        return [c.dias  `${c.dias}d antes` : '', c.produto].filter(Boolean).join(' · ')
+        return [c.dias ? `${c.dias}d antes` : '', c.produto].filter(Boolean).join(' · ')
       case 'trigger_inatividade':
         return c.dias  `Sem atividade há ${c.dias} dias` : ''
       case 'trigger_apolice':

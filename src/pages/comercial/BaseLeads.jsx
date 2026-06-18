@@ -82,11 +82,11 @@ function OrigemBadge({ origem }) {
 function FilterPanel({ filters, onChange, onApply, onReset }) {
   const toggle = (key, val) => {
     const cur = filters[key] || []
-    onChange(key, cur.includes(val)  cur.filter(v => v !== val) : [...cur, val])
+    onChange(key, cur.includes(val) ? cur.filter(v => v !== val) : [...cur, val])
   }
   const toggleTemp = (val) => {
     const cur = filters.temp || []
-    onChange('temp', cur.includes(val)  cur.filter(v => v !== val) : [...cur, val])
+    onChange('temp', cur.includes(val) ? cur.filter(v => v !== val) : [...cur, val])
   }
 
   return (
@@ -102,7 +102,7 @@ function FilterPanel({ filters, onChange, onApply, onReset }) {
                 <button key={col.id} onClick={() => toggle('cols', col.id)}
                   className="px-2 py-1 rounded-lg text-[11px] font-medium border transition-all"
                   style={active
-                     { borderColor: col.color, background: col.color + '22', color: col.color }
+                    ? { borderColor: col.color, background: col.color + '22', color: col.color }
                     : { borderColor: 'var(--glass-border)', color: 'var(--glass-text-muted)' }}>
                   {col.label}
                 </button>
@@ -121,7 +121,7 @@ function FilterPanel({ filters, onChange, onApply, onReset }) {
                 <button key={o} onClick={() => toggle('origens', o)}
                   className="px-2 py-1 rounded-lg text-[11px] font-medium border transition-all"
                   style={active
-                     { borderColor: color, background: color + '22', color }
+                    ? { borderColor: color, background: color + '22', color }
                     : { borderColor: 'var(--glass-border)', color: 'var(--glass-text-muted)' }}>
                   {o}
                 </button>
@@ -139,7 +139,7 @@ function FilterPanel({ filters, onChange, onApply, onReset }) {
                 <button key={id} onClick={() => toggleTemp(id)}
                   className="px-2 py-1 rounded-lg text-[11px] font-medium border transition-all"
                   style={active
-                     { borderColor: color, background: color + '22', color }
+                    ? { borderColor: color, background: color + '22', color }
                     : { borderColor: 'var(--glass-border)', color: 'var(--glass-text-muted)' }}>
                   {id}
                 </button>
@@ -168,7 +168,7 @@ function FilterPanel({ filters, onChange, onApply, onReset }) {
 
 function SortIcon({ col, sort, dir }) {
   if (sort !== col) return <ArrowUpDown className="w-3 h-3 opacity-40" />
-  return dir === 'asc'  <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+  return dir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
 }
 
 // ── MoverDropdown ─────────────────────────────────────────────────────────────
@@ -210,7 +210,7 @@ function FloatingBar({ count, leads, selectedIds, onDeselect, toast }) {
     const header = ['Nome','Imobiliária','Origem','Estágio','Criado em','Apólice']
     const rows = leads.filter(l => selectedIds.has(l.id)).map(l => {
       const col = PIPELINE_COLS.find(c => c.id === l.coluna)
-      return [l.nome, l.imobiliaria || '', l.origem || '', col.label || '', l.criadoEm  fmtDate(l.criadoEm) : '', l.apoliceAtiva  'Sim' : 'Não']
+        return [l.nome, l.imobiliaria || '', l.origem || '', col.label || '', l.criadoEm ? fmtDate(l.criadoEm) : '', l.apoliceAtiva ? 'Sim' : 'Não']
         .map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')
     })
     const csv  = [header.join(','), ...rows].join('\n')

@@ -153,7 +153,7 @@ function ModalVenda({ leads, onClose, onSave }) {
           <aside className="bg-[linear-gradient(180deg,rgba(239,246,255,0.9),rgba(255,255,255,0.96))] p-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-dark-muted">Resumo do fechamento</p>
             <div className="mt-5 rounded-[26px] border border-dark-border/50 bg-white/80 p-5 shadow-sm">
-              {selectedLead  (
+              {selectedLead ? (
                 <CrmAvatarBadge name={selectedLead.nome} subtitle={selectedLead.origem || 'Lead vinculado'} />
               ) : (
                 <div>
@@ -224,9 +224,9 @@ export default function Vendas() {
     if (periodo === 'todos') return state.sales || []
 
     const start = periodo === '30dias'
-       subDays(new Date(), 30)
+      ? subDays(new Date(), 30)
       : periodo === 'trimestre'
-         startOfQuarter(new Date())
+        ? startOfQuarter(new Date())
         : startOfMonth(new Date())
 
     return (state.sales || []).filter(sale => !sale.dataEmissao || new Date(sale.dataEmissao) >= start)

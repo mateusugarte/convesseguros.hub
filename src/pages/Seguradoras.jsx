@@ -24,7 +24,7 @@ function ProductChooser({ value, onChange }) {
   function toggle(produto) {
     onChange(
       value.includes(produto)
-         value.filter(item => item !== produto)
+        ? value.filter(item => item !== produto)
         : [...value, produto]
     )
   }
@@ -34,7 +34,7 @@ function ProductChooser({ value, onChange }) {
     const hasAll = fiancaValues.every(produto => value.includes(produto))
     onChange(
       hasAll
-         value.filter(produto => !fiancaValues.includes(produto))
+        ? value.filter(produto => !fiancaValues.includes(produto))
         : Array.from(new Set([...value, ...fiancaValues]))
     )
   }
@@ -51,14 +51,14 @@ function ProductChooser({ value, onChange }) {
             <div key={grupo.value} className="rounded-2xl border border-dark-border/70 bg-white/60 p-3">
               <button
                 type="button"
-                onClick={isFianca  toggleFianca : () => toggle(grupo.value)}
+                onClick={isFianca ? toggleFianca : () => toggle(grupo.value)}
                 className={`w-full rounded-xl px-3 py-2 text-left text-sm font-semibold transition-all ${
                   isFianca
-                     (grupo.subprodutos.every(sub => value.includes(sub.value))
-                       'border border-brand-accent bg-brand-accent/10 text-brand-accent'
+                    ? (grupo.subprodutos.every(sub => value.includes(sub.value))
+                        ? 'border border-brand-accent bg-brand-accent/10 text-brand-accent'
                       : 'border border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text')
                     : value.includes(grupo.value)
-                       'border border-brand-accent bg-brand-accent/10 text-brand-accent'
+                      ? 'border border-brand-accent bg-brand-accent/10 text-brand-accent'
                       : 'border border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
                 }`}
               >
@@ -76,7 +76,7 @@ function ProductChooser({ value, onChange }) {
                         onClick={() => toggle(sub.value)}
                         className={`rounded-xl border px-3 py-2 text-sm transition-all ${
                           active
-                             'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                            ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
                             : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
                         }`}
                       >
@@ -156,7 +156,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
   const [salvando, setSalvando] = useState(false)
 
   const cadastradasFiltradas = buscaExistente.trim()
-     cadastradas.filter(seg => seg.nome_canonico.toLowerCase().includes(buscaExistente.toLowerCase()))
+    ? cadastradas.filter(seg => seg.nome_canonico.toLowerCase().includes(buscaExistente.toLowerCase()))
     : cadastradas
 
   function removerAlias(alias) {
@@ -164,7 +164,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
   }
 
   function handleLogoChange(event) {
-    const file = event.target.files.[0]
+      const file = event.target.files[0]
     if (!file) return
     setLogoFile(file)
     setLogoPreviewError(false)
@@ -186,9 +186,9 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
   }
 
   function updatePendingDocTitle(id, title) {
-    setPendingDocs(prev => prev.map(doc => (
-      doc.id === id  { ...doc, title } : doc
-    )))
+      setPendingDocs(prev => prev.map(doc => (
+        doc.id === id ? { ...doc, title } : doc
+      )))
   }
 
   function removePendingDoc(id) {
@@ -305,9 +305,9 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
 
   const nomeSelecionado = cadastradas.find(seg => seg.id === segExistente).nome_canonico
   const modoCompleto = ehEditar || modo === 'nova'
-  const podeSalvar = modoCompleto
-     !!nome.trim() && produtos.length > 0
-    : !!segExistente && aliases.length > 0
+    const podeSalvar = modoCompleto
+      ? !!nome.trim() && produtos.length > 0
+      : !!segExistente && aliases.length > 0
 
   return (
     <div className="animate-fade-in">
@@ -317,7 +317,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
             <ArrowLeft className="w-4 h-4" />
           </button>
           <h2 className="font-bold text-dark-text text-base">
-            {ehEditar  'Editar Seguradora' : 'Configurar Seguradora'}
+            {ehEditar ? 'Editar Seguradora' : 'Configurar Seguradora'}
           </h2>
         </div>
 
@@ -326,13 +326,13 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
             <div className="flex rounded-lg border border-dark-border overflow-hidden text-sm font-medium">
               <button
                 onClick={() => setModo('nova')}
-                className={`flex-1 py-2 transition-colors ${modo === 'nova'  'bg-brand-accent text-white' : 'text-dark-muted hover:text-dark-text'}`}
+                className={`flex-1 py-2 transition-colors ${modo === 'nova' ? 'bg-brand-accent text-white' : 'text-dark-muted hover:text-dark-text'}`}
               >
                 Criar nova
               </button>
               <button
                 onClick={() => setModo('existente')}
-                className={`flex-1 py-2 transition-colors ${modo === 'existente'  'bg-brand-accent text-white' : 'text-dark-muted hover:text-dark-text'}`}
+                className={`flex-1 py-2 transition-colors ${modo === 'existente' ? 'bg-brand-accent text-white' : 'text-dark-muted hover:text-dark-text'}`}
               >
                 Incluir em existente
               </button>

@@ -30,7 +30,7 @@ function getRangeFiltro(filtro, customFrom, customTo) {
     return [s.toISOString(), now.toISOString()]
   }
   if (filtro === 'mes') return [new Date(now.getFullYear(), now.getMonth(), 1).toISOString(), now.toISOString()]
-  if (filtro === 'personalizado') return [customFrom || null, customTo  new Date(`${customTo}T23:59:59`).toISOString() : null]
+  if (filtro === 'personalizado') return [customFrom || null, customTo ? new Date(`${customTo}T23:59:59`).toISOString() : null]
   return [null, null]
 }
 
@@ -41,7 +41,11 @@ function fmtBRL(v) {
 
 function fmtData(v) {
   if (!v) return '—'
-  try { return format(parseISO(String(v).slice(0, 10) + 'T12:00:00'), 'dd/MM/yy', { locale: ptBR }) } catch { return v }
+  try {
+    return format(parseISO(String(v).slice(0, 10) + 'T12:00:00'), 'dd/MM/yy', { locale: ptBR })
+  } catch {
+    return v
+  }
 }
 
 function StatusBadge({ status }) {
@@ -54,7 +58,7 @@ function StatusBadge({ status }) {
 }
 
 function nomeFicha(item) {
-  return item.fichas.nome_empresa || item.fichas.nome_interessado || item.nome_interessado || '—'
+  return item.fichas?.nome_empresa || item.fichas?.nome_interessado || item.nome_interessado || '—'
 }
 
 const PAGE_SIZE = 50
@@ -88,7 +92,7 @@ export default function ApolicesLista() {
       .select('nome_canonico')
       .eq('ativa', true)
       .order('nome_canonico')
-      .then(({ data }) => setSegsOpcoes(data.map(s => s.nome_canonico) || []))
+      .then(({ data }) => setSegsOpcoes(data?.map(s => s.nome_canonico) || []))
   }, [])
 
   function buscar() {
@@ -151,9 +155,9 @@ export default function ApolicesLista() {
       nomeFicha(a),
       a.numero_apolice || '',
       a.seguradora || '',
-      STATUS_EMISSAO_LABELS[a.status_emissao].label || a.status_emissao || '',
-      a.valor_parcela  fmtBRL(a.valor_parcela) : '',
-      a.profiles.nome || '',
+      STATUS_EMISSAO_LABELS[a.status_emissao]?.label || a.status_emissao || '',
+      a.valor_parcela ? fmtBRL(a.valor_parcela) : '',
+      a.profiles?.nome || '',
     ])
 
     const csv = [
@@ -207,7 +211,7 @@ export default function ApolicesLista() {
             <button
               key={opt.key}
               onClick={() => setFiltro(opt.key)}
-              className={`rounded-2xl px-3 py-2 text-xs font-medium transition-colors ${filtro === opt.key  'bg-brand-secondary text-white' : 'border border-dark-border text-dark-muted hover:text-dark-text'}`}
+              className={`rounded-2xl px-3 py-2 text-xs font-medium transition-colors ${filtro === opt.key ? 'bg-brand-secondary text-white' : 'border border-dark-border text-dark-muted hover:text-dark-text'}`}
             >
               {opt.label}
             </button>
@@ -266,7 +270,7 @@ export default function ApolicesLista() {
       </DataCard>
 
       <DataCard title="Tabela de apólices" subtitle={`Resultados aplicados: ${total}. Clique em uma linha para abrir o detalhe.`}>
-        {loading  (
+        {loading ? (
           <div className="flex h-48 items-center justify-center gap-2 text-sm text-dark-muted">
             <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -274,7 +278,7 @@ export default function ApolicesLista() {
             </svg>
             Carregando...
           </div>
-        ) : apolices.length === 0  (
+        ) : apolices.length === 0 ? (
           <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-dark-border text-sm text-dark-muted">
             Nenhuma apólice encontrada
           </div>
@@ -297,8 +301,8 @@ export default function ApolicesLista() {
                     <td className="td font-mono text-xs text-dark-muted">{a.numero_apolice || '—'}</td>
                     <td className="td text-xs text-dark-muted">{a.seguradora || '—'}</td>
                     <td className="td"><StatusBadge status={a.status_emissao} /></td>
-                    <td className="td font-mono text-xs">{a.valor_parcela  fmtBRL(a.valor_parcela) : '—'}</td>
-                    <td className="td text-xs text-dark-muted">{a.profiles.nome.split(' ')[0] || '—'}</td>
+                    <td className="td font-mono text-xs">{a.valor_parcela ? fmtBRL(a.valor_parcela) : '—'}</td>
+                    <td className="td text-xs text-dark-muted">{a.profiles?.nome?.split(' ')[0] || '—'}</td>
                     <td className="td" onClick={e => e.stopPropagation()}>
                       <button onClick={() => navigate(`/apolices/${a.id}`)} className="rounded-lg border border-dark-border px-2 py-1 text-xs text-dark-muted transition-colors hover:border-brand-accent/50 hover:text-dark-text">
                         Ver

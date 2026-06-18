@@ -42,7 +42,7 @@ export function AuthProvider({ children }) {
   async function loadProfile(userId) {
     const { data } = await supabase
       .from('profiles')
-      .select('id, nome, orcamentista_label, avatar_url, is_admin')
+      .select('id, nome, orcamentista_label, avatar_url, areas_atuacao, is_admin')
       .eq('id', userId)
       .single()
 
@@ -62,7 +62,7 @@ export function AuthProvider({ children }) {
       const { data: created, error: createError } = await supabase
         .from('profiles')
         .insert(payload)
-        .select('id, nome, orcamentista_label, avatar_url, is_admin')
+        .select('id, nome, orcamentista_label, avatar_url, areas_atuacao, is_admin')
         .single()
 
       if (!createError && created) {

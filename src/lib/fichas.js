@@ -501,11 +501,23 @@ async function registrarAudit(action, fichaId, dadosAntes, dadosDepois) {
 // ── Actions ───────────────────────────────────────────────────────────────────
 
 export async function assumirFicha(id, orcamentistaId) {
-  const { error } = await supabase.from('fichas').update({
-    assumida: true, orcamentista_id: orcamentistaId, status: 'em_cotacao', assumida_em: new Date().toISOString(),
-  }).eq('id', id).or('assumida.eq.false,assumida.is.null')
-  if (!error) registrarAudit('assumir_ficha', id, { assumida: false }, { assumida: true, orcamentista_id: orcamentistaId, status: 'em_cotacao' })
-  return error
+  const payload = {
+    assumida: true,
+    orcamentista_id: orcamentistaId,
+    status: 'em_cotacao',
+    assumida_em: new Date().toISOString(),
+  }
+
+  const { data, error } = await supabase
+    .from('fichas')
+    .update(payload)
+    .eq('id', id)
+    .select('id')
+
+  if (error) return error
+  if (!data || data.length === 0) return new Error('Sem permissao para assumir esta ficha')
+  registrarAudit('assumir_ficha', id, { assumida: false }, payload)
+  return null
 }
 
 export async function finalizarFicha(id, { status, seguradora, retorno_enviado, userId }) {

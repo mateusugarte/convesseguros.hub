@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { PageHeader, DataCard } from '../components/ui'
 import { Avatar } from '../components/ui/Avatar'
 import { useTheme } from '../contexts/ThemeContext'
@@ -6,7 +6,18 @@ import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { replaceEntityImage } from '../lib/entityMedia'
 import { supabase } from '../lib/supabase'
-import { Moon, SunMedium, MonitorCog, Layers3, Upload, UserCircle2 } from 'lucide-react'
+import {
+  Moon,
+  SunMedium,
+  MonitorCog,
+  Layers3,
+  Upload,
+  UserCircle2,
+  ShieldCheck,
+  Users2,
+  UserPlus,
+  BadgeCheck,
+} from 'lucide-react'
 
 const options = [
   {
@@ -23,6 +34,29 @@ const options = [
   },
 ]
 
+const ROLE_OPTIONS = [
+  { value: 'orcamentista', label: 'Orcamentista' },
+  { value: 'comercial', label: 'Comercial' },
+  { value: 'financeiro', label: 'Financeiro' },
+  { value: 'administrativo', label: 'Administrativo' },
+  { value: 'gestor', label: 'Gestor' },
+]
+
+function toggleItem(list, value) {
+  return list.includes(value) ? list.filter(item => item !== value) : [...list, value]
+}
+
+function roleLabel(role) {
+  return ROLE_OPTIONS.find(item => item.value === role)?.label || role
+}
+
+function normalizeLabel(name) {
+  return String(name || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase()
+}
+
 export default function Configuracoes() {
   const { theme, setTheme } = useTheme()
   const { user, profile, refreshProfile } = useAuth()
@@ -32,33 +66,77 @@ export default function Configuracoes() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || '')
   const [nome, setNome] = useState(profile?.nome || '')
-  const [savingNome, setSavingNome] = useState(false)
+  const [areasAtuacao, setAreasAtuacao] = useState(profile?.areas_atuacao || [])
+  const [savingPerfil, setSavingPerfil] = useState(false)
+
+  const [profiles, setProfiles] = useState([])
+  const [loadingProfiles, setLoadingProfiles] = useState(false)
+
+  const [newUser, setNewUser] = useState({
+    nome: '',
+    email: '',
+    password: '',
+    roles: [],
+    is_admin: false,
+  })
+  const [creatingUser, setCreatingUser] = useState(false)
+
+  const isAdmin = Boolean(profile?.is_admin)
 
   useEffect(() => {
     setAvatarPreview(profile?.avatar_url || '')
     setNome(profile?.nome || '')
-  }, [profile?.avatar_url, profile?.nome])
+    setAreasAtuacao(profile?.areas_atuacao || [])
+  }, [profile?.avatar_url, profile?.nome, profile?.areas_atuacao])
 
-  async function handleSaveNome() {
+  useEffect(() => {
+    if (!isAdmin) return
+    loadProfiles()
+  }, [isAdmin])
+
+  const selectedRoleBadges = useMemo(() => {
+    return areasAtuacao.map(roleLabel)
+  }, [areasAtuacao])
+
+  async function loadProfiles() {
+    setLoadingProfiles(true)
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, nome, orcamentista_label, avatar_url, areas_atuacao, is_admin, created_at')
+      .order('nome')
+
+    setLoadingProfiles(false)
+
+    if (error) {
+      toast({ type: 'error', title: 'Erro ao carregar usuarios', message: error.message })
+      return
+    }
+
+    setProfiles(data || [])
+  }
+
+  async function handleSavePerfil() {
     if (!user?.id || !nome.trim()) return
-    setSavingNome(true)
+
+    setSavingPerfil(true)
     const { error } = await supabase
       .from('profiles')
       .update({
         nome: nome.trim(),
-        orcamentista_label: nome.trim().toUpperCase(),
+        orcamentista_label: normalizeLabel(nome),
+        areas_atuacao: areasAtuacao,
       })
       .eq('id', user.id)
 
-    setSavingNome(false)
+    setSavingPerfil(false)
 
     if (error) {
-      toast({ type: 'error', title: 'Erro ao salvar nome', message: error.message })
+      toast({ type: 'error', title: 'Erro ao salvar perfil', message: error.message })
       return
     }
 
     await refreshProfile?.()
-    toast({ type: 'success', title: 'Nome atualizado' })
+    toast({ type: 'success', title: 'Perfil atualizado' })
   }
 
   async function handleAvatarUpload(event) {
@@ -99,6 +177,49 @@ export default function Configuracoes() {
     toast({ type: 'success', title: 'Foto de perfil atualizada' })
   }
 
+  async function handleCreateUser(event) {
+    event.preventDefault()
+    if (!newUser.nome.trim() || !newUser.email.trim() || !newUser.password.trim()) return
+
+    setCreatingUser(true)
+
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError || !sessionData?.session?.access_token) {
+        throw new Error('Nao foi possivel validar sua sessao de admin.')
+      }
+
+      const response = await fetch('/api/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
+        body: JSON.stringify({
+          nome: newUser.nome.trim(),
+          email: newUser.email.trim(),
+          password: newUser.password,
+          areas_atuacao: newUser.roles,
+          is_admin: newUser.is_admin,
+        }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Nao foi possivel criar o usuario.')
+      }
+
+      toast({ type: 'success', title: 'Usuario criado', message: payload?.profile?.nome || 'Cadastro realizado com sucesso.' })
+      setNewUser({ nome: '', email: '', password: '', roles: [], is_admin: false })
+      await loadProfiles()
+    } catch (error) {
+      toast({ type: 'error', title: 'Erro ao criar usuario', message: error.message })
+    } finally {
+      setCreatingUser(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -123,7 +244,7 @@ export default function Configuracoes() {
                 />
               </div>
 
-              <div className="min-w-0 flex-1 space-y-3">
+              <div className="min-w-0 flex-1 space-y-4">
                 <div>
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-dark-muted">Nome</label>
                   <input
@@ -138,14 +259,51 @@ export default function Configuracoes() {
                   </p>
                 </div>
 
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-dark-muted">
+                    Funcoes do perfil
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {ROLE_OPTIONS.map(role => {
+                      const active = areasAtuacao.includes(role.value)
+                      return (
+                        <button
+                          key={role.value}
+                          type="button"
+                          onClick={() => setAreasAtuacao(prev => toggleItem(prev, role.value))}
+                          className={`rounded-2xl border px-3 py-2 text-left text-sm transition-all ${
+                            active
+                              ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                              : 'border-dark-border hover:border-brand-accent/40 hover:bg-dark-surface2/40'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <ShieldCheck className="h-4 w-4" />
+                            {role.label}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {selectedRoleBadges.length ? (
+                      selectedRoleBadges.map(role => (
+                        <span key={role} className="badge badge-blue">{role}</span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-dark-muted">Sem funcoes marcadas</span>
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={handleSaveNome}
-                    disabled={savingNome || !nome.trim()}
+                    onClick={handleSavePerfil}
+                    disabled={savingPerfil || !nome.trim()}
                     className="btn-primary flex items-center gap-2 disabled:opacity-50"
                   >
-                    {savingNome ? 'Salvando...' : 'Salvar nome'}
+                    {savingPerfil ? 'Salvando...' : 'Salvar perfil'}
                   </button>
                   <button
                     type="button"
@@ -168,7 +326,7 @@ export default function Configuracoes() {
                 </div>
 
                 <p className="max-w-md text-xs text-dark-muted">
-                  Use uma foto quadrada para melhor resultado. A imagem aparece no topo do workspace e nas áreas de identificação do usuário.
+                  Use uma foto quadrada para melhor resultado. A imagem aparece no topo do workspace e nas areas de identificacao do usuario.
                 </p>
               </div>
             </div>
@@ -219,40 +377,166 @@ export default function Configuracoes() {
           </DataCard>
         </div>
 
-        <DataCard
-          title="Resumo"
-          subtitle="Contexto atual do workspace"
-        >
-          <div className="space-y-3 text-sm text-dark-muted">
-            <div className="rounded-2xl border border-dark-border/70 p-4">
-              <div className="flex items-center gap-2 text-dark-text">
-                <Layers3 className="h-4 w-4 text-brand-accent" />
-                Shell operacional
+        <div className="space-y-4">
+          <DataCard
+            title="Resumo"
+            subtitle="Contexto atual do workspace"
+          >
+            <div className="space-y-3 text-sm text-dark-muted">
+              <div className="rounded-2xl border border-dark-border/70 p-4">
+                <div className="flex items-center gap-2 text-dark-text">
+                  <Layers3 className="h-4 w-4 text-brand-accent" />
+                  Shell operacional
+                </div>
+                <p className="mt-2 text-sm text-dark-muted">
+                  O sistema opera com design premium e separacao de workspaces.
+                </p>
               </div>
-              <p className="mt-2 text-sm text-dark-muted">
-                O sistema opera com design premium e separacao de workspaces.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-dark-border/70 p-4">
-              <div className="flex items-center gap-2 text-dark-text">
-                <MonitorCog className="h-4 w-4 text-brand-secondary" />
-                Preferencia salva
+              <div className="rounded-2xl border border-dark-border/70 p-4">
+                <div className="flex items-center gap-2 text-dark-text">
+                  <MonitorCog className="h-4 w-4 text-brand-secondary" />
+                  Preferencia salva
+                </div>
+                <p className="mt-2 text-sm text-dark-muted">
+                  A escolha de tema fica registrada localmente para a sessao do usuario.
+                </p>
               </div>
-              <p className="mt-2 text-sm text-dark-muted">
-                A escolha de tema fica registrada localmente para a sessao do usuario.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-dark-border/70 p-4">
-              <div className="flex items-center gap-2 text-dark-text">
-                <UserCircle2 className="h-4 w-4 text-status-success" />
-                Perfil ativo
+              <div className="rounded-2xl border border-dark-border/70 p-4">
+                <div className="flex items-center gap-2 text-dark-text">
+                  <UserCircle2 className="h-4 w-4 text-status-success" />
+                  Perfil ativo
+                </div>
+                <p className="mt-2 text-sm text-dark-muted">
+                  O nome, a foto e as funcoes acima ficam salvos no perfil do usuario logado.
+                </p>
               </div>
-              <p className="mt-2 text-sm text-dark-muted">
-                A foto e o nome acima são atualizados no perfil logado e aparecem no topo do workspace.
-              </p>
             </div>
-          </div>
-        </DataCard>
+          </DataCard>
+
+          {isAdmin && (
+            <DataCard
+              title="Criar usuario"
+              subtitle="Admin pode cadastrar usuarios com mais de uma funcao"
+            >
+              <form className="space-y-4" onSubmit={handleCreateUser}>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-[0.14em] text-dark-muted">Nome</label>
+                    <input
+                      className="input"
+                      value={newUser.nome}
+                      onChange={e => setNewUser(prev => ({ ...prev, nome: e.target.value }))}
+                      placeholder="Nome do usuario"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-[0.14em] text-dark-muted">Email</label>
+                    <input
+                      className="input"
+                      type="email"
+                      value={newUser.email}
+                      onChange={e => setNewUser(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="usuario@empresa.com"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-[0.14em] text-dark-muted">Senha inicial</label>
+                  <input
+                    className="input"
+                    type="password"
+                    value={newUser.password}
+                    onChange={e => setNewUser(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="Senha temporaria"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-dark-muted">Funcoes</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {ROLE_OPTIONS.map(role => {
+                      const active = newUser.roles.includes(role.value)
+                      return (
+                        <button
+                          key={role.value}
+                          type="button"
+                          onClick={() => setNewUser(prev => ({ ...prev, roles: toggleItem(prev.roles, role.value) }))}
+                          className={`rounded-2xl border px-3 py-2 text-left text-sm transition-all ${
+                            active
+                              ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                              : 'border-dark-border hover:border-brand-accent/40 hover:bg-dark-surface2/40'
+                          }`}
+                        >
+                          {role.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {newUser.roles.map(role => (
+                      <span key={role} className="badge badge-info">{roleLabel(role)}</span>
+                    ))}
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-3 rounded-2xl border border-dark-border px-4 py-3 text-sm text-dark-text">
+                  <input
+                    type="checkbox"
+                    checked={newUser.is_admin}
+                    onChange={e => setNewUser(prev => ({ ...prev, is_admin: e.target.checked }))}
+                  />
+                  <span className="flex items-center gap-2">
+                    <BadgeCheck className="h-4 w-4 text-status-success" />
+                    Tornar admin
+                  </span>
+                </label>
+
+                <button
+                  type="submit"
+                  disabled={creatingUser || !newUser.nome.trim() || !newUser.email.trim() || !newUser.password.trim()}
+                  className="btn-primary flex items-center gap-2 disabled:opacity-50"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  {creatingUser ? 'Criando...' : 'Criar usuario'}
+                </button>
+              </form>
+            </DataCard>
+          )}
+
+          {isAdmin && (
+            <DataCard
+              title="Usuarios cadastrados"
+              subtitle="Perfis ativos no sistema e suas funcoes"
+            >
+              {loadingProfiles ? (
+                <p className="text-sm text-dark-muted">Carregando usuarios...</p>
+              ) : (
+                <div className="space-y-3">
+                  {profiles.map(item => (
+                    <div key={item.id} className="rounded-2xl border border-dark-border/70 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium text-dark-text">{item.nome}</p>
+                          <p className="text-xs text-dark-muted">{item.orcamentista_label}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {item.is_admin && <span className="badge badge-success">Admin</span>}
+                          {(item.areas_atuacao || []).map(role => (
+                            <span key={role} className="badge badge-muted">{roleLabel(role)}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {!profiles.length && (
+                    <p className="text-sm text-dark-muted">Nenhum perfil encontrado.</p>
+                  )}
+                </div>
+              )}
+            </DataCard>
+          )}
+        </div>
       </div>
     </div>
   )

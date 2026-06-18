@@ -138,7 +138,7 @@ function FichaCardContent({
         <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-dark-border/40 mt-auto">
           {nome ? (
             <div className="flex items-center gap-1.5 min-w-0">
-              <Avatar name={nome} src={apolice.profiles?.avatar_url || ''} size="sm" />
+              <Avatar name={nome} src={ficha.profiles?.avatar_url || ''} size="sm" />
               <span className="text-[10px] text-dark-muted font-medium truncate max-w-[72px]">
                 {nome.split(' ')[0]}
               </span>

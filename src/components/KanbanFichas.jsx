@@ -328,14 +328,6 @@ function DroppableColumn({
             </span>
             <ArrowRight className="w-3 h-3 opacity-40" style={{ color: column.color }} />
           </button>
-          <button
-            onClick={onToggleSortOrder}
-            title={`Ordem atual: ${sortOrder === 'recentes' ? 'mais recentes' : 'mais antigas'}`}
-            className="mt-1 flex h-5 w-5 items-center justify-center rounded-full border transition-colors hover:bg-white/40"
-            style={{ color: column.color, borderColor: column.color + '35' }}
-          >
-            <ArrowUpDown className="w-3 h-3" />
-          </button>
         </div>
         <div
           className="flex-1 rounded-b-xl border transition-colors duration-150"
@@ -735,7 +727,20 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
   function handleDetalhe(fichaId) {
     navigate(`/fichas/${fichaId}`, {
-      state: { from: '/fichas', scrollY: window.scrollY, ...contextState },
+      state: {
+        from: location.pathname,
+        backTo: location.pathname,
+        backState: {
+          restoreKanban: true,
+          produto,
+          mes: contextState?.mes ?? null,
+          ano: contextState?.ano ?? null,
+          view: 'kanban',
+          scrollY: window.scrollY,
+        },
+        scrollY: window.scrollY,
+        ...contextState,
+      },
     })
   }
 

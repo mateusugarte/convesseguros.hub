@@ -776,6 +776,7 @@ export default function Fichas() {
     if (state.produto) setProduto(state.produto)
     if (state.mes)     setMes(state.mes)
     if (state.ano)     setAno(state.ano)
+    if (state.view)    setView(state.view)
     let cleanup
     if (state.scrollY) {
       const t = setTimeout(() => window.scrollTo({ top: state.scrollY, behavior: 'instant' }), 150)

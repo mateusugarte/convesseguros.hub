@@ -227,6 +227,8 @@ export default function FichaDetalhePage() {
   const [finalizar,setFinalizar]= useState(false)
   const [confirm,  setConfirm]  = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const backTo = location.state?.backTo || location.state?.from || '/fichas'
+  const backState = location.state?.backState || (location.state?.restoreKanban ? location.state : null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -276,7 +278,7 @@ export default function FichaDetalhePage() {
       toast({ type: 'error', title: 'Erro ao excluir ficha' })
     } else {
       toast({ type: 'success', title: 'Ficha excluída' })
-      navigate('/fichas')
+      navigate(backTo, { replace: true, state: backState || undefined })
     }
   }
 
@@ -296,7 +298,7 @@ export default function FichaDetalhePage() {
     return (
       <div className="text-center py-20">
         <p className="text-dark-muted">Ficha não encontrada</p>
-        <button onClick={() => navigate('/fichas')} className="btn-secondary mt-4">← Voltar</button>
+        <button onClick={() => navigate(backTo, { replace: true, state: backState || undefined })} className="btn-secondary mt-4">← Voltar</button>
       </div>
     )
   }
@@ -330,12 +332,7 @@ export default function FichaDetalhePage() {
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <button
               onClick={() => {
-                const state = location.state
-                if (state?.from === '/fichas') {
-                  navigate('/fichas', { replace: true, state: { restoreKanban: true, ...state } })
-                } else {
-                  navigate('/fichas')
-                }
+                navigate(backTo, { replace: true, state: backState || undefined })
               }}
               className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
             >

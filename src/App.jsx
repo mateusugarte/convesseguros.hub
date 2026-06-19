@@ -93,6 +93,7 @@ function AppRoutes() {
           <Route path="apolices/:id" element={<ApoliceDetalhe />} />
           {/* Área Auto */}
           <Route path="auto"                element={<AutoDashboard />} />
+          <Route path="auto/gestao"         element={<AutoEmissoes />} />
           <Route path="auto/renovacoes"     element={<AutoRenovacoes />} />
           <Route path="auto/emissoes"       element={<AutoEmissoes />} />
           <Route path="auto/clientes"       element={<AutoClientes />} />

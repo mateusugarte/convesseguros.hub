@@ -328,6 +328,40 @@ export async function emitirApoliceAuto(payload) {
     ? valorComissao * parseFloat(payload.pct_repasse)
     : null
 
+  if (payload.emissao_id) {
+    const emissaoUpdate = {
+      coluna: 'emitida',
+      cliente_id: clienteId,
+      nome_cliente: payload.nome_cliente || null,
+      cpf_cliente: payload.cpf_cliente || null,
+      celular_cliente: payload.celular_cliente || null,
+      condutor_nome: payload.condutor_nome || null,
+      condutor_cpf: payload.condutor_cpf || null,
+      modelo_veiculo: payload.modelo_veiculo || null,
+      placa: payload.placa || null,
+      seguradora: payload.seguradora || null,
+      numero_apolice: payload.numero_apolice || null,
+      vigencia_inicio: payload.vigencia_inicio || null,
+      vigencia_fim: payload.vigencia_fim || null,
+      premio_liquido: premioLiquido,
+      pct_comissao: pctComissao,
+      valor_comissao: valorComissao,
+      forma_pagamento: payload.forma_pagamento || null,
+      parcelamento: payload.parcelamento || null,
+      tem_repasse: !!payload.tem_repasse,
+      pct_repasse: payload.tem_repasse ? parseFloat(payload.pct_repasse) || null : null,
+      nome_repasse: payload.tem_repasse ? payload.nome_repasse || null : null,
+      valor_repasse: payload.tem_repasse ? valorRepasse : null,
+      updated_at: new Date().toISOString(),
+    }
+
+    const { error: emissaoError } = await supabase
+      .from('emissoes_auto')
+      .update(emissaoUpdate)
+      .eq('id', payload.emissao_id)
+    if (emissaoError) throw emissaoError
+  }
+
   const { data, error } = await supabase
     .from('apolices_auto')
     .insert({

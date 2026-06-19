@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Car, CheckCircle2, FileText, RefreshCw, Search, X, Plus } from 'lucide-react'
 import { format, startOfMonth, startOfWeek } from 'date-fns'
@@ -9,6 +9,7 @@ import {
 } from '../../lib/auto'
 import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../components/ui'
 import SeguradoraSelect from '../../components/SeguradoraSelect'
+import { useToast } from '../../contexts/ToastContext'
 import { formatDateBR, formatMoney } from './autoShared'
 
 const COLUNAS = [
@@ -32,6 +33,7 @@ const FORM_EMISSAO_VAZIO = {
   celular_cliente: '',
   condutor_nome: '',
   condutor_cpf: '',
+  condutor_igual_segurado: false,
   modelo_veiculo: '',
   placa: '',
   seguradora: '',
@@ -56,6 +58,7 @@ const FORM_MANUAL_VAZIO = {
   celular_cliente: '',
   condutor_nome: '',
   condutor_cpf: '',
+  condutor_igual_segurado: false,
   modelo_veiculo: '',
   placa: '',
   seguradora: '',
@@ -139,6 +142,13 @@ function getSeguradorasAprovadas(emissao) {
     .filter(seg => seg.nome)
 }
 
+function isSeguradoCondutorData(nomeCliente, cpfCliente, condutorNome, condutorCpf) {
+  const norm = value => String(value || '').trim().toLowerCase()
+  const cpf = value => String(value || '').replace(/\D/g, '')
+  return norm(nomeCliente) && norm(nomeCliente) === norm(condutorNome)
+    && cpf(cpfCliente) && cpf(cpfCliente) === cpf(condutorCpf)
+}
+
 function getFormEmissaoInicial(emissao) {
   const c = emissao?.cotacoes_auto || {}
   const aprovadas = getSeguradorasAprovadas(emissao)
@@ -151,8 +161,14 @@ function getFormEmissaoInicial(emissao) {
     nome_cliente: emissao?.nome_cliente || c.nome_cliente || c.nome_interessado || '',
     cpf_cliente: emissao?.cpf_cliente || c.cpf_cliente || '',
     celular_cliente: emissao?.celular_cliente || c.celular_cliente || '',
-    condutor_nome: emissao?.condutor_nome || c.condutor_nome || '',
-    condutor_cpf: emissao?.condutor_cpf || c.condutor_cpf || '',
+    condutor_nome: emissao?.condutor_nome || c.condutor_nome || emissao?.nome_cliente || c.nome_cliente || '',
+    condutor_cpf: emissao?.condutor_cpf || c.condutor_cpf || emissao?.cpf_cliente || c.cpf_cliente || '',
+    condutor_igual_segurado: isSeguradoCondutorData(
+      emissao?.nome_cliente || c.nome_cliente || '',
+      emissao?.cpf_cliente || c.cpf_cliente || '',
+      emissao?.condutor_nome || c.condutor_nome || emissao?.nome_cliente || c.nome_cliente || '',
+      emissao?.condutor_cpf || c.condutor_cpf || emissao?.cpf_cliente || c.cpf_cliente || ''
+    ),
     modelo_veiculo: emissao?.modelo_veiculo || c.modelo_veiculo || '',
     placa: emissao?.placa || c.placa || '',
     seguradora: primeiraAprovada,
@@ -849,15 +865,17 @@ function ModalApolices({ onClose }) {
 
 // ─── CampoTexto (formulario de emissao) ─────────────────────────────────────
 
-function CampoTexto({ label, campo, value, onChange, type = 'text' }) {
+function CampoTexto({ label, campo, value, onChange, type = 'text', placeholder = '', disabled = false }) {
   return (
     <div>
       <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">{label}</label>
       <input
         type={type}
         value={value}
+        placeholder={placeholder}
+        disabled={disabled}
         onChange={e => onChange(campo, e.target.value)}
-        className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+        className={`w-full rounded-2xl border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none ${disabled ? 'border-dark-border/50 opacity-70 cursor-not-allowed' : 'border-dark-border'}`}
       />
     </div>
   )
@@ -868,6 +886,8 @@ function CampoTexto({ label, campo, value, onChange, type = 'text' }) {
 export default function AutoEmissoes() {
   const qc = useQueryClient()
   const navigate = useNavigate()
+  const location = useLocation()
+  const toast = useToast()
   const initialRange = useMemo(() => getPeriodoRange('semana'), [])
 
   const [dragging, setDragging] = useState(null)
@@ -898,9 +918,12 @@ export default function AutoEmissoes() {
       qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
       setModalResultado(null)
     },
+    onError: error => {
+      toast({ type: 'error', title: 'Erro ao salvar o resultado', message: error?.message || 'Tente novamente.' })
+    },
   })
 
-  const { mutate: emitir, isPending } = useMutation({
+  const { mutateAsync: emitirAsync, isPending } = useMutation({
     mutationFn: payload => emitirApoliceAuto(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
@@ -908,6 +931,9 @@ export default function AutoEmissoes() {
       qc.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] })
       setModalEmissao(null)
       setForm(FORM_EMISSAO_VAZIO)
+    },
+    onError: error => {
+      toast({ type: 'error', title: 'Erro ao salvar a emissão', message: error?.message || 'Verifique os dados informados.' })
     },
   })
 
@@ -920,16 +946,53 @@ export default function AutoEmissoes() {
       setManualOpen(false)
       setManualForm(FORM_MANUAL_VAZIO)
     },
+    onError: error => {
+      toast({ type: 'error', title: 'Erro ao salvar a emissão manual', message: error?.message || 'Verifique os dados informados.' })
+    },
   })
 
   const seguradorasAprovadas = useMemo(() => getSeguradorasAprovadas(modalEmissao), [modalEmissao])
 
   function setField(campo, valor) {
-    setForm(current => ({ ...current, [campo]: valor }))
+    setForm(current => {
+      const next = { ...current, [campo]: valor }
+      const deveSincronizar = next.condutor_igual_segurado && ['nome_cliente', 'cpf_cliente'].includes(campo)
+      if (deveSincronizar) {
+        next.condutor_nome = next.nome_cliente
+        next.condutor_cpf = next.cpf_cliente
+      }
+      if (campo === 'condutor_igual_segurado') {
+        if (valor) {
+          next.condutor_nome = next.nome_cliente
+          next.condutor_cpf = next.cpf_cliente
+        } else if (current.condutor_nome === current.nome_cliente && current.condutor_cpf === current.cpf_cliente) {
+          next.condutor_nome = ''
+          next.condutor_cpf = ''
+        }
+      }
+      return next
+    })
   }
 
   function setManualField(campo, valor) {
-    setManualForm(current => ({ ...current, [campo]: valor }))
+    setManualForm(current => {
+      const next = { ...current, [campo]: valor }
+      const deveSincronizar = next.condutor_igual_segurado && ['nome_cliente', 'cpf_cliente'].includes(campo)
+      if (deveSincronizar) {
+        next.condutor_nome = next.nome_cliente
+        next.condutor_cpf = next.cpf_cliente
+      }
+      if (campo === 'condutor_igual_segurado') {
+        if (valor) {
+          next.condutor_nome = next.nome_cliente
+          next.condutor_cpf = next.cpf_cliente
+        } else if (current.condutor_nome === current.nome_cliente && current.condutor_cpf === current.cpf_cliente) {
+          next.condutor_nome = ''
+          next.condutor_cpf = ''
+        }
+      }
+      return next
+    })
   }
 
   function handlePeriodoChange(value) {
@@ -983,7 +1046,7 @@ export default function AutoEmissoes() {
   const valorRepasse = form.tem_repasse ? valorComissao * (parseFloat(form.pct_repasse) || 0) : 0
 
   function handleEmitir() {
-    emitir({
+    emitirAsync({
       emissao_id: modalEmissao.id,
       cliente_id: modalEmissao.cliente_id,
       nome_cliente: modalEmissao.cotacoes_auto?.nome_cliente || modalEmissao.nome_cliente || null,
@@ -1009,8 +1072,9 @@ export default function AutoEmissoes() {
       pct_repasse: form.tem_repasse ? parseFloat(form.pct_repasse) : null,
       nome_repasse: form.tem_repasse ? form.nome_repasse : null,
       valor_repasse: form.tem_repasse ? valorRepasse : null,
-    })
-    mover({ id: modalEmissao.id, coluna: 'emitida' })
+    }).then(() => {
+      mover({ id: modalEmissao.id, coluna: 'emitida' })
+    }).catch(() => {})
   }
 
   function handleCreateManual() {
@@ -1062,14 +1126,24 @@ export default function AutoEmissoes() {
     coluna: getEmissaoColuna(modalEmissao),
   } : null
 
+  const isGestaoRoute = location.pathname.startsWith('/auto/gestao')
+
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         eyebrow="Modulo auto"
-        title="Gestao de Emissoes"
-        description="Kanban operacional para conduzir cotacoes pendentes, negociacao, vistoria e emissao da carteira Auto."
+        title={isGestaoRoute ? 'Gestão AUTO' : 'Gestão de Emissões'}
+        description={isGestaoRoute
+          ? 'Kanban operacional do módulo Auto com as colunas da fila de trabalho.'
+          : 'Área de emissões Auto com acesso rápido ao kanban operacional e à consulta de apólices.'}
         actions={(
           <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => navigate(isGestaoRoute ? '/auto/emissoes' : '/auto/gestao')}
+              className="btn-secondary"
+            >
+              {isGestaoRoute ? 'Ir para Emissões' : 'Gestão AUTO'}
+            </button>
             <button onClick={() => setManualOpen(true)} className="btn-primary">
               Nova emissao manual
             </button>
@@ -1329,6 +1403,57 @@ export default function AutoEmissoes() {
                     <CampoTexto label="Parcelamento (vezes)" campo="parcelamento" value={form.parcelamento} onChange={setField} />
                   </div>
 
+                  <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
+                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Dados do condutor</p>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <button
+                        type="button"
+                        onClick={() => setField('condutor_igual_segurado', true)}
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold border transition-colors ${
+                          form.condutor_igual_segurado
+                            ? 'border-status-success bg-status-success/10 text-status-success'
+                            : 'border-dark-border bg-white/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+                        }`}
+                      >
+                        Segurado é o condutor
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setField('condutor_igual_segurado', false)}
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold border transition-colors ${
+                          !form.condutor_igual_segurado
+                            ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                            : 'border-dark-border bg-white/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+                        }`}
+                      >
+                        Preencher manualmente
+                      </button>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <CampoTexto
+                        label="Nome do condutor"
+                        campo="condutor_nome"
+                        value={form.condutor_nome}
+                        onChange={setField}
+                        disabled={form.condutor_igual_segurado}
+                        placeholder={form.condutor_igual_segurado ? 'Copiado do segurado' : ''}
+                      />
+                      <CampoTexto
+                        label="CPF do condutor"
+                        campo="condutor_cpf"
+                        value={form.condutor_cpf}
+                        onChange={setField}
+                        disabled={form.condutor_igual_segurado}
+                        placeholder={form.condutor_igual_segurado ? 'Copiado do segurado' : ''}
+                      />
+                    </div>
+                    {form.condutor_igual_segurado && (
+                      <p className="mt-2 text-[11px] text-dark-muted">
+                        Os dados do condutor estão sendo copiados do segurado. Se precisar, desmarque para editar manualmente.
+                      </p>
+                    )}
+                  </div>
+
                   <div className="grid gap-4 lg:grid-cols-2">
                     <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
                       <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Tipo de producao</label>
@@ -1466,8 +1591,6 @@ export default function AutoEmissoes() {
                     <CampoTexto label="Nome do segurado" campo="nome_cliente" value={manualForm.nome_cliente} onChange={setManualField} />
                     <CampoTexto label="CPF do segurado" campo="cpf_cliente" value={manualForm.cpf_cliente} onChange={setManualField} />
                     <CampoTexto label="Celular" campo="celular_cliente" value={manualForm.celular_cliente} onChange={setManualField} />
-                    <CampoTexto label="Nome do condutor" campo="condutor_nome" value={manualForm.condutor_nome} onChange={setManualField} />
-                    <CampoTexto label="CPF do condutor" campo="condutor_cpf" value={manualForm.condutor_cpf} onChange={setManualField} />
                     <CampoTexto label="Modelo do veiculo" campo="modelo_veiculo" value={manualForm.modelo_veiculo} onChange={setManualField} />
                     <CampoTexto label="Placa" campo="placa" value={manualForm.placa} onChange={setManualField} />
                     <div>
@@ -1486,6 +1609,57 @@ export default function AutoEmissoes() {
                     <CampoTexto label="% Comissao" campo="pct_comissao" value={manualForm.pct_comissao} onChange={setManualField} type="number" />
                     <CampoTexto label="Forma de pagamento" campo="forma_pagamento" value={manualForm.forma_pagamento} onChange={setManualField} />
                     <CampoTexto label="Parcelamento (vezes)" campo="parcelamento" value={manualForm.parcelamento} onChange={setManualField} />
+                  </div>
+
+                  <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
+                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Dados do condutor</p>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <button
+                        type="button"
+                        onClick={() => setManualField('condutor_igual_segurado', true)}
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold border transition-colors ${
+                          manualForm.condutor_igual_segurado
+                            ? 'border-status-success bg-status-success/10 text-status-success'
+                            : 'border-dark-border bg-white/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+                        }`}
+                      >
+                        Segurado é o condutor
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setManualField('condutor_igual_segurado', false)}
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold border transition-colors ${
+                          !manualForm.condutor_igual_segurado
+                            ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                            : 'border-dark-border bg-white/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+                        }`}
+                      >
+                        Preencher manualmente
+                      </button>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <CampoTexto
+                        label="Nome do condutor"
+                        campo="condutor_nome"
+                        value={manualForm.condutor_nome}
+                        onChange={setManualField}
+                        disabled={manualForm.condutor_igual_segurado}
+                        placeholder={manualForm.condutor_igual_segurado ? 'Copiado do segurado' : ''}
+                      />
+                      <CampoTexto
+                        label="CPF do condutor"
+                        campo="condutor_cpf"
+                        value={manualForm.condutor_cpf}
+                        onChange={setManualField}
+                        disabled={manualForm.condutor_igual_segurado}
+                        placeholder={manualForm.condutor_igual_segurado ? 'Copiado do segurado' : ''}
+                      />
+                    </div>
+                    {manualForm.condutor_igual_segurado && (
+                      <p className="mt-2 text-[11px] text-dark-muted">
+                        Os dados do condutor estão sendo copiados do segurado. Se precisar, desmarque para editar manualmente.
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid gap-4 lg:grid-cols-2">

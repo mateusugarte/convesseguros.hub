@@ -191,6 +191,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
     setSalvando(true)
     try {
       let imobId
+      const aliasesNormalizados = [...new Set(aliasesModal.map(v => v.trim()).filter(Boolean))]
 
       if (ehEditar && imobAtual) {
         // Atualizar nome canônico
@@ -201,23 +202,23 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
         imobId = imobAtual.id
         // Limpar aliases antigos e reinserir, permitindo duplicatas quando necessário
         await supabase.from('imobiliaria_aliases').delete().eq('imobiliaria_id', imobId)
-        if (aliasesModal.length > 0) {
-          const payload = aliasesModal.map(v => ({ imobiliaria_id: imobId, alias: v.trim() }))
+        if (aliasesNormalizados.length > 0) {
+          const payload = aliasesNormalizados.map(v => ({ imobiliaria_id: imobId, alias: v }))
           const { error: err } = await supabase.from('imobiliaria_aliases')
-            .insert(payload)
+            .upsert(payload, { onConflict: 'alias' })
           if (err) throw err
         }
 
       } else if (modo === 'existente') {
         // Incluir variações em imobiliária existente
         // Permite registrar o mesmo alias mais de uma vez quando isso for necessário para o mapeamento
-        if (!imobSelecionada || aliasesModal.length === 0) {
+        if (!imobSelecionada || aliasesNormalizados.length === 0) {
           toast({ type: 'error', title: 'Selecione uma imobiliária e ao menos uma variação' })
           return
         }
-        const payload = aliasesModal.map(v => ({ imobiliaria_id: imobSelecionada, alias: v.trim() }))
+        const payload = aliasesNormalizados.map(v => ({ imobiliaria_id: imobSelecionada, alias: v }))
         const { error } = await supabase.from('imobiliaria_aliases')
-          .insert(payload)
+          .upsert(payload, { onConflict: 'alias' })
         if (error) throw error
 
       } else {
@@ -239,10 +240,10 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
           imobId = novo.id
         }
 
-        if (aliasesModal.length > 0) {
-          const payload = aliasesModal.map(v => ({ imobiliaria_id: imobId, alias: v.trim() }))
+        if (aliasesNormalizados.length > 0) {
+          const payload = aliasesNormalizados.map(v => ({ imobiliaria_id: imobId, alias: v }))
           const { error } = await supabase.from('imobiliaria_aliases')
-            .insert(payload)
+            .upsert(payload, { onConflict: 'alias' })
           if (error) throw error
         }
       }

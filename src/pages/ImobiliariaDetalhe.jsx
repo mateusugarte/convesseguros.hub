@@ -131,7 +131,7 @@ export default function ImobiliariaDetalhe() {
     const t = novoAlias.trim()
     if (!t) return
     setAddingAlias(true)
-    const { error } = await supabase.from('imobiliaria_aliases').insert({ imobiliaria_id: id, alias: t })
+    const { error } = await supabase.from('imobiliaria_aliases').upsert({ imobiliaria_id: id, alias: t }, { onConflict: 'alias' })
     if (error) {
       toast({ type: 'error', title: 'Erro ao adicionar variação', message: error.message })
     } else {

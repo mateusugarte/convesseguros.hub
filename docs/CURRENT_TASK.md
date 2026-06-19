@@ -6,13 +6,11 @@ Claude
 
 ## Pagina
 
-Multiplas paginas — correcao de encoding e pesquisa de fichas
+Dashboard.jsx, ApolicesDashboard.jsx, ComercialDashboard.jsx
 
 ## Objetivo
 
-1. Corrigir textos com encoding errado (Pessoa JurÃ­dica, Em AnÃ¡lise, etc.) em todo o sistema.
-2. Corrigir card de fichas Pessoa Juridica que nao mostrava o nome.
-3. Corrigir pesquisa de fichas na area de emissao (modal Iniciar Emissao).
+Melhorar design e microfuncoes dos tres dashboards do sistema.
 
 ## Status
 
@@ -20,21 +18,45 @@ Concluido.
 
 ## Alteracoes Realizadas
 
-- `src/components/KanbanFichas.jsx` — encoding corrigido (Em Analise, Mes, Nao, Confirmar Aprovacao, etc.)
-- `src/components/KanbanBoard.jsx` — encoding corrigido (Em Cotacao, Em Analise, em-dash)
-- `src/pages/Relatorio.jsx` — encoding corrigido (Marco, Enviado Cobranca, Desistiu da Locacao, labels de modal)
-- `src/pages/Fichas.jsx` — encoding corrigido (Pessoa Juridica, Marco, Voce, Imobiliaria, em-dash)
-- `src/components/RelatorioMensal.jsx` — encoding corrigido (Nao, Marco, Desistencias, Total do Mes)
-- `src/lib/fichas.js` — `fetchFichasKanban` agora inclui campo `nome_empresa` (corrige nomes de PJ mostrando -)
-- `src/lib/apolices.js` — `buscarFichasParaEmissao` removidos filtros de status e apolices existentes; busca agora cobre todas as fichas; pesquisa ampliada para CPF/CNPJ alem do nome
+### Dashboard.jsx
+- Titulos em ingles traduzidos para portugues:
+  - "Main Analytics" → "Analytics de fichas"
+  - "Alerts" → "Alertas operacionais"
+  - "Hero Metrics" → "Metricas principais"
+  - "Production Breakdown" → "Producao por produto"
+  - "Status Mix" → "Distribuicao de status"
+  - "Recent Activity" → "Atividade recente"
+  - "User Ranking" → "Ranking da equipe"
+  - "Upcoming Deadlines" → "Fila de cotacoes"
+  - "Operational Metrics" → "Metricas operacionais"
+  - "Imobiliarias Destaque" → "Imobiliarias em destaque"
+- Linhas de "Atividade recente" agora sao clicaveis e navegam para /fichas/:id
+- Linhas de "Fila de cotacoes" agora permitem clicar no nome para ver a ficha
+- AlertCard agora suporta botoes de acao com navegacao direta (href)
+- Alertas de pendencias e backlog tem links para /fichas e /minhas-fichas
+- Botao de refresh (icone) adicionado na FilterBar com animate-spin quando refetching
+- Link "Ver todas" em "Atividade recente" navega para /fichas
+- Link "Minha carteira" em "Fila de cotacoes" navega para /minhas-fichas
+- useNavigate importado e usado
+
+### ApolicesDashboard.jsx
+- Card "Periodo" removido — filtro integrado direto no header (PageHeader actions)
+- Altura do grafico de area: 140px → 240px
+- CartesianGrid adicionado ao grafico de area
+- strokeWidth e activeDot melhorados
+- Altura do grafico de producao por seguradora: 190px → 260px
+- CartesianGrid adicionado ao grafico de producao
+- Top 5 Imobiliarias redesenhado: de grafico horizontal para lista com mini progress bars
+  - Cada item e clicavel (navega para /apolices/lista)
+  - Barra de progresso relativa ao primeiro colocado
+  - Cores graduadas por posicao
+
+### ComercialDashboard.jsx
+- Badge de aviso "!" aparece na contagem de "Parados" quando stale > 0
+- Idade media fica em amber quando >= 7 dias
 
 ## Proximos Passos
 
-- Verificar se dados de nome_empresa ja estao preenchidos no banco para fichas PJ existentes
-- Monitorar se pesquisa de emissao esta retornando resultados como esperado
-
-## Observacoes
-
-- Encoding era mojibake: UTF-8 bytes interpretados como Latin-1/CP1252 e re-salvos
-- A funcao normalizeDisplayText em src/lib/text.js ja tratava o encoding dos dados do banco — o problema era nos textos hardcoded no codigo-fonte
-- fichas.js fetchFichasKanban nao buscava nome_empresa, causando nome vazio em cards PJ
+- Verificar se todas as rotas de navegacao existem corretamente
+- Testar responsividade dos dashboards em tela menor
+- Avaliar adicionar animacao de entrada nas metricas (count-up)

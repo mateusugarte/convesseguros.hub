@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Car, CheckCircle2, FileText, RefreshCw, Search, X, Plus } from 'lucide-react'
@@ -123,6 +123,69 @@ function condutorEmissao(emissao) {
 
 function seguradoraEmissao(emissao) {
   return emissao.seguradora || emissao.cotacoes_auto?.seguradora_preferencial?.nome || emissao.cotacoes_auto?.seguradora_mais_barata?.nome || '—'
+}
+
+function aprovadaNome(seg) {
+  return seg?.nome?.trim() || ''
+}
+
+function getSeguradorasAprovadas(emissao) {
+  const lista = Array.isArray(emissao?.seguradoras_cotadas) ? emissao.seguradoras_cotadas : []
+  return lista
+    .map(seg => ({
+      ...seg,
+      nome: aprovadaNome(seg),
+    }))
+    .filter(seg => seg.nome)
+}
+
+function getFormEmissaoInicial(emissao) {
+  const c = emissao?.cotacoes_auto || {}
+  const aprovadas = getSeguradorasAprovadas(emissao)
+  const preferida = c.seguradora_preferencial?.nome || c.seguradora_mais_barata?.nome || ''
+  const primeiraAprovada = aprovadas[0]?.nome || preferida
+  const seguradoraBase = aprovadas.find(seg => seg.nome === preferida) || aprovadas[0] || null
+
+  return {
+    ...FORM_EMISSAO_VAZIO,
+    nome_cliente: emissao?.nome_cliente || c.nome_cliente || c.nome_interessado || '',
+    cpf_cliente: emissao?.cpf_cliente || c.cpf_cliente || '',
+    celular_cliente: emissao?.celular_cliente || c.celular_cliente || '',
+    condutor_nome: emissao?.condutor_nome || c.condutor_nome || '',
+    condutor_cpf: emissao?.condutor_cpf || c.condutor_cpf || '',
+    modelo_veiculo: emissao?.modelo_veiculo || c.modelo_veiculo || '',
+    placa: emissao?.placa || c.placa || '',
+    seguradora: primeiraAprovada,
+    numero_apolice: emissao?.numero_apolice || c.numero_orcamento || '',
+    vigencia_inicio: emissao?.vigencia_inicio || c.vigencia_inicio || '',
+    vigencia_fim: emissao?.vigencia_fim || c.vigencia_fim || '',
+    premio_liquido: emissao?.premio_liquido
+      ?? seguradoraBase?.premio_liquido
+      ?? c.seguradora_preferencial?.premio_liquido
+      ?? c.seguradora_mais_barata?.premio_liquido
+      ?? '',
+    pct_comissao: emissao?.pct_comissao
+      ?? seguradoraBase?.pct_comissao
+      ?? c.seguradora_preferencial?.pct_comissao
+      ?? c.seguradora_mais_barata?.pct_comissao
+      ?? '',
+    forma_pagamento: emissao?.forma_pagamento
+      || seguradoraBase?.forma_pagamento
+      || c.seguradora_preferencial?.forma_pagamento
+      || c.seguradora_mais_barata?.forma_pagamento
+      || '',
+    parcelamento: emissao?.parcelamento
+      || seguradoraBase?.parcelamentos
+      || c.seguradora_preferencial?.parcelamentos
+      || c.seguradora_mais_barata?.parcelamentos
+      || '',
+    tipo_producao: emissao?.tipo_producao || 'individual',
+    responsavel: emissao?.responsavel || '',
+    eh_renovacao: Boolean(emissao?.eh_renovacao || c.tipo === 'renovacao'),
+    tem_repasse: Boolean(emissao?.tem_repasse || seguradoraBase?.nome_repasse),
+    pct_repasse: emissao?.pct_repasse || seguradoraBase?.pct_repasse || '',
+    nome_repasse: emissao?.nome_repasse || seguradoraBase?.nome_repasse || '',
+  }
 }
 
 // ─── Card ───────────────────────────────────────────────────────────────────
@@ -859,6 +922,8 @@ export default function AutoEmissoes() {
     },
   })
 
+  const seguradorasAprovadas = useMemo(() => getSeguradorasAprovadas(modalEmissao), [modalEmissao])
+
   function setField(campo, valor) {
     setForm(current => ({ ...current, [campo]: valor }))
   }
@@ -903,6 +968,14 @@ export default function AutoEmissoes() {
       },
     })
   }
+
+  useEffect(() => {
+    if (!modalEmissao) {
+      setForm(FORM_EMISSAO_VAZIO)
+      return
+    }
+    setForm(getFormEmissaoInicial(modalEmissao))
+  }, [modalEmissao])
 
   const premioLiquido = parseFloat(form.premio_liquido) || 0
   const pctComissao = parseFloat(form.pct_comissao) || 0
@@ -1228,12 +1301,24 @@ export default function AutoEmissoes() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora</label>
-                      <SeguradoraSelect
-                        value={form.seguradora}
-                        onChange={value => setField('seguradora', value)}
-                        produto="auto"
-                        placeholder="Selecionar seguradora"
-                      />
+                      {seguradorasAprovadas.length > 0 ? (
+                        <select
+                          value={form.seguradora}
+                          onChange={e => setField('seguradora', e.target.value)}
+                          className="w-full rounded-2xl border border-dark-border bg-white/90 px-3 py-2 text-sm text-dark-text outline-none"
+                        >
+                          <option value="">Selecionar seguradora aprovada</option>
+                          {seguradorasAprovadas.map(seg => (
+                            <option key={seg.nome} value={seg.nome}>
+                              {seg.nome}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="rounded-2xl border border-dark-border bg-white/70 px-3 py-2 text-sm text-dark-muted">
+                          Nenhuma seguradora aprovada nesta ficha
+                        </div>
+                      )}
                     </div>
                     <CampoTexto label="Numero da apolice" campo="numero_apolice" value={form.numero_apolice} onChange={setField} />
                     <CampoTexto label="Vigencia inicio" campo="vigencia_inicio" value={form.vigencia_inicio} onChange={setField} type="date" />
@@ -1302,7 +1387,7 @@ export default function AutoEmissoes() {
                   </button>
                   <button
                     onClick={handleEmitir}
-                    disabled={isPending || !form.vigencia_fim}
+                    disabled={isPending || !form.vigencia_fim || !form.seguradora || (seguradorasAprovadas.length === 0)}
                     className="btn-primary flex-1 disabled:opacity-50"
                   >
                     {isPending ? 'Emitindo...' : 'Confirmar emissao'}

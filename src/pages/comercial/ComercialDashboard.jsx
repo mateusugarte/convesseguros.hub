@@ -624,10 +624,15 @@ export default function ComercialDashboard() {
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <div className="rounded-[18px] bg-slate-900/[0.035] p-3">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Idade média</p>
-                  <p className="mt-2 text-lg font-black text-dark-text">{stage.averageAge}d</p>
+                  <p className={`mt-2 text-lg font-black ${stage.averageAge >= 7 ? 'text-amber-600' : 'text-dark-text'}`}>{stage.averageAge}d</p>
                 </div>
                 <div className="rounded-[18px] bg-slate-900/[0.035] p-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Parados</p>
+                  <div className="flex items-center justify-between gap-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Parados</p>
+                    {stage.stale > 0 && (
+                      <span className="inline-flex items-center rounded-full bg-amber-500/12 border border-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-600">!</span>
+                    )}
+                  </div>
                   <p className={`mt-2 text-lg font-black ${stage.stale > 0 ? 'text-amber-600' : 'text-dark-text'}`}>{stage.stale}</p>
                 </div>
               </div>

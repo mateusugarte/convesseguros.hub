@@ -299,7 +299,7 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onTog
 function DroppableColumn({
   column, fichas, userId, onDetalhe, onAssumir, onFinalizar, onToggleRetorno,
   collapsed, onToggleCollapse, newIds, colIndex, resolverNome, resolveImobiliariaInfo,
-  sortOrder, onToggleSortOrder,
+  sortOrder, onToggleSortOrder, sortingFeedback,
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: column.id })
 
@@ -317,8 +317,8 @@ function DroppableColumn({
         style={{ width: '52px', ...animStyle }}
       >
         <div
-          className="flex flex-col items-center gap-1.5 py-3 px-1.5 rounded-t-xl border border-b-0"
-          style={{ background: column.color + '14', borderColor: column.color + '45' }}
+          className="flex flex-col items-center gap-1.5 py-3 px-1.5 rounded-t-2xl border border-b-0 shadow-[0_10px_28px_rgba(15,23,42,0.06)]"
+          style={{ background: `linear-gradient(180deg, ${column.color}18, ${column.color}08)`, borderColor: column.color + '45' }}
         >
           <button
             onClick={onToggleCollapse}
@@ -336,12 +336,12 @@ function DroppableColumn({
           </button>
         </div>
         <div
-          className="flex-1 rounded-b-xl border transition-colors duration-150"
+          className="flex-1 rounded-b-2xl border transition-colors duration-150"
           style={{
             minHeight: '60px',
             borderColor:     isOver ? column.color + '70' : 'rgb(var(--color-border))',
-            backgroundColor: isOver ? column.color + '14' : 'rgb(var(--color-surface2) / 0.3)',
-            boxShadow:       isOver ? `inset 0 0 0 1.5px ${column.color}40` : 'none',
+            backgroundColor: isOver ? column.color + '12' : 'rgb(var(--color-surface2) / 0.28)',
+            boxShadow:       isOver ? `inset 0 0 0 1.5px ${column.color}40, 0 0 24px ${column.color}10` : '0 10px 28px rgba(15,23,42,0.04)',
           }}
         />
       </div>
@@ -352,39 +352,43 @@ function DroppableColumn({
     <div className="kanban-col animate-fade-in flex flex-col" style={animStyle}>
       {/* Header */}
       <div
-        className="kanban-col-header"
+        className="kanban-col-header flex flex-col gap-2"
         style={{
           background: `linear-gradient(180deg, ${column.color}16, ${column.color}08)`,
           borderColor: `${column.color}42`,
           boxShadow: `inset 0 1px 0 rgba(255,255,255,0.45)`,
           backdropFilter: 'blur(10px)',
+          borderRadius: '18px 18px 0 0',
         }}
       >
-        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <div
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ background: column.color, boxShadow: `0 0 6px ${column.color}90` }}
-          />
-          <span className="text-[11px] font-bold tracking-wide truncate" style={{ color: column.color }}>
-            {column.label}
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <div
+              className="w-2 h-2 rounded-full flex-shrink-0"
+              style={{ background: column.color, boxShadow: `0 0 6px ${column.color}90` }}
+            />
+            <span className="text-[11px] font-bold tracking-wide truncate" style={{ color: column.color }}>
+              {column.label}
+            </span>
+          </div>
           <span
-            className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md"
+            className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full"
             style={{ background: column.color + '22', color: column.color }}
           >
             {fichas.length}
           </span>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={onToggleSortOrder}
             title={`Ordem atual: ${sortOrder === 'recentes' ? 'mais recentes' : 'mais antigas'}`}
-            className="kanban-col-collapse flex items-center gap-1 px-2"
+            className={`kanban-col-sort kanban-sort-toggle flex items-center gap-1 px-1 py-1 rounded-full border text-[10px] font-semibold ${sortingFeedback ? 'ring-2 ring-brand-accent/15 shadow-[0_10px_22px_rgba(245,88,42,0.08)]' : ''}`}
             style={{ color: column.color }}
           >
-            <ArrowUpDown className="w-3.5 h-3.5" />
-            <span className="text-[9px] font-semibold uppercase tracking-[0.08em]">
-              {sortOrder === 'recentes' ? '↑ recentes' : '↓ antigas'}
+            <span className={`kanban-sort-option ${sortOrder === 'recentes' ? 'is-active' : ''}`}>Recentes</span>
+            <span className={`kanban-sort-option ${sortOrder === 'antigas' ? 'is-active' : ''}`}>Antigas</span>
+            <span className={`kanban-sort-thumb ${sortOrder === 'antigas' ? 'is-alt' : ''}`}>
+              <ArrowUpDown className={`w-3 h-3 ${sortingFeedback ? 'animate-spin' : ''}`} />
             </span>
           </button>
           <button
@@ -405,9 +409,9 @@ function DroppableColumn({
         style={{
           border:          isOver ? `1.5px dashed ${column.color}70` : '1px solid rgb(var(--color-border))',
           borderTop:       'none',
-          borderRadius:    '0 0 16px 16px',
+          borderRadius:    '0 0 18px 18px',
           backgroundColor: isOver ? column.color + '0b' : 'rgb(var(--color-surface2) / 0.28)',
-          boxShadow:       isOver ? `inset 0 0 0 1px ${column.color}20, 0 0 24px ${column.color}12` : '0 10px 28px rgba(15,23,42,0.04)',
+          boxShadow:       isOver ? `inset 0 0 0 1px ${column.color}20, 0 0 24px ${column.color}12` : '0 12px 30px rgba(15,23,42,0.05)',
           transition:      'border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease',
         }}
       >
@@ -565,6 +569,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   const [customFrom, setCustomFrom] = useState('')
   const [customTo,   setCustomTo]   = useState('')
   const [sortOrder,  setSortOrder]  = useState('recentes')
+  const [sortingFeedback, setSortingFeedback] = useState(false)
   const [collapsed,  setCollapsed]  = useState(new Set())
   const [newIds,     setNewIds]     = useState(new Set())
 
@@ -577,6 +582,13 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   const [salvandoRecusado, setSalvandoRecusado] = useState(false)
   const [pendingAprovado,  setPendingAprovado]  = useState(null)
   const [salvandoAprovado, setSalvandoAprovado] = useState(false)
+  const sortFeedbackTimerRef = useRef(null)
+
+  useEffect(() => {
+    return () => {
+      if (sortFeedbackTimerRef.current) clearTimeout(sortFeedbackTimerRef.current)
+    }
+  }, [])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -593,10 +605,10 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     }
     const data = await fetchFichasKanban({ produto, dateFrom, dateTo })
     setFichas(data)
-    const cols = groupFichas(data, user?.id, sortOrder)
+    const cols = groupFichas(data, user?.id)
     setCollapsed(new Set(COLUMNS.filter(c => cols[c.id].length === 0).map(c => c.id)))
     setLoading(false)
-  }, [produto, periodo, customFrom, customTo, user?.id, useExternal, externalDateFrom, externalDateTo, sortOrder])
+  }, [produto, periodo, customFrom, customTo, user?.id, useExternal, externalDateFrom, externalDateTo])
 
   useEffect(() => { load() }, [load])
 
@@ -817,6 +829,16 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     })
   }
 
+  function handleToggleSortOrder() {
+    setSortingFeedback(true)
+    setSortOrder(prev => (prev === 'recentes' ? 'antigas' : 'recentes'))
+    if (sortFeedbackTimerRef.current) clearTimeout(sortFeedbackTimerRef.current)
+    sortFeedbackTimerRef.current = setTimeout(() => {
+      setSortingFeedback(false)
+      sortFeedbackTimerRef.current = null
+    }, 220)
+  }
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -831,16 +853,26 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   }
 
   return (
-    <div className="space-y-3">
+    <div className={`space-y-2.5 ${sortingFeedback ? 'kanban-sorting' : ''}`}>
+      {sortingFeedback && (
+        <div className="flex items-center justify-between rounded-2xl border border-brand-accent/20 bg-brand-accent/5 px-4 py-2 text-xs text-brand-accent animate-fade-in">
+          <span className="inline-flex items-center gap-2 font-medium">
+            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            Reorganizando colunas
+          </span>
+          <span className="text-brand-accent/70">A ordem está sendo atualizada</span>
+        </div>
+      )}
+
       {/* Filtro de período */}
       {!useExternal && (
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-0.5 bg-dark-surface2/60 border border-dark-border rounded-lg p-0.5">
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-dark-border/60 bg-dark-surface2/50 px-3 py-2 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+          <div className="flex items-center gap-0.5 bg-white/70 border border-dark-border rounded-full p-0.5 shadow-sm">
             {PERIODOS.map(p => (
               <button
                 key={p.key}
                 onClick={() => setPeriodo(p.key)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                   periodo === p.key
                     ? 'bg-brand-secondary text-white shadow-sm'
                     : 'text-dark-muted hover:text-dark-text'
@@ -851,7 +883,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
             ))}
           </div>
           {periodo === 'custom' && (
-            <div className="flex items-center gap-1.5 text-xs text-dark-muted">
+            <div className="flex items-center gap-1.5 text-xs text-dark-muted rounded-full border border-dark-border bg-white/70 px-3 py-1.5">
               <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
               <DatePicker value={customFrom} onChange={v => setCustomFrom(v)} />
               <span>—</span>
@@ -859,8 +891,10 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
             </div>
           )}
           <div className="ml-auto flex items-center gap-2 text-xs text-dark-muted">
-            <span>{fichas.length} ficha{fichas.length !== 1 ? 's' : ''}</span>
-            <button onClick={load} className="flex items-center gap-1 hover:text-dark-text transition-colors">
+            <span className="inline-flex items-center gap-1 rounded-full border border-dark-border bg-white/75 px-3 py-1 font-medium">
+              {fichas.length} ficha{fichas.length !== 1 ? 's' : ''}
+            </span>
+            <button onClick={load} className="flex items-center gap-1 rounded-full border border-dark-border bg-white/70 px-3 py-1.5 hover:text-dark-text transition-colors">
               <RefreshCw className="w-3.5 h-3.5" /> Atualizar
             </button>
           </div>
@@ -868,9 +902,11 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
       )}
 
       {useExternal && (
-        <div className="flex items-center justify-between text-xs text-dark-muted">
-          <span>{fichas.length} ficha{fichas.length !== 1 ? 's' : ''} neste período</span>
-          <button onClick={load} className="flex items-center gap-1 hover:text-dark-text transition-colors">
+        <div className="flex items-center justify-between rounded-2xl border border-dark-border/60 bg-dark-surface2/50 px-3 py-2 text-xs text-dark-muted shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+          <span className="inline-flex items-center gap-1 rounded-full border border-dark-border bg-white/75 px-3 py-1 font-medium">
+            {fichas.length} ficha{fichas.length !== 1 ? 's' : ''} neste período
+          </span>
+          <button onClick={load} className="flex items-center gap-1 rounded-full border border-dark-border bg-white/70 px-3 py-1.5 hover:text-dark-text transition-colors">
             <RefreshCw className="w-3.5 h-3.5" /> Atualizar
           </button>
         </div>
@@ -924,7 +960,8 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
                   colIndex={i}
                   resolverNome={resolverNome}
                   sortOrder={sortOrder}
-                  onToggleSortOrder={() => setSortOrder(prev => (prev === 'recentes' ? 'antigas' : 'recentes'))}
+                  onToggleSortOrder={handleToggleSortOrder}
+                  sortingFeedback={sortingFeedback}
                   resolveImobiliariaInfo={resolveImobiliariaInfo}
                 />
               ))}
@@ -933,7 +970,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
 
           <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
             {activeCard && (
-              <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none', '--kanban-accent': PRODUTO_COLOR[activeCard?.produto] || '#000079', cursor: 'grabbing' }}>
+              <div style={{ width: 'var(--kanban-col-w, 304px)', pointerEvents: 'none', '--kanban-accent': PRODUTO_COLOR[activeCard?.produto] || '#000079', cursor: 'grabbing' }}>
                 <FichaCard ficha={activeCard} isDragOverlay resolverNome={resolverNome} resolveImobiliariaInfo={resolveImobiliariaInfo} />
               </div>
             )}

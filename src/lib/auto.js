@@ -33,6 +33,71 @@ function countBy(items, accessor) {
   }, {})
 }
 
+function normalizeCpf(value) {
+  return String(value ?? '').replace(/\D/g, '')
+}
+
+function isUuid(value) {
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
+async function resolverClienteAutoId(payload = {}) {
+  if (isUuid(payload.cliente_id)) return payload.cliente_id
+
+  const cpf = normalizeCpf(payload.cpf_cliente || payload.cpf)
+  if (!cpf) {
+    throw new Error('CPF do cliente é obrigatório para salvar o registro do seguro auto.')
+  }
+
+  const nomeCompleto = payload.nome_cliente || payload.nome_completo || payload.nome || cpf
+  const celular = payload.celular_cliente || payload.celular || null
+  const email = payload.email_cliente || payload.email || null
+
+  const { data: existente, error: buscarError } = await supabase
+    .from('clientes_auto')
+    .select('*')
+    .eq('cpf', cpf)
+    .maybeSingle()
+
+  if (buscarError) throw buscarError
+
+  if (existente?.id) {
+    const updates = {}
+    if (nomeCompleto && nomeCompleto !== existente.nome_completo) updates.nome_completo = nomeCompleto
+    if (celular && celular !== existente.celular) updates.celular = celular
+    if (email && email !== existente.email) updates.email = email
+    if (payload.estado_civil && payload.estado_civil !== existente.estado_civil) updates.estado_civil = payload.estado_civil
+    if (payload.profissao && payload.profissao !== existente.profissao) updates.profissao = payload.profissao
+
+    if (Object.keys(updates).length) {
+      const { error: updateError } = await supabase
+        .from('clientes_auto')
+        .update(updates)
+        .eq('id', existente.id)
+      if (updateError) throw updateError
+    }
+
+    return existente.id
+  }
+
+  const { data, error } = await supabase
+    .from('clientes_auto')
+    .insert({
+      nome_completo: nomeCompleto,
+      cpf,
+      telefone: payload.telefone || null,
+      celular,
+      email,
+      estado_civil: payload.estado_civil || null,
+      profissao: payload.profissao || null,
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data.id
+}
+
 export function getEmissaoColuna(item) {
   const raw = item?.coluna
   if (typeof raw !== 'string') return 'pendentes'
@@ -100,10 +165,12 @@ export async function getCotacoesAuto({ tipo, status, seguradora, inicio, fim } 
 }
 
 export async function criarCotacaoAuto(payload) {
+  const clienteId = await resolverClienteAutoId(payload)
   const { data, error } = await supabase
     .from('cotacoes_auto')
     .insert({
       ...payload,
+      cliente_id: clienteId,
       tipo: payload.tipo || 'novo',
       status: payload.status || 'pendente',
     })
@@ -197,14 +264,14 @@ async function sincronizarEmissoesPendentes() {
 
   if (!faltantes.length) return
 
-  const payload = faltantes.map(item => ({
+  const payload = await Promise.all(faltantes.map(async item => ({
     cotacao_id: item.id,
-    cliente_id: item.cliente_id,
+    cliente_id: await resolverClienteAutoId(item),
     tipo: item.tipo,
     coluna: null,
     created_at: item.created_at,
     updated_at: item.created_at,
-  }))
+  })))
 
   const { error: insertError } = await supabase
     .from('emissoes_auto')
@@ -252,6 +319,7 @@ export async function salvarResultadoCotacao(id, { resultado, seguradoras_cotada
 
 // Apolices
 export async function emitirApoliceAuto(payload) {
+  const clienteId = await resolverClienteAutoId(payload)
   const premioLiquido = parseFloat(payload.premio_liquido) || 0
   const pctComissao = parseFloat(payload.pct_comissao) || 0
   const valorComissao = premioLiquido * pctComissao
@@ -264,6 +332,7 @@ export async function emitirApoliceAuto(payload) {
     .from('apolices_auto')
     .insert({
       ...payload,
+      cliente_id: clienteId,
       valor_comissao: valorComissao,
       valor_repasse: valorRepasse,
     })
@@ -274,14 +343,13 @@ export async function emitirApoliceAuto(payload) {
 }
 
 export async function criarEmissaoManualAuto(payload) {
+  const clienteId = await resolverClienteAutoId(payload)
   const premioLiquido = parseFloat(payload.premio_liquido) || 0
   const pctComissao = parseFloat(payload.pct_comissao) || 0
   const valorComissao = premioLiquido * pctComissao
   const valorRepasse = payload.tem_repasse && payload.pct_repasse
     ? valorComissao * parseFloat(payload.pct_repasse)
     : null
-
-  const clienteId = payload.cliente_id || `${(payload.cpf_cliente || '').replace(/\D/g, '') || 'manual'}_${new Date().toISOString().split('T')[0]}`
 
   const emissaoPayload = {
     cotacao_id: null,

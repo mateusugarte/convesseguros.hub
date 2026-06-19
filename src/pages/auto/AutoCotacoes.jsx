@@ -159,7 +159,6 @@ export default function AutoCotacoes() {
 
   const { mutateAsync: salvarNovo, isPending: salvandoNovo } = useMutation({
     mutationFn: async payload => criarCotacaoAuto({
-      cliente_id: `${(payload.cpf || '').replace(/\D/g, '')}_${new Date().toISOString().split('T')[0]}`,
       tipo: 'novo',
       status: 'pendente',
       nome_cliente: payload.nome_completo || null,
@@ -185,7 +184,6 @@ export default function AutoCotacoes() {
 
   const { mutateAsync: salvarRenovacao, isPending: salvandoRenovacao } = useMutation({
     mutationFn: async payload => criarCotacaoAuto({
-      cliente_id: `${(payload.cpf || '').replace(/\D/g, '')}_${new Date().toISOString().split('T')[0]}`,
       tipo: 'renovacao',
       status: 'pendente',
       cpf_cliente: payload.cpf || null,

@@ -218,6 +218,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
   })
   const isPJ   = form.produto === 'pessoa_juridica'
   const isPlus = form.produto === 'comercial_pf' || isPJ
+  const seguradoraEscolhida = form.seguradora || ''
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -464,18 +465,32 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
             <p className="eyebrow text-dark-muted mb-3 pb-2 border-b border-dark-border/30">Cotação</p>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {form.cotacoes.map((cotacao, index) => (
-                <div key={cotacao.seguradora} className="rounded-[28px] border border-dark-border bg-white/85 p-4 shadow-[0_18px_38px_rgba(15,23,42,0.08)] backdrop-blur-sm space-y-4">
+                <div
+                  key={cotacao.seguradora}
+                  className={`rounded-[28px] border p-4 shadow-[0_18px_38px_rgba(15,23,42,0.08)] backdrop-blur-sm space-y-4 transition-all ${
+                    cotacao.seguradora === seguradoraEscolhida
+                      ? 'border-brand-accent/55 bg-brand-accent/7 ring-2 ring-brand-accent/12 shadow-[0_22px_46px_rgba(245,88,42,0.14)]'
+                      : 'border-dark-border bg-white/85'
+                  }`}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <SeguradoraBadge nome={cotacao.seguradora} size="xl" showName={false} />
-                    <span className={`text-[10px] uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border whitespace-nowrap ${
-                      cotacao.status === 'aprovado'
-                        ? 'border-status-success/30 text-status-success bg-status-success/10'
-                        : cotacao.status === 'recusado'
-                          ? 'border-status-danger/30 text-status-danger bg-status-danger/10'
-                          : 'border-dark-border text-dark-muted bg-dark-surface'
-                    }`}>
-                      {cotacao.status || 'Sem status'}
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      {cotacao.seguradora === seguradoraEscolhida && (
+                        <span className="text-[9px] uppercase tracking-[0.18em] rounded-full border border-brand-accent/30 bg-brand-accent/10 px-2.5 py-1 text-brand-accent font-semibold">
+                          Escolhida
+                        </span>
+                      )}
+                      <span className={`text-[10px] uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border whitespace-nowrap ${
+                        cotacao.status === 'aprovado'
+                          ? 'border-status-success/30 text-status-success bg-status-success/10'
+                          : cotacao.status === 'recusado'
+                            ? 'border-status-danger/30 text-status-danger bg-status-danger/10'
+                            : 'border-dark-border text-dark-muted bg-dark-surface'
+                      }`}>
+                        {cotacao.status || 'Sem status'}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

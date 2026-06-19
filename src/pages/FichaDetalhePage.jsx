@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { fetchFichaDetalhe, editarFicha, deletarFicha, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
+import { fetchFichaDetalhe, editarFicha, deletarFicha, salvarRetornoGeradoFicha, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useToast } from '../contexts/ToastContext'
@@ -380,6 +380,16 @@ export default function FichaDetalhePage() {
     () => normalizarCotacoes(ficha?.raw_data?.cotacoes, ficha?.produto),
     [ficha?.raw_data?.cotacoes, ficha?.produto]
   )
+  const retornoSalvo = ficha?.raw_data?.retorno_gerado || null
+  const mensagemExibida = mensagemGerada || retornoSalvo?.texto || ''
+  const cotacoesSnapshotSalvas = Array.isArray(retornoSalvo?.cotacoes_snapshot) ? retornoSalvo.cotacoes_snapshot : []
+  const seguradoraEscolhida = ficha?.seguradora || retornoSalvo?.seguradora_escolhida || ''
+
+  useEffect(() => {
+    if (!retornoSalvo) return
+    if (!mensagemGerada && retornoSalvo.texto) setMensagemGerada(retornoSalvo.texto)
+    if (!biometriaUrl && retornoSalvo.biometria_url) setBiometriaUrl(retornoSalvo.biometria_url)
+  }, [retornoSalvo, mensagemGerada, biometriaUrl])
 
   async function updateField(field, value) {
     const prev = ficha
@@ -403,6 +413,7 @@ export default function FichaDetalhePage() {
     } else {
       toast({ type: 'success', title: 'Campo atualizado' })
     }
+    return err
   }
 
   async function updateCotacao(seguradora, field, value) {
@@ -453,18 +464,52 @@ export default function FichaDetalhePage() {
   const canAssumir  = !ficha.assumida && ficha.status === 'pendente'
   const canFinalizar = isMe && ficha.status === 'em_cotacao'
   const nomePrincipal = isPJ ? (ficha.nome_empresa || ficha.nome_interessado || 'Sem nome') : (ficha.nome_interessado || 'Sem nome')
+  const cotacoesAprovadas = cotacoesNormalizadas.filter(c => c.status === 'aprovado').length
+  const cotacoesRecusadas = cotacoesNormalizadas.filter(c => c.status === 'recusado').length
+  const cotacoesPendentes = cotacoesNormalizadas.filter(c => !c.status).length
+  const resumoCotacoesSalvas = cotacoesSnapshotSalvas.length ? cotacoesSnapshotSalvas : cotacoesNormalizadas
 
   async function handleGerarMensagemRetorno() {
     const data = buildCotacaoMessageData(ficha, cotacoesNormalizadas, biometriaUrl)
     const texto = `${data.title}\n\n${data.body}`.trim()
+    const err = await salvarRetornoGeradoFicha(id, {
+      texto,
+      biometria_url: biometriaUrl,
+      gerado_em: new Date().toISOString(),
+      seguradora_escolhida: data.seguradoraEscolhida,
+      status: data.status,
+      cotacoes_snapshot: cotacoesNormalizadas,
+    }, user?.id)
+    if (err) {
+      toast({ type: 'error', title: 'Erro ao salvar retorno' })
+      return
+    }
+    setFicha(prev => prev ? {
+      ...prev,
+      seguradora: data.seguradoraEscolhida || prev.seguradora || '',
+      raw_data: {
+        ...(prev.raw_data || {}),
+        retorno_gerado: {
+          texto,
+          biometria_url: biometriaUrl,
+          gerado_em: new Date().toISOString(),
+          seguradora_escolhida: data.seguradoraEscolhida,
+          status: data.status,
+          cotacoes_snapshot: cotacoesNormalizadas,
+        },
+      },
+    } : prev)
+    if (data.seguradoraEscolhida && ficha?.seguradora !== data.seguradoraEscolhida) {
+      await editarFicha(id, { seguradora: data.seguradoraEscolhida }, user?.id)
+    }
     setMensagemGerada(texto)
-    toast({ type: 'success', title: 'Mensagem gerada' })
+    toast({ type: 'success', title: 'Mensagem gerada e salva' })
   }
 
   async function handleCopiarMensagemRetorno() {
     try {
       setCopiandoMensagem(true)
-      await navigator.clipboard.writeText(mensagemGerada || '')
+      await navigator.clipboard.writeText(mensagemExibida || '')
       toast({ type: 'success', title: 'Mensagem copiada' })
     } catch (error) {
       toast({ type: 'error', title: 'Erro ao copiar mensagem', message: error?.message })
@@ -727,6 +772,11 @@ export default function FichaDetalhePage() {
                   <p className="mt-1 text-lg font-semibold text-dark-text">{cotacoesNormalizadas.length}</p>
                 </div>
               </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="badge badge-success">Aprovadas: {cotacoesAprovadas}</span>
+                <span className="badge badge-danger">Recusadas: {cotacoesRecusadas}</span>
+                <span className="badge badge-warning">Pendentes: {cotacoesPendentes}</span>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -736,13 +786,24 @@ export default function FichaDetalhePage() {
                   : cotacao.status === 'recusado'
                     ? 'border-status-danger/30 text-status-danger bg-status-danger/10'
                     : 'border-dark-border text-dark-muted bg-dark-surface'
+                const isEscolhida = seguradoraEscolhida && cotacao.seguradora === seguradoraEscolhida
 
                 return (
-                  <div key={cotacao.seguradora} className="rounded-[28px] border border-dark-border bg-white/90 p-4 shadow-[0_18px_38px_rgba(15,23,42,0.08)] backdrop-blur-sm space-y-4">
+                  <div
+                    key={cotacao.seguradora}
+                    className={`rounded-[28px] border p-4 shadow-[0_18px_38px_rgba(15,23,42,0.08)] backdrop-blur-sm space-y-4 transition-all ${isEscolhida ? 'border-brand-accent/55 bg-brand-accent/7 ring-2 ring-brand-accent/12 shadow-[0_22px_46px_rgba(245,88,42,0.14)]' : 'border-dark-border bg-white/90'}`}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <SeguradoraBadge nome={cotacao.seguradora} size="xl" showName={false} />
-                      <div className={`text-[10px] uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border whitespace-nowrap ${statusTone}`}>
-                        {cotacao.status || 'Sem status'}
+                      <div className="flex flex-col items-end gap-1">
+                        {isEscolhida && (
+                          <span className="text-[9px] uppercase tracking-[0.18em] rounded-full border border-brand-accent/30 bg-brand-accent/10 px-2.5 py-1 text-brand-accent font-semibold">
+                            Escolhida
+                          </span>
+                        )}
+                        <div className={`text-[10px] uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border whitespace-nowrap ${statusTone}`}>
+                          {cotacao.status || 'Sem status'}
+                        </div>
                       </div>
                     </div>
 
@@ -827,7 +888,7 @@ export default function FichaDetalhePage() {
             cpfCnpj={ficha.cpf || ficha.cnpj}
           />
 
-                    <DataCard
+          <DataCard
             title="Mensagem de retorno"
             actions={(
               <>
@@ -850,9 +911,16 @@ export default function FichaDetalhePage() {
             )}
             bodyClassName="space-y-4"
           >
-            <p className="text-xs text-dark-muted">
-              Clique em gerar para montar a mensagem com os dados atuais da ficha. Depois cole o link de biometria e copie o texto pronto.
-            </p>
+            <div className="rounded-2xl border border-brand-accent/20 bg-brand-accent/5 px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-accent">
+                {retornoSalvo?.texto ? 'Última mensagem salva' : 'Mensagem pronta para gerar'}
+              </p>
+              <p className="mt-1 text-xs text-dark-muted">
+                {retornoSalvo?.texto
+                  ? `A ficha mantém o texto gerado, o link de biometria e as cotações usadas na última geração${retornoSalvo?.gerado_em ? ` · ${fmtDt(retornoSalvo.gerado_em)}` : ''}.`
+                  : 'Clique em gerar para salvar a mensagem dentro da ficha e manter o retorno sempre disponível.'}
+              </p>
+            </div>
 
             <div>
               <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">
@@ -869,24 +937,78 @@ export default function FichaDetalhePage() {
               </div>
             </div>
 
-            <div className="rounded-[28px] border border-dark-border/70 bg-dark-surface2/30 p-4">
+            <div className="rounded-[28px] border border-dark-border/70 bg-dark-surface2/30 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-accent">
-                    {mensagemGerada ? 'Mensagem gerada' : 'Aguardando geração'}
+                    {mensagemExibida ? 'Mensagem gerada' : 'Aguardando geração'}
                   </p>
                   <p className="mt-1 text-xs text-dark-muted">
-                    {mensagemGerada ? 'O texto abaixo pode ser copiado e enviado.' : 'A mensagem será montada ao clicar no botão acima.'}
+                    {mensagemExibida
+                      ? `O texto abaixo pode ser copiado e enviado${retornoSalvo?.gerado_em ? ` · salvo em ${fmtDt(retornoSalvo.gerado_em)}` : ''}.`
+                      : 'A mensagem será montada ao clicar no botão acima.'}
                   </p>
                 </div>
+                {retornoSalvo?.status && (
+                  <span className={`badge ${retornoSalvo.status === 'aprovado' ? 'badge-success' : retornoSalvo.status === 'recusado' ? 'badge-danger' : 'badge-warning'}`}>
+                    {retornoSalvo.status}
+                  </span>
+                )}
               </div>
               <textarea
                 readOnly
-                value={mensagemGerada}
+                value={mensagemExibida}
                 rows={16}
+                placeholder="A mensagem gerada aparecerá aqui."
                 className="w-full resize-none rounded-2xl border border-dark-border bg-dark-surface px-4 py-3 font-mono text-[12px] leading-5 text-dark-text outline-none"
               />
             </div>
+
+            {!!resumoCotacoesSalvas.length && (
+              <div className="rounded-[28px] border border-dark-border/70 bg-white/60 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">
+                      Cotações usadas
+                    </p>
+                    <p className="mt-1 text-xs text-dark-muted">
+                      {retornoSalvo?.seguradora_escolhida
+                        ? `A última geração foi vinculada à seguradora ${normalizeDisplayText(retornoSalvo.seguradora_escolhida).toUpperCase()}.`
+                        : 'Confira abaixo o conjunto salvo na última geração.'}
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                  {resumoCotacoesSalvas.map(cotacao => (
+                    <div
+                      key={`snapshot-${cotacao.seguradora}`}
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-dark-border bg-dark-surface px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-dark-text">
+                          {normalizeDisplayText(cotacao.seguradora).toUpperCase()}
+                        </p>
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-dark-muted">
+                          {cotacao.status || 'sem status'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-dark-text">
+                          {cotacao.status === 'recusado'
+                            ? 'Recusado'
+                            : cotacao.status === 'aprovado'
+                              ? `${cotacao.parcelamento || '—'}x · ${cotacao.valor_parcela != null && cotacao.valor_parcela !== '' ? formatMoney(cotacao.valor_parcela) : '—'}`
+                              : 'Pendente'}
+                        </p>
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-dark-muted">
+                          comissão {ficha.pct_comissao != null && ficha.pct_comissao !== '' ? `${ficha.pct_comissao}%` : '—'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </DataCard>
         </div>
       </div>

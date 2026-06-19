@@ -11,7 +11,7 @@ import { findSeguradoraMetaByNome } from '../lib/seguradoras'
 import { useTheme } from '../contexts/ThemeContext'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  AreaChart, Area, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Cell,
 } from 'recharts'
 import { format, parseISO } from 'date-fns'
@@ -202,6 +202,26 @@ export default function ApolicesDashboard() {
         description={`Leitura consolidada da operação em ${mesLabel}. Acompanhe volume, concentração por seguradora e as imobiliárias mais ativas sem sair do fluxo.`}
         actions={(
           <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={String(ano)}
+              onChange={v => setAno(Number(v))}
+              options={[agora.getFullYear(), agora.getFullYear() - 1].map(a => ({ value: String(a), label: String(a) }))}
+              className="w-24"
+            />
+            <div className="flex items-center gap-1 flex-wrap">
+              {MESES_ABBR.map((label, i) => (
+                <button
+                  key={i}
+                  onClick={() => setMes(i + 1)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                    mes === i + 1 ? 'bg-brand-secondary text-white shadow-sm' : 'text-dark-text hover:bg-dark-surface2'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="h-6 w-px bg-dark-border/50" />
             <button
               onClick={() => navigate('/apolices/gestao')}
               className="flex items-center gap-1.5 rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted transition-colors hover:border-brand-accent/50 hover:text-dark-text"
@@ -257,43 +277,24 @@ export default function ApolicesDashboard() {
         )}
       />
 
-      <DataCard title="Período" subtitle="Filtra os gráficos do dashboard por ano e mês." bodyClassName="space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <Select
-            value={String(ano)}
-            onChange={v => setAno(Number(v))}
-            options={[agora.getFullYear(), agora.getFullYear() - 1].map(a => ({ value: String(a), label: String(a) }))}
-            className="w-24"
-          />
-          <div className="flex items-center gap-1 flex-wrap">
-            {MESES_ABBR.map((label, i) => (
-              <button
-                key={i}
-                onClick={() => setMes(i + 1)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                  mes === i + 1 ? 'bg-brand-secondary text-white shadow-sm' : 'text-dark-text hover:bg-dark-surface2'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </DataCard>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <DataCard title={`Apólices por dia — ${mesLabel}`} bodyClassName="lg:col-span-2">
+        <DataCard
+          className="lg:col-span-2"
+          title={`Apólices por dia — ${mesLabel}`}
+          subtitle="Volume diário emitido no período selecionado."
+        >
           {loading ? (
-            <div className="h-[140px] flex items-center justify-center text-dark-muted text-sm">Carregando...</div>
+            <div className="h-[240px] flex items-center justify-center text-dark-muted text-sm">Carregando...</div>
           ) : porDia.length > 0 && porDia.some(d => d.total > 0) ? (
-            <ResponsiveContainer width="100%" height={140}>
-              <AreaChart data={porDia} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={porDia} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gradApolice" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={BRAND.primary} stopOpacity={0.4} />
                     <stop offset="95%" stopColor={BRAND.primary} stopOpacity={0} />
                   </linearGradient>
                 </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS[theme].grid} />
                 <XAxis
                   dataKey="dia"
                   tick={{ fontSize: 11, fill: CHART_COLORS[theme].tick }}
@@ -301,19 +302,37 @@ export default function ApolicesDashboard() {
                   axisLine={false}
                   tickLine={false}
                 />
+                <YAxis
+                  tick={{ fontSize: 11, fill: CHART_COLORS[theme].tick }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
                 <Tooltip content={<DarkTip />} />
-                <Area type="monotone" dataKey="total" name="Apólices" stroke={BRAND.primary} fill="url(#gradApolice)" strokeWidth={2} dot={false} />
+                <Area
+                  type="monotone"
+                  dataKey="total"
+                  name="Apólices"
+                  stroke={BRAND.primary}
+                  fill="url(#gradApolice)"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  dot={false}
+                  activeDot={{ r: 4, strokeWidth: 0 }}
+                />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[140px] flex items-center justify-center text-dark-muted text-sm">
-              Nenhuma apólice emitida em {mesLabel}
+            <div className="h-[240px] flex flex-col items-center justify-center gap-2 text-dark-muted">
+              <FileCheck className="w-8 h-8 opacity-30" />
+              <p className="text-sm">Nenhuma apólice emitida em {mesLabel}</p>
             </div>
           )}
         </DataCard>
 
         <DataCard
           title="Produção por Seguradora"
+          subtitle="Prêmio total emitido no período."
           actions={(
             <div className="flex items-center gap-0.5">
               {FILTRO_SEG.map(f => (
@@ -331,8 +350,9 @@ export default function ApolicesDashboard() {
           )}
         >
           {producaoSeg.length > 0 ? (
-            <ResponsiveContainer width="100%" height={190}>
-              <BarChart data={producaoSeg} margin={{ top: 8, right: 4, left: -8, bottom: 48 }}>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={producaoSeg} margin={{ top: 8, right: 4, left: -8, bottom: 52 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS[theme].grid} />
                 <XAxis
                   dataKey="seguradora"
                   tick={(props) => <LogoTick {...props} logos={segLogos} />}
@@ -345,10 +365,10 @@ export default function ApolicesDashboard() {
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)}
-                  width={36}
+                  width={38}
                 />
                 <Tooltip content={<SegTip />} />
-                <Bar dataKey="value" radius={[5, 5, 0, 0]} maxBarSize={52}>
+                <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={52}>
                   {producaoSeg.map((entry, i) => (
                     <Cell key={i} fill={SEG_COLORS[entry.seguradora] || BRAND.primary} />
                   ))}
@@ -356,7 +376,7 @@ export default function ApolicesDashboard() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[120px] flex items-center justify-center text-dark-muted text-sm">Sem dados</div>
+            <div className="h-[200px] flex items-center justify-center text-dark-muted text-sm">Sem dados</div>
           )}
         </DataCard>
       </div>
@@ -364,20 +384,47 @@ export default function ApolicesDashboard() {
       <DataCard title={`Top 5 Imobiliárias — ${mesLabel}`} subtitle="Ranking por volume emitido no período.">
         {topImob.length === 0 ? (
           <p className="text-sm text-dark-muted">Sem dados para o período</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={topImob.length * 40 + 20}>
-            <BarChart
-              data={topImob.map(t => ({ ...t, nome: resolverNome(t.nome) || t.nome }))}
-              layout="vertical"
-              margin={{ top: 0, right: 40, left: 0, bottom: 0 }}
-            >
-              <XAxis type="number" tick={{ fontSize: 11, fill: CHART_COLORS[theme].tick }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="nome" tick={{ fontSize: 11, fill: CHART_COLORS[theme].tick }} width={130} axisLine={false} tickLine={false} />
-              <Tooltip formatter={(v) => [v, 'Apólices']} contentStyle={tooltipStyle(theme)} />
-              <Bar dataKey="total" fill={BRAND.primary} radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
+        ) : (() => {
+          const maxTotal = Math.max(...topImob.map(t => t.total), 1)
+          const RANK_COLORS = [BRAND.primary, '#2247aa', '#4b6cc2', '#7fbec4', '#a2d6da']
+          return (
+            <div className="space-y-3">
+              {topImob.map((item, index) => {
+                const nome = resolverNome(item.nome) || item.nome
+                const pct = Math.round((item.total / maxTotal) * 100)
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => navigate('/apolices/lista')}
+                    className="w-full rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-brand-accent/30 hover:shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black text-white flex-shrink-0"
+                        style={{ background: RANK_COLORS[index] ?? BRAND.primary }}
+                      >
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <p className="text-sm font-semibold text-dark-text truncate">{nome}</p>
+                          <span className="text-sm font-bold text-dark-text flex-shrink-0">{item.total}</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-dark-border/40">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${pct}%`, background: RANK_COLORS[index] ?? BRAND.primary }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )
+        })()}
       </DataCard>
     </div>
   )

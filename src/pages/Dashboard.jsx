@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, CartesianGrid, Cell,
@@ -19,7 +20,7 @@ import { DashboardSkeleton } from '../components/Skeleton'
 import {
   Activity, AlertTriangle, ArrowRight, BarChart3, BellRing, CalendarDays,
   CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Clock3,
-  Crown, ShieldCheck, Sparkles, Target, TrendingUp, Users, Zap,
+  Crown, ExternalLink, RefreshCw, ShieldCheck, Sparkles, Target, TrendingUp, Users, Zap,
 } from 'lucide-react'
 import {
   DataCard,
@@ -105,8 +106,9 @@ function buildAlerts({ kpis, metricas, minhasFichas, topImob }) {
     alerts.push({
       id: 'sem-resposta',
       tone: 'warning',
-      title: 'Pendencias acima de 48h',
+      title: 'Pendências acima de 48h',
       description: `${metricas.semResposta} ficha(s) aguardando retorno sem resposta recente.`,
+      action: { label: 'Ver fichas', href: '/fichas' },
     })
   }
 
@@ -115,7 +117,8 @@ function buildAlerts({ kpis, metricas, minhasFichas, topImob }) {
       id: 'backlog',
       tone: 'danger',
       title: 'Backlog operacional elevado',
-      description: `${kpis.emAberto} fichas em aberto demandando triagem ou conclusao.`,
+      description: `${kpis.emAberto} fichas em aberto demandando triagem ou conclusão.`,
+      action: { label: 'Abrir fichas', href: '/fichas' },
     })
   }
 
@@ -125,7 +128,8 @@ function buildAlerts({ kpis, metricas, minhasFichas, topImob }) {
       id: 'minhas-atrasadas',
       tone: 'warning',
       title: 'Carteira pessoal envelhecendo',
-      description: `${overdueMine.length} ficha(s) em cotacao com 24h ou mais.`,
+      description: `${overdueMine.length} ficha(s) em cotação com 24h ou mais.`,
+      action: { label: 'Minha carteira', href: '/minhas-fichas' },
     })
   }
 
@@ -133,8 +137,8 @@ function buildAlerts({ kpis, metricas, minhasFichas, topImob }) {
     alerts.push({
       id: 'sem-aprovacoes',
       tone: 'neutral',
-      title: 'Sem destaques no periodo',
-      description: 'Ainda nao ha aprovacoes suficientes para ranquear imobiliarias neste recorte.',
+      title: 'Sem destaques no período',
+      description: 'Ainda não há aprovações suficientes para ranquear imobiliárias neste recorte.',
     })
   }
 
@@ -142,8 +146,8 @@ function buildAlerts({ kpis, metricas, minhasFichas, topImob }) {
     alerts.push({
       id: 'all-clear',
       tone: 'success',
-      title: 'Operacao sob controle',
-      description: 'Nao ha alertas criticos neste momento. O fluxo segue dentro do esperado.',
+      title: 'Operação sob controle',
+      description: 'Não há alertas críticos neste momento. O fluxo segue dentro do esperado.',
     })
   }
 
@@ -269,23 +273,27 @@ function ApprovalSegTooltip({ active, payload }) {
   )
 }
 
-function AlertCard({ alert }) {
+function AlertCard({ alert, onNavigate }) {
   const tones = {
     success: {
       icon: <ShieldCheck className="w-4 h-4 text-status-success" />,
       shell: 'border-status-success/20 bg-status-success/6',
+      actionClass: 'text-status-success hover:underline',
     },
     warning: {
       icon: <AlertTriangle className="w-4 h-4 text-status-warning" />,
       shell: 'border-status-warning/20 bg-status-warning/6',
+      actionClass: 'text-status-warning hover:underline',
     },
     danger: {
       icon: <CircleAlert className="w-4 h-4 text-status-danger" />,
       shell: 'border-status-danger/20 bg-status-danger/6',
+      actionClass: 'text-status-danger hover:underline',
     },
     neutral: {
       icon: <BellRing className="w-4 h-4 text-brand-secondary" />,
       shell: 'border-dark-border/70 bg-dark-surface2/40',
+      actionClass: 'text-brand-accent hover:underline',
     },
   }
 
@@ -297,9 +305,18 @@ function AlertCard({ alert }) {
         <div className="w-9 h-9 rounded-2xl border border-white/20 bg-white/50 flex items-center justify-center flex-shrink-0">
           {tone.icon}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-dark-text">{alert.title}</p>
           <p className="mt-1 text-xs leading-relaxed text-dark-muted">{alert.description}</p>
+          {alert.action && (
+            <button
+              type="button"
+              onClick={() => onNavigate?.(alert.action.href)}
+              className={`mt-2 inline-flex items-center gap-1 text-[11px] font-semibold ${tone.actionClass}`}
+            >
+              {alert.action.label} <ArrowRight className="w-3 h-3" />
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -309,6 +326,7 @@ function AlertCard({ alert }) {
 export default function Dashboard() {
   const { user } = useAuth()
   const { theme } = useTheme()
+  const navigate = useNavigate()
   const [finalizar, setFinalizar] = useState(null)
 
   const now = new Date()
@@ -470,8 +488,17 @@ export default function Dashboard() {
         actions={(
           <div className="flex flex-wrap items-center gap-2">
             <div className="rounded-2xl border border-dark-border/70 bg-white/50 px-3 py-2 text-xs text-dark-muted">
-              Atualizado em {format(new Date(), "dd/MM 'as' HH:mm", { locale: ptBR })}
+              Atualizado em {format(new Date(), "dd/MM 'às' HH:mm", { locale: ptBR })}
             </div>
+            <button
+              type="button"
+              onClick={() => query.refetch()}
+              disabled={query.isFetching}
+              className="rounded-2xl border border-dark-border/70 bg-white/50 p-2 text-dark-muted transition-colors hover:border-brand-accent/40 hover:text-brand-accent disabled:opacity-50"
+              title="Atualizar dados"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${query.isFetching ? 'animate-spin' : ''}`} />
+            </button>
           </div>
         )}
       >
@@ -496,8 +523,8 @@ export default function Dashboard() {
       <div className="grid gap-6 xl:grid-cols-12">
         <DataCard
           className="xl:col-span-8 overflow-hidden"
-          title="Main Analytics"
-          subtitle="Fichas recebidas nos ultimos 30 dias com leitura paralela de aprovacoes e recusas."
+          title="Analytics de fichas"
+          subtitle="Fichas recebidas nos últimos 30 dias com leitura paralela de aprovações e recusas."
           actions={<div className="ops-kicker">30 dias</div>}
         >
           {byDay.length === 0 ? (
@@ -568,12 +595,12 @@ export default function Dashboard() {
 
         <DataCard
           className="xl:col-span-4"
-          title="Alerts"
-          subtitle="O que pede atencao imediata na operacao."
+          title="Alertas operacionais"
+          subtitle="O que pede atenção imediata na operação."
           actions={<div className="ops-kicker">Prioridades</div>}
         >
           <div className="space-y-3">
-            {alerts.map(alert => <AlertCard key={alert.id} alert={alert} />)}
+            {alerts.map(alert => <AlertCard key={alert.id} alert={alert} onNavigate={navigate} />)}
           </div>
         </DataCard>
       </div>
@@ -653,8 +680,8 @@ export default function Dashboard() {
       <div className="grid gap-6 xl:grid-cols-12">
         <DataCard
           className="xl:col-span-5"
-          title="Hero Metrics"
-          subtitle="Resumo executivo do que esta sendo entregue agora."
+          title="Métricas principais"
+          subtitle="Resumo executivo do que está sendo entregue agora."
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
@@ -682,8 +709,8 @@ export default function Dashboard() {
 
         <DataCard
           className="xl:col-span-4"
-          title="Production Breakdown"
-          subtitle="Comparativo por produto no mes atual."
+          title="Produção por produto"
+          subtitle="Comparativo por produto no mês atual."
         >
           {byProduct.every(item => item.total === 0) ? (
             <EmptyState title="Sem producao neste mes" description="Ainda nao houve fichas suficientes para montar o comparativo por produto." icon={<Target className="w-6 h-6" />} />
@@ -706,8 +733,8 @@ export default function Dashboard() {
 
         <DataCard
           className="xl:col-span-3"
-          title="Status Mix"
-          subtitle="Distribuicao das fichas no periodo selecionado."
+          title="Distribuição de status"
+          subtitle="Distribuição das fichas no período selecionado."
         >
           {distribution.length === 0 ? (
             <EmptyState title="Sem distribuicao disponivel" description="Nao ha fichas suficientes para distribuir status neste periodo." icon={<Sparkles className="w-6 h-6" />} />
@@ -742,8 +769,8 @@ export default function Dashboard() {
       <div className="grid gap-6 xl:grid-cols-12">
         <DataCard
           className="xl:col-span-5"
-          title="Imobiliarias Destaque"
-          subtitle="Aprovacoes concentradas no periodo selecionado."
+          title="Imobiliárias em destaque"
+          subtitle="Aprovações concentradas no período selecionado."
           actions={<div className="ops-kicker">Top 5</div>}
         >
           {topImob.length === 0 ? (
@@ -773,11 +800,20 @@ export default function Dashboard() {
 
         <DataCard
           className="xl:col-span-7"
-          title="Recent Activity"
-          subtitle="Ultimas movimentacoes registradas no fluxo operacional."
+          title="Atividade recente"
+          subtitle="Últimas movimentações registradas no fluxo operacional."
+          actions={(
+            <button
+              type="button"
+              onClick={() => navigate('/fichas')}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-accent hover:underline"
+            >
+              Ver todas <ExternalLink className="w-3 h-3" />
+            </button>
+          )}
         >
           {activity.length === 0 ? (
-            <EmptyState title="Sem atividade recente" description="Assim que novas fichas entrarem ou mudarem de etapa, elas aparecerao aqui." icon={<Activity className="w-6 h-6" />} />
+            <EmptyState title="Sem atividade recente" description="Assim que novas fichas entrarem ou mudarem de etapa, elas aparecerão aqui." icon={<Activity className="w-6 h-6" />} />
           ) : (
             <div className="space-y-2">
               {activity.map(item => {
@@ -786,7 +822,12 @@ export default function Dashboard() {
                 const owner = item.profiles?.nome || 'Livre'
 
                 return (
-                  <div key={item.id} className="rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-4 py-3">
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => navigate(`/fichas/${item.id}`)}
+                    className="w-full rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-brand-accent/30 hover:shadow-sm"
+                  >
                     <div className="flex items-center gap-3">
                       <div
                         className="w-10 h-10 rounded-2xl flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0"
@@ -800,7 +841,7 @@ export default function Dashboard() {
                           <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${chip.className}`}>{chip.label}</span>
                         </div>
                         <p className="mt-1 text-xs text-dark-muted truncate">
-                          {item.imobiliaria || 'Sem imobiliaria'} · {PRODUTO_LABELS[item.produto] || item.produto} · {owner}
+                          {item.imobiliaria || 'Sem imobiliária'} · {PRODUTO_LABELS[item.produto] || item.produto} · {owner}
                         </p>
                       </div>
                       <div className="text-right flex-shrink-0">
@@ -812,7 +853,7 @@ export default function Dashboard() {
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 )
               })}
             </div>
@@ -823,8 +864,8 @@ export default function Dashboard() {
       <div className="grid gap-6 xl:grid-cols-12">
         <DataCard
           className="xl:col-span-5"
-          title="User Ranking"
-          subtitle="Ranking recente derivado das ultimas 10 movimentacoes registradas."
+          title="Ranking da equipe"
+          subtitle="Ranking recente derivado das últimas 10 movimentações registradas."
           actions={<div className="ops-kicker">Recente</div>}
         >
           {teamRanking.length === 0 ? (
@@ -856,30 +897,43 @@ export default function Dashboard() {
 
         <DataCard
           className="xl:col-span-7"
-          title="Upcoming Deadlines"
-          subtitle="Fila prioritaria das fichas em cotacao mais envelhecidas."
+          title="Fila de cotações"
+          subtitle="Fichas em cotação sob sua responsabilidade, priorizadas por idade."
+          actions={(
+            <button
+              type="button"
+              onClick={() => navigate('/minhas-fichas')}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-accent hover:underline"
+            >
+              Minha carteira <ExternalLink className="w-3 h-3" />
+            </button>
+          )}
         >
           {upcomingDeadlines.length === 0 ? (
-            <EmptyState title="Nenhuma ficha em cotacao" description="Quando houver fichas sob responsabilidade do usuario, elas serao priorizadas aqui." icon={<Clock3 className="w-6 h-6" />} />
+            <EmptyState title="Nenhuma ficha em cotação" description="Quando houver fichas sob sua responsabilidade, elas serão priorizadas aqui." icon={<Clock3 className="w-6 h-6" />} />
           ) : (
             <div className="space-y-3">
               {upcomingDeadlines.map(item => {
                 const since = item.assumida_em || item.created_at
                 const chip = timeChip(since)
-                const owner = item.profiles?.nome || 'Sem responsavel'
+                const owner = item.profiles?.nome || 'Sem responsável'
 
                 return (
                   <div key={item.id} className="rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-4 py-3">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-                      <div className="flex-1 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/fichas/${item.id}`)}
+                        className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
+                      >
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-semibold text-dark-text truncate">{item.nome_interessado || 'Sem nome'}</p>
                           <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${chip.className}`}>{chip.label}</span>
                         </div>
                         <p className="mt-1 text-xs text-dark-muted truncate">
-                          {item.imobiliaria || 'Sem imobiliaria'} · {item.seguradora || 'Seguradora pendente'} · {owner}
+                          {item.imobiliaria || 'Sem imobiliária'} · {item.seguradora || 'Seguradora pendente'} · {owner}
                         </p>
-                      </div>
+                      </button>
                       <div className="flex items-center gap-2">
                         <div className="rounded-2xl border border-dark-border/70 bg-white/60 px-3 py-2 text-right">
                           <p className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">Assumida</p>
@@ -902,7 +956,7 @@ export default function Dashboard() {
         </DataCard>
       </div>
 
-      <DataCard title="Operational Metrics" subtitle="Leituras de eficiencia para acompanhar ritmo, backlog e resultado.">
+      <DataCard title="Métricas operacionais" subtitle="Leituras de eficiência para acompanhar ritmo, backlog e resultado.">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
             <div className="flex items-center justify-between gap-3">

@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { finalizarFicha } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
-import { CheckCircle2, ArrowLeft } from 'lucide-react'
+import { CheckCircle2, ArrowLeft, ShieldCheck } from 'lucide-react'
 import SeguradoraSelect from './SeguradoraSelect'
 
 const STATUS_FINAIS = [
@@ -17,18 +17,27 @@ const STATUS_FINAIS = [
 export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSuccess }) {
   const { user } = useAuth()
   const [status,    setStatus]    = useState(defaultStatus || '')
-  const [seguradora,setSeguradora]= useState(ficha?.seguradora ?? '')
+  const seguradoraDefinida = ficha?.seguradora || ficha?.raw_data?.retorno_gerado?.seguradora_escolhida || ''
+  const [seguradora,setSeguradora]= useState(seguradoraDefinida)
   const [retorno,   setRetorno]   = useState(ficha?.retorno_enviado ?? false)
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState('')
 
+  useEffect(() => {
+    setSeguradora(seguradoraDefinida)
+  }, [seguradoraDefinida])
+
   async function handleFinalizar() {
     if (!status) { setError('Selecione o status final.'); return }
+    if (!seguradoraDefinida && !seguradora.trim()) {
+      setError('Selecione a seguradora final.')
+      return
+    }
     setLoading(true)
     setError('')
     const err = await finalizarFicha(ficha.id, {
       status,
-      seguradora: seguradora.trim() || null,
+      seguradora: (seguradoraDefinida || seguradora).trim() || null,
       retorno_enviado: retorno,
       userId: user?.id,
     })
@@ -85,7 +94,17 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
           {/* Seguradora */}
           <div>
             <label className="block text-xs font-medium text-dark-muted mb-1.5 uppercase tracking-wider">Seguradora</label>
-            <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={ficha?.produto} />
+            {seguradoraDefinida ? (
+              <div className="rounded-2xl border border-brand-accent/20 bg-brand-accent/5 px-4 py-3">
+                <div className="flex items-center gap-2 text-brand-accent">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">Seguradora já definida</span>
+                </div>
+                <p className="mt-1 text-sm font-semibold text-dark-text">{seguradoraDefinida}</p>
+              </div>
+            ) : (
+              <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={ficha?.produto} required />
+            )}
           </div>
 
           {/* Retorno */}

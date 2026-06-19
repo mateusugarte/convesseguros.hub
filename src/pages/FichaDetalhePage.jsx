@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { fetchFichaDetalhe, editarFicha, deletarFicha, salvarRetornoGeradoFicha, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
+import { fetchFichaDetalhe, editarFicha, deletarFicha, salvarRetornoGeradoFicha, limparRetornoGeradoFicha, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useToast } from '../contexts/ToastContext'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ArrowLeft, Pencil, Trash2, Check, X, CalendarDays, Building2, UserRound, Clock3, Copy, FileText, Link as LinkIcon, Loader2 } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, Check, CheckCircle2, CircleDot, X, CalendarDays, Building2, UserRound, Clock3, Copy, FileText, Link as LinkIcon, Loader2 } from 'lucide-react'
 import { PageHeader, MetricCard, DataCard } from '../components/ui'
 import { Avatar } from '../components/ui'
 import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
@@ -182,6 +182,7 @@ const COTACAO_STATUS_OPTIONS = [
   { value: 'em_analise', label: 'Em análise' },
   { value: 'aprovado', label: 'Aprovado' },
   { value: 'recusado', label: 'Recusado' },
+  { value: 'sem_cadastro', label: 'Sem cadastro' },
 ]
 
 const COTACAO_SEGURADORAS_BASE = [
@@ -239,6 +240,10 @@ function buildCotacaoMessageData(ficha, cotacoes = [], biometriaUrl = '') {
     const cotacao = cotacoes.find(c => c.seguradora === seguradora) || { seguradora, status: '' }
     const nomeSeguradora = normalizeDisplayText(cotacao.seguradora || seguradora).toUpperCase()
 
+    if (cotacao.status === 'sem_cadastro') {
+      return null
+    }
+
     if (cotacao.status === 'recusado') {
       return `_*${nomeSeguradora}*_ -- RECUSADO`
     }
@@ -280,7 +285,7 @@ function buildCotacaoMessageData(ficha, cotacoes = [], biometriaUrl = '') {
       body: [
         `_*${nomeLocatario}*_`,
         '',
-        ...linhas.filter(line => !line.endsWith('PENDENTE')),
+        ...linhas.filter(line => line && !line.endsWith('PENDENTE')),
       ].join('\n'),
       status: 'recusado',
       seguradoraEscolhida: '',
@@ -295,7 +300,7 @@ function buildCotacaoMessageData(ficha, cotacoes = [], biometriaUrl = '') {
       body: [
         `_*${nomeLocatario}*_`,
         '',
-        ...linhas,
+        ...linhas.filter(Boolean),
         '',
         '_Aguardamos a realização da biometria facial para obtenção da aprovação._',
         '----------------------------------',
@@ -316,7 +321,7 @@ function buildCotacaoMessageData(ficha, cotacoes = [], biometriaUrl = '') {
     body: [
       `_*${nomeLocatario}*_`,
       '',
-      ...linhas.filter(line => !line.endsWith('PENDENTE')),
+      ...linhas.filter(line => line && !line.endsWith('PENDENTE')),
     ].join('\n'),
     status: 'pendente',
     seguradoraEscolhida: '',
@@ -423,6 +428,38 @@ export default function FichaDetalhePage() {
     await updateField('raw_data', { ...raw, cotacoes: nextCotacoes })
   }
 
+  async function selecionarSeguradora(cotacao) {
+    const nome = cotacao?.seguradora || ''
+    if (!nome) return
+
+    const payload = {
+      seguradora: nome,
+      raw_data: {
+        ...(ficha?.raw_data || {}),
+        seguradora_escolhida: nome,
+      },
+    }
+
+    const prev = ficha
+    setFicha(current => current ? {
+      ...current,
+      seguradora: nome,
+      raw_data: {
+        ...(current.raw_data || {}),
+        seguradora_escolhida: nome,
+      },
+    } : current)
+
+    const err = await editarFicha(id, payload, user?.id)
+    if (err) {
+      setFicha(prev)
+      toast({ type: 'error', title: 'Erro ao salvar seguradora escolhida' })
+      return
+    }
+
+    toast({ type: 'success', title: 'Seguradora escolhida salva' })
+  }
+
   async function handleDelete() {
     setDeleting(true)
     const err = await deletarFicha(id)
@@ -472,6 +509,23 @@ export default function FichaDetalhePage() {
   async function handleGerarMensagemRetorno() {
     const data = buildCotacaoMessageData(ficha, cotacoesNormalizadas, biometriaUrl)
     const texto = `${data.title}\n\n${data.body}`.trim()
+
+    if (retornoSalvo?.texto || mensagemGerada) {
+      const clearErr = await limparRetornoGeradoFicha(id, user?.id)
+      if (clearErr) {
+        toast({ type: 'error', title: 'Erro ao limpar a mensagem anterior' })
+        return
+      }
+      setMensagemGerada('')
+      setFicha(prev => prev ? {
+        ...prev,
+        raw_data: {
+          ...(prev.raw_data || {}),
+          retorno_gerado: null,
+        },
+      } : prev)
+    }
+
     const err = await salvarRetornoGeradoFicha(id, {
       texto,
       biometria_url: biometriaUrl,
@@ -804,6 +858,14 @@ export default function FichaDetalhePage() {
                         <div className={`text-[10px] uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border whitespace-nowrap ${statusTone}`}>
                           {cotacao.status || 'Sem status'}
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => selecionarSeguradora(cotacao)}
+                          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${isEscolhida ? 'bg-brand-accent text-white shadow-sm' : 'border border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-brand-accent'}`}
+                        >
+                          {isEscolhida ? <CheckCircle2 className="w-3.5 h-3.5" /> : <CircleDot className="w-3.5 h-3.5" />}
+                          {isEscolhida ? 'Selecionada' : 'Selecionar'}
+                        </button>
                       </div>
                     </div>
 

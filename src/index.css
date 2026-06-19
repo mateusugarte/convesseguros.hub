@@ -1270,6 +1270,31 @@ html.dark .kanban-card:hover {
   box-shadow: 0 24px 42px rgba(0, 0, 0, 0.30);
 }
 
+.kanban-card.kanban-card-retorno-pendente {
+  border-color: rgba(249, 115, 22, 0.34);
+}
+
+.kanban-card.kanban-card-retorno-pendente::after {
+  background: linear-gradient(180deg, #fb923c, #f97316);
+}
+
+.kanban-card.kanban-card-retorno-pendente:hover {
+  border-color: rgba(249, 115, 22, 0.48);
+  box-shadow: 0 18px 34px rgba(249, 115, 22, 0.18);
+}
+
+html.dark .kanban-card.kanban-card-retorno-pendente {
+  border-color: rgba(251, 146, 60, 0.34);
+  background:
+    linear-gradient(180deg, rgba(33, 17, 5, 0.96), rgba(24, 13, 4, 0.92)),
+    radial-gradient(circle at top left, rgba(251, 146, 60, 0.14), transparent 72%);
+}
+
+html.dark .kanban-card.kanban-card-retorno-pendente:hover {
+  border-color: rgba(251, 146, 60, 0.52);
+  box-shadow: 0 24px 42px rgba(0, 0, 0, 0.34), 0 0 0 1px rgba(251, 146, 60, 0.12);
+}
+
 .kanban-card-body {
   gap: 0.3rem;
 }

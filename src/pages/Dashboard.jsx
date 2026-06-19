@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -10,8 +10,11 @@ import { ptBR } from 'date-fns/locale'
 import {
   fetchKPIs, fetchEmitidas, fetchFichasPorDia, fetchTopImobiliarias,
   fetchDistribuicaoStatus, fetchFichasPorProdutoMes, fetchMetricas,
-  fetchAtividadeRecente, fetchFichasDoOrcamentista, fetchAprovacoesPorSeguradora, STATUS_LABELS, PRODUTO_LABELS,
+  fetchAtividadeRecente, fetchFichasDoOrcamentista, fetchAprovacoesPorSeguradora,
+  fetchRankingEquipeMensal, STATUS_LABELS, PRODUTO_LABELS,
 } from '../lib/fichas'
+import { findSeguradoraMetaByNome } from '../lib/seguradoras'
+import { getEntityImageUrl } from '../lib/entityMedia'
 import { AVATAR_COLORS, STATUS_CHART_COLORS } from '../design-system/tokens'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -273,6 +276,34 @@ function ApprovalSegTooltip({ active, payload }) {
   )
 }
 
+APPROVAL_SEG_COLORS.Tokio = '#EAB308'
+APPROVAL_SEG_COLORS.Too = '#7DD3FC'
+APPROVAL_SEG_COLORS.Pottencial = '#F97316'
+APPROVAL_SEG_COLORS.Junto = '#7C3AED'
+
+function ApprovalSegTick({ x, y, payload, logos = {}, color = '#000079' }) {
+  const name = payload?.value || ''
+  const logo = logos[name]
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <foreignObject x={-158} y={-16} width={152} height={32}>
+        <div className="flex items-center justify-end gap-2 pr-2">
+          <span className="text-[11px] font-medium text-dark-muted truncate max-w-[92px]">{name}</span>
+          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
+          <div className="w-6 h-6 rounded-lg border border-dark-border/60 bg-white/90 overflow-hidden shrink-0 flex items-center justify-center">
+            {logo ? (
+              <img src={logo} alt={name} className="w-full h-full object-contain" />
+            ) : (
+              <span className="text-[9px] font-bold text-dark-muted">{name?.slice(0, 2)?.toUpperCase()}</span>
+            )}
+          </div>
+        </div>
+      </foreignObject>
+    </g>
+  )
+}
+
 function AlertCard({ alert, onNavigate }) {
   const tones = {
     success: {
@@ -328,6 +359,7 @@ export default function Dashboard() {
   const { theme } = useTheme()
   const navigate = useNavigate()
   const [finalizar, setFinalizar] = useState(null)
+  const [approvalSegLogos, setApprovalSegLogos] = useState({})
 
   const now = new Date()
   const stored = (() => {
@@ -368,7 +400,7 @@ export default function Dashboard() {
   const query = useQuery({
     queryKey: ['dashboard', user?.id, filterYear, filterMonth],
     queryFn: async () => {
-      const [kpis, emitted, byDay, topImob, distribution, byProduct, metrics, activity, mine] = await Promise.all([
+      const [kpis, emitted, byDay, topImob, distribution, byProduct, metrics, activity, mine, ranking] = await Promise.all([
         fetchKPIs(rangeStart, rangeEnd),
         fetchEmitidas(rangeStart, rangeEnd),
         fetchFichasPorDia(30),
@@ -378,6 +410,7 @@ export default function Dashboard() {
         fetchMetricas(),
         fetchAtividadeRecente(10),
         user ? fetchFichasDoOrcamentista(user.id) : Promise.resolve([]),
+        fetchRankingEquipeMensal(rangeStart, rangeEnd),
       ])
 
       return {
@@ -390,6 +423,7 @@ export default function Dashboard() {
         metrics,
         activity,
         mine,
+        ranking,
       }
     },
   })
@@ -409,7 +443,29 @@ export default function Dashboard() {
   const metrics = data?.metrics ?? null
   const activity = data?.activity ?? []
   const mine = data?.mine ?? []
+  const ranking = data?.ranking ?? []
   const approvalSeg = approvalQuery.data ?? []
+
+  useEffect(() => {
+    let active = true
+    if (!approvalSeg.length) {
+      setApprovalSegLogos({})
+      return () => { active = false }
+    }
+
+    Promise.all(
+      approvalSeg.map(async item => {
+        const meta = await findSeguradoraMetaByNome(item.seguradora)
+        return [item.seguradora, getEntityImageUrl(meta?.logo_path, meta?.logo_url || null)]
+      })
+    ).then(entries => {
+      if (active) setApprovalSegLogos(Object.fromEntries(entries))
+    }).catch(() => {
+      if (active) setApprovalSegLogos({})
+    })
+
+    return () => { active = false }
+  }, [approvalSeg])
 
   const chartTheme = useMemo(() => {
     const isDark = theme === 'dark'
@@ -426,7 +482,7 @@ export default function Dashboard() {
     }
   }, [theme])
 
-  const teamRanking = useMemo(() => buildTeamRanking(activity), [activity])
+  const teamRanking = useMemo(() => ranking, [ranking])
   const alerts = useMemo(() => buildAlerts({ kpis, metricas: metrics, minhasFichas: mine, topImob }), [kpis, metrics, mine, topImob])
   const upcomingDeadlines = useMemo(
     () => [...mine].sort((a, b) => new Date(a.assumida_em || a.created_at) - new Date(b.assumida_em || b.created_at)).slice(0, 5),
@@ -455,28 +511,28 @@ export default function Dashboard() {
           <>
             <MetricCard
               label="Fichas do dia"
-              value={kpis?.hoje ?? '—'}
+              value={kpis?.hoje ?? 'â€”'}
               hint="entrada operacional do dia"
               icon={<Zap className="w-5 h-5" />}
             />
             <MetricCard
               label="Fichas da semana"
-              value={kpis?.semana ?? '—'}
+              value={kpis?.semana ?? 'â€”'}
               hint="volume consolidado na semana"
               icon={<TrendingUp className="w-5 h-5" />}
               tone="secondary"
             />
             <MetricCard
-              label="Fichas do mes"
-              value={kpis?.mes ?? '—'}
-              hint="capacidade entregue no periodo"
+              label="Fichas do mês"
+              value={kpis?.mes ?? 'â€”'}
+              hint="capacidade entregue no período"
               icon={<BarChart3 className="w-5 h-5" />}
               tone="warning"
             />
             <MetricCard
-              label="Apolices emitidas"
+              label="Apólices emitidas"
               value={emitted}
-              hint="status emitido no periodo"
+              hint="status emitido no período"
               icon={<CheckCircle2 className="w-5 h-5" />}
               tone="success"
             />
@@ -488,7 +544,7 @@ export default function Dashboard() {
         actions={(
           <div className="flex flex-wrap items-center gap-2">
             <div className="rounded-2xl border border-dark-border/70 bg-white/50 px-3 py-2 text-xs text-dark-muted">
-              Atualizado em {format(new Date(), "dd/MM 'às' HH:mm", { locale: ptBR })}
+              Atualizado em {format(new Date(), "dd/MM 'Ã s' HH:mm", { locale: ptBR })}
             </div>
             <button
               type="button"
@@ -512,11 +568,11 @@ export default function Dashboard() {
         </div>
         <div className="rounded-2xl border border-dark-border/70 bg-white/60 px-4 py-3 min-w-[180px]">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Tempo medio</p>
-          <p className="mt-1 text-lg font-semibold text-dark-text">{metrics?.tempoMedio != null ? `${metrics.tempoMedio}h` : '—'}</p>
+          <p className="mt-1 text-lg font-semibold text-dark-text">{metrics?.tempoMedio != null ? `${metrics.tempoMedio}h` : 'â€”'}</p>
         </div>
         <div className="rounded-2xl border border-dark-border/70 bg-white/60 px-4 py-3 min-w-[180px]">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Taxa de aprovacao</p>
-          <p className="mt-1 text-lg font-semibold text-dark-text">{metrics ? `${metrics.taxaAprovacao}%` : '—'}</p>
+          <p className="mt-1 text-lg font-semibold text-dark-text">{metrics ? `${metrics.taxaAprovacao}%` : 'â€”'}</p>
         </div>
       </FilterBar>
 
@@ -596,7 +652,7 @@ export default function Dashboard() {
         <DataCard
           className="xl:col-span-4"
           title="Alertas operacionais"
-          subtitle="O que pede atenção imediata na operação."
+          subtitle="O que pede atenÃ§Ã£o imediata na operaÃ§Ã£o."
           actions={<div className="ops-kicker">Prioridades</div>}
         >
           <div className="space-y-3">
@@ -606,8 +662,8 @@ export default function Dashboard() {
       </div>
 
       <DataCard
-        title="Aprovação por seguradora"
-        subtitle="Distribuição das fichas aprovadas na janela escolhida."
+        title="AprovaÃ§Ã£o por seguradora"
+        subtitle="DistribuiÃ§Ã£o das fichas aprovadas na janela escolhida."
         actions={(
           <div className="flex flex-wrap items-center gap-1.5">
             {APPROVAL_PERIODS.map(period => (
@@ -627,27 +683,33 @@ export default function Dashboard() {
         )}
       >
         {approvalQuery.isLoading ? (
-          <div className="h-[280px] flex items-center justify-center text-sm text-dark-muted">Carregando aprovações...</div>
+          <div className="h-[280px] flex items-center justify-center text-sm text-dark-muted">Carregando aprovaÃ§Ãµes...</div>
         ) : approvalSeg.every(item => item.value === 0) ? (
           <EmptyState
-            title="Sem aprovações para o período"
-            description="Ajuste a janela temporal para visualizar a distribuição por seguradora."
+            title="Sem aprovaÃ§Ãµes para o perÃ­odo"
+            description="Ajuste a janela temporal para visualizar a distribuiÃ§Ã£o por seguradora."
             icon={<Sparkles className="w-6 h-6" />}
           />
         ) : (
           <div className="grid gap-5 lg:grid-cols-[1.15fr,0.85fr]">
             <div className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={approvalSeg} layout="vertical" margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <BarChart data={approvalSeg} layout="vertical" margin={{ top: 4, right: 18, left: 10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={chartTheme.grid} />
                   <XAxis type="number" tick={{ fill: chartTheme.tick, fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 100]} />
                   <YAxis
                     type="category"
                     dataKey="seguradora"
-                    tick={{ fill: chartTheme.tick, fontSize: 11 }}
-                    width={110}
+                    width={170}
                     axisLine={false}
                     tickLine={false}
+                    tick={props => (
+                      <ApprovalSegTick
+                        {...props}
+                        logos={approvalSegLogos}
+                        color={APPROVAL_SEG_COLORS[props.payload?.value] || chartTheme.accent}
+                      />
+                    )}
                   />
                   <Tooltip content={<ApprovalSegTooltip />} />
                   <Bar dataKey="value" name="% aprovadas" radius={[0, 8, 8, 0]}>
@@ -661,15 +723,24 @@ export default function Dashboard() {
 
             <div className="space-y-2">
               {approvalSeg.map(item => (
-                <div key={item.seguradora} className="rounded-2xl border border-dark-border/60 bg-dark-surface2/25 px-4 py-3">
+                <div key={item.seguradora} className="rounded-2xl border border-dark-border/60 bg-dark-surface2/25 px-4 py-3 shadow-[0_10px_25px_rgba(15,23,42,0.03)]">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: APPROVAL_SEG_COLORS[item.seguradora] || chartTheme.accent }} />
-                      <span className="text-sm font-medium text-dark-text truncate">{item.seguradora}</span>
+                      <div className="w-8 h-8 rounded-xl border border-dark-border/60 bg-white overflow-hidden flex items-center justify-center flex-shrink-0">
+                        {approvalSegLogos[item.seguradora] ? (
+                          <img src={approvalSegLogos[item.seguradora]} alt={item.seguradora} className="w-full h-full object-contain" />
+                        ) : (
+                          <span className="text-[10px] font-bold text-dark-muted">{item.seguradora.slice(0, 2).toUpperCase()}</span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-sm font-semibold text-dark-text truncate block">{item.seguradora}</span>
+                        <span className="text-[11px] text-dark-muted">Aprovadas na janela escolhida</span>
+                      </div>
                     </div>
                     <span className="text-lg font-semibold text-dark-text font-mono">{item.value}%</span>
                   </div>
-                  <p className="mt-1 text-[11px] text-dark-muted">{item.total} ficha{item.total === 1 ? '' : 's'} aprovadas no período.</p>
+                  <p className="mt-1 text-[11px] text-dark-muted">{item.total} ficha{item.total === 1 ? '' : 's'} aprovadas no perÃ­odo.</p>
                 </div>
               ))}
             </div>
@@ -680,18 +751,18 @@ export default function Dashboard() {
       <div className="grid gap-6 xl:grid-cols-12">
         <DataCard
           className="xl:col-span-5"
-          title="Métricas principais"
-          subtitle="Resumo executivo do que está sendo entregue agora."
+          title="MÃ©tricas principais"
+          subtitle="Resumo executivo do que estÃ¡ sendo entregue agora."
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
               <p className="metric-label">Volume total do periodo</p>
-              <p className="stat-number text-dark-text mt-3">{kpis?.total ?? '—'}</p>
+              <p className="stat-number text-dark-text mt-3">{kpis?.total ?? 'â€”'}</p>
               <p className="metric-sub mt-2">Base total observada na janela selecionada.</p>
             </div>
             <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
               <p className="metric-label">Taxa de recusa</p>
-              <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaRecusa}%` : '—'}</p>
+              <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaRecusa}%` : 'â€”'}</p>
               <p className="metric-sub mt-2">Leitura de risco para ajustes de triagem e proposta.</p>
             </div>
             <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
@@ -709,8 +780,8 @@ export default function Dashboard() {
 
         <DataCard
           className="xl:col-span-4"
-          title="Produção por produto"
-          subtitle="Comparativo por produto no mês atual."
+          title="ProduÃ§Ã£o por produto"
+          subtitle="Comparativo por produto no mÃªs atual."
         >
           {byProduct.every(item => item.total === 0) ? (
             <EmptyState title="Sem producao neste mes" description="Ainda nao houve fichas suficientes para montar o comparativo por produto." icon={<Target className="w-6 h-6" />} />
@@ -733,8 +804,8 @@ export default function Dashboard() {
 
         <DataCard
           className="xl:col-span-3"
-          title="Distribuição de status"
-          subtitle="Distribuição das fichas no período selecionado."
+          title="DistribuiÃ§Ã£o de status"
+          subtitle="DistribuiÃ§Ã£o das fichas no perÃ­odo selecionado."
         >
           {distribution.length === 0 ? (
             <EmptyState title="Sem distribuicao disponivel" description="Nao ha fichas suficientes para distribuir status neste periodo." icon={<Sparkles className="w-6 h-6" />} />
@@ -769,8 +840,8 @@ export default function Dashboard() {
       <div className="grid gap-6 xl:grid-cols-12">
         <DataCard
           className="xl:col-span-5"
-          title="Imobiliárias em destaque"
-          subtitle="Aprovações concentradas no período selecionado."
+          title="ImobiliÃ¡rias em destaque"
+          subtitle="AprovaÃ§Ãµes concentradas no perÃ­odo selecionado."
           actions={<div className="ops-kicker">Top 5</div>}
         >
           {topImob.length === 0 ? (
@@ -801,7 +872,7 @@ export default function Dashboard() {
         <DataCard
           className="xl:col-span-7"
           title="Atividade recente"
-          subtitle="Últimas movimentações registradas no fluxo operacional."
+          subtitle="Ãšltimas movimentaÃ§Ãµes registradas no fluxo operacional."
           actions={(
             <button
               type="button"
@@ -813,7 +884,7 @@ export default function Dashboard() {
           )}
         >
           {activity.length === 0 ? (
-            <EmptyState title="Sem atividade recente" description="Assim que novas fichas entrarem ou mudarem de etapa, elas aparecerão aqui." icon={<Activity className="w-6 h-6" />} />
+            <EmptyState title="Sem atividade recente" description="Assim que novas fichas entrarem ou mudarem de etapa, elas aparecerÃ£o aqui." icon={<Activity className="w-6 h-6" />} />
           ) : (
             <div className="space-y-2">
               {activity.map(item => {
@@ -841,7 +912,7 @@ export default function Dashboard() {
                           <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${chip.className}`}>{chip.label}</span>
                         </div>
                         <p className="mt-1 text-xs text-dark-muted truncate">
-                          {item.imobiliaria || 'Sem imobiliária'} · {PRODUTO_LABELS[item.produto] || item.produto} · {owner}
+                          {item.imobiliaria || 'Sem imobiliÃ¡ria'} Â· {PRODUTO_LABELS[item.produto] || item.produto} Â· {owner}
                         </p>
                       </div>
                       <div className="text-right flex-shrink-0">
@@ -865,11 +936,11 @@ export default function Dashboard() {
         <DataCard
           className="xl:col-span-5"
           title="Ranking da equipe"
-          subtitle="Ranking recente derivado das últimas 10 movimentações registradas."
-          actions={<div className="ops-kicker">Recente</div>}
+          subtitle="Ranking mensal por usuario com base nas fichas aprovadas e nas emissões registradas no periodo selecionado."
+          actions={<div className="ops-kicker">{periodLabel}</div>}
         >
           {teamRanking.length === 0 ? (
-            <EmptyState title="Sem movimentacoes suficientes" description="O ranking aparece assim que houver atividade recente atribuida a usuarios." icon={<Users className="w-6 h-6" />} />
+            <EmptyState title="Sem dados no periodo" description="O ranking mensal aparece assim que houver aprovaÃ§Ãµes ou emissÃµes atribuÃ­das a usuarios." icon={<Users className="w-6 h-6" />} />
           ) : (
             <div className="space-y-3">
               {teamRanking.map((item, index) => (
@@ -881,12 +952,12 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-dark-text truncate">{item.name}</p>
                       <p className="mt-1 text-xs text-dark-muted">
-                        {item.approved} aprovadas · {item.emitted} emitidas nas ultimas movimentacoes.
+                        {item.approved} aprovadas · {item.emitted} emissões no mês.
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-semibold text-dark-text">{item.total}</p>
-                      <p className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">eventos</p>
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">ações</p>
                     </div>
                   </div>
                 </div>
@@ -897,8 +968,8 @@ export default function Dashboard() {
 
         <DataCard
           className="xl:col-span-7"
-          title="Fila de cotações"
-          subtitle="Fichas em cotação sob sua responsabilidade, priorizadas por idade."
+          title="Fila de cotaÃ§Ãµes"
+          subtitle="Fichas em cotaÃ§Ã£o sob sua responsabilidade, priorizadas por idade."
           actions={(
             <button
               type="button"
@@ -910,13 +981,13 @@ export default function Dashboard() {
           )}
         >
           {upcomingDeadlines.length === 0 ? (
-            <EmptyState title="Nenhuma ficha em cotação" description="Quando houver fichas sob sua responsabilidade, elas serão priorizadas aqui." icon={<Clock3 className="w-6 h-6" />} />
+            <EmptyState title="Nenhuma ficha em cotaÃ§Ã£o" description="Quando houver fichas sob sua responsabilidade, elas serÃ£o priorizadas aqui." icon={<Clock3 className="w-6 h-6" />} />
           ) : (
             <div className="space-y-3">
               {upcomingDeadlines.map(item => {
                 const since = item.assumida_em || item.created_at
                 const chip = timeChip(since)
-                const owner = item.profiles?.nome || 'Sem responsável'
+                const owner = item.profiles?.nome || 'Sem responsÃ¡vel'
 
                 return (
                   <div key={item.id} className="rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-4 py-3">
@@ -931,7 +1002,7 @@ export default function Dashboard() {
                           <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${chip.className}`}>{chip.label}</span>
                         </div>
                         <p className="mt-1 text-xs text-dark-muted truncate">
-                          {item.imobiliaria || 'Sem imobiliária'} · {item.seguradora || 'Seguradora pendente'} · {owner}
+                          {item.imobiliaria || 'Sem imobiliÃ¡ria'} Â· {item.seguradora || 'Seguradora pendente'} Â· {owner}
                         </p>
                       </button>
                       <div className="flex items-center gap-2">
@@ -956,13 +1027,13 @@ export default function Dashboard() {
         </DataCard>
       </div>
 
-      <DataCard title="Métricas operacionais" subtitle="Leituras de eficiência para acompanhar ritmo, backlog e resultado.">
+      <DataCard title="MÃ©tricas operacionais" subtitle="Leituras de eficiÃªncia para acompanhar ritmo, backlog e resultado.">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="metric-label">Taxa de aprovacao</p>
-                <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaAprovacao}%` : '—'}</p>
+                <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaAprovacao}%` : 'â€”'}</p>
               </div>
               <Target className="w-5 h-5 text-status-success" />
             </div>
@@ -973,7 +1044,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="metric-label">Taxa de recusa</p>
-                <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaRecusa}%` : '—'}</p>
+                <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaRecusa}%` : 'â€”'}</p>
               </div>
               <CircleAlert className="w-5 h-5 text-status-danger" />
             </div>
@@ -984,7 +1055,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="metric-label">Tempo medio</p>
-                <p className="stat-number text-dark-text mt-3">{metrics?.tempoMedio != null ? `${metrics.tempoMedio}h` : '—'}</p>
+                <p className="stat-number text-dark-text mt-3">{metrics?.tempoMedio != null ? `${metrics.tempoMedio}h` : 'â€”'}</p>
               </div>
               <Clock3 className="w-5 h-5 text-brand-accent" />
             </div>
@@ -995,7 +1066,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="metric-label">Sem resposta</p>
-                <p className="stat-number text-dark-text mt-3">{metrics?.semResposta ?? '—'}</p>
+                <p className="stat-number text-dark-text mt-3">{metrics?.semResposta ?? 'â€”'}</p>
               </div>
               <ArrowRight className="w-5 h-5 text-status-warning" />
             </div>
@@ -1017,3 +1088,4 @@ export default function Dashboard() {
     </div>
   )
 }
+

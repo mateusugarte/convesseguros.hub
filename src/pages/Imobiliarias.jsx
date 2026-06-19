@@ -168,13 +168,13 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
     ? mapeadas.filter(m => m.nome_canonico.toLowerCase().includes(buscaExistente.toLowerCase()))
     : mapeadas
 
-  function removerAlias(v) {
-    setAliasesModal(prev => prev.filter(x => x !== v))
+  function removerAlias(index) {
+    setAliasesModal(prev => prev.filter((_, i) => i !== index))
   }
 
   function adicionarAlias() {
     const t = novoAlias.trim()
-    if (!t || aliasesModal.includes(t)) { setNovoAlias(''); return }
+    if (!t) { setNovoAlias(''); return }
     setAliasesModal(prev => [...prev, t])
     setNovoAlias('')
   }
@@ -199,25 +199,25 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
           .eq('id', imobAtual.id)
         if (error) throw error
         imobId = imobAtual.id
-        // Limpar aliases antigos e reinserir (upsert para reassociar aliases de outras imobiliárias)
+        // Limpar aliases antigos e reinserir, permitindo duplicatas quando necessário
         await supabase.from('imobiliaria_aliases').delete().eq('imobiliaria_id', imobId)
         if (aliasesModal.length > 0) {
           const payload = aliasesModal.map(v => ({ imobiliaria_id: imobId, alias: v.trim() }))
           const { error: err } = await supabase.from('imobiliaria_aliases')
-            .upsert(payload, { onConflict: 'alias' })
+            .insert(payload)
           if (err) throw err
         }
 
       } else if (modo === 'existente') {
         // Incluir variações em imobiliária existente
-        // Aliases vêm de naoMapeadas → garantidamente ausentes em imobiliaria_aliases → insert direto
+        // Permite registrar o mesmo alias mais de uma vez quando isso for necessário para o mapeamento
         if (!imobSelecionada || aliasesModal.length === 0) {
           toast({ type: 'error', title: 'Selecione uma imobiliária e ao menos uma variação' })
           return
         }
         const payload = aliasesModal.map(v => ({ imobiliaria_id: imobSelecionada, alias: v.trim() }))
         const { error } = await supabase.from('imobiliaria_aliases')
-          .upsert(payload, { onConflict: 'alias' })
+          .insert(payload)
         if (error) throw error
 
       } else {
@@ -242,7 +242,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
         if (aliasesModal.length > 0) {
           const payload = aliasesModal.map(v => ({ imobiliaria_id: imobId, alias: v.trim() }))
           const { error } = await supabase.from('imobiliaria_aliases')
-            .upsert(payload, { onConflict: 'alias' })
+            .insert(payload)
           if (error) throw error
         }
       }
@@ -433,8 +433,8 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
               <p className="text-xs text-dark-muted italic">Nenhuma variação adicionada</p>
             ) : (
               <div className="rounded-xl border border-dark-border divide-y divide-dark-border overflow-hidden mb-2">
-                {aliasesModal.map(v => (
-                  <div key={v} className="flex items-center justify-between px-3 py-2 hover:bg-white/50 transition-colors">
+                {aliasesModal.map((v, index) => (
+                  <div key={`${v}-${index}`} className="flex items-center justify-between px-3 py-2 hover:bg-white/50 transition-colors">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="font-mono text-xs text-dark-text truncate">{v}</span>
                       {contagemPorNome[v] !== undefined && (
@@ -443,7 +443,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
                         </span>
                       )}
                     </div>
-                    <button onClick={() => removerAlias(v)} className="flex-shrink-0 p-1 rounded hover:bg-status-danger/15 text-dark-muted hover:text-status-danger transition-colors ml-2">
+                    <button onClick={() => removerAlias(index)} className="flex-shrink-0 p-1 rounded hover:bg-status-danger/15 text-dark-muted hover:text-status-danger transition-colors ml-2">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>

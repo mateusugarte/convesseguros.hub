@@ -78,11 +78,22 @@ function FichaCardContent({
   const statusInfo = STATUS_LABELS?.[ficha.status] ?? { label: ficha.status }
   const canAssumir = !ficha.assumida && ficha.status === 'pendente'
   const canFinalizar = ficha.orcamentista_id === userId && ficha.status === 'em_cotacao'
+  const retornoPendente = Boolean(ficha.status !== 'pendente' && !ficha.retorno_enviado)
+  const accentColor = retornoPendente ? '#F97316' : prodColor
+  const cardStyle = {
+    '--kanban-accent': accentColor,
+    ...(retornoPendente
+      ? {
+          background: 'linear-gradient(180deg, rgba(255,247,237,0.98), rgba(255,251,245,0.96))',
+          boxShadow: '0 10px 26px rgba(249, 115, 22, 0.12)',
+        }
+      : {}),
+  }
 
   return (
     <div
-      className={`kanban-card${isDragOverlay ? ' kanban-card-dragging' : ''}`}
-      style={{ '--kanban-accent': prodColor }}
+      className={`kanban-card${isDragOverlay ? ' kanban-card-dragging' : ''}${retornoPendente ? ' kanban-card-retorno-pendente' : ''}`}
+      style={cardStyle}
     >
       {/* Grip handle */}
       {!isDragOverlay && (

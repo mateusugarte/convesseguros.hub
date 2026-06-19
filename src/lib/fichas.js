@@ -609,6 +609,25 @@ export async function salvarRetornoGeradoFicha(id, retornoGerado, userId) {
   return null
 }
 
+export async function limparRetornoGeradoFicha(id, userId) {
+  const { data: cur } = await supabase.from('fichas').select('raw_data').eq('id', id).single()
+  const raw = cur?.raw_data || {}
+  const hist = Array.isArray(raw._edit_history) ? raw._edit_history : []
+
+  if (userId) {
+    hist.push({ editado_em: new Date().toISOString(), editado_por: userId, acao: 'limpar_retorno' })
+  }
+
+  const nextRaw = { ...raw }
+  delete nextRaw.retorno_gerado
+  nextRaw._edit_history = hist
+
+  const { data, error } = await supabase.from('fichas').update({ raw_data: nextRaw }).eq('id', id).select('id')
+  if (error) return error
+  if (!data || data.length === 0) return { message: 'Sem permissÃ£o para editar esta ficha.' }
+  return null
+}
+
 export async function deletarFicha(id) {
   const { data: fichaAntes } = await supabase.from('fichas').select('id, produto, nome_interessado, status, imobiliaria').eq('id', id).single()
   const { error } = await supabase.from('fichas').delete().eq('id', id)
@@ -684,4 +703,44 @@ export async function fetchRelatorioMensal({ ano, mes, produto }) {
 
   const { data } = await q
   return data || []
+}
+
+export async function fetchRankingEquipeMensal(inicioFiltro, fimFiltro) {
+  const data = await fetchAllRows(() => {
+    let q = supabase
+      .from('fichas')
+      .select('status, created_at, orcamentista_id, profiles!orcamentista_id(nome, avatar_url)')
+      .in('status', ['aprovado', 'emitido'])
+
+    if (inicioFiltro) q = q.gte('created_at', inicioFiltro)
+    if (fimFiltro) q = q.lte('created_at', fimFiltro)
+    return q
+  })
+
+  const summary = new Map()
+
+  data.forEach(item => {
+    const name = item.profiles?.nome || 'Sem responsavel'
+    const current = summary.get(name) || {
+      name,
+      approved: 0,
+      emitted: 0,
+      total: 0,
+      latestAt: item.created_at,
+    }
+
+    if (item.status === 'aprovado') current.approved += 1
+    if (item.status === 'emitido') current.emitted += 1
+    current.total = current.approved + current.emitted
+    if (new Date(item.created_at) > new Date(current.latestAt)) current.latestAt = item.created_at
+
+    summary.set(name, current)
+  })
+
+  return [...summary.values()]
+    .sort((a, b) => {
+      if (b.total !== a.total) return b.total - a.total
+      return new Date(b.latestAt) - new Date(a.latestAt)
+    })
+    .slice(0, 5)
 }

@@ -155,18 +155,25 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
   const since     = ficha.assumida_em || ficha.created_at
   const nome      = ficha.profiles?.nome
   const showRetorno = ficha.status !== 'pendente'
+  const retornoPendente = showRetorno && !ficha.retorno_enviado
   const imobiliaria = resolveImobiliariaInfo?.(ficha.imobiliaria)
+  const accentColor = retornoPendente ? '#F97316' : prodColor
+  const cardStyle = {
+    '--kanban-accent': accentColor,
+    background: retornoPendente
+      ? 'linear-gradient(180deg, rgba(255,247,237,0.98), rgba(255,251,245,0.96))'
+      : 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96))',
+    boxShadow: isDragOverlay
+      ? `0 20px 45px rgba(15,23,42,0.22), inset 0 1px 0 rgba(255,255,255,0.55)`
+      : retornoPendente
+        ? '0 10px 26px rgba(249, 115, 22, 0.12)'
+        : '0 10px 26px rgba(15,23,42,0.10)',
+  }
 
   return (
     <div
-      className={`kanban-card${isNew ? ' animate-card-new' : ''}${isDragOverlay ? ' kanban-card-dragging' : ''}`}
-      style={{
-        '--kanban-accent': prodColor,
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96))',
-        boxShadow: isDragOverlay
-          ? `0 20px 45px rgba(15,23,42,0.22), inset 0 1px 0 rgba(255,255,255,0.55)`
-          : '0 10px 26px rgba(15,23,42,0.10)',
-      }}
+      className={`kanban-card${isNew ? ' animate-card-new' : ''}${isDragOverlay ? ' kanban-card-dragging' : ''}${retornoPendente ? ' kanban-card-retorno-pendente' : ''}`}
+      style={cardStyle}
     >
       <div className="kanban-card-body" style={{ borderColor: `${prodColor}22` }}>
         {/* Linha topo: produto + tempo */}

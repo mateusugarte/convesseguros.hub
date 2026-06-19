@@ -29,7 +29,8 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
 
   async function handleFinalizar() {
     if (!status) { setError('Selecione o status final.'); return }
-    if (!seguradoraDefinida && !seguradora.trim()) {
+    const precisaSeguradora = status !== 'recusado'
+    if (precisaSeguradora && !seguradoraDefinida && !seguradora.trim()) {
       setError('Selecione a seguradora final.')
       return
     }
@@ -37,7 +38,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
     setError('')
     const err = await finalizarFicha(ficha.id, {
       status,
-      seguradora: (seguradoraDefinida || seguradora).trim() || null,
+      seguradora: precisaSeguradora ? (seguradoraDefinida || seguradora).trim() || null : null,
       retorno_enviado: retorno,
       userId: user?.id,
     })
@@ -94,7 +95,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
           {/* Seguradora */}
           <div>
             <label className="block text-xs font-medium text-dark-muted mb-1.5 uppercase tracking-wider">Seguradora</label>
-            {seguradoraDefinida ? (
+            {seguradoraDefinida && status !== 'recusado' ? (
               <div className="rounded-2xl border border-brand-accent/20 bg-brand-accent/5 px-4 py-3">
                 <div className="flex items-center gap-2 text-brand-accent">
                   <ShieldCheck className="w-4 h-4" />
@@ -103,7 +104,13 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
                 <p className="mt-1 text-sm font-semibold text-dark-text">{seguradoraDefinida}</p>
               </div>
             ) : (
-              <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={ficha?.produto} required />
+              status === 'recusado' ? (
+                <div className="rounded-2xl border border-dashed border-dark-border bg-dark-surface2 px-4 py-3 text-sm text-dark-muted">
+                  Ficha recusada: não é necessário selecionar seguradora.
+                </div>
+              ) : (
+                <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={ficha?.produto} required />
+              )
             )}
           </div>
 

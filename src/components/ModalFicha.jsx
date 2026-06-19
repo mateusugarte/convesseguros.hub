@@ -20,6 +20,7 @@ const COTACAO_STATUS_OPTIONS = [
   { value: 'em_analise', label: 'Em análise' },
   { value: 'aprovado', label: 'Aprovado' },
   { value: 'recusado', label: 'Recusado' },
+  { value: 'sem_cadastro', label: 'Sem cadastro' },
 ]
 
 // ── Masks ─────────────────────────────────────────────────────────────────────

@@ -304,7 +304,7 @@ export async function fetchContagemAbertaOrcamentista(orcamentistaId) {
 
 // ── Main fichas query ─────────────────────────────────────────────────────────
 
-export async function fetchFichas({ produto, ano, mes, tipo, search, imobiliaria, orcamentistaId, semSeguradora, page = 0, pageSize = 30, sortOrder = 'recentes' }) {
+export async function fetchFichas({ produto, ano, mes, dateFrom, dateTo, tipo, search, imobiliaria, orcamentistaId, semSeguradora, page = 0, pageSize = 30, sortOrder = 'recentes' }) {
   let q = supabase
     .from('fichas')
     .select('id,created_at,produto,imobiliaria,nome_interessado,nome_empresa,cpf,cnpj,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,raw_data,profiles!orcamentista_id(nome, avatar_url)', { count: 'exact' })
@@ -314,7 +314,7 @@ export async function fetchFichas({ produto, ano, mes, tipo, search, imobiliaria
 
   const term = search?.trim()
   if (term) {
-    // Busca em todos os campos relevantes; sem filtro de data para encontrar em qualquer período
+    // Busca em todos os campos relevantes
     q = q.or(
       `nome_interessado.ilike.%${term}%,` +
       `nome_empresa.ilike.%${term}%,` +
@@ -323,17 +323,19 @@ export async function fetchFichas({ produto, ano, mes, tipo, search, imobiliaria
       `imobiliaria.ilike.%${term}%,` +
       `seguradora.ilike.%${term}%`
     )
-  } else {
-    // Filtro de imobiliária e data só quando não há busca ativa
-    if (imobiliaria) q = q.ilike('imobiliaria', `%${imobiliaria}%`)
+  }
 
-    if (ano && mes && mes !== -1) {
-      q = q.gte('created_at', new Date(ano, mes - 1, 1).toISOString())
-           .lte('created_at', new Date(ano, mes, 0, 23, 59, 59).toISOString())
-    } else if (ano) {
-      q = q.gte('created_at', new Date(ano, 0, 1).toISOString())
-           .lte('created_at', new Date(ano, 11, 31, 23, 59, 59).toISOString())
-    }
+  if (imobiliaria) q = q.ilike('imobiliaria', `%${imobiliaria}%`)
+
+  if (dateFrom || dateTo) {
+    if (dateFrom) q = q.gte('created_at', dateFrom)
+    if (dateTo) q = q.lte('created_at', dateTo)
+  } else if (ano && mes && mes !== -1) {
+    q = q.gte('created_at', new Date(ano, mes - 1, 1).toISOString())
+         .lte('created_at', new Date(ano, mes, 0, 23, 59, 59).toISOString())
+  } else if (ano) {
+    q = q.gte('created_at', new Date(ano, 0, 1).toISOString())
+         .lte('created_at', new Date(ano, 11, 31, 23, 59, 59).toISOString())
   }
 
   if (tipo === 'passadas') {
@@ -743,4 +745,46 @@ export async function fetchRankingEquipeMensal(inicioFiltro, fimFiltro) {
       return new Date(b.latestAt) - new Date(a.latestAt)
     })
     .slice(0, 5)
+}
+
+export async function fetchRankingFichasMensal(inicioFiltro, fimFiltro) {
+  const data = await fetchAllRows(() => {
+    let q = supabase
+      .from('fichas')
+      .select('status, created_at, orcamentista_id, profiles!orcamentista_id(nome, avatar_url)')
+      .in('status', STATUS_PASSADOS)
+
+    if (inicioFiltro) q = q.gte('created_at', inicioFiltro)
+    if (fimFiltro) q = q.lte('created_at', fimFiltro)
+    return q
+  })
+
+  const summary = new Map()
+
+  data.forEach(item => {
+    const id = item.orcamentista_id || 'sem-responsavel'
+    const name = item.profiles?.nome || 'Sem responsável'
+    const current = summary.get(id) || {
+      id,
+      name,
+      approved: 0,
+      refused: 0,
+      passed: 0,
+      latestAt: item.created_at,
+    }
+
+    current.passed += 1
+    if (item.status === 'aprovado') current.approved += 1
+    if (item.status === 'recusado') current.refused += 1
+    if (new Date(item.created_at) > new Date(current.latestAt)) current.latestAt = item.created_at
+
+    summary.set(id, current)
+  })
+
+  return [...summary.values()].sort((a, b) => {
+    if (b.approved !== a.approved) return b.approved - a.approved
+    if (b.passed !== a.passed) return b.passed - a.passed
+    if (a.refused !== b.refused) return a.refused - b.refused
+    return new Date(b.latestAt) - new Date(a.latestAt)
+  })
 }

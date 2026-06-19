@@ -18,6 +18,10 @@ function buildOrcamentistaLabel(nome, email) {
   return base.toUpperCase()
 }
 
+function normalizeAreas(value) {
+  return Array.isArray(value) ? value.filter(Boolean) : []
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null)
   const [profile, setProfile] = useState(null)
@@ -42,7 +46,7 @@ export function AuthProvider({ children }) {
   async function loadProfile(userId) {
     const { data } = await supabase
       .from('profiles')
-      .select('id, nome, orcamentista_label, avatar_url, is_admin')
+      .select('id, nome, orcamentista_label, avatar_url, is_admin, areas_atuacao')
       .eq('id', userId)
       .single()
 
@@ -56,12 +60,13 @@ export function AuthProvider({ children }) {
         orcamentista_label: buildOrcamentistaLabel(nomeBase, currentUser.email),
         avatar_url: null,
         is_admin: resolveAdminFlag(currentUser.email, false),
+        areas_atuacao: [],
       }
 
       const { data: created, error: createError } = await supabase
         .from('profiles')
         .insert(payload)
-        .select('id, nome, orcamentista_label, avatar_url, is_admin')
+        .select('id, nome, orcamentista_label, avatar_url, is_admin, areas_atuacao')
         .single()
 
       if (!createError && created) {
@@ -73,6 +78,7 @@ export function AuthProvider({ children }) {
 
     setProfile(data ? {
       ...data,
+      areas_atuacao: normalizeAreas(data.areas_atuacao),
       is_admin: resolveAdminFlag(currentUser?.email, data.is_admin),
     } : data)
     setLoading(false)
@@ -108,6 +114,7 @@ export function AuthProvider({ children }) {
         orcamentista_label: buildOrcamentistaLabel(nomeBase, email),
         avatar_url: null,
         is_admin: resolveAdminFlag(email, false),
+        areas_atuacao: [],
       }
 
       const { error: profileError } = await supabase

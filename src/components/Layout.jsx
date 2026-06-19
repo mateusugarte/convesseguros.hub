@@ -135,6 +135,9 @@ export default function Layout() {
     ? 'Leads, vendas e jornadas no mesmo workspace.'
     : 'Fichas, apolices e operacao em uma unica mesa de controle.'
 
+  const profileAreas = Array.isArray(profile?.areas_atuacao) ? profile.areas_atuacao : []
+  const hasArea = area => profileAreas.includes(area)
+
   useEffect(() => {
     try { localStorage.setItem('sidebar-open', String(sidebarOpen)) } catch {}
   }, [sidebarOpen])
@@ -157,21 +160,40 @@ export default function Layout() {
   }, [user])
 
   useEffect(() => {
-    const ch = supabase.channel('layout-fichas-new')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'fichas' }, p => {
+    if (!user?.id) return undefined
+
+    const ch = supabase.channel(`layout-notificacoes-${user.id}`)
+
+    if (hasArea('orcamentista')) {
+      ch.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'fichas' }, p => {
         const prodLabel = PRODUTO_LABELS[p.new.produto] || p.new.produto || ''
         setAbertasCount(n => n + 1)
         toast({
           type: 'ficha',
-          title: prodLabel || 'Novo cliente',
+          title: prodLabel || 'Nova ficha',
           message: `${p.new.imobiliaria || ''} · ${p.new.nome_interessado || 'Sem nome'}`,
           action: { label: 'Ver ficha', onClick: () => navigate(`/fichas/${p.new.id}`) },
           duration: 10000,
         })
       })
-      .subscribe()
+    }
+
+    if (hasArea('auto')) {
+      ch.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cotacoes_auto' }, p => {
+        const cliente = p.new.nome_cliente || p.new.nome_completo || p.new.cpf_cliente || 'Novo seguro auto'
+        toast({
+          type: 'auto',
+          title: 'Novo seguro auto',
+          message: `${cliente}${p.new.modelo_veiculo ? ` · ${p.new.modelo_veiculo}` : ''}`,
+          action: { label: 'Abrir cotação', onClick: () => navigate(`/auto/cotacoes/${p.new.id}`) },
+          duration: 10000,
+        })
+      })
+    }
+
+    ch.subscribe()
     return () => supabase.removeChannel(ch)
-  }, [toast, navigate])
+  }, [toast, navigate, user?.id, profileAreas.join('|')])
 
   useEffect(() => {
     const handler = e => {

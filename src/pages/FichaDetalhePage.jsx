@@ -1040,7 +1040,7 @@ export default function FichaDetalhePage() {
                     </p>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                <div className="space-y-2">
                   {resumoCotacoesSalvas.map(cotacao => {
                     const isEscolhida = seguradoraEscolhida && cotacao.seguradora === seguradoraEscolhida
                     const statusLabel =
@@ -1057,29 +1057,44 @@ export default function FichaDetalhePage() {
                         key={`snapshot-${cotacao.seguradora}`}
                         type="button"
                         onClick={() => selecionarSeguradora(cotacao)}
-                        className={`flex items-center justify-between gap-3 rounded-2xl border px-3 py-2 text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 ${
+                        className={`flex w-full items-center gap-4 rounded-2xl border px-4 py-3 text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 ${
                           isEscolhida
                             ? 'border-brand-accent/50 bg-brand-accent/8 shadow-[0_14px_32px_rgba(245,88,42,0.12)] ring-1 ring-brand-accent/15'
                             : 'border-dark-border bg-dark-surface hover:border-brand-accent/35 hover:bg-white/80'
                         }`}
                       >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="truncate text-sm font-semibold text-dark-text">
-                              {normalizeDisplayText(cotacao.seguradora).toUpperCase()}
-                            </p>
-                            {isEscolhida && (
-                              <span className="inline-flex items-center rounded-full bg-brand-accent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
-                                Escolhida
-                              </span>
-                            )}
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl border bg-white shadow-sm ${isEscolhida ? 'border-brand-accent/30 ring-1 ring-brand-accent/10' : 'border-dark-border/40'}`}>
+                            <SeguradoraBadge
+                              nome={cotacao.seguradora}
+                              logoUrl={cotacao.logo_url}
+                              logoPath={cotacao.logo_path}
+                              size="xl"
+                              showName={false}
+                              className="justify-center"
+                            />
                           </div>
-                          <p className="text-[10px] uppercase tracking-[0.16em] text-dark-muted">
-                            {cotacao.status || 'sem status'}
-                          </p>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="truncate text-sm font-semibold text-dark-text md:text-base">
+                                {normalizeDisplayText(cotacao.seguradora).toUpperCase()}
+                              </p>
+                              {isEscolhida && (
+                                <span className="inline-flex items-center rounded-full bg-brand-accent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
+                                  Escolhida
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-0.5 text-[10px] uppercase tracking-[0.16em] text-dark-muted">
+                              {cotacao.status || 'sem status'}
+                            </p>
+                            <p className="mt-1 text-xs text-dark-muted">
+                              Clique para definir esta seguradora como a escolhida.
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-dark-text">
+                        <div className="ml-auto flex-shrink-0 text-right">
+                          <p className="text-sm font-semibold text-dark-text md:text-base">
                             {statusLabel}
                           </p>
                           <p className="text-[10px] uppercase tracking-[0.16em] text-dark-muted">

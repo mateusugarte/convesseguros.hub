@@ -37,6 +37,7 @@ const options = [
 const ROLE_OPTIONS = [
   { value: 'orcamentista', label: 'Orcamentista' },
   { value: 'comercial', label: 'Comercial' },
+  { value: 'auto', label: 'Seguro Auto' },
   { value: 'financeiro', label: 'Financeiro' },
   { value: 'administrativo', label: 'Administrativo' },
   { value: 'gestor', label: 'Gestor' },
@@ -49,6 +50,10 @@ const ADMIN_EMAILS = new Set([
 
 function toggleItem(list, value) {
   return list.includes(value) ? list.filter(item => item !== value) : [...list, value]
+}
+
+function normalizeAreas(value) {
+  return Array.isArray(value) ? [...new Set(value.filter(Boolean))] : []
 }
 
 function roleLabel(role) {
@@ -75,7 +80,9 @@ export default function Configuracoes() {
   const [savingPerfil, setSavingPerfil] = useState(false)
 
   const [profiles, setProfiles] = useState([])
+  const [profileDrafts, setProfileDrafts] = useState({})
   const [loadingProfiles, setLoadingProfiles] = useState(false)
+  const [savingProfileId, setSavingProfileId] = useState(null)
 
   const [newUser, setNewUser] = useState({
     nome: '',
@@ -93,8 +100,8 @@ export default function Configuracoes() {
   useEffect(() => {
     setAvatarPreview(profile?.avatar_url || '')
     setNome(profile?.nome || '')
-    setAreasAtuacao([])
-  }, [profile?.avatar_url, profile?.nome])
+    setAreasAtuacao(normalizeAreas(profile?.areas_atuacao))
+  }, [profile?.avatar_url, profile?.nome, profile?.areas_atuacao])
 
   useEffect(() => {
     if (!isAdmin) return
@@ -109,7 +116,7 @@ export default function Configuracoes() {
     setLoadingProfiles(true)
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, nome, orcamentista_label, avatar_url, is_admin, created_at')
+      .select('id, nome, orcamentista_label, avatar_url, is_admin, areas_atuacao, created_at')
       .order('nome')
 
     setLoadingProfiles(false)
@@ -119,7 +126,21 @@ export default function Configuracoes() {
       return
     }
 
-    setProfiles(data || [])
+    const nextProfiles = data || []
+    setProfiles(nextProfiles)
+    setProfileDrafts(prev => {
+      const next = { ...prev }
+      nextProfiles.forEach(item => {
+        if (!next[item.id]) {
+          next[item.id] = {
+            nome: item.nome || '',
+            is_admin: Boolean(item.is_admin),
+            areas_atuacao: normalizeAreas(item.areas_atuacao),
+          }
+        }
+      })
+      return next
+    })
   }
 
   async function handleSavePerfil() {
@@ -131,6 +152,7 @@ export default function Configuracoes() {
       .update({
         nome: nome.trim(),
         orcamentista_label: normalizeLabel(nome),
+        areas_atuacao: normalizeAreas(areasAtuacao),
       })
       .eq('id', user.id)
 
@@ -142,7 +164,72 @@ export default function Configuracoes() {
     }
 
     await refreshProfile?.()
+    await loadProfiles()
     toast({ type: 'success', title: 'Perfil atualizado' })
+  }
+
+  function updateDraft(profileId, updater) {
+    setProfileDrafts(prev => {
+      const current = prev[profileId] || { nome: '', is_admin: false, areas_atuacao: [] }
+      return {
+        ...prev,
+        [profileId]: typeof updater === 'function' ? updater(current) : { ...current, ...updater },
+      }
+    })
+  }
+
+  async function handleSaveUserProfile(profileItem) {
+    if (!profileItem?.id) return
+    const draft = profileDrafts[profileItem.id] || {
+      nome: profileItem.nome || '',
+      is_admin: Boolean(profileItem.is_admin),
+      areas_atuacao: normalizeAreas(profileItem.areas_atuacao),
+    }
+
+    setSavingProfileId(profileItem.id)
+
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError || !sessionData?.session?.access_token) {
+        throw new Error('Nao foi possivel validar sua sessao de admin.')
+      }
+
+      const response = await fetch('/api/update-user-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
+        body: JSON.stringify({
+          id: profileItem.id,
+          nome: draft.nome || profileItem.nome || '',
+          is_admin: draft.is_admin,
+          areas_atuacao: draft.areas_atuacao,
+        }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Nao foi possivel salvar o perfil.')
+      }
+
+      setProfiles(prev => prev.map(item => (
+        item.id === profileItem.id ? { ...item, ...payload.profile } : item
+      )))
+      setProfileDrafts(prev => ({
+        ...prev,
+        [profileItem.id]: {
+          nome: payload.profile?.nome || draft.nome || '',
+          is_admin: Boolean(payload.profile?.is_admin ?? draft.is_admin),
+          areas_atuacao: normalizeAreas(payload.profile?.areas_atuacao ?? draft.areas_atuacao),
+        },
+      }))
+      toast({ type: 'success', title: 'Perfil do usuario atualizado' })
+    } catch (error) {
+      toast({ type: 'error', title: 'Erro ao salvar usuario', message: error.message })
+    } finally {
+      setSavingProfileId(null)
+    }
   }
 
   async function handleAvatarUpload(event) {
@@ -206,6 +293,7 @@ export default function Configuracoes() {
           email: newUser.email.trim(),
           password: newUser.password,
           is_admin: newUser.is_admin,
+          areas_atuacao: newUser.roles,
         }),
       })
 
@@ -595,28 +683,89 @@ export default function Configuracoes() {
                   <Users2 className="h-4 w-4 text-brand-accent" />
                   <p className="text-sm font-semibold text-dark-text">Usuarios cadastrados</p>
                 </div>
-              {loadingProfiles ? (
-                <p className="text-sm text-dark-muted">Carregando usuarios...</p>
-              ) : (
-                <div className="space-y-3">
-                  {profiles.map(item => (
-                    <div key={item.id} className="rounded-2xl border border-dark-border/70 p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-medium text-dark-text">{item.nome}</p>
-                          <p className="text-xs text-dark-muted">{item.orcamentista_label}</p>
+                {loadingProfiles ? (
+                  <p className="text-sm text-dark-muted">Carregando usuarios...</p>
+                ) : (
+                  <div className="space-y-3">
+                    {profiles.map(item => {
+                      const draft = profileDrafts[item.id] || {
+                        nome: item.nome || '',
+                        is_admin: Boolean(item.is_admin),
+                        areas_atuacao: normalizeAreas(item.areas_atuacao),
+                      }
+
+                      return (
+                        <div key={item.id} className="rounded-2xl border border-dark-border/70 p-4 shadow-sm">
+                          <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-medium text-dark-text">{item.nome}</p>
+                                {draft.is_admin && <span className="badge badge-success">Admin</span>}
+                              </div>
+                              <p className="text-xs text-dark-muted">{item.orcamentista_label}</p>
+                              <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-dark-muted">
+                                {normalizeAreas(draft.areas_atuacao).length
+                                  ? normalizeAreas(draft.areas_atuacao).map(roleLabel).join(' · ')
+                                  : 'Sem funcoes definidas'}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveUserProfile(item)}
+                              disabled={savingProfileId === item.id}
+                              className="btn-secondary text-xs min-h-[38px] disabled:opacity-50"
+                            >
+                              {savingProfileId === item.id ? 'Salvando...' : 'Salvar funcoes'}
+                            </button>
+                          </div>
+
+                          <div className="mt-4 space-y-3">
+                            <div>
+                              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Funcoes</p>
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                {ROLE_OPTIONS.map(role => {
+                                  const active = normalizeAreas(draft.areas_atuacao).includes(role.value)
+                                  return (
+                                    <button
+                                      key={`${item.id}-${role.value}`}
+                                      type="button"
+                                      onClick={() => updateDraft(item.id, current => ({
+                                        ...current,
+                                        areas_atuacao: toggleItem(normalizeAreas(current.areas_atuacao), role.value),
+                                      }))}
+                                      className={`rounded-2xl border px-3 py-2 text-left text-sm transition-all ${
+                                        active
+                                          ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                                          : 'border-dark-border hover:border-brand-accent/40 hover:bg-dark-surface2/40'
+                                      }`}
+                                    >
+                                      {role.label}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            </div>
+
+                            <label className="flex items-center gap-3 rounded-2xl border border-dark-border px-4 py-3 text-sm text-dark-text">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(draft.is_admin)}
+                                onChange={e => updateDraft(item.id, { is_admin: e.target.checked })}
+                              />
+                              <span className="flex items-center gap-2">
+                                <BadgeCheck className="h-4 w-4 text-status-success" />
+                                Admin
+                              </span>
+                            </label>
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          {item.is_admin && <span className="badge badge-success">Admin</span>}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {!profiles.length && (
-                    <p className="text-sm text-dark-muted">Nenhum perfil encontrado.</p>
-                  )}
-                </div>
-              )}
+                      )
+                    })}
+                    {!profiles.length && (
+                      <p className="text-sm text-dark-muted">Nenhum perfil encontrado.</p>
+                    )}
+                  </div>
+                )}
               </div>
             </DataCard>
           )}

@@ -26,13 +26,18 @@ async function findAuthUserByEmail(adminClient, email) {
   }
 }
 
-async function upsertProfile(adminClient, { userId, nome, email, isAdmin }) {
+function normalizeAreas(value) {
+  return Array.isArray(value) ? [...new Set(value.filter(Boolean))] : []
+}
+
+async function upsertProfile(adminClient, { userId, nome, email, isAdmin, areasAtuacao }) {
   const profilePayload = {
     id: userId,
     nome,
     orcamentista_label: buildOrcamentistaLabel(nome, email),
     avatar_url: null,
     is_admin: isAdmin,
+    areas_atuacao: normalizeAreas(areasAtuacao),
   }
 
   const { error } = await adminClient
@@ -89,6 +94,7 @@ export default async function handler(req, res) {
   const email = String(body.email || '').trim().toLowerCase()
   const password = String(body.password || '')
   const isAdmin = Boolean(body.is_admin)
+  const areasAtuacao = Array.isArray(body.areas_atuacao) ? body.areas_atuacao : Array.isArray(body.roles) ? body.roles : []
 
   if (!nome || !email || !password) {
     return json(res, 400, { error: 'Nome, email e senha sao obrigatorios' })
@@ -136,6 +142,7 @@ export default async function handler(req, res) {
     nome,
     email,
     isAdmin,
+    areasAtuacao,
   })
 
   return json(res, 200, {

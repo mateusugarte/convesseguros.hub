@@ -4,7 +4,7 @@ import {
   fetchFichas, fetchAnosDisponiveis, fetchMesesDisponiveis,
   fetchContagemProdutos, fetchContagemAbertaOrcamentista, deletarFicha,
   fetchKPIsVisaoGeral, fetchDistribuicaoStatus, fetchFichasPorDia,
-  PRODUTO_LABELS, STATUS_LABELS, STATUS_EM_ABERTO, STATUS_PASSADOS,
+  fetchRankingFichasMensal, PRODUTO_LABELS, STATUS_LABELS, STATUS_EM_ABERTO, STATUS_PASSADOS,
 } from '../lib/fichas'
 import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
 import { normalizeDisplayText } from '../lib/text'
@@ -105,6 +105,12 @@ const SORT_ORDER_OPTIONS = [
   { value: 'antigas', label: 'Mais antigas' },
 ]
 
+const PERIODO_FICHAS_OPTIONS = [
+  { value: 'hoje', label: 'Hoje' },
+  { value: 'semana', label: 'Semana' },
+  { value: 'mes', label: 'Mês' },
+]
+
 function resolveProdutoFromPathname(pathname) {
   if (pathname === '/fichas') return null
   return FICHA_ROUTE_TO_PRODUTO[pathname] ?? null
@@ -112,6 +118,29 @@ function resolveProdutoFromPathname(pathname) {
 
 function resolvePathFromProduto(produto) {
   return FICHA_PRODUTO_TO_ROUTE[produto] ?? '/fichas'
+}
+
+function getPeriodoRange(periodo, ano, mes) {
+  const now = new Date()
+
+  if (periodo === 'hoje') {
+    const inicio = new Date(now)
+    inicio.setHours(0, 0, 0, 0)
+    return [inicio.toISOString(), now.toISOString()]
+  }
+
+  if (periodo === 'semana') {
+    const inicio = new Date(now)
+    inicio.setDate(inicio.getDate() - 6)
+    inicio.setHours(0, 0, 0, 0)
+    return [inicio.toISOString(), now.toISOString()]
+  }
+
+  const targetYear = ano || now.getFullYear()
+  const targetMonth = mes || (now.getMonth() + 1)
+  const inicio = new Date(targetYear, targetMonth - 1, 1)
+  const fim = new Date(targetYear, targetMonth, 0, 23, 59, 59)
+  return [inicio.toISOString(), fim.toISOString()]
 }
 
 
@@ -267,6 +296,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
   const [kpis, setKpis]           = useState(null)
   const [statusDist, setStatusDist] = useState([])
   const [fichasPorDia, setDia]    = useState([])
+  const [rankingMensal, setRankingMensal] = useState(null)
 
   // Filtro de período — padrão = mês/ano atual
   const now = new Date()
@@ -282,10 +312,12 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
       fetchKPIsVisaoGeral(inicioFiltro, fimFiltro),
       fetchDistribuicaoStatus(inicioFiltro, fimFiltro),
       fetchFichasPorDia(14),
-    ]).then(([k, d, f]) => {
+      fetchRankingFichasMensal(inicioFiltro, fimFiltro),
+    ]).then(([k, d, f, r]) => {
       setKpis(k)
       setStatusDist(d)
       setDia(f)
+      setRankingMensal(r)
     })
   }, [inicioFiltro, fimFiltro])
 
@@ -452,6 +484,84 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
       </div>
 
       <DataCard
+        title="Ranking do mês"
+        subtitle="Classificação por usuário com aprovações, recusas e total de fichas passadas no período selecionado."
+        bodyClassName="pt-4"
+      >
+        {rankingMensal === null ? (
+          <div className="h-44 flex items-center justify-center text-sm text-dark-muted">Carregando ranking...</div>
+        ) : rankingMensal.length === 0 ? (
+          <div className="h-44 flex items-center justify-center text-sm text-dark-muted">Sem dados para o período</div>
+        ) : (
+          <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+            {rankingMensal.map((item, index) => {
+              const initials = (item.name || '—')
+                .split(' ')
+                .filter(Boolean)
+                .map(part => part[0])
+                .slice(0, 2)
+                .join('')
+                .toUpperCase() || '—'
+              return (
+                <div
+                  key={item.id}
+                  className={`rounded-2xl border px-4 py-3 transition-colors ${
+                    index === 0
+                      ? 'border-brand-accent/30 bg-brand-accent/8'
+                      : 'border-dark-border/60 bg-dark-surface2/25'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-bold text-white flex-shrink-0 ${
+                        index === 0 ? 'shadow-md' : ''
+                      }`}
+                      style={{ background: index === 0 ? BRAND.accent : stringColor(item.name) }}
+                    >
+                      {index + 1}
+                    </div>
+                    <div
+                      className="w-10 h-10 rounded-2xl flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0"
+                      style={{ background: stringColor(item.name) }}
+                    >
+                      {initials}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold text-dark-text truncate">{item.name}</p>
+                        {index === 0 && (
+                          <span className="inline-flex items-center rounded-full border border-brand-accent/20 bg-brand-accent/10 px-2 py-0.5 text-[10px] font-semibold text-brand-accent">
+                            Líder do mês
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs text-dark-muted">
+                        {item.approved} aprovadas · {item.refused} recusas · {item.passed} passadas.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-right min-w-[210px]">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">Aprovadas</p>
+                        <p className="mt-1 text-base font-semibold text-status-success">{item.approved}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">Recusas</p>
+                        <p className="mt-1 text-base font-semibold text-status-danger">{item.refused}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">Passadas</p>
+                        <p className="mt-1 text-base font-semibold text-dark-text">{item.passed}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </DataCard>
+
+      <DataCard
         title="Selecionar produto"
         subtitle="Abra a mesa operacional por linha de negócio"
         bodyClassName="pt-4"
@@ -565,6 +675,26 @@ function MesAnoSelector({ ano, anos, mes, mesesComFichas, onAnoChange, onMesChan
           )
         })}
       </div>
+    </div>
+  )
+}
+
+function PeriodoSelector({ value, onChange }) {
+  return (
+    <div className="flex items-center gap-1 rounded-2xl border border-dark-border/70 bg-dark-surface2/60 p-1">
+      {PERIODO_FICHAS_OPTIONS.map(option => (
+        <button
+          key={option.value}
+          onClick={() => onChange(option.value)}
+          className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+            value === option.value
+              ? 'bg-brand-secondary text-white shadow-sm'
+              : 'text-dark-muted hover:text-dark-text'
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
     </div>
   )
 }
@@ -737,6 +867,7 @@ export default function Fichas() {
   const [produto, setProduto] = useState(() => resolveProdutoFromPathname(location.pathname))
   const [ano,     setAno]     = useState(agora.getFullYear())
   const [mes,     setMes]     = useState(agora.getMonth() + 1)
+  const [periodoFiltro, setPeriodoFiltro] = useState('mes')
   const [view,    setView]    = useState('kanban')
 
   const [contagem,        setContagem]        = useState({})
@@ -839,9 +970,10 @@ export default function Fichas() {
     fetchMesesDisponiveis(produto, ano).then(setMesesComFichas)
   }, [produto, ano])
 
-  // Datas calculadas do mês/ano selecionados
-  const dateFrom = ano && mes ? new Date(ano, mes - 1, 1).toISOString() : null
-  const dateTo   = ano && mes ? new Date(ano, mes, 0, 23, 59, 59).toISOString() : null
+  const [dateFrom, dateTo] = useMemo(
+    () => getPeriodoRange(periodoFiltro, ano, mes),
+    [periodoFiltro, ano, mes]
+  )
 
   // Query de tabela (só usada no modo lista)
   const loadFichas = useCallback(async () => {
@@ -851,6 +983,8 @@ export default function Fichas() {
     const { data, count } = await fetchFichas({
       produto: produto === 'todos' ? undefined : produto,
       ano, mes,
+      dateFrom,
+      dateTo,
       tipo: tab,
       search: debouncedSearch,
       orcamentistaId: tab === 'passadas_por_mim' ? user?.id : undefined,
@@ -861,7 +995,7 @@ export default function Fichas() {
     setFichas(data)
     setTotal(count)
     setLoading(false)
-  }, [produto, ano, mes, tab, debouncedSearch, semSeguradora, sortOrderLista, page, user, view])
+  }, [produto, ano, mes, dateFrom, dateTo, tab, debouncedSearch, semSeguradora, sortOrderLista, page, user, view])
 
   useEffect(() => { loadFichas() }, [loadFichas])
 
@@ -925,16 +1059,27 @@ export default function Fichas() {
   const mesLabel  = MESES_ABBR[mes - 1] || ''
 
   const selectorSlot = (
-    <FilterBar>
-      <MesAnoSelector
-        ano={ano}
-        anos={anos}
-        mes={mes}
-        mesesComFichas={mesesComFichas}
-        onAnoChange={a => { setAno(a); setPage(0) }}
-        onMesChange={m => { setMes(m); setPage(0) }}
-      />
-    </FilterBar>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2 rounded-2xl border border-dark-border/70 bg-white/70 px-3 py-2 shadow-sm">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Período</span>
+        <PeriodoSelector
+          value={periodoFiltro}
+          onChange={next => { setPeriodoFiltro(next); setPage(0) }}
+        />
+      </div>
+      {periodoFiltro === 'mes' && (
+        <FilterBar>
+          <MesAnoSelector
+            ano={ano}
+            anos={anos}
+            mes={mes}
+            mesesComFichas={mesesComFichas}
+            onAnoChange={a => { setAno(a); setPage(0) }}
+            onMesChange={m => { setMes(m); setPage(0) }}
+          />
+        </FilterBar>
+      )}
+    </div>
   )
 
   return (

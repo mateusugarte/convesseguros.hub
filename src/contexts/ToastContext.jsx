@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback } from 'react'
-import { CheckCircle, XCircle, AlertTriangle, Info, X, FileText } from 'lucide-react'
+import { CheckCircle, XCircle, AlertTriangle, Info, X, FileText, Car } from 'lucide-react'
 
 const ToastCtx = createContext(null)
 
@@ -63,6 +63,13 @@ const CONFIG = {
     border: 'border-status-success/40',
     ring:   'bg-status-success/12',
   },
+  auto: {
+    Icon:   Car,
+    bar:    'bg-brand-accent',
+    icon:   'text-brand-accent',
+    border: 'border-brand-accent/35',
+    ring:   'bg-brand-accent/12',
+  },
 }
 
 function Toast({ type = 'info', title, message, action, duration, onRemove }) {
@@ -90,6 +97,11 @@ function Toast({ type = 'info', title, message, action, duration, onRemove }) {
         {type === 'ficha' && (
           <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-status-success bg-status-success/12 border border-status-success/25 rounded px-1.5 py-0.5 mb-1.5">
             Nova Ficha
+          </span>
+        )}
+        {type === 'auto' && (
+          <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-brand-accent bg-brand-accent/12 border border-brand-accent/25 rounded px-1.5 py-0.5 mb-1.5">
+            Novo Seguro Auto
           </span>
         )}
         {title   && <p className="text-sm font-semibold text-dark-text leading-snug">{title}</p>}

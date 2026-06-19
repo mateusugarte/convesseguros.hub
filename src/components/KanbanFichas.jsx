@@ -16,7 +16,6 @@ import {
   Home, Briefcase, Building, LayoutGrid, RefreshCw,
   ChevronLeft, ChevronRight, Calendar,
   ChevronsLeft, ArrowRight, CheckCircle, Clock,
-  ArrowUpDown,
 } from 'lucide-react'
 import SeguradoraBadge from './SeguradoraBadge'
 import SeguradoraSelect from './SeguradoraSelect'
@@ -402,9 +401,7 @@ function DroppableColumn({
             <span className="kanban-sort-track">
               <span className={`kanban-sort-option ${sortOrder === 'recentes' ? 'is-active' : ''}`}>Recentes</span>
               <span className={`kanban-sort-option ${sortOrder === 'antigas' ? 'is-active' : ''}`}>Antigas</span>
-              <span className={`kanban-sort-thumb ${sortOrder === 'antigas' ? 'is-alt' : ''}`}>
-                <ArrowUpDown className={`w-3 h-3 ${sortingFeedback ? 'animate-spin' : ''}`} />
-              </span>
+              <span className={`kanban-sort-thumb ${sortOrder === 'antigas' ? 'is-alt' : ''}`} aria-hidden="true" />
             </span>
           </button>
           <button

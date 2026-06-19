@@ -12,6 +12,10 @@ function buildOrcamentistaLabel(nome, email) {
   return base.toUpperCase()
 }
 
+function normalizeAreas(value) {
+  return Array.isArray(value) ? [...new Set(value.filter(Boolean))] : []
+}
+
 async function findAuthUserByEmail(adminClient, email) {
   let page = 1
   const perPage = 100
@@ -24,10 +28,6 @@ async function findAuthUserByEmail(adminClient, email) {
     if (users.length < perPage) return null
     page += 1
   }
-}
-
-function normalizeAreas(value) {
-  return Array.isArray(value) ? [...new Set(value.filter(Boolean))] : []
 }
 
 async function upsertProfile(adminClient, { userId, nome, email, isAdmin, areasAtuacao }) {

@@ -14,7 +14,7 @@ import { Select } from './ui/Select'
 
 const STATUS_OPTIONS  = ['pendente','em_cotacao','em_analise','aprovado','recusado','emitido','cancelado','cpf_invalido','expirada']
 const PRODUTO_OPTIONS = ['residencial_pf','comercial_pf','pessoa_juridica']
-const CAMPOS_REPLICAVEIS = new Set(['pct_comissao', 'parcelamento'])
+const CAMPOS_REPLICAVEIS = new Set(['parcelamento'])
 const COTACAO_STATUS_OPTIONS = [
   { value: '', label: 'Sem status' },
   { value: 'em_analise', label: 'Em análise' },
@@ -95,7 +95,10 @@ function validarFicha(form) {
   const cotacoes = normalizarCotacoes(form.cotacoes)
   const aprovadas = cotacoes.filter(c => c.status === 'aprovado')
   for (const c of aprovadas) {
-    if (c.valor_parcela === '' || c.parcelamento === '' || c.pct_comissao === '') {
+    const comissaoEfetiva = c.pct_comissao !== '' && c.pct_comissao != null
+      ? c.pct_comissao
+      : form.pct_comissao
+    if (c.valor_parcela === '' || c.parcelamento === '' || comissaoEfetiva === '') {
       return `Preencha os campos da seguradora ${c.seguradora} quando o status for Aprovado`
     }
   }
@@ -255,7 +258,9 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
           valor_parcela: c.valor_parcela === '' ? null : toNumber(c.valor_parcela),
           pct_desconto: c.pct_desconto === '' ? null : toNumber(c.pct_desconto),
           parcelamento: c.parcelamento === '' ? null : toNumber(c.parcelamento),
-          pct_comissao: c.pct_comissao === '' ? null : toNumber(c.pct_comissao),
+          pct_comissao: c.pct_comissao === ''
+            ? (form.pct_comissao === '' ? null : toNumber(form.pct_comissao))
+            : toNumber(c.pct_comissao),
         })),
       },
     }
@@ -429,7 +434,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
           )}
 
           <Sec title="Financeiro da Ficha">
-            <Field label="% Comissão">
+            <Field label="% Comissão padrão">
               <input
                 type="number"
                 step="0.01"
@@ -438,6 +443,9 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                 className="input"
                 placeholder="Ex: 10"
               />
+              <p className="mt-1 text-[11px] text-dark-muted">
+                Serve como fallback para as seguradoras aprovadas. Você pode ajustar cada uma abaixo.
+              </p>
             </Field>
             <Field label="% Desconto">
               <input
@@ -548,7 +556,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                       />
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="eyebrow text-dark-muted block mb-1.5">% Comissão</label>
+                      <label className="eyebrow text-dark-muted block mb-1.5">% Comissão da seguradora</label>
                       <input
                         type="number"
                         step="0.01"
@@ -559,6 +567,9 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                         className="input"
                         placeholder="Ex: 10"
                       />
+                      <p className="mt-1 text-[11px] text-dark-muted">
+                        Se ficar vazio, a comissão padrão da ficha será usada na validação e na mensagem.
+                      </p>
                     </div>
                   </div>
                 </div>

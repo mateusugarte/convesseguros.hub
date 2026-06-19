@@ -9,6 +9,8 @@ import { initComercialStore } from '../lib/comercial'
 import { Avatar } from './ui'
 import CommandPalette from './CommandPalette'
 import { PageTransition } from './PageTransition'
+import { formatDistanceToNow } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import {
   LayoutDashboard, FileText, User, FileCheck,
   Building2, BarChart2, Settings, Search,
@@ -116,6 +118,8 @@ export default function Layout() {
   const [abertasCount, setAbertasCount] = useState(0)
   const [cmdOpen, setCmdOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [notifications, setNotifications] = useState([])
   const [hideWorkspaceTopbar, setHideWorkspaceTopbar] = useState(false)
   const [expandedItems, setExpandedItems] = useState(() => {
     const initial = new Set()
@@ -137,6 +141,20 @@ export default function Layout() {
 
   const profileAreas = Array.isArray(profile?.areas_atuacao) ? profile.areas_atuacao : []
   const hasArea = area => profileAreas.includes(area)
+
+  function pushNotification(notification) {
+    setNotifications(prev => {
+      const next = [{
+        id: notification.id || `${Date.now()}-${Math.random()}`,
+        created_at: notification.created_at || new Date().toISOString(),
+        type: notification.type || 'info',
+        title: notification.title || '',
+        message: notification.message || '',
+        href: notification.href || null,
+      }, ...prev]
+      return next.slice(0, 20)
+    })
+  }
 
   useEffect(() => {
     try { localStorage.setItem('sidebar-open', String(sidebarOpen)) } catch {}
@@ -160,6 +178,28 @@ export default function Layout() {
   }, [user])
 
   useEffect(() => {
+    if (!user?.id) {
+      setNotifications([])
+      return
+    }
+
+    try {
+      const raw = localStorage.getItem(`layout-notifications-${user.id}`)
+      const parsed = raw ? JSON.parse(raw) : []
+      setNotifications(Array.isArray(parsed) ? parsed : [])
+    } catch {
+      setNotifications([])
+    }
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!user?.id) return
+    try {
+      localStorage.setItem(`layout-notifications-${user.id}`, JSON.stringify(notifications.slice(0, 20)))
+    } catch {}
+  }, [notifications, user?.id])
+
+  useEffect(() => {
     if (!user?.id) return undefined
 
     const ch = supabase.channel(`layout-notificacoes-${user.id}`)
@@ -168,6 +208,14 @@ export default function Layout() {
       ch.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'fichas' }, p => {
         const prodLabel = PRODUTO_LABELS[p.new.produto] || p.new.produto || ''
         setAbertasCount(n => n + 1)
+        pushNotification({
+          id: `ficha-${p.new.id}`,
+          created_at: p.new.created_at,
+          type: 'ficha',
+          title: prodLabel || 'Nova ficha',
+          message: `${p.new.imobiliaria || ''} · ${p.new.nome_interessado || 'Sem nome'}`,
+          href: `/fichas/${p.new.id}`,
+        })
         toast({
           type: 'ficha',
           title: prodLabel || 'Nova ficha',
@@ -181,6 +229,14 @@ export default function Layout() {
     if (hasArea('auto')) {
       ch.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cotacoes_auto' }, p => {
         const cliente = p.new.nome_cliente || p.new.nome_completo || p.new.cpf_cliente || 'Novo seguro auto'
+        pushNotification({
+          id: `auto-${p.new.id}`,
+          created_at: p.new.created_at,
+          type: 'auto',
+          title: 'Novo seguro auto',
+          message: `${cliente}${p.new.modelo_veiculo ? ` · ${p.new.modelo_veiculo}` : ''}`,
+          href: `/auto/cotacoes/${p.new.id}`,
+        })
         toast({
           type: 'auto',
           title: 'Novo seguro auto',
@@ -488,12 +544,94 @@ export default function Layout() {
               }
             </button>
 
-            <button className="btn-ghost p-2 relative rounded-lg cursor-pointer" aria-label="Notificacoes">
+            <div className="relative">
+            <button
+              onClick={() => { setNotificationsOpen(o => !o); setUserMenuOpen(false) }}
+              className="btn-ghost p-2 relative rounded-lg cursor-pointer"
+              aria-label="Notificacoes"
+              aria-expanded={notificationsOpen}
+            >
               <Bell className="w-4 h-4" />
-              {abertasCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-status-warning" />
+              {notifications.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-status-warning px-1 text-[9px] font-bold text-white">
+                  {notifications.length > 9 ? '9+' : notifications.length}
+                </span>
               )}
             </button>
+              {notificationsOpen && (
+                <>
+                  <div className="fixed inset-0 z-[399]" onClick={() => setNotificationsOpen(false)} />
+                  <div
+                    className="absolute right-0 top-full mt-2 w-[360px] z-[400] overflow-hidden rounded-2xl border py-1 animate-slide-up"
+                    style={{
+                      background: 'var(--shell-panel-bg)',
+                      backdropFilter: 'blur(18px) saturate(170%)',
+                      WebkitBackdropFilter: 'blur(18px) saturate(170%)',
+                      border: '1px solid var(--shell-panel-border)',
+                      boxShadow: 'var(--shadow-float)',
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-3 border-b border-dark-border px-4 py-3">
+                      <div>
+                        <p className="text-sm font-semibold text-dark-text">Notificações</p>
+                        <p className="text-xs text-dark-muted">Últimos eventos recebidos</p>
+                      </div>
+                      {notifications.length > 0 && (
+                        <span className="badge badge-info">{notifications.length}</span>
+                      )}
+                    </div>
+
+                    <div className="max-h-[360px] overflow-y-auto">
+                      {notifications.length ? (
+                        notifications.map(item => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              setNotificationsOpen(false)
+                              if (item.href) navigate(item.href)
+                            }}
+                            className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-dark-surface2/60 transition-colors"
+                          >
+                            <span className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border ${
+                              item.type === 'auto'
+                                ? 'border-brand-accent/20 bg-brand-accent/10 text-brand-accent'
+                                : 'border-status-success/20 bg-status-success/10 text-status-success'
+                            }`}>
+                              <Bell className="h-4 w-4" />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="text-sm font-semibold text-dark-text truncate">{item.title}</p>
+                                <span className="text-[10px] text-dark-muted whitespace-nowrap">
+                                  {formatDistanceToNow(new Date(item.created_at), { addSuffix: true, locale: ptBR })}
+                                </span>
+                              </div>
+                              <p
+                                className="mt-1 text-xs text-dark-muted"
+                                style={{
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                }}
+                              >
+                                {item.message}
+                              </p>
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-8 text-center">
+                          <p className="text-sm font-medium text-dark-text">Sem notificações</p>
+                          <p className="mt-1 text-xs text-dark-muted">Os eventos recentes aparecem aqui.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
 
             <div className="relative ml-1">
               <button

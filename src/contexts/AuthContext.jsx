@@ -18,10 +18,6 @@ function buildOrcamentistaLabel(nome, email) {
   return base.toUpperCase()
 }
 
-function normalizeAreas(value) {
-  return Array.isArray(value) ? value.filter(Boolean) : []
-}
-
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null)
   const [profile, setProfile] = useState(null)
@@ -78,7 +74,7 @@ export function AuthProvider({ children }) {
 
     setProfile(data ? {
       ...data,
-      areas_atuacao: normalizeAreas(data.areas_atuacao),
+      areas_atuacao: Array.isArray(data.areas_atuacao) ? data.areas_atuacao : [],
       is_admin: resolveAdminFlag(currentUser?.email, data.is_admin),
     } : data)
     setLoading(false)

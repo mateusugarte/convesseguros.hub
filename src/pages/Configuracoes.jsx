@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PageHeader, DataCard } from '../components/ui'
 import { Avatar } from '../components/ui/Avatar'
 import { useTheme } from '../contexts/ThemeContext'
@@ -34,6 +34,11 @@ const options = [
   },
 ]
 
+const ADMIN_EMAILS = new Set([
+  'atendimento2@convesseguros.com',
+  'atendimento@convesseguros.com',
+])
+
 const ROLE_OPTIONS = [
   { value: 'orcamentista', label: 'Orcamentista' },
   { value: 'comercial', label: 'Comercial' },
@@ -42,11 +47,6 @@ const ROLE_OPTIONS = [
   { value: 'administrativo', label: 'Administrativo' },
   { value: 'gestor', label: 'Gestor' },
 ]
-
-const ADMIN_EMAILS = new Set([
-  'atendimento2@convesseguros.com',
-  'atendimento@convesseguros.com',
-])
 
 function toggleItem(list, value) {
   return list.includes(value) ? list.filter(item => item !== value) : [...list, value]
@@ -101,16 +101,12 @@ export default function Configuracoes() {
     setAvatarPreview(profile?.avatar_url || '')
     setNome(profile?.nome || '')
     setAreasAtuacao(normalizeAreas(profile?.areas_atuacao))
-  }, [profile?.avatar_url, profile?.nome, profile?.areas_atuacao])
+  }, [profile?.avatar_url, profile?.nome])
 
   useEffect(() => {
     if (!isAdmin) return
     loadProfiles()
   }, [isAdmin])
-
-  const selectedRoleBadges = useMemo(() => {
-    return areasAtuacao.map(roleLabel)
-  }, [areasAtuacao])
 
   async function loadProfiles() {
     setLoadingProfiles(true)
@@ -398,11 +394,11 @@ export default function Configuracoes() {
                 />
               </div>
 
-              <div className="min-w-0 flex-1 space-y-4">
-                <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-dark-muted">Nome</label>
-                  <input
-                    type="text"
+                <div className="min-w-0 flex-1 space-y-4">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-dark-muted">Nome</label>
+                    <input
+                      type="text"
                     value={nome}
                     onChange={e => setNome(e.target.value)}
                     className="input"
@@ -440,9 +436,9 @@ export default function Configuracoes() {
                     })}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {selectedRoleBadges.length ? (
-                      selectedRoleBadges.map(role => (
-                        <span key={role} className="badge badge-blue">{role}</span>
+                    {areasAtuacao.length ? (
+                      areasAtuacao.map(role => (
+                        <span key={role} className="badge badge-blue">{roleLabel(role)}</span>
                       ))
                     ) : (
                       <span className="text-sm text-dark-muted">Sem funcoes marcadas</span>
@@ -630,7 +626,7 @@ export default function Configuracoes() {
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-dark-muted">Funcoes</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-dark-muted">Funcoes por setor</p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {ROLE_OPTIONS.map(role => {
                       const active = newUser.roles.includes(role.value)
@@ -679,9 +675,12 @@ export default function Configuracoes() {
                 </button>
               </form>
               <div className="mt-6 border-t border-dark-border/60 pt-5">
-                <div className="mb-3 flex items-center gap-2">
-                  <Users2 className="h-4 w-4 text-brand-accent" />
-                  <p className="text-sm font-semibold text-dark-text">Usuarios cadastrados</p>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Users2 className="h-4 w-4 text-brand-accent" />
+                    <p className="text-sm font-semibold text-dark-text">Usuarios ativos</p>
+                  </div>
+                  <span className="badge badge-blue">{profiles.length} perfis</span>
                 </div>
                 {loadingProfiles ? (
                   <p className="text-sm text-dark-muted">Carregando usuarios...</p>
@@ -697,17 +696,26 @@ export default function Configuracoes() {
                       return (
                         <div key={item.id} className="rounded-2xl border border-dark-border/70 p-4 shadow-sm">
                           <div className="flex flex-wrap items-start justify-between gap-4">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="font-medium text-dark-text">{item.nome}</p>
-                                {draft.is_admin && <span className="badge badge-success">Admin</span>}
+                            <div className="flex min-w-0 flex-1 items-center gap-3">
+                              <Avatar
+                                name={item.nome || 'Usuario'}
+                                src={item.avatar_url || ''}
+                                size="md"
+                                className="ring-1 ring-dark-border/50"
+                              />
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="font-medium text-dark-text">{item.nome}</p>
+                                  <span className="badge badge-success">Ativo</span>
+                                  {draft.is_admin && <span className="badge badge-success">Admin</span>}
+                                </div>
+                                <p className="text-xs text-dark-muted">{item.orcamentista_label}</p>
+                                <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-dark-muted">
+                                  {normalizeAreas(draft.areas_atuacao).length
+                                    ? normalizeAreas(draft.areas_atuacao).map(roleLabel).join(' · ')
+                                    : 'Sem funcoes definidas'}
+                                </p>
                               </div>
-                              <p className="text-xs text-dark-muted">{item.orcamentista_label}</p>
-                              <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-dark-muted">
-                                {normalizeAreas(draft.areas_atuacao).length
-                                  ? normalizeAreas(draft.areas_atuacao).map(roleLabel).join(' · ')
-                                  : 'Sem funcoes definidas'}
-                              </p>
                             </div>
                             <button
                               type="button"
@@ -715,10 +723,9 @@ export default function Configuracoes() {
                               disabled={savingProfileId === item.id}
                               className="btn-secondary text-xs min-h-[38px] disabled:opacity-50"
                             >
-                              {savingProfileId === item.id ? 'Salvando...' : 'Salvar funcoes'}
+                              {savingProfileId === item.id ? 'Salvando...' : 'Salvar'}
                             </button>
                           </div>
-
                           <div className="mt-4 space-y-3">
                             <div>
                               <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Funcoes</p>

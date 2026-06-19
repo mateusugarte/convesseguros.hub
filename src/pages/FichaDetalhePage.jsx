@@ -196,7 +196,7 @@ const COTACAO_SEGURADORAS_PJ = [
   'Junto Seguros',
 ]
 
-const CAMPOS_REPLICAVEIS = new Set(['pct_comissao', 'parcelamento'])
+const CAMPOS_REPLICAVEIS = new Set(['parcelamento'])
 
 function getSeguradorasCotacao(produto) {
   return produto === 'pessoa_juridica'
@@ -748,7 +748,7 @@ export default function FichaDetalhePage() {
           <DataCard title="Controle Interno" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
             <ReadField label="Orçamentista (Forms)" value={ficha.orcamentista_forms} />
             <InlineField
-              label="% Comissão"
+              label="% Comissão padrão"
               value={ficha.pct_comissao != null ? String(ficha.pct_comissao) : ''}
               type="number"
               onSave={v => updateField('pct_comissao', v ? parseFloat(v) : null)}
@@ -765,6 +765,11 @@ export default function FichaDetalhePage() {
               type="number"
               onSave={v => updateField('parcelamento', v ? parseInt(v, 10) : null)}
             />
+            <InlineField
+              label="Número do Orçamento"
+              value={ficha.numero_orcamento != null ? String(ficha.numero_orcamento) : ''}
+              onSave={v => updateField('numero_orcamento', v)}
+            />
             <div>
               <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-dark-muted">Assumida por</p>
               {ficha.profiles?.nome ? (
@@ -777,14 +782,6 @@ export default function FichaDetalhePage() {
               )}
             </div>
             <ReadField label="Assumida em" value={fmtDt(ficha.assumida_em)} />
-            {/* Número do orçamento — exibido quando aprovado */}
-            {(ficha.status === 'aprovado' || ficha.numero_orcamento) && (
-              <InlineField
-                label="Número do Orçamento"
-                value={ficha.numero_orcamento}
-                onSave={v => updateField('numero_orcamento', v)}
-              />
-            )}
             <div className="col-span-2">
               <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wider mb-2">Retorno enviado</p>
               <label className="flex items-center gap-3 cursor-pointer group w-fit">
@@ -805,7 +802,7 @@ export default function FichaDetalhePage() {
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-accent">Resumo do preenchimento</p>
                   <p className="mt-1 text-sm text-dark-muted">
-                    A comissão global é aplicada a todas as seguradoras. Use o botão abaixo para gerar a mensagem com os dados atuais.
+                    Ajuste a comissão por seguradora abaixo. O valor da ficha pode servir como padrão, mas cada card pode ser editado individualmente.
                   </p>
                 </div>
                 <div className="inline-flex items-center rounded-full border border-dark-border bg-dark-surface px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">
@@ -814,7 +811,7 @@ export default function FichaDetalhePage() {
               </div>
               <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div className="rounded-2xl border border-dark-border/70 bg-white/70 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissão global</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissão padrão da ficha</p>
                   <p className="mt-1 text-lg font-semibold text-dark-text">{ficha.pct_comissao != null && ficha.pct_comissao !== '' ? `${ficha.pct_comissao}%` : '—'}</p>
                 </div>
                 <div className="rounded-2xl border border-dark-border/70 bg-white/70 px-4 py-3">
@@ -898,10 +895,19 @@ export default function FichaDetalhePage() {
                         type="number"
                         onSave={v => updateCotacao(cotacao.seguradora, 'parcelamento', v ? parseInt(v, 10) : null)}
                       />
-                      <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/40 px-3 py-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissão global</p>
-                        <p className="mt-1 text-sm font-semibold text-dark-text">
-                          {ficha.pct_comissao != null && ficha.pct_comissao !== '' ? `${ficha.pct_comissao}%` : 'Sem valor'}
+                      <div className="sm:col-span-2">
+                        <InlineField
+                          label="Comissão da seguradora"
+                          value={cotacao.pct_comissao !== '' && cotacao.pct_comissao != null ? String(cotacao.pct_comissao) : ''}
+                          type="number"
+                          onSave={v => updateCotacao(cotacao.seguradora, 'pct_comissao', v ? parseFloat(v) : null)}
+                        />
+                        <p className="mt-1 text-[11px] text-dark-muted">
+                          {cotacao.pct_comissao !== '' && cotacao.pct_comissao != null
+                            ? 'Valor salvo individualmente para esta seguradora.'
+                            : ficha.pct_comissao != null && ficha.pct_comissao !== ''
+                              ? `Usa o padrão da ficha: ${ficha.pct_comissao}%`
+                              : 'Preencha para registrar a comissão desta seguradora.'}
                         </p>
                       </div>
                     </div>

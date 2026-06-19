@@ -1,12 +1,12 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { fetchFichaDetalhe, editarFicha, deletarFicha, STATUS_LABELS, PRODUTO_LABELS, SEGURADORAS } from '../lib/fichas'
+import { fetchFichaDetalhe, editarFicha, deletarFicha, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useToast } from '../contexts/ToastContext'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ArrowLeft, Pencil, Trash2, Check, X, CalendarDays, Building2, UserRound, Clock3 } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, Check, X, CalendarDays, Building2, UserRound, Clock3, Copy, Link as LinkIcon, Loader2 } from 'lucide-react'
 import { PageHeader, MetricCard, DataCard } from '../components/ui'
 import { Avatar } from '../components/ui'
 import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
@@ -17,6 +17,7 @@ import ModalAssumir from '../components/ModalAssumir'
 import ModalFinalizar from '../components/ModalFinalizar'
 import SecaoDocumentos from '../components/SecaoDocumentos'
 import { Select } from '../components/ui/Select'
+import { normalizeDisplayText } from '../lib/text'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -182,10 +183,148 @@ const COTACAO_STATUS_OPTIONS = [
   { value: 'aprovado', label: 'Aprovado' },
   { value: 'recusado', label: 'Recusado' },
 ]
+
+const COTACAO_SEGURADORAS_BASE = [
+  'Porto Seguro',
+  'Tokio Marine',
+  'TOO Seguros',
+  'Pottencial',
+]
+
+const COTACAO_SEGURADORAS_PJ = [
+  'Junto Seguros',
+]
+
 const CAMPOS_REPLICAVEIS = new Set(['pct_comissao', 'parcelamento'])
 
-function normalizarCotacoes(cotacoes = []) {
-  return SEGURADORAS.map(seguradora => {
+function getSeguradorasCotacao(produto) {
+  return produto === 'pessoa_juridica'
+    ? [...COTACAO_SEGURADORAS_BASE, ...COTACAO_SEGURADORAS_PJ]
+    : COTACAO_SEGURADORAS_BASE
+}
+
+function formatMoney(v) {
+  if (v === null || v === undefined || v === '') return null
+  const n = Number(String(v).replace(',', '.'))
+  if (!Number.isFinite(n)) return null
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n)
+}
+
+function formatParcelas(v) {
+  if (v === null || v === undefined || v === '') return null
+  const n = Number.parseInt(String(v), 10)
+  if (!Number.isFinite(n)) return null
+  return `${n}x`
+}
+
+function normalizeProductLabel(produto) {
+  return produto === 'residencial_pf' ? 'RESIDENCIAL' : 'COMERCIAL'
+}
+
+function getNomeLocatario(ficha) {
+  const nome = ficha?.produto === 'pessoa_juridica'
+    ? (ficha?.nome_empresa || ficha?.nome_interessado || '')
+    : (ficha?.nome_interessado || ficha?.nome_empresa || '')
+  return normalizeDisplayText(nome).toUpperCase()
+}
+
+function buildCotacaoMessageData(ficha, cotacoes = [], biometriaUrl = '') {
+  const nomeLocatario = getNomeLocatario(ficha)
+  const tipoAprovacao = normalizeProductLabel(ficha?.produto)
+  const seguradoras = getSeguradorasCotacao(ficha?.produto)
+  const aprovadas = cotacoes.filter(c => c.status === 'aprovado')
+  const recusadas = cotacoes.filter(c => c.status === 'recusado')
+
+  const linhas = seguradoras.map(seguradora => {
+    const cotacao = cotacoes.find(c => c.seguradora === seguradora) || { seguradora, status: '' }
+    const nomeSeguradora = normalizeDisplayText(cotacao.seguradora || seguradora).toUpperCase()
+
+    if (cotacao.status === 'recusado') {
+      return `_*${nomeSeguradora}*_ -- RECUSADO`
+    }
+
+    if (cotacao.status === 'aprovado') {
+      const parcelas = formatParcelas(cotacao.parcelamento)
+      const valor = formatMoney(cotacao.valor_parcela)
+      const extras = [parcelas, valor].filter(Boolean).join(' ')
+      return `_*${nomeSeguradora}*_ -- APROVADO${extras ? ` ${extras}` : ''}`
+    }
+
+    return `_*${nomeSeguradora}*_ -- PENDENTE`
+  })
+
+  const allRecusadas = recusadas.length > 0
+    && recusadas.length === seguradoras.filter(seg => (cotacoes.find(c => c.seguradora === seg)?.status === 'recusado')).length
+    && aprovadas.length === 0
+
+  const escolhida = aprovadas
+    .map(cotacao => ({
+      ...cotacao,
+      total: Number(cotacao.valor_parcela || 0) * Number(cotacao.parcelamento || 0),
+      valor: Number(cotacao.valor_parcela || 0),
+    }))
+    .sort((a, b) => {
+      const totalA = Number.isFinite(a.total) && a.total > 0 ? a.total : Number.POSITIVE_INFINITY
+      const totalB = Number.isFinite(b.total) && b.total > 0 ? b.total : Number.POSITIVE_INFINITY
+      if (totalA !== totalB) return totalA - totalB
+      return a.valor - b.valor
+    })[0] || null
+
+  const seguradoraEscolhida = escolhida?.seguradora || aprovadas[0]?.seguradora || ''
+  const celular = normalizeDisplayText(String(ficha?.celular || '').trim())
+  const linkBiometria = biometriaUrl.trim()
+
+  if (allRecusadas) {
+    return {
+      title: `_*RECUSADO -- ${tipoAprovacao}*_`,
+      body: [
+        `_*${nomeLocatario}*_`,
+        '',
+        ...linhas.filter(line => !line.endsWith('PENDENTE')),
+      ].join('\n'),
+      status: 'recusado',
+      seguradoraEscolhida: '',
+    }
+  }
+
+  if (aprovadas.length > 0) {
+    const seguradoraTexto = seguradoraEscolhida ? `*${normalizeDisplayText(seguradoraEscolhida).toUpperCase()}*` : '*SEGURADORA*'
+
+    return {
+      title: `_*PRÉ - APROVADO -- ${tipoAprovacao}*_`,
+      body: [
+        `_*${nomeLocatario}*_`,
+        '',
+        ...linhas,
+        '',
+        '_Aguardamos a realização da biometria facial para obtenção da aprovação._',
+        '----------------------------------',
+        ` Segue acima o PDF do orçamento pela ${seguradoraTexto}, que é por onde ficou mais em conta:`,
+        '',
+        '⚠️ *Solicitamos que confira os dados do anexo antes de enviar ao cliente. Caso identifique qualquer divergência, nos informe imediatamente para realizarmos o ajuste.*',
+        '',
+        ` Segue link de biometria ${seguradoraTexto} de _*${nomeLocatario}*_ enviado para o SMS do nº *${celular || '—'}*:`,
+        linkBiometria || 'Cole o link de biometria aqui',
+      ].join('\n'),
+      status: 'aprovado',
+      seguradoraEscolhida,
+    }
+  }
+
+  return {
+    title: `_*RETORNO PENDENTE -- ${tipoAprovacao}*_`,
+    body: [
+      `_*${nomeLocatario}*_`,
+      '',
+      ...linhas.filter(line => !line.endsWith('PENDENTE')),
+    ].join('\n'),
+    status: 'pendente',
+    seguradoraEscolhida: '',
+  }
+}
+
+function normalizarCotacoes(cotacoes = [], produto) {
+  return getSeguradorasCotacao(produto).map(seguradora => {
     const atual = Array.isArray(cotacoes)
       ? cotacoes.find(c => c?.seguradora === seguradora) || {}
       : {}
@@ -201,17 +340,12 @@ function normalizarCotacoes(cotacoes = []) {
   })
 }
 
-function aplicarEmAprovadas(cotacoes, field, value) {
+function aplicarEmTodas(cotacoes, field, value) {
   if (!CAMPOS_REPLICAVEIS.has(field)) return cotacoes
-  return cotacoes.map(item => (
-    item.status === 'aprovado'
-      ? { ...item, [field]: value }
-      : item
-  ))
+  return cotacoes.map(item => ({ ...item, [field]: value }))
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-
 export default function FichaDetalhePage() {
   const { id }    = useParams()
   const navigate  = useNavigate()
@@ -227,6 +361,8 @@ export default function FichaDetalhePage() {
   const [finalizar,setFinalizar]= useState(false)
   const [confirm,  setConfirm]  = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [biometriaUrl, setBiometriaUrl] = useState('')
+  const [copiandoMensagem, setCopiandoMensagem] = useState(false)
   const backTo = location.state?.backTo || location.state?.from || '/fichas'
   const backState = location.state?.backState || (location.state?.restoreKanban ? location.state : null)
 
@@ -245,10 +381,10 @@ export default function FichaDetalhePage() {
 
     if (CAMPOS_REPLICAVEIS.has(field)) {
       const raw = ficha?.raw_data || {}
-      const cotacoes = normalizarCotacoes(raw.cotacoes)
+      const cotacoes = normalizarCotacoes(raw.cotacoes, ficha?.produto)
       patch.raw_data = {
         ...raw,
-        cotacoes: aplicarEmAprovadas(cotacoes, field, value),
+        cotacoes: aplicarEmTodas(cotacoes, field, value),
       }
     }
 
@@ -265,7 +401,7 @@ export default function FichaDetalhePage() {
 
   async function updateCotacao(seguradora, field, value) {
     const raw = ficha?.raw_data || {}
-    const cotacoes = normalizarCotacoes(raw.cotacoes)
+    const cotacoes = normalizarCotacoes(raw.cotacoes, ficha?.produto)
     const nextCotacoes = cotacoes.map(c => (c.seguradora === seguradora ? { ...c, [field]: value } : c))
     await updateField('raw_data', { ...raw, cotacoes: nextCotacoes })
   }
@@ -311,6 +447,27 @@ export default function FichaDetalhePage() {
   const canAssumir  = !ficha.assumida && ficha.status === 'pendente'
   const canFinalizar = isMe && ficha.status === 'em_cotacao'
   const nomePrincipal = isPJ ? (ficha.nome_empresa || ficha.nome_interessado || 'Sem nome') : (ficha.nome_interessado || 'Sem nome')
+  const cotacoesNormalizadas = useMemo(
+    () => normalizarCotacoes(ficha.raw_data?.cotacoes, ficha.produto),
+    [ficha.raw_data?.cotacoes, ficha.produto]
+  )
+  const mensagemRetorno = useMemo(
+    () => buildCotacaoMessageData(ficha, cotacoesNormalizadas, biometriaUrl),
+    [ficha, cotacoesNormalizadas, biometriaUrl]
+  )
+  const textoMensagemRetorno = `${mensagemRetorno.title}\n\n${mensagemRetorno.body}`.trim()
+
+  async function handleCopiarMensagemRetorno() {
+    try {
+      setCopiandoMensagem(true)
+      await navigator.clipboard.writeText(textoMensagemRetorno)
+      toast({ type: 'success', title: 'Mensagem copiada' })
+    } catch (error) {
+      toast({ type: 'error', title: 'Erro ao copiar mensagem', message: error?.message })
+    } finally {
+      setCopiandoMensagem(false)
+    }
+  }
 
   if (editar) return (
     <ModalFicha ficha={ficha} onClose={() => setEditar(false)} onSuccess={() => { setEditar(false); load() }} />
@@ -539,66 +696,97 @@ export default function FichaDetalhePage() {
             </div>
           </DataCard>
 
-          <DataCard title="Cotação" bodyClassName="space-y-4">
-            <p className="text-sm text-dark-muted">
-              Preencha as 5 seguradoras manualmente. Os campos de comissao e parcelamento acima sao espelhados automaticamente nas seguradoras com status Aprovado.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {normalizarCotacoes(ficha.raw_data?.cotacoes).map(cotacao => (
-                <div key={cotacao.seguradora} className="rounded-[28px] border border-dark-border bg-white/85 p-4 shadow-[0_18px_38px_rgba(15,23,42,0.08)] backdrop-blur-sm space-y-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <SeguradoraBadge nome={cotacao.seguradora} size="xl" showName={false} />
-                    <span className={`text-[10px] uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border whitespace-nowrap ${
-                      cotacao.status === 'aprovado'
-                        ? 'border-status-success/30 text-status-success bg-status-success/10'
-                        : cotacao.status === 'recusado'
-                          ? 'border-status-danger/30 text-status-danger bg-status-danger/10'
-                          : 'border-dark-border text-dark-muted bg-dark-surface'
-                    }`}>
-                      {cotacao.status || 'Sem status'}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-dark-muted mb-1">Status</p>
-                      <Select
-                        value={cotacao.status}
-                        onChange={value => updateCotacao(cotacao.seguradora, 'status', value)}
-                        options={COTACAO_STATUS_OPTIONS}
-                        placeholder="Sem status"
-                        label="Status"
-                      />
-                    </div>
-                    <InlineField
-                      label="Valor da Parcela"
-                      value={cotacao.valor_parcela !== '' && cotacao.valor_parcela != null ? String(cotacao.valor_parcela) : ''}
-                      type="number"
-                      onSave={v => updateCotacao(cotacao.seguradora, 'valor_parcela', v ? parseFloat(v) : null)}
-                    />
-                    <InlineField
-                      label="% Desconto"
-                      value={cotacao.pct_desconto !== '' && cotacao.pct_desconto != null ? String(cotacao.pct_desconto) : ''}
-                      type="number"
-                      onSave={v => updateCotacao(cotacao.seguradora, 'pct_desconto', v ? parseFloat(v) : null)}
-                    />
-                    <InlineField
-                      label="Qtd. Parcelas"
-                      value={cotacao.parcelamento !== '' && cotacao.parcelamento != null ? String(cotacao.parcelamento) : ''}
-                      type="number"
-                      onSave={v => updateCotacao(cotacao.seguradora, 'parcelamento', v ? parseInt(v, 10) : null)}
-                    />
-                    <div className="sm:col-span-2">
-                      <InlineField
-                        label="% Comissão"
-                        value={cotacao.pct_comissao !== '' && cotacao.pct_comissao != null ? String(cotacao.pct_comissao) : ''}
-                        type="number"
-                        onSave={v => updateCotacao(cotacao.seguradora, 'pct_comissao', v ? parseFloat(v) : null)}
-                      />
-                    </div>
-                  </div>
+          <DataCard title="Cotação e retorno" bodyClassName="space-y-5">
+            <div className="rounded-[28px] border border-brand-accent/20 bg-brand-accent/5 p-4 md:p-5">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-accent">Resumo do preenchimento</p>
+                  <p className="mt-1 text-sm text-dark-muted">
+                    A comissão global é aplicada a todas as seguradoras e a mensagem de retorno é montada automaticamente.
+                  </p>
                 </div>
-              ))}
+                <div className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                  mensagemRetorno.status === 'aprovado'
+                    ? 'border-status-success/30 bg-status-success/10 text-status-success'
+                    : mensagemRetorno.status === 'recusado'
+                      ? 'border-status-danger/30 bg-status-danger/10 text-status-danger'
+                      : 'border-dark-border bg-dark-surface text-dark-muted'
+                }`}>
+                  {mensagemRetorno.title.replaceAll('_', '').trim()}
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="rounded-2xl border border-dark-border/70 bg-white/70 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissão global</p>
+                  <p className="mt-1 text-lg font-semibold text-dark-text">{ficha.pct_comissao != null && ficha.pct_comissao !== '' ? `${ficha.pct_comissao}%` : '—'}</p>
+                </div>
+                <div className="rounded-2xl border border-dark-border/70 bg-white/70 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Parcelamento base</p>
+                  <p className="mt-1 text-lg font-semibold text-dark-text">{ficha.parcelamento != null && ficha.parcelamento !== '' ? `${ficha.parcelamento}x` : '—'}</p>
+                </div>
+                <div className="rounded-2xl border border-dark-border/70 bg-white/70 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Seguradoras exibidas</p>
+                  <p className="mt-1 text-lg font-semibold text-dark-text">{cotacoesNormalizadas.length}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {cotacoesNormalizadas.map(cotacao => {
+                const statusTone = cotacao.status === 'aprovado'
+                  ? 'border-status-success/30 text-status-success bg-status-success/10'
+                  : cotacao.status === 'recusado'
+                    ? 'border-status-danger/30 text-status-danger bg-status-danger/10'
+                    : 'border-dark-border text-dark-muted bg-dark-surface'
+
+                return (
+                  <div key={cotacao.seguradora} className="rounded-[28px] border border-dark-border bg-white/90 p-4 shadow-[0_18px_38px_rgba(15,23,42,0.08)] backdrop-blur-sm space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <SeguradoraBadge nome={cotacao.seguradora} size="xl" showName={false} />
+                      <div className={`text-[10px] uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border whitespace-nowrap ${statusTone}`}>
+                        {cotacao.status || 'Sem status'}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="sm:col-span-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-dark-muted mb-1">Status</p>
+                        <Select
+                          value={cotacao.status}
+                          onChange={value => updateCotacao(cotacao.seguradora, 'status', value)}
+                          options={COTACAO_STATUS_OPTIONS}
+                          placeholder="Sem status"
+                          label="Status"
+                        />
+                      </div>
+                      <InlineField
+                        label="Valor da Parcela"
+                        value={cotacao.valor_parcela !== '' && cotacao.valor_parcela != null ? String(cotacao.valor_parcela) : ''}
+                        type="number"
+                        onSave={v => updateCotacao(cotacao.seguradora, 'valor_parcela', v ? parseFloat(v) : null)}
+                      />
+                      <InlineField
+                        label="% Desconto"
+                        value={cotacao.pct_desconto !== '' && cotacao.pct_desconto != null ? String(cotacao.pct_desconto) : ''}
+                        type="number"
+                        onSave={v => updateCotacao(cotacao.seguradora, 'pct_desconto', v ? parseFloat(v) : null)}
+                      />
+                      <InlineField
+                        label="Qtd. Parcelas"
+                        value={cotacao.parcelamento !== '' && cotacao.parcelamento != null ? String(cotacao.parcelamento) : ''}
+                        type="number"
+                        onSave={v => updateCotacao(cotacao.seguradora, 'parcelamento', v ? parseInt(v, 10) : null)}
+                      />
+                      <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/40 px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissão global</p>
+                        <p className="mt-1 text-sm font-semibold text-dark-text">
+                          {ficha.pct_comissao != null && ficha.pct_comissao !== '' ? `${ficha.pct_comissao}%` : 'Sem valor'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </DataCard>
         </div>
@@ -640,6 +828,61 @@ export default function FichaDetalhePage() {
             fichaId={ficha.id}
             cpfCnpj={ficha.cpf || ficha.cnpj}
           />
+
+          <DataCard
+            title="Mensagem de retorno"
+            actions={(
+              <button
+                onClick={handleCopiarMensagemRetorno}
+                disabled={copiandoMensagem}
+                className="inline-flex items-center gap-1.5 rounded-2xl border border-brand-accent/30 px-3 py-1.5 text-xs font-medium text-brand-accent transition-colors hover:bg-brand-accent/10 disabled:opacity-50"
+              >
+                {copiandoMensagem ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiandoMensagem ? 'Copiando...' : 'Copiar'}
+              </button>
+            )}
+            bodyClassName="space-y-4"
+          >
+            <p className="text-xs text-dark-muted">
+              Cole o link de biometria abaixo. O texto é atualizado automaticamente com o nome, produto, status e valores das seguradoras.
+            </p>
+
+            <div>
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">
+                Link de biometria
+              </label>
+              <div className="flex items-center gap-2 rounded-2xl border border-dark-border bg-dark-surface2/40 px-3 py-2">
+                <LinkIcon className="w-4 h-4 flex-shrink-0 text-dark-muted" />
+                <input
+                  value={biometriaUrl}
+                  onChange={e => setBiometriaUrl(e.target.value)}
+                  placeholder="Cole aqui o link da biometria"
+                  className="w-full bg-transparent text-sm text-dark-text outline-none placeholder:text-dark-muted/50"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-dark-border/70 bg-dark-surface2/30 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-accent">{mensagemRetorno.title.replaceAll('_', '').trim()}</p>
+                  <p className="mt-1 text-xs text-dark-muted">
+                    {mensagemRetorno.status === 'aprovado'
+                      ? `Seguradora escolhida: ${mensagemRetorno.seguradoraEscolhida || '—'}`
+                      : mensagemRetorno.status === 'recusado'
+                        ? 'Todas as seguradoras estão recusadas.'
+                        : 'Aguardando aprovação ou recusa completa.'}
+                  </p>
+                </div>
+              </div>
+              <textarea
+                readOnly
+                value={textoMensagemRetorno}
+                rows={16}
+                className="w-full resize-none rounded-2xl border border-dark-border bg-dark-surface px-4 py-3 font-mono text-[12px] leading-5 text-dark-text outline-none"
+              />
+            </div>
+          </DataCard>
         </div>
       </div>
 

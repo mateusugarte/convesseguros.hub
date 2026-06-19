@@ -376,6 +376,11 @@ export default function FichaDetalhePage() {
 
   useEffect(() => { load() }, [load])
 
+  const cotacoesNormalizadas = useMemo(
+    () => normalizarCotacoes(ficha?.raw_data?.cotacoes, ficha?.produto),
+    [ficha?.raw_data?.cotacoes, ficha?.produto]
+  )
+
   async function updateField(field, value) {
     const prev = ficha
     const patch = { [field]: value }
@@ -448,10 +453,6 @@ export default function FichaDetalhePage() {
   const canAssumir  = !ficha.assumida && ficha.status === 'pendente'
   const canFinalizar = isMe && ficha.status === 'em_cotacao'
   const nomePrincipal = isPJ ? (ficha.nome_empresa || ficha.nome_interessado || 'Sem nome') : (ficha.nome_interessado || 'Sem nome')
-  const cotacoesNormalizadas = useMemo(
-    () => normalizarCotacoes(ficha?.raw_data?.cotacoes, ficha?.produto),
-    [ficha?.raw_data?.cotacoes, ficha?.produto]
-  )
 
   async function handleGerarMensagemRetorno() {
     const data = buildCotacaoMessageData(ficha, cotacoesNormalizadas, biometriaUrl)

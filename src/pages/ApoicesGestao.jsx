@@ -13,6 +13,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { PRODUTO_LABELS, STATUS_LABELS } from '../lib/fichas'
 import { fetchFichasAprovadasEmissao } from '../lib/fichas'
+import { formatDecimalBRInput } from '../lib/numberInput'
 import {
   Plus, ChevronLeft, ChevronRight, RefreshCw,
   Search, Home, Briefcase, Building, LayoutGrid, X, Check, ArrowLeft,
@@ -446,9 +447,9 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     setEndereco(f.cep || '')
     // Pré-preenche número do orçamento com número da apólice da ficha (se houver)
     setNumeroOrcamento(f.numero_apolice || '')
-    setValorParcela(f.valor_parcela ?? f.valor_aluguel ?? '')
-    setPctComissao(f.pct_comissao ?? '')
-    setPctDesconto(f.pct_desconto ?? '')
+    setValorParcela(f.valor_parcela !== null && f.valor_parcela !== undefined ? formatDecimalBRInput(f.valor_parcela) : (f.valor_aluguel ?? ''))
+    setPctComissao(f.pct_comissao !== null && f.pct_comissao !== undefined ? formatDecimalBRInput(f.pct_comissao) : '')
+    setPctDesconto(f.pct_desconto !== null && f.pct_desconto !== undefined ? formatDecimalBRInput(f.pct_desconto) : '')
     setParcelamento(f.parcelamento ?? '')
     setSeguradora(f.seguradora || '')
   }
@@ -473,8 +474,8 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     if (!fichaSelecionada) return
     setCriando(true)
     const premioLiquidoNum = toNumber(premioLiquido)
-    const pctComissaoNum = pctComissao === '' ? null : pctComissao
-    const pctDescontoNum = pctDesconto === '' ? null : pctDesconto
+    const pctComissaoNum = pctComissao === '' ? null : toNumber(pctComissao)
+    const pctDescontoNum = pctDesconto === '' ? null : toNumber(pctDesconto)
     const parcelamentoNum = toNumber(parcelamento)
     const valorParcelaNum = toNumber(valorParcela)
     const { error } = await criarApolice({
@@ -852,8 +853,8 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
             <EditField label="Parcelamento (vezes)" type="number" value={parcelamento} onChange={setParcelamento} placeholder="Ex: 12" required />
               <EditField label="Valor da Parcela (R$)" type="text" inputMode="decimal" value={valorParcela} onChange={setValorParcela} placeholder="0,00" required />
               <EditField label="Prêmio Líquido (R$)" type="text" inputMode="decimal" value={premioLiquido} onChange={setPremioLiquido} placeholder="0,00" required />
-            <EditField label="% Comissão" type="number" value={pctComissao} onChange={setPctComissao} placeholder="Ex: 10" required />
-            <EditField label="% Desconto" type="number" value={pctDesconto} onChange={setPctDesconto} placeholder="Ex: 5" required />
+            <EditField label="% Comissão" type="text" inputMode="decimal" value={pctComissao} onChange={setPctComissao} placeholder="Ex: 10,00" required />
+            <EditField label="% Desconto" type="text" inputMode="decimal" value={pctDesconto} onChange={setPctDesconto} placeholder="Ex: 5,00" required />
             <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Prêmio total</p>
               <p className="mt-1 font-semibold">{premioTotal != null ? formatMoneyBR(premioTotal) : '—'}</p>

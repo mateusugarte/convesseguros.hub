@@ -5,6 +5,7 @@ import {
 } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { toNumber } from '../lib/apolices'
+import { formatDecimalBRInput, parseDecimalBR } from '../lib/numberInput'
 import { ArrowLeft, Plus, Save } from 'lucide-react'
 import SeguradoraBadge from './SeguradoraBadge'
 import SeguradoraSelect from './SeguradoraSelect'
@@ -59,10 +60,10 @@ function normalizarCotacoes(cotacoes = []) {
     return {
       seguradora,
       status: atual.status || '',
-      valor_parcela: atual.valor_parcela ?? '',
-      pct_desconto: atual.pct_desconto ?? '',
+      valor_parcela: formatNumberField(atual.valor_parcela),
+      pct_desconto: formatNumberField(atual.pct_desconto),
       parcelamento: atual.parcelamento ?? '',
-      pct_comissao: atual.pct_comissao ?? '',
+      pct_comissao: formatNumberField(atual.pct_comissao),
     }
   })
 }
@@ -74,6 +75,10 @@ function aplicarEmAprovadas(cotacoes, field, value) {
       ? { ...item, [field]: value }
       : item
   ))
+}
+
+function formatNumberField(value) {
+  return formatDecimalBRInput(value)
 }
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -145,18 +150,18 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
     cep:                ficha?.cep                ?? '',
     imobiliaria:        ficha?.imobiliaria        ?? '',
     tipo_imovel:        ficha?.tipo_imovel        ?? '',
-    valor_aluguel:      ficha?.valor_aluguel      ?? '',
-    valor_iptu:         ficha?.valor_iptu         ?? '',
-    valor_condominio:   ficha?.valor_condominio   ?? '',
+    valor_aluguel:      formatNumberField(ficha?.valor_aluguel),
+    valor_iptu:         formatNumberField(ficha?.valor_iptu),
+    valor_condominio:   formatNumberField(ficha?.valor_condominio),
     observacoes:        ficha?.observacoes        ?? '',
     atividade:          ficha?.atividade          ?? '',
     opcao_tributaria:   ficha?.opcao_tributaria   ?? '',
-    total_rendimentos:  ficha?.total_rendimentos  ?? '',
-    capital_social:     ficha?.capital_social     ?? '',
+    total_rendimentos:  formatNumberField(ficha?.total_rendimentos),
+    capital_social:     formatNumberField(ficha?.capital_social),
     motivo_locacao:     ficha?.motivo_locacao     ?? '',
     vigencia:           ficha?.vigencia           ?? '',
-    pct_comissao:       ficha?.pct_comissao       ?? '',
-    pct_desconto:       ficha?.pct_desconto       ?? '',
+    pct_comissao:       formatNumberField(ficha?.pct_comissao),
+    pct_desconto:       formatNumberField(ficha?.pct_desconto),
     parcelamento:       ficha?.parcelamento       ?? '',
     cotacoes:           normalizarCotacoes(ficha?.raw_data?.cotacoes),
     status:             ficha?.status             ?? 'pendente',
@@ -183,18 +188,18 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
       cep:                ficha?.cep                ?? '',
       imobiliaria:        ficha?.imobiliaria        ?? '',
       tipo_imovel:        ficha?.tipo_imovel        ?? '',
-      valor_aluguel:      ficha?.valor_aluguel      ?? '',
-      valor_iptu:         ficha?.valor_iptu         ?? '',
-      valor_condominio:   ficha?.valor_condominio   ?? '',
+      valor_aluguel:      formatNumberField(ficha?.valor_aluguel),
+      valor_iptu:         formatNumberField(ficha?.valor_iptu),
+      valor_condominio:   formatNumberField(ficha?.valor_condominio),
       observacoes:        ficha?.observacoes        ?? '',
       atividade:          ficha?.atividade          ?? '',
       opcao_tributaria:   ficha?.opcao_tributaria   ?? '',
-      total_rendimentos:  ficha?.total_rendimentos  ?? '',
-      capital_social:     ficha?.capital_social     ?? '',
+      total_rendimentos:  formatNumberField(ficha?.total_rendimentos),
+      capital_social:     formatNumberField(ficha?.capital_social),
       motivo_locacao:     ficha?.motivo_locacao     ?? '',
       vigencia:           ficha?.vigencia           ?? '',
-      pct_comissao:       ficha?.pct_comissao       ?? '',
-      pct_desconto:       ficha?.pct_desconto       ?? '',
+      pct_comissao:       formatNumberField(ficha?.pct_comissao),
+      pct_desconto:       formatNumberField(ficha?.pct_desconto),
       parcelamento:       ficha?.parcelamento       ?? '',
       cotacoes:           normalizarCotacoes(ficha?.raw_data?.cotacoes),
       status:             ficha?.status             ?? 'pendente',
@@ -236,19 +241,19 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
     const { cotacoes, ...formBase } = form
     const dados = {
       ...formBase,
-      valor_aluguel:     form.valor_aluguel     || null,
-      valor_iptu:        form.valor_iptu        || null,
-      valor_condominio:  form.valor_condominio  || null,
-      total_rendimentos: form.total_rendimentos || null,
-      capital_social:    form.capital_social    || null,
+      valor_aluguel:     form.valor_aluguel === '' ? null : parseDecimalBR(form.valor_aluguel),
+      valor_iptu:        form.valor_iptu === '' ? null : parseDecimalBR(form.valor_iptu),
+      valor_condominio:  form.valor_condominio === '' ? null : parseDecimalBR(form.valor_condominio),
+      total_rendimentos: form.total_rendimentos === '' ? null : parseDecimalBR(form.total_rendimentos),
+      capital_social:    form.capital_social === '' ? null : parseDecimalBR(form.capital_social),
       // Limpar campo não usado por produto
       cpf:  isPJ ? null : form.cpf || null,
       cnpj: isPJ ? form.cnpj || null : null,
       nome_interessado: isPJ ? null : form.nome_interessado || null,
       nome_empresa:     isPJ ? form.nome_empresa || null : null,
       cpf_socios:       isPJ ? form.cpf_socios || null : null,
-      pct_comissao:     form.pct_comissao === '' ? null : form.pct_comissao,
-      pct_desconto:     form.pct_desconto === '' ? null : form.pct_desconto,
+      pct_comissao:     form.pct_comissao === '' ? null : parseDecimalBR(form.pct_comissao),
+      pct_desconto:     form.pct_desconto === '' ? null : parseDecimalBR(form.pct_desconto),
       parcelamento:     form.parcelamento === '' ? null : Number(form.parcelamento),
       raw_data: {
         ...(ficha?.raw_data || {}),
@@ -381,13 +386,13 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
               <input type="text" value={form.cep} onChange={e => set('cep', e.target.value)} className="input" />
             </Field>
             <Field label="Aluguel">
-              <input type="text" value={form.valor_aluguel} onChange={e => set('valor_aluguel', e.target.value)} className="input" placeholder="Ex: 1500,00" />
+              <input type="text" inputMode="decimal" value={form.valor_aluguel} onChange={e => set('valor_aluguel', e.target.value)} className="input" placeholder="Ex: 1.500,00" />
             </Field>
             <Field label="IPTU">
-              <input type="text" value={form.valor_iptu} onChange={e => set('valor_iptu', e.target.value)} className="input" placeholder="Ex: 200,00" />
+              <input type="text" inputMode="decimal" value={form.valor_iptu} onChange={e => set('valor_iptu', e.target.value)} className="input" placeholder="Ex: 200,00" />
             </Field>
             <Field label="Condomínio">
-              <input type="text" value={form.valor_condominio} onChange={e => set('valor_condominio', e.target.value)} className="input" placeholder="Ex: 300,00" />
+              <input type="text" inputMode="decimal" value={form.valor_condominio} onChange={e => set('valor_condominio', e.target.value)} className="input" placeholder="Ex: 300,00" />
             </Field>
             <Field label="Orçamentista">
               <Select
@@ -409,10 +414,10 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                 <input type="text" value={form.atividade} onChange={e => set('atividade', e.target.value)} className="input" placeholder="Atividade no imóvel" />
               </Field>
               <Field label="Total de Rendimentos">
-                <input type="text" value={form.total_rendimentos} onChange={e => set('total_rendimentos', e.target.value)} className="input" placeholder="Ex: 5000,00" />
+                <input type="text" inputMode="decimal" value={form.total_rendimentos} onChange={e => set('total_rendimentos', e.target.value)} className="input" placeholder="Ex: 5.000,00" />
               </Field>
               <Field label="Capital Social">
-                <input type="text" value={form.capital_social} onChange={e => set('capital_social', e.target.value)} className="input" placeholder="Ex: 10000,00" />
+                <input type="text" inputMode="decimal" value={form.capital_social} onChange={e => set('capital_social', e.target.value)} className="input" placeholder="Ex: 10.000,00" />
               </Field>
               <Field label="Motivo da Locação">
                 <input type="text" value={form.motivo_locacao} onChange={e => set('motivo_locacao', e.target.value)} className="input" />
@@ -434,27 +439,27 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
           )}
 
           <Sec title="Financeiro da Ficha">
-            <Field label="% Comissão padrão">
+              <Field label="% Comissão padrão">
               <input
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={form.pct_comissao}
                 onChange={e => set('pct_comissao', e.target.value)}
                 className="input"
-                placeholder="Ex: 10"
+                placeholder="Ex: 10,00"
               />
               <p className="mt-1 text-[11px] text-dark-muted">
                 Serve como fallback para as seguradoras aprovadas. Você pode ajustar cada uma abaixo.
               </p>
             </Field>
-            <Field label="% Desconto">
+              <Field label="% Desconto">
               <input
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={form.pct_desconto}
                 onChange={e => set('pct_desconto', e.target.value)}
                 className="input"
-                placeholder="Ex: 5"
+                placeholder="Ex: 5,00"
               />
             </Field>
             <Field label="Parcelamento">
@@ -518,27 +523,27 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                     <div>
                       <label className="eyebrow text-dark-muted block mb-1.5">Valor da parcela</label>
                       <input
-                        type="number"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         value={cotacao.valor_parcela}
                         onChange={e => set('cotacoes', form.cotacoes.map((item, itemIndex) => (
                           itemIndex === index ? { ...item, valor_parcela: e.target.value } : item
                         )))}
                         className="input"
-                        placeholder="Ex: 150,00"
+                        placeholder="Ex: 1.500,00"
                       />
                     </div>
                     <div>
                       <label className="eyebrow text-dark-muted block mb-1.5">% Desconto</label>
                       <input
-                        type="number"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         value={cotacao.pct_desconto}
                         onChange={e => set('cotacoes', form.cotacoes.map((item, itemIndex) => (
                           itemIndex === index ? { ...item, pct_desconto: e.target.value } : item
                         )))}
                         className="input"
-                        placeholder="Ex: 5"
+                        placeholder="Ex: 5,00"
                       />
                     </div>
                     <div>
@@ -558,14 +563,14 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                     <div className="sm:col-span-2">
                       <label className="eyebrow text-dark-muted block mb-1.5">% Comissão da seguradora</label>
                       <input
-                        type="number"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         value={cotacao.pct_comissao}
                         onChange={e => set('cotacoes', form.cotacoes.map((item, itemIndex) => (
                           itemIndex === index ? { ...item, pct_comissao: e.target.value } : item
                         )))}
                         className="input"
-                        placeholder="Ex: 10"
+                        placeholder="Ex: 10,00"
                       />
                       <p className="mt-1 text-[11px] text-dark-muted">
                         Se ficar vazio, a comissão padrão da ficha será usada na validação e na mensagem.

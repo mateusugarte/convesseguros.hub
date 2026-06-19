@@ -4,6 +4,8 @@ import { fetchFichaDetalhe, editarFicha, deletarFicha, salvarRetornoGeradoFicha,
 import { useAuth } from '../contexts/AuthContext'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useToast } from '../contexts/ToastContext'
+import { toNumber } from '../lib/apolices'
+import { formatDecimalBRInput } from '../lib/numberInput'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ArrowLeft, Pencil, Trash2, Check, CheckCircle2, CircleDot, X, CalendarDays, Building2, UserRound, Clock3, Copy, FileText, Link as LinkIcon, Loader2 } from 'lucide-react'
@@ -32,12 +34,16 @@ function fmtBRL(v) {
 
 // ── InlineField — campo editável com click ────────────────────────────────────
 
-function InlineField({ label, value, onSave, type = 'text', rows }) {
+function InlineField({ label, value, onSave, type = 'text', rows, formatter, inputMode }) {
   const [editing, setEditing] = useState(false)
   const [draft,   setDraft]   = useState(value || '')
   const [saving,  setSaving]  = useState(false)
 
-  function cancel() { setEditing(false); setDraft(value || '') }
+  function formatDraft(val) {
+    return formatter ? formatter(val) : (val || '')
+  }
+
+  function cancel() { setEditing(false); setDraft(formatDraft(value)) }
 
   async function save() {
     if (draft === (value || '')) { setEditing(false); return }
@@ -71,6 +77,7 @@ function InlineField({ label, value, onSave, type = 'text', rows }) {
           ) : (
             <input
               type={type}
+              inputMode={inputMode}
               value={draft}
               onChange={e => setDraft(e.target.value)}
               onKeyDown={handleKey}
@@ -94,10 +101,10 @@ function InlineField({ label, value, onSave, type = 'text', rows }) {
         </div>
       ) : (
         <p
-          onClick={() => { setDraft(value || ''); setEditing(true) }}
+          onClick={() => { setDraft(formatDraft(value)); setEditing(true) }}
           className="text-sm text-dark-text cursor-pointer group flex items-center gap-1.5 hover:text-brand-accent transition-colors"
         >
-          <span>{value || <span className="text-dark-muted/40 italic">—</span>}</span>
+          <span>{formatter ? (formatter(value) || <span className="text-dark-muted/40 italic">—</span>) : (value || <span className="text-dark-muted/40 italic">—</span>)}</span>
           <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-40 flex-shrink-0 transition-opacity" />
         </p>
       )}
@@ -750,14 +757,18 @@ export default function FichaDetalhePage() {
             <InlineField
               label="% Comissão padrão"
               value={ficha.pct_comissao != null ? String(ficha.pct_comissao) : ''}
-              type="number"
-              onSave={v => updateField('pct_comissao', v ? parseFloat(v) : null)}
+              type="text"
+              inputMode="decimal"
+              formatter={formatDecimalBRInput}
+              onSave={v => updateField('pct_comissao', v ? toNumber(v) : null)}
             />
             <InlineField
               label="% Desconto"
               value={ficha.pct_desconto != null ? String(ficha.pct_desconto) : ''}
-              type="number"
-              onSave={v => updateField('pct_desconto', v ? parseFloat(v) : null)}
+              type="text"
+              inputMode="decimal"
+              formatter={formatDecimalBRInput}
+              onSave={v => updateField('pct_desconto', v ? toNumber(v) : null)}
             />
             <InlineField
               label="Parcelamento"
@@ -812,7 +823,11 @@ export default function FichaDetalhePage() {
               <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div className="rounded-2xl border border-dark-border/70 bg-white/70 px-4 py-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissão padrão da ficha</p>
-                  <p className="mt-1 text-lg font-semibold text-dark-text">{ficha.pct_comissao != null && ficha.pct_comissao !== '' ? `${ficha.pct_comissao}%` : '—'}</p>
+                  <p className="mt-1 text-lg font-semibold text-dark-text">
+                    {ficha.pct_comissao != null && ficha.pct_comissao !== ''
+                      ? `${formatDecimalBRInput(ficha.pct_comissao)}%`
+                      : '—'}
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-dark-border/70 bg-white/70 px-4 py-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Parcelamento base</p>
@@ -880,14 +895,18 @@ export default function FichaDetalhePage() {
                       <InlineField
                         label="Valor da Parcela"
                         value={cotacao.valor_parcela !== '' && cotacao.valor_parcela != null ? String(cotacao.valor_parcela) : ''}
-                        type="number"
-                        onSave={v => updateCotacao(cotacao.seguradora, 'valor_parcela', v ? parseFloat(v) : null)}
+                        type="text"
+                        inputMode="decimal"
+                        formatter={formatDecimalBRInput}
+                        onSave={v => updateCotacao(cotacao.seguradora, 'valor_parcela', v ? toNumber(v) : null)}
                       />
                       <InlineField
                         label="% Desconto"
                         value={cotacao.pct_desconto !== '' && cotacao.pct_desconto != null ? String(cotacao.pct_desconto) : ''}
-                        type="number"
-                        onSave={v => updateCotacao(cotacao.seguradora, 'pct_desconto', v ? parseFloat(v) : null)}
+                        type="text"
+                        inputMode="decimal"
+                        formatter={formatDecimalBRInput}
+                        onSave={v => updateCotacao(cotacao.seguradora, 'pct_desconto', v ? toNumber(v) : null)}
                       />
                       <InlineField
                         label="Qtd. Parcelas"
@@ -899,8 +918,10 @@ export default function FichaDetalhePage() {
                         <InlineField
                           label="Comissão da seguradora"
                           value={cotacao.pct_comissao !== '' && cotacao.pct_comissao != null ? String(cotacao.pct_comissao) : ''}
-                          type="number"
-                          onSave={v => updateCotacao(cotacao.seguradora, 'pct_comissao', v ? parseFloat(v) : null)}
+                          type="text"
+                          inputMode="decimal"
+                          formatter={formatDecimalBRInput}
+                          onSave={v => updateCotacao(cotacao.seguradora, 'pct_comissao', v ? toNumber(v) : null)}
                         />
                         <p className="mt-1 text-[11px] text-dark-muted">
                           {cotacao.pct_comissao !== '' && cotacao.pct_comissao != null

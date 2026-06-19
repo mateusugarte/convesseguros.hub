@@ -13,6 +13,7 @@ import { DatePicker } from '../components/ui/DatePicker'
 import { Select } from '../components/ui/Select'
 import { PageHeader, MetricCard, DataCard, Avatar } from '../components/ui'
 import { normalizeDisplayText } from '../lib/text'
+import { formatDecimalBRInput } from '../lib/numberInput'
 
 function fmtDt(v) {
   if (!v) return null
@@ -58,7 +59,7 @@ function FieldShell({ label, required, children }) {
   )
 }
 
-function EditField({ label, value, onChange, type = 'text', placeholder, required }) {
+function EditField({ label, value, onChange, type = 'text', placeholder, required, inputMode }) {
   return (
     <FieldShell label={label} required={required}>
       {type === 'date' ? (
@@ -66,6 +67,7 @@ function EditField({ label, value, onChange, type = 'text', placeholder, require
       ) : (
         <input
           type={type}
+          inputMode={inputMode}
           value={value || ''}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
@@ -152,11 +154,11 @@ export default function ApoliceDetalhe() {
       setEndereco(data.endereco || '')
       setInicioVigencia(data.inicio_vigencia || '')
       setFimVigencia(data.fim_vigencia || '')
-      setValorParcela(data.valor_parcela !== null && data.valor_parcela !== undefined ? String(data.valor_parcela) : '')
+      setValorParcela(data.valor_parcela !== null && data.valor_parcela !== undefined ? formatDecimalBRInput(data.valor_parcela) : '')
       setParcelamento(data.parcelamento !== null && data.parcelamento !== undefined ? String(data.parcelamento) : '')
-      setPremioLiquido(data.premio_liquido !== null && data.premio_liquido !== undefined ? String(data.premio_liquido) : '')
-      setPctComissao(data.pct_comissao !== null && data.pct_comissao !== undefined ? String(data.pct_comissao) : '')
-      setPctDesconto(data.pct_desconto !== null && data.pct_desconto !== undefined ? String(data.pct_desconto) : '')
+      setPremioLiquido(data.premio_liquido !== null && data.premio_liquido !== undefined ? formatDecimalBRInput(data.premio_liquido) : '')
+      setPctComissao(data.pct_comissao !== null && data.pct_comissao !== undefined ? formatDecimalBRInput(data.pct_comissao) : '')
+      setPctDesconto(data.pct_desconto !== null && data.pct_desconto !== undefined ? formatDecimalBRInput(data.pct_desconto) : '')
       setFormaPagamento(data.forma_pagamento || '')
     }
     setLoading(false)
@@ -188,8 +190,8 @@ export default function ApoliceDetalhe() {
       valor_parcela: parcelaNum || null,
       forma_pagamento: formaPagamento || null,
       premio_liquido: premioLiquidoNum || null,
-      pct_comissao: pctComissao === '' ? null : pctComissao,
-      pct_desconto: pctDesconto === '' ? null : pctDesconto,
+      pct_comissao: pctComissao === '' ? null : toNumber(pctComissao),
+      pct_desconto: pctDesconto === '' ? null : toNumber(pctDesconto),
       premio_total: premioTotal,
       valor_producao: premioTotal,
       valor_comissao: valorComissao,
@@ -368,10 +370,10 @@ export default function ApoliceDetalhe() {
               <p className="text-sm text-dark-text">{meses > 0 ? `${meses} meses` : '—'}</p>
             </div>
             <EditField label="Parcelamento (vezes)" type="number" value={parcelamento} onChange={setParcelamento} placeholder="Ex: 12" required />
-            <EditField label="Valor da Parcela (R$)" type="number" value={valorParcela} onChange={setValorParcela} placeholder="0,00" required />
-            <EditField label="Prêmio Líquido (R$)" type="number" value={premioLiquido} onChange={setPremioLiquido} placeholder="0,00" required />
-            <EditField label="% Comissão" type="number" value={pctComissao} onChange={setPctComissao} placeholder="Ex: 10" required />
-            <EditField label="% Desconto" type="number" value={pctDesconto} onChange={setPctDesconto} placeholder="Ex: 5" required />
+            <EditField label="Valor da Parcela (R$)" type="text" inputMode="decimal" value={valorParcela} onChange={setValorParcela} placeholder="0,00" required />
+            <EditField label="Prêmio Líquido (R$)" type="text" inputMode="decimal" value={premioLiquido} onChange={setPremioLiquido} placeholder="0,00" required />
+            <EditField label="% Comissão" type="text" inputMode="decimal" value={pctComissao} onChange={setPctComissao} placeholder="Ex: 10,00" required />
+            <EditField label="% Desconto" type="text" inputMode="decimal" value={pctDesconto} onChange={setPctDesconto} placeholder="Ex: 5,00" required />
             <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Valor total do seguro</p>
               <p className="mt-1 font-semibold">{premioTotal != null ? formatMoneyBR(premioTotal) : '—'}</p>

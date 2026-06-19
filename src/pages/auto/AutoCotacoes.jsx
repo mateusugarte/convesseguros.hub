@@ -14,6 +14,7 @@ import { AlertCircle, BadgeDollarSign, Briefcase, CalendarDays, Car, CircleCheck
 import { PageHeader, MetricCard, DataCard, EmptyState } from '../../components/ui'
 import SeguradoraSelect from '../../components/SeguradoraSelect'
 import { criarCotacaoAuto, getAutoCotacoesMensais, getAutoCotacoesResumo, getCotacoesAuto } from '../../lib/auto'
+import { toNumber } from '../../lib/apolices'
 import { COTACAO_STATUS, formatDateTimeBR, formatMoney, statusToneClass, toneClasses } from './autoShared'
 
 const LISTA_TABS = [
@@ -63,13 +64,14 @@ function QuoteStatusBadge({ status }) {
   return <span className={`badge ${toneClasses(meta.tone)}`}>{meta.label}</span>
 }
 
-function Field({ label, value, onChange, type = 'text', placeholder, children }) {
+function Field({ label, value, onChange, type = 'text', placeholder, children, inputMode }) {
   return (
     <div>
       <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-dark-muted">{label}</label>
       {children || (
         <input
           type={type}
+          inputMode={inputMode}
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
@@ -90,8 +92,8 @@ function iconLabel(Icon, text) {
 }
 
 function calcComissao(seg) {
-  const premioLiquido = parseFloat(seg.premio_liquido) || 0
-  const pctComissao = parseFloat(seg.pct_comissao) || 0
+  const premioLiquido = toNumber(seg.premio_liquido) || 0
+  const pctComissao = toNumber(seg.pct_comissao) || 0
   return premioLiquido * pctComissao
 }
 
@@ -191,10 +193,16 @@ export default function AutoCotacoes() {
       vigencia_fim: payload.vigencia_fim || null,
       seguradora_preferencial: {
         ...payload.seguradora_preferencial,
+        premio_total: toNumber(payload.seguradora_preferencial.premio_total),
+        premio_liquido: toNumber(payload.seguradora_preferencial.premio_liquido),
+        pct_comissao: toNumber(payload.seguradora_preferencial.pct_comissao),
         valor_comissao: calcComissao(payload.seguradora_preferencial),
       },
       seguradora_mais_barata: {
         ...payload.seguradora_mais_barata,
+        premio_total: toNumber(payload.seguradora_mais_barata.premio_total),
+        premio_liquido: toNumber(payload.seguradora_mais_barata.premio_liquido),
+        pct_comissao: toNumber(payload.seguradora_mais_barata.pct_comissao),
         valor_comissao: calcComissao(payload.seguradora_mais_barata),
       },
     }),
@@ -590,15 +598,15 @@ export default function AutoCotacoes() {
                           placeholder="Selecionar seguradora"
                         />
                       </Field>
-                      <Field label={iconLabel(BadgeDollarSign, 'Premio total')} type="number" value={renovacao[section.key].premio_total} onChange={value => setRenovacao(prev => ({
+                      <Field label={iconLabel(BadgeDollarSign, 'Premio total')} type="text" inputMode="decimal" value={renovacao[section.key].premio_total} onChange={value => setRenovacao(prev => ({
                         ...prev,
                         [section.key]: { ...prev[section.key], premio_total: value },
                       }))} />
-                      <Field label={iconLabel(BadgeDollarSign, 'Premio liquido')} type="number" value={renovacao[section.key].premio_liquido} onChange={value => setRenovacao(prev => ({
+                      <Field label={iconLabel(BadgeDollarSign, 'Premio liquido')} type="text" inputMode="decimal" value={renovacao[section.key].premio_liquido} onChange={value => setRenovacao(prev => ({
                         ...prev,
                         [section.key]: { ...prev[section.key], premio_liquido: value },
                       }))} />
-                      <Field label={iconLabel(BadgeDollarSign, '% Comissao')} type="number" value={renovacao[section.key].pct_comissao} onChange={value => setRenovacao(prev => ({
+                      <Field label={iconLabel(BadgeDollarSign, '% Comissao')} type="text" inputMode="decimal" value={renovacao[section.key].pct_comissao} onChange={value => setRenovacao(prev => ({
                         ...prev,
                         [section.key]: { ...prev[section.key], pct_comissao: value },
                       }))} />

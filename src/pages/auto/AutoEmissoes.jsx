@@ -11,6 +11,7 @@ import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../c
 import SeguradoraSelect from '../../components/SeguradoraSelect'
 import { useToast } from '../../contexts/ToastContext'
 import { formatDateBR, formatMoney } from './autoShared'
+import { toNumber } from '../../lib/apolices'
 
 const COLUNAS = [
   { id: 'pendentes', label: 'Cotacoes pendentes', hint: 'entradas novas do n8n e itens sem andamento', tone: 'warning' },
@@ -534,7 +535,7 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
 // ─── FormSeguradora ──────────────────────────────────────────────────────────
 
 function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
-  const valorComissao = (parseFloat(seg.premio_liquido) || 0) * (parseFloat(seg.pct_comissao) || 0) / 100
+  const valorComissao = (toNumber(seg.premio_liquido) || 0) * (toNumber(seg.pct_comissao) || 0) / 100
 
   return (
     <div className="rounded-3xl border border-brand-secondary/20 bg-brand-secondary/5 p-4">
@@ -563,8 +564,8 @@ function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
         <div>
           <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Valor total</label>
           <input
-            type="number"
-            step="0.01"
+            type="text"
+            inputMode="decimal"
             value={seg.valor_total}
             onChange={e => onChange('valor_total', e.target.value)}
             className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
@@ -574,8 +575,8 @@ function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
         <div>
           <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Premio liquido</label>
           <input
-            type="number"
-            step="0.01"
+            type="text"
+            inputMode="decimal"
             value={seg.premio_liquido}
             onChange={e => onChange('premio_liquido', e.target.value)}
             className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
@@ -585,8 +586,8 @@ function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
         <div>
           <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">% Comissao</label>
           <input
-            type="number"
-            step="0.1"
+            type="text"
+            inputMode="decimal"
             value={seg.pct_comissao}
             onChange={e => onChange('pct_comissao', e.target.value)}
             className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
@@ -657,10 +658,10 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
     const seguradasFinal = resultado === 'aprovada'
       ? seguradoras.map(s => ({
           nome: s.nome,
-          valor_total: parseFloat(s.valor_total) || 0,
-          premio_liquido: parseFloat(s.premio_liquido) || 0,
-          pct_comissao: parseFloat(s.pct_comissao) || 0,
-          valor_comissao: (parseFloat(s.premio_liquido) || 0) * (parseFloat(s.pct_comissao) || 0) / 100,
+          valor_total: toNumber(s.valor_total) || 0,
+          premio_liquido: toNumber(s.premio_liquido) || 0,
+          pct_comissao: toNumber(s.pct_comissao) || 0,
+          valor_comissao: (toNumber(s.premio_liquido) || 0) * (toNumber(s.pct_comissao) || 0) / 100,
           parcelamentos: s.parcelamentos,
           forma_pagamento: s.forma_pagamento,
         }))
@@ -1040,10 +1041,10 @@ export default function AutoEmissoes() {
     setForm(getFormEmissaoInicial(modalEmissao))
   }, [modalEmissao])
 
-  const premioLiquido = parseFloat(form.premio_liquido) || 0
-  const pctComissao = parseFloat(form.pct_comissao) || 0
+  const premioLiquido = toNumber(form.premio_liquido) || 0
+  const pctComissao = toNumber(form.pct_comissao) || 0
   const valorComissao = premioLiquido * pctComissao
-  const valorRepasse = form.tem_repasse ? valorComissao * (parseFloat(form.pct_repasse) || 0) : 0
+  const valorRepasse = form.tem_repasse ? valorComissao * (toNumber(form.pct_repasse) || 0) : 0
 
   function handleEmitir() {
     emitirAsync({
@@ -1069,7 +1070,7 @@ export default function AutoEmissoes() {
       responsavel: form.tipo_producao === 'individual' ? form.responsavel : null,
       eh_renovacao: form.eh_renovacao,
       tem_repasse: form.tem_repasse,
-      pct_repasse: form.tem_repasse ? parseFloat(form.pct_repasse) : null,
+      pct_repasse: form.tem_repasse ? toNumber(form.pct_repasse) : null,
       nome_repasse: form.tem_repasse ? form.nome_repasse : null,
       valor_repasse: form.tem_repasse ? valorRepasse : null,
     }).then(() => {
@@ -1090,10 +1091,10 @@ export default function AutoEmissoes() {
       numero_apolice: manualForm.numero_apolice,
       vigencia_inicio: manualForm.vigencia_inicio,
       vigencia_fim: manualForm.vigencia_fim,
-      premio_liquido: manualForm.premio_liquido,
-      pct_comissao: manualForm.pct_comissao,
+      premio_liquido: toNumber(manualForm.premio_liquido),
+      pct_comissao: toNumber(manualForm.pct_comissao),
       tem_repasse: manualForm.tem_repasse,
-      pct_repasse: manualForm.tem_repasse ? manualForm.pct_repasse : null,
+      pct_repasse: manualForm.tem_repasse ? toNumber(manualForm.pct_repasse) : null,
       nome_repasse: manualForm.tem_repasse ? manualForm.nome_repasse : null,
       forma_pagamento: manualForm.forma_pagamento,
       parcelamento: manualForm.parcelamento,
@@ -1465,8 +1466,8 @@ export default function AutoEmissoes() {
                     <CampoTexto label="Numero da apolice" campo="numero_apolice" value={form.numero_apolice} onChange={setField} />
                     <CampoTexto label="Vigencia inicio" campo="vigencia_inicio" value={form.vigencia_inicio} onChange={setField} type="date" />
                     <CampoTexto label="Vigencia fim" campo="vigencia_fim" value={form.vigencia_fim} onChange={setField} type="date" />
-                    <CampoTexto label="Premio liquido" campo="premio_liquido" value={form.premio_liquido} onChange={setField} type="number" />
-                    <CampoTexto label="% Comissao" campo="pct_comissao" value={form.pct_comissao} onChange={setField} type="number" />
+                    <CampoTexto label="Premio liquido" campo="premio_liquido" value={form.premio_liquido} onChange={setField} type="text" inputMode="decimal" />
+                    <CampoTexto label="% Comissao" campo="pct_comissao" value={form.pct_comissao} onChange={setField} type="text" inputMode="decimal" />
                     <CampoTexto label="Forma de pagamento" campo="forma_pagamento" value={form.forma_pagamento} onChange={setField} />
                     <CampoTexto label="Parcelamento (vezes)" campo="parcelamento" value={form.parcelamento} onChange={setField} />
                   </div>
@@ -1633,7 +1634,7 @@ export default function AutoEmissoes() {
                     <div className="mt-6 rounded-3xl border border-status-success/20 bg-status-success/10 px-4 py-4 text-sm font-medium text-status-success shadow-sm">
                       <p className="text-[10px] uppercase tracking-[0.16em] text-status-success/80">Comissao calculada</p>
                       <p className="mt-2 text-2xl font-semibold">
-                        {formatMoney((parseFloat(manualForm.premio_liquido) || 0) * (parseFloat(manualForm.pct_comissao) || 0))}
+                        {formatMoney((toNumber(manualForm.premio_liquido) || 0) * (toNumber(manualForm.pct_comissao) || 0))}
                       </p>
                     </div>
                   )}
@@ -1673,8 +1674,8 @@ export default function AutoEmissoes() {
                     <CampoTexto label="Numero da apolice" campo="numero_apolice" value={manualForm.numero_apolice} onChange={setManualField} />
                     <CampoTexto label="Vigencia inicio" campo="vigencia_inicio" value={manualForm.vigencia_inicio} onChange={setManualField} type="date" />
                     <CampoTexto label="Vigencia fim" campo="vigencia_fim" value={manualForm.vigencia_fim} onChange={setManualField} type="date" />
-                    <CampoTexto label="Premio liquido" campo="premio_liquido" value={manualForm.premio_liquido} onChange={setManualField} type="number" />
-                    <CampoTexto label="% Comissao" campo="pct_comissao" value={manualForm.pct_comissao} onChange={setManualField} type="number" />
+                    <CampoTexto label="Premio liquido" campo="premio_liquido" value={manualForm.premio_liquido} onChange={setManualField} type="text" inputMode="decimal" />
+                    <CampoTexto label="% Comissao" campo="pct_comissao" value={manualForm.pct_comissao} onChange={setManualField} type="text" inputMode="decimal" />
                     <CampoTexto label="Forma de pagamento" campo="forma_pagamento" value={manualForm.forma_pagamento} onChange={setManualField} />
                     <CampoTexto label="Parcelamento (vezes)" campo="parcelamento" value={manualForm.parcelamento} onChange={setManualField} />
                   </div>

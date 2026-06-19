@@ -359,7 +359,7 @@ function DroppableColumn({
     <div className="kanban-col animate-fade-in flex flex-col" style={animStyle}>
       {/* Header */}
       <div
-        className="kanban-col-header flex flex-col gap-2"
+        className="kanban-col-header flex flex-col gap-3"
         style={{
           background: `linear-gradient(180deg, ${column.color}16, ${column.color}08)`,
           borderColor: `${column.color}42`,
@@ -368,18 +368,23 @@ function DroppableColumn({
           borderRadius: '18px 18px 0 0',
         }}
       >
-        <div className="flex items-center justify-between gap-2 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <div
-              className="w-2 h-2 rounded-full flex-shrink-0"
-              style={{ background: column.color, boxShadow: `0 0 6px ${column.color}90` }}
-            />
-            <span className="text-[11px] font-bold tracking-wide truncate" style={{ color: column.color }}>
-              {column.label}
-            </span>
+        <div className="flex items-start justify-between gap-3 min-w-0">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <div
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ background: column.color, boxShadow: `0 0 6px ${column.color}90` }}
+              />
+              <span className="text-[11px] font-bold tracking-wide truncate" style={{ color: column.color }}>
+                {column.label}
+              </span>
+            </div>
+            <p className="mt-1 text-[10px] text-dark-muted">
+              {sortOrder === 'recentes' ? 'Mais novas primeiro' : 'Mais antigas primeiro'}
+            </p>
           </div>
           <span
-            className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full"
+            className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0"
             style={{ background: column.color + '22', color: column.color }}
           >
             {fichas.length}
@@ -389,18 +394,23 @@ function DroppableColumn({
           <button
             onClick={onToggleSortOrder}
             title={`Ordem atual: ${sortOrder === 'recentes' ? 'mais recentes' : 'mais antigas'}`}
-            className={`kanban-col-sort kanban-sort-toggle flex items-center gap-1 px-1 py-1 rounded-full border text-[10px] font-semibold ${sortingFeedback ? 'ring-2 ring-brand-accent/15 shadow-[0_10px_22px_rgba(245,88,42,0.08)]' : ''}`}
+            aria-label={`Alternar ordem entre mais recentes e mais antigas. Atualmente: ${sortOrder === 'recentes' ? 'mais recentes' : 'mais antigas'}`}
+            className={`kanban-col-sort kanban-sort-toggle flex items-center gap-2 px-2 py-1 rounded-full border text-[10px] font-semibold ${sortingFeedback ? 'ring-2 ring-brand-accent/15 shadow-[0_10px_22px_rgba(245,88,42,0.08)]' : ''}`}
             style={{ color: column.color }}
           >
-            <span className={`kanban-sort-option ${sortOrder === 'recentes' ? 'is-active' : ''}`}>Recentes</span>
-            <span className={`kanban-sort-option ${sortOrder === 'antigas' ? 'is-active' : ''}`}>Antigas</span>
-            <span className={`kanban-sort-thumb ${sortOrder === 'antigas' ? 'is-alt' : ''}`}>
-              <ArrowUpDown className={`w-3 h-3 ${sortingFeedback ? 'animate-spin' : ''}`} />
+            <span className="kanban-sort-label">Ordem</span>
+            <span className="kanban-sort-track">
+              <span className={`kanban-sort-option ${sortOrder === 'recentes' ? 'is-active' : ''}`}>Recentes</span>
+              <span className={`kanban-sort-option ${sortOrder === 'antigas' ? 'is-active' : ''}`}>Antigas</span>
+              <span className={`kanban-sort-thumb ${sortOrder === 'antigas' ? 'is-alt' : ''}`}>
+                <ArrowUpDown className={`w-3 h-3 ${sortingFeedback ? 'animate-spin' : ''}`} />
+              </span>
             </span>
           </button>
           <button
             onClick={onToggleCollapse}
             title="Colapsar coluna"
+            aria-label={`Colapsar a coluna ${column.label}`}
             className="kanban-col-collapse"
             style={{ color: column.color }}
           >

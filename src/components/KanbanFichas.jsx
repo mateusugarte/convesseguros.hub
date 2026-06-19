@@ -160,14 +160,20 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
   return (
     <div
       className={`kanban-card${isNew ? ' animate-card-new' : ''}${isDragOverlay ? ' kanban-card-dragging' : ''}`}
-      style={{ '--kanban-accent': prodColor }}
+      style={{
+        '--kanban-accent': prodColor,
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96))',
+        boxShadow: isDragOverlay
+          ? `0 20px 45px rgba(15,23,42,0.22), inset 0 1px 0 rgba(255,255,255,0.55)`
+          : '0 10px 26px rgba(15,23,42,0.10)',
+      }}
     >
-      <div className="kanban-card-body">
+      <div className="kanban-card-body" style={{ borderColor: `${prodColor}22` }}>
         {/* Linha topo: produto + tempo */}
         <div className="flex items-center justify-between gap-1 mb-1.5">
           <span
-            className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-[3px] rounded-full uppercase tracking-wide select-none"
-            style={{ background: prodColor + '20', color: prodColor }}
+            className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-[4px] rounded-full uppercase tracking-wide select-none"
+            style={{ background: prodColor + '14', color: prodColor, border: `1px solid ${prodColor}26` }}
           >
             <ProdIcon className="w-2.5 h-2.5" strokeWidth={2.5} />
             {PRODUTO_ABBR[ficha.produto] || ''}
@@ -238,7 +244,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
           <button
             onPointerDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onToggleRetorno?.(ficha) }}
-            className={`w-full flex items-center justify-center gap-1.5 text-[9px] font-semibold px-2 py-1 rounded-lg border transition-all mt-1.5 ${
+            className={`w-full flex items-center justify-center gap-1.5 text-[9px] font-semibold px-2.5 py-1.5 rounded-xl border transition-all mt-1.5 ${
               ficha.retorno_enviado
                 ? 'bg-status-success/10 text-status-success border-status-success/25 hover:bg-status-success/18'
                 : 'bg-status-warning/10 text-status-warning border-status-warning/25 hover:bg-status-warning/18'
@@ -347,7 +353,12 @@ function DroppableColumn({
       {/* Header */}
       <div
         className="kanban-col-header"
-        style={{ background: column.color + '12', borderColor: column.color + '40' }}
+        style={{
+          background: `linear-gradient(180deg, ${column.color}16, ${column.color}08)`,
+          borderColor: `${column.color}42`,
+          boxShadow: `inset 0 1px 0 rgba(255,255,255,0.45)`,
+          backdropFilter: 'blur(10px)',
+        }}
       >
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
           <div
@@ -390,13 +401,13 @@ function DroppableColumn({
       {/* Body — zona de drop */}
       <div
         ref={setNodeRef}
-        className="kanban-col-body flex-1 p-1.5 space-y-1.5 overflow-y-auto"
+        className="kanban-col-body flex-1 p-2 space-y-2 overflow-y-auto"
         style={{
           border:          isOver ? `1.5px dashed ${column.color}70` : '1px solid rgb(var(--color-border))',
           borderTop:       'none',
-          borderRadius:    '0 0 12px 12px',
-          backgroundColor: isOver ? column.color + '0a' : 'rgb(var(--color-surface2) / 0.35)',
-          boxShadow:       isOver ? `inset 0 0 0 1px ${column.color}20, 0 0 20px ${column.color}10` : 'none',
+          borderRadius:    '0 0 16px 16px',
+          backgroundColor: isOver ? column.color + '0b' : 'rgb(var(--color-surface2) / 0.28)',
+          boxShadow:       isOver ? `inset 0 0 0 1px ${column.color}20, 0 0 24px ${column.color}12` : '0 10px 28px rgba(15,23,42,0.04)',
           transition:      'border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease',
         }}
       >

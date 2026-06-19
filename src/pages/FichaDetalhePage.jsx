@@ -6,7 +6,7 @@ import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useToast } from '../contexts/ToastContext'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ArrowLeft, Pencil, Trash2, Check, X, CalendarDays, Building2, UserRound, Clock3, Copy, Link as LinkIcon, Loader2 } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, Check, X, CalendarDays, Building2, UserRound, Clock3, Copy, FileText, Link as LinkIcon, Loader2 } from 'lucide-react'
 import { PageHeader, MetricCard, DataCard } from '../components/ui'
 import { Avatar } from '../components/ui'
 import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
@@ -362,6 +362,7 @@ export default function FichaDetalhePage() {
   const [confirm,  setConfirm]  = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [biometriaUrl, setBiometriaUrl] = useState('')
+  const [mensagemGerada, setMensagemGerada] = useState('')
   const [copiandoMensagem, setCopiandoMensagem] = useState(false)
   const backTo = location.state?.backTo || location.state?.from || '/fichas'
   const backState = location.state?.backState || (location.state?.restoreKanban ? location.state : null)
@@ -448,19 +449,21 @@ export default function FichaDetalhePage() {
   const canFinalizar = isMe && ficha.status === 'em_cotacao'
   const nomePrincipal = isPJ ? (ficha.nome_empresa || ficha.nome_interessado || 'Sem nome') : (ficha.nome_interessado || 'Sem nome')
   const cotacoesNormalizadas = useMemo(
-    () => normalizarCotacoes(ficha.raw_data?.cotacoes, ficha.produto),
-    [ficha.raw_data?.cotacoes, ficha.produto]
+    () => normalizarCotacoes(ficha?.raw_data?.cotacoes, ficha?.produto),
+    [ficha?.raw_data?.cotacoes, ficha?.produto]
   )
-  const mensagemRetorno = useMemo(
-    () => buildCotacaoMessageData(ficha, cotacoesNormalizadas, biometriaUrl),
-    [ficha, cotacoesNormalizadas, biometriaUrl]
-  )
-  const textoMensagemRetorno = `${mensagemRetorno.title}\n\n${mensagemRetorno.body}`.trim()
+
+  async function handleGerarMensagemRetorno() {
+    const data = buildCotacaoMessageData(ficha, cotacoesNormalizadas, biometriaUrl)
+    const texto = `${data.title}\n\n${data.body}`.trim()
+    setMensagemGerada(texto)
+    toast({ type: 'success', title: 'Mensagem gerada' })
+  }
 
   async function handleCopiarMensagemRetorno() {
     try {
       setCopiandoMensagem(true)
-      await navigator.clipboard.writeText(textoMensagemRetorno)
+      await navigator.clipboard.writeText(mensagemGerada || '')
       toast({ type: 'success', title: 'Mensagem copiada' })
     } catch (error) {
       toast({ type: 'error', title: 'Erro ao copiar mensagem', message: error?.message })
@@ -702,17 +705,11 @@ export default function FichaDetalhePage() {
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-accent">Resumo do preenchimento</p>
                   <p className="mt-1 text-sm text-dark-muted">
-                    A comissão global é aplicada a todas as seguradoras e a mensagem de retorno é montada automaticamente.
+                    A comissão global é aplicada a todas as seguradoras. Use o botão abaixo para gerar a mensagem com os dados atuais.
                   </p>
                 </div>
-                <div className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
-                  mensagemRetorno.status === 'aprovado'
-                    ? 'border-status-success/30 bg-status-success/10 text-status-success'
-                    : mensagemRetorno.status === 'recusado'
-                      ? 'border-status-danger/30 bg-status-danger/10 text-status-danger'
-                      : 'border-dark-border bg-dark-surface text-dark-muted'
-                }`}>
-                  {mensagemRetorno.title.replaceAll('_', '').trim()}
+                <div className="inline-flex items-center rounded-full border border-dark-border bg-dark-surface px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">
+                  Automação manual
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -829,22 +826,31 @@ export default function FichaDetalhePage() {
             cpfCnpj={ficha.cpf || ficha.cnpj}
           />
 
-          <DataCard
+                    <DataCard
             title="Mensagem de retorno"
             actions={(
-              <button
-                onClick={handleCopiarMensagemRetorno}
-                disabled={copiandoMensagem}
-                className="inline-flex items-center gap-1.5 rounded-2xl border border-brand-accent/30 px-3 py-1.5 text-xs font-medium text-brand-accent transition-colors hover:bg-brand-accent/10 disabled:opacity-50"
-              >
-                {copiandoMensagem ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
-                {copiandoMensagem ? 'Copiando...' : 'Copiar'}
-              </button>
+              <>
+                <button
+                  onClick={handleGerarMensagemRetorno}
+                  className="inline-flex items-center gap-1.5 rounded-2xl bg-brand-secondary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:opacity-90"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  Gerar mensagem de retorno
+                </button>
+                <button
+                  onClick={handleCopiarMensagemRetorno}
+                  disabled={copiandoMensagem || !mensagemGerada}
+                  className="inline-flex items-center gap-1.5 rounded-2xl border border-brand-accent/30 px-3 py-1.5 text-xs font-medium text-brand-accent transition-colors hover:bg-brand-accent/10 disabled:opacity-50"
+                >
+                  {copiandoMensagem ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copiandoMensagem ? 'Copiando...' : 'Copiar'}
+                </button>
+              </>
             )}
             bodyClassName="space-y-4"
           >
             <p className="text-xs text-dark-muted">
-              Cole o link de biometria abaixo. O texto é atualizado automaticamente com o nome, produto, status e valores das seguradoras.
+              Clique em gerar para montar a mensagem com os dados atuais da ficha. Depois cole o link de biometria e copie o texto pronto.
             </p>
 
             <div>
@@ -865,19 +871,17 @@ export default function FichaDetalhePage() {
             <div className="rounded-[28px] border border-dark-border/70 bg-dark-surface2/30 p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-accent">{mensagemRetorno.title.replaceAll('_', '').trim()}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-accent">
+                    {mensagemGerada ? 'Mensagem gerada' : 'Aguardando geração'}
+                  </p>
                   <p className="mt-1 text-xs text-dark-muted">
-                    {mensagemRetorno.status === 'aprovado'
-                      ? `Seguradora escolhida: ${mensagemRetorno.seguradoraEscolhida || '—'}`
-                      : mensagemRetorno.status === 'recusado'
-                        ? 'Todas as seguradoras estão recusadas.'
-                        : 'Aguardando aprovação ou recusa completa.'}
+                    {mensagemGerada ? 'O texto abaixo pode ser copiado e enviado.' : 'A mensagem será montada ao clicar no botão acima.'}
                   </p>
                 </div>
               </div>
               <textarea
                 readOnly
-                value={textoMensagemRetorno}
+                value={mensagemGerada}
                 rows={16}
                 className="w-full resize-none rounded-2xl border border-dark-border bg-dark-surface px-4 py-3 font-mono text-[12px] leading-5 text-dark-text outline-none"
               />

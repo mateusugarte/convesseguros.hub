@@ -205,7 +205,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
         if (aliasesNormalizados.length > 0) {
           const payload = aliasesNormalizados.map(v => ({ imobiliaria_id: imobId, alias: v }))
           const { error: err } = await supabase.from('imobiliaria_aliases')
-            .upsert(payload, { onConflict: 'alias' })
+            .insert(payload)
           if (err) throw err
         }
 
@@ -218,7 +218,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
         }
         const payload = aliasesNormalizados.map(v => ({ imobiliaria_id: imobSelecionada, alias: v }))
         const { error } = await supabase.from('imobiliaria_aliases')
-          .upsert(payload, { onConflict: 'alias' })
+          .insert(payload)
         if (error) throw error
 
       } else {
@@ -243,7 +243,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
         if (aliasesNormalizados.length > 0) {
           const payload = aliasesNormalizados.map(v => ({ imobiliaria_id: imobId, alias: v }))
           const { error } = await supabase.from('imobiliaria_aliases')
-            .upsert(payload, { onConflict: 'alias' })
+            .insert(payload)
           if (error) throw error
         }
       }

@@ -1132,9 +1132,9 @@ html.dark .shell-topbar {
 }
 
 .shell-nav-item-active {
-  background: linear-gradient(135deg, rgba(245, 88, 42, 0.12), rgba(74, 144, 217, 0.08));
-  border: 1px solid rgba(245, 88, 42, 0.18);
-  box-shadow: 0 8px 18px rgba(245, 88, 42, 0.08);
+  background: linear-gradient(135deg, rgba(74, 144, 217, 0.18), rgba(37, 99, 235, 0.12));
+  border: 1px solid rgba(74, 144, 217, 0.26);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
 }
 
 .shell-nav-item:hover {
@@ -1146,18 +1146,19 @@ html.dark .shell-topbar {
 }
 
 .shell-subnav-item-active {
-  border-color: rgba(74, 144, 217, 0.20);
-  box-shadow: 0 6px 14px rgba(74, 144, 217, 0.08);
+  background: rgba(37, 99, 235, 0.10);
+  border-color: rgba(37, 99, 235, 0.22);
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.10);
 }
 
 html.dark .shell-nav-item-active {
-  background: linear-gradient(135deg, rgba(255, 130, 84, 0.16), rgba(74, 144, 217, 0.12));
-  border-color: rgba(255, 130, 84, 0.24);
+  background: linear-gradient(135deg, rgba(74, 144, 217, 0.20), rgba(37, 99, 235, 0.14));
+  border-color: rgba(74, 144, 217, 0.28);
 }
 
 html.dark .shell-subnav-item-active {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(74, 144, 217, 0.18);
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(74, 144, 217, 0.24);
 }
 
 /* ── Kanban premium workspace ─────────────────────────────────────────────── */

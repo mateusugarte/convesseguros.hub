@@ -1132,17 +1132,17 @@ export default function AutoEmissoes() {
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         eyebrow="Modulo auto"
-        title={isGestaoRoute ? 'Gestão AUTO' : 'Gestão de Emissões'}
+        title={isGestaoRoute ? 'Gestao AUTO' : 'Gestao de Emissoes'}
         description={isGestaoRoute
-          ? 'Kanban operacional do módulo Auto com as colunas da fila de trabalho.'
-          : 'Área de emissões Auto com acesso rápido ao kanban operacional e à consulta de apólices.'}
+          ? 'Area dedicada ao kanban operacional do modulo Auto.'
+          : 'Area de emissao e consulta de apolices do modulo Auto.'}
         actions={(
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => navigate(isGestaoRoute ? '/auto/emissoes' : '/auto/gestao')}
               className="btn-secondary"
             >
-              {isGestaoRoute ? 'Ir para Emissões' : 'Gestão AUTO'}
+              {isGestaoRoute ? 'Ir para Emissoes' : 'Gestao AUTO'}
             </button>
             <button onClick={() => setManualOpen(true)} className="btn-primary">
               Nova emissao manual
@@ -1152,7 +1152,7 @@ export default function AutoEmissoes() {
             </button>
           </div>
         )}
-        stats={(
+        stats={isGestaoRoute ? undefined : (
           <>
             <MetricCard label="Pendentes" value={metricas.pendentes} hint="cotacoes sem status" tone="warning" icon={<FileText className="w-5 h-5" />} />
             <MetricCard label="Em fila" value={metricas.total} hint="registros no kanban" icon={<FileText className="w-5 h-5" />} />
@@ -1162,144 +1162,212 @@ export default function AutoEmissoes() {
         )}
       />
 
-      <DataCard className="overflow-hidden border-brand-secondary/10" bodyClassName="p-0">
-        <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="relative overflow-hidden bg-gradient-to-br from-brand-secondary/12 via-transparent to-brand-accent/8 p-6 md:p-8">
-            <div className="absolute -right-8 top-0 h-28 w-28 rounded-full bg-brand-secondary/10 blur-3xl" />
-            <div className="absolute -bottom-4 left-1/3 h-24 w-24 rounded-full bg-brand-accent/10 blur-3xl" />
-            <div className="relative z-[1] max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-secondary/15 bg-white/65 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">
-                <RefreshCw className="h-3.5 w-3.5" />
-                Mesa operacional
+      {isGestaoRoute ? (
+        <>
+          <FilterBar>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-medium text-dark-muted">Periodo das emissoes</span>
+              <div className="inline-flex flex-wrap rounded-2xl border border-dark-border/60 bg-white/70 p-1 shadow-sm">
+                {PERIOD_OPTIONS.map(option => {
+                  const active = periodo === option.value
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => handlePeriodoChange(option.value)}
+                      className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
+                        active ? 'bg-dark-text text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  )
+                })}
               </div>
-              <h2 className="mt-4 text-2xl font-semibold text-dark-text md:text-3xl">
-                Clique no card para ver os dados. Arraste para avancar no fluxo.
-              </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-dark-muted">
-                Pendentes entram pela coluna inicial. Arraste para <strong>Cotacao feita</strong> para registrar o resultado e as seguradoras. Cards recusados ficam em vermelho.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                <span className="badge badge-warning">{metricas.pendentes} pendentes</span>
-                <span className="badge badge-info">{metricas.total} registros</span>
-                <span className="badge badge-success">{metricas.emitidas} emitidas</span>
+              {periodo === 'custom' && (
+                <>
+                  <input
+                    type="date"
+                    value={filtroInicio}
+                    onChange={e => setFiltroInicio(e.target.value)}
+                    className="rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+                  />
+                  <span className="text-xs text-dark-muted">ate</span>
+                  <input
+                    type="date"
+                    value={filtroFim}
+                    onChange={e => setFiltroFim(e.target.value)}
+                    className="rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+                  />
+                </>
+              )}
+              {periodo !== 'custom' && filtroInicio && filtroFim && (
+                <span className="text-xs text-dark-muted">
+                  {formatDateBR(filtroInicio)} ate {formatDateBR(filtroFim)}
+                </span>
+              )}
+              {(filtroInicio || filtroFim || periodo !== 'semana') && (
+                <button
+                  onClick={() => handlePeriodoChange('semana')}
+                  className="rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted hover:border-brand-accent/40 hover:text-dark-text"
+                >
+                  Voltar para semana
+                </button>
+              )}
+            </div>
+          </FilterBar>
+
+          <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-5">
+            {COLUNAS.map(coluna => {
+              const cards = emissoes.filter(item => getEmissaoColuna(item) === coluna.id)
+              return (
+                <DataCard
+                  key={coluna.id}
+                  title={coluna.label}
+                  subtitle={`${cards.length} item(ns)`}
+                  className={dragOver === coluna.id ? 'ring-2 ring-brand-accent/20' : ''}
+                  bodyClassName="pt-4"
+                >
+                  <div
+                    onDragOver={e => { e.preventDefault(); setDragOver(coluna.id) }}
+                    onDrop={() => handleDrop(coluna.id)}
+                    onDragLeave={() => setDragOver(null)}
+                    className="min-h-[72vh] space-y-3"
+                  >
+                    {cards.length === 0 ? (
+                      <EmptyState
+                        icon={<Car className="w-6 h-6" />}
+                        title={coluna.id === 'pendentes' ? 'Sem pendencias' : 'Coluna vazia'}
+                        description={coluna.id === 'pendentes'
+                          ? 'As cotacoes criadas pelo formulario aparecem aqui primeiro.'
+                          : 'Arraste um card para avancar no fluxo.'}
+                        className="py-8"
+                      />
+                    ) : (
+                      cards.map(item => (
+                        <CardEmissao
+                          key={item.id}
+                          emissao={item}
+                          onDragStart={setDragging}
+                          onClick={abrirDetalhe}
+                        />
+                      ))
+                    )}
+                  </div>
+                </DataCard>
+              )
+            })}
+          </div>
+        </>
+      ) : (
+        <>
+          <DataCard className="overflow-hidden border-brand-secondary/10" bodyClassName="p-0">
+            <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
+              <div className="relative overflow-hidden bg-gradient-to-br from-brand-secondary/12 via-transparent to-brand-accent/8 p-6 md:p-8">
+                <div className="absolute -right-8 top-0 h-28 w-28 rounded-full bg-brand-secondary/10 blur-3xl" />
+                <div className="absolute -bottom-4 left-1/3 h-24 w-24 rounded-full bg-brand-accent/10 blur-3xl" />
+                <div className="relative z-[1] max-w-2xl">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-brand-secondary/15 bg-white/65 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Mesa de emissao
+                  </div>
+                  <h2 className="mt-4 text-2xl font-semibold text-dark-text md:text-3xl">
+                    Consulte as emissoes recentes e abra a gestao quando precisar do kanban.
+                  </h2>
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-dark-muted">
+                    Aqui ficam a visao geral, os atalhos e a consulta das apolices emitidas. O kanban foi movido para a area dedicada de Gestao AUTO.
+                  </p>
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    <span className="badge badge-warning">{metricas.pendentes} pendentes</span>
+                    <span className="badge badge-info">{metricas.total} registros</span>
+                    <span className="badge badge-success">{metricas.emitidas} emitidas</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-3 bg-dark-surface2/45 p-6 md:p-8 sm:grid-cols-2 lg:grid-cols-1">
+                {boardSummary.map(item => {
+                  const barClasses = {
+                    warning: 'bg-status-warning/15',
+                    secondary: 'bg-brand-secondary/15',
+                    success: 'bg-status-success/15',
+                    accent: 'bg-brand-accent/15',
+                  }
+                  return (
+                    <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-white/75 p-4 shadow-sm">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{item.label}</p>
+                      <p className="mt-2 text-2xl font-semibold text-dark-text">{item.value}</p>
+                      <div className={`mt-3 h-1.5 rounded-full ${barClasses[item.tone]}`} />
+                    </div>
+                  )
+                })}
               </div>
             </div>
-          </div>
+          </DataCard>
 
-          <div className="grid gap-3 bg-dark-surface2/45 p-6 md:p-8 sm:grid-cols-2 lg:grid-cols-1">
-            {boardSummary.map(item => {
-              const barClasses = {
-                warning: 'bg-status-warning/15',
-                secondary: 'bg-brand-secondary/15',
-                success: 'bg-status-success/15',
-                accent: 'bg-brand-accent/15',
-              }
-              return (
-                <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-white/75 p-4 shadow-sm">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{item.label}</p>
-                  <p className="mt-2 text-2xl font-semibold text-dark-text">{item.value}</p>
-                  <div className={`mt-3 h-1.5 rounded-full ${barClasses[item.tone]}`} />
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </DataCard>
+          <FilterBar>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-medium text-dark-muted">Atalhos da area</span>
+              <button onClick={() => navigate('/auto/gestao')} className="rounded-2xl border border-brand-secondary/30 bg-brand-secondary/10 px-3 py-2 text-xs font-semibold text-brand-secondary">
+                Abrir Gestao AUTO
+              </button>
+              <button onClick={() => setManualOpen(true)} className="rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted hover:border-brand-accent/40 hover:text-dark-text">
+                Nova emissao manual
+              </button>
+              <button onClick={() => setShowApolices(true)} className="rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted hover:border-brand-accent/40 hover:text-dark-text">
+                Consultar apolices emitidas
+              </button>
+            </div>
+          </FilterBar>
 
-      <FilterBar>
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs font-medium text-dark-muted">Periodo das emissoes</span>
-          <div className="inline-flex flex-wrap rounded-2xl border border-dark-border/60 bg-white/70 p-1 shadow-sm">
-            {PERIOD_OPTIONS.map(option => {
-              const active = periodo === option.value
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => handlePeriodoChange(option.value)}
-                  className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
-                    active ? 'bg-dark-text text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              )
-            })}
-          </div>
-          {periodo === 'custom' && (
-            <>
-              <input
-                type="date"
-                value={filtroInicio}
-                onChange={e => setFiltroInicio(e.target.value)}
-                className="rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+          <DataCard title="Ultimas emissoes" subtitle={`${emissoes.length} registro(s)`}>
+            {emissoes.length === 0 ? (
+              <EmptyState
+                icon={<FileText className="w-6 h-6" />}
+                title="Nenhuma emissao encontrada"
+                description="Use os atalhos acima para criar uma nova emissao ou abrir as apolices emitidas."
               />
-              <span className="text-xs text-dark-muted">ate</span>
-              <input
-                type="date"
-                value={filtroFim}
-                onChange={e => setFiltroFim(e.target.value)}
-                className="rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
-              />
-            </>
-          )}
-          {periodo !== 'custom' && filtroInicio && filtroFim && (
-            <span className="text-xs text-dark-muted">
-              {formatDateBR(filtroInicio)} ate {formatDateBR(filtroFim)}
-            </span>
-          )}
-          {(filtroInicio || filtroFim || periodo !== 'semana') && (
-            <button
-              onClick={() => handlePeriodoChange('semana')}
-              className="rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted hover:border-brand-accent/40 hover:text-dark-text"
-            >
-              Voltar para semana
-            </button>
-          )}
-        </div>
-      </FilterBar>
-
-      <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-5">
-        {COLUNAS.map(coluna => {
-          const cards = emissoes.filter(item => getEmissaoColuna(item) === coluna.id)
-          return (
-            <DataCard
-              key={coluna.id}
-              title={coluna.label}
-              subtitle={`${cards.length} item(ns)`}
-              className={dragOver === coluna.id ? 'ring-2 ring-brand-accent/20' : ''}
-              bodyClassName="pt-4"
-            >
-              <div
-                onDragOver={e => { e.preventDefault(); setDragOver(coluna.id) }}
-                onDrop={() => handleDrop(coluna.id)}
-                onDragLeave={() => setDragOver(null)}
-                className="min-h-[240px] space-y-3"
-              >
-                {cards.length === 0 ? (
-                  <EmptyState
-                    icon={<Car className="w-6 h-6" />}
-                    title={coluna.id === 'pendentes' ? 'Sem pendencias' : 'Coluna vazia'}
-                    description={coluna.id === 'pendentes'
-                      ? 'As cotacoes criadas pelo formulario aparecem aqui primeiro.'
-                      : 'Arraste um card para avancar no fluxo.'}
-                    className="py-8"
-                  />
-                ) : (
-                  cards.map(item => (
-                    <CardEmissao
-                      key={item.id}
-                      emissao={item}
-                      onDragStart={setDragging}
-                      onClick={abrirDetalhe}
-                    />
-                  ))
-                )}
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-dark-border/60 text-left">
+                      <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Cliente</th>
+                      <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora</th>
+                      <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Status</th>
+                      <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Apolice</th>
+                      <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Vigencia</th>
+                      <th className="pb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Acao</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-dark-border/40">
+                    {emissoes.slice(0, 10).map(item => (
+                      <tr key={item.id} className="transition-colors hover:bg-brand-accent/5">
+                        <td className="py-3 pr-4 font-medium text-dark-text">{nomeEmissao(item)}</td>
+                        <td className="py-3 pr-4 text-dark-muted">{seguradoraEmissao(item)}</td>
+                        <td className="py-3 pr-4 text-dark-muted">{getEmissaoColuna(item)}</td>
+                        <td className="py-3 pr-4 text-dark-muted">{item.numero_apolice || '—'}</td>
+                        <td className="py-3 pr-4 text-dark-muted">
+                          {item.vigencia_inicio ? formatDateBR(item.vigencia_inicio) : '—'} — {item.vigencia_fim ? formatDateBR(item.vigencia_fim) : '—'}
+                        </td>
+                        <td className="py-3">
+                          <button
+                            type="button"
+                            onClick={() => abrirDetalhe(item)}
+                            className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-3 py-1.5 text-xs font-semibold text-brand-secondary"
+                          >
+                            Abrir
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </DataCard>
-          )
-        })}
-      </div>
+            )}
+          </DataCard>
+        </>
+      )}
 
       {/* Modal: resultado da cotacao (drag para cotacao_feita) */}
       {modalResultado && (

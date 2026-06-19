@@ -1580,6 +1580,25 @@ html.dark .skeleton-surface {
   .kanban-scroll { scroll-snap-type: x mandatory; }
 }
 
+@media (max-width: 1600px) {
+  :root {
+    --kanban-col-w: 220px;
+    --kanban-gap: 8px;
+  }
+
+  .ops-shell,
+  .crm-shell {
+    zoom: 0.85;
+  }
+}
+
+@media (max-width: 1280px) {
+  :root {
+    --kanban-col-w: 204px;
+    --kanban-gap: 6px;
+  }
+}
+
 /* Premium operational foundation */
 .btn-primary {
   background: linear-gradient(

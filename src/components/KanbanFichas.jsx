@@ -942,8 +942,8 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
           onDragEnd={handleDragEnd}
           onDragCancel={() => setActiveId(null)}
         >
-          <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
-            <div className="flex gap-3 min-w-max px-1">
+      <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
+            <div className="flex min-w-max px-1" style={{ gap: 'var(--kanban-gap, 12px)' }}>
               {COLUMNS.map((column, i) => (
                 <DroppableColumn
                   key={column.id}

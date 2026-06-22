@@ -4,7 +4,7 @@ import { fetchFichaDetalhe, editarFicha, deletarFicha, salvarRetornoGeradoFicha,
 import { useAuth } from '../contexts/AuthContext'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useToast } from '../contexts/ToastContext'
-import { toNumber } from '../lib/apolices'
+import { toNumber, formatMoneyBR } from '../lib/apolices'
 import { formatDecimalBRInput } from '../lib/numberInput'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -28,8 +28,7 @@ function fmtDt(v) {
   try { return format(parseISO(v), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) } catch { return v }
 }
 function fmtBRL(v) {
-  if (v === null || v === undefined || v === '') return null
-  return String(v)
+  return formatMoneyBR(v)
 }
 
 // ── InlineField — campo editável com click ────────────────────────────────────
@@ -212,9 +211,8 @@ function getSeguradorasCotacao(produto) {
 }
 
 function formatMoney(v) {
-  if (v === null || v === undefined || v === '') return null
-  const n = Number(String(v).replace(',', '.'))
-  if (!Number.isFinite(n)) return null
+  const n = toNumber(v)
+  if (n === null) return null
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n)
 }
 
@@ -272,8 +270,8 @@ function buildCotacaoMessageData(ficha, cotacoes = [], biometriaUrl = '') {
   const escolhida = aprovadas
     .map(cotacao => ({
       ...cotacao,
-      total: Number(cotacao.valor_parcela || 0) * Number(cotacao.parcelamento || 0),
-      valor: Number(cotacao.valor_parcela || 0),
+      total: (toNumber(cotacao.valor_parcela) || 0) * (toNumber(cotacao.parcelamento) || 0),
+      valor: toNumber(cotacao.valor_parcela) || 0,
     }))
     .sort((a, b) => {
       const totalA = Number.isFinite(a.total) && a.total > 0 ? a.total : Number.POSITIVE_INFINITY

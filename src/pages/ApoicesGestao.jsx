@@ -254,7 +254,7 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, 
             )}
             {apolice.valor_parcela && (
               <p className="text-[9px] text-dark-muted">
-                Parcela: R$ {parseFloat(apolice.valor_parcela).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                Parcela: {formatMoneyBR(apolice.valor_parcela)}
               </p>
             )}
           </div>

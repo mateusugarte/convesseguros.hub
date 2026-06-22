@@ -5,6 +5,7 @@ import {
   useDraggable, useDroppable,
 } from '@dnd-kit/core'
 import { fetchFichasKanban, assumirFicha, moverFichaStatus } from '../lib/fichas'
+import { toNumber } from '../lib/apolices'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -514,7 +515,7 @@ function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) 
               Valor Parcela (R$) <span className="text-status-danger">*</span>
             </label>
             <input
-              type="number" step="0.01" min="0"
+              type="text" inputMode="decimal"
               value={valorParcela} onChange={e => setValorParcela(e.target.value)}
               placeholder="0,00" className="input text-sm"
             />
@@ -546,10 +547,10 @@ function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) 
       </div>
       <div className="flex justify-end gap-3 px-6 pb-5">
         <button onClick={onCancelar} className="btn-secondary text-sm">Cancelar</button>
-        <button
-          onClick={() => valido && onConfirmar({
-            seguradora,
-            valorParcela: parseFloat(valorParcela),
+          <button
+            onClick={() => valido && onConfirmar({
+              seguradora,
+            valorParcela: toNumber(valorParcela),
             numeroOrcamento: numeroOrcamento.trim(),
             retornoEnviado,
           })}

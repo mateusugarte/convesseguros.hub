@@ -7,12 +7,13 @@ import { X, Pencil, Trash2, ChevronDown, ChevronUp, ExternalLink } from 'lucide-
 import { useNavigate } from 'react-router-dom'
 import ImobiliariaIdentity from './ImobiliariaIdentity'
 import { Avatar } from './ui'
+import { formatMoneyBR } from '../lib/apolices'
+import { formatDecimalBRInput } from '../lib/numberInput'
 import { normalizeDisplayText } from '../lib/text'
 
 function fmt(v) { if (v === null || v === undefined) return '—'; return String(v) }
 function fmtBRL(v) {
-  if (v === null || v === undefined || v === '') return '—'
-  return String(v)
+  return formatMoneyBR(v)
 }
 function fmtDt(v) {
   if (!v) return '—'
@@ -191,8 +192,8 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
 
           <Section title="Controle Interno">
             <Field label="Orç. (Forms)"    value={ficha.orcamentista_forms} />
-            <Field label="% Comissão"      value={ficha.pct_comissao != null ? `${ficha.pct_comissao}%` : null} />
-            <Field label="% Desconto"      value={ficha.pct_desconto != null ? `${ficha.pct_desconto}%` : null} />
+            <Field label="% Comissão"      value={ficha.pct_comissao != null ? `${formatDecimalBRInput(ficha.pct_comissao)}%` : null} />
+            <Field label="% Desconto"      value={ficha.pct_desconto != null ? `${formatDecimalBRInput(ficha.pct_desconto)}%` : null} />
             <Field label="Parcelamento"    value={ficha.parcelamento} />
             <div className="col-span-2">
               <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wider mb-1">Assumida por</p>

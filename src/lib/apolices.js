@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { normalizeDisplayText } from './text'
+import { parseDecimalBR } from './numberInput'
 
 export const STATUS_EMISSAO_LABELS = {
   recebida:             { label: 'Recebida',             color: '#3B82F6' },
@@ -19,11 +20,7 @@ export const SEGURADORAS_APOLICE = [
 ]
 
 export function toNumber(value) {
-  if (value === null || value === undefined || value === '') return null
-  const parsed = typeof value === 'number'
-    ? value
-    : Number(String(value).replace(/\./g, '').replace(',', '.'))
-  return Number.isFinite(parsed) ? parsed : null
+  return parseDecimalBR(value)
 }
 
 export function normalizePercent(value) {
@@ -48,7 +45,9 @@ export function calculateValorComissao(premioLiquido, pctComissao) {
 
 export function formatMoneyBR(v) {
   if (v === null || v === undefined || v === '') return '—'
-  return `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+  const parsed = toNumber(v)
+  if (parsed === null) return '—'
+  return `R$ ${parsed.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 // ── KPIs ─────────────────────────────────────────────────────────────────────

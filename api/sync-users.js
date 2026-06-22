@@ -16,6 +16,10 @@ function normalizeAreas(value) {
   return Array.isArray(value) ? [...new Set(value.filter(Boolean))] : []
 }
 
+function normalizeProducts(value) {
+  return Array.isArray(value) ? [...new Set(value.filter(Boolean))] : []
+}
+
 async function listAllAuthUsers(adminClient) {
   const users = []
   let page = 1
@@ -80,7 +84,7 @@ export default async function handler(req, res) {
       const nomeBase = String(authUser.user_metadata?.nome || authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')?.[0] || 'Usuario').trim()
       const { data: existingProfile } = await adminClient
         .from('profiles')
-        .select('id, avatar_url, is_admin, areas_atuacao')
+        .select('id, avatar_url, is_admin, areas_atuacao, comercial_produtos')
         .eq('id', authUser.id)
         .maybeSingle()
 
@@ -91,6 +95,7 @@ export default async function handler(req, res) {
         avatar_url: existingProfile?.avatar_url || null,
         is_admin: Boolean(existingProfile?.is_admin),
         areas_atuacao: normalizeAreas(existingProfile?.areas_atuacao),
+        comercial_produtos: normalizeProducts(existingProfile?.comercial_produtos),
       }
 
       const { error } = await adminClient

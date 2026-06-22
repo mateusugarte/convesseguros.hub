@@ -5,7 +5,7 @@ import { useToast } from '../contexts/ToastContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { supabase } from '../lib/supabase'
 import { fetchContagemAbertaOrcamentista, PRODUTO_LABELS } from '../lib/fichas'
-import { initComercialStore } from '../lib/comercial'
+import { canManageCommercial, initComercialStore } from '../lib/comercial'
 import { Avatar } from './ui'
 import CommandPalette from './CommandPalette'
 import { PageTransition } from './PageTransition'
@@ -86,6 +86,7 @@ const NAV_GROUPS = [
         label: 'Comercial',
         subitems: [
           { to: '/comercial', label: 'Dashboard', end: true },
+          { to: '/comercial/gestao', label: 'Gestao Comercial', managerOnly: true },
           { to: '/comercial/pipeline', label: 'Pipeline' },
           { to: '/comercial/leads', label: 'Base de Leads' },
           { to: '/comercial/vendas', label: 'Vendas' },
@@ -377,6 +378,7 @@ export default function Layout() {
 
               {group.items.map(item => {
                 if (item.adminOnly && !profile?.is_admin) return null
+                if (item.managerOnly && !canManageCommercial(profile)) return null
                 const Icon = item.icon
 
                 if (item.subitems) {
@@ -400,7 +402,9 @@ export default function Layout() {
 
                       {(sidebarOpen || isMobile) && isExpanded && (
                         <div className="ml-3 mt-1 border-l border-dark-border/40 pl-3 space-y-1">
-                          {item.subitems.map(sub => (
+                          {item.subitems.map(sub => {
+                            if (sub.managerOnly && !canManageCommercial(profile)) return null
+                            return (
                             <NavLink
                               key={sub.to}
                               to={sub.to}
@@ -411,7 +415,8 @@ export default function Layout() {
                             >
                               {sub.label}
                             </NavLink>
-                          ))}
+                            )
+                          })}
                         </div>
                       )}
                     </div>

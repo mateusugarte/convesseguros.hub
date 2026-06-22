@@ -30,7 +30,7 @@ async function findAuthUserByEmail(adminClient, email) {
   }
 }
 
-async function upsertProfile(adminClient, { userId, nome, email, isAdmin, areasAtuacao }) {
+async function upsertProfile(adminClient, { userId, nome, email, isAdmin, areasAtuacao, comercialProdutos }) {
   const profilePayload = {
     id: userId,
     nome,
@@ -38,6 +38,7 @@ async function upsertProfile(adminClient, { userId, nome, email, isAdmin, areasA
     avatar_url: null,
     is_admin: isAdmin,
     areas_atuacao: normalizeAreas(areasAtuacao),
+    comercial_produtos: normalizeAreas(comercialProdutos),
   }
 
   const { error } = await adminClient
@@ -95,6 +96,7 @@ export default async function handler(req, res) {
   const password = String(body.password || '')
   const isAdmin = Boolean(body.is_admin)
   const areasAtuacao = Array.isArray(body.areas_atuacao) ? body.areas_atuacao : Array.isArray(body.roles) ? body.roles : []
+  const comercialProdutos = Array.isArray(body.comercial_produtos) ? body.comercial_produtos : []
 
   if (!nome || !email || !password) {
     return json(res, 400, { error: 'Nome, email e senha sao obrigatorios' })
@@ -143,6 +145,7 @@ export default async function handler(req, res) {
     email,
     isAdmin,
     areasAtuacao,
+    comercialProdutos,
   })
 
   return json(res, 200, {

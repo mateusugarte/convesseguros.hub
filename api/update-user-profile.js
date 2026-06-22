@@ -11,6 +11,10 @@ function normalizeAreas(value) {
   return Array.isArray(value) ? [...new Set(value.filter(Boolean))] : []
 }
 
+function normalizeProducts(value) {
+  return Array.isArray(value) ? [...new Set(value.filter(Boolean))] : []
+}
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*')
@@ -63,13 +67,14 @@ export default async function handler(req, res) {
   if (typeof body.orcamentista_label === 'string') updates.orcamentista_label = body.orcamentista_label.trim()
   if ('is_admin' in body) updates.is_admin = Boolean(body.is_admin)
   if ('areas_atuacao' in body) updates.areas_atuacao = normalizeAreas(body.areas_atuacao)
+  if ('comercial_produtos' in body) updates.comercial_produtos = normalizeProducts(body.comercial_produtos)
   if ('avatar_url' in body) updates.avatar_url = body.avatar_url || null
 
   const { data, error } = await adminClient
     .from('profiles')
     .update(updates)
     .eq('id', id)
-    .select('id, nome, orcamentista_label, avatar_url, is_admin, areas_atuacao')
+    .select('id, nome, orcamentista_label, avatar_url, is_admin, areas_atuacao, comercial_produtos')
     .single()
 
   if (error) {

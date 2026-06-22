@@ -24,6 +24,42 @@ export const PRODUTOS = [
   { id: 'seguro_incendio',   label: 'Seguro Incêndio',    cor: '#E67E22' },
 ]
 
+export const COMERCIAL_PRODUTO_OPTIONS = [
+  { id: 'seguro_fianca', label: 'Seguro Fiança', cor: '#2563EB' },
+  ...PRODUTOS,
+]
+
+export const COMERCIAL_PAPEIS = ['vendedor', 'gestor']
+
+export function getCommercialRole(profile) {
+  const areas = Array.isArray(profile?.areas_atuacao) ? profile.areas_atuacao : []
+  if (profile?.is_admin) return 'gestor'
+  if (areas.includes('gestor')) return 'gestor'
+  return 'vendedor'
+}
+
+export function canManageCommercial(profile) {
+  return getCommercialRole(profile) === 'gestor'
+}
+
+export function normalizeCommercialProducts(value) {
+  return Array.isArray(value) ? [...new Set(value.filter(Boolean))] : []
+}
+
+export function canViewCommercialLead(profile, lead, userId) {
+  if (!lead) return false
+  if (profile?.is_admin) return true
+  if (canManageCommercial(profile)) return true
+  if (lead.user_id && userId && lead.user_id === userId) return true
+  if (lead.responsavelId && userId && lead.responsavelId === userId) return true
+  return false
+}
+
+export function filterVisibleCommercialLeads(leads = [], profile, userId) {
+  if (profile?.is_admin || canManageCommercial(profile)) return leads
+  return leads.filter(lead => canViewCommercialLead(profile, lead, userId))
+}
+
 export const TAGS_DEFAULT = [
   { id: 'urgente',        label: 'Urgente',        cor: '#EF4444' },
   { id: 'alto_potencial', label: 'Alto Potencial', cor: '#10B981' },
@@ -90,6 +126,26 @@ function rowToLead(r) {
     motivoRecusa:    r.motivo_recusa   || '',
     propostaEnviada: r.proposta_enviada,
     vendaRealizada:  r.venda_realizada || false,
+    produtoInteresse: r.produto_interesse || '',
+    responsavelId:   r.responsavel_id   || null,
+    responsavelNome:  r.responsavel_nome || '',
+    distribuidoPor:   r.distribuido_por  || null,
+    distribuidoEm:    r.distribuido_em   || null,
+    listaPeriodo:     r.lista_periodo    || '',
+    listaOrigem:      r.lista_origem     || '',
+    objetivo:         r.objetivo         || '',
+    renda:            r.renda            ?? null,
+    veiculo:          r.veiculo          || '',
+    cpf:              r.cpf              || '',
+    cnpj:             r.cnpj             || '',
+    email:            r.email            || '',
+    celular:          r.celular          || '',
+    setorOrigem:      r.setor_origem     || '',
+    imobiliariaOrigem:r.imobiliaria_origem || '',
+    possuiApolice:    r.possui_apolice   || false,
+    numeroApolice:    r.numero_apolice   || '',
+    informacoesImportantes: r.informacoes_importantes || '',
+    dadosInteligencia: r.dados_inteligencia || {},
     historico:            r.historico              || [],
     criadoEm:             r.criado_em,
     jornada_id:           r.jornada_id             || null,
@@ -120,6 +176,26 @@ function leadToRow(lead, userId) {
     motivo_recusa:    lead.motivoRecusa    || null,
     proposta_enviada: lead.propostaEnviada || null,
     venda_realizada:  lead.vendaRealizada  || false,
+    produto_interesse: lead.produtoInteresse || null,
+    responsavel_id:   lead.responsavelId   || userId,
+    responsavel_nome:  lead.responsavelNome || null,
+    distribuido_por:   lead.distribuidoPor  || null,
+    distribuido_em:    lead.distribuidoEm   || null,
+    lista_periodo:     lead.listaPeriodo    || null,
+    lista_origem:      lead.listaOrigem     || null,
+    objetivo:          lead.objetivo        || null,
+    renda:             lead.renda           ?? null,
+    veiculo:           lead.veiculo         || null,
+    cpf:               lead.cpf             || null,
+    cnpj:              lead.cnpj            || null,
+    email:             lead.email           || null,
+    celular:           lead.celular         || null,
+    setor_origem:      lead.setorOrigem     || null,
+    imobiliaria_origem: lead.imobiliariaOrigem || null,
+    possui_apolice:    lead.possuiApolice   || false,
+    numero_apolice:    lead.numeroApolice   || null,
+    informacoes_importantes: lead.informacoesImportantes || null,
+    dados_inteligencia: lead.dadosInteligencia || {},
     historico:        lead.historico       || [],
     criado_em:        lead.criadoEm        || new Date().toISOString(),
   }
@@ -132,6 +208,13 @@ const LEAD_MAP = {
   apoliceAtiva: 'apolice_ativa', jaRecusou: 'ja_recusou',
   motivoRecusa: 'motivo_recusa', propostaEnviada: 'proposta_enviada',
   vendaRealizada: 'venda_realizada', criadoEm: 'criado_em',
+  produtoInteresse: 'produto_interesse', responsavelId: 'responsavel_id',
+  responsavelNome: 'responsavel_nome', distribuidoPor: 'distribuido_por',
+  distribuidoEm: 'distribuido_em', listaPeriodo: 'lista_periodo',
+  listaOrigem: 'lista_origem', setorOrigem: 'setor_origem',
+  imobiliariaOrigem: 'imobiliaria_origem', possuiApolice: 'possui_apolice',
+  numeroApolice: 'numero_apolice', informacoesImportantes: 'informacoes_importantes',
+  dadosInteligencia: 'dados_inteligencia',
 }
 function leadChangesToRow(changes) {
   const row = {}
@@ -270,11 +353,11 @@ export async function initComercialStore(userId) {
 
   try {
     const [leadsRes, salesRes, eventsRes, journeysRes, scriptsRes] = await Promise.all([
-      supabase.from('comercial_leads').select('*').eq('user_id', userId).order('criado_em', { ascending: false }),
-      supabase.from('comercial_vendas').select('*').eq('user_id', userId).order('criado_em', { ascending: false }),
-      supabase.from('comercial_eventos').select('*').eq('user_id', userId).order('data', { ascending: true }),
-      supabase.from('comercial_jornadas').select('*').eq('user_id', userId).order('criado_em', { ascending: false }),
-      supabase.from('comercial_scripts').select('*').eq('user_id', userId).order('criado_em', { ascending: false }),
+      supabase.from('comercial_leads').select('*').order('criado_em', { ascending: false }),
+      supabase.from('comercial_vendas').select('*').order('criado_em', { ascending: false }),
+      supabase.from('comercial_eventos').select('*').order('data', { ascending: true }),
+      supabase.from('comercial_jornadas').select('*').order('criado_em', { ascending: false }),
+      supabase.from('comercial_scripts').select('*').order('criado_em', { ascending: false }),
     ])
 
     const meta = (() => { try { return JSON.parse(localStorage.getItem(`comercial_meta_${userId}`)) || 10 } catch { return 10 } })()
@@ -307,6 +390,7 @@ export const leadAdd = async (lead) => {
     coluna:          lead.coluna || 'contato',
     criadoEm:        now,
     ultimaAtividade: now,
+    responsavelId:   lead.responsavelId || _userId,
     historico:       [{ data: now, desc: 'Lead criado' }],
   }
   setState(s => ({ ...s, leads: [novo, ...s.leads] }))

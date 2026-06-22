@@ -13,6 +13,8 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { DatePicker } from '../../components/ui/DatePicker'
 import { CrmMetricCard, CrmPageHeader, CrmSectionCard } from '../../components/comercial'
+import { useAuth } from '../../contexts/AuthContext'
+import { canManageCommercial, filterVisibleCommercialLeads } from '../../lib/comercial'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -249,6 +251,7 @@ function FloatingBar({ count, leads, selectedIds, onDeselect, toast }) {
 
 export default function BaseLeads() {
   const state    = useComercial()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const toast    = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -328,8 +331,13 @@ export default function BaseLeads() {
   }
 
   // Filtering + sorting
+  const visibleLeads = useMemo(
+    () => filterVisibleCommercialLeads(state.leads || [], profile, user?.id),
+    [state.leads, profile, user?.id]
+  )
+
   const filtered = useMemo(() => {
-    let rows = [...(state.leads || [])]
+    let rows = [...visibleLeads]
 
     if (q) {
       const lq = q.toLowerCase()
@@ -364,7 +372,7 @@ export default function BaseLeads() {
       return dir === 'asc' ? va - vb : vb - va
     })
     return rows
-  }, [state.leads, q, filterCols, filterOrigens, filterTemp, filterFrom, filterTo, sort, dir])
+  }, [visibleLeads, q, filterCols, filterOrigens, filterTemp, filterFrom, filterTo, sort, dir])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const safePage   = Math.min(page, totalPages - 1)
@@ -517,6 +525,7 @@ export default function BaseLeads() {
                   </button>
                 </th>
                 <th className="text-left px-3 py-3 text-xs font-semibold text-dark-muted uppercase tracking-wider whitespace-nowrap">Imobiliária</th>
+                {canManageCommercial(profile) && <th className="text-left px-3 py-3 text-xs font-semibold text-dark-muted uppercase tracking-wider whitespace-nowrap">Responsável</th>}
                 <th className="text-left px-3 py-3">
                   <button onClick={() => toggleSort('temperatura')} className="flex items-center gap-1 text-xs font-semibold text-dark-muted uppercase tracking-wider hover:text-dark-text transition-colors">
                     Temp. <SortIcon col="temperatura" sort={sort} dir={dir} />
@@ -536,7 +545,7 @@ export default function BaseLeads() {
             <tbody>
               {pageRows.length === 0 ? (
                 <tr>
-                  <td colSpan={9}>
+                  <td colSpan={9 + (canManageCommercial(profile) ? 1 : 0)}>
                     <div className="table-empty">
                       <SearchX className="table-empty-icon text-dark-muted" />
                       <p className="text-dark-muted text-sm">Nenhum lead encontrado</p>
@@ -578,6 +587,13 @@ export default function BaseLeads() {
                         ? <div className="flex items-center gap-1 text-xs text-dark-muted"><Building2 className="w-3 h-3 flex-shrink-0" />{lead.imobiliaria}</div>
                         : <span className="text-dark-muted text-xs">—</span>}
                     </td>
+                    {canManageCommercial(profile) && (
+                      <td className="px-3 py-3.5" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>
+                        {lead.responsavelNome
+                          ? <span className="text-xs font-medium text-dark-text">{lead.responsavelNome}</span>
+                          : <span className="text-dark-muted text-xs">Sem responsável</span>}
+                      </td>
+                    )}
                     <td className="px-3 py-3.5" onClick={() => navigate(`/comercial/leads/${lead.id}`)}>
                       <TemperaturaBadge score={score} />
                     </td>

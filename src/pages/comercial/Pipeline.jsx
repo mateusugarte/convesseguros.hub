@@ -16,6 +16,8 @@ import { Select } from '../../components/ui/Select'
 import { DatePicker } from '../../components/ui/DatePicker'
 import { CrmMetricCard, CrmPageHeader, CrmSectionCard } from '../../components/comercial'
 import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../../lib/kanbanDnd'
+import { useAuth } from '../../contexts/AuthContext'
+import { filterVisibleCommercialLeads, canManageCommercial, COMERCIAL_PRODUTO_OPTIONS } from '../../lib/comercial'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -134,6 +136,14 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
             </span>
           )}
         </div>
+
+        {lead.responsavelNome && (
+          <div className="mb-1.5">
+            <span className="inline-flex items-center rounded-full border border-slate-300/60 bg-slate-100 px-2 py-0.5 text-[9px] font-semibold text-slate-700">
+              Resp.: {lead.responsavelNome}
+            </span>
+          </div>
+        )}
 
         {leadTags.length > 0 && (
           <div className="flex gap-1 flex-wrap mb-1.5">
@@ -382,6 +392,7 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
     nome: '', telefone: '', tipo: 'PF', origem: 'Prospecção',
     imobiliaria: '', nomeApolice: '', tipoLocatario: '',
     proximaAcao: '', resumo: '', tags: [],
+    produtoInteresse: 'seguro_fianca',
   })
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
@@ -410,7 +421,7 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
   async function importFicha(f) {
     if (jaNoComercial(f.nome_interessado)) return
     try {
-      await leadAdd({ nome: f.nome_interessado, telefone: f.celular || '', tipo: 'PF', origem: 'Seguro Fiança', imobiliaria: f.imobiliaria || '', nomeApolice: f.id, tipoLocatario: 'Locatário', proximaAcao: '', resumo: '', tags: [], apoliceAtiva: false })
+      await leadAdd({ nome: f.nome_interessado, telefone: f.celular || '', tipo: 'PF', origem: 'Seguro Fiança', imobiliaria: f.imobiliaria || '', nomeApolice: f.id, tipoLocatario: 'Locatário', proximaAcao: '', resumo: '', tags: [], apoliceAtiva: false, produtoInteresse: 'seguro_fianca' })
       toast?.({ type: 'success', title: 'Lead importado!' })
     } catch { toast?.({ type: 'error', title: 'Erro ao importar lead' }) }
     onClose()
@@ -419,7 +430,7 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
   async function importApolice(a) {
     if (jaNoComercial(a.nome_interessado)) return
     try {
-      await leadAdd({ nome: a.nome_interessado, telefone: '', tipo: 'PF', origem: 'Seguro Fiança', imobiliaria: a.imobiliaria || '', nomeApolice: a.numero_apolice || '', tipoLocatario: 'Locatário', proximaAcao: '', resumo: '', tags: [], apoliceAtiva: true })
+      await leadAdd({ nome: a.nome_interessado, telefone: '', tipo: 'PF', origem: 'Seguro Fiança', imobiliaria: a.imobiliaria || '', nomeApolice: a.numero_apolice || '', tipoLocatario: 'Locatário', proximaAcao: '', resumo: '', tags: [], apoliceAtiva: true, produtoInteresse: 'seguro_fianca' })
       toast?.({ type: 'success', title: 'Lead importado!' })
     } catch { toast?.({ type: 'error', title: 'Erro ao importar lead' }) }
     onClose()
@@ -560,11 +571,11 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
           {/* Manual */}
           {step === 'manual' && (
             <div className="px-6 py-4 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
-                  <label className={LBL}>Nome *</label>
-                  <input value={form.nome} onChange={e => set('nome', e.target.value)}
-                    className="input" placeholder="Nome completo" autoFocus />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className={LBL}>Nome *</label>
+                    <input value={form.nome} onChange={e => set('nome', e.target.value)}
+                      className="input" placeholder="Nome completo" autoFocus />
                 </div>
                 <div>
                   <label className={LBL}>Telefone</label>
@@ -579,19 +590,27 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
                     options={[{ value: 'PF', label: 'Pessoa Física' }, { value: 'PJ', label: 'Pessoa Jurídica' }]}
                   />
                 </div>
-                <div>
-                  <label className={LBL}>Origem</label>
-                  <Select
-                    value={form.origem}
-                    onChange={v => set('origem', v)}
-                    options={ORIGENS.map(o => ({ value: o, label: o }))}
-                  />
-                </div>
-                <div>
-                  <label className={LBL}>Imobiliária</label>
-                  <input value={form.imobiliaria} onChange={e => set('imobiliaria', e.target.value)}
-                    className="input" placeholder="Nome da imobiliária" />
-                </div>
+                  <div>
+                    <label className={LBL}>Origem</label>
+                    <Select
+                      value={form.origem}
+                      onChange={v => set('origem', v)}
+                      options={ORIGENS.map(o => ({ value: o, label: o }))}
+                    />
+                  </div>
+                  <div>
+                    <label className={LBL}>Produto de interesse</label>
+                    <Select
+                      value={form.produtoInteresse}
+                      onChange={v => set('produtoInteresse', v)}
+                      options={COMERCIAL_PRODUTO_OPTIONS.map(product => ({ value: product.id, label: product.label }))}
+                    />
+                  </div>
+                  <div>
+                    <label className={LBL}>Imobiliária</label>
+                    <input value={form.imobiliaria} onChange={e => set('imobiliaria', e.target.value)}
+                      className="input" placeholder="Nome da imobiliária" />
+                  </div>
                 {form.origem === 'Seguro Fiança' && (
                   <>
                     <div>
@@ -678,6 +697,7 @@ function SelectionBar({ count, onMover, onArquivar, onClear }) {
 
 export default function Pipeline() {
   const state      = useComercial()
+  const { user, profile } = useAuth()
   const toast      = useToast()
   const navigate   = useNavigate()
   const [activeId,    setActiveId]    = useState(null)
@@ -688,18 +708,22 @@ export default function Pipeline() {
   const [selectedIds, setSelectedIds] = useState(new Set())
 
   const sensors    = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
-  const activeLead = activeId ? state.leads.find(l => l.id === activeId) : null
-  const leads      = state.leads || []
+  const visibleLeads = useMemo(
+    () => filterVisibleCommercialLeads(state.leads || [], profile, user?.id),
+    [state.leads, profile, user?.id]
+  )
+  const activeLead = activeId ? visibleLeads.find(l => l.id === activeId) : null
+  const leads      = visibleLeads
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return state.leads || []
+    if (!search.trim()) return visibleLeads
     const q = search.toLowerCase()
-    return (state.leads || []).filter(l =>
+    return visibleLeads.filter(l =>
       l.nome.toLowerCase().includes(q) ||
       (l.telefone || '').includes(q) ||
       (l.imobiliaria || '').toLowerCase().includes(q)
     )
-  }, [state.leads, search])
+  }, [visibleLeads, search])
 
   const activeLeads = leads.filter(l => l.coluna !== 'recusou')
   const hotLeads = activeLeads.filter(l => calcScore(l) > 60)
@@ -848,6 +872,18 @@ export default function Pipeline() {
           </div>
 
           <aside className="space-y-4 px-5 py-5">
+            {canManageCommercial(profile) && (
+              <div className="rounded-[24px] border border-brand-accent/20 bg-brand-accent/6 p-4">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-brand-accent" />
+                  <p className="text-sm font-semibold text-dark-text">Modo gestor</p>
+                </div>
+                <p className="mt-2 text-xs text-dark-muted">
+                  {leads.length} leads visíveis na carteira atual. Use o detalhe do lead para redistribuir responsável.
+                </p>
+              </div>
+            )}
+
             <div className="rounded-[24px] border border-dark-border/50 bg-white/65 p-4">
               <div className="flex items-center gap-2">
                 <Layers3 className="h-4 w-4 text-brand-accent" />

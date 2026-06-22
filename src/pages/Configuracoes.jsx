@@ -5,6 +5,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { replaceEntityImage } from '../lib/entityMedia'
+import { PRODUTOS as COMERCIAL_PRODUTOS } from '../lib/comercial'
 import { supabase } from '../lib/supabase'
 import {
   Moon,
@@ -56,6 +57,10 @@ function normalizeAreas(value) {
   return Array.isArray(value) ? [...new Set(value.filter(Boolean))] : []
 }
 
+function normalizeProducts(value) {
+  return Array.isArray(value) ? [...new Set(value.filter(Boolean))] : []
+}
+
 function roleLabel(role) {
   return ROLE_OPTIONS.find(item => item.value === role)?.label || role
 }
@@ -77,6 +82,7 @@ export default function Configuracoes() {
   const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || '')
   const [nome, setNome] = useState(profile?.nome || '')
   const [areasAtuacao, setAreasAtuacao] = useState([])
+  const [comercialProdutos, setComercialProdutos] = useState([])
   const [savingPerfil, setSavingPerfil] = useState(false)
 
   const [profiles, setProfiles] = useState([])
@@ -90,6 +96,7 @@ export default function Configuracoes() {
     password: '',
     roles: [],
     is_admin: false,
+    comercial_produtos: [],
   })
   const [creatingUser, setCreatingUser] = useState(false)
   const [syncingUsers, setSyncingUsers] = useState(false)
@@ -101,7 +108,8 @@ export default function Configuracoes() {
     setAvatarPreview(profile?.avatar_url || '')
     setNome(profile?.nome || '')
     setAreasAtuacao(normalizeAreas(profile?.areas_atuacao))
-  }, [profile?.avatar_url, profile?.nome])
+    setComercialProdutos(normalizeProducts(profile?.comercial_produtos))
+  }, [profile?.avatar_url, profile?.nome, profile?.comercial_produtos])
 
   useEffect(() => {
     if (!isAdmin) return
@@ -112,7 +120,7 @@ export default function Configuracoes() {
     setLoadingProfiles(true)
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, nome, orcamentista_label, avatar_url, is_admin, areas_atuacao, created_at')
+      .select('id, nome, orcamentista_label, avatar_url, is_admin, areas_atuacao, comercial_produtos, created_at')
       .order('nome')
 
     setLoadingProfiles(false)
@@ -132,6 +140,7 @@ export default function Configuracoes() {
             nome: item.nome || '',
             is_admin: Boolean(item.is_admin),
             areas_atuacao: normalizeAreas(item.areas_atuacao),
+            comercial_produtos: normalizeProducts(item.comercial_produtos),
           }
         }
       })
@@ -149,6 +158,7 @@ export default function Configuracoes() {
         nome: nome.trim(),
         orcamentista_label: normalizeLabel(nome),
         areas_atuacao: normalizeAreas(areasAtuacao),
+        comercial_produtos: normalizeProducts(comercialProdutos),
       })
       .eq('id', user.id)
 
@@ -166,7 +176,7 @@ export default function Configuracoes() {
 
   function updateDraft(profileId, updater) {
     setProfileDrafts(prev => {
-      const current = prev[profileId] || { nome: '', is_admin: false, areas_atuacao: [] }
+      const current = prev[profileId] || { nome: '', is_admin: false, areas_atuacao: [], comercial_produtos: [] }
       return {
         ...prev,
         [profileId]: typeof updater === 'function' ? updater(current) : { ...current, ...updater },
@@ -180,6 +190,7 @@ export default function Configuracoes() {
       nome: profileItem.nome || '',
       is_admin: Boolean(profileItem.is_admin),
       areas_atuacao: normalizeAreas(profileItem.areas_atuacao),
+      comercial_produtos: normalizeProducts(profileItem.comercial_produtos),
     }
 
     setSavingProfileId(profileItem.id)
@@ -201,6 +212,7 @@ export default function Configuracoes() {
           nome: draft.nome || profileItem.nome || '',
           is_admin: draft.is_admin,
           areas_atuacao: draft.areas_atuacao,
+          comercial_produtos: draft.comercial_produtos,
         }),
       })
 
@@ -218,6 +230,7 @@ export default function Configuracoes() {
           nome: payload.profile?.nome || draft.nome || '',
           is_admin: Boolean(payload.profile?.is_admin ?? draft.is_admin),
           areas_atuacao: normalizeAreas(payload.profile?.areas_atuacao ?? draft.areas_atuacao),
+          comercial_produtos: normalizeProducts(payload.profile?.comercial_produtos ?? draft.comercial_produtos),
         },
       }))
       toast({ type: 'success', title: 'Perfil do usuario atualizado' })
@@ -284,13 +297,14 @@ export default function Configuracoes() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${sessionData.session.access_token}`,
         },
-        body: JSON.stringify({
-          nome: newUser.nome.trim(),
-          email: newUser.email.trim(),
-          password: newUser.password,
-          is_admin: newUser.is_admin,
-          areas_atuacao: newUser.roles,
-        }),
+      body: JSON.stringify({
+        nome: newUser.nome.trim(),
+        email: newUser.email.trim(),
+        password: newUser.password,
+        is_admin: newUser.is_admin,
+        areas_atuacao: newUser.roles,
+        comercial_produtos: newUser.comercial_produtos,
+      }),
       })
 
       const payload = await response.json().catch(() => ({}))
@@ -300,7 +314,7 @@ export default function Configuracoes() {
       }
 
       toast({ type: 'success', title: 'Usuario criado', message: payload?.profile?.nome || 'Cadastro realizado com sucesso.' })
-      setNewUser({ nome: '', email: '', password: '', roles: [], is_admin: false })
+      setNewUser({ nome: '', email: '', password: '', roles: [], is_admin: false, comercial_produtos: [] })
       await loadProfiles()
     } catch (error) {
       toast({ type: 'error', title: 'Erro ao criar usuario', message: error.message })
@@ -442,6 +456,42 @@ export default function Configuracoes() {
                       ))
                     ) : (
                       <span className="text-sm text-dark-muted">Sem funcoes marcadas</span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-dark-muted">
+                    Produtos comerciais liberados
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {COMERCIAL_PRODUTOS.map(product => {
+                      const active = comercialProdutos.includes(product.id)
+                      return (
+                        <button
+                          key={product.id}
+                          type="button"
+                          onClick={() => setComercialProdutos(prev => toggleItem(prev, product.id))}
+                          className={`rounded-2xl border px-3 py-2 text-left text-sm transition-all ${
+                            active
+                              ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                              : 'border-dark-border hover:border-brand-accent/40 hover:bg-dark-surface2/40'
+                          }`}
+                        >
+                          {product.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {comercialProdutos.length ? (
+                      comercialProdutos.map(productId => (
+                        <span key={productId} className="badge badge-info">
+                          {COMERCIAL_PRODUTOS.find(product => product.id === productId)?.label || productId}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-dark-muted">Sem produtos liberados</span>
                     )}
                   </div>
                 </div>
@@ -653,6 +703,36 @@ export default function Configuracoes() {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-dark-muted">Produtos comerciais liberados</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {COMERCIAL_PRODUTOS.map(product => {
+                      const active = newUser.comercial_produtos.includes(product.id)
+                      return (
+                        <button
+                          key={product.id}
+                          type="button"
+                          onClick={() => setNewUser(prev => ({ ...prev, comercial_produtos: toggleItem(prev.comercial_produtos, product.id) }))}
+                          className={`rounded-2xl border px-3 py-2 text-left text-sm transition-all ${
+                            active
+                              ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                              : 'border-dark-border hover:border-brand-accent/40 hover:bg-dark-surface2/40'
+                          }`}
+                        >
+                          {product.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {newUser.comercial_produtos.map(productId => (
+                      <span key={productId} className="badge badge-blue">
+                        {COMERCIAL_PRODUTOS.find(product => product.id === productId)?.label || productId}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
                 <label className="flex items-center gap-3 rounded-2xl border border-dark-border px-4 py-3 text-sm text-dark-text">
                   <input
                     type="checkbox"
@@ -691,6 +771,7 @@ export default function Configuracoes() {
                         nome: item.nome || '',
                         is_admin: Boolean(item.is_admin),
                         areas_atuacao: normalizeAreas(item.areas_atuacao),
+                        comercial_produtos: normalizeProducts(item.comercial_produtos),
                       }
 
                       return (
@@ -714,6 +795,11 @@ export default function Configuracoes() {
                                   {normalizeAreas(draft.areas_atuacao).length
                                     ? normalizeAreas(draft.areas_atuacao).map(roleLabel).join(' · ')
                                     : 'Sem funcoes definidas'}
+                                </p>
+                                <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-dark-muted">
+                                  {normalizeProducts(draft.comercial_produtos).length
+                                    ? normalizeProducts(draft.comercial_produtos).map(productId => COMERCIAL_PRODUTOS.find(product => product.id === productId)?.label || productId).join(' · ')
+                                    : 'Sem produtos liberados'}
                                 </p>
                               </div>
                             </div>
@@ -747,6 +833,32 @@ export default function Configuracoes() {
                                       }`}
                                     >
                                       {role.label}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            </div>
+
+                            <div>
+                              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Produtos comerciais</p>
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                {COMERCIAL_PRODUTOS.map(product => {
+                                  const active = normalizeProducts(draft.comercial_produtos).includes(product.id)
+                                  return (
+                                    <button
+                                      key={`${item.id}-${product.id}`}
+                                      type="button"
+                                      onClick={() => updateDraft(item.id, current => ({
+                                        ...current,
+                                        comercial_produtos: toggleItem(normalizeProducts(current.comercial_produtos), product.id),
+                                      }))}
+                                      className={`rounded-2xl border px-3 py-2 text-left text-sm transition-all ${
+                                        active
+                                          ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                                          : 'border-dark-border hover:border-brand-accent/40 hover:bg-dark-surface2/40'
+                                      }`}
+                                    >
+                                      {product.label}
                                     </button>
                                   )
                                 })}

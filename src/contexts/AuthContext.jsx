@@ -18,6 +18,10 @@ function buildOrcamentistaLabel(nome, email) {
   return base.toUpperCase()
 }
 
+function normalizeProducts(value) {
+  return Array.isArray(value) ? [...new Set(value.filter(Boolean))] : []
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null)
   const [profile, setProfile] = useState(null)
@@ -42,7 +46,7 @@ export function AuthProvider({ children }) {
   async function loadProfile(userId) {
     const { data } = await supabase
       .from('profiles')
-      .select('id, nome, orcamentista_label, avatar_url, is_admin, areas_atuacao')
+      .select('id, nome, orcamentista_label, avatar_url, is_admin, areas_atuacao, comercial_produtos')
       .eq('id', userId)
       .single()
 
@@ -57,16 +61,21 @@ export function AuthProvider({ children }) {
         avatar_url: null,
         is_admin: resolveAdminFlag(currentUser.email, false),
         areas_atuacao: [],
+        comercial_produtos: [],
       }
 
       const { data: created, error: createError } = await supabase
         .from('profiles')
         .insert(payload)
-        .select('id, nome, orcamentista_label, avatar_url, is_admin, areas_atuacao')
+        .select('id, nome, orcamentista_label, avatar_url, is_admin, areas_atuacao, comercial_produtos')
         .single()
 
       if (!createError && created) {
-        setProfile({ ...created, is_admin: resolveAdminFlag(currentUser.email, created.is_admin) })
+        setProfile({
+          ...created,
+          comercial_produtos: normalizeProducts(created.comercial_produtos),
+          is_admin: resolveAdminFlag(currentUser.email, created.is_admin),
+        })
         setLoading(false)
         return
       }
@@ -75,6 +84,7 @@ export function AuthProvider({ children }) {
     setProfile(data ? {
       ...data,
       areas_atuacao: Array.isArray(data.areas_atuacao) ? data.areas_atuacao : [],
+      comercial_produtos: normalizeProducts(data.comercial_produtos),
       is_admin: resolveAdminFlag(currentUser?.email, data.is_admin),
     } : data)
     setLoading(false)
@@ -111,6 +121,7 @@ export function AuthProvider({ children }) {
         avatar_url: null,
         is_admin: resolveAdminFlag(email, false),
         areas_atuacao: [],
+        comercial_produtos: [],
       }
 
       const { error: profileError } = await supabase

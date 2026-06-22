@@ -201,4 +201,80 @@ Extraídos das sessões de trabalho — nunca violar:
 
 ---
 
+## 9. PLANEJAMENTO DE IMPLEMENTAÇÃO DO MODELO COMERCIAL
+
+> Objetivo: transformar a operação comercial em um sistema controlado por permissão, distribuição e acompanhamento, sem quebrar o fluxo atual do CRM.
+
+### 9.1 Objetivo funcional
+
+- O `admin` define quais produtos cada usuário pode operar.
+- O `gestor comercial` organiza as listas de leads por vendedor, com visão semanal, mensal e por prioridade.
+- O sistema distribui automaticamente para cada vendedor apenas os leads atribuídos a ele.
+- O vendedor trabalha somente sua lista, enquanto o gestor acompanha o funil completo da operação.
+
+### 9.2 Regra operacional
+
+| Papel | Responsabilidade |
+|------|-------------------|
+| Admin | Definir permissões de produto por usuário |
+| Gestor comercial | Montar, revisar e redistribuir listas de leads |
+| Vendedor | Executar os leads recebidos e atualizar o status |
+
+### 9.3 Escopo do sistema
+
+- Permissão por produto no perfil do usuário.
+- Atribuição de responsável comercial por lead.
+- Lista de trabalho automática por vendedor.
+- Visão de acompanhamento por semana, mês e status.
+- Reatribuição manual pelo gestor quando necessário.
+- Registro histórico de distribuição e redistribuição.
+
+### 9.4 Etapas de implementação
+
+**Fase 1 — Base de permissão**
+- Criar ou validar o vínculo entre usuário e produtos autorizados.
+- Exibir os produtos permitidos no cadastro e na edição do usuário.
+- Garantir que o CRM respeite a permissão no carregamento e na visualização.
+
+**Fase 2 — Responsável e fila de leads**
+- Adicionar responsável comercial ao lead.
+- Permitir que o gestor atribua um lead a um vendedor.
+- Exibir a fila individual do vendedor no CRM.
+- Filtrar a base por responsável, período e prioridade.
+
+**Fase 3 — Distribuição automática**
+- Criar distribuição automática de listas por regras definidas pelo gestor.
+- Separar listas por semana, mês e campanhas.
+- Permitir atualização em lote da carteira do vendedor.
+- Registrar a origem da distribuição para auditoria interna.
+
+**Fase 4 — Acompanhamento do gestor**
+- Criar visão consolidada da operação por vendedor.
+- Exibir volume de leads, atrasos, estágio e taxa de avanço.
+- Destacar leads parados ou sem contato.
+- Permitir redistribuição rápida entre vendedores.
+
+**Fase 5 — Consolidação operacional**
+- Padronizar a rotina comercial a partir do uso do sistema.
+- Ajustar a tela do vendedor para leitura simples da sua lista.
+- Ajustar a tela do gestor para leitura analítica e supervisão.
+
+### 9.5 Regras de negócio propostas
+
+- Um usuário só visualiza os produtos para os quais foi liberado.
+- O vendedor só visualiza os leads atribuídos a ele, exceto quando o gestor decidir compartilhar a visão.
+- O gestor pode ver toda a operação do time.
+- A distribuição pode ser manual, automática ou híbrida.
+- O sistema deve preservar histórico de atribuições para controle interno.
+
+### 9.6 Resultado esperado
+
+- Melhor controle sobre quem vende o quê.
+- Menos perda de oportunidades por desorganização.
+- Maior previsibilidade da rotina comercial.
+- Lista mais limpa para cada vendedor.
+- Gestão mais próxima e com leitura real da operação.
+
+---
+
 *Documento gerado a partir das conversas de planejamento. Atualizar conforme novas decisões forem tomadas.*

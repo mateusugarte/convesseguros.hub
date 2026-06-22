@@ -5,7 +5,10 @@ import {
   PIPELINE_COLS, TIPOS_EVENTO, ORIGENS, calcScore, scoreFaixa, diffDias,
   fetchFichasParaImport,
 } from '../../lib/comercial'
+import { canManageCommercial, COMERCIAL_PRODUTO_OPTIONS } from '../../lib/comercial'
 import { useToast } from '../../contexts/ToastContext'
+import { useAuth } from '../../contexts/AuthContext'
+import { supabase } from '../../lib/supabase'
 import { Select } from '../../components/ui/Select'
 import { DatePicker } from '../../components/ui/DatePicker'
 import {
@@ -989,14 +992,19 @@ export default function LeadDetalhe() {
   const navigate                        = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const state                           = useComercial()
+  const { user, profile }               = useAuth()
   const toast                           = useToast()
   const [moveOpen, setMoveOpen]         = useState(false)
   const [editOpen, setEditOpen]         = useState(false)
+  const [teamProfiles, setTeamProfiles]  = useState([])
+  const [assigning, setAssigning]       = useState(false)
+  const [responsavelId, setResponsavelId] = useState('')
   const moveRef                         = useRef(null)
 
   const lead   = state.leads?.find(l => l.id === id)
   const events = (state.events || []).filter(e => e.leadId === id)
   const tags   = state.tags || []
+  const isManager = canManageCommercial(profile)
 
   const activeTab = searchParams.get('aba') || 'timeline'
   const setTab    = t => setSearchParams({ aba: t }, { replace: true })
@@ -1009,6 +1017,29 @@ export default function LeadDetalhe() {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
+
+  useEffect(() => {
+    setResponsavelId(lead?.responsavelId || '')
+  }, [lead?.responsavelId, id])
+
+  useEffect(() => {
+    if (!isManager) {
+      setTeamProfiles([])
+      return
+    }
+
+    let canceled = false
+    supabase
+      .from('profiles')
+      .select('id, nome, avatar_url, is_admin, areas_atuacao, comercial_produtos')
+      .order('nome')
+      .then(({ data, error }) => {
+        if (canceled || error) return
+        setTeamProfiles(Array.isArray(data) ? data : [])
+      })
+
+    return () => { canceled = true }
+  }, [isManager])
 
   async function handleMove(col, colIdx) {
     const currentIdx = PIPELINE_COLS.findIndex(c => c.id === lead.coluna)
@@ -1033,6 +1064,25 @@ export default function LeadDetalhe() {
     await leadMover(lead.id, col.id)
     toast({ type: 'success', title: `Movido para ${col.label}` })
     setMoveOpen(false)
+  }
+
+  async function handleAssignResponsavel() {
+    if (!isManager || responsavelId === lead.responsavelId) return
+    const selected = teamProfiles.find(item => item.id === responsavelId)
+    setAssigning(true)
+    try {
+      await leadUpdate(lead.id, {
+        responsavelId: responsavelId || null,
+        responsavelNome: selected?.nome || null,
+        distribuidoPor: user?.id || null,
+        distribuidoEm: new Date().toISOString(),
+      })
+      toast({ type: 'success', title: 'Responsável atualizado' })
+    } catch {
+      toast({ type: 'error', title: 'Erro ao atualizar responsável' })
+    } finally {
+      setAssigning(false)
+    }
   }
 
   if (!lead) {
@@ -1121,6 +1171,12 @@ export default function LeadDetalhe() {
         <div className="mb-4 flex flex-wrap gap-3 text-xs text-dark-muted">
           {lead.origem    && <span className="flex items-center gap-1"><Tag className="w-3 h-3" /> {lead.origem}</span>}
           {lead.tipo      && <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {lead.tipo}</span>}
+          {lead.produtoInteresse && (
+            <span className="flex items-center gap-1">
+              <FileText className="w-3 h-3" />
+              {COMERCIAL_PRODUTO_OPTIONS.find(product => product.id === lead.produtoInteresse)?.label || lead.produtoInteresse}
+            </span>
+          )}
           {lead.criadoEm  && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Criado {fmtDateShort(lead.criadoEm)}</span>}
           {lead.ultimaAtividade && <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Ativo {fmtDate(lead.ultimaAtividade)}</span>}
           {qualificationMeta && (
@@ -1165,6 +1221,46 @@ export default function LeadDetalhe() {
           </CrmSectionCard>
           <CrmSectionCard title="Próxima ação" contentClassName="p-0">
             <CardProximaAcao  lead={lead} />
+          </CrmSectionCard>
+          <CrmSectionCard title="Responsável comercial" contentClassName="p-0">
+            <div className="space-y-3 p-4">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-dark-muted">Atual</p>
+                <p className="text-sm font-medium text-dark-text">
+                  {lead.responsavelNome || 'Sem responsável definido'}
+                </p>
+              </div>
+
+              {isManager ? (
+                <>
+                  <Select
+                    value={responsavelId}
+                    onChange={setResponsavelId}
+                    searchable
+                    placeholder="Selecionar responsável"
+                    options={[
+                      { value: '', label: 'Sem responsável' },
+                      ...teamProfiles.map(item => ({
+                        value: item.id,
+                        label: item.nome,
+                      })),
+                    ]}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAssignResponsavel}
+                    disabled={assigning || responsavelId === lead.responsavelId}
+                    className="btn-primary text-xs w-full disabled:opacity-50"
+                  >
+                    {assigning ? 'Salvando...' : 'Atribuir responsável'}
+                  </button>
+                </>
+              ) : (
+                <p className="text-xs text-dark-muted">
+                  A distribuição é controlada pelo gestor comercial.
+                </p>
+              )}
+            </div>
           </CrmSectionCard>
           <CrmSectionCard title="Resumo operacional" contentClassName="p-0">
             <CardResumo       lead={lead} events={events} />

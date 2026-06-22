@@ -45,6 +45,7 @@ const AutoSinistros  = lazy(() => import('./pages/auto/AutoSinistros'))
 
 // Área Comercial
 const ComercialDashboard = lazy(() => import('./pages/comercial/ComercialDashboard'))
+const GestaoComercial    = lazy(() => import('./pages/comercial/GestaoComercial'))
 const Pipeline           = lazy(() => import('./pages/comercial/Pipeline'))
 const BaseLeads          = lazy(() => import('./pages/comercial/BaseLeads'))
 const LeadDetalhe        = lazy(() => import('./pages/comercial/LeadDetalhe'))
@@ -103,6 +104,7 @@ function AppRoutes() {
           <Route path="auto/sinistros"      element={<AutoSinistros />} />
           {/* Área Comercial */}
           <Route path="comercial"            element={<ComercialDashboard />} />
+          <Route path="comercial/gestao"     element={<GestaoComercial />} />
           <Route path="comercial/pipeline"   element={<Pipeline />} />
           <Route path="comercial/leads"      element={<BaseLeads />} />
           <Route path="comercial/leads/:id"  element={<LeadDetalhe />} />

@@ -1,32 +1,42 @@
 # ROADMAP.md - Sistema de Gestao do Conves Hub
 
 > Visao consolidada do projeto. Mantem o que esta pronto, o que esta planejado e o que ainda depende de execucao.
+> Ultima atualizacao: 2026-06-22
 
 ## Prioridades imediatas
 
-- [ ] **Cerebro Obsidian** — base de conhecimento interna da Conves (produto, processos, clientes, playbooks). A ser construido em momento separado.
-- [x] **Fase 0** — CRM base: status owner, contatos nas imobiliarias, codigo imob por seguradora. Concluido.
-- [x] **Fase 1** — Dashboard comercial com metricas reais (conversao ficha→apolice, ranking imobiliarias). Concluido.
-- [ ] **Fase 2** — Jornadas: redesign visual (node-based estilo n8n), novo node tipo Etapa, aba "Jornada do Cliente" no detalhe do lead. Em execucao.
-- [ ] **Fase 3** — Campanhas: area completa + banner no dashboard + strip no pipeline + aba no lead. Em execucao.
-- [ ] **Fase 4** — Redesign visual completo do sistema. Em execucao.
-- [ ] **Fase 5** — Forecasting: projecao de apolices/comissao a partir do pipeline. Proxima.
-- [ ] **Fase 6** — Aquisicao estruturada: outreach automatizado + materiais comerciais. Futuro.
-- [ ] **Fase 7** — WhatsApp Business integration. Futuro.
+- [ ] **Campanhas** — area completa + banner no dashboard + strip no pipeline + aba no lead. Em execucao.
+- [ ] **ApolicesDashboard** — finalizar metricas e graficos reais.
+- [ ] **GestaoEmissoes** — landing operacional do nucleo de apolices.
+- [ ] **Reformulacao Conves** — documento estrategico e estrutural para diretoria (CONVES_CONTEXTO_AGENTES.md).
+- [ ] **Estrutura Comercial por Permissao** — admin define produtos por usuario, gestor distribui leads por vendedor e vendedor recebe lista automatica.
+
+## Fases concluidas
+
+- [x] **Fase 0** — CRM base: status owner, contatos nas imobiliarias, codigo imob por seguradora.
+- [x] **Fase 1** — Dashboard comercial com metricas reais (conversao ficha-apolice, ranking imobiliarias).
+- [x] **Fase 2** — Jornadas: editor visual node-based com ReactFlow.
+- [x] **Fase 4** — Redesign visual completo do sistema (v12 concluido).
+- [x] **Modulo Auto** — Dashboard, Cotacoes, Clientes, Emissoes, Renovacoes, Sinistros.
+- [x] **Financeiro** — Dashboard de comissoes por seguradora.
+
+## Fases em execucao
+
+- [ ] **Fase 3** — Campanhas: area completa.
+
+## Fases futuras
+
+- [ ] **Fase 5** — Forecasting: projecao de apolices/comissao a partir do pipeline.
+- [ ] **Fase 6** — Aquisicao estruturada: outreach automatizado + materiais comerciais.
+- [ ] **Fase 7** — WhatsApp Business integration (n8n).
+- [ ] **Cerebro Obsidian** — base de conhecimento interna da Conves.
 
 ## Visao geral
 
-- Plataforma interna para fichas, apolices, imobiliarias, seguradoras e area comercial.
+- Plataforma interna para fichas, apolices, imobiliarias, seguradoras, auto e area comercial.
 - Entrada principal: Google Forms -> n8n -> Supabase.
 - Frontend: React + Tailwind.
 - Infra: Supabase + Vercel.
-
-## Auditoria rapida
-
-- O roadmap foi reorganizado por dominio.
-- Itens sem status foram normalizados.
-- Redundancias claras foram removidas.
-- Paginas reais do projeto foram agrupadas por modulo.
 
 ## Modulos atuais
 
@@ -36,12 +46,12 @@
 - Dashboard [pronto]
 - Configuracoes [pronto]
 
-### Fichas
+### Fichas (Fianca)
 
 - Fichas [pronto]
 - FichaDetalhePage [pronto]
 - MinhasFichas [pronto]
-- GestaoEmissoes [planejado]
+- GestaoEmissoes [em andamento]
 - Relatorio [pronto]
 
 ### Imobiliarias e seguradoras
@@ -52,7 +62,7 @@
 
 ### Apolices
 
-- ApolicesDashboard [pronto]
+- ApolicesDashboard [em andamento]
 - ApoicesGestao [pronto]
 - ApolicesLista [pronto]
 - ApoliceDetalhe [pronto]
@@ -66,6 +76,22 @@
 - Vendas [pronto]
 - Calendario [pronto]
 - Jornadas [pronto]
+- Campanhas [planejado]
+
+### Auto
+
+- AutoDashboard [pronto]
+- AutoCotacoes [pronto]
+- AutoCotacaoDetalhe [pronto]
+- AutoCotacoesConsulta [pronto]
+- AutoClientes [pronto]
+- AutoEmissoes [pronto]
+- AutoRenovacoes [pronto]
+- AutoSinistros [pronto]
+
+### Financeiro
+
+- Financeiro [pronto]
 
 ## Base tecnica
 
@@ -79,16 +105,16 @@
 
 ### Base estrutural
 
-- Tabelas principais de `profiles` e `fichas`.
+- Tabelas principais de `profiles`, `fichas`, `apolices`, `comercial_leads`, `imobiliarias`.
 - Indices de apoio para consulta.
 - Politicas de acesso no Supabase.
 - Usuarios base configurados.
 
 ### Estrutura React
 
-- Aplicacao em React + Tailwind.
-- Paginas base e organizacao de componentes.
-- Navegacao pronta para os modulos ativos.
+- Aplicacao em React + Vite + Tailwind.
+- Design system com dark workspace sidebar.
+- Navegacao pronta para todos os modulos ativos.
 
 ### Dashboard e Fichas
 
@@ -96,31 +122,33 @@
 - Lista e detalhes de fichas.
 - Fluxo de assumir e finalizar fichas.
 
-### Testes
+### Comercial
 
-- Login validado.
-- Assumir e finalizar ficha validado.
-- Filtros principais validos.
-- Responsividade basica validada.
+- Pipeline kanban com drag-and-drop.
+- Base de leads com filtros avancados.
+- Editor de jornadas com ReactFlow.
+- Registro e analise de vendas.
+- Calendario de atividades.
+
+### Auto
+
+- Fluxo completo: cotacao -> emissao -> renovacao -> sinistro.
+
+### Financeiro
+
+- Dashboard de comissoes por seguradora.
 
 ## Pendencias conhecidas
 
-- Gestao de emissoes.
+- Gestao de emissoes (landing page operacional).
+- ApolicesDashboard (metricas completas).
+- Campanhas (modulo completo).
 
 ## Evolucoes futuras
 
-- Notificacoes WhatsApp.
+- Notificacoes WhatsApp via n8n.
 - Relatorios PDF/Excel.
 - Historico de alteracoes por ficha.
 - Metricas por orcamentista.
-- Integracao com emissao de apolices.
 - App mobile.
-
-## Ordem de execucao
-
-1. Base Supabase e autenticacao
-2. Estrutura React
-3. Dashboard
-4. Fichas
-5. Testes
-6. Evolucoes futuras
+- Cerebro Conves (base de conhecimento em Obsidian).

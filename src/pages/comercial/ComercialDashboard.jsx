@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { DatePicker } from '../../components/ui/DatePicker'
 import { useAuth } from '../../contexts/AuthContext'
-import { diffDias, ORIGENS, PIPELINE_COLS, useComercial } from '../../lib/comercial'
+import { diffDias, ORIGENS, PIPELINE_COLS, useComercial, filterVisibleCommercialLeads, canManageCommercial } from '../../lib/comercial'
 import {
   CrmAvatarBadge,
   CrmEmptyState,
@@ -260,7 +260,7 @@ function TrendTooltip({ active, payload, label }) {
 
 export default function ComercialDashboard() {
   const state = useComercial()
-  const { profile } = useAuth()
+  const { profile, user } = useAuth()
   const navigate = useNavigate()
 
   const [periodo, setPeriodo] = useState({ tipo: 'mes', de: '', ate: '' })
@@ -269,8 +269,12 @@ export default function ComercialDashboard() {
   const range = useMemo(() => getPeriodoRange(periodo.tipo, periodo.de, periodo.ate), [periodo])
   const prevRange = useMemo(() => getPrevRange(periodo.tipo, range), [periodo.tipo, range])
 
-  const filteredLeads = useMemo(() => (state.leads || []).filter(lead => inRange(lead.criadoEm, range)), [state.leads, range])
-  const prevLeads = useMemo(() => (state.leads || []).filter(lead => inRange(lead.criadoEm, prevRange)), [state.leads, prevRange])
+  const visibleLeads = useMemo(
+    () => filterVisibleCommercialLeads(state.leads || [], profile, user?.id),
+    [state.leads, profile, user?.id]
+  )
+  const filteredLeads = useMemo(() => visibleLeads.filter(lead => inRange(lead.criadoEm, range)), [visibleLeads, range])
+  const prevLeads = useMemo(() => visibleLeads.filter(lead => inRange(lead.criadoEm, prevRange)), [visibleLeads, prevRange])
   const filteredSales = useMemo(() => (state.sales || []).filter(sale => inRange(sale.dataEmissao, range)), [state.sales, range])
   const prevSales = useMemo(() => (state.sales || []).filter(sale => inRange(sale.dataEmissao, prevRange)), [state.sales, prevRange])
 
@@ -291,7 +295,19 @@ export default function ComercialDashboard() {
   const priorityItems = useMemo(() => buildPriorityItems(state.leads || [], state.events || []), [state.leads, state.events])
   const trendData = useMemo(() => buildTrendData(filteredLeads, filteredSales, range), [filteredLeads, filteredSales, range])
   const origins = useMemo(() => buildOrigins(filteredLeads), [filteredLeads])
-  const pipelineOverview = useMemo(() => buildPipelineOverview(state.leads || []), [state.leads])
+  const pipelineOverview = useMemo(() => buildPipelineOverview(visibleLeads), [visibleLeads])
+  const leadByOwner = useMemo(() => {
+    if (!canManageCommercial(profile)) return []
+    const grouped = new Map()
+    visibleLeads.forEach(lead => {
+      const key = lead.responsavelNome || 'Sem responsável'
+      const current = grouped.get(key) || { nome: key, total: 0, stale: 0 }
+      current.total += 1
+      if (lead.ultimaAtividade && diffDias(lead.ultimaAtividade) >= 7) current.stale += 1
+      grouped.set(key, current)
+    })
+    return [...grouped.values()].sort((a, b) => b.total - a.total)
+  }, [visibleLeads, profile])
   const todayEventsCount = useMemo(
     () => (state.events || []).filter(event => {
       try { return isToday(parseISO(event.data)) } catch { return false }
@@ -302,6 +318,7 @@ export default function ComercialDashboard() {
   const periodLabel = format(range.ate, "MMMM 'de' yyyy", { locale: ptBR })
   const displayName = profile?.nome?.split(' ')[0] || 'time'
   const leadGoals = remainingBusinessDays()
+  const isManager = canManageCommercial(profile)
 
   function toggleSeries(key) {
     setHiddenSeries(previous => {
@@ -327,6 +344,11 @@ export default function ComercialDashboard() {
         )}
         actions={(
           <>
+            {isManager && (
+              <button type="button" onClick={() => navigate('/comercial/gestao')} className="btn-secondary text-sm">
+                Gestao comercial
+              </button>
+            )}
             <button type="button" onClick={() => navigate('/comercial/pipeline')} className="btn-secondary text-sm">
               Ver pipeline
             </button>
@@ -574,7 +596,7 @@ export default function ComercialDashboard() {
                 <div className="rounded-[22px] border border-dark-border/50 bg-white/55 p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-dark-muted">Alertas críticos</p>
                   <p className="mt-2 text-2xl font-black text-dark-text">
-                    {(state.leads || []).filter(lead => lead.ultimaAtividade && diffDias(lead.ultimaAtividade) >= 10 && lead.coluna !== 'recusou').length}
+                    {visibleLeads.filter(lead => lead.ultimaAtividade && diffDias(lead.ultimaAtividade) >= 10 && lead.coluna !== 'recusou').length}
                   </p>
                   <p className="mt-1 text-xs text-dark-muted">Leads com mais de 10 dias sem contato.</p>
                 </div>
@@ -588,6 +610,33 @@ export default function ComercialDashboard() {
               </div>
             </div>
           </CrmSectionCard>
+
+          {canManageCommercial(profile) && (
+            <CrmSectionCard title="Carteiras por vendedor" subtitle="Leitura rápida da distribuição operacional do time.">
+              <div className="space-y-2">
+                {leadByOwner.length ? (
+                  leadByOwner.map(item => (
+                    <div key={item.nome} className="rounded-[18px] border border-dark-border/50 bg-white/55 px-3 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-dark-text">{item.nome}</p>
+                        <span className="rounded-full bg-brand-accent/10 px-2 py-1 text-[11px] font-semibold text-brand-accent">
+                          {item.total} leads
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-dark-muted">{item.stale} leads sem atividade crítica</p>
+                    </div>
+                  ))
+                ) : (
+                  <CrmEmptyState
+                    icon={Users}
+                    title="Sem responsáveis definidos"
+                    description="Assim que o gestor distribuir leads, a leitura por carteira aparece aqui."
+                    compact
+                  />
+                )}
+              </div>
+            </CrmSectionCard>
+          )}
         </div>
       </div>
 

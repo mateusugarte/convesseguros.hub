@@ -9,6 +9,8 @@ area: comercial
 **Responsável:** Mateus Ugarte
 **Objetivo geral:** Integrar novas imobiliárias parceiras de forma estruturada, garantindo que comecem a enviar fichas com qualidade e que entendam o potencial de parceria além do fiança.
 
+**Conexão comercial:** [[01-COMERCIAL/Comercial|Comercial]] · [[01-COMERCIAL/Produtos/Fiança|Produto Fiança]]
+
 ---
 
 **ETAPA 1 — Identificação e abordagem da imobiliária**

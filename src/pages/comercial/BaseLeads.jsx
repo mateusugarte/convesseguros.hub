@@ -579,6 +579,23 @@ export default function BaseLeads() {
                         <div>
                           <p className="font-semibold text-dark-text leading-tight">{lead.nome}</p>
                           {lead.telefone && <p className="text-[11px] text-dark-muted font-mono">{lead.telefone}</p>}
+                          <div className="mt-1 flex flex-wrap gap-1.5">
+                            {Number(lead.listaGeradaCount || 0) > 0 && (
+                              <span className="rounded-full bg-brand-accent/10 px-2 py-0.5 text-[10px] font-semibold text-brand-accent">
+                                Lista {lead.listaGeradaCount}x
+                              </span>
+                            )}
+                            {lead.contatadoEm && (
+                              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                                Contatado
+                              </span>
+                            )}
+                            {lead.repassadoEm && (
+                              <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-700">
+                                Repassado
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>

@@ -5,7 +5,7 @@ import {
   PIPELINE_COLS, TIPOS_EVENTO, ORIGENS, calcScore, scoreFaixa, diffDias,
   fetchFichasParaImport,
 } from '../../lib/comercial'
-import { canManageCommercial, COMERCIAL_PRODUTO_OPTIONS } from '../../lib/comercial'
+import { canManageCommercial, COMERCIAL_PRODUTO_OPTIONS, isCommercialSellerProfile } from '../../lib/comercial'
 import { useToast } from '../../contexts/ToastContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -1035,11 +1035,11 @@ export default function LeadDetalhe() {
       .order('nome')
       .then(({ data, error }) => {
         if (canceled || error) return
-        setTeamProfiles(Array.isArray(data) ? data : [])
+        setTeamProfiles(Array.isArray(data) ? data.filter(item => isCommercialSellerProfile(item) || item.id === user?.id) : [])
       })
 
     return () => { canceled = true }
-  }, [isManager])
+  }, [isManager, user?.id])
 
   async function handleMove(col, colIdx) {
     const currentIdx = PIPELINE_COLS.findIndex(c => c.id === lead.coluna)
@@ -1085,6 +1085,19 @@ export default function LeadDetalhe() {
     }
   }
 
+  async function handleRegisterContact() {
+    const now = new Date().toISOString()
+    await leadUpdate(lead.id, {
+      contatadoEm: now,
+      contatadoPor: user?.id || null,
+      contatadoNome: profile?.nome || user?.email || 'Usuário',
+      repassadoEm: lead.repassadoEm || now,
+      repassadoPor: lead.repassadoPor || user?.id || null,
+      repassadoNome: lead.repassadoNome || profile?.nome || user?.email || 'Usuário',
+    })
+    toast({ type: 'success', title: 'Contato registrado' })
+  }
+
   if (!lead) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -1105,6 +1118,7 @@ export default function LeadDetalhe() {
   const taskCount  = events.filter(e => e.tipo === 'Tarefa').length
   const noteCount  = events.filter(e => e.tipo === 'Nota').length
   const daysIdle   = lead.ultimaAtividade ? diffDias(lead.ultimaAtividade) : null
+  const canRegisterContact = isManager || lead.responsavelId === user?.id || lead.user_id === user?.id
 
   return (
     <div className="space-y-5 animate-fade-in pb-8">
@@ -1262,6 +1276,18 @@ export default function LeadDetalhe() {
               )}
             </div>
           </CrmSectionCard>
+          {canRegisterContact && (
+            <CrmSectionCard title="Registro rápido" contentClassName="p-0">
+              <div className="space-y-3 p-4">
+                <p className="text-xs text-dark-muted">
+                  Marque quando o lead já recebeu contato para manter a lista organizada.
+                </p>
+                <button type="button" onClick={handleRegisterContact} className="btn-secondary text-xs w-full">
+                  Registrar contato
+                </button>
+              </div>
+            </CrmSectionCard>
+          )}
           <CrmSectionCard title="Resumo operacional" contentClassName="p-0">
             <CardResumo       lead={lead} events={events} />
           </CrmSectionCard>

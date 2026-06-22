@@ -74,3 +74,8 @@ A Conves passa a operar com mais clareza sobre:
 - [[Posicionamento e Marca]]
 - [[Retencao e Relacionamento]]
 - [[Cultura Estrategica]]
+
+## Conexoes
+
+- [[01-COMERCIAL/Comercial|Comercial]]
+- [[02 - Sistema Online/Sistema Online|Sistema Online]]

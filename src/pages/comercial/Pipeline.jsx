@@ -145,6 +145,24 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
           </div>
         )}
 
+        <div className="mb-1.5 flex flex-wrap gap-1.5">
+          {Number(lead.listaGeradaCount || 0) > 0 && (
+            <span className="inline-flex items-center rounded-full border border-brand-accent/15 bg-brand-accent/10 px-2 py-0.5 text-[9px] font-semibold text-brand-accent">
+              Lista {lead.listaGeradaCount}x
+            </span>
+          )}
+          {lead.contatadoEm && (
+            <span className="inline-flex items-center rounded-full border border-emerald-600/15 bg-emerald-600/10 px-2 py-0.5 text-[9px] font-semibold text-emerald-700">
+              Contatado
+            </span>
+          )}
+          {lead.repassadoEm && (
+            <span className="inline-flex items-center rounded-full border border-sky-600/15 bg-sky-600/10 px-2 py-0.5 text-[9px] font-semibold text-sky-700">
+              Repassado
+            </span>
+          )}
+        </div>
+
         {leadTags.length > 0 && (
           <div className="flex gap-1 flex-wrap mb-1.5">
             {leadTags.slice(0, 2).map(t => (

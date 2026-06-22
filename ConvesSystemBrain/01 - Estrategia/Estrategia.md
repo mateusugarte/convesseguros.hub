@@ -29,3 +29,11 @@ Cada nota estrategica deve responder:
 ## Entrada principal
 
 - [[Mapa Estrategico]]
+
+## Ligacoes principais
+
+- [[00 - Mapa Mestre]]
+- [[01-COMERCIAL/Comercial|Comercial]]
+- [[02 - Sistema Online/Sistema Online|Sistema Online]]
+- [[03 - Sistema Cultural/Sistema Cultural|Sistema Cultural]]
+- [[08 - IA e Handoff/IA e Handoff|IA e Handoff]]

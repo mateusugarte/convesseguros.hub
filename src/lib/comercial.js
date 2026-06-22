@@ -42,8 +42,52 @@ export function canManageCommercial(profile) {
   return getCommercialRole(profile) === 'gestor'
 }
 
+export function isCommercialSellerProfile(profile) {
+  const areas = Array.isArray(profile?.areas_atuacao) ? profile.areas_atuacao : []
+  return areas.includes('comercial') || areas.includes('vendedor')
+}
+
 export function normalizeCommercialProducts(value) {
   return Array.isArray(value) ? [...new Set(value.filter(Boolean))] : []
+}
+
+export function getCommercialLeadIdentity(lead = {}) {
+  const cpf = String(lead.cpf || '').replace(/\D/g, '')
+  const cnpj = String(lead.cnpj || '').replace(/\D/g, '')
+  const email = String(lead.email || '').trim().toLowerCase()
+  const phone = String(lead.celular || lead.telefone || '').replace(/\D/g, '')
+  const imobiliaria = String(lead.imobiliaria || lead.imobiliariaOrigem || '').trim().toLowerCase()
+  const nome = String(lead.nome || '').trim().toLowerCase()
+  const origem = String(lead.origem || lead.listaOrigem || lead.setorOrigem || '').trim().toLowerCase()
+
+  if (cpf) return `cpf:${cpf}`
+  if (cnpj) return `cnpj:${cnpj}`
+  if (email) return `email:${email}`
+  if (phone) return `phone:${phone}`
+  return [nome, imobiliaria, origem].filter(Boolean).join('|') || String(lead.id || '')
+}
+
+export function buildCommercialLeadGenerationMap(leads = []) {
+  const map = new Map()
+  leads.forEach(lead => {
+    const key = getCommercialLeadIdentity(lead)
+    map.set(key, (map.get(key) || 0) + 1)
+  })
+  return map
+}
+
+export function annotateCommercialLeads(leads = []) {
+  const map = buildCommercialLeadGenerationMap(leads)
+  return leads.map(lead => {
+    const key = getCommercialLeadIdentity(lead)
+    const count = map.get(key) || 1
+    return {
+      ...lead,
+      identidadeBase: key,
+      listaGeradaCount: count,
+      listaGerada: count > 1,
+    }
+  })
 }
 
 export function canViewCommercialLead(profile, lead, userId) {
@@ -134,6 +178,15 @@ function rowToLead(r) {
     listaPeriodo:     r.lista_periodo    || '',
     listaOrigem:      r.lista_origem     || '',
     objetivo:         r.objetivo         || '',
+    identidadeBase:   r.identidade_base   || '',
+    listaGeradaCount: r.lista_gerada_count || 1,
+    listaGerada:      Number(r.lista_gerada_count || 0) > 1,
+    contatadoEm:      r.contatado_em      || null,
+    contatadoPor:     r.contatado_por     || null,
+    contatadoNome:    r.contatado_nome    || '',
+    repassadoEm:      r.repassado_em      || null,
+    repassadoPor:     r.repassado_por     || null,
+    repassadoNome:    r.repassado_nome    || '',
     renda:            r.renda            ?? null,
     veiculo:          r.veiculo          || '',
     cpf:              r.cpf              || '',
@@ -184,6 +237,7 @@ function leadToRow(lead, userId) {
     lista_periodo:     lead.listaPeriodo    || null,
     lista_origem:      lead.listaOrigem     || null,
     objetivo:          lead.objetivo        || null,
+    identidade_base:   lead.identidadeBase  || getCommercialLeadIdentity(lead),
     renda:             lead.renda           ?? null,
     veiculo:           lead.veiculo         || null,
     cpf:               lead.cpf             || null,
@@ -196,6 +250,12 @@ function leadToRow(lead, userId) {
     numero_apolice:    lead.numeroApolice   || null,
     informacoes_importantes: lead.informacoesImportantes || null,
     dados_inteligencia: lead.dadosInteligencia || {},
+    contatado_em:      lead.contatadoEm     || null,
+    contatado_por:     lead.contatadoPor    || null,
+    contatado_nome:    lead.contatadoNome   || null,
+    repassado_em:      lead.repassadoEm     || null,
+    repassado_por:     lead.repassadoPor    || null,
+    repassado_nome:    lead.repassadoNome   || null,
     historico:        lead.historico       || [],
     criado_em:        lead.criadoEm        || new Date().toISOString(),
   }
@@ -214,7 +274,10 @@ const LEAD_MAP = {
   listaOrigem: 'lista_origem', setorOrigem: 'setor_origem',
   imobiliariaOrigem: 'imobiliaria_origem', possuiApolice: 'possui_apolice',
   numeroApolice: 'numero_apolice', informacoesImportantes: 'informacoes_importantes',
-  dadosInteligencia: 'dados_inteligencia',
+  dadosInteligencia: 'dados_inteligencia', identidadeBase: 'identidade_base',
+  listaGeradaCount: 'lista_gerada_count', contatadoEm: 'contatado_em',
+  contatadoPor: 'contatado_por', contatadoNome: 'contatado_nome',
+  repassadoEm: 'repassado_em', repassadoPor: 'repassado_por', repassadoNome: 'repassado_nome',
 }
 function leadChangesToRow(changes) {
   const row = {}
@@ -363,7 +426,7 @@ export async function initComercialStore(userId) {
     const meta = (() => { try { return JSON.parse(localStorage.getItem(`comercial_meta_${userId}`)) || 10 } catch { return 10 } })()
 
     _state = {
-      leads:    (leadsRes.data    || []).map(rowToLead),
+      leads:    annotateCommercialLeads((leadsRes.data || []).map(rowToLead)),
       sales:    (salesRes.data    || []).map(rowToSale),
       events:   (eventsRes.data   || []).map(rowToEvent),
       journeys: (journeysRes.data || []).map(rowToJourney),
@@ -391,13 +454,14 @@ export const leadAdd = async (lead) => {
     criadoEm:        now,
     ultimaAtividade: now,
     responsavelId:   lead.responsavelId || _userId,
+    identidadeBase:  lead.identidadeBase || getCommercialLeadIdentity(lead),
     historico:       [{ data: now, desc: 'Lead criado' }],
   }
-  setState(s => ({ ...s, leads: [novo, ...s.leads] }))
+  setState(s => ({ ...s, leads: annotateCommercialLeads([novo, ...s.leads]) }))
   const { error } = await supabase.from('comercial_leads').insert(leadToRow(novo, _userId))
   if (error) {
     console.error('leadAdd:', error)
-    setState(s => ({ ...s, leads: s.leads.filter(l => l.id !== novo.id) }))
+    setState(s => ({ ...s, leads: annotateCommercialLeads(s.leads.filter(l => l.id !== novo.id)) }))
     throw error
   }
   return novo
@@ -405,7 +469,10 @@ export const leadAdd = async (lead) => {
 
 export const leadUpdate = async (id, changes) => {
   const now = new Date().toISOString()
-  setState(s => ({ ...s, leads: s.leads.map(l => l.id === id ? { ...l, ...changes, ultimaAtividade: now } : l) }))
+  setState(s => ({
+    ...s,
+    leads: annotateCommercialLeads(s.leads.map(l => l.id === id ? { ...l, ...changes, ultimaAtividade: now } : l)),
+  }))
   const { error } = await supabase.from('comercial_leads')
     .update({ ...leadChangesToRow(changes), ultima_atividade: now })
     .eq('id', id)
@@ -419,10 +486,10 @@ export const leadMover = async (id, coluna, extra = {}) => {
   const newHist = [...(lead?.historico || []), { data: now, desc: `Movido para ${colLabel}` }]
   setState(s => ({
     ...s,
-    leads: s.leads.map(l => l.id === id
+    leads: annotateCommercialLeads(s.leads.map(l => l.id === id
       ? { ...l, coluna, ultimaAtividade: now, historico: newHist, ...extra }
       : l
-    ),
+    )),
   }))
   const { error } = await supabase.from('comercial_leads')
     .update({ coluna, ultima_atividade: now, historico: newHist, ...leadChangesToRow(extra) })

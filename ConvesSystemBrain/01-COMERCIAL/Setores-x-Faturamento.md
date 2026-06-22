@@ -8,6 +8,11 @@ area: comercial
 
 > Este capítulo existe para que todos na empresa entendam não apenas **o que fazem**, mas **por que isso importa para o resultado**. Cada setor tem um papel direto ou indireto na geração de receita. Conhecer esse papel é parte da cultura da Conves.
 
+## Conexoes
+
+- [[Comercial]]
+- [[Produtos/Fiança|Produto Fiança]]
+
 ---
 
 ### VISÃO GERAL — O MOTOR DE RECEITA DA CONVES

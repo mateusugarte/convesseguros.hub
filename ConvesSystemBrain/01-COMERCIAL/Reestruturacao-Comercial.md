@@ -9,6 +9,12 @@ area: comercial
 > Fonte: Documento "Reestruturacao_Comercial_CONVES.docx" — integrado em 2026-06-22.
 > Este capítulo define a máquina comercial da Conves: setores, funções, pessoas e processos.
 
+## Conexoes
+
+- [[Comercial]]
+- [[Produtos/Fiança|Produto Fiança]]
+- [[00 - Mapa Mestre]]
+
 ### 3A.1 Contexto e Objetivo
 
 A Conves possui produção comprovada de aproximadamente **R$ 500 mil de prêmio total no setor de fiança**. O objetivo da reestruturação é deixar de depender apenas de demanda espontânea e indicações soltas, criando uma máquina comercial capaz de:

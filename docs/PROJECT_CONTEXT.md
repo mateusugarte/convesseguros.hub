@@ -6,12 +6,13 @@ Conves Hub e uma plataforma interna para operacao de seguros com gestao de ficha
 
 ## Stack
 
-- React
+- React + Vite
 - Tailwind CSS
 - React Router
 - TanStack Query
-- Supabase
-- Vercel
+- Supabase (PostgreSQL + Auth + RLS + Realtime)
+- n8n self-hosted (automacoes)
+- Vercel (deploy)
 
 ## Modulos
 
@@ -21,12 +22,12 @@ Conves Hub e uma plataforma interna para operacao de seguros com gestao de ficha
 - Dashboard [pronto]
 - Configuracoes [pronto]
 
-### Fichas
+### Fichas (Fianca)
 
 - Fichas [pronto]
 - FichaDetalhePage [pronto]
 - MinhasFichas [pronto]
-- GestaoEmissoes [planejado]
+- GestaoEmissoes [em andamento]
 - Relatorio [pronto]
 
 ### Imobiliarias e seguradoras
@@ -37,7 +38,7 @@ Conves Hub e uma plataforma interna para operacao de seguros com gestao de ficha
 
 ### Apolices
 
-- ApolicesDashboard [pronto]
+- ApolicesDashboard [em andamento]
 - ApoicesGestao [pronto]
 - ApolicesLista [pronto]
 - ApoliceDetalhe [pronto]
@@ -51,6 +52,22 @@ Conves Hub e uma plataforma interna para operacao de seguros com gestao de ficha
 - Vendas [pronto]
 - Calendario [pronto]
 - Jornadas [pronto]
+- Campanhas [planejado]
+
+### Auto (modulo ativo)
+
+- AutoDashboard [pronto]
+- AutoCotacoes [pronto]
+- AutoCotacaoDetalhe [pronto]
+- AutoCotacoesConsulta [pronto]
+- AutoClientes [pronto]
+- AutoEmissoes [pronto]
+- AutoRenovacoes [pronto]
+- AutoSinistros [pronto]
+
+### Financeiro
+
+- Financeiro [pronto]
 
 ## Convencoes
 
@@ -68,6 +85,8 @@ Conves Hub e uma plataforma interna para operacao de seguros com gestao de ficha
 - Loading e erro visiveis.
 - Responsividade como padrao.
 - Preservar o design system existente.
+- Design system: PRIMARY #1A3A6B, SECONDARY #2B5BA8, ACCENT #4A90D9, GOLD #C9A84C.
+- Sidebar: Dark Workspace dual-column (rail de icones + painel expandido).
 
 ## Documentacao
 

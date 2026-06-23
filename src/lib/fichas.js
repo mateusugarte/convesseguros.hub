@@ -363,13 +363,9 @@ export async function fetchFichasAprovadasEmissao({ search, imobiliarias } = {})
     let q = supabase
       .from('fichas')
       .select(`
-        id, created_at, produto, imobiliaria,
-        nome_interessado, nome_empresa, cpf, cnpj,
-        valor_aluguel, celular, cep, tipo_imovel,
-        vigencia, endereco, forma_pagamento,
-        pct_comissao, pct_desconto, parcelamento, valor_parcela,
-        status, assumida, orcamentista_id, assumida_em,
-        seguradora, retorno_enviado, raw_data,
+        id, created_at, imobiliaria,
+        nome_interessado, nome_empresa,
+        status, raw_data,
         profiles!orcamentista_id(nome, avatar_url)
       `)
       .in('status', ['aprovado', 'emitido'])
@@ -388,22 +384,15 @@ export async function fetchFichasAprovadasEmissao({ search, imobiliarias } = {})
     const haystack = [
       f.nome_interessado,
       f.nome_empresa,
-      f.cpf,
-      f.cnpj,
       f.imobiliaria,
-      f.seguradora,
-      f.numero_orcamento,
       raw.nome,
       raw.nome_interessado,
       raw.nome_empresa,
       raw.razao_social,
       raw.empresa,
       raw.nome_fantasia,
-      raw.seguradora,
       raw.imobiliaria,
       raw.numero_orcamento,
-      raw.cpf,
-      raw.cnpj,
     ]
       .filter(Boolean)
       .map(normalizeSearchText)

@@ -11,7 +11,7 @@ import { Select } from '../components/ui/Select'
 import { DatePicker } from '../components/ui/DatePicker'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
-import { PRODUTO_LABELS, STATUS_LABELS } from '../lib/fichas'
+import { STATUS_LABELS } from '../lib/fichas'
 import { fetchFichasAprovadasEmissao } from '../lib/fichas'
 import { formatDecimalBRInput } from '../lib/numberInput'
 import {
@@ -29,13 +29,13 @@ import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/ka
 import { normalizeDisplayText } from '../lib/text'
 import { parseApolice } from '../lib/apoliceParser'
 
-// ── Constantes ────────────────────────────────────────────────────────────────
+// â”€â”€ Constantes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const COLUNAS = [
   { id: 'recebida',             label: 'Recebida',             color: '#3B82F6' },
   { id: 'proposta_transmitida', label: 'Proposta Transmitida', color: '#F59E0B' },
-  { id: 'emitida',              label: 'Apólice Emitida',      color: '#8B5CF6' },
-  { id: 'enviada',              label: 'Apólice Enviada',      color: '#10B981' },
+  { id: 'emitida',              label: 'ApÃ³lice Emitida',      color: '#8B5CF6' },
+  { id: 'enviada',              label: 'ApÃ³lice Enviada',      color: '#10B981' },
 ]
 
 const PRODUTO_ICON  = { residencial_pf: Home, comercial_pf: Briefcase, pessoa_juridica: Building }
@@ -134,14 +134,14 @@ function SelectField({ label, value, onChange, options, required }) {
   )
 }
 
-// ── Helpers nomes ─────────────────────────────────────────────────────────────
+// â”€â”€ Helpers nomes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function nomeApolice(apolice) {
   return normalizeDisplayText(
     apolice.fichas?.nome_empresa
     || apolice.fichas?.nome_interessado
     || apolice.nome_interessado
-  ) || '—'
+  ) || 'â€”'
 }
 
 function produtoApolice(apolice) {
@@ -171,87 +171,24 @@ function normalizeKey(value) {
 function resolveFichaEmissao(ficha) {
   const raw = ficha?.raw_data || {}
   return {
-    nome: normalizeDisplayText(ficha?.nome_empresa || ficha?.nome_interessado || raw?.nome_empresa || raw?.nome_interessado) || '—',
-    documento: ficha?.cnpj || ficha?.cpf || raw?.cnpj || raw?.cpf || '',
-    celular: ficha?.celular || raw?.celular || '',
-    valorAluguel: ficha?.valor_aluguel ?? raw?.valor_aluguel ?? null,
-    valorParcela: ficha?.valor_parcela ?? raw?.valor_parcela ?? null,
-    vigencia: ficha?.vigencia || raw?.vigencia || '',
-    vencimento: ficha?.vencimento || raw?.vencimento || '',
-    tipoImovel: ficha?.tipo_imovel || raw?.tipo_imovel || '',
-    endereco: ficha?.endereco || raw?.endereco || '',
+    nome: normalizeDisplayText(ficha?.nome_empresa || ficha?.nome_interessado || raw?.nome_empresa || raw?.nome_interessado) || 'â€”',
     numeroOrcamento: ficha?.numero_orcamento || raw?.numero_orcamento || ficha?.numero_apolice || raw?.numero_apolice || '',
-    seguradoraPadrao: ficha?.seguradora || raw?.seguradora || '',
-    premioLiquido: ficha?.premio_liquido ?? raw?.premio_liquido ?? '',
-    pctComissao: ficha?.pct_comissao ?? raw?.pct_comissao ?? '',
-    pctDesconto: ficha?.pct_desconto ?? raw?.pct_desconto ?? '',
-    parcelamento: ficha?.parcelamento ?? raw?.parcelamento ?? '',
-    formaPagamento: ficha?.forma_pagamento || raw?.forma_pagamento || 'fatura_sem_entrada',
-    cotacoes: Array.isArray(raw?.cotacoes) ? raw.cotacoes : [],
-    seguradoraPreferencial: raw?.seguradora_preferencial || null,
-    seguradoraMaisBarata: raw?.seguradora_mais_barata || null,
     avatarUrl: ficha?.profiles?.avatar_url || raw?.avatar_url || '',
   }
 }
 
-function getAprovacaoPorSeguradora(ficha, seguradoraNome) {
-  const base = resolveFichaEmissao(ficha)
-  const target = normalizeKey(seguradoraNome || base.seguradoraPadrao)
-  const cotacoes = base.cotacoes.filter(Boolean)
-  const aprovadas = cotacoes.filter(c => normalizeKey(c?.status) === 'aprovado')
-
-  const preferida = base.seguradoraPreferencial && normalizeKey(base.seguradoraPreferencial.nome) === target
-    ? base.seguradoraPreferencial
-    : null
-  const barata = base.seguradoraMaisBarata && normalizeKey(base.seguradoraMaisBarata.nome) === target
-    ? base.seguradoraMaisBarata
-    : null
-
-  return cotacoes.find(c => normalizeKey(c?.seguradora) === target && normalizeKey(c?.status) === 'aprovado')
-    || preferida
-    || barata
-    || cotacoes.find(c => normalizeKey(c?.status) === 'aprovado')
-    || base.seguradoraPreferencial
-    || base.seguradoraMaisBarata
-    || aprovadas[0]
-    || null
-}
-
 function buildFormDataFromFicha(ficha, seguradoraNome = '') {
   const base = resolveFichaEmissao(ficha)
-  const aprovacao = getAprovacaoPorSeguradora(ficha, seguradoraNome || base.seguradoraPadrao)
+  const raw = ficha?.raw_data || {}
 
   return {
     numeroOrcamento: base.numeroOrcamento ? String(base.numeroOrcamento) : '',
-    valorParcela: aprovacao?.valor_parcela != null
-      ? formatDecimalBRInput(aprovacao.valor_parcela)
-      : (base.valorParcela != null ? formatDecimalBRInput(base.valorParcela) : ''),
-    parcelamento: aprovacao?.parcelamento != null
-      ? String(aprovacao.parcelamento)
-      : (base.parcelamento != null && base.parcelamento !== '' ? String(base.parcelamento) : ''),
-    premioLiquido: aprovacao?.premio_liquido != null
-      ? formatDecimalBRInput(aprovacao.premio_liquido)
-      : (base.premioLiquido != null && base.premioLiquido !== '' ? formatDecimalBRInput(base.premioLiquido) : ''),
-    pctComissao: aprovacao?.pct_comissao != null
-      ? formatDecimalBRInput(aprovacao.pct_comissao)
-      : (base.pctComissao != null && base.pctComissao !== '' ? formatDecimalBRInput(base.pctComissao) : ''),
-    pctDesconto: aprovacao?.pct_desconto != null
-      ? formatDecimalBRInput(aprovacao.pct_desconto)
-      : (base.pctDesconto != null && base.pctDesconto !== '' ? formatDecimalBRInput(base.pctDesconto) : ''),
-    formaPagamento: aprovacao?.forma_pagamento || base.formaPagamento || 'fatura_sem_entrada',
-    seguradora: seguradoraNome || aprovacao?.seguradora || base.seguradoraPadrao || '',
-    endereco: base.endereco,
-    valorAluguel: base.valorAluguel,
-    celular: base.celular,
-    vigencia: base.vigencia,
-    vencimento: base.vencimento,
-    tipoImovel: base.tipoImovel,
     nome: base.nome,
-    documento: base.documento,
+    imobiliaria: ficha?.imobiliaria || raw?.imobiliaria || '',
   }
 }
 
-// ── Card ──────────────────────────────────────────────────────────────────────
+// â”€â”€ Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, dragListeners, dragAttributes }) {
   const [expandido, setExpandido] = useState(false)
@@ -261,12 +198,12 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, 
   const pColor   = PRODUTO_COLOR[prod] || '#6B7280'
   const emissor  = apolice.profiles?.nome
   const statusLabel = STATUS_EMISSAO_LABELS[apolice.status_emissao]?.label || apolice.status_emissao || 'Recebida'
-  const documento = apolice.fichas?.cnpj || apolice.fichas?.cpf || '—'
-  const celular = apolice.fichas?.celular || '—'
-  const tipoImovel = apolice.fichas?.tipo_imovel || '—'
-  const vigencia = [apolice.inicio_vigencia, apolice.fim_vigencia].filter(Boolean).join(' até ') || '—'
-  const valorParcela = apolice.valor_parcela ? formatMoneyBR(apolice.valor_parcela) : '—'
-  const parcelamento = apolice.parcelamento ? `${apolice.parcelamento}x` : '—'
+  const documento = apolice.fichas?.cnpj || apolice.fichas?.cpf || 'â€”'
+  const celular = apolice.fichas?.celular || 'â€”'
+  const tipoImovel = apolice.fichas?.tipo_imovel || 'â€”'
+  const vigencia = [apolice.inicio_vigencia, apolice.fim_vigencia].filter(Boolean).join(' atÃ© ') || 'â€”'
+  const valorParcela = apolice.valor_parcela ? formatMoneyBR(apolice.valor_parcela) : 'â€”'
+  const parcelamento = apolice.parcelamento ? `${apolice.parcelamento}x` : 'â€”'
 
   return (
     <div
@@ -310,12 +247,12 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, 
           {nomeApolice(apolice)}
         </p>
 
-        {/* Imobiliária */}
+        {/* ImobiliÃ¡ria */}
         <p className="text-[10px] text-dark-muted truncate leading-none mb-1.5">
-          {resolverNome ? resolverNome(apolice.imobiliaria) : (apolice.imobiliaria || '—')}
+          {resolverNome ? resolverNome(apolice.imobiliaria) : (apolice.imobiliaria || 'â€”')}
         </p>
 
-        {/* Número apólice */}
+        {/* NÃºmero apÃ³lice */}
         {apolice.numero_apolice && (
           <p className="text-[10px] font-mono mb-1.5" style={{ color: '#2B5BA8' }}>
             {apolice.numero_apolice}
@@ -339,7 +276,7 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, 
             <p className="mt-0.5 text-[10px] text-dark-text truncate">{celular}</p>
           </div>
           <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2 py-1.5">
-            <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Imóvel</p>
+            <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">ImÃ³vel</p>
             <p className="mt-0.5 text-[10px] text-dark-text truncate">{tipoImovel}</p>
           </div>
           <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2 py-1.5">
@@ -351,7 +288,7 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, 
         <div className="mt-1.5 rounded-xl border border-dark-border/60 bg-dark-surface2/25 px-2 py-1.5">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Vigência</p>
+              <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">VigÃªncia</p>
               <p className="mt-0.5 text-[10px] text-dark-text truncate">{vigencia}</p>
             </div>
             <div className="text-right">
@@ -374,19 +311,19 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, 
             <span className="text-[9px] text-status-warning font-semibold tracking-wide uppercase">Livre</span>
           )}
 
-          {/* Botão expandir */}
+          {/* BotÃ£o expandir */}
           {!isDragOverlay && (
             <button
               onPointerDown={e => e.stopPropagation()}
               onClick={e => { e.stopPropagation(); setExpandido(v => !v) }}
               className="text-[9px] text-dark-muted hover:text-dark-text transition-colors px-1.5 py-0.5 rounded-md hover:bg-dark-surface2"
             >
-              {expandido ? '▲' : '▼ Detalhes'}
+              {expandido ? 'â–²' : 'â–¼ Detalhes'}
             </button>
           )}
         </div>
 
-        {/* Seção expansível */}
+        {/* SeÃ§Ã£o expansÃ­vel */}
         {expandido && !isDragOverlay && (
           <div className="space-y-0.5 pt-1.5 mt-1.5 border-t border-dark-border/40 animate-fade-in">
             {(apolice.fichas?.cpf || apolice.fichas?.cnpj) && (
@@ -398,7 +335,7 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, 
               <p className="text-[9px] text-dark-muted">Tel: {apolice.fichas.celular}</p>
             )}
             {apolice.fichas?.tipo_imovel && (
-              <p className="text-[9px] text-dark-muted">Imóvel: {apolice.fichas.tipo_imovel}</p>
+              <p className="text-[9px] text-dark-muted">ImÃ³vel: {apolice.fichas.tipo_imovel}</p>
             )}
             {apolice.fichas?.cep && (
               <p className="text-[9px] text-dark-muted font-mono">CEP: {apolice.fichas.cep}</p>
@@ -415,7 +352,7 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, 
   )
 }
 
-// ── DraggableCard ─────────────────────────────────────────────────────────────
+// â”€â”€ DraggableCard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function DraggableCard({ apolice, onDetalhe, resolverNome }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -438,7 +375,7 @@ function DraggableCard({ apolice, onDetalhe, resolverNome }) {
   )
 }
 
-// ── Column ────────────────────────────────────────────────────────────────────
+// â”€â”€ Column â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function DroppableColumn({ col, apolices, onDetalhe, resolverNome, colIndex, collapsed, onToggleCollapse }) {
   const { isOver, setNodeRef: setDropRef } = useDroppable({ id: col.id })
@@ -535,7 +472,7 @@ function DroppableColumn({ col, apolices, onDetalhe, resolverNome, colIndex, col
   )
 }
 
-// ── Modal Iniciar Emissão ─────────────────────────────────────────────────────
+// â”€â”€ Modal Iniciar EmissÃ£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ModalIniciarEmissao({ onClose, onCriado, toast }) {
   const { getAliases } = useImobiliaria()
@@ -550,7 +487,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
   const [criando,           setCriando]           = useState(false)
   const [emitidoPor,        setEmitidoPor]        = useState(user?.id || '')
 
-  // Campos adicionais preenchidos ao iniciar emissão
+  // Campos adicionais preenchidos ao iniciar emissÃ£o
   const [numeroOrcamento, setNumeroOrcamento] = useState('')
   const [valorParcela,    setValorParcela]    = useState('')
   const [premioLiquido,   setPremioLiquido]   = useState('')
@@ -592,7 +529,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
       } catch (error) {
         if (!cancelled) {
           setFichasEncontradas([])
-          toast({ type: 'error', title: 'Erro ao carregar fichas aprovadas', message: error?.message || 'Tente atualizar a página.' })
+          toast({ type: 'error', title: 'Erro ao carregar fichas aprovadas', message: error?.message || 'Tente atualizar a pÃ¡gina.' })
         }
       } finally {
         if (!cancelled) setBuscando(false)
@@ -606,26 +543,11 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     setFichaSelecionada(f)
     const auto = buildFormDataFromFicha(f, f.seguradora || '')
     setNumeroOrcamento(auto.numeroOrcamento)
-    setValorParcela(auto.valorParcela)
-    setPremioLiquido(auto.premioLiquido)
-    setPctComissao(auto.pctComissao)
-    setPctDesconto(auto.pctDesconto)
-    setParcelamento(auto.parcelamento)
-    setSeguradora(auto.seguradora)
-    setFormaPagamento(auto.formaPagamento)
     setEmitidoPor(user?.id || '')
   }
 
   function handleSeguradoraChange(value) {
     setSeguradora(value)
-    if (!fichaSelecionada) return
-    const auto = buildFormDataFromFicha(fichaSelecionada, value)
-    setValorParcela(auto.valorParcela)
-    setParcelamento(auto.parcelamento)
-    setPremioLiquido(auto.premioLiquido)
-    setPctComissao(auto.pctComissao)
-    setPctDesconto(auto.pctDesconto)
-    setFormaPagamento(auto.formaPagamento)
   }
 
   async function handlePreencherInfo() {
@@ -636,7 +558,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     try {
       const { campos, extras, semParser } = await parseApolice(seguradora, pdfFile)
       if (semParser) {
-        setExtracaoErro(`Seguradora "${seguradora}" ainda não possui parser configurado.`)
+        setExtracaoErro(`Seguradora "${seguradora}" ainda nÃ£o possui parser configurado.`)
         return
       }
       if (isLikelyPolicyNumber(campos.numero_proposta)) setNumeroOrcamento(campos.numero_proposta)
@@ -650,7 +572,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
         setExtracaoExtras(extras)
       }
     } catch (err) {
-      setExtracaoErro('Erro ao ler o PDF. Verifique se o arquivo é válido.')
+      setExtracaoErro('Erro ao ler o PDF. Verifique se o arquivo Ã© vÃ¡lido.')
     } finally {
       setExtraindo(false)
     }
@@ -662,11 +584,6 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     setDebouncedBusca('')
     setFichaSelecionada(null)
     setNumeroOrcamento('')
-    setValorParcela('')
-    setPremioLiquido('')
-    setPctComissao('')
-    setPctDesconto('')
-    setParcelamento('')
     setSeguradora('')
     setFormaPagamento('fatura_sem_entrada')
     setPdfFile(null)
@@ -678,32 +595,18 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
   async function criar() {
     if (!fichaSelecionada) return
     setCriando(true)
-    const auto = buildFormDataFromFicha(fichaSelecionada, seguradora)
-    const premioLiquidoNum = toNumber(premioLiquido)
-    const pctComissaoNum = pctComissao === '' ? null : toNumber(pctComissao)
-    const pctDescontoNum = pctDesconto === '' ? null : toNumber(pctDesconto)
-    const parcelamentoNum = toNumber(parcelamento)
-    const valorParcelaNum = toNumber(valorParcela)
     const { error } = await criarApolice({
       ficha_id:         fichaSelecionada.id,
       imobiliaria:      fichaSelecionada.imobiliaria,
-      produto:          fichaSelecionada.produto,
       status_emissao:   'recebida',
-      valor_aluguel:    auto.valorAluguel,
-      nome_interessado: auto.nome,
+      nome_interessado: fichaSelecionada.nome_interessado || fichaSelecionada.nome_empresa || fichaSelecionada.raw_data?.nome_interessado || fichaSelecionada.raw_data?.nome_empresa || null,
       // Campos preenchidos no modal
       numero_proposta:  numeroOrcamento.trim() || null,
-      valor_parcela:    valorParcelaNum,
-      endereco:         auto.endereco || null,
       emitido_por:      emitidoPor || user?.id || null,
-      // Defaults obrigatórios no banco enquanto migração 09 não for rodada
+      // Defaults obrigatÃ³rios no banco enquanto migraÃ§Ã£o 09 nÃ£o for rodada
       numero_apolice:   null,
       seguradora:       seguradora || 'Outras',
       data_emissao:     null,
-      pct_comissao:     pctComissaoNum,
-      pct_desconto:     pctDescontoNum,
-      parcelamento:     parcelamentoNum,
-      premio_liquido:   premioLiquidoNum || null,
       premio_total:     null,
       valor_producao:   null,
       valor_comissao:   null,
@@ -711,13 +614,12 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     })
     setCriando(false)
     if (error) { toast({ type: 'error', title: 'Erro ao criar', message: error.message }); return }
-    toast({ type: 'success', title: 'Emissão iniciada!' })
+    toast({ type: 'success', title: 'EmissÃ£o iniciada!' })
     onCriado()
     onClose()
   }
 
   const fichaResumo = fichaSelecionada ? resolveFichaEmissao(fichaSelecionada) : null
-  const mesesVigencia = fichaResumo?.vigencia || ''
 
   return (
     <div className="animate-fade-in">
@@ -727,7 +629,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
           <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <h2 className="font-bold text-dark-text">Iniciar Emissão</h2>
+          <h2 className="font-bold text-dark-text">Iniciar EmissÃ£o</h2>
         </div>
 
         <div className="px-6 py-5 space-y-4">
@@ -735,7 +637,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Busca de fichas aprovadas</p>
-                <p className="text-sm text-dark-text">Aqui aparecem fichas, não apólices, de todos os produtos.</p>
+                <p className="text-sm text-dark-text">Aqui aparecem fichas, nÃ£o apÃ³lices, de todos os produtos.</p>
               </div>
               <div className="text-xs text-dark-muted">
                 {buscando ? 'Carregando...' : `${fichasEncontradas.length} ficha${fichasEncontradas.length !== 1 ? 's' : ''}`}
@@ -744,7 +646,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
           </div>
 
           <div className="grid gap-3">
-            <FieldShell label="Imobiliária">
+            <FieldShell label="ImobiliÃ¡ria">
               <ImobiliariaSelect value={imobFiltro} onChange={setImobFiltro} className="w-full" />
             </FieldShell>
 
@@ -762,7 +664,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                 )}
                 <input
                   type="text"
-                  placeholder="Nome, CPF, CNPJ, imobiliária ou seguradora..."
+                  placeholder="Nome, CPF, CNPJ, imobiliÃ¡ria ou seguradora..."
                   value={busca}
                   onChange={e => setBusca(e.target.value)}
                   className="text-sm flex-1 outline-none bg-transparent text-dark-text placeholder-dark-muted"
@@ -772,13 +674,13 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                     onClick={limparFiltro}
                     className="text-dark-muted hover:text-dark-text transition-colors flex-shrink-0 text-xs"
                   >
-                    ×
+                    Ã—
                   </button>
                 )}
               </div>
               {debouncedBusca && (
                 <span className="text-[10px] text-brand-accent/70 pl-1">
-                  Buscando em fichas aprovadas · {fichasEncontradas.length} resultado{fichasEncontradas.length !== 1 ? 's' : ''}
+                  Buscando em fichas aprovadas Â· {fichasEncontradas.length} resultado{fichasEncontradas.length !== 1 ? 's' : ''}
                 </span>
               )}
             </div>
@@ -788,7 +690,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-dark-border/70">
               <div>
                 <p className="text-sm font-semibold text-dark-text">Fichas aprovadas</p>
-                <p className="text-xs text-dark-muted">Selecione uma ficha para preencher a emissão.</p>
+                <p className="text-xs text-dark-muted">Selecione uma ficha para preencher o nÃºmero do orÃ§amento.</p>
               </div>
               <span className="text-xs text-dark-muted">
                 {buscando ? 'Carregando...' : `${fichasEncontradas.length} ficha${fichasEncontradas.length !== 1 ? 's' : ''}`}
@@ -801,7 +703,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
               ) : fichasEncontradas.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-dark-border/80 bg-white/60 px-4 py-8 text-center">
                   <p className="text-sm font-medium text-dark-text">Nenhuma ficha aprovada encontrada</p>
-                  <p className="mt-1 text-xs text-dark-muted">Tente outra imobiliária ou altere o termo de busca.</p>
+                  <p className="mt-1 text-xs text-dark-muted">Tente outra imobiliÃ¡ria ou altere o termo de busca.</p>
                 </div>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -817,7 +719,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                               ? 'border-brand-accent bg-brand-secondary/10 shadow-sm'
                               : 'border-dark-border bg-white hover:border-brand-accent/40'
                           }`}
-                        >
+                          >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex min-w-0 items-center gap-2">
                               <Avatar
@@ -829,42 +731,19 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                                 <p className="truncate text-sm font-semibold text-dark-text">
                                   {resumo.nome}
                                 </p>
-                                <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-dark-muted">
-                                  {PRODUTO_LABELS[f.produto] || f.produto || '—'}
-                                </p>
                               </div>
                             </div>
                             <span className="badge text-[9px] bg-status-success/15 text-status-success">
                               Aprovada
                             </span>
                           </div>
-                          <div className="mt-3 space-y-1.5">
-                            <p className="text-xs text-dark-muted truncate">{f.imobiliaria || '—'}</p>
-                            <p className="text-[10px] font-mono text-dark-muted">{resumo.documento || '—'}</p>
-                            <div className="flex flex-wrap gap-1.5 pt-1">
-                              <span className="rounded-full bg-dark-surface2 px-2 py-1 text-[10px] text-dark-muted">
-                                {resumo.celular ? `Cel: ${resumo.celular}` : 'Celular não informado'}
-                              </span>
-                              <span className="rounded-full bg-dark-surface2 px-2 py-1 text-[10px] text-dark-muted">
-                                {resumo.tipoImovel || 'Tipo não informado'}
-                              </span>
-                              <span className="rounded-full bg-dark-surface2 px-2 py-1 text-[10px] text-dark-muted">
-                                {resumo.valorAluguel != null ? formatMoneyBR(resumo.valorAluguel) : 'Aluguel —'}
-                              </span>
-                              <span className="rounded-full bg-dark-surface2 px-2 py-1 text-[10px] text-dark-muted">
-                                {resumo.vigencia || 'Vigência não informada'}
-                              </span>
-                            </div>
-                          </div>
-                        </button>
+                          <div className="mt-3 space-y-1">`r`n                            <p className="text-xs font-medium text-dark-text truncate">{f.imobiliaria || '—'}</p>`r`n                            <p className="text-[10px] text-dark-muted">`r`n                              {resumo.numeroOrcamento ? `N° do orçamento: ${resumo.numeroOrcamento}` : 'Sem número de orçamento'}`r`n                            </p>`r`n                          </div>`r`n                        </button>
                       )
                     })}
                   </div>
                 )}
             </div>
-          </div>
-
-          {fichaSelecionada ? (
+          </div>          {fichaSelecionada ? (
             <div className="rounded-xl bg-status-success/10 border border-status-success/25 overflow-hidden">
               <div className="flex items-center justify-between px-3 py-2.5 border-b border-status-success/20">
                 <div className="min-w-0">
@@ -874,50 +753,24 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                   </p>
                 </div>
                 <button
-                  onClick={() => { setFichaSelecionada(null); setNumeroOrcamento(''); setValorParcela(''); setPremioLiquido(''); setPctComissao(''); setPctDesconto(''); setParcelamento(''); setSeguradora(''); setFormaPagamento('fatura_sem_entrada'); setEmitidoPor(user?.id || '') }}
+                  onClick={() => { setFichaSelecionada(null); setNumeroOrcamento(''); setSeguradora(''); setFormaPagamento('fatura_sem_entrada'); setEmitidoPor(user?.id || '') }}
                   className="flex-shrink-0 ml-2 text-dark-muted hover:text-dark-text"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="px-3 py-2.5 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                <div>
+              <div className="px-3 py-2.5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="rounded-xl border border-dark-border/60 bg-white/80 px-3 py-2">
+                  <span className="text-dark-muted">Nome</span>
+                  <p className="mt-1 text-dark-text font-medium truncate">{fichaResumo?.nome || '—'}</p>
+                </div>
+                <div className="rounded-xl border border-dark-border/60 bg-white/80 px-3 py-2">
                   <span className="text-dark-muted">Imobiliária</span>
-                  <p className="text-dark-text font-medium truncate">{fichaSelecionada.imobiliaria || '—'}</p>
+                  <p className="mt-1 text-dark-text font-medium truncate">{fichaSelecionada.imobiliaria || '—'}</p>
                 </div>
-                <div>
-                  <span className="text-dark-muted">Produto</span>
-                  <p className="text-dark-text font-medium">{PRODUTO_LABELS[fichaSelecionada.produto] || fichaSelecionada.produto || '—'}</p>
-                </div>
-                <div>
-                  <span className="text-dark-muted">{fichaSelecionada.cnpj ? 'CNPJ' : 'CPF'}</span>
-                  <p className="text-dark-text font-mono">{fichaResumo?.documento || '—'}</p>
-                </div>
-                <div>
-                  <span className="text-dark-muted">Aluguel</span>
-                  <p className="text-dark-text font-medium">
-                    {fichaResumo?.valorAluguel != null ? formatMoneyBR(fichaResumo.valorAluguel) : '—'}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-dark-muted">Celular</span>
-                  <p className="text-dark-text">{fichaResumo?.celular || '—'}</p>
-                </div>
-                <div>
-                  <span className="text-dark-muted">Tipo de Imóvel</span>
-                  <p className="text-dark-text">{fichaResumo?.tipoImovel || '—'}</p>
-                </div>
-                <div>
-                  <span className="text-dark-muted">Vigência</span>
-                  <p className="text-dark-text">{fichaResumo?.vigencia || '—'}</p>
-                </div>
-                <div>
-                  <span className="text-dark-muted">Vencimento</span>
-                  <p className="text-dark-text">{fichaResumo?.vencimento || '—'}</p>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-dark-muted">Observações</span>
-                  <p className="text-dark-text line-clamp-2">{fichaSelecionada.observacoes || '—'}</p>
+                <div className="rounded-xl border border-dark-border/60 bg-white/80 px-3 py-2 sm:col-span-2">
+                  <span className="text-dark-muted">N° do orçamento</span>
+                  <p className="mt-1 text-dark-text font-semibold truncate">{numeroOrcamento || '—'}</p>
                 </div>
               </div>
             </div>
@@ -928,38 +781,17 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
             <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">Resumo automático</p>
-                <p className="text-xs text-dark-muted">Dados herdados da ficha selecionada.</p>
-              </div>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">
-                {mesesVigencia || 'Vigência não informada'}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-xl border border-dark-border/60 bg-white/80 px-3 py-2">
-                <p className="text-[10px] uppercase tracking-wider text-dark-muted">Aluguel</p>
-                <p className="mt-1 font-semibold text-dark-text">{fichaResumo?.valorAluguel != null ? formatMoneyBR(fichaResumo.valorAluguel) : '—'}</p>
-              </div>
-              <div className="rounded-xl border border-dark-border/60 bg-white/80 px-3 py-2">
-                <p className="text-[10px] uppercase tracking-wider text-dark-muted">Celular</p>
-                <p className="mt-1 font-semibold text-dark-text">{fichaResumo?.celular || '—'}</p>
-              </div>
-              <div className="rounded-xl border border-dark-border/60 bg-white/80 px-3 py-2">
-                <p className="text-[10px] uppercase tracking-wider text-dark-muted">Tipo de imóvel</p>
-                <p className="mt-1 font-semibold text-dark-text">{fichaResumo?.tipoImovel || '—'}</p>
-              </div>
-              <div className="rounded-xl border border-dark-border/60 bg-white/80 px-3 py-2">
-                <p className="text-[10px] uppercase tracking-wider text-dark-muted">N° do orçamento</p>
-                <p className="mt-1 font-semibold text-dark-text truncate">{numeroOrcamento || '—'}</p>
+                <p className="text-xs text-dark-muted">Somente nome, imobiliária e número do orçamento selecionado.</p>
               </div>
             </div>
           </div>
           ) : null}
 
           <div className="space-y-3">
-            <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Dados da Emissão</p>
+            <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Dados da EmissÃ£o</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <EditField
-                label="N° do Orçamento"
+                label="NÂ° do OrÃ§amento"
                 value={numeroOrcamento}
                 onChange={setNumeroOrcamento}
                 placeholder="Ex: 12345"
@@ -990,7 +822,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-dark-border">
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
           <button onClick={criar} disabled={!fichaSelecionada || criando || !numeroOrcamento.trim() || !seguradora} className="btn-primary text-sm">
-            {criando ? 'Criando...' : 'Criar Solicitação'}
+            {criando ? 'Criando...' : 'Criar SolicitaÃ§Ã£o'}
           </button>
         </div>
       </div>
@@ -998,7 +830,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
   )
 }
 
-// ── Modal Finalizar ───────────────────────────────────────────────────────────
+// â”€â”€ Modal Finalizar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
   const [proprietarioNome,  setProprietarioNome]  = useState('')
@@ -1060,7 +892,7 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
     })
     setSalvando(false)
     if (err) { toast({ type: 'error', title: 'Erro ao emitir' }); return }
-    toast({ type: 'success', title: 'Apólice emitida!' })
+    toast({ type: 'success', title: 'ApÃ³lice emitida!' })
     onFinalizado()
     onClose()
   }
@@ -1073,7 +905,7 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
     try {
       const { campos, extras, semParser } = await parseApolice(seguradora, pdfFile)
       if (semParser) {
-        setExtracaoErro(`Seguradora "${seguradora}" ainda não possui parser configurado.`)
+        setExtracaoErro(`Seguradora "${seguradora}" ainda nÃ£o possui parser configurado.`)
         return
       }
       if (campos.nome_proprietario) setProprietarioNome(campos.nome_proprietario)
@@ -1091,7 +923,7 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
         setExtracaoExtras(extras)
       }
     } catch (err) {
-      setExtracaoErro('Erro ao ler o PDF. Verifique se o arquivo é válido.')
+      setExtracaoErro('Erro ao ler o PDF. Verifique se o arquivo Ã© vÃ¡lido.')
     } finally {
       setExtraindo(false)
     }
@@ -1114,37 +946,37 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
           <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <h2 className="font-bold text-dark-text">Emitir Apólice</h2>
+          <h2 className="font-bold text-dark-text">Emitir ApÃ³lice</h2>
         </div>
 
         <div className="px-6 py-5 space-y-4">
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <EditField label="Nome do Proprietário" value={proprietarioNome} onChange={setProprietarioNome} placeholder="João da Silva" required />
-            <EditField label="Celular do Proprietário" value={proprietarioCel} onChange={setProprietarioCel} placeholder="(11) 99999-9999" />
-            <EditField label="Número da Apólice" value={numeroApolice} onChange={setNumeroApolice} placeholder="000000000" required />
-            <EditField label="Número da Proposta" value={numeroProposta} onChange={setNumeroProposta} placeholder="Opcional" />
+            <EditField label="Nome do ProprietÃ¡rio" value={proprietarioNome} onChange={setProprietarioNome} placeholder="JoÃ£o da Silva" required />
+            <EditField label="Celular do ProprietÃ¡rio" value={proprietarioCel} onChange={setProprietarioCel} placeholder="(11) 99999-9999" />
+            <EditField label="NÃºmero da ApÃ³lice" value={numeroApolice} onChange={setNumeroApolice} placeholder="000000000" required />
+            <EditField label="NÃºmero da Proposta" value={numeroProposta} onChange={setNumeroProposta} placeholder="Opcional" />
             <div className="sm:col-span-2">
-              <EditField label="Endereço do Imóvel" value={endereco} onChange={setEndereco} placeholder="Rua, número, bairro, cidade" />
+              <EditField label="EndereÃ§o do ImÃ³vel" value={endereco} onChange={setEndereco} placeholder="Rua, nÃºmero, bairro, cidade" />
             </div>
-            <EditField label="Início da Vigência" type="date" value={inicioVigencia} onChange={setInicioVigencia} required />
-            <EditField label="Fim da Vigência" type="date" value={fimVigencia} onChange={setFimVigencia} required />
+            <EditField label="InÃ­cio da VigÃªncia" type="date" value={inicioVigencia} onChange={setInicioVigencia} required />
+            <EditField label="Fim da VigÃªncia" type="date" value={fimVigencia} onChange={setFimVigencia} required />
             <div>
-              <LabelOpt>Tempo de Vigência</LabelOpt>
-              <div className="input text-sm text-dark-muted bg-dark-surface2/50">{meses > 0 ? `${meses} meses` : '—'}</div>
+              <LabelOpt>Tempo de VigÃªncia</LabelOpt>
+              <div className="input text-sm text-dark-muted bg-dark-surface2/50">{meses > 0 ? `${meses} meses` : 'â€”'}</div>
             </div>
             <EditField label="Parcelamento (vezes)" type="number" value={parcelamento} onChange={setParcelamento} placeholder="Ex: 12" required />
               <EditField label="Valor da Parcela (R$)" type="text" inputMode="decimal" value={valorParcela} onChange={setValorParcela} placeholder="0,00" required />
-              <EditField label="Prêmio Líquido (R$)" type="text" inputMode="decimal" value={premioLiquido} onChange={setPremioLiquido} placeholder="0,00" required />
-            <EditField label="% Comissão" type="text" inputMode="decimal" value={pctComissao} onChange={setPctComissao} placeholder="Ex: 10,00" required />
+              <EditField label="PrÃªmio LÃ­quido (R$)" type="text" inputMode="decimal" value={premioLiquido} onChange={setPremioLiquido} placeholder="0,00" required />
+            <EditField label="% ComissÃ£o" type="text" inputMode="decimal" value={pctComissao} onChange={setPctComissao} placeholder="Ex: 10,00" required />
             <EditField label="% Desconto" type="text" inputMode="decimal" value={pctDesconto} onChange={setPctDesconto} placeholder="Ex: 5,00" required />
             <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Prêmio total</p>
-              <p className="mt-1 font-semibold">{premioTotal != null ? formatMoneyBR(premioTotal) : '—'}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">PrÃªmio total</p>
+              <p className="mt-1 font-semibold">{premioTotal != null ? formatMoneyBR(premioTotal) : 'â€”'}</p>
             </div>
             <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Comissão calculada</p>
-              <p className="mt-1 font-semibold">{valorComissao != null ? formatMoneyBR(valorComissao) : '—'}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">ComissÃ£o calculada</p>
+              <p className="mt-1 font-semibold">{valorComissao != null ? formatMoneyBR(valorComissao) : 'â€”'}</p>
             </div>
             <SelectField
               label="Forma de Pagamento"
@@ -1154,7 +986,7 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
                 { value: '', label: 'Selecione...' },
                 { value: 'fatura_sem_entrada', label: 'Fatura sem entrada' },
                 { value: 'fatura_com_entrada', label: 'Fatura com entrada' },
-                { value: 'cartao_credito', label: 'Cartão de crédito' },
+                { value: 'cartao_credito', label: 'CartÃ£o de crÃ©dito' },
               ]}
               required
             />
@@ -1167,7 +999,7 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-dark-border">
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
           <button onClick={confirmar} disabled={!obrigatoriosOK || salvando} className="btn-primary text-sm">
-            {salvando ? 'Salvando...' : 'Confirmar Emissão'}
+            {salvando ? 'Salvando...' : 'Confirmar EmissÃ£o'}
           </button>
         </div>
       </div>
@@ -1175,7 +1007,7 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
   )
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function ApoicesGestao() {
   const navigate                             = useNavigate()
@@ -1243,7 +1075,7 @@ export default function ApoicesGestao() {
     setActiveId(null)
     if (!over) return
 
-    // ── Column reorder ──
+    // â”€â”€ Column reorder â”€â”€
     if (active.data.current?.type === 'column') {
       const fromColId = active.data.current.colId
       const toColId   = over.id
@@ -1262,7 +1094,7 @@ export default function ApoicesGestao() {
       return
     }
 
-    // ── Card move ──
+    // â”€â”€ Card move â”€â”€
     const id         = active.id
     const novoStatus = over.id
     const apolice    = apolices.find(a => a.id === id)
@@ -1279,7 +1111,7 @@ export default function ApoicesGestao() {
       a.id === id ? { ...a, status_emissao: novoStatus } : a
     ))
     const err = await moverStatusApolice(id, novoStatus)
-    if (err) { toast({ type: 'error', title: 'Erro ao mover apólice' }); load() }
+    if (err) { toast({ type: 'error', title: 'Erro ao mover apÃ³lice' }); load() }
   }
 
   function handleFinalizarSuccess() {
@@ -1289,7 +1121,7 @@ export default function ApoicesGestao() {
   }
 
   function handleFinalizarClose() {
-    // Rollback: não mover
+    // Rollback: nÃ£o mover
     setPendingMove(null)
     setModalFinalizar(null)
   }
@@ -1321,15 +1153,15 @@ export default function ApoicesGestao() {
   return (
     <div className="space-y-4 animate-fade-in">
 
-      {/* ── Header ── */}
+      {/* â”€â”€ Header â”€â”€ */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="title-page text-dark-text">Gestão de Apólices</h1>
-          <p className="text-xs text-dark-muted mt-0.5">Arraste as apólices entre as colunas para atualizar o status</p>
+          <h1 className="title-page text-dark-text">GestÃ£o de ApÃ³lices</h1>
+          <p className="text-xs text-dark-muted mt-0.5">Arraste as apÃ³lices entre as colunas para atualizar o status</p>
         </div>
       </div>
 
-      {/* ── Filtros ── */}
+      {/* â”€â”€ Filtros â”€â”€ */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1 bg-dark-surface2 border border-dark-border rounded-lg p-0.5">
           {['hoje','semana','mes'].map(f => (
@@ -1337,7 +1169,7 @@ export default function ApoicesGestao() {
                     className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                       filtro === f ? 'bg-brand-secondary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
                     }`}>
-              {f === 'hoje' ? 'Hoje' : f === 'semana' ? 'Semana' : 'Mês'}
+              {f === 'hoje' ? 'Hoje' : f === 'semana' ? 'Semana' : 'MÃªs'}
             </button>
           ))}
         </div>
@@ -1348,12 +1180,12 @@ export default function ApoicesGestao() {
             <RefreshCw className="w-3.5 h-3.5" /> Atualizar
           </button>
           <button onClick={() => setModalIniciar(true)} className="btn-primary flex items-center gap-2 text-sm">
-            <Plus className="w-4 h-4" /> Iniciar Emissão
+            <Plus className="w-4 h-4" /> Iniciar EmissÃ£o
           </button>
         </div>
       </div>
 
-      {/* ── Kanban ── */}
+      {/* â”€â”€ Kanban â”€â”€ */}
       {loading ? (
         <KanbanSkeleton />
       ) : (
@@ -1424,7 +1256,7 @@ export default function ApoicesGestao() {
                       <div className="p-1.5 rounded-b-xl border border-t-0 min-h-[60px]" style={{ background: col.color + '06', borderColor: col.color + '30' }}>
                         {(groups[cid] || []).slice(0, 3).map(a => (
                           <div key={a.id} className="text-[10px] text-dark-muted truncate py-1 px-2 rounded-lg mb-1" style={{ background: 'rgb(var(--color-surface2) / 0.6)' }}>
-                            {normalizeDisplayText(a.fichas?.nome_interessado || a.nome_interessado) || '—'}
+                            {normalizeDisplayText(a.fichas?.nome_interessado || a.nome_interessado) || 'â€”'}
                           </div>
                         ))}
                       </div>

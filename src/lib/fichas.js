@@ -365,10 +365,6 @@ export async function fetchFichasAprovadasEmissao({ search, imobiliarias } = {})
       nome_interessado, nome_empresa, cpf, cnpj,
       status, assumida, orcamentista_id, assumida_em,
       seguradora, retorno_enviado, raw_data,
-      valor_aluguel, valor_parcela, premio_liquido,
-      celular, cep, tipo_imovel, vigencia,
-      vencimento, numero_orcamento, endereco, observacoes,
-      pct_comissao, pct_desconto, parcelamento, forma_pagamento,
       profiles!orcamentista_id(nome, avatar_url)
     `)
     .eq('status', 'aprovado')

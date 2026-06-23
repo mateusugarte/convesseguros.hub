@@ -499,6 +499,11 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
   const [parcelamento,    setParcelamento]    = useState('')
   const [seguradora,      setSeguradora]      = useState('')
   const [formaPagamento,  setFormaPagamento]  = useState('fatura_sem_entrada')
+  const [pdfFile,         setPdfFile]         = useState(null)
+  const [extraindo,       setExtraindo]       = useState(false)
+  const [extracaoExtras,  setExtracaoExtras]  = useState(null)
+  const [extracaoErro,    setExtracaoErro]    = useState('')
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     supabase.from('profiles').select('id, nome, avatar_url').order('nome').then(({ data }) => setProfiles(data || []))
@@ -558,6 +563,34 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     setFormaPagamento(auto.formaPagamento)
   }
 
+  async function handlePreencherInfo() {
+    if (!pdfFile || !seguradora) return
+    setExtraindo(true)
+    setExtracaoErro('')
+    setExtracaoExtras(null)
+    try {
+      const { campos, extras, semParser } = await parseApolice(seguradora, pdfFile)
+      if (semParser) {
+        setExtracaoErro(`Seguradora "${seguradora}" ainda não possui parser configurado.`)
+        return
+      }
+      if (campos.numero_proposta) setNumeroOrcamento(campos.numero_proposta)
+      else if (campos.numero_apolice) setNumeroOrcamento(campos.numero_apolice)
+      if (campos.valor_parcela) setValorParcela(campos.valor_parcela)
+      if (campos.parcelamento) setParcelamento(campos.parcelamento)
+      if (campos.premio_liquido) setPremioLiquido(campos.premio_liquido)
+      if (campos.forma_pagamento) setFormaPagamento(campos.forma_pagamento)
+      if (campos.seguradora) setSeguradora(campos.seguradora)
+      if (extras.cep || extras.tipo_imovel || extras.valor_aluguel != null) {
+        setExtracaoExtras(extras)
+      }
+    } catch (err) {
+      setExtracaoErro('Erro ao ler o PDF. Verifique se o arquivo é válido.')
+    } finally {
+      setExtraindo(false)
+    }
+  }
+
   function limparFiltro() {
     setImobFiltro('')
     setBusca('')
@@ -571,6 +604,9 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     setParcelamento('')
     setSeguradora('')
     setFormaPagamento('fatura_sem_entrada')
+    setPdfFile(null)
+    setExtracaoExtras(null)
+    setExtracaoErro('')
     setEmitidoPor(user?.id || '')
   }
 
@@ -759,9 +795,12 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
           {fichaSelecionada ? (
             <div className="rounded-xl bg-status-success/10 border border-status-success/25 overflow-hidden">
               <div className="flex items-center justify-between px-3 py-2.5 border-b border-status-success/20">
-                <p className="text-sm font-semibold text-dark-text truncate">
-                  {fichaResumo?.nome || '—'}
-                </p>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-status-success/80">Dados da ficha</p>
+                  <p className="text-sm font-semibold text-dark-text truncate">
+                    {fichaResumo?.nome || '—'}
+                  </p>
+                </div>
                 <button
                   onClick={() => { setFichaSelecionada(null); setNumeroOrcamento(''); setValorParcela(''); setPremioLiquido(''); setPctComissao(''); setPctDesconto(''); setParcelamento(''); setSeguradora(''); setFormaPagamento('fatura_sem_entrada'); setEmitidoPor(user?.id || '') }}
                   className="flex-shrink-0 ml-2 text-dark-muted hover:text-dark-text"
@@ -809,6 +848,109 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                   <p className="text-dark-text line-clamp-2">{fichaSelecionada.observacoes || '—'}</p>
                 </div>
               </div>
+            </div>
+          ) : null}
+
+          {fichaSelecionada ? (
+            <div className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/5 p-4 space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-secondary">
+                    Fazer upload da apólice
+                  </p>
+                  <p className="text-xs text-dark-muted">
+                    Envie o PDF da apólice e use a seguradora selecionada para acionar a automação.
+                  </p>
+                </div>
+                <span className="rounded-full border border-dark-border bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-dark-muted">
+                  Seguradora: {seguradora || 'não selecionada'}
+                </span>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                className="hidden"
+                onChange={e => {
+                  setPdfFile(e.target.files?.[0] || null)
+                  setExtracaoExtras(null)
+                  setExtracaoErro('')
+                }}
+              />
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-xs font-medium text-dark-text hover:border-brand-secondary/40 transition-colors"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  {pdfFile ? pdfFile.name : 'Upload da apólice em PDF'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePreencherInfo}
+                  disabled={extraindo || !seguradora || !pdfFile}
+                  title={!pdfFile ? 'Envie o PDF da apólice primeiro' : !seguradora ? 'Selecione a seguradora primeiro' : 'Ler PDF e preencher dados'}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-brand-secondary px-3 py-2 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {extraindo
+                    ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" />Lendo apólice...</>
+                    : <><Sparkles className="w-3.5 h-3.5" />Preencher as informações</>}
+                </button>
+
+                {pdfFile && (
+                  <button
+                    type="button"
+                    onClick={() => { setPdfFile(null); setExtracaoExtras(null); setExtracaoErro('') }}
+                    className="rounded-full p-1.5 text-dark-muted hover:text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {!seguradora && (
+                <p className="text-xs text-status-warning font-medium">
+                  Selecione a seguradora aprovada para liberar a automação.
+                </p>
+              )}
+
+              {extracaoErro && (
+                <p className="text-xs text-red-500 font-medium">{extracaoErro}</p>
+              )}
+
+              {extracaoExtras && (
+                <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3 space-y-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted mb-2">
+                    Informações extraídas da apólice
+                  </p>
+                  {extracaoExtras.tipo_imovel && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-dark-muted">Tipo de imóvel</span>
+                      <span className="font-medium text-dark-text">{extracaoExtras.tipo_imovel}</span>
+                    </div>
+                  )}
+                  {extracaoExtras.cep && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-dark-muted">CEP</span>
+                      <span className="font-mono font-medium text-dark-text">
+                        {extracaoExtras.cep.replace(/^(\d{5})(\d{3})$/, '$1-$2')}
+                      </span>
+                    </div>
+                  )}
+                  {extracaoExtras.valor_aluguel != null && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-dark-muted">Aluguel declarado</span>
+                      <span className="font-medium text-status-success">
+                        {formatMoneyBR(extracaoExtras.valor_aluguel)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : null}
 
@@ -1023,10 +1165,10 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-secondary">
-                  Apólice e automação
+                  Fazer upload da apólice
                 </p>
                 <p className="text-xs text-dark-muted">
-                  Envie o PDF da apólice acima dos dados operacionais e acione a leitura por seguradora.
+                  Envie o PDF da apólice aqui e acione a automação com a seguradora selecionada.
                 </p>
               </div>
               <span className="rounded-full border border-dark-border bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-dark-muted">
@@ -1065,7 +1207,7 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
               >
                 {extraindo
                   ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" />Lendo apólice...</>
-                  : <><Sparkles className="w-3.5 h-3.5" />Ler PDF e preencher</>}
+                  : <><Sparkles className="w-3.5 h-3.5" />Preencher as informações</>}
               </button>
 
               {pdfFile && (

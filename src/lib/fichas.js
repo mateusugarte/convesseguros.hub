@@ -363,14 +363,13 @@ export async function fetchFichasAprovadasEmissao({ search, imobiliarias } = {})
     .select(`
       id, created_at, produto, imobiliaria,
       nome_interessado, nome_empresa, cpf, cnpj,
-      valor_aluguel, celular, cep, tipo_imovel, numero_orcamento,
+      valor_aluguel, celular, cep, tipo_imovel,
       vigencia, vencimento, endereco, forma_pagamento,
       pct_comissao, pct_desconto, parcelamento, valor_parcela,
       status, assumida, orcamentista_id, assumida_em,
-      seguradora, retorno_enviado, raw_data,
-      profiles!orcamentista_id(nome, avatar_url)
+      seguradora, retorno_enviado, raw_data
     `)
-    .eq('status', 'aprovado')
+    .in('status', ['aprovado', 'emitido'])
     .order('created_at', { ascending: false })
 
   if (Array.isArray(imobiliarias) && imobiliarias.length) {

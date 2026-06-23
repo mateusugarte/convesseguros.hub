@@ -7,9 +7,10 @@ export const AUTO_LINKS = [
 ]
 
 export const RENOVACAO_STATUS = {
-  nao_cotada: { label: 'Nao cotada', tone: 'danger' },
-  cotada_nao_enviada: { label: 'Cotada nao enviada', tone: 'warning' },
-  cotada_enviada: { label: 'Cotada enviada', tone: 'success' },
+  pendente: { label: 'Pendente', tone: 'muted', cls: 'badge-muted' },
+  nao_cotada: { label: 'Nao cotada', tone: 'danger', cls: 'badge-danger' },
+  cotada_nao_enviada: { label: 'Cotada nao enviada', tone: 'warning', cls: 'badge-warning' },
+  cotada_enviada: { label: 'Cotada enviada', tone: 'success', cls: 'badge-success' },
 }
 
 export const RENOVACAO_RESULTADO = {

@@ -191,7 +191,7 @@ export default function AutoRenovacoes() {
                     </div>
 
                     <select
-                      value={item.status_cotacao}
+                      value={item.status_cotacao || 'nao_cotada'}
                       onChange={e => atualizarStatus({ id: item.id, status_cotacao: e.target.value })}
                       className="min-w-[220px] rounded-2xl border border-dark-border/70 bg-white/90 px-3 py-2 text-sm text-dark-text shadow-sm outline-none transition-colors focus:border-brand-accent/40"
                     >

@@ -82,6 +82,11 @@ function calcularMeses(inicio, fim) {
   return Math.max(0, Math.round((new Date(fim) - new Date(inicio)) / (1000 * 60 * 60 * 24 * 30)))
 }
 
+function isLikelyPolicyNumber(value) {
+  const text = String(value || '').trim()
+  return text.length > 0 && /^[0-9./-]+$/.test(text)
+}
+
 function FieldShell({ label, required, children }) {
   return (
     <div className="group relative rounded-3xl border border-transparent px-2 py-1.5 transition-all hover:border-brand-accent/20 hover:bg-dark-surface2/20">
@@ -628,8 +633,8 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
         setExtracaoErro(`Seguradora "${seguradora}" ainda não possui parser configurado.`)
         return
       }
-      if (campos.numero_proposta) setNumeroOrcamento(campos.numero_proposta)
-      else if (campos.numero_apolice) setNumeroOrcamento(campos.numero_apolice)
+      if (isLikelyPolicyNumber(campos.numero_proposta)) setNumeroOrcamento(campos.numero_proposta)
+      else if (isLikelyPolicyNumber(campos.numero_apolice)) setNumeroOrcamento(campos.numero_apolice)
       if (campos.valor_parcela) setValorParcela(campos.valor_parcela)
       if (campos.parcelamento) setParcelamento(campos.parcelamento)
       if (campos.premio_liquido) setPremioLiquido(campos.premio_liquido)
@@ -1033,8 +1038,8 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
       forma_pagamento:      formaPagamento,
       seguradora,
       premio_liquido:      premioLiquidoNum || null,
-      pct_comissao:        pctComissao === '' ? null : pctComissao,
-      pct_desconto:        pctDesconto === '' ? null : pctDesconto,
+      pct_comissao:        pctComissao === '' ? null : toNumber(pctComissao),
+      pct_desconto:        pctDesconto === '' ? null : toNumber(pctDesconto),
       premio_total:        premioTotal,
       valor_producao:      premioTotal,
       valor_comissao:      valorComissao,
@@ -1060,7 +1065,7 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
       }
       if (campos.nome_proprietario) setProprietarioNome(campos.nome_proprietario)
       if (campos.numero_apolice)   setNumeroApolice(campos.numero_apolice)
-      if (campos.numero_proposta)  setNumeroProposta(campos.numero_proposta)
+      if (isLikelyPolicyNumber(campos.numero_proposta)) setNumeroProposta(campos.numero_proposta)
       if (campos.endereco)         setEndereco(campos.endereco)
       if (campos.inicio_vigencia)  setInicioVigencia(campos.inicio_vigencia)
       if (campos.fim_vigencia)     setFimVigencia(campos.fim_vigencia)

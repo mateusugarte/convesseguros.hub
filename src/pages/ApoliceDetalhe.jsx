@@ -39,6 +39,11 @@ function calcularMeses(inicio, fim) {
   return Math.max(0, Math.round((new Date(fim) - new Date(inicio)) / (1000 * 60 * 60 * 24 * 30)))
 }
 
+function isLikelyPolicyNumber(value) {
+  const text = String(value || '').trim()
+  return text.length > 0 && /^[0-9./-]+$/.test(text)
+}
+
 function ReadField({ label, value }) {
   if (!value && value !== 0) return null
   return (
@@ -319,7 +324,7 @@ export default function ApoliceDetalhe() {
     navigate('/apolices/lista')
   }
 
-  async function anexarPdfComoDocumento(file, resolvedSeguradora) {
+  async function anexarPdfComoDocumento(file) {
     if (!file) return
     setAnexandoDoc(true)
     const { error } = await uploadDocumento({
@@ -336,35 +341,6 @@ export default function ApoliceDetalhe() {
     }
     setDocsRefreshKey(k => k + 1)
     toast({ type: 'success', title: 'PDF anexado em Documentos' })
-
-    if (!resolvedSeguradora) return
-    setExtraindo(true)
-    setExtracaoErro('')
-    setExtracaoExtras(null)
-    try {
-      const { campos, extras, semParser } = await parseApolice(resolvedSeguradora, file)
-      if (semParser) {
-        setExtracaoErro(`Seguradora "${resolvedSeguradora}" ainda não possui parser configurado.`)
-        return
-      }
-      if (campos.nome_proprietario) setProprietarioNome(campos.nome_proprietario)
-      if (campos.numero_apolice) setNumeroApolice(campos.numero_apolice)
-      if (campos.numero_proposta) setNumeroProposta(campos.numero_proposta)
-      if (campos.endereco) setEndereco(campos.endereco)
-      if (campos.inicio_vigencia) setInicioVigencia(campos.inicio_vigencia)
-      if (campos.fim_vigencia) setFimVigencia(campos.fim_vigencia)
-      if (campos.parcelamento) setParcelamento(campos.parcelamento)
-      if (campos.valor_parcela) setValorParcela(campos.valor_parcela)
-      if (campos.premio_liquido) setPremioLiquido(campos.premio_liquido)
-      if (campos.forma_pagamento) setFormaPagamento(campos.forma_pagamento)
-      if (extras.cep || extras.tipo_imovel || extras.valor_aluguel != null) {
-        setExtracaoExtras(extras)
-      }
-    } catch (err) {
-      setExtracaoErro('Erro ao ler o PDF. Verifique se o arquivo é válido.')
-    } finally {
-      setExtraindo(false)
-    }
   }
 
   function getSeguradoraAutomacao() {
@@ -385,7 +361,7 @@ export default function ApoliceDetalhe() {
       }
       if (campos.nome_proprietario) setProprietarioNome(campos.nome_proprietario)
       if (campos.numero_apolice) setNumeroApolice(campos.numero_apolice)
-      if (campos.numero_proposta) setNumeroProposta(campos.numero_proposta)
+      if (isLikelyPolicyNumber(campos.numero_proposta)) setNumeroProposta(campos.numero_proposta)
       if (campos.endereco) setEndereco(campos.endereco)
       if (campos.inicio_vigencia) setInicioVigencia(campos.inicio_vigencia)
       if (campos.fim_vigencia) setFimVigencia(campos.fim_vigencia)
@@ -621,7 +597,7 @@ export default function ApoliceDetalhe() {
                 setExtracaoExtras(null)
                 setExtracaoErro('')
                 if (file) {
-                  await anexarPdfComoDocumento(file, getSeguradoraAutomacao())
+                  await anexarPdfComoDocumento(file)
                 }
               }}
             />

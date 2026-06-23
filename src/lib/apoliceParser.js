@@ -57,14 +57,25 @@ export async function extractPdfText(file) {
 
 function parsePortoSeguro(text) {
   const r = {}
+  const normalized = String(text || '').replace(/\s+/g, ' ')
 
-  // Número da apólice — linha "APÓLICE Nº 59.0746.000000010972294.0000"
-  // O número útil fica entre o bloco inicial "59.0746.0000000" e o sufixo final ".0000".
-  const ap = text.match(/AP[ÓO]LICE\s+N[º°]\s*([0-9.\s]+)/i)
+  // Número da apólice — na Porto o trecho útil vem depois de "59.0746.0000000"
+  // e antes do sufixo final ".0000".
+  const ap = normalized.match(/59\s*\.?\s*0746\s*\.?\s*0000000\s*([0-9. ]{6,})/i)
   if (ap) {
-    const cleaned = ap[1].replace(/\s+/g, '')
-    const middle = cleaned.match(/^\d{2}\.\d{4}\.\d{7}(\d+)(?:\.\d{4})?$/)
-    r.numero_apolice = middle?.[1] || cleaned.replace(/\.\d{4}$/, '')
+    const candidate = ap[1]
+      .trim()
+      .replace(/\s+/g, '')
+      .replace(/^\.+|\.+$/g, '')
+      .split('.')[0]
+    if (candidate) r.numero_apolice = candidate
+  } else {
+    const header = normalized.match(/AP[ÓO]LICE\s+N[º°]\s*([0-9.\s]{16,})/i)
+    if (header) {
+      const cleaned = header[1].replace(/\s+/g, '')
+      const tail = cleaned.match(/^59\.0746\.0000000(\d+)(?:\.\d{4})?$/i)
+      if (tail) r.numero_apolice = tail[1]
+    }
   }
 
   // Vigência — "a partir das 24 horas do dia DD/MM/YYYY até as 24 horas do dia DD/MM/YYYY"
@@ -116,7 +127,7 @@ function parsePortoSeguro(text) {
 
   // Número da proposta
   const prop = text.match(/PROPOSTA N[º°]\s+([\w-]+)/i)
-  if (prop) r.numero_proposta = prop[1].trim()
+  if (prop && /^[0-9./-]+$/.test(prop[1].trim())) r.numero_proposta = prop[1].trim()
 
   // Proprietário (locador) — "LOCADOR  FULANO DE TAL  CPF/CNPJ..."
   const locador = text.match(/\bLOCADOR\b\s+(.+?)(?=\s+CPF\/CNPJ|\s+CNPJ|\s+CPF|\s+SEGUNDO|\s+TERCEIRO)/i)

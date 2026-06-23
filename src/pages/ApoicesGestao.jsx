@@ -892,21 +892,6 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                 onChange={setNumeroOrcamento}
                 placeholder="Ex: 12345"
               />
-              <EditField
-                label="Valor da Parcela (R$)"
-                type="text"
-                inputMode="decimal"
-                value={valorParcela}
-                onChange={setValorParcela}
-                placeholder="0,00"
-              />
-              <EditField
-                label="Parcelamento (vezes)"
-                type="number"
-                value={parcelamento}
-                onChange={setParcelamento}
-                placeholder="Ex: 12"
-              />
               <div className="sm:col-span-2">
                 <SelectField
                   label="Emissor"
@@ -932,7 +917,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
 
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-dark-border">
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
-          <button onClick={criar} disabled={!fichaSelecionada || criando || !numeroOrcamento.trim() || !seguradora || !valorParcela || !parcelamento} className="btn-primary text-sm">
+          <button onClick={criar} disabled={!fichaSelecionada || criando || !numeroOrcamento.trim() || !seguradora} className="btn-primary text-sm">
             {criando ? 'Criando...' : 'Criar Solicitação'}
           </button>
         </div>

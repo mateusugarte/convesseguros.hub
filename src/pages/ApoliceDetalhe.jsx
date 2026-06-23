@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchApoliceDetalhe, atualizarApolice, excluirApolice, STATUS_EMISSAO_LABELS, FORMA_PAGAMENTO_LABELS, calculatePremioTotal, calculateValorComissao, formatMoneyBR, toNumber } from '../lib/apolices'
-import { PRODUTO_LABELS } from '../lib/fichas'
+import { editarFicha } from '../lib/fichas'
+import { PRODUTO_LABELS, STATUS_LABELS } from '../lib/fichas'
 import { uploadDocumento } from '../lib/documentos'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useToast } from '../contexts/ToastContext'
@@ -27,6 +28,10 @@ function fmtDt(v) {
 function fmtData(v) {
   if (!v) return '—'
   try { return format(parseISO(String(v).slice(0, 10) + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR }) } catch { return v }
+}
+
+function resolveFichaValor(ficha, field) {
+  return ficha?.[field] ?? ficha?.raw_data?.[field] ?? null
 }
 
 function calcularMeses(inicio, fim) {
@@ -144,6 +149,24 @@ export default function ApoliceDetalhe() {
   const [pctComissao, setPctComissao] = useState('')
   const [pctDesconto, setPctDesconto] = useState('')
   const [formaPagamento, setFormaPagamento] = useState('')
+  const [fichaNome, setFichaNome] = useState('')
+  const [fichaCpf, setFichaCpf] = useState('')
+  const [fichaCnpj, setFichaCnpj] = useState('')
+  const [fichaCelular, setFichaCelular] = useState('')
+  const [fichaProduto, setFichaProduto] = useState('')
+  const [fichaTipoImovel, setFichaTipoImovel] = useState('')
+  const [fichaCep, setFichaCep] = useState('')
+  const [fichaValorAluguel, setFichaValorAluguel] = useState('')
+  const [fichaImobiliaria, setFichaImobiliaria] = useState('')
+  const [fichaSeguradora, setFichaSeguradora] = useState('')
+  const [fichaStatus, setFichaStatus] = useState('')
+  const [fichaVigencia, setFichaVigencia] = useState('')
+  const [fichaPctComissao, setFichaPctComissao] = useState('')
+  const [fichaPctDesconto, setFichaPctDesconto] = useState('')
+  const [fichaParcelamento, setFichaParcelamento] = useState('')
+  const [fichaVencimento, setFichaVencimento] = useState('')
+  const [fichaOrigem, setFichaOrigem] = useState('')
+  const [fichaObservacoes, setFichaObservacoes] = useState('')
   const [pdfFile, setPdfFile] = useState(null)
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState('')
   const [extraindo, setExtraindo] = useState(false)
@@ -173,6 +196,26 @@ export default function ApoliceDetalhe() {
       setPctComissao(data.pct_comissao !== null && data.pct_comissao !== undefined ? formatDecimalBRInput(data.pct_comissao) : '')
       setPctDesconto(data.pct_desconto !== null && data.pct_desconto !== undefined ? formatDecimalBRInput(data.pct_desconto) : '')
       setFormaPagamento(data.forma_pagamento || '')
+
+      const fichaBase = data.fichas || {}
+      setFichaNome(normalizeDisplayText(fichaBase.nome_empresa || fichaBase.nome_interessado || '') || '')
+      setFichaCpf(fichaBase.cpf || '')
+      setFichaCnpj(fichaBase.cnpj || '')
+      setFichaCelular(fichaBase.celular || '')
+      setFichaProduto(fichaBase.produto || '')
+      setFichaTipoImovel(resolveFichaValor(fichaBase, 'tipo_imovel') || '')
+      setFichaCep(resolveFichaValor(fichaBase, 'cep') || '')
+      setFichaValorAluguel(formatDecimalBRInput(resolveFichaValor(fichaBase, 'valor_aluguel')))
+      setFichaImobiliaria(fichaBase.imobiliaria || '')
+      setFichaSeguradora(resolveFichaValor(fichaBase, 'seguradora') || '')
+      setFichaStatus(fichaBase.status || '')
+      setFichaVigencia(resolveFichaValor(fichaBase, 'vigencia') || '')
+      setFichaPctComissao(formatDecimalBRInput(resolveFichaValor(fichaBase, 'pct_comissao')))
+      setFichaPctDesconto(formatDecimalBRInput(resolveFichaValor(fichaBase, 'pct_desconto')))
+      setFichaParcelamento(resolveFichaValor(fichaBase, 'parcelamento') != null ? String(resolveFichaValor(fichaBase, 'parcelamento')) : '')
+      setFichaVencimento(resolveFichaValor(fichaBase, 'vencimento') || '')
+      setFichaOrigem(resolveFichaValor(fichaBase, 'origem_lead') || '')
+      setFichaObservacoes(resolveFichaValor(fichaBase, 'observacoes') || '')
     }
     setLoading(false)
   }, [id])
@@ -189,7 +232,7 @@ export default function ApoliceDetalhe() {
     return () => URL.revokeObjectURL(url)
   }, [pdfFile])
 
-  async function salvar() {
+  async function salvar(statusOverride = null) {
     setSalvando(true)
     const meses = calcularMeses(inicioVigencia, fimVigencia)
     const parcelaNum = toNumber(valorParcela)
@@ -197,12 +240,37 @@ export default function ApoliceDetalhe() {
     const premioLiquidoNum = toNumber(premioLiquido)
     const premioTotal = calculatePremioTotal(parcelaNum, parcelasNum)
     const valorComissao = calculateValorComissao(premioLiquidoNum, pctComissao)
-    const dataEmissao = ['emitida', 'enviada'].includes(statusEmissao) ? (apolice?.data_emissao || new Date().toISOString().slice(0, 10)) : null
-    const err = await atualizarApolice(id, {
+    const statusFinal = statusOverride || statusEmissao
+    const dataEmissao = ['emitida', 'enviada'].includes(statusFinal) ? (apolice?.data_emissao || new Date().toISOString().slice(0, 10)) : null
+    const fichaBase = apolice?.fichas || null
+    const fichaId = fichaBase?.id
+    const fichaPatch = fichaId ? {
+      nome_interessado: fichaProduto === 'pessoa_juridica' ? null : (fichaNome.trim() || null),
+      nome_empresa: fichaProduto === 'pessoa_juridica' ? (fichaNome.trim() || null) : null,
+      cpf: fichaProduto === 'pessoa_juridica' ? null : (fichaCpf.trim() || null),
+      cnpj: fichaProduto === 'pessoa_juridica' ? (fichaCnpj.trim() || null) : null,
+      celular: fichaCelular.trim() || null,
+      produto: fichaProduto || null,
+      imobiliaria: fichaImobiliaria.trim() || null,
+      seguradora: fichaSeguradora.trim() || null,
+      status: fichaStatus || null,
+      vigencia: fichaVigencia.trim() || null,
+      pct_comissao: fichaPctComissao === '' ? null : toNumber(fichaPctComissao),
+      pct_desconto: fichaPctDesconto === '' ? null : toNumber(fichaPctDesconto),
+      parcelamento: fichaParcelamento === '' ? null : Number(fichaParcelamento),
+      vencimento: fichaVencimento.trim() || null,
+      origem_lead: fichaOrigem.trim() || null,
+      observacoes: fichaObservacoes.trim() || null,
+      tipo_imovel: fichaTipoImovel.trim() || null,
+      cep: fichaCep.trim() || null,
+      valor_aluguel: fichaValorAluguel === '' ? null : toNumber(fichaValorAluguel),
+    } : null
+    const [err, fichaErr] = await Promise.all([
+      atualizarApolice(id, {
       numero_apolice: numeroApolice.trim() || null,
       numero_proposta: numeroProposta.trim() || null,
       seguradora: seguradora || null,
-      status_emissao: statusEmissao,
+      status_emissao: statusFinal,
       proprietario_nome: proprietarioNome.trim() || null,
       proprietario_cel: proprietarioCel.trim() || null,
       endereco: endereco.trim() || null,
@@ -219,11 +287,17 @@ export default function ApoliceDetalhe() {
       valor_producao: premioTotal,
       valor_comissao: valorComissao,
       data_emissao: dataEmissao,
-    })
+      }),
+      fichaId ? editarFicha(fichaId, fichaPatch, user?.id) : Promise.resolve(null),
+    ])
     setSalvando(false)
-    if (err) { toast({ type: 'error', title: 'Erro ao salvar' }); return }
+    if (err || fichaErr) { toast({ type: 'error', title: 'Erro ao salvar' }); load(); return }
     toast({ type: 'success', title: 'Alterações salvas!' })
     load()
+  }
+
+  async function finalizarEmissao() {
+    await salvar('emitida')
   }
 
   async function handleDelete() {
@@ -371,6 +445,15 @@ export default function ApoliceDetalhe() {
             >
               <Save className="h-3.5 w-3.5" /> {salvando ? 'Salvando...' : 'Salvar'}
             </button>
+            {apolice.status_emissao !== 'emitida' && apolice.status_emissao !== 'enviada' && (
+              <button
+                onClick={finalizarEmissao}
+                disabled={salvando}
+                className="flex items-center gap-1.5 rounded-2xl border border-status-success/30 px-3 py-2 text-xs text-status-success transition-colors hover:bg-status-success/10 disabled:opacity-50"
+              >
+                <Check className="h-3.5 w-3.5" /> {salvando ? 'Finalizando...' : 'Finalizar emissão de apólice'}
+              </button>
+            )}
             {!confirm ? (
               <button
                 onClick={() => setConfirm(true)}
@@ -412,23 +495,48 @@ export default function ApoliceDetalhe() {
         <div className="space-y-5">
           {ficha ? (
             <DataCard title="Dados da Ficha" subtitle="Base de origem da apólice." bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
-              <div className="col-span-2"><ReadField label="Nome" value={normalizeDisplayText(ficha.nome_empresa || ficha.nome_interessado)} /></div>
-              <ReadField label={ficha.cnpj ? 'CNPJ' : 'CPF'} value={ficha.cpf || ficha.cnpj} />
-              <ReadField label="Celular" value={ficha.celular} />
-              <ReadField label="Produto" value={PRODUTO_LABELS[ficha.produto] || ficha.produto} />
-              <ReadField label="Tipo de Imóvel" value={ficha.tipo_imovel} />
-              <ReadField label="CEP" value={ficha.cep} />
-              <ReadField label="Valor do Aluguel" value={valorAluguelFicha != null ? `R$ ${Number(valorAluguelFicha).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null} />
-              <ReadField label="Imobiliária" value={resolverNome(apolice.imobiliaria)} />
-              <ReadField label="Seguradora da Ficha" value={ficha.seguradora} />
-              <ReadField label="Status" value={ficha.status} />
-              <ReadField label="Vigência" value={ficha.vigencia} />
-              <ReadField label="% Comissão" value={ficha.pct_comissao != null ? `${ficha.pct_comissao}%` : null} />
-              <ReadField label="% Desconto" value={ficha.pct_desconto != null ? `${ficha.pct_desconto}%` : null} />
-              <ReadField label="Parcelamento" value={ficha.parcelamento} />
-              <ReadField label="Vencimento" value={ficha.vencimento} />
-              <ReadField label="Origem" value={ficha.origem_lead} />
-              <ReadField label="Observações" value={ficha.observacoes} />
+              <div className="col-span-2">
+                <EditField
+                  label="Nome"
+                  value={fichaNome}
+                  onChange={setFichaNome}
+                  placeholder={fichaProduto === 'pessoa_juridica' ? 'Nome da empresa' : 'Nome do interessado'}
+                />
+              </div>
+              <EditField
+                label={fichaProduto === 'pessoa_juridica' ? 'CNPJ' : 'CPF'}
+                value={fichaProduto === 'pessoa_juridica' ? fichaCnpj : fichaCpf}
+                onChange={fichaProduto === 'pessoa_juridica' ? setFichaCnpj : setFichaCpf}
+                placeholder={fichaProduto === 'pessoa_juridica' ? '00.000.000/0000-00' : '000.000.000-00'}
+              />
+              <EditField label="Celular" value={fichaCelular} onChange={setFichaCelular} placeholder="(11) 99999-9999" />
+              <SelectField
+                label="Produto"
+                value={fichaProduto}
+                onChange={setFichaProduto}
+                options={Object.entries(PRODUTO_LABELS).map(([value, label]) => ({ value, label }))}
+              />
+              <EditField label="Tipo de Imóvel" value={fichaTipoImovel} onChange={setFichaTipoImovel} />
+              <EditField label="CEP" value={fichaCep} onChange={setFichaCep} />
+              <EditField label="Valor do Aluguel" type="text" inputMode="decimal" value={fichaValorAluguel} onChange={setFichaValorAluguel} placeholder="0,00" />
+              <EditField label="Imobiliária" value={fichaImobiliaria} onChange={setFichaImobiliaria} />
+              <EditField label="Seguradora da Ficha" value={fichaSeguradora} onChange={setFichaSeguradora} />
+              <SelectField
+                label="Status"
+                value={fichaStatus}
+                onChange={setFichaStatus}
+                options={['pendente', 'em_cotacao', 'em_analise', 'aprovado', 'recusado', 'emitido', 'cancelado', 'cpf_invalido', 'expirada']
+                  .map(value => ({ value, label: STATUS_LABELS[value]?.label || value }))}
+              />
+              <EditField label="Vigência" value={fichaVigencia} onChange={setFichaVigencia} />
+              <EditField label="% Comissão" type="text" inputMode="decimal" value={fichaPctComissao} onChange={setFichaPctComissao} placeholder="10,00" />
+              <EditField label="% Desconto" type="text" inputMode="decimal" value={fichaPctDesconto} onChange={setFichaPctDesconto} placeholder="5,00" />
+              <EditField label="Parcelamento" type="number" value={fichaParcelamento} onChange={setFichaParcelamento} placeholder="12" />
+              <EditField label="Vencimento" type="date" value={fichaVencimento} onChange={setFichaVencimento} />
+              <EditField label="Origem" value={fichaOrigem} onChange={setFichaOrigem} />
+              <div className="col-span-2">
+                <EditField label="Observações" value={fichaObservacoes} onChange={setFichaObservacoes} />
+              </div>
               {apolice.profiles?.nome && (
                 <div className="col-span-2">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted mb-1">Emissor</p>

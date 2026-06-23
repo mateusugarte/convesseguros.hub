@@ -46,7 +46,7 @@ export function calculateValorComissao(premioLiquido, pctComissao) {
 export function formatMoneyBR(v) {
   if (v === null || v === undefined || v === '') return '—'
   const parsed = toNumber(v)
-  if (parsed === null) return '—'
+  if (parsed === null || !Number.isFinite(parsed)) return '—'
   return `R$ ${parsed.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 

@@ -130,6 +130,7 @@ export default function ApoliceDetalhe() {
 
   const [apolice, setApolice] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [confirm, setConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -178,46 +179,55 @@ export default function ApoliceDetalhe() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const data = await fetchApoliceDetalhe(id)
-    if (data) {
-      setApolice(data)
-      setNumeroApolice(data.numero_apolice || '')
-      setNumeroProposta(data.numero_proposta || '')
-      setSeguradora(data.seguradora || '')
-      setStatusEmissao(data.status_emissao || '')
-      setProprietarioNome(data.proprietario_nome || '')
-      setProprietarioCel(data.proprietario_cel || '')
-      setEndereco(data.endereco || '')
-      setInicioVigencia(data.inicio_vigencia || '')
-      setFimVigencia(data.fim_vigencia || '')
-      setValorParcela(data.valor_parcela !== null && data.valor_parcela !== undefined ? formatDecimalBRInput(data.valor_parcela) : '')
-      setParcelamento(data.parcelamento !== null && data.parcelamento !== undefined ? String(data.parcelamento) : '')
-      setPremioLiquido(data.premio_liquido !== null && data.premio_liquido !== undefined ? formatDecimalBRInput(data.premio_liquido) : '')
-      setPctComissao(data.pct_comissao !== null && data.pct_comissao !== undefined ? formatDecimalBRInput(data.pct_comissao) : '')
-      setPctDesconto(data.pct_desconto !== null && data.pct_desconto !== undefined ? formatDecimalBRInput(data.pct_desconto) : '')
-      setFormaPagamento(data.forma_pagamento || '')
+    setLoadError('')
+    try {
+      const data = await fetchApoliceDetalhe(id)
+      if (data) {
+        setApolice(data)
+        setNumeroApolice(data.numero_apolice || '')
+        setNumeroProposta(data.numero_proposta || '')
+        setSeguradora(data.seguradora || '')
+        setStatusEmissao(data.status_emissao || '')
+        setProprietarioNome(data.proprietario_nome || '')
+        setProprietarioCel(data.proprietario_cel || '')
+        setEndereco(data.endereco || '')
+        setInicioVigencia(data.inicio_vigencia || '')
+        setFimVigencia(data.fim_vigencia || '')
+        setValorParcela(data.valor_parcela !== null && data.valor_parcela !== undefined ? formatDecimalBRInput(data.valor_parcela) : '')
+        setParcelamento(data.parcelamento !== null && data.parcelamento !== undefined ? String(data.parcelamento) : '')
+        setPremioLiquido(data.premio_liquido !== null && data.premio_liquido !== undefined ? formatDecimalBRInput(data.premio_liquido) : '')
+        setPctComissao(data.pct_comissao !== null && data.pct_comissao !== undefined ? formatDecimalBRInput(data.pct_comissao) : '')
+        setPctDesconto(data.pct_desconto !== null && data.pct_desconto !== undefined ? formatDecimalBRInput(data.pct_desconto) : '')
+        setFormaPagamento(data.forma_pagamento || '')
 
-      const fichaBase = data.fichas || {}
-      setFichaNome(normalizeDisplayText(fichaBase.nome_empresa || fichaBase.nome_interessado || '') || '')
-      setFichaCpf(fichaBase.cpf || '')
-      setFichaCnpj(fichaBase.cnpj || '')
-      setFichaCelular(fichaBase.celular || '')
-      setFichaProduto(fichaBase.produto || '')
-      setFichaTipoImovel(resolveFichaValor(fichaBase, 'tipo_imovel') || '')
-      setFichaCep(resolveFichaValor(fichaBase, 'cep') || '')
-      setFichaValorAluguel(formatDecimalBRInput(resolveFichaValor(fichaBase, 'valor_aluguel')))
-      setFichaImobiliaria(fichaBase.imobiliaria || '')
-      setFichaSeguradora(resolveFichaValor(fichaBase, 'seguradora') || '')
-      setFichaStatus(fichaBase.status || '')
-      setFichaVigencia(resolveFichaValor(fichaBase, 'vigencia') || '')
-      setFichaPctComissao(formatDecimalBRInput(resolveFichaValor(fichaBase, 'pct_comissao')))
-      setFichaPctDesconto(formatDecimalBRInput(resolveFichaValor(fichaBase, 'pct_desconto')))
-      setFichaParcelamento(resolveFichaValor(fichaBase, 'parcelamento') != null ? String(resolveFichaValor(fichaBase, 'parcelamento')) : '')
-      setFichaVencimento(resolveFichaValor(fichaBase, 'vencimento') || '')
-      setFichaOrigem(resolveFichaValor(fichaBase, 'origem_lead') || '')
-      setFichaObservacoes(resolveFichaValor(fichaBase, 'observacoes') || '')
+        const fichaBase = data.fichas || {}
+        setFichaNome(normalizeDisplayText(fichaBase.nome_empresa || fichaBase.nome_interessado || '') || '')
+        setFichaCpf(fichaBase.cpf || '')
+        setFichaCnpj(fichaBase.cnpj || '')
+        setFichaCelular(fichaBase.celular || '')
+        setFichaProduto(fichaBase.produto || '')
+        setFichaTipoImovel(resolveFichaValor(fichaBase, 'tipo_imovel') || '')
+        setFichaCep(resolveFichaValor(fichaBase, 'cep') || '')
+        setFichaValorAluguel(formatDecimalBRInput(resolveFichaValor(fichaBase, 'valor_aluguel')))
+        setFichaImobiliaria(fichaBase.imobiliaria || '')
+        setFichaSeguradora(resolveFichaValor(fichaBase, 'seguradora') || '')
+        setFichaStatus(fichaBase.status || '')
+        setFichaVigencia(resolveFichaValor(fichaBase, 'vigencia') || '')
+        setFichaPctComissao(formatDecimalBRInput(resolveFichaValor(fichaBase, 'pct_comissao')))
+        setFichaPctDesconto(formatDecimalBRInput(resolveFichaValor(fichaBase, 'pct_desconto')))
+        setFichaParcelamento(resolveFichaValor(fichaBase, 'parcelamento') != null ? String(resolveFichaValor(fichaBase, 'parcelamento')) : '')
+        setFichaVencimento(resolveFichaValor(fichaBase, 'vencimento') || '')
+        setFichaOrigem(resolveFichaValor(fichaBase, 'origem_lead') || '')
+        setFichaObservacoes(resolveFichaValor(fichaBase, 'observacoes') || '')
+      } else {
+        setLoadError('Apólice não encontrada.')
+      }
+    } catch (error) {
+      setApolice(null)
+      setLoadError('Não foi possível carregar esta apólice. Tente atualizar a página.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [id])
 
   useEffect(() => { load() }, [load])
@@ -401,6 +411,17 @@ export default function ApoliceDetalhe() {
         </svg>
         Carregando apólice...
       </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <DataCard title="Apólice" subtitle="Erro ao carregar o registro.">
+        <div className="rounded-3xl border border-status-danger/20 bg-status-danger/5 px-4 py-5 text-sm text-dark-text">
+          <p className="font-semibold text-status-danger">{loadError}</p>
+          <button onClick={() => navigate('/apolices/lista')} className="btn-secondary mt-4">← Voltar para a lista</button>
+        </div>
+      </DataCard>
     )
   }
 

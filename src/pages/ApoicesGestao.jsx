@@ -143,6 +143,18 @@ function produtoApolice(apolice) {
   return apolice.fichas?.produto || apolice.produto
 }
 
+function statusBadgeClass(status) {
+  switch (status) {
+    case 'emitida':
+    case 'enviada':
+      return 'badge-success'
+    case 'proposta_transmitida':
+      return 'badge-warning'
+    default:
+      return 'badge-info'
+  }
+}
+
 function normalizeKey(value) {
   return String(value || '')
     .normalize('NFD')
@@ -242,6 +254,13 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, 
   const ProdIcon = PRODUTO_ICON[prod] || LayoutGrid
   const pColor   = PRODUTO_COLOR[prod] || '#6B7280'
   const emissor  = apolice.profiles?.nome
+  const statusLabel = STATUS_EMISSAO_LABELS[apolice.status_emissao]?.label || apolice.status_emissao || 'Recebida'
+  const documento = apolice.fichas?.cnpj || apolice.fichas?.cpf || '—'
+  const celular = apolice.fichas?.celular || '—'
+  const tipoImovel = apolice.fichas?.tipo_imovel || '—'
+  const vigencia = [apolice.inicio_vigencia, apolice.fim_vigencia].filter(Boolean).join(' até ') || '—'
+  const valorParcela = apolice.valor_parcela ? formatMoneyBR(apolice.valor_parcela) : '—'
+  const parcelamento = apolice.parcelamento ? `${apolice.parcelamento}x` : '—'
 
   return (
     <div
@@ -270,7 +289,10 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, 
             style={{ background: pColor + '20', color: pColor }}
           >
             <ProdIcon className="w-2.5 h-2.5" strokeWidth={2.5} />
-            {PRODUTO_ABBR[prod] || ''}
+            {PRODUTO_ABBR[prod] || 'AUTO'}
+          </span>
+          <span className={`badge text-[9px] font-mono select-none ${statusBadgeClass(apolice.status_emissao)}`}>
+            {statusLabel}
           </span>
           <span className={`badge text-[9px] font-mono select-none ${timeBadgeCls(apolice.created_at)}`}>
             {timeSince(apolice.created_at)}
@@ -300,6 +322,38 @@ function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, 
             <SeguradoraBadge nome={apolice.seguradora} size="xs" />
           </div>
         )}
+
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
+          <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2 py-1.5">
+            <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Documento</p>
+            <p className="mt-0.5 text-[10px] font-mono text-dark-text truncate">{documento}</p>
+          </div>
+          <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2 py-1.5">
+            <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Celular</p>
+            <p className="mt-0.5 text-[10px] text-dark-text truncate">{celular}</p>
+          </div>
+          <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2 py-1.5">
+            <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Imóvel</p>
+            <p className="mt-0.5 text-[10px] text-dark-text truncate">{tipoImovel}</p>
+          </div>
+          <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2 py-1.5">
+            <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Parcelas</p>
+            <p className="mt-0.5 text-[10px] text-dark-text truncate">{parcelamento}</p>
+          </div>
+        </div>
+
+        <div className="mt-1.5 rounded-xl border border-dark-border/60 bg-dark-surface2/25 px-2 py-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Vigência</p>
+              <p className="mt-0.5 text-[10px] text-dark-text truncate">{vigencia}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Parcela</p>
+              <p className="mt-0.5 text-[10px] font-semibold text-brand-accent">{valorParcela}</p>
+            </div>
+          </div>
+        </div>
 
         {/* Footer: emissor */}
         <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-dark-border/40 mt-auto">

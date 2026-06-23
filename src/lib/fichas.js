@@ -392,7 +392,17 @@ export async function fetchFichasAprovadasEmissao({ search, imobiliarias } = {})
 
 export async function fetchFichaDetalhe(id) {
   const { data } = await supabase.from('fichas').select('*, profiles!orcamentista_id(nome, orcamentista_label, avatar_url)').eq('id', id).single()
-  return data
+  if (!data) return data
+
+  const raw = data.raw_data || {}
+  return {
+    ...data,
+    valor_aluguel: data.valor_aluguel ?? raw.valor_aluguel ?? null,
+    valor_iptu: data.valor_iptu ?? raw.valor_iptu ?? null,
+    valor_condominio: data.valor_condominio ?? raw.valor_condominio ?? null,
+    total_rendimentos: data.total_rendimentos ?? raw.total_rendimentos ?? null,
+    capital_social: data.capital_social ?? raw.capital_social ?? null,
+  }
 }
 
 export async function fetchAnosDisponiveis(produto) {

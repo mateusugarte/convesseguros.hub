@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchApoliceDetalhe, atualizarApolice, excluirApolice, STATUS_EMISSAO_LABELS, FORMA_PAGAMENTO_LABELS, calculatePremioTotal, calculateValorComissao, formatMoneyBR, toNumber } from '../lib/apolices'
 import { PRODUTO_LABELS } from '../lib/fichas'
+import { uploadDocumento } from '../lib/documentos'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useToast } from '../contexts/ToastContext'
+import { useAuth } from '../contexts/AuthContext'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ArrowLeft, Save, Trash2, Clock3, Building2, ShieldCheck, CalendarDays, Pencil } from 'lucide-react'
@@ -118,6 +120,7 @@ export default function ApoliceDetalhe() {
   const { id } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
+  const { user } = useAuth()
   const { resolverNome } = useImobiliaria()
 
   const [apolice, setApolice] = useState(null)
@@ -142,9 +145,12 @@ export default function ApoliceDetalhe() {
   const [pctDesconto, setPctDesconto] = useState('')
   const [formaPagamento, setFormaPagamento] = useState('')
   const [pdfFile, setPdfFile] = useState(null)
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState('')
   const [extraindo, setExtraindo] = useState(false)
+  const [anexandoDoc, setAnexandoDoc] = useState(false)
   const [extracaoExtras, setExtracaoExtras] = useState(null)
   const [extracaoErro, setExtracaoErro] = useState('')
+  const [docsRefreshKey, setDocsRefreshKey] = useState(0)
   const fileInputRef = useRef(null)
 
   const load = useCallback(async () => {
@@ -172,6 +178,16 @@ export default function ApoliceDetalhe() {
   }, [id])
 
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (!pdfFile) {
+      setPdfPreviewUrl('')
+      return
+    }
+    const url = URL.createObjectURL(pdfFile)
+    setPdfPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [pdfFile])
 
   async function salvar() {
     setSalvando(true)
@@ -216,6 +232,54 @@ export default function ApoliceDetalhe() {
     if (err) { setDeleting(false); toast({ type: 'error', title: 'Erro ao excluir' }); return }
     toast({ type: 'success', title: 'Apólice excluída' })
     navigate('/apolices/lista')
+  }
+
+  async function anexarPdfComoDocumento(file, resolvedSeguradora) {
+    if (!file) return
+    setAnexandoDoc(true)
+    const { error } = await uploadDocumento({
+      file,
+      apoliceId: apolice?.id,
+      fichaId: ficha?.id,
+      cpfCnpj: ficha?.cpf || ficha?.cnpj,
+      userId: user?.id,
+    })
+    setAnexandoDoc(false)
+    if (error) {
+      toast({ type: 'error', title: 'Erro ao anexar documento', message: error.message })
+      return
+    }
+    setDocsRefreshKey(k => k + 1)
+    toast({ type: 'success', title: 'PDF anexado em Documentos' })
+
+    if (!resolvedSeguradora) return
+    setExtraindo(true)
+    setExtracaoErro('')
+    setExtracaoExtras(null)
+    try {
+      const { campos, extras, semParser } = await parseApolice(resolvedSeguradora, file)
+      if (semParser) {
+        setExtracaoErro(`Seguradora "${resolvedSeguradora}" ainda não possui parser configurado.`)
+        return
+      }
+      if (campos.nome_proprietario) setProprietarioNome(campos.nome_proprietario)
+      if (campos.numero_apolice) setNumeroApolice(campos.numero_apolice)
+      if (campos.numero_proposta) setNumeroProposta(campos.numero_proposta)
+      if (campos.endereco) setEndereco(campos.endereco)
+      if (campos.inicio_vigencia) setInicioVigencia(campos.inicio_vigencia)
+      if (campos.fim_vigencia) setFimVigencia(campos.fim_vigencia)
+      if (campos.parcelamento) setParcelamento(campos.parcelamento)
+      if (campos.valor_parcela) setValorParcela(campos.valor_parcela)
+      if (campos.premio_liquido) setPremioLiquido(campos.premio_liquido)
+      if (campos.forma_pagamento) setFormaPagamento(campos.forma_pagamento)
+      if (extras.cep || extras.tipo_imovel || extras.valor_aluguel != null) {
+        setExtracaoExtras(extras)
+      }
+    } catch (err) {
+      setExtracaoErro('Erro ao ler o PDF. Verifique se o arquivo é válido.')
+    } finally {
+      setExtraindo(false)
+    }
   }
 
   function getSeguradoraAutomacao() {
@@ -284,6 +348,7 @@ export default function ApoliceDetalhe() {
   const valorComissao = calculateValorComissao(premioLiquidoNum, pctComissao)
   const siStatus = STATUS_EMISSAO_LABELS[apolice.status_emissao] || { label: apolice.status_emissao, color: '#6B7280' }
   const nomePrincipal = normalizeDisplayText(ficha?.nome_empresa || ficha?.nome_interessado || apolice.nome_interessado) || 'Apólice'
+  const valorAluguelFicha = extracaoExtras?.valor_aluguel ?? apolice.valor_aluguel ?? ficha?.valor_aluguel
 
   return (
     <div className="space-y-5 pb-8 animate-fade-in">
@@ -353,7 +418,7 @@ export default function ApoliceDetalhe() {
               <ReadField label="Produto" value={PRODUTO_LABELS[ficha.produto] || ficha.produto} />
               <ReadField label="Tipo de Imóvel" value={ficha.tipo_imovel} />
               <ReadField label="CEP" value={ficha.cep} />
-              <ReadField label="Valor do Aluguel" value={ficha.valor_aluguel ? `R$ ${Number(ficha.valor_aluguel).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null} />
+              <ReadField label="Valor do Aluguel" value={valorAluguelFicha != null ? `R$ ${Number(valorAluguelFicha).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null} />
               <ReadField label="Imobiliária" value={resolverNome(apolice.imobiliaria)} />
               <ReadField label="Seguradora da Ficha" value={ficha.seguradora} />
               <ReadField label="Status" value={ficha.status} />
@@ -420,10 +485,14 @@ export default function ApoliceDetalhe() {
               type="file"
               accept=".pdf"
               className="hidden"
-              onChange={e => {
-                setPdfFile(e.target.files?.[0] || null)
+              onChange={async e => {
+                const file = e.target.files?.[0] || null
+                setPdfFile(file)
                 setExtracaoExtras(null)
                 setExtracaoErro('')
+                if (file) {
+                  await anexarPdfComoDocumento(file, getSeguradoraAutomacao())
+                }
               }}
             />
 
@@ -440,7 +509,7 @@ export default function ApoliceDetalhe() {
               <button
                 type="button"
                 onClick={handlePreencherInfo}
-                disabled={extraindo || !pdfFile || !getSeguradoraAutomacao()}
+                disabled={extraindo || anexandoDoc || !pdfFile || !getSeguradoraAutomacao()}
                 title={!pdfFile ? 'Envie o PDF da apólice primeiro' : !getSeguradoraAutomacao() ? 'Selecione a seguradora primeiro' : 'Ler PDF e preencher dados'}
                 className="inline-flex items-center gap-2 rounded-2xl bg-brand-secondary px-3 py-2 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -459,6 +528,20 @@ export default function ApoliceDetalhe() {
                 </button>
               )}
             </div>
+
+            {pdfPreviewUrl && (
+              <div className="overflow-hidden rounded-2xl border border-dark-border/70 bg-dark-surface2/10">
+                <div className="flex items-center justify-between border-b border-dark-border/60 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Pré-visualização do PDF</p>
+                  {anexandoDoc && <span className="text-[10px] font-semibold text-brand-secondary">Anexando...</span>}
+                </div>
+                <iframe
+                  title="Pré-visualização da apólice"
+                  src={pdfPreviewUrl}
+                  className="h-80 w-full bg-white"
+                />
+              </div>
+            )}
 
             {!getSeguradoraAutomacao() && (
               <p className="text-xs font-medium text-status-warning">
@@ -535,6 +618,7 @@ export default function ApoliceDetalhe() {
           </DataCard>
 
           <SecaoDocumentos
+            key={docsRefreshKey}
             apoliceId={apolice.id}
             cpfCnpj={apolice.fichas?.cpf || apolice.fichas?.cnpj}
           />

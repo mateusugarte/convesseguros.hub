@@ -31,6 +31,10 @@ function fmtBRL(v) {
   return formatMoneyBR(v)
 }
 
+function resolveFichaValor(ficha, field) {
+  return ficha?.[field] ?? ficha?.raw_data?.[field] ?? null
+}
+
 // ── InlineField — campo editável com click ────────────────────────────────────
 
 function InlineField({ label, value, onSave, type = 'text', rows, formatter, inputMode }) {
@@ -724,9 +728,9 @@ export default function FichaDetalhePage() {
             <ReadField label="Imobiliária" value={resolverNome(ficha.imobiliaria) || ficha.imobiliaria} />
             <ReadField label="Tipo" value={ficha.tipo_imovel} />
             <ReadField label="CEP" value={ficha.cep} />
-            <ReadField label="Aluguel" value={fmtBRL(ficha.valor_aluguel)} />
-            <ReadField label="IPTU" value={fmtBRL(ficha.valor_iptu)} />
-            <ReadField label="Condomínio" value={fmtBRL(ficha.valor_condominio)} />
+            <ReadField label="Aluguel" value={fmtBRL(resolveFichaValor(ficha, 'valor_aluguel'))} />
+            <ReadField label="IPTU" value={fmtBRL(resolveFichaValor(ficha, 'valor_iptu'))} />
+            <ReadField label="Condomínio" value={fmtBRL(resolveFichaValor(ficha, 'valor_condominio'))} />
             <div className="col-span-2">
               <InlineField
                 label="Observações"
@@ -741,8 +745,8 @@ export default function FichaDetalhePage() {
           {isComPlus && (
             <DataCard title="Dados Complementares" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
               <ReadField label="Atividade" value={ficha.atividade} />
-              <ReadField label="Total de Rendimentos" value={fmtBRL(ficha.total_rendimentos)} />
-              <ReadField label="Capital Social" value={fmtBRL(ficha.capital_social)} />
+              <ReadField label="Total de Rendimentos" value={fmtBRL(resolveFichaValor(ficha, 'total_rendimentos'))} />
+              <ReadField label="Capital Social" value={fmtBRL(resolveFichaValor(ficha, 'capital_social'))} />
               <ReadField label="Motivo da Locação" value={ficha.motivo_locacao} />
               <ReadField label="Vigência" value={ficha.vigencia} />
               {isPJ && <ReadField label="Opção Tributária" value={ficha.opcao_tributaria} />}

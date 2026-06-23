@@ -15,6 +15,10 @@ function fmt(v) { if (v === null || v === undefined) return '—'; return String
 function fmtBRL(v) {
   return formatMoneyBR(v)
 }
+
+function resolveFichaValor(ficha, field) {
+  return ficha?.[field] ?? ficha?.raw_data?.[field] ?? null
+}
 function fmtDt(v) {
   if (!v) return '—'
   try { return format(parseISO(v), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) } catch { return v }
@@ -172,9 +176,9 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
             <Field label="Imobiliária"  value={resolverNome(ficha.imobiliaria) || ficha.imobiliaria} />
             <Field label="Tipo"         value={ficha.tipo_imovel} />
             <Field label="CEP"          value={ficha.cep} />
-            <Field label="Aluguel"      value={fmtBRL(ficha.valor_aluguel)} />
-            <Field label="IPTU"         value={fmtBRL(ficha.valor_iptu)} />
-            <Field label="Condomínio"   value={fmtBRL(ficha.valor_condominio)} />
+            <Field label="Aluguel"      value={fmtBRL(resolveFichaValor(ficha, 'valor_aluguel'))} />
+            <Field label="IPTU"         value={fmtBRL(resolveFichaValor(ficha, 'valor_iptu'))} />
+            <Field label="Condomínio"   value={fmtBRL(resolveFichaValor(ficha, 'valor_condominio'))} />
             <Field label="Observações"  value={ficha.observacoes || '—'} clamp />
           </Section>
 
@@ -182,8 +186,8 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
           {isPlus && (
             <Section title="Dados Complementares" defaultOpen={false}>
               <Field label="Atividade"         value={ficha.atividade} />
-              <Field label="Total Rendimentos" value={fmtBRL(ficha.total_rendimentos)} />
-              <Field label="Capital Social"    value={fmtBRL(ficha.capital_social)} />
+              <Field label="Total Rendimentos" value={fmtBRL(resolveFichaValor(ficha, 'total_rendimentos'))} />
+              <Field label="Capital Social"    value={fmtBRL(resolveFichaValor(ficha, 'capital_social'))} />
               <Field label="Motivo Locação"    value={ficha.motivo_locacao} />
               <Field label="Vigência"          value={ficha.vigencia} />
               {isPJ && <Field label="Opção Tributária" value={ficha.opcao_tributaria} />}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchApoliceDetalhe, atualizarApolice, excluirApolice, STATUS_EMISSAO_LABELS, FORMA_PAGAMENTO_LABELS, calculatePremioTotal, calculateValorComissao, formatMoneyBR, toNumber } from '../lib/apolices'
 import { PRODUTO_LABELS } from '../lib/fichas'
@@ -14,6 +14,8 @@ import { Select } from '../components/ui/Select'
 import { PageHeader, MetricCard, DataCard, Avatar } from '../components/ui'
 import { normalizeDisplayText } from '../lib/text'
 import { formatDecimalBRInput } from '../lib/numberInput'
+import { parseApolice } from '../lib/apoliceParser'
+import { Upload, RefreshCw, Sparkles, X } from 'lucide-react'
 
 function fmtDt(v) {
   if (!v) return null
@@ -139,6 +141,11 @@ export default function ApoliceDetalhe() {
   const [pctComissao, setPctComissao] = useState('')
   const [pctDesconto, setPctDesconto] = useState('')
   const [formaPagamento, setFormaPagamento] = useState('')
+  const [pdfFile, setPdfFile] = useState(null)
+  const [extraindo, setExtraindo] = useState(false)
+  const [extracaoExtras, setExtracaoExtras] = useState(null)
+  const [extracaoErro, setExtracaoErro] = useState('')
+  const fileInputRef = useRef(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -209,6 +216,42 @@ export default function ApoliceDetalhe() {
     if (err) { setDeleting(false); toast({ type: 'error', title: 'Erro ao excluir' }); return }
     toast({ type: 'success', title: 'Apólice excluída' })
     navigate('/apolices/lista')
+  }
+
+  function getSeguradoraAutomacao() {
+    return seguradora || apolice?.seguradora || ficha?.seguradora || ''
+  }
+
+  async function handlePreencherInfo() {
+    const seguradoraAtual = getSeguradoraAutomacao()
+    if (!pdfFile || !seguradoraAtual) return
+    setExtraindo(true)
+    setExtracaoErro('')
+    setExtracaoExtras(null)
+    try {
+      const { campos, extras, semParser } = await parseApolice(seguradoraAtual, pdfFile)
+      if (semParser) {
+        setExtracaoErro(`Seguradora "${seguradoraAtual}" ainda não possui parser configurado.`)
+        return
+      }
+      if (campos.nome_proprietario) setProprietarioNome(campos.nome_proprietario)
+      if (campos.numero_apolice) setNumeroApolice(campos.numero_apolice)
+      if (campos.numero_proposta) setNumeroProposta(campos.numero_proposta)
+      if (campos.endereco) setEndereco(campos.endereco)
+      if (campos.inicio_vigencia) setInicioVigencia(campos.inicio_vigencia)
+      if (campos.fim_vigencia) setFimVigencia(campos.fim_vigencia)
+      if (campos.parcelamento) setParcelamento(campos.parcelamento)
+      if (campos.valor_parcela) setValorParcela(campos.valor_parcela)
+      if (campos.premio_liquido) setPremioLiquido(campos.premio_liquido)
+      if (campos.forma_pagamento) setFormaPagamento(campos.forma_pagamento)
+      if (extras.cep || extras.tipo_imovel || extras.valor_aluguel != null) {
+        setExtracaoExtras(extras)
+      }
+    } catch (err) {
+      setExtracaoErro('Erro ao ler o PDF. Verifique se o arquivo é válido.')
+    } finally {
+      setExtraindo(false)
+    }
   }
 
   if (loading) {
@@ -360,6 +403,102 @@ export default function ApoliceDetalhe() {
               onChange={setStatusEmissao}
               options={Object.entries(STATUS_EMISSAO_LABELS).map(([k, v]) => ({ value: k, label: v.label }))}
             />
+          </DataCard>
+
+          <DataCard title="Fazer upload da apólice" subtitle="Use o PDF para acionar a automação desta emissão." bodyClassName="space-y-3">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <p className="text-xs text-dark-muted">
+                Envie a apólice em PDF e preencha os dados usando a seguradora selecionada.
+              </p>
+              <span className="rounded-full border border-dark-border bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-dark-muted">
+                Seguradora: {getSeguradoraAutomacao() || 'não selecionada'}
+              </span>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              className="hidden"
+              onChange={e => {
+                setPdfFile(e.target.files?.[0] || null)
+                setExtracaoExtras(null)
+                setExtracaoErro('')
+              }}
+            />
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-2 rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-xs font-medium text-dark-text hover:border-brand-accent/40 transition-colors"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                {pdfFile ? pdfFile.name : 'Upload da apólice em PDF'}
+              </button>
+
+              <button
+                type="button"
+                onClick={handlePreencherInfo}
+                disabled={extraindo || !pdfFile || !getSeguradoraAutomacao()}
+                title={!pdfFile ? 'Envie o PDF da apólice primeiro' : !getSeguradoraAutomacao() ? 'Selecione a seguradora primeiro' : 'Ler PDF e preencher dados'}
+                className="inline-flex items-center gap-2 rounded-2xl bg-brand-secondary px-3 py-2 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {extraindo
+                  ? <><RefreshCw className="h-3.5 w-3.5 animate-spin" />Lendo apólice...</>
+                  : <><Sparkles className="h-3.5 w-3.5" />Preencher as informações</>}
+              </button>
+
+              {pdfFile && (
+                <button
+                  type="button"
+                  onClick={() => { setPdfFile(null); setExtracaoExtras(null); setExtracaoErro('') }}
+                  className="rounded-full p-1.5 text-dark-muted hover:text-red-500 hover:bg-red-50 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            {!getSeguradoraAutomacao() && (
+              <p className="text-xs font-medium text-status-warning">
+                Selecione a seguradora para liberar a automação.
+              </p>
+            )}
+
+            {extracaoErro && (
+              <p className="text-xs font-medium text-red-500">{extracaoErro}</p>
+            )}
+
+            {extracaoExtras && (
+              <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3 space-y-1.5">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">
+                  Informações extraídas da apólice
+                </p>
+                {extracaoExtras.tipo_imovel && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-dark-muted">Tipo de imóvel</span>
+                    <span className="font-medium text-dark-text">{extracaoExtras.tipo_imovel}</span>
+                  </div>
+                )}
+                {extracaoExtras.cep && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-dark-muted">CEP</span>
+                    <span className="font-mono font-medium text-dark-text">
+                      {extracaoExtras.cep.replace(/^(\d{5})(\d{3})$/, '$1-$2')}
+                    </span>
+                  </div>
+                )}
+                {extracaoExtras.valor_aluguel != null && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-dark-muted">Aluguel declarado</span>
+                    <span className="font-medium text-status-success">
+                      {formatMoneyBR(extracaoExtras.valor_aluguel)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </DataCard>
 
           <DataCard title="Vigência e Pagamento" bodyClassName="space-y-4">

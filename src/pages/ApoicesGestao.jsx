@@ -1019,16 +1019,20 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
 
         <div className="px-6 py-5 space-y-4">
 
-          {/* ── Automação PDF ─────────────────────────────────── */}
           <div className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/5 p-4 space-y-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-secondary">
-              Preencher automaticamente via apólice
-            </p>
-            <p className="text-xs text-dark-muted">
-              Selecione a seguradora abaixo, faça upload do PDF da apólice e clique em{' '}
-              <span className="font-semibold text-dark-text">Preencher informações</span>.
-              Celular e comissão permanecem manuais — a comissão em % calcula automaticamente o valor em R$.
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-secondary">
+                  Apólice e automação
+                </p>
+                <p className="text-xs text-dark-muted">
+                  Envie o PDF da apólice acima dos dados operacionais e acione a leitura por seguradora.
+                </p>
+              </div>
+              <span className="rounded-full border border-dark-border bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-dark-muted">
+                Seguradora: {seguradora || 'não selecionada'}
+              </span>
+            </div>
 
             <input
               ref={fileInputRef}
@@ -1049,22 +1053,20 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
                 className="inline-flex items-center gap-2 rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-xs font-medium text-dark-text hover:border-brand-secondary/40 transition-colors"
               >
                 <Upload className="w-3.5 h-3.5" />
-                {pdfFile ? pdfFile.name : 'Selecionar PDF da apólice'}
+                {pdfFile ? pdfFile.name : 'Upload da apólice em PDF'}
               </button>
 
-              {pdfFile && (
-                <button
-                  type="button"
-                  onClick={handlePreencherInfo}
-                  disabled={extraindo || !seguradora}
-                  title={!seguradora ? 'Selecione a seguradora primeiro' : ''}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-brand-secondary px-3 py-2 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {extraindo
-                    ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" />Extraindo...</>
-                    : <><Sparkles className="w-3.5 h-3.5" />Preencher informações</>}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handlePreencherInfo}
+                disabled={extraindo || !seguradora || !pdfFile}
+                title={!pdfFile ? 'Envie o PDF da apólice primeiro' : !seguradora ? 'Selecione a seguradora primeiro' : 'Ler PDF e preencher dados'}
+                className="inline-flex items-center gap-2 rounded-2xl bg-brand-secondary px-3 py-2 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {extraindo
+                  ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" />Lendo apólice...</>
+                  : <><Sparkles className="w-3.5 h-3.5" />Ler PDF e preencher</>}
+              </button>
 
               {pdfFile && (
                 <button
@@ -1077,9 +1079,9 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
               )}
             </div>
 
-            {!seguradora && pdfFile && (
+            {!seguradora && (
               <p className="text-xs text-status-warning font-medium">
-                Selecione a seguradora no campo abaixo antes de preencher.
+                Selecione a seguradora aprovada para liberar a automação.
               </p>
             )}
 
@@ -1117,7 +1119,6 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
               </div>
             )}
           </div>
-          {/* ── fim Automação PDF ────────────────────────────── */}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <EditField label="Nome do Proprietário" value={proprietarioNome} onChange={setProprietarioNome} placeholder="João da Silva" required />

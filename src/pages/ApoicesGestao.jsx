@@ -143,6 +143,96 @@ function produtoApolice(apolice) {
   return apolice.fichas?.produto || apolice.produto
 }
 
+function normalizeKey(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+function resolveFichaEmissao(ficha) {
+  const raw = ficha?.raw_data || {}
+  return {
+    nome: normalizeDisplayText(ficha?.nome_empresa || ficha?.nome_interessado || raw?.nome_empresa || raw?.nome_interessado) || '—',
+    documento: ficha?.cnpj || ficha?.cpf || raw?.cnpj || raw?.cpf || '',
+    celular: ficha?.celular || raw?.celular || '',
+    valorAluguel: ficha?.valor_aluguel ?? raw?.valor_aluguel ?? null,
+    valorParcela: ficha?.valor_parcela ?? raw?.valor_parcela ?? null,
+    vigencia: ficha?.vigencia || raw?.vigencia || '',
+    vencimento: ficha?.vencimento || raw?.vencimento || '',
+    tipoImovel: ficha?.tipo_imovel || raw?.tipo_imovel || '',
+    endereco: ficha?.endereco || raw?.endereco || '',
+    numeroOrcamento: ficha?.numero_orcamento || raw?.numero_orcamento || ficha?.numero_apolice || raw?.numero_apolice || '',
+    seguradoraPadrao: ficha?.seguradora || raw?.seguradora || '',
+    premioLiquido: ficha?.premio_liquido ?? raw?.premio_liquido ?? '',
+    pctComissao: ficha?.pct_comissao ?? raw?.pct_comissao ?? '',
+    pctDesconto: ficha?.pct_desconto ?? raw?.pct_desconto ?? '',
+    parcelamento: ficha?.parcelamento ?? raw?.parcelamento ?? '',
+    formaPagamento: ficha?.forma_pagamento || raw?.forma_pagamento || 'fatura_sem_entrada',
+    cotacoes: Array.isArray(raw?.cotacoes) ? raw.cotacoes : [],
+    seguradoraPreferencial: raw?.seguradora_preferencial || null,
+    seguradoraMaisBarata: raw?.seguradora_mais_barata || null,
+  }
+}
+
+function getAprovacaoPorSeguradora(ficha, seguradoraNome) {
+  const base = resolveFichaEmissao(ficha)
+  const target = normalizeKey(seguradoraNome || base.seguradoraPadrao)
+  const cotacoes = base.cotacoes.filter(Boolean)
+  const aprovadas = cotacoes.filter(c => normalizeKey(c?.status) === 'aprovado')
+
+  const preferida = base.seguradoraPreferencial && normalizeKey(base.seguradoraPreferencial.nome) === target
+    ? base.seguradoraPreferencial
+    : null
+  const barata = base.seguradoraMaisBarata && normalizeKey(base.seguradoraMaisBarata.nome) === target
+    ? base.seguradoraMaisBarata
+    : null
+
+  return cotacoes.find(c => normalizeKey(c?.seguradora) === target && normalizeKey(c?.status) === 'aprovado')
+    || preferida
+    || barata
+    || cotacoes.find(c => normalizeKey(c?.status) === 'aprovado')
+    || base.seguradoraPreferencial
+    || base.seguradoraMaisBarata
+    || aprovadas[0]
+    || null
+}
+
+function buildFormDataFromFicha(ficha, seguradoraNome = '') {
+  const base = resolveFichaEmissao(ficha)
+  const aprovacao = getAprovacaoPorSeguradora(ficha, seguradoraNome || base.seguradoraPadrao)
+
+  return {
+    numeroOrcamento: base.numeroOrcamento ? String(base.numeroOrcamento) : '',
+    valorParcela: aprovacao?.valor_parcela != null
+      ? formatDecimalBRInput(aprovacao.valor_parcela)
+      : (base.valorParcela != null ? formatDecimalBRInput(base.valorParcela) : ''),
+    parcelamento: aprovacao?.parcelamento != null
+      ? String(aprovacao.parcelamento)
+      : (base.parcelamento != null && base.parcelamento !== '' ? String(base.parcelamento) : ''),
+    premioLiquido: aprovacao?.premio_liquido != null
+      ? formatDecimalBRInput(aprovacao.premio_liquido)
+      : (base.premioLiquido != null && base.premioLiquido !== '' ? formatDecimalBRInput(base.premioLiquido) : ''),
+    pctComissao: aprovacao?.pct_comissao != null
+      ? formatDecimalBRInput(aprovacao.pct_comissao)
+      : (base.pctComissao != null && base.pctComissao !== '' ? formatDecimalBRInput(base.pctComissao) : ''),
+    pctDesconto: aprovacao?.pct_desconto != null
+      ? formatDecimalBRInput(aprovacao.pct_desconto)
+      : (base.pctDesconto != null && base.pctDesconto !== '' ? formatDecimalBRInput(base.pctDesconto) : ''),
+    formaPagamento: aprovacao?.forma_pagamento || base.formaPagamento || 'fatura_sem_entrada',
+    seguradora: seguradoraNome || aprovacao?.seguradora || base.seguradoraPadrao || '',
+    endereco: base.endereco,
+    valorAluguel: base.valorAluguel,
+    celular: base.celular,
+    vigencia: base.vigencia,
+    vencimento: base.vencimento,
+    tipoImovel: base.tipoImovel,
+    nome: base.nome,
+    documento: base.documento,
+  }
+}
+
 // ── Card ──────────────────────────────────────────────────────────────────────
 
 function ApoliceCard({ apolice, isDragOverlay = false, resolverNome, onDetalhe, dragListeners, dragAttributes }) {
@@ -402,13 +492,13 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
 
   // Campos adicionais preenchidos ao iniciar emissão
   const [numeroOrcamento, setNumeroOrcamento] = useState('')
-  const [endereco,        setEndereco]        = useState('')
   const [valorParcela,    setValorParcela]    = useState('')
   const [premioLiquido,   setPremioLiquido]   = useState('')
   const [pctComissao,     setPctComissao]     = useState('')
   const [pctDesconto,     setPctDesconto]     = useState('')
   const [parcelamento,    setParcelamento]    = useState('')
   const [seguradora,      setSeguradora]      = useState('')
+  const [formaPagamento,  setFormaPagamento]  = useState('fatura_sem_entrada')
 
   useEffect(() => {
     supabase.from('profiles').select('id, nome, avatar_url').order('nome').then(({ data }) => setProfiles(data || []))
@@ -444,15 +534,28 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
 
   function selecionarFicha(f) {
     setFichaSelecionada(f)
-    // Pré-preenche endereço com CEP da ficha
-    setEndereco(f.cep || '')
-    // Pré-preenche número do orçamento com número da apólice da ficha (se houver)
-    setNumeroOrcamento(f.numero_apolice || '')
-    setValorParcela(f.valor_parcela !== null && f.valor_parcela !== undefined ? formatDecimalBRInput(f.valor_parcela) : (f.valor_aluguel ?? ''))
-    setPctComissao(f.pct_comissao !== null && f.pct_comissao !== undefined ? formatDecimalBRInput(f.pct_comissao) : '')
-    setPctDesconto(f.pct_desconto !== null && f.pct_desconto !== undefined ? formatDecimalBRInput(f.pct_desconto) : '')
-    setParcelamento(f.parcelamento ?? '')
-    setSeguradora(f.seguradora || '')
+    const auto = buildFormDataFromFicha(f, f.seguradora || '')
+    setNumeroOrcamento(auto.numeroOrcamento)
+    setValorParcela(auto.valorParcela)
+    setPremioLiquido(auto.premioLiquido)
+    setPctComissao(auto.pctComissao)
+    setPctDesconto(auto.pctDesconto)
+    setParcelamento(auto.parcelamento)
+    setSeguradora(auto.seguradora)
+    setFormaPagamento(auto.formaPagamento)
+    setEmitidoPor(user?.id || '')
+  }
+
+  function handleSeguradoraChange(value) {
+    setSeguradora(value)
+    if (!fichaSelecionada) return
+    const auto = buildFormDataFromFicha(fichaSelecionada, value)
+    setValorParcela(auto.valorParcela)
+    setParcelamento(auto.parcelamento)
+    setPremioLiquido(auto.premioLiquido)
+    setPctComissao(auto.pctComissao)
+    setPctDesconto(auto.pctDesconto)
+    setFormaPagamento(auto.formaPagamento)
   }
 
   function limparFiltro() {
@@ -461,19 +564,20 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     setDebouncedBusca('')
     setFichaSelecionada(null)
     setNumeroOrcamento('')
-    setEndereco('')
     setValorParcela('')
     setPremioLiquido('')
     setPctComissao('')
     setPctDesconto('')
     setParcelamento('')
     setSeguradora('')
+    setFormaPagamento('fatura_sem_entrada')
     setEmitidoPor(user?.id || '')
   }
 
   async function criar() {
     if (!fichaSelecionada) return
     setCriando(true)
+    const auto = buildFormDataFromFicha(fichaSelecionada, seguradora)
     const premioLiquidoNum = toNumber(premioLiquido)
     const pctComissaoNum = pctComissao === '' ? null : toNumber(pctComissao)
     const pctDescontoNum = pctDesconto === '' ? null : toNumber(pctDesconto)
@@ -484,15 +588,15 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
       imobiliaria:      fichaSelecionada.imobiliaria,
       produto:          fichaSelecionada.produto,
       status_emissao:   'recebida',
-      valor_aluguel:    fichaSelecionada.valor_aluguel,
-      nome_interessado: fichaSelecionada.nome_empresa || fichaSelecionada.nome_interessado,
+      valor_aluguel:    auto.valorAluguel,
+      nome_interessado: auto.nome,
       // Campos preenchidos no modal
       numero_proposta:  numeroOrcamento.trim() || null,
       valor_parcela:    valorParcelaNum,
-      endereco:         endereco.trim() || null,
+      endereco:         auto.endereco || null,
       emitido_por:      emitidoPor || user?.id || null,
       // Defaults obrigatórios no banco enquanto migração 09 não for rodada
-      numero_apolice:   '',
+      numero_apolice:   null,
       seguradora:       seguradora || 'Outras',
       data_emissao:     null,
       pct_comissao:     pctComissaoNum,
@@ -502,6 +606,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
       premio_total:     null,
       valor_producao:   null,
       valor_comissao:   null,
+      forma_pagamento:  formaPagamento || null,
     })
     setCriando(false)
     if (error) { toast({ type: 'error', title: 'Erro ao criar', message: error.message }); return }
@@ -509,6 +614,9 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
     onCriado()
     onClose()
   }
+
+  const fichaResumo = fichaSelecionada ? resolveFichaEmissao(fichaSelecionada) : null
+  const mesesVigencia = fichaResumo?.vigencia || ''
 
   return (
     <div className="animate-fade-in">
@@ -594,42 +702,57 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                   <p className="text-sm font-medium text-dark-text">Nenhuma ficha aprovada encontrada</p>
                   <p className="mt-1 text-xs text-dark-muted">Tente outra imobiliária ou altere o termo de busca.</p>
                 </div>
-              ) : (
-                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                  {fichasEncontradas.map(f => (
-                    <button
-                      key={f.id}
-                      onClick={() => selecionarFicha(f)}
-                      className={`rounded-2xl border p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${
-                        fichaSelecionada?.id === f.id
-                          ? 'border-brand-accent bg-brand-secondary/10 shadow-sm'
-                          : 'border-dark-border bg-white hover:border-brand-accent/40'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-dark-text">
-                            {normalizeDisplayText(f.nome_empresa || f.nome_interessado) || '—'}
-                          </p>
-                          <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-dark-muted">
-                            {PRODUTO_LABELS[f.produto] || f.produto || '—'}
-                          </p>
-                        </div>
-                        <span className="badge text-[9px] bg-status-success/15 text-status-success">
-                          Aprovada
-                        </span>
-                      </div>
-                      <div className="mt-3 space-y-1.5">
-                        <p className="text-xs text-dark-muted truncate">{f.imobiliaria || '—'}</p>
-                        <p className="text-[10px] font-mono text-dark-muted">{f.cpf || f.cnpj || '—'}</p>
-                        <p className="text-[10px] text-dark-muted truncate">
-                          {f.celular || f.cep || f.tipo_imovel || 'Sem dados extras'}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {fichasEncontradas.map(f => {
+                      const resumo = resolveFichaEmissao(f)
+                      const selecionada = fichaSelecionada?.id === f.id
+                      return (
+                        <button
+                          key={f.id}
+                          onClick={() => selecionarFicha(f)}
+                          className={`rounded-2xl border p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                            selecionada
+                              ? 'border-brand-accent bg-brand-secondary/10 shadow-sm'
+                              : 'border-dark-border bg-white hover:border-brand-accent/40'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-dark-text">
+                                {resumo.nome}
+                              </p>
+                              <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-dark-muted">
+                                {PRODUTO_LABELS[f.produto] || f.produto || '—'}
+                              </p>
+                            </div>
+                            <span className="badge text-[9px] bg-status-success/15 text-status-success">
+                              Aprovada
+                            </span>
+                          </div>
+                          <div className="mt-3 space-y-1.5">
+                            <p className="text-xs text-dark-muted truncate">{f.imobiliaria || '—'}</p>
+                            <p className="text-[10px] font-mono text-dark-muted">{resumo.documento || '—'}</p>
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              <span className="rounded-full bg-dark-surface2 px-2 py-1 text-[10px] text-dark-muted">
+                                {resumo.celular ? `Cel: ${resumo.celular}` : 'Celular não informado'}
+                              </span>
+                              <span className="rounded-full bg-dark-surface2 px-2 py-1 text-[10px] text-dark-muted">
+                                {resumo.tipoImovel || 'Tipo não informado'}
+                              </span>
+                              <span className="rounded-full bg-dark-surface2 px-2 py-1 text-[10px] text-dark-muted">
+                                {resumo.valorAluguel != null ? formatMoneyBR(resumo.valorAluguel) : 'Aluguel —'}
+                              </span>
+                              <span className="rounded-full bg-dark-surface2 px-2 py-1 text-[10px] text-dark-muted">
+                                {resumo.vigencia || 'Vigência não informada'}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
             </div>
           </div>
 
@@ -637,10 +760,10 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
             <div className="rounded-xl bg-status-success/10 border border-status-success/25 overflow-hidden">
               <div className="flex items-center justify-between px-3 py-2.5 border-b border-status-success/20">
                 <p className="text-sm font-semibold text-dark-text truncate">
-                  {normalizeDisplayText(fichaSelecionada.nome_empresa || fichaSelecionada.nome_interessado) || '—'}
+                  {fichaResumo?.nome || '—'}
                 </p>
                 <button
-                  onClick={() => { setFichaSelecionada(null); setNumeroOrcamento(''); setEndereco(''); setValorParcela(''); setEmitidoPor(user?.id || '') }}
+                  onClick={() => { setFichaSelecionada(null); setNumeroOrcamento(''); setValorParcela(''); setPremioLiquido(''); setPctComissao(''); setPctDesconto(''); setParcelamento(''); setSeguradora(''); setFormaPagamento('fatura_sem_entrada'); setEmitidoPor(user?.id || '') }}
                   className="flex-shrink-0 ml-2 text-dark-muted hover:text-dark-text"
                 >
                   <X className="w-4 h-4" />
@@ -657,29 +780,29 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                 </div>
                 <div>
                   <span className="text-dark-muted">{fichaSelecionada.cnpj ? 'CNPJ' : 'CPF'}</span>
-                  <p className="text-dark-text font-mono">{fichaSelecionada.cnpj || fichaSelecionada.cpf || '—'}</p>
+                  <p className="text-dark-text font-mono">{fichaResumo?.documento || '—'}</p>
                 </div>
                 <div>
                   <span className="text-dark-muted">Aluguel</span>
                   <p className="text-dark-text font-medium">
-                    {fichaSelecionada.valor_aluguel ? `R$ ${fichaSelecionada.valor_aluguel}` : '—'}
+                    {fichaResumo?.valorAluguel != null ? formatMoneyBR(fichaResumo.valorAluguel) : '—'}
                   </p>
                 </div>
                 <div>
                   <span className="text-dark-muted">Celular</span>
-                  <p className="text-dark-text">{fichaSelecionada.celular || '—'}</p>
+                  <p className="text-dark-text">{fichaResumo?.celular || '—'}</p>
                 </div>
                 <div>
                   <span className="text-dark-muted">Tipo de Imóvel</span>
-                  <p className="text-dark-text">{fichaSelecionada.tipo_imovel || '—'}</p>
+                  <p className="text-dark-text">{fichaResumo?.tipoImovel || '—'}</p>
                 </div>
                 <div>
                   <span className="text-dark-muted">Vigência</span>
-                  <p className="text-dark-text">{fichaSelecionada.vigencia || '—'}</p>
+                  <p className="text-dark-text">{fichaResumo?.vigencia || '—'}</p>
                 </div>
                 <div>
                   <span className="text-dark-muted">Vencimento</span>
-                  <p className="text-dark-text">{fichaSelecionada.vencimento || '—'}</p>
+                  <p className="text-dark-text">{fichaResumo?.vencimento || '—'}</p>
                 </div>
                 <div className="col-span-2">
                   <span className="text-dark-muted">Observações</span>
@@ -688,6 +811,36 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
               </div>
             </div>
           ) : null}
+
+          <div className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/5 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">Resumo automático</p>
+                <p className="text-xs text-dark-muted">Dados herdados da ficha selecionada.</p>
+              </div>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">
+                {mesesVigencia || 'Vigência não informada'}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-xl border border-dark-border/60 bg-white/80 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-dark-muted">Aluguel</p>
+                <p className="mt-1 font-semibold text-dark-text">{fichaResumo?.valorAluguel != null ? formatMoneyBR(fichaResumo.valorAluguel) : '—'}</p>
+              </div>
+              <div className="rounded-xl border border-dark-border/60 bg-white/80 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-dark-muted">Celular</p>
+                <p className="mt-1 font-semibold text-dark-text">{fichaResumo?.celular || '—'}</p>
+              </div>
+              <div className="rounded-xl border border-dark-border/60 bg-white/80 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-dark-muted">Tipo de imóvel</p>
+                <p className="mt-1 font-semibold text-dark-text">{fichaResumo?.tipoImovel || '—'}</p>
+              </div>
+              <div className="rounded-xl border border-dark-border/60 bg-white/80 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-dark-muted">N° do orçamento</p>
+                <p className="mt-1 font-semibold text-dark-text truncate">{numeroOrcamento || '—'}</p>
+              </div>
+            </div>
+          </div>
 
           <div className="space-y-3">
             <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Dados da Emissão</p>
@@ -726,19 +879,11 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                 <FieldShell label="Seguradora aprovada" required>
                   <SeguradoraSelect
                     value={seguradora}
-                    onChange={setSeguradora}
+                    onChange={handleSeguradoraChange}
                     produto={fichaSelecionada?.produto}
                     required
                   />
                 </FieldShell>
-              </div>
-              <div className="sm:col-span-2">
-                <EditField
-                  label="Endereço do Imóvel"
-                  value={endereco}
-                  onChange={setEndereco}
-                  placeholder="Rua, número, bairro, cidade"
-                />
               </div>
             </div>
           </div>
@@ -746,7 +891,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
 
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-dark-border">
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
-          <button onClick={criar} disabled={!fichaSelecionada || criando} className="btn-primary text-sm">
+          <button onClick={criar} disabled={!fichaSelecionada || criando || !numeroOrcamento.trim() || !seguradora || !valorParcela || !parcelamento} className="btn-primary text-sm">
             {criando ? 'Criando...' : 'Criar Solicitação'}
           </button>
         </div>

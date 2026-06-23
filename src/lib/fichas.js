@@ -360,7 +360,17 @@ export async function fetchFichas({ produto, ano, mes, dateFrom, dateTo, tipo, s
 export async function fetchFichasAprovadasEmissao({ search, imobiliarias } = {}) {
   let q = supabase
     .from('fichas')
-    .select('id,created_at,produto,imobiliaria,nome_interessado,nome_empresa,cpf,cnpj,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,raw_data,profiles!orcamentista_id(nome, avatar_url)')
+    .select(`
+      id, created_at, produto, imobiliaria,
+      nome_interessado, nome_empresa, cpf, cnpj,
+      status, assumida, orcamentista_id, assumida_em,
+      seguradora, retorno_enviado, raw_data,
+      valor_aluguel, valor_parcela, premio_liquido,
+      celular, cep, tipo_imovel, vigencia,
+      vencimento, numero_orcamento, endereco, observacoes,
+      pct_comissao, pct_desconto, parcelamento, forma_pagamento,
+      profiles!orcamentista_id(nome, avatar_url)
+    `)
     .eq('status', 'aprovado')
     .order('created_at', { ascending: false })
 

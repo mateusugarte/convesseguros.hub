@@ -41,6 +41,39 @@ function isUuid(value) {
   return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
 
+function toFloatOrNull(value) {
+  if (value === null || value === undefined || value === '') return null
+  const parsed = parseFloat(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function buildRenewalComparisonPayload(payload = {}, premioLiquidoAtual = 0, comissaoAtual = 0) {
+  if (!payload.eh_renovacao) {
+    return {
+      renovacao_premio_liquido_ano_anterior: null,
+      renovacao_comissao_ano_anterior: null,
+      renovacao_premio_liquido_ano_atual: null,
+      renovacao_comissao_ano_atual: null,
+      renovacao_diferenca_premio_liquido: null,
+      renovacao_diferenca_comissao: null,
+    }
+  }
+
+  const premioAnterior = toFloatOrNull(payload.renovacao_premio_liquido_ano_anterior)
+  const comissaoAnterior = toFloatOrNull(payload.renovacao_comissao_ano_anterior)
+  const premioAtual = toFloatOrNull(payload.renovacao_premio_liquido_ano_atual) ?? premioLiquidoAtual
+  const comissaoAtualFinal = toFloatOrNull(payload.renovacao_comissao_ano_atual) ?? comissaoAtual
+
+  return {
+    renovacao_premio_liquido_ano_anterior: premioAnterior,
+    renovacao_comissao_ano_anterior: comissaoAnterior,
+    renovacao_premio_liquido_ano_atual: premioAtual,
+    renovacao_comissao_ano_atual: comissaoAtualFinal,
+    renovacao_diferenca_premio_liquido: (premioAtual ?? 0) - (premioAnterior ?? 0),
+    renovacao_diferenca_comissao: (comissaoAtualFinal ?? 0) - (comissaoAnterior ?? 0),
+  }
+}
+
 async function resolverClienteAutoId(payload = {}) {
   if (isUuid(payload.cliente_id)) return payload.cliente_id
 
@@ -323,6 +356,7 @@ export async function emitirApoliceAuto(payload) {
   const premioLiquido = parseFloat(payload.premio_liquido) || 0
   const pctComissao = parseFloat(payload.pct_comissao) || 0
   const valorComissao = premioLiquido * pctComissao
+  const comparativoRenovacao = buildRenewalComparisonPayload(payload, premioLiquido, valorComissao)
 
   const valorRepasse = payload.tem_repasse && payload.pct_repasse
     ? valorComissao * parseFloat(payload.pct_repasse)
@@ -352,6 +386,7 @@ export async function emitirApoliceAuto(payload) {
       pct_repasse: payload.tem_repasse ? parseFloat(payload.pct_repasse) || null : null,
       nome_repasse: payload.tem_repasse ? payload.nome_repasse || null : null,
       valor_repasse: payload.tem_repasse ? valorRepasse : null,
+      ...comparativoRenovacao,
       updated_at: new Date().toISOString(),
     }
 
@@ -381,6 +416,7 @@ export async function criarEmissaoManualAuto(payload) {
   const premioLiquido = parseFloat(payload.premio_liquido) || 0
   const pctComissao = parseFloat(payload.pct_comissao) || 0
   const valorComissao = premioLiquido * pctComissao
+  const comparativoRenovacao = buildRenewalComparisonPayload(payload, premioLiquido, valorComissao)
   const valorRepasse = payload.tem_repasse && payload.pct_repasse
     ? valorComissao * parseFloat(payload.pct_repasse)
     : null
@@ -404,6 +440,7 @@ export async function criarEmissaoManualAuto(payload) {
     premio_liquido: premioLiquido,
     pct_comissao: pctComissao,
     valor_comissao: valorComissao,
+    ...comparativoRenovacao,
     forma_pagamento: payload.forma_pagamento || null,
     parcelamento: payload.parcelamento || null,
     tem_repasse: !!payload.tem_repasse,
@@ -431,6 +468,7 @@ export async function criarEmissaoManualAuto(payload) {
     premio_liquido: premioLiquido,
     pct_comissao: pctComissao,
     valor_comissao: valorComissao,
+    ...comparativoRenovacao,
     forma_pagamento: payload.forma_pagamento || null,
     parcelamento: payload.parcelamento || null,
     tipo_producao: payload.tipo_producao || 'individual',
@@ -587,20 +625,30 @@ export async function atualizarApoliceAuto(id, changes) {
 export async function getDashboardAutoMetrics() {
   const { inicio, fim } = inicioFimMes(0)
   const proximoMes = inicioFimMes(1)
+  const hoje = new Date()
+  const anoAnteriorInicio = new Date(hoje.getFullYear() - 1, hoje.getMonth(), 1).toISOString().split('T')[0]
+  const anoAnteriorFim = new Date(hoje.getFullYear() - 1, hoje.getMonth() + 1, 0).toISOString().split('T')[0]
 
-  const [emissoes, cotacoesMes, renovadasMes, vencendoProximoMes, apolicesMes, cotacoesConvertidas, renovacoesPendentes] = await Promise.all([
+  const [emissoes, cotacoesMes, renovadasMes, vencendoProximoMes, apolicesMes, cotacoesConvertidas, renovacoesPendentes, renovacoesAnoAnterior] = await Promise.all([
     supabase.from('apolices_auto').select('id, eh_renovacao').gte('created_at', inicio).lte('created_at', fim),
     supabase.from('cotacoes_auto').select('id').gte('created_at', inicio).lte('created_at', fim),
     supabase.from('renovacoes_auto').select('id').eq('status_renovacao', 'renovada').gte('created_at', inicio).lte('created_at', fim),
     supabase.from('renovacoes_auto').select('id').gte('vigencia_fim', proximoMes.inicio).lte('vigencia_fim', proximoMes.fim),
-    supabase.from('apolices_auto').select('valor_comissao').gte('created_at', inicio).lte('created_at', fim),
+    supabase.from('apolices_auto').select('valor_comissao, premio_liquido, eh_renovacao, renovacao_comissao_ano_atual, renovacao_premio_liquido_ano_atual').gte('created_at', inicio).lte('created_at', fim),
     supabase.from('cotacoes_auto').select('id').eq('status', 'convertida').gte('created_at', inicio).lte('created_at', fim),
     supabase.from('renovacoes_auto').select('id').neq('status_cotacao', 'cotada_enviada'),
+    supabase.from('apolices_auto').select('valor_comissao, premio_liquido, eh_renovacao, renovacao_comissao_ano_atual, renovacao_premio_liquido_ano_atual').eq('eh_renovacao', true).gte('created_at', anoAnteriorInicio).lte('created_at', anoAnteriorFim),
   ])
 
   const totalCotacoesMes = cotacoesMes.data?.length ?? 0
   const totalConvertidas = cotacoesConvertidas.data?.length ?? 0
   const comissaoTotal = (apolicesMes.data ?? []).reduce((sum, item) => sum + (item.valor_comissao || 0), 0)
+  const renovacoesMesAtual = (apolicesMes.data ?? []).filter(item => item.eh_renovacao)
+  const renovacoesAnoPassado = renovacoesAnoAnterior.data ?? []
+  const renovacoesComissaoMesAtual = renovacoesMesAtual.reduce((sum, item) => sum + (item.renovacao_comissao_ano_atual ?? item.valor_comissao ?? 0), 0)
+  const renovacoesComissaoAnoAnterior = renovacoesAnoPassado.reduce((sum, item) => sum + (item.renovacao_comissao_ano_atual ?? item.valor_comissao ?? 0), 0)
+  const renovacoesPremioLiquidoMesAtual = renovacoesMesAtual.reduce((sum, item) => sum + (item.renovacao_premio_liquido_ano_atual ?? item.premio_liquido ?? 0), 0)
+  const renovacoesPremioLiquidoAnoAnterior = renovacoesAnoPassado.reduce((sum, item) => sum + (item.renovacao_premio_liquido_ano_atual ?? item.premio_liquido ?? 0), 0)
   const taxaConversao = totalCotacoesMes > 0 ? Math.round((totalConvertidas / totalCotacoesMes) * 100) : 0
 
   return {
@@ -610,6 +658,12 @@ export async function getDashboardAutoMetrics() {
     renovacoesConcluidas: renovadasMes.data?.length ?? 0,
     vencendoProximoMes: vencendoProximoMes.data?.length ?? 0,
     comissaoTotal,
+    renovacoesComissaoMesAtual,
+    renovacoesComissaoAnoAnterior,
+    renovacoesComissaoDiferenca: renovacoesComissaoMesAtual - renovacoesComissaoAnoAnterior,
+    renovacoesPremioLiquidoMesAtual,
+    renovacoesPremioLiquidoAnoAnterior,
+    renovacoesPremioLiquidoDiferenca: renovacoesPremioLiquidoMesAtual - renovacoesPremioLiquidoAnoAnterior,
     taxaConversao,
     renovacoesPendentes: renovacoesPendentes.data?.length ?? 0,
   }

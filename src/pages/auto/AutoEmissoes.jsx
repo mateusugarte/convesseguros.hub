@@ -51,6 +51,10 @@ const FORM_EMISSAO_VAZIO = {
   tem_repasse: false,
   pct_repasse: '',
   nome_repasse: '',
+  renovacao_premio_liquido_ano_anterior: '',
+  renovacao_comissao_ano_anterior: '',
+  renovacao_premio_liquido_ano_atual: '',
+  renovacao_comissao_ano_atual: '',
 }
 
 const FORM_MANUAL_VAZIO = {
@@ -75,6 +79,10 @@ const FORM_MANUAL_VAZIO = {
   parcelamento: '',
   responsavel: '',
   eh_renovacao: false,
+  renovacao_premio_liquido_ano_anterior: '',
+  renovacao_comissao_ano_anterior: '',
+  renovacao_premio_liquido_ano_atual: '',
+  renovacao_comissao_ano_atual: '',
 }
 
 const NOVA_SEGURADORA = {
@@ -148,6 +156,27 @@ function isSeguradoCondutorData(nomeCliente, cpfCliente, condutorNome, condutorC
   const cpf = value => String(value || '').replace(/\D/g, '')
   return norm(nomeCliente) && norm(nomeCliente) === norm(condutorNome)
     && cpf(cpfCliente) && cpf(cpfCliente) === cpf(condutorCpf)
+}
+
+function toNumberOrEmpty(value) {
+  const parsed = toNumber(value)
+  return Number.isFinite(parsed) && parsed !== 0 ? parsed : (String(value || '').trim() === '' ? '' : parsed)
+}
+
+function buildRenovacaoComparativo(form, premioLiquidoAtual, valorComissaoAtual) {
+  const premioAnterior = toNumber(form.renovacao_premio_liquido_ano_anterior) || 0
+  const comissaoAnterior = toNumber(form.renovacao_comissao_ano_anterior) || 0
+  const premioAtual = toNumber(form.renovacao_premio_liquido_ano_atual) || premioLiquidoAtual || 0
+  const comissaoAtual = toNumber(form.renovacao_comissao_ano_atual) || valorComissaoAtual || 0
+
+  return {
+    renovacao_premio_liquido_ano_anterior: premioAnterior || null,
+    renovacao_comissao_ano_anterior: comissaoAnterior || null,
+    renovacao_premio_liquido_ano_atual: premioAtual || null,
+    renovacao_comissao_ano_atual: comissaoAtual || null,
+    renovacao_diferenca_premio_liquido: (premioAtual || 0) - (premioAnterior || 0),
+    renovacao_diferenca_comissao: (comissaoAtual || 0) - (comissaoAnterior || 0),
+  }
 }
 
 function getFormEmissaoInicial(emissao) {
@@ -866,12 +895,13 @@ function ModalApolices({ onClose }) {
 
 // ─── CampoTexto (formulario de emissao) ─────────────────────────────────────
 
-function CampoTexto({ label, campo, value, onChange, type = 'text', placeholder = '', disabled = false }) {
+function CampoTexto({ label, campo, value, onChange, type = 'text', placeholder = '', disabled = false, inputMode }) {
   return (
     <div>
       <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">{label}</label>
       <input
         type={type}
+        inputMode={inputMode}
         value={value}
         placeholder={placeholder}
         disabled={disabled}
@@ -971,6 +1001,10 @@ export default function AutoEmissoes() {
           next.condutor_cpf = ''
         }
       }
+      if (campo === 'eh_renovacao' && valor) {
+        next.renovacao_premio_liquido_ano_atual = next.renovacao_premio_liquido_ano_atual || next.premio_liquido
+        next.renovacao_comissao_ano_atual = next.renovacao_comissao_ano_atual || ((toNumber(next.premio_liquido) || 0) * (toNumber(next.pct_comissao) || 0))
+      }
       return next
     })
   }
@@ -991,6 +1025,10 @@ export default function AutoEmissoes() {
           next.condutor_nome = ''
           next.condutor_cpf = ''
         }
+      }
+      if (campo === 'eh_renovacao' && valor) {
+        next.renovacao_premio_liquido_ano_atual = next.renovacao_premio_liquido_ano_atual || next.premio_liquido
+        next.renovacao_comissao_ano_atual = next.renovacao_comissao_ano_atual || ((toNumber(next.premio_liquido) || 0) * (toNumber(next.pct_comissao) || 0))
       }
       return next
     })
@@ -1045,6 +1083,16 @@ export default function AutoEmissoes() {
   const pctComissao = toNumber(form.pct_comissao) || 0
   const valorComissao = premioLiquido * pctComissao
   const valorRepasse = form.tem_repasse ? valorComissao * (toNumber(form.pct_repasse) || 0) : 0
+  const renovacaoComparativo = form.eh_renovacao
+    ? buildRenovacaoComparativo(form, premioLiquido, valorComissao)
+    : {
+        renovacao_premio_liquido_ano_anterior: null,
+        renovacao_comissao_ano_anterior: null,
+        renovacao_premio_liquido_ano_atual: null,
+        renovacao_comissao_ano_atual: null,
+        renovacao_diferenca_premio_liquido: null,
+        renovacao_diferenca_comissao: null,
+      }
 
   function handleEmitir() {
     emitirAsync({
@@ -1069,6 +1117,7 @@ export default function AutoEmissoes() {
       tipo_producao: form.tipo_producao,
       responsavel: form.tipo_producao === 'individual' ? form.responsavel : null,
       eh_renovacao: form.eh_renovacao,
+      ...renovacaoComparativo,
       tem_repasse: form.tem_repasse,
       pct_repasse: form.tem_repasse ? toNumber(form.pct_repasse) : null,
       nome_repasse: form.tem_repasse ? form.nome_repasse : null,
@@ -1100,6 +1149,18 @@ export default function AutoEmissoes() {
       parcelamento: manualForm.parcelamento,
       responsavel: manualForm.responsavel,
       eh_renovacao: manualForm.eh_renovacao,
+      ...(
+        manualForm.eh_renovacao
+          ? buildRenovacaoComparativo(manualForm, toNumber(manualForm.premio_liquido) || 0, (toNumber(manualForm.premio_liquido) || 0) * (toNumber(manualForm.pct_comissao) || 0))
+          : {
+              renovacao_premio_liquido_ano_anterior: null,
+              renovacao_comissao_ano_anterior: null,
+              renovacao_premio_liquido_ano_atual: null,
+              renovacao_comissao_ano_atual: null,
+              renovacao_diferenca_premio_liquido: null,
+              renovacao_diferenca_comissao: null,
+            }
+      ),
       tipo_producao: 'individual',
     })
   }
@@ -1559,6 +1620,56 @@ export default function AutoEmissoes() {
                     </label>
                   </div>
 
+                  {form.eh_renovacao && (
+                    <div className="grid gap-4 rounded-3xl border border-status-success/20 bg-status-success/8 p-4">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <CampoTexto
+                          label="Premio liquido ano passado"
+                          campo="renovacao_premio_liquido_ano_anterior"
+                          value={form.renovacao_premio_liquido_ano_anterior}
+                          onChange={setField}
+                          type="text"
+                          inputMode="decimal"
+                        />
+                        <CampoTexto
+                          label="Comissao ano passado"
+                          campo="renovacao_comissao_ano_anterior"
+                          value={form.renovacao_comissao_ano_anterior}
+                          onChange={setField}
+                          type="text"
+                          inputMode="decimal"
+                        />
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="rounded-2xl border border-status-success/20 bg-white/80 p-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Premio liquido deste ano</p>
+                          <p className="mt-2 text-sm font-semibold text-dark-text">{formatMoney(premioLiquido)}</p>
+                        </div>
+                        <div className="rounded-2xl border border-status-success/20 bg-white/80 p-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissao deste ano</p>
+                          <p className="mt-2 text-sm font-semibold text-dark-text">{formatMoney(valorComissao)}</p>
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-brand-secondary/20 bg-white/75 p-4 text-sm">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">Comparativo</p>
+                        <div className="mt-2 grid gap-3 md:grid-cols-2">
+                          <div>
+                            <p className="text-xs text-dark-muted">Diferenca de premio liquido</p>
+                            <p className="mt-1 font-semibold text-dark-text">
+                              {formatMoney((toNumber(form.renovacao_premio_liquido_ano_atual) || premioLiquido) - (toNumber(form.renovacao_premio_liquido_ano_anterior) || 0))}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-dark-muted">Diferenca de comissao</p>
+                            <p className="mt-1 font-semibold text-dark-text">
+                              {formatMoney((toNumber(form.renovacao_comissao_ano_atual) || valorComissao) - (toNumber(form.renovacao_comissao_ano_anterior) || 0))}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {form.tem_repasse && (
                     <div className="grid gap-4 rounded-3xl border border-brand-secondary/20 bg-brand-secondary/8 p-4 md:grid-cols-2">
                       <CampoTexto label="% Repasse" campo="pct_repasse" value={form.pct_repasse} onChange={setField} type="number" />
@@ -1744,6 +1855,39 @@ export default function AutoEmissoes() {
                       </label>
                     </div>
                   </div>
+
+                  {manualForm.eh_renovacao && (
+                    <div className="grid gap-4 rounded-3xl border border-status-success/20 bg-status-success/8 p-4">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <CampoTexto
+                          label="Premio liquido ano passado"
+                          campo="renovacao_premio_liquido_ano_anterior"
+                          value={manualForm.renovacao_premio_liquido_ano_anterior}
+                          onChange={setManualField}
+                          type="text"
+                          inputMode="decimal"
+                        />
+                        <CampoTexto
+                          label="Comissao ano passado"
+                          campo="renovacao_comissao_ano_anterior"
+                          value={manualForm.renovacao_comissao_ano_anterior}
+                          onChange={setManualField}
+                          type="text"
+                          inputMode="decimal"
+                        />
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="rounded-2xl border border-status-success/20 bg-white/80 p-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Premio liquido deste ano</p>
+                          <p className="mt-2 text-sm font-semibold text-dark-text">{formatMoney(toNumber(manualForm.premio_liquido) || 0)}</p>
+                        </div>
+                        <div className="rounded-2xl border border-status-success/20 bg-white/80 p-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissao deste ano</p>
+                          <p className="mt-2 text-sm font-semibold text-dark-text">{formatMoney((toNumber(manualForm.premio_liquido) || 0) * (toNumber(manualForm.pct_comissao) || 0))}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid gap-3 rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
                     <label className="flex items-center gap-2 text-sm text-dark-text">

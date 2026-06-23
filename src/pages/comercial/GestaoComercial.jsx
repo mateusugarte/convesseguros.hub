@@ -19,6 +19,7 @@ import {
   BrainCircuit,
   BriefcaseBusiness,
   FileText,
+  LayoutGrid,
 } from 'lucide-react'
 import {
   Bar,
@@ -30,6 +31,7 @@ import {
   YAxis,
 } from 'recharts'
 import { supabase } from '../../lib/supabase'
+import { getEntityImageUrl } from '../../lib/entityMedia'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../contexts/ToastContext'
 import {
@@ -38,6 +40,7 @@ import {
   buildCommercialLeadGenerationMap,
   eventAdd,
   getCommercialLeadIdentity,
+  annotateCommercialLeads,
   isCommercialSellerProfile,
   leadAdd,
   useComercial,
@@ -311,16 +314,18 @@ function saveFlow(flow) {
   storageWrite(imobiliariaFlowKey, flow)
 }
 
-function buildFlowDefaults(imob) {
-  return {
-    objetivo: imob?.objetivo_comercial || '',
-    onboardingStatus: imob?.onboarding_status || 'nao_iniciado',
-    onboardingProcesso: Array.isArray(imob?.onboarding_processo) ? imob.onboarding_processo : [],
-    ultimaVisitaEm: imob?.ultima_visita_em || '',
-    ultimaVisitaHouve: Boolean(imob?.ultima_visita_houve),
-    ultimaVisitaComoFoi: imob?.ultima_visita_como_foi || '',
-    visitaPara: '',
-    novaEtapa: '',
+  function buildFlowDefaults(imob) {
+    return {
+      objetivo: imob?.objetivo_comercial || '',
+      onboardingStatus: imob?.onboarding_status || 'nao_iniciado',
+      onboardingProcesso: Array.isArray(imob?.onboarding_processo) ? imob.onboarding_processo : [],
+      recebeComissao: Boolean(imob?.recebe_comissao),
+      pctComissao: imob?.pct_comissao || '',
+      ultimaVisitaEm: imob?.ultima_visita_em || '',
+      ultimaVisitaHouve: Boolean(imob?.ultima_visita_houve),
+      ultimaVisitaComoFoi: imob?.ultima_visita_como_foi || '',
+      visitaPara: '',
+      novaEtapa: '',
   }
 }
 
@@ -333,6 +338,7 @@ export default function GestaoComercial() {
   const [tab, setTab] = useState('painel')
   const [profiles, setProfiles] = useState([])
   const [imobiliarias, setImobiliarias] = useState([])
+  const [apolicesPorImob, setApolicesPorImob] = useState({})
   const [flowByImob, setFlowByImob] = useState(() => loadFlow())
   const [loadingProfiles, setLoadingProfiles] = useState(false)
   const [loadingImobiliarias, setLoadingImobiliarias] = useState(false)
@@ -346,6 +352,7 @@ export default function GestaoComercial() {
   const [includeContacted, setIncludeContacted] = useState(true)
   const [onlyNew, setOnlyNew] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [viewMode, setViewMode] = useState('lista')
   const [batchLimit, setBatchLimit] = useState(30)
   const [loadingBatch, setLoadingBatch] = useState(false)
   const [batchRows, setBatchRows] = useState([])
@@ -358,6 +365,10 @@ export default function GestaoComercial() {
   const visibleLeads = state.leads || []
   const visibleSales = state.sales || []
   const generationMap = useMemo(() => buildCommercialLeadGenerationMap(visibleLeads), [visibleLeads])
+  const sellers = useMemo(
+    () => profiles.filter(item => isCommercialSellerProfile(item) || item.id === user?.id),
+    [profiles, user?.id]
+  )
   const leadByIdentity = useMemo(() => {
     const map = new Map()
     visibleLeads.forEach(lead => {
@@ -365,10 +376,6 @@ export default function GestaoComercial() {
     })
     return map
   }, [visibleLeads])
-  const sellers = useMemo(
-    () => profiles.filter(item => isCommercialSellerProfile(item) || item.id === user?.id),
-    [profiles, user?.id]
-  )
 
   useEffect(() => storageWrite(batchStorageKey, objectives), [objectives])
   useEffect(() => storageWrite(historyStorageKey, history.slice(0, 15)), [history])
@@ -382,7 +389,8 @@ export default function GestaoComercial() {
     Promise.all([
       supabase.from('profiles').select('id, nome, is_admin, areas_atuacao, comercial_produtos, avatar_url').order('nome'),
       supabase.from('imobiliarias').select('id, nome_canonico, ativa, imagem_url, imagem_path, created_at').order('nome_canonico'),
-    ]).then(([profilesRes, imobiliariasRes]) => {
+      supabase.from('apolices').select('imobiliaria').not('imobiliaria', 'is', null),
+    ]).then(([profilesRes, imobiliariasRes, apolicesRes]) => {
       if (cancelled) return
       if (profilesRes.error) {
         toast({ type: 'error', title: 'Erro ao carregar equipe', message: profilesRes.error.message })
@@ -393,6 +401,17 @@ export default function GestaoComercial() {
         toast({ type: 'error', title: 'Erro ao carregar imobiliárias', message: imobiliariasRes.error.message })
       } else {
         setImobiliarias(Array.isArray(imobiliariasRes.data) ? imobiliariasRes.data : [])
+      }
+      if (apolicesRes?.error) {
+        toast({ type: 'error', title: 'Erro ao carregar apólices', message: apolicesRes.error.message })
+      } else {
+        const counts = {}
+        (apolicesRes.data || []).forEach(item => {
+          const key = String(item.imobiliaria || '').toLowerCase()
+          if (!key) return
+          counts[key] = (counts[key] || 0) + 1
+        })
+        setApolicesPorImob(counts)
       }
       setLoadingProfiles(false)
       setLoadingImobiliarias(false)
@@ -475,6 +494,23 @@ export default function GestaoComercial() {
       }
     })
   }, [imobiliarias, flowByImob, visibleLeads, visibleSales])
+
+  const sellerBoards = useMemo(() => sellers.map(member => {
+    const leads = visibleLeads.filter(lead => lead.responsavelId === member.id || lead.user_id === member.id)
+    const totalGenerations = leads.reduce((sum, lead) => sum + Number(lead.listaGeradaCount || 0), 0)
+    return {
+      ...member,
+      leads,
+      totalGenerations,
+      contato: leads.filter(lead => lead.contatadoEm).length,
+      repassados: leads.filter(lead => lead.repassadoEm).length,
+      porColuna: leads.reduce((acc, lead) => {
+        const key = lead.coluna || 'contato'
+        acc[key] = (acc[key] || 0) + 1
+        return acc
+      }, {}),
+    }
+  }), [sellers, visibleLeads])
 
   const filteredBatch = useMemo(() => {
     const term = searchQuery.trim().toLowerCase()
@@ -1015,6 +1051,86 @@ export default function GestaoComercial() {
               </div>
             </div>
           </CrmSectionCard>
+
+          <CrmSectionCard title="Leads por vendedor" subtitle="Lista e kanban das carteiras atuais do time." className="xl:col-span-2">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => setViewMode('lista')} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${viewMode === 'lista' ? 'bg-brand-accent text-white' : 'bg-slate-900/[0.05] text-dark-muted'}`}>
+                Lista
+              </button>
+              <button type="button" onClick={() => setViewMode('kanban')} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${viewMode === 'kanban' ? 'bg-brand-accent text-white' : 'bg-slate-900/[0.05] text-dark-muted'}`}>
+                Kanban
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {sellerBoards.map(member => (
+                <div key={member.id} className="rounded-[22px] border border-dark-border/50 bg-white/60 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-dark-text">{member.nome}</p>
+                      <p className="text-xs text-dark-muted">{member.leads.length} leads · {member.contato} contatados · {member.repassados} repassados</p>
+                    </div>
+                    <span className="rounded-full bg-brand-accent/10 px-2 py-1 text-[11px] font-semibold text-brand-accent">
+                      {member.totalGenerations} gerações
+                    </span>
+                  </div>
+
+                  {viewMode === 'lista' ? (
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-dark-border/50 text-left">
+                            <th className="px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-dark-muted">Lead</th>
+                            <th className="px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-dark-muted">Origem</th>
+                            <th className="px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-dark-muted">Contato</th>
+                            <th className="px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-dark-muted">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {member.leads.slice(0, 10).map(lead => (
+                            <tr key={lead.id} className="border-b border-dark-border/30 last:border-b-0">
+                              <td className="px-3 py-3">
+                                <p className="font-medium text-dark-text">{lead.nome}</p>
+                                <p className="text-xs text-dark-muted">{lead.imobiliaria || 'Sem imobiliária'}</p>
+                              </td>
+                              <td className="px-3 py-3 text-xs text-dark-muted">{sourceLabel(lead.listaOrigem || lead.source)}</td>
+                              <td className="px-3 py-3 text-xs text-dark-muted">{formatPhone(lead.celular)} · {lead.email || '—'}</td>
+                              <td className="px-3 py-3 text-xs text-dark-muted">
+                                <div className="flex flex-wrap gap-1.5">
+                                  {lead.listaGeradaCount > 0 && <span className="rounded-full bg-brand-accent/10 px-2 py-0.5 text-[10px] font-semibold text-brand-accent">Lista {lead.listaGeradaCount}x</span>}
+                                  {lead.contatadoEm && <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Contatado</span>}
+                                  {lead.repassadoEm && <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-700">Repassado</span>}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                      {member.leads.slice(0, 12).map(lead => (
+                        <button
+                          key={lead.id}
+                          type="button"
+                          onClick={() => navigate(`/comercial/leads/${lead.id}`)}
+                          className="rounded-[18px] border border-dark-border/50 bg-white/70 p-3 text-left transition-colors hover:border-brand-accent/40"
+                        >
+                          <p className="font-semibold text-dark-text">{lead.nome}</p>
+                          <p className="mt-1 text-xs text-dark-muted">{lead.imobiliaria || lead.origem}</p>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {lead.listaGeradaCount > 0 && <span className="rounded-full bg-brand-accent/10 px-2 py-0.5 text-[10px] font-semibold text-brand-accent">Lista {lead.listaGeradaCount}x</span>}
+                            {lead.contatadoEm && <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Contatado</span>}
+                            {lead.repassadoEm && <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-700">Repassado</span>}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CrmSectionCard>
         </div>
       )}
 
@@ -1026,100 +1142,60 @@ export default function GestaoComercial() {
             ) : imobiliariasList.length === 0 ? (
               <CrmEmptyState icon={Building2} title="Sem imobiliárias" description="A base de imobiliárias será mostrada aqui assim que estiver sincronizada." compact />
             ) : (
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <div className="space-y-3">
                 {imobiliariasList.map(imob => {
                   const flow = flowByImob[imob.id] || buildFlowDefaults(imob)
                   return (
-                    <div key={imob.id} className="rounded-[22px] border border-dark-border/50 bg-white/60 p-4 space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-semibold text-dark-text">{imob.nome_canonico}</p>
-                          <p className="text-xs text-dark-muted">{imob.leads} leads · {imob.vendas} vendas</p>
+                    <button
+                      key={imob.id}
+                      type="button"
+                      onClick={() => navigate(`/imobiliarias/${imob.id}`)}
+                      className="w-full rounded-[22px] border border-dark-border/50 bg-white/60 p-4 text-left transition-colors hover:border-brand-accent/40"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-dark-border/40 bg-white">
+                          {getEntityImageUrl(imob.imagem_path, imob.imagem_url) ? (
+                            <img src={getEntityImageUrl(imob.imagem_path, imob.imagem_url)} alt={imob.nome_canonico} className="h-full w-full object-cover" />
+                          ) : (
+                            <Building2 className="h-6 w-6 text-dark-muted" />
+                          )}
                         </div>
-                        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${imob.ativa ? 'bg-emerald-500/10 text-emerald-600' : 'bg-slate-900/[0.05] text-dark-muted'}`}>
-                          {imob.ativa ? 'Ativa' : 'Inativa'}
-                        </span>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Objetivo comercial</label>
-                        <input
-                          className="input"
-                          value={flow.objetivo || ''}
-                          onChange={e => saveImobiliariaFlow(imob.id, { objetivo: e.target.value })}
-                          placeholder="Ex: aumentar volume de fiança"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Processo de onboarding</label>
-                        <div className="flex flex-wrap gap-2">
-                          {(flow.onboardingProcesso || []).map(step => (
-                            <span key={step} className="rounded-full bg-slate-900/[0.05] px-2.5 py-1 text-[11px] font-semibold text-dark-muted">
-                              {step}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-semibold text-dark-text">{imob.nome_canonico}</p>
+                              <p className="text-xs text-dark-muted">{imob.leads} leads · {imob.vendas} vendas</p>
+                            </div>
+                            <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${imob.ativa ? 'bg-emerald-500/10 text-emerald-600' : 'bg-slate-900/[0.05] text-dark-muted'}`}>
+                              {imob.ativa ? 'Ativa' : 'Inativa'}
                             </span>
-                          ))}
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-dark-muted">
+                            <span className="rounded-full bg-slate-900/[0.05] px-2 py-1">Comissão {flow.recebeComissao ? 'sim' : 'não'}</span>
+                            {flow.pctComissao && <span className="rounded-full bg-slate-900/[0.05] px-2 py-1">{flow.pctComissao}%</span>}
+                            <span className="rounded-full bg-brand-accent/10 px-2 py-1 text-brand-accent">{apolicesPorImob[String(imob.nome_canonico || '').toLowerCase()] || 0} apólices</span>
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={e => { e.stopPropagation(); saveImobiliariaFlow(imob.id, { recebeComissao: !flow.recebeComissao }) }}
+                              className={`rounded-full px-3 py-1.5 text-[11px] font-semibold ${flow.recebeComissao ? 'bg-emerald-500/10 text-emerald-700' : 'bg-slate-900/[0.05] text-dark-muted'}`}
+                            >
+                              Recebe comissão
+                            </button>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              onClick={e => e.stopPropagation()}
+                              className="input w-24 py-1.5 text-xs"
+                              placeholder="%"
+                              value={flow.pctComissao || ''}
+                              onChange={e => saveImobiliariaFlow(imob.id, { pctComissao: e.target.value })}
+                            />
+                          </div>
                         </div>
-                        <div className="flex gap-2">
-                          <input
-                            className="input flex-1"
-                            value={flow.novaEtapa || ''}
-                            onChange={e => saveImobiliariaFlow(imob.id, { novaEtapa: e.target.value })}
-                            placeholder="Nova etapa"
-                          />
-                          <button
-                            type="button"
-                            className="btn-secondary"
-                            onClick={() => {
-                              const next = (flow.onboardingProcesso || []).concat((flow.novaEtapa || '').trim()).filter(Boolean)
-                              saveImobiliariaFlow(imob.id, { onboardingProcesso: next, novaEtapa: '' })
-                            }}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </button>
-                        </div>
                       </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <button
-                          type="button"
-                          onClick={() => saveImobiliariaFlow(imob.id, { ultimaVisitaHouve: true, ultimaVisitaEm: new Date().toISOString() })}
-                          className={`rounded-2xl border px-3 py-2 text-left ${flow.ultimaVisitaHouve ? 'border-brand-accent bg-brand-accent/10 text-brand-accent' : 'border-dark-border text-dark-muted'}`}
-                        >
-                          Houve visita
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => saveImobiliariaFlow(imob.id, { ultimaVisitaHouve: false, ultimaVisitaEm: '' })}
-                          className={`rounded-2xl border px-3 py-2 text-left ${flow.ultimaVisitaHouve ? 'border-dark-border text-dark-muted' : 'border-brand-accent bg-brand-accent/10 text-brand-accent'}`}
-                        >
-                          Sem visita
-                        </button>
-                      </div>
-
-                      <textarea
-                        className="input min-h-[88px]"
-                        value={flow.ultimaVisitaComoFoi || ''}
-                        onChange={e => saveImobiliariaFlow(imob.id, { ultimaVisitaComoFoi: e.target.value })}
-                        placeholder="Como foi a última visita?"
-                      />
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <input
-                          type="datetime-local"
-                          className="input"
-                          value={flow.visitaPara || ''}
-                          onChange={e => saveImobiliariaFlow(imob.id, { visitaPara: e.target.value })}
-                        />
-                        <button type="button" onClick={() => scheduleImobiliariaVisit(imob)} className="btn-primary">
-                          Agendar visita
-                        </button>
-                      </div>
-
-                      <button type="button" onClick={() => navigate('/comercial/calendario')} className="btn-secondary w-full">
-                        Abrir calendário do gestor
-                      </button>
-                    </div>
+                    </button>
                   )
                 })}
               </div>
@@ -1128,13 +1204,15 @@ export default function GestaoComercial() {
 
           <CrmSectionCard title="Top imobiliárias" subtitle="Relações mais acionadas pela operação.">
             <div className="space-y-3">
-              {partnerOverview.map(item => (
+              {[...partnerOverview]
+                .sort((a, b) => (apolicesPorImob[b.nome.toLowerCase()] || 0) - (apolicesPorImob[a.nome.toLowerCase()] || 0))
+                .map(item => (
                 <div key={item.nome} className="rounded-[18px] border border-dark-border/50 bg-white/60 p-4">
                   <div className="flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-brand-accent" />
                     <p className="font-semibold text-dark-text">{item.nome}</p>
                   </div>
-                  <p className="mt-2 text-sm text-dark-muted">{item.leads} lead(s) observados na base.</p>
+                  <p className="mt-2 text-sm text-dark-muted">{apolicesPorImob[item.nome.toLowerCase()] || 0} apólices emitidas conosco.</p>
                 </div>
               ))}
             </div>
@@ -1146,21 +1224,34 @@ export default function GestaoComercial() {
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
           <CrmSectionCard title="Planning & Growth" subtitle="Define foco, cadência e prioridades do mês.">
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="rounded-[22px] border border-dark-border/50 bg-white/60 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Foco mensal</p>
-                <p className="mt-2 text-sm font-semibold text-dark-text">Selecionar produto foco, setor foco e lista foco por vendedor.</p>
+              <div className="rounded-[22px] border border-dark-border/50 bg-white/60 p-4 md:col-span-2">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Mês de planejamento</p>
+                    <p className="mt-2 text-sm font-semibold text-dark-text">{format(new Date(), "MMMM 'de' yyyy", { locale: ptBR })}</p>
+                  </div>
+                  <span className="badge badge-info">Objetivos por setor</span>
+                </div>
               </div>
               <div className="rounded-[22px] border border-dark-border/50 bg-white/60 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Cadência</p>
-                <p className="mt-2 text-sm font-semibold text-dark-text">Semana: distribuição. Mês: acompanhamento. Trimestre: revisão de estratégia.</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Setor de fichas</p>
+                <p className="mt-2 text-sm font-semibold text-dark-text">Objetivo de fichas aprovadas e fichas passadas por mês.</p>
+                <input className="input mt-3" placeholder="Meta do setor" />
               </div>
               <div className="rounded-[22px] border border-dark-border/50 bg-white/60 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Inteligência</p>
-                <p className="mt-2 text-sm font-semibold text-dark-text">Separar geração, qualificação e distribuição para não misturar operação com prospecção.</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Setor de emissões</p>
+                <p className="mt-2 text-sm font-semibold text-dark-text">Objetivo de emissões feitas, com foco em prêmio líquido.</p>
+                <input className="input mt-3" placeholder="Meta do setor" />
               </div>
               <div className="rounded-[22px] border border-dark-border/50 bg-white/60 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Growth</p>
-                <p className="mt-2 text-sm font-semibold text-dark-text">Mensurar campanhas, listas e conversão por vendedor, por origem e por produto.</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Renovação AUTO</p>
+                <p className="mt-2 text-sm font-semibold text-dark-text">Objetivo de lucro mensal baseado em prêmio líquido e comissão.</p>
+                <input className="input mt-3" placeholder="Meta de lucro" />
+              </div>
+              <div className="rounded-[22px] border border-dark-border/50 bg-white/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Comercial</p>
+                <p className="mt-2 text-sm font-semibold text-dark-text">Definir objetivos por vendedor, por origem e por produto.</p>
+                <input className="input mt-3" placeholder="Meta comercial" />
               </div>
             </div>
           </CrmSectionCard>

@@ -17,7 +17,7 @@ import { formatDecimalBRInput } from '../lib/numberInput'
 import {
   Plus, ChevronLeft, ChevronRight, RefreshCw,
   Search, Home, Briefcase, Building, LayoutGrid, X, Check, ArrowLeft,
-  GripVertical, ChevronsLeft, Pencil,
+  GripVertical, ChevronsLeft, Pencil, Upload, Sparkles,
 } from 'lucide-react'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import SeguradoraSelect from '../components/SeguradoraSelect'
@@ -27,6 +27,7 @@ import { supabase } from '../lib/supabase'
 import { KanbanSkeleton } from '../components/Skeleton'
 import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/kanbanDnd'
 import { normalizeDisplayText } from '../lib/text'
+import { parseApolice } from '../lib/apoliceParser'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -772,6 +773,11 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
   const [formaPagamento,    setFormaPagamento]     = useState(apolice?.forma_pagamento || '')
   const [seguradora,        setSeguradora]         = useState(apolice?.seguradora || '')
   const [salvando,          setSalvando]           = useState(false)
+  const [pdfFile,           setPdfFile]            = useState(null)
+  const [extraindo,         setExtraindo]          = useState(false)
+  const [extracaoExtras,    setExtracaoExtras]     = useState(null)
+  const [extracaoErro,      setExtracaoErro]       = useState('')
+  const fileInputRef = useRef(null)
 
   const meses = calcularMeses(inicioVigencia, fimVigencia)
   const qtdParcelas = toNumber(parcelamento) || 0
@@ -815,6 +821,37 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
     onClose()
   }
 
+  async function handlePreencherInfo() {
+    if (!pdfFile || !seguradora) return
+    setExtraindo(true)
+    setExtracaoErro('')
+    setExtracaoExtras(null)
+    try {
+      const { campos, extras, semParser } = await parseApolice(seguradora, pdfFile)
+      if (semParser) {
+        setExtracaoErro(`Seguradora "${seguradora}" ainda não possui parser configurado.`)
+        return
+      }
+      if (campos.nome_proprietario) setProprietarioNome(campos.nome_proprietario)
+      if (campos.numero_apolice)   setNumeroApolice(campos.numero_apolice)
+      if (campos.numero_proposta)  setNumeroProposta(campos.numero_proposta)
+      if (campos.endereco)         setEndereco(campos.endereco)
+      if (campos.inicio_vigencia)  setInicioVigencia(campos.inicio_vigencia)
+      if (campos.fim_vigencia)     setFimVigencia(campos.fim_vigencia)
+      if (campos.parcelamento)     setParcelamento(campos.parcelamento)
+      if (campos.valor_parcela)    setValorParcela(campos.valor_parcela)
+      if (campos.premio_liquido)   setPremioLiquido(campos.premio_liquido)
+      if (campos.forma_pagamento)  setFormaPagamento(campos.forma_pagamento)
+      if (extras.cep || extras.tipo_imovel || extras.valor_aluguel != null) {
+        setExtracaoExtras(extras)
+      }
+    } catch (err) {
+      setExtracaoErro('Erro ao ler o PDF. Verifique se o arquivo é válido.')
+    } finally {
+      setExtraindo(false)
+    }
+  }
+
   const LabelReq = ({ children }) => (
     <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
       {children} <span className="text-status-danger">*</span>
@@ -836,6 +873,107 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
         </div>
 
         <div className="px-6 py-5 space-y-4">
+
+          {/* ── Automação PDF ─────────────────────────────────── */}
+          <div className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/5 p-4 space-y-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-secondary">
+              Preencher automaticamente via apólice
+            </p>
+            <p className="text-xs text-dark-muted">
+              Selecione a seguradora abaixo, faça upload do PDF da apólice e clique em{' '}
+              <span className="font-semibold text-dark-text">Preencher informações</span>.
+              Celular e comissão permanecem manuais — a comissão em % calcula automaticamente o valor em R$.
+            </p>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              className="hidden"
+              onChange={e => {
+                setPdfFile(e.target.files?.[0] || null)
+                setExtracaoExtras(null)
+                setExtracaoErro('')
+              }}
+            />
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-2 rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-xs font-medium text-dark-text hover:border-brand-secondary/40 transition-colors"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                {pdfFile ? pdfFile.name : 'Selecionar PDF da apólice'}
+              </button>
+
+              {pdfFile && (
+                <button
+                  type="button"
+                  onClick={handlePreencherInfo}
+                  disabled={extraindo || !seguradora}
+                  title={!seguradora ? 'Selecione a seguradora primeiro' : ''}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-brand-secondary px-3 py-2 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {extraindo
+                    ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" />Extraindo...</>
+                    : <><Sparkles className="w-3.5 h-3.5" />Preencher informações</>}
+                </button>
+              )}
+
+              {pdfFile && (
+                <button
+                  type="button"
+                  onClick={() => { setPdfFile(null); setExtracaoExtras(null); setExtracaoErro('') }}
+                  className="rounded-full p-1.5 text-dark-muted hover:text-red-500 hover:bg-red-50 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {!seguradora && pdfFile && (
+              <p className="text-xs text-status-warning font-medium">
+                Selecione a seguradora no campo abaixo antes de preencher.
+              </p>
+            )}
+
+            {extracaoErro && (
+              <p className="text-xs text-red-500 font-medium">{extracaoErro}</p>
+            )}
+
+            {extracaoExtras && (
+              <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3 space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted mb-2">
+                  Informações extraídas do imóvel
+                </p>
+                {extracaoExtras.tipo_imovel && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-dark-muted">Tipo de imóvel</span>
+                    <span className="font-medium text-dark-text">{extracaoExtras.tipo_imovel}</span>
+                  </div>
+                )}
+                {extracaoExtras.cep && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-dark-muted">CEP</span>
+                    <span className="font-mono font-medium text-dark-text">
+                      {extracaoExtras.cep.replace(/^(\d{5})(\d{3})$/, '$1-$2')}
+                    </span>
+                  </div>
+                )}
+                {extracaoExtras.valor_aluguel != null && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-dark-muted">Aluguel declarado</span>
+                    <span className="font-medium text-status-success">
+                      {formatMoneyBR(extracaoExtras.valor_aluguel)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          {/* ── fim Automação PDF ────────────────────────────── */}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <EditField label="Nome do Proprietário" value={proprietarioNome} onChange={setProprietarioNome} placeholder="João da Silva" required />
             <EditField label="Celular do Proprietário" value={proprietarioCel} onChange={setProprietarioCel} placeholder="(11) 99999-9999" />

@@ -100,7 +100,7 @@ export default function ImobiliariaDetalhe() {
     setLoading(true)
     const { data } = await supabase
       .from('imobiliarias')
-      .select('id, nome_canonico, ativa, created_at, imagem_url, imagem_path, imobiliaria_aliases(id, alias)')
+      .select('id, nome_canonico, ativa, created_at, imagem_url, imagem_path, recebe_comissao, pct_comissao, objetivo_comercial, observacoes_comerciais, imobiliaria_aliases(id, alias)')
       .eq('id', id)
       .single()
     setImob(data)
@@ -326,6 +326,40 @@ export default function ImobiliariaDetalhe() {
               <div className="sm:col-span-2">
                 <CampoEmBreve label="Endereço" />
               </div>
+            </div>
+          </DataCard>
+          <DataCard title="Parceria comercial" description="Controle de comissão, objetivo e observações da imobiliária.">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+              <div>
+                <p className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider mb-2">Recebe comissão</p>
+                <label className="flex items-center gap-3 cursor-pointer w-fit">
+                  <div
+                    onClick={() => updateField('recebe_comissao', !imob.recebe_comissao)}
+                    className={`w-9 h-5 rounded-full transition-colors ${imob.recebe_comissao ? 'bg-status-success' : 'bg-dark-border'}`}
+                  >
+                    <div className={`w-3.5 h-3.5 bg-white rounded-full transition-transform m-[3px] ${imob.recebe_comissao ? 'translate-x-4' : 'translate-x-0'}`} />
+                  </div>
+                  <span className="text-sm text-dark-text">{imob.recebe_comissao ? 'Sim' : 'Nao'}</span>
+                </label>
+              </div>
+
+              <CampoEditavel
+                label="% Comissão"
+                value={imob.pct_comissao != null ? `${imob.pct_comissao}` : ''}
+                onSave={v => updateField('pct_comissao', v ? Number(v) : null)}
+              />
+
+              <CampoEditavel
+                label="Objetivo comercial"
+                value={imob.objetivo_comercial}
+                onSave={v => updateField('objetivo_comercial', v)}
+              />
+
+              <CampoEditavel
+                label="Observações comerciais"
+                value={imob.observacoes_comerciais}
+                onSave={v => updateField('observacoes_comerciais', v)}
+              />
             </div>
           </DataCard>
         </div>

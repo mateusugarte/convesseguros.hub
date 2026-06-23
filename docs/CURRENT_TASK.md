@@ -2,30 +2,26 @@
 
 ## Responsavel Atual
 
-Claude + Codex
+Claude
 
 ## Pagina
 
-CONVES_CONTEXTO_AGENTES.md, docs/PROJECT_CONTEXT.md, ROADMAP.md
+`src/pages/ApoicesGestao.jsx` — ModalFinalizar
 
 ## Objetivo
 
-Atualizar documentacao do projeto para refletir estado atual (modulo Auto, Financeiro) e criar documento extenso de reformulacao da Conves para apresentacao a diretoria.
+Automacao de preenchimento de campos via upload de PDF de apolice, com parser especifico por seguradora.
 
 ## Status
 
-Em execucao.
+Concluido — aguardando teste com PDFs reais.
 
-## Arquivos em uso
+## Arquivos alterados
 
-- `CONVES_CONTEXTO_AGENTES.md`
-- `docs/PROJECT_CONTEXT.md`
-- `ROADMAP.md`
-
-## Proximo Responsavel
-
-Codex (para contribuicoes de UI/design no documento)
+- `src/lib/apoliceParser.js` — criado (parsers Porto, Pottencial, Tokio Marine, Too Seguros)
+- `src/pages/ApoicesGestao.jsx` — ModalFinalizar: secao de upload + botao "Preencher informacoes"
+- `package.json` — dependencia pdfjs-dist adicionada
 
 ## Proximo Passo
 
-Desenvolver secoes de reformulacao cultural e de design do sistema junto ao usuario e Codex.
+Testar com PDFs reais de cada seguradora e ajustar regex se necessario.

@@ -209,6 +209,12 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
             <Field label="Assumida em"     value={fmtDt(ficha.assumida_em)} />
             <Field label="Seguradora"      value={ficha.seguradora} />
             <Field label="Retorno enviado" value={ficha.retorno_enviado ? 'Sim' : null} />
+            <Field
+              label="Passado pela imobiliária"
+              value={Object.prototype.hasOwnProperty.call(ficha.raw_data || {}, 'passado_pela_imobiliaria')
+                ? (ficha.raw_data?.passado_pela_imobiliaria ? 'Sim' : 'Não')
+                : null}
+            />
             <Field label="Finalizada em"   value={fmtDt(ficha.finalizada_em)} />
           </Section>
         </div>

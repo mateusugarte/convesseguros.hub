@@ -68,6 +68,23 @@ export default function AutoDashboard() {
       hint: 'itens ainda sem tratativa',
     },
   ]
+  const resumoRenovacao = [
+    {
+      label: 'Comissao este mes',
+      value: formatMoney(metrics?.renovacoesComissaoMesAtual ?? 0),
+      hint: 'renovacoes emitidas neste mes',
+    },
+    {
+      label: 'Comissao ano anterior',
+      value: formatMoney(metrics?.renovacoesComissaoAnoAnterior ?? 0),
+      hint: 'mes equivalente do ano passado',
+    },
+    {
+      label: 'Diferenca da comissao',
+      value: formatMoney(metrics?.renovacoesComissaoDiferenca ?? 0),
+      hint: 'crescimento ou retração do mes',
+    },
+  ]
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -125,6 +142,35 @@ export default function AutoDashboard() {
                 <p className="mt-2 text-sm leading-6 text-dark-muted">{item.hint}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </DataCard>
+
+      <DataCard
+        title="Renovacoes Auto"
+        subtitle="Comparativo mensal da carteira renovada com base em premio liquido e comissao"
+      >
+        <div className="grid gap-3 md:grid-cols-3">
+          {resumoRenovacao.map(item => (
+            <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-white/75 p-4 shadow-sm">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{item.label}</p>
+              <p className="mt-2 text-2xl font-semibold text-dark-text">{item.value}</p>
+              <p className="mt-2 text-sm leading-6 text-dark-muted">{item.hint}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-3xl border border-brand-secondary/15 bg-brand-secondary/5 p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">Premio liquido este mes</p>
+            <p className="mt-2 text-xl font-semibold text-dark-text">{formatMoney(metrics?.renovacoesPremioLiquidoMesAtual ?? 0)}</p>
+          </div>
+          <div className="rounded-3xl border border-brand-secondary/15 bg-brand-secondary/5 p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">Premio liquido ano anterior</p>
+            <p className="mt-2 text-xl font-semibold text-dark-text">{formatMoney(metrics?.renovacoesPremioLiquidoAnoAnterior ?? 0)}</p>
+          </div>
+          <div className="rounded-3xl border border-brand-secondary/15 bg-brand-secondary/5 p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">Diferenca de premio liquido</p>
+            <p className="mt-2 text-xl font-semibold text-dark-text">{formatMoney(metrics?.renovacoesPremioLiquidoDiferenca ?? 0)}</p>
           </div>
         </div>
       </DataCard>

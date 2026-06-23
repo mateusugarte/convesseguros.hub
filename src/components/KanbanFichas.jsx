@@ -4,7 +4,7 @@ import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDraggable, useDroppable,
 } from '@dnd-kit/core'
-import { fetchFichasKanban, assumirFicha, moverFichaStatus } from '../lib/fichas'
+import { fetchFichasKanban, assumirFicha, moverFichaStatusComRawData, moverFichaStatus } from '../lib/fichas'
 import { toNumber } from '../lib/apolices'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useAuth } from '../contexts/AuthContext'
@@ -495,6 +495,7 @@ function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) 
   const [valorParcela,    setValorParcela]    = useState('')
   const [numeroOrcamento, setNumeroOrcamento] = useState('')
   const [retornoEnviado,  setRetornoEnviado]  = useState(null)
+  const [passadoPelaImobiliaria, setPassadoPelaImobiliaria] = useState(false)
   const valido = seguradora && valorParcela && numeroOrcamento.trim() && retornoEnviado !== null
 
   return (
@@ -544,6 +545,16 @@ function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) 
             ))}
           </div>
         </div>
+
+        <label className="flex items-center gap-3 p-3 rounded-xl border border-dark-border bg-dark-surface2 cursor-pointer hover:border-brand-accent/40 transition-colors">
+          <input
+            type="checkbox"
+            checked={passadoPelaImobiliaria}
+            onChange={e => setPassadoPelaImobiliaria(e.target.checked)}
+            className="w-5 h-5 rounded accent-brand-accent"
+          />
+          <span className="text-sm text-dark-text">Passado pela imobiliária?</span>
+        </label>
       </div>
       <div className="flex justify-end gap-3 px-6 pb-5">
         <button onClick={onCancelar} className="btn-secondary text-sm">Cancelar</button>
@@ -553,11 +564,12 @@ function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) 
             valorParcela: toNumber(valorParcela),
             numeroOrcamento: numeroOrcamento.trim(),
             retornoEnviado,
+            passadoPelaImobiliaria,
           })}
           disabled={!valido || salvando}
           className="btn-primary text-sm"
         >
-          {salvando ? 'Salvando...' : 'Confirmar Aprovação'}
+          {salvando ? 'Salvando...' : 'Avançar'}
         </button>
       </div>
     </div>
@@ -735,10 +747,13 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     setPendingRecusado(null)
   }
 
-  async function handleConfirmarAprovado({ seguradora, valorParcela, numeroOrcamento, retornoEnviado }) {
+  async function handleConfirmarAprovado({ seguradora, valorParcela, numeroOrcamento, retornoEnviado, passadoPelaImobiliaria }) {
     if (!pendingAprovado) return
     setSalvandoAprovado(true)
-    const err = await moverFichaStatus(pendingAprovado.fichaId, 'aprovado', { userId: user?.id })
+    const err = await moverFichaStatusComRawData(pendingAprovado.fichaId, 'aprovado', {
+      userId: user?.id,
+      rawDataPatch: { passado_pela_imobiliaria: passadoPelaImobiliaria },
+    })
     if (!err) {
       const patch = {
         seguradora,
@@ -746,6 +761,10 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
         numero_orcamento: numeroOrcamento,
         retorno_enviado: retornoEnviado,
         finalizada_em: new Date().toISOString(),
+        raw_data: {
+          ...(pendingAprovado.fichaOriginal?.raw_data || {}),
+          passado_pela_imobiliaria: passadoPelaImobiliaria,
+        },
       }
       setFichas(prev => prev.map(f => (
         f.id === pendingAprovado.fichaId

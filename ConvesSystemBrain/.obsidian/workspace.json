@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "02-OPERACIONAL/PC-07-Onboarding-Imobiliaria.md",
+                "file": "00 - Mapa Mestre.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Links inversos para PC-07-Onboarding-Imobiliaria"
+              "title": "Links inversos para 00 - Mapa Mestre"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "02-OPERACIONAL/PC-07-Onboarding-Imobiliaria.md",
+                "file": "00 - Mapa Mestre.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Links de saída para PC-07-Onboarding-Imobiliaria"
+              "title": "Links de saída para 00 - Mapa Mestre"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "02-OPERACIONAL/PC-07-Onboarding-Imobiliaria.md",
+                "file": "00 - Mapa Mestre.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Sumário de PC-07-Onboarding-Imobiliaria"
+              "title": "Sumário de 00 - Mapa Mestre"
             }
           }
         ]
@@ -185,35 +185,36 @@
   },
   "active": "4b6898b642ecae45",
   "lastOpenFiles": [
+    "01-COMERCIAL/Produtos/Fiança.md",
+    "02 - Sistema Online/Fichas.md",
+    "02 - Sistema Online/Fluxos Operacionais.md",
+    "03 - Sistema Cultural/Objetivos Setoriais.md",
+    "03 - Sistema Cultural/Sistema Cultural.md",
+    "03 - Sistema Cultural/Rituais por Time.md",
+    "03 - Sistema Cultural/Relacionamento com Parceiros.md",
+    "05 - Processos/Processos.md",
+    "00 - Mapa Mestre.md",
+    "08 - IA e Handoff/Fluxo de Handoff.md",
+    "08 - IA e Handoff/Claude - Visual.md",
+    "Sem título.canvas",
+    "02-OPERACIONAL/PC-07-Onboarding-Imobiliaria.md",
     "08 - IA e Handoff/README.md",
     "08 - IA e Handoff/ChatGPT - Documentacao.md",
-    "08 - IA e Handoff/Claude - Visual.md",
-    "08 - IA e Handoff/Fluxo de Handoff.md",
     "08 - IA e Handoff/IA e Handoff.md",
     "08 - IA e Handoff",
     "Bem-vindo.md",
     "02-OPERACIONAL/Operacional.md",
-    "01-COMERCIAL/Produtos/Fiança.md",
     "01-COMERCIAL/Produtos",
     "01-COMERCIAL/Comercial.md",
     "07 - Templates/Templates.md",
     "06 - Reunioes e Decisoes/Reunioes e Decisoes.md",
-    "05 - Processos/Processos.md",
     "04 - Usuarios e Perfis/Usuarios e Perfis.md",
-    "03 - Sistema Cultural/Sistema Cultural.md",
     "02 - Sistema Online/Sistema Online.md",
     "01 - Estrategia/Estrategia.md",
     "02 - Sistema Online/Planejamento Operacional.md",
-    "02-OPERACIONAL/PC-07-Onboarding-Imobiliaria.md",
     "02-OPERACIONAL/PC-06-Financiamento.md",
     "02-OPERACIONAL/PC-05-Consorcio.md",
-    "02-OPERACIONAL/PC-04-Saude-PJ.md",
-    "02-OPERACIONAL/PC-03-Auto-Renovacao.md",
-    "02-OPERACIONAL/PC-02-Auto-Novo.md",
-    "02-OPERACIONAL/PC-01-Campanha-Mensal.md",
     "02-OPERACIONAL",
-    "01-COMERCIAL/Setores-x-Faturamento.md",
-    "01-COMERCIAL/Rituais-de-Gestao.md",
     "01-COMERCIAL",
     "07 - Templates",
     "06 - Reunioes e Decisoes",

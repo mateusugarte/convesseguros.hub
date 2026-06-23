@@ -16,6 +16,9 @@ import { Select } from './ui/Select'
 const STATUS_OPTIONS  = ['pendente','em_cotacao','em_analise','aprovado','recusado','emitido','cancelado','cpf_invalido','expirada']
 const PRODUTO_OPTIONS = ['residencial_pf','comercial_pf','pessoa_juridica']
 const CAMPOS_REPLICAVEIS = new Set(['parcelamento'])
+const ORCAMENTISTA_EXTRA_OPTIONS = [
+  { value: 'Passado pela imob', label: 'Passado pela imob' },
+]
 const COTACAO_STATUS_OPTIONS = [
   { value: '', label: 'Sem status' },
   { value: 'em_analise', label: 'Em análise' },
@@ -399,7 +402,10 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                 value={form.orcamentista_forms}
                 onChange={v => set('orcamentista_forms', v)}
                 placeholder="Selecionar orçamentista..."
-                options={profiles.map(p => ({ value: p.nome, label: p.nome }))}
+                options={[
+                  ...ORCAMENTISTA_EXTRA_OPTIONS,
+                  ...profiles.map(p => ({ value: p.nome, label: p.nome })),
+                ]}
               />
             </Field>
             <Field label="Observações" span2>

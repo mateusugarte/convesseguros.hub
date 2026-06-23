@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { finalizarFicha } from '../lib/fichas'
+import { finalizarFichaComRawData } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { CheckCircle2, ArrowLeft, ShieldCheck } from 'lucide-react'
 import SeguradoraSelect from './SeguradoraSelect'
@@ -20,12 +20,17 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
   const seguradoraDefinida = ficha?.seguradora || ficha?.raw_data?.retorno_gerado?.seguradora_escolhida || ''
   const [seguradora,setSeguradora]= useState(seguradoraDefinida)
   const [retorno,   setRetorno]   = useState(ficha?.retorno_enviado ?? false)
+  const [passadoPelaImobiliaria, setPassadoPelaImobiliaria] = useState(Boolean(ficha?.raw_data?.passado_pela_imobiliaria))
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState('')
 
   useEffect(() => {
     setSeguradora(seguradoraDefinida)
   }, [seguradoraDefinida])
+
+  useEffect(() => {
+    setPassadoPelaImobiliaria(Boolean(ficha?.raw_data?.passado_pela_imobiliaria))
+  }, [ficha?.raw_data?.passado_pela_imobiliaria])
 
   async function handleFinalizar() {
     if (!status) { setError('Selecione o status final.'); return }
@@ -36,11 +41,14 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
     }
     setLoading(true)
     setError('')
-    const err = await finalizarFicha(ficha.id, {
+    const err = await finalizarFichaComRawData(ficha.id, {
       status,
       seguradora: precisaSeguradora ? (seguradoraDefinida || seguradora).trim() || null : null,
       retorno_enviado: retorno,
       userId: user?.id,
+      rawDataPatch: status === 'aprovado'
+        ? { passado_pela_imobiliaria: passadoPelaImobiliaria }
+        : undefined,
     })
     if (err) {
       console.error('Erro ao finalizar ficha:', err)
@@ -110,9 +118,21 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
                 </div>
               ) : (
                 <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={ficha?.produto} required />
-              )
-            )}
+            )
+          )}
           </div>
+
+          {status === 'aprovado' && (
+            <label className="flex items-center gap-3 p-3 rounded-xl border border-dark-border bg-dark-surface2 cursor-pointer hover:border-brand-accent/40 transition-colors">
+              <input
+                type="checkbox"
+                checked={passadoPelaImobiliaria}
+                onChange={e => setPassadoPelaImobiliaria(e.target.checked)}
+                className="w-5 h-5 rounded accent-brand-accent"
+              />
+              <span className="text-sm text-dark-text">Passado pela imobiliária?</span>
+            </label>
+          )}
 
           {/* Retorno */}
           <label className="flex items-center gap-3 p-3 rounded-xl border border-dark-border bg-dark-surface2 cursor-pointer hover:border-brand-accent/40 transition-colors">
@@ -135,7 +155,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
         <div className="modal-shell-footer flex gap-3 px-6 pb-5 pt-4 border-t border-dark-border/60">
           <button onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
           <button onClick={handleFinalizar} disabled={loading || !status} className="btn-primary flex-1">
-            {loading ? 'Salvando...' : 'Finalizar Ficha'}
+            {loading ? 'Salvando...' : status === 'aprovado' ? 'Avançar' : 'Finalizar Ficha'}
           </button>
         </div>
       </div>

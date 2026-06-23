@@ -803,6 +803,12 @@ export default function FichaDetalhePage() {
                 <span className="text-sm text-dark-text">{ficha.retorno_enviado ? 'Sim' : 'Não'}</span>
               </label>
             </div>
+            <ReadField
+              label="Passado pela imobiliária"
+              value={Object.prototype.hasOwnProperty.call(ficha.raw_data || {}, 'passado_pela_imobiliaria')
+                ? (ficha.raw_data?.passado_pela_imobiliaria ? 'Sim' : 'Não')
+                : null}
+            />
           </DataCard>
 
           <DataCard title="Cotação e retorno" bodyClassName="space-y-5">

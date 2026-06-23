@@ -522,17 +522,40 @@ export async function assumirFicha(id, orcamentistaId) {
   return null
 }
 
-export async function finalizarFicha(id, { status, seguradora, retorno_enviado, userId }) {
+async function buildRawDataUpdate(id, rawDataPatch) {
+  if (!rawDataPatch || Object.keys(rawDataPatch).length === 0) return {}
+
+  const { data: current, error } = await supabase
+    .from('fichas')
+    .select('raw_data')
+    .eq('id', id)
+    .single()
+
+  if (error) return { error }
+
+  return {
+    raw_data: {
+      ...(current?.raw_data || {}),
+      ...rawDataPatch,
+    },
+  }
+}
+
+export async function finalizarFicha(id, { status, seguradora, retorno_enviado, userId, rawDataPatch }) {
+  const rawDataUpdate = await buildRawDataUpdate(id, rawDataPatch)
+  if (rawDataUpdate.error) return rawDataUpdate.error
+
   const { error } = await supabase.from('fichas').update({
     status, seguradora, retorno_enviado,
     finalizada_em: new Date().toISOString(),
     finalizado_por: userId || null,
+    ...rawDataUpdate,
   }).eq('id', id)
   if (!error) registrarAudit('finalizar_ficha', id, null, { status, seguradora, retorno_enviado })
   return error
 }
 
-export async function moverFichaStatus(fichaId, novoStatus, { assumir = false, userId } = {}) {
+export async function moverFichaStatus(fichaId, novoStatus, { assumir = false, userId, rawDataPatch } = {}) {
   const update = { status: novoStatus }
   if (assumir && userId) {
     update.orcamentista_id = userId
@@ -549,6 +572,65 @@ export async function moverFichaStatus(fichaId, novoStatus, { assumir = false, u
   if (error) return error
   if (!data || data.length === 0) return new Error('Sem permissão para mover esta ficha')
   return null
+}
+
+export async function moverFichaStatusComRawData(fichaId, novoStatus, { assumir = false, userId, rawDataPatch } = {}) {
+  const update = { status: novoStatus }
+  if (assumir && userId) {
+    update.orcamentista_id = userId
+    update.assumida = true
+    update.assumida_em = new Date().toISOString()
+  }
+  if (novoStatus === 'pendente') {
+    update.assumida = false
+    update.orcamentista_id = null
+    update.assumida_em = null
+  }
+
+  if (rawDataPatch && Object.keys(rawDataPatch).length > 0) {
+    const { data: current, error: currentError } = await supabase
+      .from('fichas')
+      .select('raw_data')
+      .eq('id', fichaId)
+      .single()
+    if (currentError) return currentError
+    update.raw_data = {
+      ...(current?.raw_data || {}),
+      ...rawDataPatch,
+    }
+  }
+
+  const { data, error } = await supabase.from('fichas').update(update).eq('id', fichaId).select('id')
+  if (error) return error
+  if (!data || data.length === 0) return new Error('Sem permissao para mover esta ficha')
+  return null
+}
+
+export async function finalizarFichaComRawData(id, { status, seguradora, retorno_enviado, userId, rawDataPatch }) {
+  const update = {
+    status,
+    seguradora,
+    retorno_enviado,
+    finalizada_em: new Date().toISOString(),
+    finalizado_por: userId || null,
+  }
+
+  if (rawDataPatch && Object.keys(rawDataPatch).length > 0) {
+    const { data: current, error: currentError } = await supabase
+      .from('fichas')
+      .select('raw_data')
+      .eq('id', id)
+      .single()
+    if (currentError) return currentError
+    update.raw_data = {
+      ...(current?.raw_data || {}),
+      ...rawDataPatch,
+    }
+  }
+
+  const { error } = await supabase.from('fichas').update(update).eq('id', id)
+  if (!error) registrarAudit('finalizar_ficha', id, null, { status, seguradora, retorno_enviado })
+  return error
 }
 
 export async function marcarRetornoEnviado(id) {

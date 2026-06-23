@@ -1064,6 +1064,7 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
         return
       }
       if (campos.nome_proprietario) setProprietarioNome(campos.nome_proprietario)
+      if (campos.proprietario_cel) setProprietarioCel(campos.proprietario_cel)
       if (campos.numero_apolice)   setNumeroApolice(campos.numero_apolice)
       if (isLikelyPolicyNumber(campos.numero_proposta)) setNumeroProposta(campos.numero_proposta)
       if (campos.endereco)         setEndereco(campos.endereco)

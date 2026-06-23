@@ -133,6 +133,19 @@ function parsePortoSeguro(text) {
   const locador = text.match(/\bLOCADOR\b\s+(.+?)(?=\s+CPF\/CNPJ|\s+CNPJ|\s+CPF|\s+SEGUNDO|\s+TERCEIRO)/i)
   if (locador) r.nome_proprietario = locador[1].trim()
 
+  // Na Porto, os dados do proprietário costumam aparecer no bloco "DADOS DO SEGURADO".
+  if (!r.nome_proprietario) {
+    const segurado =
+      text.match(/\bDADOS?\s+DO\s+SEGURADO\b[\s\S]{0,250}?\bSEGURADO\b\s*:?\s*(.+?)(?=\s*(?:CPF|CNPJ|DATA DE NASCIMENTO|NASCIMENTO|CELULAR|TELEFONE|E-?MAIL|ENDERE|LOCAL DE RISCO))/i)
+      || text.match(/\bSEGURADO\b\s*:?\s*(.+?)(?=\s*(?:CPF|CNPJ|DATA DE NASCIMENTO|NASCIMENTO|CELULAR|TELEFONE|E-?MAIL|ENDERE|LOCAL DE RISCO))/i)
+    if (segurado) r.nome_proprietario = segurado[1].trim()
+  }
+
+  const celSegurado =
+    text.match(/\b(?:CELULAR|TELEFONE|FONE)\b\s*:?\s*(\(?\d{2}\)?\s*\d{4,5}-?\d{4})/i)
+    || text.match(/\b(?:CELULAR|TELEFONE|FONE)\b[\s\S]{0,60}?(\(?\d{2}\)?\s*\d{4,5}-?\d{4})/i)
+  if (celSegurado) r.proprietario_cel = celSegurado[1].trim()
+
   r.forma_pagamento = 'fatura_sem_entrada'
 
   return r

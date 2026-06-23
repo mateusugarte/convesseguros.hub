@@ -82,7 +82,8 @@ async function fetchAllRows(queryFactory, pageSize = 1000) {
   let all = []
   let offset = 0
   while (true) {
-    const { data } = await queryFactory().range(offset, offset + pageSize - 1)
+    const { data, error } = await queryFactory().range(offset, offset + pageSize - 1)
+    if (error) throw error
     if (!data || data.length === 0) break
     all = all.concat(data)
     if (data.length < pageSize) break
@@ -358,24 +359,27 @@ export async function fetchFichas({ produto, ano, mes, dateFrom, dateTo, tipo, s
 }
 
 export async function fetchFichasAprovadasEmissao({ search, imobiliarias } = {}) {
-  let q = supabase
-    .from('fichas')
-    .select(`
-      id, created_at, produto, imobiliaria,
-      nome_interessado, nome_empresa, cpf, cnpj,
-      valor_aluguel, celular, cep, tipo_imovel,
-      vigencia, vencimento, endereco, forma_pagamento,
-      pct_comissao, pct_desconto, parcelamento, valor_parcela,
-      status, assumida, orcamentista_id, assumida_em,
-      seguradora, retorno_enviado, raw_data
-    `)
-    .in('status', ['aprovado', 'emitido'])
-    .order('created_at', { ascending: false })
+  const data = await fetchAllRows(() => {
+    let q = supabase
+      .from('fichas')
+      .select(`
+        id, created_at, produto, imobiliaria,
+        nome_interessado, nome_empresa, cpf, cnpj,
+        valor_aluguel, celular, cep, tipo_imovel,
+        vigencia, vencimento, endereco, forma_pagamento,
+        pct_comissao, pct_desconto, parcelamento, valor_parcela,
+        status, assumida, orcamentista_id, assumida_em,
+        seguradora, retorno_enviado, raw_data,
+        profiles!orcamentista_id(nome, avatar_url)
+      `)
+      .in('status', ['aprovado', 'emitido'])
+      .order('created_at', { ascending: false })
 
-  if (Array.isArray(imobiliarias) && imobiliarias.length) {
-    q = q.in('imobiliaria', imobiliarias)
-  }
-  const data = await fetchAllRows(() => q)
+    if (Array.isArray(imobiliarias) && imobiliarias.length) {
+      q = q.in('imobiliaria', imobiliarias)
+    }
+    return q
+  })
   if (!search?.trim()) return data || []
 
   const term = normalizeSearchText(search.trim())

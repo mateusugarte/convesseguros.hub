@@ -190,6 +190,7 @@ function resolveFichaEmissao(ficha) {
     cotacoes: Array.isArray(raw?.cotacoes) ? raw.cotacoes : [],
     seguradoraPreferencial: raw?.seguradora_preferencial || null,
     seguradoraMaisBarata: raw?.seguradora_mais_barata || null,
+    avatarUrl: ficha?.profiles?.avatar_url || raw?.avatar_url || '',
   }
 }
 
@@ -588,6 +589,11 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
           imobiliarias: aliasesFilter,
         })
         if (!cancelled) setFichasEncontradas(data)
+      } catch (error) {
+        if (!cancelled) {
+          setFichasEncontradas([])
+          toast({ type: 'error', title: 'Erro ao carregar fichas aprovadas', message: error?.message || 'Tente atualizar a página.' })
+        }
       } finally {
         if (!cancelled) setBuscando(false)
       }
@@ -813,13 +819,20 @@ function ModalIniciarEmissao({ onClose, onCriado, toast }) {
                           }`}
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-dark-text">
-                                {resumo.nome}
-                              </p>
-                              <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-dark-muted">
-                                {PRODUTO_LABELS[f.produto] || f.produto || '—'}
-                              </p>
+                            <div className="flex min-w-0 items-center gap-2">
+                              <Avatar
+                                name={resumo.nome}
+                                src={resumo.avatarUrl || ''}
+                                size="sm"
+                              />
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-dark-text">
+                                  {resumo.nome}
+                                </p>
+                                <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-dark-muted">
+                                  {PRODUTO_LABELS[f.produto] || f.produto || '—'}
+                                </p>
+                              </div>
                             </div>
                             <span className="badge text-[9px] bg-status-success/15 text-status-success">
                               Aprovada

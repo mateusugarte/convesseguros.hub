@@ -710,6 +710,7 @@ export default function Layout() {
         open={cmdOpen}
         onClose={() => setCmdOpen(false)}
         onOpenFicha={id => { navigate(`/fichas/${id}`); setCmdOpen(false) }}
+        onOpenApolice={id => { navigate(`/apolices/${id}`); setCmdOpen(false) }}
       />
     </div>
   )

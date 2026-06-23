@@ -258,7 +258,56 @@ export default function ApoliceDetalhe() {
     const statusFinal = statusOverride || statusEmissao
     const dataEmissao = ['emitida', 'enviada'].includes(statusFinal) ? (apolice?.data_emissao || new Date().toISOString().slice(0, 10)) : null
     const numeroApoliceFinal = numeroApolice.trim() || apolice?.numero_apolice || null
-    const err = await atualizarApolice(id, {
+    const fichaBase = apolice?.fichas || null
+    const fichaId = fichaBase?.id
+    const fichaValorAluguelNum = fichaValorAluguel === '' ? null : toNumber(fichaValorAluguel)
+    const fichaPctComissaoNum = fichaPctComissao === '' ? null : toNumber(fichaPctComissao)
+    const fichaPctDescontoNum = fichaPctDesconto === '' ? null : toNumber(fichaPctDesconto)
+    const fichaParcelamentoNum = fichaParcelamento === '' ? null : toNumber(fichaParcelamento)
+    const fichaPayload = fichaId ? {
+      nome_interessado: fichaProduto === 'pessoa_juridica' ? null : fichaNome.trim() || null,
+      nome_empresa: fichaProduto === 'pessoa_juridica' ? fichaNome.trim() || null : null,
+      cpf: fichaProduto === 'pessoa_juridica' ? null : fichaCpf.trim() || null,
+      cnpj: fichaProduto === 'pessoa_juridica' ? fichaCnpj.trim() || null : null,
+      celular: fichaCelular.trim() || null,
+      produto: fichaProduto || null,
+      tipo_imovel: fichaTipoImovel.trim() || null,
+      cep: fichaCep.trim() || null,
+      valor_aluguel: fichaValorAluguelNum,
+      imobiliaria: fichaImobiliaria.trim() || null,
+      seguradora: fichaSeguradora.trim() || null,
+      status: fichaStatus || null,
+      vigencia: fichaVigencia.trim() || null,
+      pct_comissao: fichaPctComissaoNum,
+      pct_desconto: fichaPctDescontoNum,
+      parcelamento: fichaParcelamentoNum,
+      vencimento: fichaVencimento.trim() || null,
+      origem_lead: fichaOrigem.trim() || null,
+      observacoes: fichaObservacoes.trim() || null,
+      raw_data: {
+        nome_interessado: fichaProduto === 'pessoa_juridica' ? null : fichaNome.trim() || null,
+        nome_empresa: fichaProduto === 'pessoa_juridica' ? fichaNome.trim() || null : null,
+        cpf: fichaProduto === 'pessoa_juridica' ? null : fichaCpf.trim() || null,
+        cnpj: fichaProduto === 'pessoa_juridica' ? fichaCnpj.trim() || null : null,
+        celular: fichaCelular.trim() || null,
+        produto: fichaProduto || null,
+        tipo_imovel: fichaTipoImovel.trim() || null,
+        cep: fichaCep.trim() || null,
+        valor_aluguel: fichaValorAluguelNum,
+        imobiliaria: fichaImobiliaria.trim() || null,
+        seguradora: fichaSeguradora.trim() || null,
+        status: fichaStatus || null,
+        vigencia: fichaVigencia.trim() || null,
+        pct_comissao: fichaPctComissaoNum,
+        pct_desconto: fichaPctDescontoNum,
+        parcelamento: fichaParcelamentoNum,
+        vencimento: fichaVencimento.trim() || null,
+        origem_lead: fichaOrigem.trim() || null,
+        observacoes: fichaObservacoes.trim() || null,
+      },
+    } : null
+    const [errApolice, errFicha] = await Promise.all([
+      atualizarApolice(id, {
       numero_apolice: numeroApoliceFinal,
       numero_proposta: numeroProposta.trim() || null,
       seguradora: seguradora || null,
@@ -279,8 +328,11 @@ export default function ApoliceDetalhe() {
       valor_producao: premioTotal,
       valor_comissao: valorComissao,
       data_emissao: dataEmissao,
-    })
+    }),
+      fichaId ? editarFicha(fichaId, fichaPayload, user?.id) : Promise.resolve(null),
+    ])
     setSalvando(false)
+    const err = errApolice || errFicha
     if (err) { toast({ type: 'error', title: 'Erro ao salvar apólice', message: err.message || 'Falha na atualização.' }); load(); return }
     toast({ type: 'success', title: 'Alterações salvas!' })
     load()
@@ -504,6 +556,8 @@ export default function ApoliceDetalhe() {
               <EditField label="% Comissão" type="text" inputMode="decimal" value={fichaPctComissao} onChange={setFichaPctComissao} placeholder="10,00" />
               <EditField label="% Desconto" type="text" inputMode="decimal" value={fichaPctDesconto} onChange={setFichaPctDesconto} placeholder="5,00" />
               <EditField label="Parcelamento" type="number" value={fichaParcelamento} onChange={setFichaParcelamento} placeholder="12" />
+              <EditField label="Vencimento" value={fichaVencimento} onChange={setFichaVencimento} placeholder="Ex: 10/12/2026" />
+              <EditField label="Origem do lead" value={fichaOrigem} onChange={setFichaOrigem} placeholder="Origem da ficha" />
               <div className="col-span-2">
                 <EditField label="Observações" value={fichaObservacoes} onChange={setFichaObservacoes} />
               </div>

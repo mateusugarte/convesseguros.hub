@@ -2,9 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core'
 import {
+  Briefcase,
+  Building,
   ChevronLeft,
   ChevronRight,
   GripVertical,
+  Home,
+  LayoutGrid,
   Plus,
   RefreshCw,
   Search,
@@ -32,6 +36,10 @@ const COLUNAS = [
   { id: 'emitida', label: 'Apólice Emitida', color: '#8B5CF6' },
   { id: 'enviada', label: 'Apólice Enviada', color: '#10B981' },
 ]
+
+const PRODUTO_ICON = { residencial_pf: Home, comercial_pf: Briefcase, pessoa_juridica: Building }
+const PRODUTO_COLOR = { residencial_pf: '#4A90D9', comercial_pf: '#10B981', pessoa_juridica: '#8B5CF6' }
+const PRODUTO_ABBR = { residencial_pf: 'RES. PF', comercial_pf: 'COM. PF', pessoa_juridica: 'PJ' }
 
 function getPeriodDates(filtro) {
   const now = new Date()
@@ -74,8 +82,24 @@ function nomeApolice(apolice) {
   ) || 'Sem nome'
 }
 
+function produtoApolice(apolice) {
+  return apolice?.fichas?.produto || apolice?.produto
+}
+
 function documentoApolice(apolice) {
   return apolice?.fichas?.cnpj || apolice?.fichas?.cpf || '—'
+}
+
+function statusBadgeClass(status) {
+  switch (status) {
+    case 'emitida':
+    case 'enviada':
+      return 'badge-success'
+    case 'proposta_transmitida':
+      return 'badge-warning'
+    default:
+      return 'badge-info'
+  }
 }
 
 function resumoFicha(ficha) {
@@ -97,100 +121,138 @@ function resumoFicha(ficha) {
   }
 }
 
+function InfoPill({ label, value, mono = false }) {
+  return (
+    <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2 py-1.5">
+      <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">{label}</p>
+      <p className={`mt-0.5 text-[10px] text-dark-text truncate${mono ? ' font-mono' : ''}`}>{value || '—'}</p>
+    </div>
+  )
+}
+
 function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, dragListeners, dragAttributes }) {
+  const [expandido, setExpandido] = useState(false)
+  const produto = produtoApolice(apolice)
+  const ProdutoIcon = PRODUTO_ICON[produto] || LayoutGrid
+  const produtoColor = PRODUTO_COLOR[produto] || '#6B7280'
   const emissorNome = apolice?.profiles?.nome || ''
+  const statusLabel = STATUS_EMISSAO_LABELS[apolice?.status_emissao]?.label || apolice?.status_emissao || 'Recebida'
   const documento = documentoApolice(apolice)
   const celular = apolice?.fichas?.celular || '—'
   const tipoImovel = normalizeDisplayText(apolice?.fichas?.tipo_imovel) || '—'
   const vigencia = [apolice?.inicio_vigencia, apolice?.fim_vigencia].filter(Boolean).join(' até ') || '—'
   const parcela = apolice?.valor_parcela ? formatMoneyBR(apolice.valor_parcela) : '—'
   const parcelamento = apolice?.parcelamento ? `${apolice.parcelamento}x` : '—'
-  const statusLabel = STATUS_EMISSAO_LABELS[apolice?.status_emissao]?.label || 'Recebida'
 
   return (
-    <div className={`kanban-card${isDragOverlay ? ' kanban-card-dragging' : ''}`}>
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          {!isDragOverlay && (
-            <button
-              {...dragListeners}
-              {...dragAttributes}
-              className="text-dark-muted hover:text-dark-text transition-colors"
-              onClick={e => e.stopPropagation()}
-              tabIndex={-1}
-              aria-label="Arrastar apólice"
-            >
-              <GripVertical className="w-3.5 h-3.5" />
-            </button>
-          )}
-          <span className="badge badge-info text-[9px] uppercase tracking-wide">{statusLabel}</span>
-        </div>
-        <span className={`badge text-[9px] font-mono ${timeBadgeClass(apolice?.created_at)}`}>
-          {timeSince(apolice?.created_at)}
-        </span>
-      </div>
+    <div className={`kanban-card${isDragOverlay ? ' kanban-card-dragging' : ''}`} style={{ '--kanban-accent': produtoColor }}>
+      {!isDragOverlay && (
+        <button
+          {...dragListeners}
+          {...dragAttributes}
+          className="kanban-grip"
+          onClick={event => event.stopPropagation()}
+          tabIndex={-1}
+          aria-label="Arrastar"
+        >
+          <GripVertical className="w-3.5 h-3.5" />
+        </button>
+      )}
 
-      <button type="button" className="w-full text-left" onClick={() => onOpen?.(apolice.id)}>
-        <p className="text-[13px] font-semibold text-dark-text leading-tight truncate">
+      <div className="kanban-card-body cursor-pointer" onClick={() => !isDragOverlay && onOpen?.(apolice.id)}>
+        <div className="flex items-center justify-between gap-1 mb-1.5">
+          <span
+            className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-[3px] rounded-full uppercase tracking-wide select-none"
+            style={{ background: `${produtoColor}20`, color: produtoColor }}
+          >
+            <ProdutoIcon className="w-2.5 h-2.5" strokeWidth={2.5} />
+            {PRODUTO_ABBR[produto] || 'AUTO'}
+          </span>
+          <span className={`badge text-[9px] font-mono select-none ${statusBadgeClass(apolice?.status_emissao)}`}>
+            {statusLabel}
+          </span>
+          <span className={`badge text-[9px] font-mono select-none ${timeBadgeClass(apolice?.created_at)}`}>
+            {timeSince(apolice?.created_at)}
+          </span>
+        </div>
+
+        <p className="text-[12.5px] font-semibold text-dark-text leading-snug truncate mb-0.5">
           {nomeApolice(apolice)}
         </p>
-        <p className="mt-1 text-[10px] text-dark-muted truncate">
+        <p className="text-[10px] text-dark-muted truncate leading-none mb-1.5">
           {resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || '—')}
         </p>
 
         {apolice?.numero_apolice && (
-          <p className="mt-2 text-[10px] font-mono" style={{ color: '#2B5BA8' }}>
+          <p className="text-[10px] font-mono mb-1.5" style={{ color: '#2B5BA8' }}>
             {apolice.numero_apolice}
           </p>
         )}
-      </button>
 
-      {apolice?.seguradora && (
-        <div className="mt-2">
-          <SeguradoraBadge nome={apolice.seguradora} size="xs" />
-        </div>
-      )}
-
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <InfoPill label="Documento" value={documento} mono />
-        <InfoPill label="Celular" value={celular} />
-        <InfoPill label="Imóvel" value={tipoImovel} />
-        <InfoPill label="Parcelas" value={parcelamento} />
-      </div>
-
-      <div className="mt-2 rounded-xl border border-dark-border/60 bg-dark-surface2/20 px-3 py-2">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Vigência</p>
-            <p className="mt-0.5 text-[10px] text-dark-text truncate">{vigencia}</p>
+        {apolice?.seguradora && (
+          <div className="mb-1.5">
+            <SeguradoraBadge nome={apolice.seguradora} size="xs" />
           </div>
-          <div className="text-right">
-            <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Parcela</p>
-            <p className="mt-0.5 text-[10px] font-semibold text-brand-accent">{parcela}</p>
+        )}
+
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
+          <InfoPill label="Documento" value={documento} mono />
+          <InfoPill label="Celular" value={celular} />
+          <InfoPill label="Imóvel" value={tipoImovel} />
+          <InfoPill label="Parcelas" value={parcelamento} />
+        </div>
+
+        <div className="mt-1.5 rounded-xl border border-dark-border/60 bg-dark-surface2/25 px-2 py-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Vigência</p>
+              <p className="mt-0.5 text-[10px] text-dark-text truncate">{vigencia}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Parcela</p>
+              <p className="mt-0.5 text-[10px] font-semibold text-brand-accent">{parcela}</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="mt-3 pt-2 border-t border-dark-border/40 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <Avatar name={emissorNome || 'Livre'} src={apolice?.profiles?.avatar_url || ''} size="sm" />
-          <span className="text-[10px] text-dark-muted truncate">
-            {emissorNome ? emissorNome.split(' ')[0] : 'Livre'}
-          </span>
+        <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-dark-border/40 mt-auto">
+          {emissorNome ? (
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Avatar name={emissorNome} src={apolice?.profiles?.avatar_url || ''} size="sm" />
+              <span className="text-[10px] text-dark-muted font-medium truncate max-w-[96px]">
+                {emissorNome.split(' ')[0]}
+              </span>
+            </div>
+          ) : (
+            <span className="text-[9px] text-status-warning font-semibold tracking-wide uppercase">Livre</span>
+          )}
+
+          {!isDragOverlay && (
+            <button
+              type="button"
+              onPointerDown={event => event.stopPropagation()}
+              onClick={event => {
+                event.stopPropagation()
+                setExpandido(value => !value)
+              }}
+              className="text-[9px] text-dark-muted hover:text-dark-text transition-colors px-1.5 py-0.5 rounded-md hover:bg-dark-surface2"
+            >
+              {expandido ? '▲' : '▼ Detalhes'}
+            </button>
+          )}
         </div>
-        <button type="button" className="text-[10px] text-dark-muted hover:text-dark-text transition-colors" onClick={() => onOpen?.(apolice.id)}>
-          Detalhes
-        </button>
-      </div>
-    </div>
-  )
-}
 
-function InfoPill({ label, value, mono = false }) {
-  return (
-    <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2.5 py-2">
-      <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">{label}</p>
-      <p className={`mt-0.5 text-[10px] text-dark-text truncate${mono ? ' font-mono' : ''}`}>{value || '—'}</p>
+        {expandido && !isDragOverlay && (
+          <div className="space-y-0.5 pt-1.5 mt-1.5 border-t border-dark-border/40 animate-fade-in">
+            <p className="text-[9px] text-dark-muted truncate">
+              Imobiliária: {resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || '—')}
+            </p>
+            {apolice?.fichas?.cep && <p className="text-[9px] text-dark-muted font-mono">CEP: {apolice.fichas.cep}</p>}
+            {apolice?.seguradora && <p className="text-[9px] text-dark-muted">Seguradora: {apolice.seguradora}</p>}
+            {apolice?.valor_parcela && <p className="text-[9px] text-dark-muted">Parcela: {parcela}</p>}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -202,7 +264,7 @@ function DraggableCard({ apolice, resolverNome, onOpen }) {
   })
 
   return (
-    <div ref={setNodeRef} style={{ opacity: isDragging ? 0.35 : 1 }}>
+    <div ref={setNodeRef} style={{ opacity: isDragging ? 0.25 : 1, transition: isDragging ? 'none' : 'opacity 0.2s ease' }}>
       <KanbanCard
         apolice={apolice}
         resolverNome={resolverNome}
@@ -219,18 +281,12 @@ function DroppableColumn({ col, apolices, resolverNome, onOpen }) {
 
   return (
     <div className="kanban-col flex flex-col flex-shrink-0">
-      <div
-        className="kanban-col-header"
-        style={{ background: `${col.color}14`, borderColor: `${col.color}45` }}
-      >
+      <div className="kanban-col-header" style={{ background: `${col.color}14`, borderColor: `${col.color}45` }}>
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-2 h-2 rounded-full" style={{ background: col.color }} />
           <span className="text-[12px] font-semibold" style={{ color: col.color }}>{col.label}</span>
         </div>
-        <span
-          className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md"
-          style={{ background: `${col.color}24`, color: col.color }}
-        >
+        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md" style={{ background: `${col.color}24`, color: col.color }}>
           {apolices.length}
         </span>
       </div>
@@ -292,9 +348,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast, grupos, getAliases, use
   }, [busca, getAliases, imobFiltro, toast])
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      loadFichas()
-    }, 250)
+    const timeout = setTimeout(() => loadFichas(), 250)
     return () => clearTimeout(timeout)
   }, [loadFichas])
 
@@ -350,28 +404,22 @@ function ModalIniciarEmissao({ onClose, onCriado, toast, grupos, getAliases, use
         <div className="px-7 py-6 space-y-5">
           <div className="grid grid-cols-1 xl:grid-cols-[300px_minmax(0,1fr)] gap-4">
             <div>
-              <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
-                Imobiliária
-              </label>
-              <select value={imobFiltro} onChange={e => setImobFiltro(e.target.value)} className="select text-sm">
+              <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Imobiliária</label>
+              <select value={imobFiltro} onChange={event => setImobFiltro(event.target.value)} className="select text-sm">
                 <option value="">Todas as imobiliárias</option>
                 {grupos.map(grupo => (
-                  <option key={grupo.id} value={grupo.nome_canonico}>
-                    {grupo.nome_canonico}
-                  </option>
+                  <option key={grupo.id} value={grupo.nome_canonico}>{grupo.nome_canonico}</option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
-                Pesquisar fichas aprovadas
-              </label>
+              <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Pesquisar fichas aprovadas</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted" />
                 <input
                   value={busca}
-                  onChange={e => setBusca(e.target.value)}
+                  onChange={event => setBusca(event.target.value)}
                   placeholder="Nome do cliente ou imobiliária"
                   className="input pl-10"
                 />
@@ -392,9 +440,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast, grupos, getAliases, use
               {loading ? (
                 <div className="text-sm text-dark-muted text-center py-16">Carregando fichas aprovadas...</div>
               ) : fichas.length === 0 ? (
-                <div className="text-sm text-dark-muted text-center py-16">
-                  Nenhuma ficha aprovada encontrada.
-                </div>
+                <div className="text-sm text-dark-muted text-center py-16">Nenhuma ficha aprovada encontrada.</div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   {fichas.map(ficha => {
@@ -420,9 +466,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast, grupos, getAliases, use
                             </div>
                             <p className="mt-1 text-sm text-dark-muted truncate">{resumo.imobiliaria}</p>
                             {resumo.emissorNome && (
-                              <p className="mt-2 text-[11px] text-dark-muted truncate">
-                                Orcamentista: {resumo.emissorNome}
-                              </p>
+                              <p className="mt-2 text-[11px] text-dark-muted truncate">Orcamentista: {resumo.emissorNome}</p>
                             )}
                             <p className="mt-2 text-[11px] font-mono text-dark-muted">
                               Nº orçamento: {resumo.numeroOrcamento || 'Não informado'}
@@ -461,20 +505,16 @@ function ModalIniciarEmissao({ onClose, onCriado, toast, grupos, getAliases, use
 
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
-                  Nº do orçamento
-                </label>
+                <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Nº do orçamento</label>
                 <input
                   value={numeroOrcamento}
-                  onChange={e => setNumeroOrcamento(e.target.value)}
+                  onChange={event => setNumeroOrcamento(event.target.value)}
                   placeholder="Ex: 12345"
                   className="input text-sm"
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
-                  Ficha selecionada
-                </label>
+                <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Ficha selecionada</label>
                 <div className="input text-sm bg-white/70">
                   {fichaSelecionada ? resumoFicha(fichaSelecionada).nome : 'Nenhuma ficha selecionada'}
                 </div>
@@ -485,11 +525,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast, grupos, getAliases, use
 
         <div className="flex items-center justify-end gap-3 px-7 py-5 border-t border-dark-border">
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
-          <button
-            onClick={criarSolicitacao}
-            disabled={!fichaSelecionada || criando}
-            className="btn-primary text-sm"
-          >
+          <button onClick={criarSolicitacao} disabled={!fichaSelecionada || criando} className="btn-primary text-sm">
             {criando ? 'Criando...' : 'Criar Solicitação'}
           </button>
         </div>
@@ -591,6 +627,18 @@ export default function ApoicesGestao() {
     }
   }
 
+  function handleCriado(novaApolice) {
+    if (!novaApolice?.id) {
+      load()
+      return
+    }
+
+    setApolices(prev => {
+      const semDuplicata = prev.filter(item => item.id !== novaApolice.id)
+      return [{ ...novaApolice, status_emissao: 'recebida' }, ...semDuplicata]
+    })
+  }
+
   const activeCard = activeId ? apolices.find(item => item.id === activeId) : null
 
   return (
@@ -598,9 +646,7 @@ export default function ApoicesGestao() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="title-page text-dark-text">Gestão de Apólices</h1>
-          <p className="text-xs text-dark-muted mt-0.5">
-            Arraste as apólices entre as colunas para atualizar o status
-          </p>
+          <p className="text-xs text-dark-muted mt-0.5">Arraste as apólices entre as colunas para atualizar o status</p>
         </div>
       </div>
 
@@ -622,15 +668,13 @@ export default function ApoicesGestao() {
         <div className="flex items-center gap-3 flex-wrap">
           <select
             value={imobFiltro}
-            onChange={e => setImobFiltro(e.target.value)}
+            onChange={event => setImobFiltro(event.target.value)}
             className="select text-sm py-1.5"
             style={{ minWidth: '220px' }}
           >
             <option value="">Todas as imobiliárias</option>
             {grupos.map(grupo => (
-              <option key={grupo.id} value={grupo.nome_canonico}>
-                {grupo.nome_canonico}
-              </option>
+              <option key={grupo.id} value={grupo.nome_canonico}>{grupo.nome_canonico}</option>
             ))}
           </select>
 
@@ -642,12 +686,26 @@ export default function ApoicesGestao() {
             Atualizar
           </button>
 
-          <button onClick={() => setModalIniciar(true)} className="btn-primary flex items-center gap-2 text-sm">
+          <button
+            onClick={() => setModalIniciar(prev => !prev)}
+            className={`flex items-center gap-2 text-sm ${modalIniciar ? 'btn-secondary' : 'btn-primary'}`}
+          >
             <Plus className="w-4 h-4" />
-            Iniciar Emissão
+            {modalIniciar ? 'Fechar emissão' : 'Iniciar Emissão'}
           </button>
         </div>
       </div>
+
+      {modalIniciar && (
+        <ModalIniciarEmissao
+          onClose={() => setModalIniciar(false)}
+          onCriado={handleCriado}
+          toast={toast}
+          grupos={grupos}
+          getAliases={getAliases}
+          user={user}
+        />
+      )}
 
       {loading ? (
         <KanbanSkeleton />
@@ -655,10 +713,7 @@ export default function ApoicesGestao() {
         <div className="relative">
           {canScrollL && (
             <>
-              <div
-                className="absolute left-0 top-0 bottom-4 w-16 z-10 pointer-events-none"
-                style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }}
-              />
+              <div className="absolute left-0 top-0 bottom-4 w-16 z-10 pointer-events-none" style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }} />
               <button
                 onClick={() => scrollRef.current?.scrollBy({ left: -280, behavior: 'smooth' })}
                 className="absolute left-0.5 top-[60px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-md flex items-center justify-center text-dark-muted hover:text-dark-text transition-all"
@@ -670,10 +725,7 @@ export default function ApoicesGestao() {
 
           {canScrollR && (
             <>
-              <div
-                className="absolute right-0 top-0 bottom-4 w-16 z-10 pointer-events-none"
-                style={{ background: 'linear-gradient(to left, rgb(var(--color-bg)), transparent)' }}
-              />
+              <div className="absolute right-0 top-0 bottom-4 w-16 z-10 pointer-events-none" style={{ background: 'linear-gradient(to left, rgb(var(--color-bg)), transparent)' }} />
               <button
                 onClick={() => scrollRef.current?.scrollBy({ left: 280, behavior: 'smooth' })}
                 className="absolute right-0.5 top-[60px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-md flex items-center justify-center text-dark-muted hover:text-dark-text transition-all"
@@ -712,17 +764,6 @@ export default function ApoicesGestao() {
             </DndContext>
           </div>
         </div>
-      )}
-
-      {modalIniciar && (
-        <ModalIniciarEmissao
-          onClose={() => setModalIniciar(false)}
-          onCriado={load}
-          toast={toast}
-          grupos={grupos}
-          getAliases={getAliases}
-          user={user}
-        />
       )}
     </div>
   )

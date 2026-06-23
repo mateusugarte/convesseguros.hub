@@ -170,8 +170,6 @@ export default function ApoliceDetalhe() {
   const [fichaPctComissao, setFichaPctComissao] = useState('')
   const [fichaPctDesconto, setFichaPctDesconto] = useState('')
   const [fichaParcelamento, setFichaParcelamento] = useState('')
-  const [fichaVencimento, setFichaVencimento] = useState('')
-  const [fichaOrigem, setFichaOrigem] = useState('')
   const [fichaObservacoes, setFichaObservacoes] = useState('')
   const [pdfFile, setPdfFile] = useState(null)
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState('')
@@ -221,8 +219,6 @@ export default function ApoliceDetalhe() {
         setFichaPctComissao(formatDecimalBRInput(resolveFichaValor(fichaBase, 'pct_comissao')))
         setFichaPctDesconto(formatDecimalBRInput(resolveFichaValor(fichaBase, 'pct_desconto')))
         setFichaParcelamento(resolveFichaValor(fichaBase, 'parcelamento') != null ? String(resolveFichaValor(fichaBase, 'parcelamento')) : '')
-        setFichaVencimento(resolveFichaValor(fichaBase, 'vencimento') || '')
-        setFichaOrigem(resolveFichaValor(fichaBase, 'origem_lead') || '')
         setFichaObservacoes(resolveFichaValor(fichaBase, 'observacoes') || '')
       } else {
         setLoadError('Apólice não encontrada.')
@@ -281,8 +277,6 @@ export default function ApoliceDetalhe() {
       pct_comissao: fichaPctComissaoNum,
       pct_desconto: fichaPctDescontoNum,
       parcelamento: fichaParcelamentoNum,
-      vencimento: fichaVencimento.trim() || null,
-      origem_lead: fichaOrigem.trim() || null,
       observacoes: fichaObservacoes.trim() || null,
       raw_data: {
         nome_interessado: fichaProduto === 'pessoa_juridica' ? null : fichaNome.trim() || null,
@@ -301,8 +295,6 @@ export default function ApoliceDetalhe() {
         pct_comissao: fichaPctComissaoNum,
         pct_desconto: fichaPctDescontoNum,
         parcelamento: fichaParcelamentoNum,
-        vencimento: fichaVencimento.trim() || null,
-        origem_lead: fichaOrigem.trim() || null,
         observacoes: fichaObservacoes.trim() || null,
       },
     } : null
@@ -556,8 +548,6 @@ export default function ApoliceDetalhe() {
               <EditField label="% Comissão" type="text" inputMode="decimal" value={fichaPctComissao} onChange={setFichaPctComissao} placeholder="10,00" />
               <EditField label="% Desconto" type="text" inputMode="decimal" value={fichaPctDesconto} onChange={setFichaPctDesconto} placeholder="5,00" />
               <EditField label="Parcelamento" type="number" value={fichaParcelamento} onChange={setFichaParcelamento} placeholder="12" />
-              <EditField label="Vencimento" value={fichaVencimento} onChange={setFichaVencimento} placeholder="Ex: 10/12/2026" />
-              <EditField label="Origem do lead" value={fichaOrigem} onChange={setFichaOrigem} placeholder="Origem da ficha" />
               <div className="col-span-2">
                 <EditField label="Observações" value={fichaObservacoes} onChange={setFichaObservacoes} />
               </div>

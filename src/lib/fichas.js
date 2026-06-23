@@ -376,21 +376,37 @@ export async function fetchFichasAprovadasEmissao({ search, imobiliarias } = {})
   if (Array.isArray(imobiliarias) && imobiliarias.length) {
     q = q.in('imobiliaria', imobiliarias)
   }
-
-  const term = search?.trim()
-  if (term) {
-    q = q.or(
-      `nome_interessado.ilike.%${term}%,` +
-      `nome_empresa.ilike.%${term}%,` +
-      `cpf.ilike.%${term}%,` +
-      `cnpj.ilike.%${term}%,` +
-      `imobiliaria.ilike.%${term}%,` +
-      `seguradora.ilike.%${term}%`
-    )
-  }
-
   const data = await fetchAllRows(() => q)
-  return data || []
+  if (!search?.trim()) return data || []
+
+  const term = normalizeSearchText(search.trim())
+  return (data || []).filter(f => {
+    const raw = f.raw_data || {}
+    const haystack = [
+      f.nome_interessado,
+      f.nome_empresa,
+      f.cpf,
+      f.cnpj,
+      f.imobiliaria,
+      f.seguradora,
+      f.numero_orcamento,
+      raw.nome,
+      raw.nome_interessado,
+      raw.nome_empresa,
+      raw.razao_social,
+      raw.empresa,
+      raw.nome_fantasia,
+      raw.seguradora,
+      raw.imobiliaria,
+      raw.numero_orcamento,
+      raw.cpf,
+      raw.cnpj,
+    ]
+      .filter(Boolean)
+      .map(normalizeSearchText)
+      .join(' ')
+    return haystack.includes(term)
+  })
 }
 
 export async function fetchFichaDetalhe(id) {

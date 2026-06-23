@@ -366,7 +366,7 @@ export async function fetchFichasAprovadasEmissao({ search, imobiliarias } = {})
         id, created_at, produto, imobiliaria,
         nome_interessado, nome_empresa, cpf, cnpj,
         valor_aluguel, celular, cep, tipo_imovel,
-        vigencia, vencimento, endereco, forma_pagamento,
+        vigencia, endereco, forma_pagamento,
         pct_comissao, pct_desconto, parcelamento, valor_parcela,
         status, assumida, orcamentista_id, assumida_em,
         seguradora, retorno_enviado, raw_data,

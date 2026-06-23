@@ -58,9 +58,14 @@ export async function extractPdfText(file) {
 function parsePortoSeguro(text) {
   const r = {}
 
-  // Número da apólice — formato exclusivo Porto: 59.0746.000000010972294.0000
-  const ap = text.match(/\b(\d{2}\.\d{4}\.\d{17,22}\.\d{4})\b/)
-  if (ap) r.numero_apolice = ap[1]
+  // Número da apólice — linha "APÓLICE Nº 59.0746.000000010972294.0000"
+  // O número útil fica entre o bloco inicial "59.0746.0000000" e o sufixo final ".0000".
+  const ap = text.match(/AP[ÓO]LICE\s+N[º°]\s*([0-9.\s]+)/i)
+  if (ap) {
+    const cleaned = ap[1].replace(/\s+/g, '')
+    const middle = cleaned.match(/^\d{2}\.\d{4}\.\d{7}(\d+)(?:\.\d{4})?$/)
+    r.numero_apolice = middle?.[1] || cleaned.replace(/\.\d{4}$/, '')
+  }
 
   // Vigência — "a partir das 24 horas do dia DD/MM/YYYY até as 24 horas do dia DD/MM/YYYY"
   const vig = text.match(

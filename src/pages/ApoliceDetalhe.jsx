@@ -252,6 +252,7 @@ export default function ApoliceDetalhe() {
     const valorComissao = calculateValorComissao(premioLiquidoNum, pctComissao)
     const statusFinal = statusOverride || statusEmissao
     const dataEmissao = ['emitida', 'enviada'].includes(statusFinal) ? (apolice?.data_emissao || new Date().toISOString().slice(0, 10)) : null
+    const numeroApoliceFinal = numeroApolice.trim() || apolice?.numero_apolice || null
     const fichaBase = apolice?.fichas || null
     const fichaId = fichaBase?.id
     const fichaPatch = fichaId ? {
@@ -277,7 +278,7 @@ export default function ApoliceDetalhe() {
     } : null
     const [err, fichaErr] = await Promise.all([
       atualizarApolice(id, {
-      numero_apolice: numeroApolice.trim() || null,
+      numero_apolice: numeroApoliceFinal,
       numero_proposta: numeroProposta.trim() || null,
       seguradora: seguradora || null,
       status_emissao: statusFinal,

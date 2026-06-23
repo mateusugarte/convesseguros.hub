@@ -1018,10 +1018,11 @@ function ModalFinalizar({ apoliceId, apolice, onClose, onFinalizado, toast }) {
   async function confirmar() {
     if (!obrigatoriosOK) return
     setSalvando(true)
+    const numeroApoliceFinal = numeroApolice.trim() || apolice?.numero_apolice || null
     const err = await moverStatusApolice(apoliceId, 'emitida', {
       proprietario_nome:    proprietarioNome.trim(),
       proprietario_cel:     proprietarioCel.trim() || null,
-      numero_apolice:       numeroApolice.trim(),
+      numero_apolice:       numeroApoliceFinal,
       numero_proposta:      numeroProposta.trim() || null,
       endereco:             endereco.trim() || null,
       inicio_vigencia:      inicioVigencia,

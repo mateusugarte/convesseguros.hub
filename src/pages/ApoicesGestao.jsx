@@ -36,8 +36,8 @@ import { Avatar } from '../components/ui'
 const COLUNAS = [
   { id: 'recebida', label: 'Recebida', color: '#3B82F6' },
   { id: 'proposta_transmitida', label: 'Proposta Transmitida', color: '#F59E0B' },
-  { id: 'emitida', label: 'ApÃ³lice Emitida', color: '#8B5CF6' },
-  { id: 'enviada', label: 'ApÃ³lice Enviada', color: '#10B981' },
+  { id: 'emitida', label: 'Apólice Emitida', color: '#8B5CF6' },
+  { id: 'enviada', label: 'Apólice Enviada', color: '#10B981' },
 ]
 
 const PRODUTO_ICON = { residencial_pf: Home, comercial_pf: Briefcase, pessoa_juridica: Building }
@@ -125,7 +125,7 @@ function resumoFicha(ficha) {
 
   return {
     nome,
-    imobiliaria: normalizeDisplayText(ficha?.imobiliaria || raw?.imobiliaria) || 'ImobiliÃ¡ria nÃ£o informada',
+    imobiliaria: normalizeDisplayText(ficha?.imobiliaria || raw?.imobiliaria) || 'Imobiliária não informada',
     avatarUrl: ficha?.profiles?.avatar_url || raw?.avatar_url || '',
     emissorNome: ficha?.profiles?.nome || '',
     numeroOrcamento: String(raw?.numero_orcamento || '').trim(),
@@ -167,7 +167,7 @@ function extrairDadosPortoUpload(texto) {
   const proposta = text.match(/PROPOSTA N[ÂºÂ°]\s+([\w.-]+)/i)
   if (proposta) result.numero_proposta = proposta[1].trim()
 
-  const vigencia = text.match(/a partir das 24 horas do dia (\d{2}\/\d{2}\/\d{4}) at[eÃ©] as 24 horas do dia (\d{2}\/\d{2}\/\d{4})/i)
+  const vigencia = text.match(/a partir das 24 horas do dia (\d{2}\/\d{2}\/\d{4}) at[eé] as 24 horas do dia (\d{2}\/\d{2}\/\d{4})/i)
   if (vigencia) {
     result.inicio_vigencia = parseDateBR(vigencia[1])
     result.fim_vigencia = parseDateBR(vigencia[2])
@@ -201,13 +201,13 @@ function extrairDadosPortoUpload(texto) {
     result.nome_locatario = locatario[2].trim()
   }
 
-  const tipoLocacao = text.match(/TIPO DE LOCA[Ã‡C][ÃƒA]O\s+\d+\s*[â€“\-]\s*(\w+)/i)
+  const tipoLocacao = text.match(/TIPO DE LOCA[ÇC][ÃA]O\s+\d+\s*[–\-]\s*(\w+)/i)
   if (tipoLocacao) result.tipo_imovel = tipoLocacao[1].trim()
 
   const aluguel = text.match(/Aluguel\s+R\$\s*([\d.,]+)\s+\d+x/i)
   if (aluguel) result.valor_aluguel = parseMoneyBR(aluguel[1])
 
-  const premioLiquido = text.match(/Pr[Ãªe]mio L[Ã­i]quido\s+R\$\s*([\d.,]+)/i)
+  const premioLiquido = text.match(/Pr[êe]mio L[íi]quido\s+R\$\s*([\d.,]+)/i)
   if (premioLiquido) result.premio_liquido = parseMoneyBR(premioLiquido[1])
 
   const valorParcela = text.match(/Valor da Parcela\s+R\$\s*([\d.,]+)/i)
@@ -216,7 +216,7 @@ function extrairDadosPortoUpload(texto) {
   const parcelamento = text.match(/Fatura sem entrada\s+(\d+)X/i)
   if (parcelamento) result.parcelamento = Number.parseInt(parcelamento[1], 10)
 
-  const premioTotal = text.match(/Pre[Ã§c]o Total do Seguro\s+R\$\s*([\d.,]+)/i)
+  const premioTotal = text.match(/Pre[çc]o Total do Seguro\s+R\$\s*([\d.,]+)/i)
   if (premioTotal) result.premio_total = parseMoneyBR(premioTotal[1])
 
   result.forma_pagamento = 'fatura_sem_entrada'
@@ -233,7 +233,7 @@ function extrairDadosPottencialUpload(texto) {
   const proposta = text.match(/N[ÂºÂ°]\s*DA PROPOSTA\s+(\d+)/i)
   if (proposta) result.numero_proposta = proposta[1].trim()
 
-  const vigencia = text.match(/Das 0h do dia\s+(\d{2}\/\d{2}\/\d{4})\s+Ã s 0h do dia\s+(\d{2}\/\d{2}\/\d{4})/i)
+  const vigencia = text.match(/Das 0h do dia\s+(\d{2}\/\d{2}\/\d{4})\s+às 0h do dia\s+(\d{2}\/\d{2}\/\d{4})/i)
   if (vigencia) {
     result.inicio_vigencia = parseDateBR(vigencia[1])
     result.fim_vigencia = parseDateBR(vigencia[2])
@@ -251,13 +251,13 @@ function extrairDadosPottencialUpload(texto) {
     result.proprietario_documento = locador[2].trim()
   }
 
-  const tipoLocacao = text.match(/Tipo de loca[Ã§c][Ã£a]o:\s+(Residencial|Comercial)/i)
+  const tipoLocacao = text.match(/Tipo de loca[çc][ãa]o:\s+(Residencial|Comercial)/i)
   if (tipoLocacao) result.tipo_imovel = tipoLocacao[1].trim()
 
-  const localRisco = text.match(/Local do Risco:\s+(.+?)(?=\s+Vig[Ãªe]ncia do contrato de loca[Ã§c][Ã£a]o:|\s+LOCAT[ÃA]RIOS?\s+\(Garantidos\))/i)
+  const localRisco = text.match(/Local do Risco:\s+(.+?)(?=\s+Vig[êe]ncia do contrato de loca[çc][ãa]o:|\s+LOCAT[ÃA]RIOS?\s+\(Garantidos\))/i)
   if (localRisco) {
     result.endereco = localRisco[1].trim()
-    const enderecoMatch = result.endereco.match(/(.+?)\s+(\d{8})\s+([A-ZÃ€-Ãœ\s]+?)\s+([A-ZÃ€-Ãœ\s]+)\s+([A-Z]{2})$/i)
+    const enderecoMatch = result.endereco.match(/(.+?)\s+(\d{8})\s+([A-ZÀ-Ü\s]+?)\s+([A-ZÀ-Ü\s]+)\s+([A-Z]{2})$/i)
     if (enderecoMatch) {
       result.endereco_linha = enderecoMatch[1].trim()
       result.cep = enderecoMatch[2].trim()
@@ -273,10 +273,10 @@ function extrairDadosPottencialUpload(texto) {
   const aluguel = text.match(/Aluguel\s+R\$\s*([\d.,]+)\s+R\$\s*[\d.,]+\s+R\$\s*[\d.,]+/i)
   if (aluguel) result.valor_aluguel = parseMoneyBR(aluguel[1])
 
-  const premioLiquido = text.match(/Pr[Ãªe]mio L[Ã­i]quido\s+R\$\s*([\d.,]+)/i)
+  const premioLiquido = text.match(/Pr[êe]mio L[íi]quido\s+R\$\s*([\d.,]+)/i)
   if (premioLiquido) result.premio_liquido = parseMoneyBR(premioLiquido[1])
 
-  const premioTotal = text.match(/Pr[Ãªe]mio Total:\s+R\$\s*([\d.,]+)/i)
+  const premioTotal = text.match(/Pr[êe]mio Total:\s+R\$\s*([\d.,]+)/i)
   if (premioTotal) result.premio_total = parseMoneyBR(premioTotal[1])
 
   const pagamento = text.match(/Fatura mensal em\s+(\d+)\s*x sem juros:\s+R\$\s*([\d.,]+)/i)
@@ -362,7 +362,7 @@ function InfoPill({ label, value, mono = false }) {
   return (
     <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2 py-1.5">
       <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">{label}</p>
-      <p className={`mt-0.5 text-[10px] text-dark-text truncate${mono ? ' font-mono' : ''}`}>{value || 'â€”'}</p>
+      <p className={`mt-0.5 text-[10px] text-dark-text truncate${mono ? ' font-mono' : ''}`}>{value || '—'}</p>
     </div>
   )
 }
@@ -377,9 +377,9 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
   const documento = documentoApolice(apolice)
   const celular = apolice?.fichas?.celular || apolice?.raw_data?.celular || '—'
   const tipoImovel = normalizeDisplayText(apolice?.fichas?.tipo_imovel || apolice?.raw_data?.tipo_imovel) || '—'
-  const vigencia = [apolice?.inicio_vigencia, apolice?.fim_vigencia].filter(Boolean).join(' atÃ© ') || 'â€”'
-  const parcela = apolice?.valor_parcela ? formatMoneyBR(apolice.valor_parcela) : 'â€”'
-  const parcelamento = apolice?.parcelamento ? `${apolice.parcelamento}x` : 'â€”'
+  const vigencia = [apolice?.inicio_vigencia, apolice?.fim_vigencia].filter(Boolean).join(' até ') || '—'
+  const parcela = apolice?.valor_parcela ? formatMoneyBR(apolice.valor_parcela) : '—'
+  const parcelamento = apolice?.parcelamento ? `${apolice.parcelamento}x` : '—'
 
   return (
     <div className={`kanban-card${isDragOverlay ? ' kanban-card-dragging' : ''}`} style={{ '--kanban-accent': produtoColor }}>
@@ -419,12 +419,12 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
         {isApoliceSemFicha(apolice) && (
           <div className="mb-1">
             <span className="inline-flex items-center rounded-full bg-status-warning/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-status-warning">
-              ApÃ³lice sem ficha vinculada
+              Apólice sem ficha vinculada
             </span>
           </div>
         )}
         <p className="text-[10px] text-dark-muted truncate leading-none mb-1.5">
-          {resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || 'â€”')}
+          {resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || '—')}
         </p>
 
         {apolice?.numero_apolice && (
@@ -442,14 +442,14 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
         <div className="mt-2 grid grid-cols-2 gap-1.5">
           <InfoPill label="Documento" value={documento} mono />
           <InfoPill label="Celular" value={celular} />
-          <InfoPill label="ImÃ³vel" value={tipoImovel} />
+          <InfoPill label="Imóvel" value={tipoImovel} />
           <InfoPill label="Parcelas" value={parcelamento} />
         </div>
 
         <div className="mt-1.5 rounded-xl border border-dark-border/60 bg-dark-surface2/25 px-2 py-1.5">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">VigÃªncia</p>
+              <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Vigência</p>
               <p className="mt-0.5 text-[10px] text-dark-text truncate">{vigencia}</p>
             </div>
             <div className="text-right">
@@ -481,7 +481,7 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
               }}
               className="text-[9px] text-dark-muted hover:text-dark-text transition-colors px-1.5 py-0.5 rounded-md hover:bg-dark-surface2"
             >
-              {expandido ? 'â–²' : 'â–¼ Detalhes'}
+              {expandido ? '▲' : '▼ Detalhes'}
             </button>
           )}
         </div>
@@ -489,7 +489,7 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
         {expandido && !isDragOverlay && (
           <div className="space-y-0.5 pt-1.5 mt-1.5 border-t border-dark-border/40 animate-fade-in">
             <p className="text-[9px] text-dark-muted truncate">
-              ImobiliÃ¡ria: {resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || 'â€”')}
+              Imobiliária: {resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || '—')}
             </p>
             {(apolice?.fichas?.cep || apolice?.raw_data?.cep) && <p className="text-[9px] text-dark-muted font-mono">CEP: {apolice?.fichas?.cep || apolice?.raw_data?.cep}</p>}
             {apolice?.seguradora && <p className="text-[9px] text-dark-muted">Seguradora: {apolice.seguradora}</p>}
@@ -623,11 +623,11 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
     setCriando(false)
 
     if (error) {
-      toast({ type: 'error', title: 'Erro ao criar solicitaÃ§Ã£o', message: error.message })
+      toast({ type: 'error', title: 'Erro ao criar solicitação', message: error.message })
       return
     }
 
-    toast({ type: 'success', title: 'SolicitaÃ§Ã£o criada' })
+    toast({ type: 'success', title: 'Solicitação criada' })
     onCriado?.()
     onBack?.()
   }
@@ -640,11 +640,11 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
             <Plus className="w-3.5 h-3.5" />
             Area dedicada
           </div>
-          <h2 className="mt-3 text-xl font-bold text-dark-text">Iniciar EmissÃ£o</h2>
-          <p className="text-sm text-dark-muted mt-0.5">Selecione uma ficha aprovada para criar a solicitaÃ§Ã£o.</p>
+          <h2 className="mt-3 text-xl font-bold text-dark-text">Iniciar Emissão</h2>
+          <p className="text-sm text-dark-muted mt-0.5">Selecione uma ficha aprovada para criar a solicitação.</p>
         </div>
         <button onClick={onBack} className="btn-secondary text-sm">
-          Voltar para gestÃ£o
+          Voltar para gestão
         </button>
       </div>
 
@@ -653,9 +653,9 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
           <div>
             <div className="grid grid-cols-1 xl:grid-cols-[300px_minmax(0,1fr)] gap-4">
               <div>
-                <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">ImobiliÃ¡ria</label>
+                <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Imobiliária</label>
                 <select value={imobFiltro} onChange={event => setImobFiltro(event.target.value)} className="select text-sm">
-                  <option value="">Todas as imobiliÃ¡rias</option>
+                  <option value="">Todas as imobiliárias</option>
                   {grupos.map(grupo => (
                     <option key={grupo.id} value={grupo.nome_canonico}>{grupo.nome_canonico}</option>
                   ))}
@@ -669,7 +669,7 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
                   <input
                     value={busca}
                     onChange={event => setBusca(event.target.value)}
-                    placeholder="Nome do cliente ou imobiliÃ¡ria"
+                    placeholder="Nome do cliente ou imobiliária"
                     className="input pl-10"
                   />
                 </div>
@@ -681,7 +681,7 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
             <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border">
               <div>
                 <h3 className="text-lg font-semibold text-dark-text">Fichas aprovadas</h3>
-                <p className="text-sm text-dark-muted">Mostrando nome completo, foto e imobiliÃ¡ria.</p>
+                <p className="text-sm text-dark-muted">Mostrando nome completo, foto e imobiliária.</p>
               </div>
               <span className="text-sm text-dark-muted">{fichas.length} fichas</span>
             </div>
@@ -719,7 +719,7 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
                               <p className="mt-2 text-[11px] text-dark-muted truncate">Orcamentista: {resumo.emissorNome}</p>
                             )}
                             <p className="mt-2 text-[11px] font-mono text-dark-muted">
-                              NÂº orÃ§amento: {resumo.numeroOrcamento || 'NÃ£o informado'}
+                              Nº orçamento: {resumo.numeroOrcamento || 'Não informado'}
                             </p>
                           </div>
                         </div>
@@ -736,9 +736,9 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
           <div className="rounded-3xl border border-dark-border bg-white/80 p-5">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-dark-muted">Dados da emissÃ£o</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-dark-muted">Dados da emissão</h3>
                 <p className="text-sm text-dark-muted mt-1">
-                  Ao selecionar a ficha, o nÃºmero do orÃ§amento Ã© preenchido automaticamente quando existir.
+                  Ao selecionar a ficha, o número do orçamento é preenchido automaticamente quando existir.
                 </p>
               </div>
               {fichaSelecionada && (
@@ -750,14 +750,14 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
                     setNumeroOrcamento('')
                   }}
                 >
-                  Limpar seleÃ§Ã£o
+                  Limpar seleção
                 </button>
               )}
             </div>
 
             <div className="mt-4 space-y-4">
               <div>
-                <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">NÂº do orÃ§amento</label>
+                <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Nº do orçamento</label>
                 <input
                   value={numeroOrcamento}
                   onChange={event => setNumeroOrcamento(event.target.value)}
@@ -774,13 +774,13 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
               {fichaSelecionada && (
                 <>
                   <div className="rounded-2xl border border-dark-border/60 bg-dark-surface2/20 p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">ImobiliÃ¡ria</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Imobiliária</p>
                     <p className="mt-2 text-sm font-semibold text-dark-text">{resumoFicha(fichaSelecionada).imobiliaria}</p>
                   </div>
                   <div className="rounded-2xl border border-dark-border/60 bg-dark-surface2/20 p-4">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Resumo</p>
                     <p className="mt-2 text-sm text-dark-text">Cliente: {resumoFicha(fichaSelecionada).nome}</p>
-                    <p className="mt-1 text-xs text-dark-muted">OrÃ§amento: {numeroOrcamento || 'NÃ£o informado'}</p>
+                    <p className="mt-1 text-xs text-dark-muted">Orçamento: {numeroOrcamento || 'Não informado'}</p>
                   </div>
                 </>
               )}
@@ -789,7 +789,7 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
             <div className="mt-6 flex flex-col gap-3">
               <button onClick={onBack} className="btn-secondary text-sm">Cancelar</button>
               <button onClick={criarSolicitacao} disabled={!fichaSelecionada || criando} className="btn-primary text-sm">
-                {criando ? 'Criando...' : 'Criar SolicitaÃ§Ã£o'}
+                {criando ? 'Criando...' : 'Criar Solicitação'}
               </button>
             </div>
           </div>
@@ -1044,7 +1044,7 @@ export default function ApoicesGestao() {
       setApolices(data || [])
     } catch {
       setApolices([])
-      toast({ type: 'error', title: 'Erro ao carregar apÃ³lices' })
+      toast({ type: 'error', title: 'Erro ao carregar apólices' })
     } finally {
       setLoading(false)
     }
@@ -1100,7 +1100,7 @@ export default function ApoicesGestao() {
 
     const error = await moverStatusApolice(id, novoStatus)
     if (error) {
-      toast({ type: 'error', title: 'Erro ao mover apÃ³lice' })
+      toast({ type: 'error', title: 'Erro ao mover apólice' })
       load()
     }
   }
@@ -1123,8 +1123,8 @@ export default function ApoicesGestao() {
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="title-page text-dark-text">GestÃ£o de ApÃ³lices</h1>
-          <p className="text-xs text-dark-muted mt-0.5">Arraste as apÃ³lices entre as colunas para atualizar o status</p>
+          <h1 className="title-page text-dark-text">Gestão de Apólices</h1>
+          <p className="text-xs text-dark-muted mt-0.5">Arraste as apólices entre as colunas para atualizar o status</p>
         </div>
       </div>
 
@@ -1138,7 +1138,7 @@ export default function ApoicesGestao() {
                 filtro === item ? 'bg-brand-secondary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
               }`}
             >
-              {item === 'hoje' ? 'Hoje' : item === 'semana' ? 'Semana' : 'MÃªs'}
+              {item === 'hoje' ? 'Hoje' : item === 'semana' ? 'Semana' : 'Mês'}
             </button>
           ))}
         </div>
@@ -1150,7 +1150,7 @@ export default function ApoicesGestao() {
             className="select text-sm py-1.5"
             style={{ minWidth: '220px' }}
           >
-            <option value="">Todas as imobiliÃ¡rias</option>
+            <option value="">Todas as imobiliárias</option>
             {grupos.map(grupo => (
               <option key={grupo.id} value={grupo.nome_canonico}>{grupo.nome_canonico}</option>
             ))}
@@ -1169,7 +1169,7 @@ export default function ApoicesGestao() {
             className={`flex items-center gap-2 text-sm ${workspace === 'iniciar' ? 'btn-secondary' : 'btn-primary'}`}
           >
             <Plus className="w-4 h-4" />
-            {workspace === 'iniciar' ? 'Fechar emissÃ£o' : 'Iniciar EmissÃ£o'}
+            {workspace === 'iniciar' ? 'Fechar emissão' : 'Iniciar Emissão'}
           </button>
           <button
             onClick={() => setModalUploadDireto(prev => !prev)}

@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core'
 import {
@@ -369,7 +369,7 @@ function InfoPill({ label, value, mono = false }) {
   )
 }
 
-function KanbanCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen, isDragOverlay = false, dragListeners, dragAttributes }) {
+function KanbanCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen, isDragOverlay = false }) {
   const [expandido, setExpandido] = useState(false)
   const produto = produtoApolice(apolice)
   const ProdutoIcon = PRODUTO_ICON[produto] || LayoutGrid
@@ -392,16 +392,9 @@ function KanbanCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen, is
       style={{ '--kanban-accent': semFicha ? '#F97316' : produtoColor }}
     >
       {!isDragOverlay && (
-        <button
-          {...dragListeners}
-          {...dragAttributes}
-          className="kanban-grip"
-          onClick={event => event.stopPropagation()}
-          tabIndex={-1}
-          aria-label="Arrastar"
-        >
+        <div className="kanban-grip" aria-hidden>
           <GripVertical className="w-3.5 h-3.5" />
-        </button>
+        </div>
       )}
 
       <div className="kanban-card-body cursor-pointer" onClick={() => !isDragOverlay && onOpen?.(apolice.id)}>
@@ -525,14 +518,17 @@ function DraggableCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen 
   })
 
   return (
-    <div ref={setNodeRef} style={{ opacity: isDragging ? 0.25 : 1, transition: isDragging ? 'none' : 'opacity 0.2s ease' }}>
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      style={{ opacity: isDragging ? 0.25 : 1, transition: isDragging ? 'none' : 'opacity 0.2s ease', cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none' }}
+    >
       <KanbanCard
         apolice={apolice}
         resolverNome={resolverNome}
         resolverImobiliariaInfo={resolverImobiliariaInfo}
         onOpen={onOpen}
-        dragListeners={listeners}
-        dragAttributes={attributes}
       />
     </div>
   )

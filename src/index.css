@@ -1251,6 +1251,7 @@ html.dark .kanban-col-body {
   border-radius: 18px 0 0 18px;
   background: linear-gradient(180deg, var(--kanban-accent, rgb(var(--brand-primary-rgb))), rgb(var(--brand-primary-deep-rgb) / 0.72));
   opacity: 0.92;
+  pointer-events: none;
 }
 
 .kanban-card:hover {

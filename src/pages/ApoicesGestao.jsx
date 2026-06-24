@@ -1019,7 +1019,7 @@ export default function ApoicesGestao() {
 
   const [apolices, setApolices] = useState([])
   const [loading, setLoading] = useState(true)
-  const [filtro, setFiltro] = useState('semana')
+  const [filtro, setFiltro] = useState('total')
   const [imobFiltro, setImobFiltro] = useState('')
   const [workspace, setWorkspace] = useState('kanban')
   const [modalUploadDireto, setModalUploadDireto] = useState(false)
@@ -1130,7 +1130,7 @@ export default function ApoicesGestao() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1 bg-dark-surface2 border border-dark-border rounded-lg p-0.5">
-          {['hoje', 'semana', 'mes'].map(item => (
+          {['total', 'hoje', 'semana', 'mes'].map(item => (
             <button
               key={item}
               onClick={() => setFiltro(item)}
@@ -1138,7 +1138,7 @@ export default function ApoicesGestao() {
                 filtro === item ? 'bg-brand-secondary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
               }`}
             >
-              {item === 'hoje' ? 'Hoje' : item === 'semana' ? 'Semana' : 'Mês'}
+              {item === 'total' ? 'Todos' : item === 'hoje' ? 'Hoje' : item === 'semana' ? 'Semana' : 'Mês'}
             </button>
           ))}
         </div>

@@ -873,6 +873,10 @@ html.dark {
   .kanban-scroll {
     scroll-snap-type: x mandatory;
   }
+
+  .kanban-viewport {
+    min-height: calc(100vh - 12.5rem);
+  }
 }
 
 /* ── Landscape mobile/tablet: corrigir alturas ────────────────────────────── */
@@ -1164,10 +1168,12 @@ html.dark .shell-subnav-item-active {
 /* ── Kanban premium workspace ─────────────────────────────────────────────── */
 .kanban-scroll {
   scroll-padding-inline: 8px;
+  min-height: 100%;
 }
 
 .kanban-col {
   width: var(--kanban-col-w, 286px);
+  min-height: 100%;
   border-radius: 28px;
   overflow: hidden;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 248, 250, 0.90));
@@ -1202,6 +1208,7 @@ html.dark .kanban-col-header {
 }
 
 .kanban-col-body {
+  flex: 1 1 auto;
   padding: 12px;
   gap: 10px;
   min-height: 280px;
@@ -1214,6 +1221,11 @@ html.dark .kanban-col-body {
   background:
     linear-gradient(180deg, rgba(11, 18, 36, 0.88), rgba(8, 14, 28, 0.96)),
     radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.05), transparent 72%);
+}
+
+.kanban-viewport {
+  display: flex;
+  flex-direction: column;
 }
 
 .kanban-card {

@@ -370,7 +370,7 @@ const DroppableColumn = memo(function DroppableColumn({ col, apolices, resolverN
   const { setNodeRef, isOver } = useDroppable({ id: col.id })
 
   return (
-    <div className="kanban-col flex flex-col flex-shrink-0" style={{ contain: 'layout paint style' }}>
+    <div className="kanban-col flex h-full flex-col flex-shrink-0" style={{ contain: 'layout paint style' }}>
       <div className="kanban-col-header" style={{ background: `${col.color}14`, borderColor: `${col.color}45` }}>
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-2 h-2 rounded-full" style={{ background: col.color }} />
@@ -1194,7 +1194,7 @@ export default function ApoicesGestao() {
       {workspace !== 'kanban' ? null : loading ? (
         <KanbanSkeleton />
       ) : (
-        <div className="relative">
+        <div className="relative kanban-viewport min-h-[calc(100vh-16rem)]">
           {canScrollL && (
             <>
               <div className="absolute left-0 top-0 bottom-4 w-16 z-10 pointer-events-none" style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }} />
@@ -1219,7 +1219,7 @@ export default function ApoicesGestao() {
             </>
           )}
 
-          <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
+          <div ref={scrollRef} className="kanban-scroll h-full overflow-x-auto pb-2">
             <DndContext
               sensors={sensors}
               collisionDetection={kanbanPointerCollision}
@@ -1232,7 +1232,7 @@ export default function ApoicesGestao() {
                 setActiveCard(null)
               }}
             >
-              <div className="flex gap-3 min-w-max px-1">
+              <div className="flex min-h-full items-stretch gap-3 min-w-max px-1">
                 {COLUNAS.map(col => (
                   <DroppableColumn
                     key={col.id}

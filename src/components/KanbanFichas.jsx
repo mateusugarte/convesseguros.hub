@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef } from 'react'
+﻿import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
@@ -101,6 +101,11 @@ function groupFichas(fichas, userId, sortOrder = 'recentes') {
   }
   return cols
 }
+
+const MemoFichaCard = memo(FichaCard)
+const MemoDraggableCard = memo(DraggableCard)
+const MemoDroppableColumn = memo(DroppableColumn)
+
 
 function upsertFicha(list, nova) {
   const idx = list.findIndex(item => item.id === nova.id)
@@ -287,7 +292,7 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onTog
       }}
       onClick={() => !isDragging && onDetalhe(ficha.id)}
     >
-      <FichaCard
+      <MemoFichaCard
         ficha={ficha}
         userId={userId}
         onAssumir={onAssumir}
@@ -438,7 +443,7 @@ function DroppableColumn({
             <span className="kanban-empty-text">Vazia</span>
           </div>
         ) : fichas.map(f => (
-          <DraggableCard
+          <MemoDraggableCard
             key={f.id}
             ficha={f}
             userId={userId}
@@ -692,8 +697,8 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     scrollRef.current?.scrollBy({ left: dir === 'left' ? -280 : 280, behavior: 'smooth' })
   }
 
-  const cols       = groupFichas(fichas, user?.id, sortOrder)
-  const activeCard = activeId ? fichas.find(f => f.id === activeId) : null
+  const cols = useMemo(() => groupFichas(fichas, user?.id, sortOrder), [fichas, user?.id, sortOrder])
+  const activeCard = useMemo(() => (activeId ? fichas.find(f => f.id === activeId) : null), [activeId, fichas])
 
   async function handleAssumir(fichaId) {
     const fichaOriginal = fichas.find(f => f.id === fichaId)
@@ -873,6 +878,83 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     }, 220)
   }
 
+  const handleAssumirFast = useCallback(async (fichaId) => {
+    const fichaOriginal = fichas.find(f => f.id === fichaId)
+    if (!fichaOriginal) return
+    setFichas(prev => prev.map(f =>
+      f.id !== fichaId ? f : {
+        ...f, assumida: true, orcamentista_id: user?.id,
+        status: 'em_cotacao', assumida_em: new Date().toISOString(),
+      }
+    ))
+    setCollapsed(prev => { const next = new Set(prev); next.delete('minhas'); return next })
+    const err = await assumirFicha(fichaId, user.id)
+    if (err) {
+      setFichas(prev => prev.map(f => f.id === fichaId ? fichaOriginal : f))
+      toast({ type: 'error', title: 'Erro ao assumir ficha' })
+    } else {
+      toast({ type: 'success', title: 'Ficha assumida!' })
+    }
+  }, [fichas, toast, user?.id])
+
+  const handleFinalizarFast = useCallback((ficha, defaultStatus) => {
+    setFinalizar(ficha)
+    setFinalizarDefaultStatus(defaultStatus || null)
+  }, [])
+
+  const handleToggleRetornoFast = useCallback(async (ficha) => {
+    const novoValor = !ficha.retorno_enviado
+    setFichas(prev => prev.map(f => f.id === ficha.id ? { ...f, retorno_enviado: novoValor } : f))
+    const { error } = await supabase.from('fichas').update({ retorno_enviado: novoValor }).eq('id', ficha.id)
+    if (error) {
+      setFichas(prev => prev.map(f => f.id === ficha.id ? ficha : f))
+      toast({ type: 'error', title: 'Erro ao atualizar retorno' })
+    }
+  }, [toast])
+
+  const handleDetalheFast = useCallback((fichaId) => {
+    navigate(`/fichas/${fichaId}`, {
+      state: {
+        from: location.pathname,
+        backTo: location.pathname,
+        backState: {
+          restoreKanban: true,
+          produto,
+          mes: contextState?.mes ?? null,
+          ano: contextState?.ano ?? null,
+          view: 'kanban',
+          scrollY: window.scrollY,
+        },
+        scrollY: window.scrollY,
+        ...contextState,
+      },
+    })
+  }, [contextState, navigate, produto])
+
+  const toggleCollapseFast = useCallback((colId) => {
+    setCollapsed(prev => {
+      const next = new Set(prev)
+      if (next.has(colId)) next.delete(colId)
+      else next.add(colId)
+      return next
+    })
+  }, [])
+
+  const handleToggleSortOrderFast = useCallback(() => {
+    setSortingFeedback(true)
+    setSortOrder(prev => (prev === 'recentes' ? 'antigas' : 'recentes'))
+    if (sortFeedbackTimerRef.current) clearTimeout(sortFeedbackTimerRef.current)
+    sortFeedbackTimerRef.current = setTimeout(() => {
+      setSortingFeedback(false)
+      sortFeedbackTimerRef.current = null
+    }, 220)
+  }, [])
+
+  const columnCollapseHandlers = useMemo(
+    () => Object.fromEntries(COLUMNS.map(column => [column.id, () => toggleCollapseFast(column.id)])),
+    [toggleCollapseFast]
+  )
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -979,22 +1061,22 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
       <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
             <div className="flex min-w-max px-1" style={{ gap: 'var(--kanban-gap, 12px)' }}>
               {COLUMNS.map((column, i) => (
-                <DroppableColumn
+                <MemoDroppableColumn
                   key={column.id}
                   column={column}
                   fichas={cols[column.id] || []}
                   userId={user?.id}
-                  onDetalhe={handleDetalhe}
-                  onAssumir={handleAssumir}
-                  onFinalizar={handleFinalizar}
-                  onToggleRetorno={handleToggleRetorno}
+                  onDetalhe={handleDetalheFast}
+                  onAssumir={handleAssumirFast}
+                  onFinalizar={handleFinalizarFast}
+                  onToggleRetorno={handleToggleRetornoFast}
                   collapsed={collapsed.has(column.id)}
-                  onToggleCollapse={() => toggleCollapse(column.id)}
+                  onToggleCollapse={columnCollapseHandlers[column.id]}
                   newIds={newIds}
                   colIndex={i}
                   resolverNome={resolverNome}
                   sortOrder={sortOrder}
-                  onToggleSortOrder={handleToggleSortOrder}
+                  onToggleSortOrder={handleToggleSortOrderFast}
                   sortingFeedback={sortingFeedback}
                   resolveImobiliariaInfo={resolveImobiliariaInfo}
                 />
@@ -1005,7 +1087,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
           <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
             {activeCard && (
               <div style={{ width: 'var(--kanban-col-w, 304px)', pointerEvents: 'none', '--kanban-accent': PRODUTO_COLOR[activeCard?.produto] || '#000079', cursor: 'grabbing' }}>
-                <FichaCard ficha={activeCard} isDragOverlay resolverNome={resolverNome} resolveImobiliariaInfo={resolveImobiliariaInfo} />
+                <MemoFichaCard ficha={activeCard} isDragOverlay resolverNome={resolverNome} resolveImobiliariaInfo={resolveImobiliariaInfo} />
               </div>
             )}
           </DragOverlay>
@@ -1044,6 +1126,8 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     </div>
   )
 }
+
+
 
 
 

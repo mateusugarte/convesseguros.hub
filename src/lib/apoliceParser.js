@@ -3,18 +3,16 @@
  * Extrai campos do texto bruto via pdfjs-dist e regex específicos para cada layout.
  */
 import * as pdfjsLib from 'pdfjs-dist'
-import { sanitizeProprietarioNome as sanitizeProprietarioNomeText } from './text'
+import { sanitizeProprietarioNome } from './text.js'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
   import.meta.url,
 ).href
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 function parseDateBR(str) {
   if (!str) return ''
-  const parts = str.trim().split('/')
+  const parts = String(str).trim().split('/')
   if (parts.length !== 3) return ''
   const [d, m, y] = parts
   return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
@@ -23,13 +21,9 @@ function parseDateBR(str) {
 function parseMoneyBR(str) {
   if (!str) return null
   const s = String(str).trim()
-  let clean = s
-  if (s.includes(',')) {
-    // BR format: 1.234,56 → remove . then , → .
-    clean = s.replace(/\./g, '').replace(',', '.')
-  }
+  const clean = s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s
   const val = parseFloat(clean)
-  return isNaN(val) ? null : val
+  return Number.isNaN(val) ? null : val
 }
 
 function fmt(val) {
@@ -37,51 +31,29 @@ function fmt(val) {
   return String(val)
 }
 
-export function sanitizeProprietarioNome(value) {
-  const text = String(value || '').replace(/\s+/g, ' ').trim()
-  if (!text) return ''
-
-  return text
-    .replace(/^\((?:segurado|propriet[aá]rio|locador)\)\s*/i, '')
-    .replace(/^(?:segurado|propriet[aá]rio|locador)\s*:\s*/i, '')
-    .replace(/^(?:nome)\s*:\s*/i, '')
-    .replace(/^(?:segurado|propriet[aá]rio|locador)\s+nome\s*:\s*/i, '')
-    .replace(/^\((?:segurado|propriet[aá]rio|locador)\)\s*nome\s*:\s*/i, '')
-    .trim()
+function normalizeText(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim()
 }
-
-// ─── Extração de texto do PDF ─────────────────────────────────────────────────
 
 export async function extractPdfText(file) {
   const arrayBuffer = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
   let fullText = ''
-  for (let i = 1; i <= pdf.numPages; i++) {
+  for (let i = 1; i <= pdf.numPages; i += 1) {
     const page = await pdf.getPage(i)
     const content = await page.getTextContent()
-    const pageText = content.items.map(item => item.str).join(' ')
-    fullText += pageText + '\n'
+    fullText += content.items.map(item => item.str).join(' ') + '\n'
   }
   return fullText
 }
 
-// ─── Porto Seguro ─────────────────────────────────────────────────────────────
-// Layout: tabela de cabeçalho com APÓLICE Nº, vigência em texto corrido,
-// LOCAL DE RISCO, TIPO DE LOCAÇÃO, PREÇO DO SEGURO com Valor da Parcela e 29X.
-
 function parsePortoSeguro(text) {
   const r = {}
-  const normalized = String(text || '').replace(/\s+/g, ' ')
+  const normalized = normalizeText(text)
 
-  // Número da apólice — na Porto o trecho útil vem depois de "59.0746.0000000"
-  // e antes do sufixo final ".0000".
   const ap = normalized.match(/59\s*\.?\s*0746\s*\.?\s*0000000\s*([0-9. ]{6,})/i)
   if (ap) {
-    const candidate = ap[1]
-      .trim()
-      .replace(/\s+/g, '')
-      .replace(/^\.+|\.+$/g, '')
-      .split('.')[0]
+    const candidate = ap[1].trim().replace(/\s+/g, '').replace(/^\.+|\.+$/g, '').split('.')[0]
     if (candidate) r.numero_apolice = candidate
   } else {
     const header = normalized.match(/AP[ÓO]LICE\s+N[º°]\s*([0-9.\s]{16,})/i)
@@ -92,323 +64,266 @@ function parsePortoSeguro(text) {
     }
   }
 
-  // Vigência — "a partir das 24 horas do dia DD/MM/YYYY até as 24 horas do dia DD/MM/YYYY"
-  const vig = text.match(
-    /a partir das 24 horas do dia (\d{2}\/\d{2}\/\d{4}) at[eé] as 24 horas do dia (\d{2}\/\d{2}\/\d{4})/i
-  )
+  const vig = normalized.match(/a partir das 24 horas do dia (\d{2}\/\d{2}\/\d{4}) at[eé] as 24 horas do dia (\d{2}\/\d{2}\/\d{4})/i)
   if (vig) {
     r.inicio_vigencia = parseDateBR(vig[1])
-    r.fim_vigencia    = parseDateBR(vig[2])
+    r.fim_vigencia = parseDateBR(vig[2])
   }
 
-  // Endereço — "LOCAL DE RISCO  AV SAULLE PAGNONCELLI 317 CASA 2, 07081170, JARDIM..."
-  const end = text.match(/LOCAL DE RISCO\s+(.+?)(?=\s+PRIMEIRO LOCAT|\s+CPF\/CNPJ|\s+ESTIPULANTE)/i)
+  const end = normalized.match(/LOCAL DE RISCO\s+(.+?)(?=\s+PRIMEIRO LOCAT|\s+CPF\/CNPJ|\s+ESTIPULANTE)/i)
   if (end) r.endereco = end[1].trim()
-
-  // CEP — 8 dígitos dentro do endereço
   if (r.endereco) {
     const cep = r.endereco.match(/\b(\d{8})\b/)
     if (cep) r.cep = cep[1]
   }
 
-  // Tipo de imóvel / locação — "TIPO DE LOCAÇÃO  1 – Residencial"
-  const tipo = text.match(/TIPO DE LOCA[ÇC][ÃA]O\s+\d+\s*[–\-]\s*(\w+)/i)
-  if (tipo) r.tipo_imovel = tipo[1]
+  const tipo = normalized.match(/TIPO DE LOCA(?:ÇÃO|CAO)\s+\d+\s*[-–]\s*(\w+)/i)
+  if (tipo) r.tipo_imovel = tipo[1].trim()
 
-  // Aluguel (verba declarada) — linha "Aluguel R$ 1.500,00 30x R$ ..."
-  const alug = text.match(/Aluguel\s+R\$\s*([\d.,]+)\s+\d+x/i)
+  const alug = normalized.match(/Aluguel\s+R\$\s*([\d.,]+)\s+\d+x/i)
   if (alug) r.valor_aluguel = parseMoneyBR(alug[1])
 
-  // Prêmio Líquido — seção "PREÇO DO SEGURO": após "Prêmio Tarifário" e "Desconto"
-  const premioSec = text.match(
-    /Pr[êe]mio Tarif[áa]rio[\s\S]{1,300}?Pr[êe]mio L[íi]quido\s+R\$\s*([\d.,]+)/i
-  )
+  const premioSec = normalized.match(/Pr[êe]mio Tarif[áa]rio[\s\S]{1,300}?Pr[êe]mio L[íi]quido\s+R\$\s*([\d.,]+)/i)
   if (premioSec) r.premio_liquido = parseMoneyBR(premioSec[1])
 
-  // Prêmio Total — "Preço Total do Seguro R$ 3.687,93"
-  const ptot = text.match(/Pre[çc]o Total do Seguro\s+R\$\s*([\d.,]+)/i)
+  const ptot = normalized.match(/Pre[çc]o Total do Seguro\s+R\$\s*([\d.,]+)/i)
   if (ptot) r.premio_total = parseMoneyBR(ptot[1])
 
-  // Valor da Parcela — "Valor da Parcela R$ 127,17"
-  const parc = text.match(/Valor da Parcela\s+R\$\s*([\d.,]+)/i)
+  const parc = normalized.match(/Valor da Parcela\s+R\$\s*([\d.,]+)/i)
   if (parc) r.valor_parcela = parseMoneyBR(parc[1])
 
-  // Parcelamento — "Fatura sem entrada 29X" ou "29X" após tipo de pagamento
-  const nparc = text.match(/Fatura\s+sem\s+entrada\s*(\d+)X/i)
-    || text.match(/Tipo de Pagamento\s+Fatura sem entrada\s*\n?\s*(\d+)X/i)
-    || text.match(/(\d+)X\s*(?:sem juros)?/i)
+  const nparc = normalized.match(/Fatura\s+sem\s+entrada\s*(\d+)X/i)
+    || normalized.match(/Tipo de Pagamento\s+Fatura sem entrada\s*(\d+)X/i)
+    || normalized.match(/(\d+)X\s*(?:sem juros)?/i)
   if (nparc) r.parcelamento = parseInt(nparc[1], 10)
 
-  // Número da proposta
-  const prop = text.match(/PROPOSTA N[º°]\s+([\w-]+)/i)
+  const prop = normalized.match(/PROPOSTA N[º°]\s+([\w.-]+)/i)
   if (prop && /^[0-9./-]+$/.test(prop[1].trim())) r.numero_proposta = prop[1].trim()
 
-  // Proprietário (locador) — "LOCADOR  FULANO DE TAL  CPF/CNPJ..."
-  const locador = text.match(/\bLOCADOR\b\s+(.+?)(?=\s+CPF\/CNPJ|\s+CNPJ|\s+CPF|\s+SEGUNDO|\s+TERCEIRO)/i)
+  const locatario = normalized.match(
+    /PRIMEIRO\s+LOCAT[ÁA]RIO\s+CPF\/CNPJ\s+([\d./-]+)\s+NOME\/RAZ(?:ÃO|AO)\s+SOCIAL\s+(.+?)(?=\s+NOME SOCIAL|\s+PROFISS(?:ÃO|AO)|\s+ESTIPULANTE)/i
+  )
+  if (locatario) {
+    r.documento_locatario = locatario[1].trim()
+    r.nome_locatario = locatario[2].trim()
+  }
+
+  const locador = normalized.match(/\bLOCADOR\b\s+(.+?)(?=\s+CPF\/CNPJ|\s+CNPJ|\s+CPF|\s+SEGUNDO|\s+TERCEIRO)/i)
   if (locador) r.nome_proprietario = locador[1].trim()
 
-  // Na Porto, os dados do proprietário costumam aparecer no bloco "DADOS DO SEGURADO".
   if (!r.nome_proprietario) {
     const segurado =
-      text.match(/\bDADOS?\s+DO\s+SEGURADO\b[\s\S]{0,250}?\bSEGURADO\b\s*:?\s*(.+?)(?=\s*(?:CPF|CNPJ|DATA DE NASCIMENTO|NASCIMENTO|CELULAR|TELEFONE|E-?MAIL|ENDERE|LOCAL DE RISCO))/i)
-      || text.match(/\bSEGURADO\b\s*:?\s*(.+?)(?=\s*(?:CPF|CNPJ|DATA DE NASCIMENTO|NASCIMENTO|CELULAR|TELEFONE|E-?MAIL|ENDERE|LOCAL DE RISCO))/i)
+      normalized.match(/\bDADOS?\s+DO\s+SEGURADO\b[\s\S]{0,250}?NOME\/RAZ(?:ÃO|AO)\s+SOCIAL\s+(.+?)(?=\s+NOME SOCIAL|\s+CPF\/CNPJ|\s+CEP|\s+ENDEREÇO)/i) ||
+      normalized.match(/\bSEGURADO\b\s*:?\s*(.+?)(?=\s*(?:CPF|CNPJ|DATA DE NASCIMENTO|NASCIMENTO|CELULAR|TELEFONE|FONE|E-?MAIL|ENDERE|LOCAL DE RISCO))/i)
     if (segurado) r.nome_proprietario = segurado[1].trim()
   }
 
   const celSegurado =
-    text.match(/\b(?:CELULAR|TELEFONE|FONE)\b\s*:?\s*(\(?\d{2}\)?\s*\d{4,5}-?\d{4})/i)
-    || text.match(/\b(?:CELULAR|TELEFONE|FONE)\b[\s\S]{0,60}?(\(?\d{2}\)?\s*\d{4,5}-?\d{4})/i)
+    normalized.match(/\b(?:CELULAR|TELEFONE|FONE)\b\s*:?\s*(\(?\d{2}\)?\s*\d{4,5}-?\d{4})/i) ||
+    normalized.match(/\b(?:CELULAR|TELEFONE|FONE)\b[\s\S]{0,60}?(\(?\d{2}\)?\s*\d{4,5}-?\d{4})/i)
   if (celSegurado) r.proprietario_cel = celSegurado[1].trim()
 
   r.forma_pagamento = 'fatura_sem_entrada'
-
   return r
 }
 
-// ─── Pottencial ───────────────────────────────────────────────────────────────
-// Layout: cabeçalho com "Nº DA APÓLICE" em bloco separado,
-// vigência em "Das 0h do dia … às 0h do dia …",
-// pagamento em "Fatura mensal em 30 x sem juros: R$ 171,26",
-// dados do imóvel na pág 3 com "Local do Risco:".
-
 function parsePottencial(text) {
   const r = {}
+  const normalized = normalizeText(text)
 
-  // Número da apólice — longa sequência após "Nº DA APÓLICE"
-  const ap = text.match(/N[º°]\s*DA\s*AP[ÓO]LICE\s+(\d{10,})/i)
+  const ap = normalized.match(/N[º°]\s*DA\s*AP[ÓO]LICE\s+(\d{10,})/i)
   if (ap) r.numero_apolice = ap[1].trim()
 
-  // Número da proposta
-  const prop = text.match(/N[º°]\s*DA\s*PROPOSTA\s+(\d+)/i)
+  const prop = normalized.match(/N[º°]\s*DA\s*PROPOSTA\s+(\d+)/i)
   if (prop) r.numero_proposta = prop[1].trim()
 
-  // Vigência — "Das 0h do dia 25/06/2026 às 0h do dia 25/12/2028"
-  const vig = text.match(/Das 0h do dia (\d{2}\/\d{2}\/\d{4})\s+[àa]s 0h do dia (\d{2}\/\d{2}\/\d{4})/i)
+  const vig = normalized.match(/Das 0h do dia (\d{2}\/\d{2}\/\d{4})\s+[àa]s 0h do dia (\d{2}\/\d{2}\/\d{4})/i)
   if (vig) {
     r.inicio_vigencia = parseDateBR(vig[1])
-    r.fim_vigencia    = parseDateBR(vig[2])
+    r.fim_vigencia = parseDateBR(vig[2])
   }
 
-  // Alternativa: "Vigência do contrato de locação: DD/MM/YYYY à DD/MM/YYYY"
   if (!r.inicio_vigencia) {
-    const vigAlt = text.match(
-      /Vig[êe]ncia do contrato de loca[çc][aã]o:\s*(\d{2}\/\d{2}\/\d{4})\s*[àa]\s*(\d{2}\/\d{2}\/\d{4})/i
-    )
+    const vigAlt = normalized.match(/Vig[êe]ncia do contrato de loca[çc][ãa]o:\s*(\d{2}\/\d{2}\/\d{4})\s*[àa]\s*(\d{2}\/\d{2}\/\d{4})/i)
     if (vigAlt) {
       r.inicio_vigencia = parseDateBR(vigAlt[1])
-      r.fim_vigencia    = parseDateBR(vigAlt[2])
+      r.fim_vigencia = parseDateBR(vigAlt[2])
     }
   }
 
-  // Endereço — "Local do Risco: CONDESSA AMALIA 204 AP 06 JARDIM SANTA MENA 07096010 GUARULHOS SP"
-  const end = text.match(/Local do Risco:\s*(.+?)(?=\s*Vig[êe]ncia|\s*LOCAT[ÁA]RIO|\s*LOCADOR|\n\n)/i)
+  const end = normalized.match(/Local do Risco:\s*(.+?)(?=\s*Vig[êe]ncia|\s*LOCAT[ÁA]RIO|\s*LOCADOR|\s*LOCAT[ÁA]RIOS|\n\n)/i)
   if (end) r.endereco = end[1].trim()
-
-  // CEP — 8 dígitos dentro do endereço
   if (r.endereco) {
     const cep = r.endereco.match(/\b(\d{8})\b/)
     if (cep) r.cep = cep[1]
   }
 
-  // Tipo de locação — "Tipo de locação: Residencial"
-  const tipo = text.match(/Tipo de loca[çc][aã]o:\s*(\w+)/i)
-  if (tipo) r.tipo_imovel = tipo[1]
+  const tipo = normalized.match(/Tipo de loca[çc][ãa]o:\s*(\w+)/i)
+  if (tipo) r.tipo_imovel = tipo[1].trim()
 
-  // Proprietário (locador)
-  const locador = text.match(/LOCADOR\s*:?\s*(.+?)(?=\s*CPF|\s*CNPJ|\s*E-mail|\s*Celular|\s*Endere)/i)
-    || text.match(/PROPRIET[ÁA]RIO\s*:?\s*(.+?)(?=\s*CPF|\s*CNPJ|\s*E-mail|\s*Celular)/i)
-  if (locador) r.nome_proprietario = locador[1].trim()
+  const locatario =
+    normalized.match(/LOCAT[ÁA]RIOS?\s*\(?(?:Garantid[oa]s?)?\)?\s+Nome:\s+(.+?)\s+CPF:\s*([\d./-]+)/i) ||
+    normalized.match(/Locat[áa]rio\s*\(Garantido\)\s+(.+?)\s+CPF:\s*([\d./-]+)/i)
+  if (locatario) {
+    r.nome_locatario = locatario[1].trim()
+    r.documento_locatario = locatario[2].trim()
+  }
 
-  // Aluguel — "Aluguel R$ 1.600,00 R$ 48.000,00 R$ 3.304,11"
-  const alug = text.match(/Aluguel\s+R\$\s*([\d.,]+)\s+R\$/i)
+  const locador = normalized.match(/LOCADOR\s*(?:\(Segurado\))?\s*Nome:\s+(.+?)\s+CPF:\s*([\d./-]+)/i)
+    || normalized.match(/LOCADOR\s*:?\s*(.+?)(?=\s*CPF|\s*CNPJ|\s*E-mail|\s*Celular|\s*Endere)/i)
+    || normalized.match(/PROPRIET[ÁA]RIO\s+Nome:\s+(.+?)\s+(?:CPF|CNPJ):\s*([\d./-]+)/i)
+    || normalized.match(/PROPRIET[ÁA]RIO\s*:?\s*(.+?)(?=\s*CPF|\s*CNPJ|\s*E-mail|\s*Celular)/i)
+  if (locador) {
+    r.nome_proprietario = locador[1].trim()
+    if (locador[2] && !r.proprietario_documento) r.proprietario_documento = locador[2].trim()
+  }
+
+  const alug = normalized.match(/Aluguel\s+R\$\s*([\d.,]+)\s+R\$/i)
   if (alug) r.valor_aluguel = parseMoneyBR(alug[1])
 
-  // Prêmio Líquido — "VALOR DO SEGURO … Prêmio Líquido R$ 4.784,66"
-  const premioSec = text.match(/VALOR DO SEGURO[\s\S]{1,100}?Pr[êe]mio L[íi]quido\s+R\$\s*([\d.,]+)/i)
+  const premioSec = normalized.match(/VALOR DO SEGURO[\s\S]{1,100}?Pr[êe]mio L[íi]quido\s+R\$\s*([\d.,]+)/i)
   if (premioSec) r.premio_liquido = parseMoneyBR(premioSec[1])
 
-  // Prêmio Total — "Prêmio Total: R$ 5.137,77"
-  const ptot = text.match(/Pr[êe]mio Total:?\s+R\$\s*([\d.,]+)/i)
+  const ptot = normalized.match(/Pr[êe]mio Total:?\s+R\$\s*([\d.,]+)/i)
   if (ptot) r.premio_total = parseMoneyBR(ptot[1])
 
-  // Valor da Parcela + Parcelamento — "Fatura mensal em 30 x sem juros: R$ 171,26"
-  const pag = text.match(/Fatura mensal em (\d+)\s*x\s*sem juros:?\s+R\$\s*([\d.,]+)/i)
+  const pag = normalized.match(/Fatura mensal em (\d+)\s*x\s*sem juros:?\s+R\$\s*([\d.,]+)/i)
   if (pag) {
-    r.parcelamento  = parseInt(pag[1], 10)
+    r.parcelamento = parseInt(pag[1], 10)
     r.valor_parcela = parseMoneyBR(pag[2])
   }
 
   r.forma_pagamento = 'fatura_sem_entrada'
-
   return r
 }
 
-// ─── Tokio Marine ─────────────────────────────────────────────────────────────
-// Layout: "Apólice: 00091477", vigência em linha "Vigência: a partir das…",
-// seção "DADOS DO ITEM" com Local do Risco, CEP, Tipo de Imóvel separados,
-// "Prêmio Líquido Total R$: 6.621,06", tabela de parcelas com valores pontados.
-
 function parseTokioMarine(text) {
   const r = {}
+  const normalized = normalizeText(text)
 
-  // Número da apólice — "Apólice: 00091477"
-  const ap = text.match(/Ap[óo]lice:\s*(\d+)/i)
+  const ap = normalized.match(/Ap[óo]lice:\s*(\d+)/i)
   if (ap) r.numero_apolice = ap[1].trim()
 
-  // Vigência — "Vigência: a partir das 24 horas do dia 05/06/2026 até às 24 horas do dia 05/12/2028"
-  const vig = text.match(
-    /Vig[êe]ncia:\s*a partir das 24 horas do dia (\d{2}\/\d{2}\/\d{4}) at[eé] [àa]s 24 horas do dia (\d{2}\/\d{2}\/\d{4})/i
-  )
+  const vig = normalized.match(/Vig[êe]ncia:\s*a partir das 24 horas do dia (\d{2}\/\d{2}\/\d{4}) at[eé] [àa]s 24 horas do dia (\d{2}\/\d{2}\/\d{4})/i)
   if (vig) {
     r.inicio_vigencia = parseDateBR(vig[1])
-    r.fim_vigencia    = parseDateBR(vig[2])
+    r.fim_vigencia = parseDateBR(vig[2])
   }
 
-  // Endereço composto de vários campos da seção DADOS DO ITEM
-  const local   = text.match(/Local do Risco:\s*(.+?)(?=\s+Complemento:|\s+N[uú]mero|\s+Bairro:|$)/i)
-  const numero  = text.match(/N[uú]mero Logradouro:\s*(\d+)/i)
-  const compl   = text.match(/Complemento:\s*(.+?)(?=\s+N[uú]mero|\s+Bairro:|$)/i)
-  const bairro  = text.match(/Bairro:\s*(.+?)(?=\s+Cidade:|$)/i)
-  const cidade  = text.match(/Cidade:\s*(.+?)(?=\s+CEP:|$)/i)
+  const local = normalized.match(/Local do Risco:\s*(.+?)(?=\s+Complemento:|\s+N[uú]mero|\s+Bairro:|$)/i)
+  const numero = normalized.match(/N[uú]mero Logradouro:\s*(\d+)/i)
+  const compl = normalized.match(/Complemento:\s*(.+?)(?=\s+N[uú]mero|\s+Bairro:|$)/i)
+  const bairro = normalized.match(/Bairro:\s*(.+?)(?=\s+Cidade:|$)/i)
+  const cidade = normalized.match(/Cidade:\s*(.+?)(?=\s+CEP:|$)/i)
   if (local) {
     let end = local[1].trim()
     if (numero) end += ', ' + numero[1]
-    if (compl)  end += ' ' + compl[1].trim()
+    if (compl) end += ' ' + compl[1].trim()
     if (bairro) end += ' - ' + bairro[1].trim()
     if (cidade) end += ' - ' + cidade[1].trim()
     r.endereco = end
   }
 
-  // CEP — "CEP: 07031-000"
-  const cep = text.match(/CEP:\s*([\d]{5}-?[\d]{3})/i)
+  const cep = normalized.match(/CEP:\s*([\d]{5}-?[\d]{3})/i)
   if (cep) r.cep = cep[1].replace('-', '')
 
-  // Tipo de imóvel — "Tipo de Imóvel: Apartamento"
-  const tipoIm = text.match(/Tipo de Im[óo]vel:\s*(\w+)/i)
+  const tipoIm = normalized.match(/Tipo de Im[óo]vel:\s*(\w+)/i)
   if (tipoIm) r.tipo_imovel = tipoIm[1]
 
-  // Aluguel (verba declarada) — última coluna da linha Aluguel na tabela COBERTURAS
-  // "Aluguel Até 30 vezes a verba declarada 4.014,50 2.000,00"
-  const alug = text.match(
-    /Aluguel\s+At[eé] \d+ vezes a verba declarada\s+([\d.,]+)\s+([\d.,]+)/i
-  )
-  if (alug) r.valor_aluguel = parseMoneyBR(alug[2]) // última coluna = verba declarada
+  const alug = normalized.match(/Aluguel\s+At[eé] \d+ vezes a verba declarada\s+([\d.,]+)\s+([\d.,]+)/i)
+  if (alug) r.valor_aluguel = parseMoneyBR(alug[2])
 
-  // Proprietário (locador)
-  const locador = text.match(/(?:Locador|Propriet[áa]rio)[:\s]+(.+?)(?=\s+CPF|\s+Data de Nasc|\s+Tipo|\s+Bairro)/i)
+  const locador = normalized.match(/(?:Locador|Propriet[áa]rio)[:\s]+(.+?)(?=\s+CPF|\s+Data de Nasc|\s+Tipo|\s+Bairro)/i)
   if (locador) r.nome_proprietario = locador[1].trim()
 
-  // Prêmio Líquido Total — "Prêmio Líquido Total R$: 6.621,06"
-  const premioTot = text.match(/Pr[êe]mio L[íi]quido Total R\$[:\s]+([\d.,]+)/i)
+  const premioTot = normalized.match(/Pr[êe]mio L[íi]quido Total R\$[:\s]+([\d.,]+)/i)
   if (premioTot) r.premio_liquido = parseMoneyBR(premioTot[1])
 
-  // Prêmio Total — "Prêmio Total: R$ 7.109,68"
-  const ptot = text.match(/Pr[êe]mio Total:\s*R\$\s*([\d.,]+)/i)
+  const ptot = normalized.match(/Pr[êe]mio Total:\s*R\$\s*([\d.,]+)/i)
   if (ptot) r.premio_total = parseMoneyBR(ptot[1])
 
-  // Valor da 1ª parcela na tabela: "01 245.15 10/07/2026 Ficha" ou "01 245,15 ..."
-  const parc1 = text.match(/\b0?1\s+([\d.,]+)\s+\d{2}\/\d{2}\/\d{4}\s+Ficha/i)
+  const parc1 = normalized.match(/\b0?1\s+([\d.,]+)\s+\d{2}\/\d{2}\/\d{4}\s+Ficha/i)
   if (parc1) r.valor_parcela = parseMoneyBR(parc1[1])
 
-  // Parcelamento — número da última parcela antes do fim da tabela
-  const allRows = [...text.matchAll(/\b(\d{2})\s+[\d.,]+\s+\d{2}\/\d{2}\/\d{4}\s+Ficha/gi)]
-  if (allRows.length > 0) {
-    r.parcelamento = parseInt(allRows[allRows.length - 1][1], 10)
-  }
+  const allRows = [...normalized.matchAll(/\b(\d{2})\s+[\d.,]+\s+\d{2}\/\d{2}\/\d{4}\s+Ficha/gi)]
+  if (allRows.length > 0) r.parcelamento = parseInt(allRows[allRows.length - 1][1], 10)
 
   return r
 }
 
-// ─── Too Seguros ──────────────────────────────────────────────────────────────
-// Layout: "APÓLICE Nº 1074600194858", vigência em "INÍCIO DE VIGÊNCIA DAS 24H",
-// Local do Risco com bairro/cidade na mesma seção,
-// "PRÊMIO LÍQUIDO: 3.658,23 … PRÊMIO TOTAL: 3.928,21",
-// tabela de parcelas: "1 126,03 0,00 0,00 9,30 135,33 23/07/2026"
-
 function parseTooSeguros(text) {
   const r = {}
+  const normalized = normalizeText(text)
 
-  // Número da apólice — "APÓLICE Nº 1074600194858"
-  const ap = text.match(/AP[ÓO]LICE N[º°]\s+([\d]+)/i)
+  const ap = normalized.match(/AP[ÓO]LICE N[º°]\s+([\d]+)/i)
   if (ap) r.numero_apolice = ap[1].trim()
 
-  // Número da proposta — "PROPOSTA Nº 000835"
-  const prop = text.match(/PROPOSTA N[º°]\s+([\d]+)/i)
+  const prop = normalized.match(/PROPOSTA N[º°]\s+([\d]+)/i)
   if (prop) r.numero_proposta = prop[1].trim()
 
-  // Vigência — "INÍCIO DE VIGÊNCIA DAS 24H 25/06/2026" e "TÉRMINO DE VIGÊNCIA DAS 24H 25/12/2028"
-  const vigI = text.match(/IN[IÍ]CIO DE VIG[EÊ]NCIA DAS 24H\s+(\d{2}\/\d{2}\/\d{4})/i)
-  const vigF = text.match(/T[EÉ]RMINO DE VIG[EÊ]NCIA DAS 24H\s+(\d{2}\/\d{2}\/\d{4})/i)
+  const vigI = normalized.match(/IN[IÍ]CIO DE VIG[ÊE]NCIA DAS 24H\s+(\d{2}\/\d{2}\/\d{4})/i)
+  const vigF = normalized.match(/T[ÉE]RMINO DE VIG[ÊE]NCIA DAS 24H\s+(\d{2}\/\d{2}\/\d{4})/i)
   if (vigI) r.inicio_vigencia = parseDateBR(vigI[1])
-  if (vigF) r.fim_vigencia    = parseDateBR(vigF[1])
+  if (vigF) r.fim_vigencia = parseDateBR(vigF[1])
 
-  // Segurado / proprietário
   const segurado =
-    text.match(/DADOS DO SEGURADO[\s\S]{0,250}?\bSegurado:\s*(.+?)(?=\s+CPF\/CNPJ|\s+CPF|\s+CNPJ)/i)
-    || text.match(/\bSEGURADO\b\s*:?\s*(.+?)(?=\s*(?:CPF|CNPJ|CELULAR|TELEFONE|FONE|E-?MAIL|ENDERE|Local do Risco|Bairro|Cidade))/i)
+    normalized.match(/DADOS DO SEGURADO[\s\S]{0,250}?\bSegurado:\s*(.+?)(?=\s+CPF\/CNPJ|\s+CPF|\s+CNPJ)/i) ||
+    normalized.match(/\bSEGURADO\b\s*:?\s*(.+?)(?=\s*(?:CPF|CNPJ|CELULAR|TELEFONE|FONE|E-?MAIL|ENDERE|Local do Risco|Bairro|Cidade))/i)
   if (segurado) r.nome_proprietario = segurado[1].trim()
 
   const seguradoDoc =
-    text.match(/DADOS DO SEGURADO[\s\S]{0,250}?\bCPF\/CNPJ:\s*([\d./-]+)/i)
-    || text.match(/\bSEGURADO\b[\s\S]{0,120}?\bCPF\/CNPJ:\s*([\d./-]+)/i)
+    normalized.match(/DADOS DO SEGURADO[\s\S]{0,250}?\bCPF\/CNPJ:\s*([\d./-]+)/i) ||
+    normalized.match(/\bSEGURADO\b[\s\S]{0,120}?\bCPF\/CNPJ:\s*([\d./-]+)/i)
   if (seguradoDoc) r.proprietario_documento = seguradoDoc[1].trim()
 
-  // Endereço — "Local do Risco: Avenida José Brumatti, 2856 - BLOCO 03 APTO 96"
-  const localRisco = text.match(/Local do Risco:\s*(.+?)(?=\s+Bairro:|\s+Tipo de LOCA|$)/i)
-  const bairro = text.match(/Bairro:\s*(.+?)(?=\s+Cidade:|$)/i)
-  const cidade = text.match(/Cidade:\s*(.+?)(?=\s+UF:|$)/i)
-  const estado = text.match(/UF:\s*([A-Z]{2})/i)
-  const cep = text.match(/CEP:\s*([\d.]+(?:-[\d]+)?)/i)
+  const garantido =
+    normalized.match(/DADOS DO GARANTIDO[\s\S]{0,160}?\bGarantido:\s*(.+?)(?=\s+CPF:|\s+CPF\/CNPJ:)/i) ||
+    normalized.match(/\bGarantido:\s*(.+?)(?=\s+CPF:|\s+CPF\/CNPJ:)/i)
+  if (garantido) r.nome_locatario = garantido[1].trim()
+
+  const garantidoDoc =
+    normalized.match(/DADOS DO GARANTIDO[\s\S]{0,200}?\bCPF(?:\/CNPJ)?:\s*([\d./-]+)/i) ||
+    normalized.match(/\bGarantido:\s*.+?\s+CPF(?:\/CNPJ)?:\s*([\d./-]+)/i)
+  if (garantidoDoc) r.documento_locatario = garantidoDoc[1].trim()
+
+  const localRisco = normalized.match(/Local do Risco:\s*(.+?)(?=\s+Bairro:|\s+Tipo de LOCA|$)/i)
+  const bairro = normalized.match(/Bairro:\s*(.+?)(?=\s+Cidade:|$)/i)
+  const cidade = normalized.match(/Cidade:\s*(.+?)(?=\s+UF:|$)/i)
+  const estado = normalized.match(/UF:\s*([A-Z]{2})/i)
+  const cep = normalized.match(/CEP:\s*([\d.]+(?:-[\d]+)?)/i)
   if (localRisco) r.endereco_linha = localRisco[1].trim()
   if (bairro) r.bairro = bairro[1].trim()
   if (cidade) r.cidade = cidade[1].trim()
   if (estado) r.estado = estado[1].trim().toUpperCase()
   if (cep) r.cep = cep[1].replace(/[.\-]/g, '')
 
-  r.endereco = [
-    r.endereco_linha,
-    r.bairro,
-    r.cidade,
-    r.estado,
-  ].filter(Boolean).join(', ')
+  r.endereco = [r.endereco_linha, r.bairro, r.cidade, r.estado].filter(Boolean).join(', ')
 
-  // Tipo de locação — "Imóvel - Residencial"
   const tipo =
-    text.match(/TIPO DE LOCA[ÇC][ÃA]O[\s\S]{0,80}?\bIm[óo]vel\s*-\s*(Residencial|Comercial)/i)
-    || text.match(/Im[óo]vel\s*-\s*(Residencial|Comercial)/i)
+    normalized.match(/TIPO DE LOCA(?:ÇÃO|CAO)[\s\S]{0,80}?\bIm[óo]vel\s*-\s*(Residencial|Comercial)/i) ||
+    normalized.match(/Im[óo]vel\s*-\s*(Residencial|Comercial)/i)
   if (tipo) r.tipo_imovel = tipo[1]
 
   if (!r.proprietario_cel) {
     const celSegurado =
-      text.match(/\b(?:CELULAR|TELEFONE|FONE)\b\s*:?\s*(\(?\d{2}\)?\s*\d{4,5}-?\d{4})/i)
-      || text.match(/\b(?:CELULAR|TELEFONE|FONE)\b[\s\S]{0,60}?(\(?\d{2}\)?\s*\d{4,5}-?\d{4})/i)
+      normalized.match(/\b(?:CELULAR|TELEFONE|FONE)\b\s*:?\s*(\(?\d{2}\)?\s*\d{4,5}-?\d{4})/i) ||
+      normalized.match(/\b(?:CELULAR|TELEFONE|FONE)\b[\s\S]{0,60}?(\(?\d{2}\)?\s*\d{4,5}-?\d{4})/i)
     if (celSegurado) r.proprietario_cel = celSegurado[1].trim()
   }
 
-  // Aluguel — "Aluguel 1.400,00 42.000,00 2.946,76" (verba declarada = 1ª coluna)
-  const alug = text.match(/Aluguel\s+([\d.,]+)\s+[\d.,]+\s+[\d.,]+/i)
+  const alug = normalized.match(/Aluguel\s+([\d.,]+)\s+[\d.,]+\s+[\d.,]+/i)
   if (alug) r.valor_aluguel = parseMoneyBR(alug[1])
 
-  // Prêmio Líquido — "PRÊMIO LÍQUIDO: 3.658,23"
-  const prem = text.match(/PR[ÊE]MIO L[ÍI]QUIDO:\s*([\d.,]+)/i)
+  const prem = normalized.match(/PR[ÊE]MIO L[ÍI]QUIDO:\s*([\d.,]+)/i)
   if (prem) r.premio_liquido = parseMoneyBR(prem[1])
 
-  // Prêmio Total — "PRÊMIO TOTAL: 3.928,21"
-  // Cuidado: existe "PRÊMIO TOTAL LÍQUIDO" antes — pegar o último match
-  const ptotAll = [...text.matchAll(/PR[ÊE]MIO TOTAL:\s*([\d.,]+)/gi)]
+  const ptotAll = [...normalized.matchAll(/PR[ÊE]MIO TOTAL:\s*([\d.,]+)/gi)]
   if (ptotAll.length > 0) r.premio_total = parseMoneyBR(ptotAll[ptotAll.length - 1][1])
 
-  // Valor da parcela (prêmio total com IOF): coluna 6 da linha 1 da tabela
-  // "1 126,03 0,00 0,00 9,30 135,33 23/07/2026"
-  const parc1 = text.match(
-    /\b1\s+[\d.,]+\s+0,00\s+0,00\s+[\d.,]+\s+([\d.,]+)\s+\d{2}\/\d{2}\/\d{4}/i
-  )
+  const parc1 = normalized.match(/\b1\s+[\d.,]+\s+0,00\s+0,00\s+[\d.,]+\s+([\d.,]+)\s+\d{2}\/\d{2}\/\d{4}/i)
   if (parc1) r.valor_parcela = parseMoneyBR(parc1[1])
 
-  // Parcelamento — último número de linha da tabela
-  const allRows = [...text.matchAll(
-    /\b(\d+)\s+[\d.,]+\s+0,00\s+0,00\s+[\d.,]+\s+[\d.,]+\s+\d{2}\/\d{2}\/\d{4}/gi
-  )]
+  const allRows = [...normalized.matchAll(/\b(\d+)\s+[\d.,]+\s+0,00\s+0,00\s+[\d.,]+\s+[\d.,]+\s+\d{2}\/\d{2}\/\d{4}/gi)]
   if (allRows.length > 0) {
     const last = parseInt(allRows[allRows.length - 1][1], 10)
     if (last > 0) r.parcelamento = last
@@ -417,15 +332,13 @@ function parseTooSeguros(text) {
   return r
 }
 
-// ─── Dispatch ─────────────────────────────────────────────────────────────────
-
 const PARSERS = {
-  porto:        parsePortoSeguro,
+  porto: parsePortoSeguro,
   'porto seguro': parsePortoSeguro,
-  pottencial:   parsePottencial,
-  tokio:        parseTokioMarine,
+  pottencial: parsePottencial,
+  tokio: parseTokioMarine,
   'tokio marine': parseTokioMarine,
-  too:          parseTooSeguros,
+  too: parseTooSeguros,
   'too seguros': parseTooSeguros,
 }
 
@@ -439,15 +352,6 @@ function findParser(seguradora) {
   return null
 }
 
-/**
- * Extrai campos de uma apólice PDF de acordo com a seguradora selecionada.
- * @param {string} seguradora — nome da seguradora selecionada no form
- * @param {File}   file       — arquivo PDF
- * @returns {Promise<{campos: object, extras: object, semParser: boolean}>}
- *   campos  → campos do form (numero_apolice, inicio_vigencia, etc.)
- *   extras  → informações extras não mapeadas para inputs (cep, tipo_imovel, valor_aluguel)
- *   semParser → true se seguradora sem parser configurado
- */
 export async function parseApolice(seguradora, file) {
   const text = await extractPdfText(file)
   const parser = findParser(seguradora)
@@ -459,22 +363,20 @@ export async function parseApolice(seguradora, file) {
   const raw = parser(text)
   if (raw.nome_proprietario) raw.nome_proprietario = sanitizeProprietarioNome(raw.nome_proprietario)
 
-  // Separar campos que preenchem inputs dos extras informativos
   const { cep, tipo_imovel, valor_aluguel, forma_pagamento, ...camposForm } = raw
 
   return {
     campos: {
       ...camposForm,
-      // formatação numérica como string para inputs controlados
-      premio_liquido:  raw.premio_liquido != null ? fmt(raw.premio_liquido) : '',
-      premio_total:    raw.premio_total   != null ? fmt(raw.premio_total)   : '',
-      valor_parcela:   raw.valor_parcela  != null ? fmt(raw.valor_parcela)  : '',
-      parcelamento:    raw.parcelamento   != null ? fmt(raw.parcelamento)   : '',
+      premio_liquido: raw.premio_liquido != null ? fmt(raw.premio_liquido) : '',
+      premio_total: raw.premio_total != null ? fmt(raw.premio_total) : '',
+      valor_parcela: raw.valor_parcela != null ? fmt(raw.valor_parcela) : '',
+      parcelamento: raw.parcelamento != null ? fmt(raw.parcelamento) : '',
       forma_pagamento: forma_pagamento || '',
     },
     extras: {
-      cep:          cep          || null,
-      tipo_imovel:  tipo_imovel  || null,
+      cep: cep || null,
+      tipo_imovel: tipo_imovel || null,
       valor_aluguel: valor_aluguel != null ? valor_aluguel : null,
     },
     semParser: false,

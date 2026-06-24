@@ -305,27 +305,20 @@ export default function ApoliceDetalhe() {
     }
 
     if (!fichaId) {
-      apolicePayload.imobiliaria = fichaImobiliaria.trim() || null
-      apolicePayload.produto = fichaProduto || null
+      apolicePayload.imobiliaria  = fichaImobiliaria.trim() || null
+      apolicePayload.produto      = fichaProduto || null
       apolicePayload.nome_interessado = fichaProduto === 'pessoa_juridica'
         ? null
         : (fichaNome.trim() || apolice?.nome_interessado || null)
-      apolicePayload.raw_data = {
-        ...(apolice?.raw_data || {}),
-        nome_interessado: fichaProduto === 'pessoa_juridica' ? null : fichaNome.trim() || null,
-        nome_empresa: fichaProduto === 'pessoa_juridica' ? fichaNome.trim() || null : null,
-        cpf: fichaProduto === 'pessoa_juridica' ? null : fichaCpf.trim() || null,
-        cnpj: fichaProduto === 'pessoa_juridica' ? fichaCnpj.trim() || null : null,
-        celular: fichaCelular.trim() || null,
-        produto: fichaProduto || null,
-        tipo_imovel: fichaTipoImovel.trim() || null,
-        cep: fichaCep.trim() || null,
-        valor_aluguel: fichaValorAluguelNum,
-        imobiliaria: fichaImobiliaria.trim() || null,
-        status: fichaStatus || null,
-        vigencia: fichaVigencia.trim() || null,
-        observacoes: fichaObservacoes.trim() || null,
-      }
+      apolicePayload.nome_empresa = fichaProduto === 'pessoa_juridica' ? fichaNome.trim() || null : null
+      apolicePayload.cpf          = fichaProduto === 'pessoa_juridica' ? null : fichaCpf.trim() || null
+      apolicePayload.cnpj         = fichaProduto === 'pessoa_juridica' ? fichaCnpj.trim() || null : null
+      apolicePayload.celular      = fichaCelular.trim() || null
+      apolicePayload.tipo_imovel  = fichaTipoImovel.trim() || null
+      apolicePayload.cep          = fichaCep.trim() || null
+      apolicePayload.valor_aluguel = fichaValorAluguelNum
+      apolicePayload.vigencia     = fichaVigencia.trim() || null
+      apolicePayload.observacoes  = fichaObservacoes.trim() || null
     }
 
     const [errApolice, errFicha] = await Promise.all([

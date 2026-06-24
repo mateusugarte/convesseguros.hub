@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { PageHeader, MetricCard, DataCard, EmptyState } from '../components/ui'
 import { Select } from '../components/ui/Select'
 import { useAuth } from '../contexts/AuthContext'
@@ -7,20 +7,40 @@ import { Coins, ShieldCheck, FileText, TrendingUp } from 'lucide-react'
 
 const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
+function pad2(value) {
+  return String(value).padStart(2, '0')
+}
+
+function toLocalYmd(date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
+}
+
 function getRange(ano, mes) {
   return [
-    new Date(ano, mes - 1, 1).toISOString(),
-    new Date(ano, mes, 0, 23, 59, 59).toISOString(),
+    toLocalYmd(new Date(ano, mes - 1, 1)),
+    toLocalYmd(new Date(ano, mes, 0)),
   ]
+}
+
+function getParcelas(item) {
+  const parcelas = Number(toNumber(item.parcelamento))
+  return Number.isFinite(parcelas) && parcelas > 0 ? parcelas : 1
+}
+
+function getComissaoMensal(item) {
+  const comissaoMensal = toNumber(item.comissao_mensal)
+  if (comissaoMensal !== null) return comissaoMensal
+  const comissaoTotal = toNumber(item.valor_comissao) || 0
+  return comissaoTotal / getParcelas(item)
 }
 
 function groupBySeguradora(items) {
   const map = new Map()
   items.forEach(item => {
     const key = item.seguradora || 'Sem seguradora'
-    const current = map.get(key) || { seguradora: key, producao: 0, comissao: 0, apolices: 0 }
+    const current = map.get(key) || { seguradora: key, producao: 0, comissaoMensal: 0, apolices: 0 }
     current.producao += toNumber(item.premio_total ?? item.valor_producao) || 0
-    current.comissao += toNumber(item.valor_comissao) || 0
+    current.comissaoMensal += getComissaoMensal(item)
     current.apolices += 1
     map.set(key, current)
   })
@@ -52,7 +72,7 @@ export default function Financeiro() {
 
   const agrupado = useMemo(() => groupBySeguradora(rows), [rows])
   const totalProducao = useMemo(() => rows.reduce((sum, item) => sum + (toNumber(item.premio_total ?? item.valor_producao) || 0), 0), [rows])
-  const totalComissao = useMemo(() => rows.reduce((sum, item) => sum + (toNumber(item.valor_comissao) || 0), 0), [rows])
+  const totalComissaoMensal = useMemo(() => rows.reduce((sum, item) => sum + getComissaoMensal(item), 0), [rows])
   const totalApolices = rows.length
   const ticketMedio = totalApolices ? totalProducao / totalApolices : 0
   const mesLabel = `${MESES_ABBR[mes - 1]} ${ano}`
@@ -73,12 +93,12 @@ export default function Financeiro() {
     <div className="space-y-5 animate-fade-in">
       <PageHeader
         eyebrow="Financeiro"
-        title="Comissionamento"
-        description="Leitura financeira das apólices emitidas. A produção entra pelo prêmio total e a comissão é calculada sobre o prêmio líquido."
+        title="Seguro Fiança"
+        description="Leitura financeira do setor de seguro fiança. A comissão é reconhecida mês a mês e rateada pela quantidade de parcelas de cada apólice."
         stats={(
           <>
             <MetricCard label="Produção" value={formatMoneyBR(totalProducao)} hint={mesLabel} tone="accent" icon={<Coins className="h-4 w-4" />} />
-            <MetricCard label="Comissão" value={formatMoneyBR(totalComissao)} hint="sobre prêmio líquido" tone="secondary" icon={<TrendingUp className="h-4 w-4" />} />
+            <MetricCard label="Comissão do mês" value={formatMoneyBR(totalComissaoMensal)} hint="seguro fiança rateado por parcelas" tone="secondary" icon={<TrendingUp className="h-4 w-4" />} />
             <MetricCard label="Apólices" value={totalApolices} hint="emitidas no período" tone="success" icon={<FileText className="h-4 w-4" />} />
             <MetricCard label="Ticket médio" value={formatMoneyBR(ticketMedio)} hint="produção por apólice" tone="warning" icon={<Coins className="h-4 w-4" />} />
           </>
@@ -139,7 +159,7 @@ export default function Financeiro() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold text-dark-text">{formatMoneyBR(item.producao)}</p>
-                      <p className="text-xs text-dark-muted">Comissão {formatMoneyBR(item.comissao)}</p>
+                      <p className="text-xs text-dark-muted">Comissão do mês {formatMoneyBR(item.comissaoMensal)}</p>
                     </div>
                   </div>
                 </div>
@@ -154,7 +174,7 @@ export default function Financeiro() {
           ) : rows.length === 0 ? (
             <EmptyState
               title="Sem registros"
-              description="As apólices emitidas aparecerão aqui após o preenchimento do prêmio líquido e da comissão."
+              description="As apólices emitidas aparecerão aqui após o preenchimento da produção e do rateio mensal da comissão."
               icon={<FileText className="h-6 w-6" />}
             />
           ) : (
@@ -162,7 +182,7 @@ export default function Financeiro() {
               <table className="table-table text-sm">
                 <thead className="table-thead">
                   <tr>
-                    {['Emissão', 'Seguradora', 'Apólice', 'Produção', 'Comissão', '% Comissão'].map(h => (
+                    {['Emissão', 'Seguradora', 'Apólice', 'Parcelas', 'Produção', 'Comissão do mês', '% Comissão'].map(h => (
                       <th key={h} className="th whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -173,8 +193,9 @@ export default function Financeiro() {
                       <td className="td text-xs text-dark-muted whitespace-nowrap">{String(row.data_emissao).slice(0, 10)}</td>
                       <td className="td max-w-[160px] truncate">{row.seguradora || '—'}</td>
                       <td className="td font-mono text-xs text-dark-muted">{row.numero_apolice || '—'}</td>
+                      <td className="td font-mono text-xs">{getParcelas(row)}</td>
                       <td className="td font-mono text-xs">{formatMoneyBR(row.premio_total ?? row.valor_producao)}</td>
-                      <td className="td font-mono text-xs">{formatMoneyBR(row.valor_comissao)}</td>
+                      <td className="td font-mono text-xs">{formatMoneyBR(getComissaoMensal(row))}</td>
                       <td className="td font-mono text-xs">{row.pct_comissao != null ? `${row.pct_comissao}%` : '—'}</td>
                     </tr>
                   ))}

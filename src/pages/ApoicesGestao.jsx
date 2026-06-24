@@ -24,7 +24,7 @@ import {
   STATUS_EMISSAO_LABELS,
 } from '../lib/apolices'
 import { fetchFichasAprovadasEmissao } from '../lib/fichas'
-import { extractPdfText, sanitizeProprietarioNome } from '../lib/apoliceParser'
+import { sanitizeProprietarioNome } from '../lib/text'
 import { uploadDocumento } from '../lib/documentos'
 import { normalizeDisplayText } from '../lib/text'
 import { useImobiliaria } from '../hooks/useImobiliaria'
@@ -134,232 +134,12 @@ function resumoFicha(ficha) {
   }
 }
 
-function parseDateBR(str) {
-  if (!str) return ''
-  const parts = String(str).trim().split('/')
-  if (parts.length !== 3) return ''
-  const [d, m, y] = parts
-  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-}
-
-function parseMoneyBR(str) {
-  if (!str) return null
-  const clean = String(str).trim().replace(/\./g, '').replace(',', '.')
-  const value = Number.parseFloat(clean)
-  return Number.isFinite(value) ? value : null
-}
-
 function inferProdutoFianca({ documento, tipoImovel }) {
   const digits = String(documento || '').replace(/\D/g, '')
   const tipo = String(tipoImovel || '').toLowerCase()
   if (digits.length > 11) return 'pessoa_juridica'
   if (tipo.includes('comercial')) return 'comercial_pf'
   return 'residencial_pf'
-}
-
-function extrairDadosPortoUpload(texto) {
-  const text = String(texto || '').replace(/\s+/g, ' ')
-  const result = {}
-
-  const numeroApolice = text.match(/59\s*\.?\s*0746\s*\.?\s*0000000\s*([0-9. ]{6,})/i)
-  if (numeroApolice) {
-    result.numero_apolice = numeroApolice[1].trim().replace(/\s+/g, '').replace(/^\.+|\.+$/g, '').split('.')[0]
-  }
-
-  const proposta = text.match(/PROPOSTA N[ÂºÂ°]\s+([\w.-]+)/i)
-  if (proposta) result.numero_proposta = proposta[1].trim()
-
-  const vigencia = text.match(/a partir das 24 horas do dia (\d{2}\/\d{2}\/\d{4}) at[eé] as 24 horas do dia (\d{2}\/\d{2}\/\d{4})/i)
-  if (vigencia) {
-    result.inicio_vigencia = parseDateBR(vigencia[1])
-    result.fim_vigencia = parseDateBR(vigencia[2])
-  }
-
-  const segurado = text.match(/DADOS DO SEGURADO\s+NOME\/RAZ[ÃƒA]O SOCIAL\s+(.+?)\s+NOME SOCIAL\s+CPF\/CNPJ\s+([\d./-]+)/i)
-  if (segurado) {
-    result.nome_proprietario = segurado[1].trim()
-    result.proprietario_documento = segurado[2].trim()
-  }
-
-  const localRisco = text.match(/LOCAL DE RISCO\s+(.+?)(?=\s+PRIMEIRO LOCAT[ÃA]RIO|\s+ESTIPULANTE)/i)
-  if (localRisco) {
-    result.endereco = localRisco[1].trim()
-    const partes = result.endereco.split(',').map(item => item.trim()).filter(Boolean)
-    result.endereco_linha = partes[0] || ''
-    result.cep = partes[1] ? partes[1].replace(/\D/g, '') : ''
-    if (partes[2]) {
-      const bairroCidadeEstado = partes[2].match(/(.+?)\s*-\s*([^,]+),\s*([A-Z]{2})$/i)
-      if (bairroCidadeEstado) {
-        result.bairro = bairroCidadeEstado[1].trim()
-        result.cidade = bairroCidadeEstado[2].trim()
-        result.estado = bairroCidadeEstado[3].trim().toUpperCase()
-      }
-    }
-  }
-
-  const locatario = text.match(/PRIMEIRO LOCAT[ÃA]RIO CPF\/CNPJ\s+([\d./-]+)\s+NOME\/RAZ[ÃƒA]O SOCIAL\s+(.+?)(?=\s+NOME SOCIAL|\s+PROFISS[ÃƒA]O|\s+ESTIPULANTE)/i)
-  if (locatario) {
-    result.documento_locatario = locatario[1].trim()
-    result.nome_locatario = locatario[2].trim()
-  }
-
-  const tipoLocacao = text.match(/TIPO DE LOCACAO\s+\d+\s*[-–]\s*(\w+)/i)
-  if (tipoLocacao) result.tipo_imovel = tipoLocacao[1].trim()
-
-  const aluguel = text.match(/Aluguel\s+R\$\s*([\d.,]+)\s+\d+x/i)
-  if (aluguel) result.valor_aluguel = parseMoneyBR(aluguel[1])
-
-  const premioLiquido = text.match(/Premio Liquido\s+R?\$?\s*([\d.,]+)/i)
-  if (premioLiquido) result.premio_liquido = parseMoneyBR(premioLiquido[1])
-
-  const valorParcela = text.match(/Valor da Parcela\s+R\$\s*([\d.,]+)/i)
-  if (valorParcela) result.valor_parcela = parseMoneyBR(valorParcela[1])
-
-  const parcelamento = text.match(/Fatura sem entrada\s+(\d+)X/i)
-  if (parcelamento) result.parcelamento = Number.parseInt(parcelamento[1], 10)
-
-  const premioTotal = text.match(/Pre[çc]o Total do Seguro\s+R\$\s*([\d.,]+)/i)
-  if (premioTotal) result.premio_total = parseMoneyBR(premioTotal[1])
-
-  result.forma_pagamento = 'fatura_sem_entrada'
-  return result
-}
-
-function extrairDadosPottencialUpload(texto) {
-  const text = String(texto || '').replace(/\s+/g, ' ')
-  const result = {}
-
-  const numeroApolice =
-    text.match(/N[º°]\\s*DA\\s+APOLICE\\s+(\\d{8,})/i) ||
-    text.match(/APOLICE[:\\s#]+(\\d{8,})/i) ||
-    text.match(/N[º°]\\s*APOLICE[:\\s]+(\\d+)/i)
-  if (numeroApolice) result.numero_apolice = numeroApolice[1].trim()
-
-  const proposta =
-    text.match(/N[º°]\\s*DA\\s+PROPOSTA[:\\s]+(\\d+)/i) ||
-    text.match(/PROPOSTA[:\\s#]+(\\d+)/i)
-  if (proposta) result.numero_proposta = proposta[1].trim()
-
-  const vigencia = text.match(/Das?\s+0h\s+do\s+dia\s+(\d{2}\/\d{2}\/\d{4})\s+.{0,10}0h\s+do\s+dia\s+(\d{2}\/\d{2}\/\d{4})/i)
-  if (vigencia) {
-    result.inicio_vigencia = parseDateBR(vigencia[1])
-    result.fim_vigencia = parseDateBR(vigencia[2])
-  }
-
-  const locatario =
-    text.match(/LOCAT[ÁA]RIOS?\s+\(?Garantidos?\)?\s+Nome:\s+(.+?)\s+CPF:\s+([\d./-]+)/i) ||
-    text.match(/(?:LOCAT.{0,4}RIO|GARANTIDO)\s+Nome:\s+(.+?)\s+(?:CPF|CNPJ):\s+([\d./-]+)/i)
-  if (locatario) {
-    result.nome_locatario = locatario[1].trim()
-    result.documento_locatario = locatario[2].trim()
-  }
-
-  const locador =
-    text.match(/LOCADOR\s+\(?Segurado\)?\s+Nome:\s+(.+?)\s+CPF:\s+([\d./-]+)/i) ||
-    text.match(/PROPRIET[ÁA]RIO\s+Nome:\s+(.+?)\s+(?:CPF|CNPJ):\s+([\d./-]+)/i)
-  if (locador) {
-    result.nome_proprietario = locador[1].trim()
-    result.proprietario_documento = locador[2].trim()
-  }
-
-  const tipoLocacao = text.match(/Tipo\s+de\s+loca[çc][ãa]o:\s+(Residencial|Comercial)/i)
-  if (tipoLocacao) result.tipo_imovel = tipoLocacao[1].trim()
-
-  const localRisco = text.match(/Local\s+do\s+Risco:\s+(.+?)(?=\s+Vig.{1,4}ncia\s+do\s+contrato|\s+LOCAT)/i)
-  if (localRisco) {
-    result.endereco = localRisco[1].trim()
-    const cepMatch = result.endereco.match(/\b(\d{5}-?\d{3}|\d{8})\b/)
-    if (cepMatch) result.cep = cepMatch[1].replace('-', '')
-    result.endereco_linha = result.endereco.split(/\s+\d{5}/)[0].trim()
-  }
-
-  const aluguel = text.match(/Aluguel\s+R\$\s*([\d.,]+)/i)
-  if (aluguel) result.valor_aluguel = parseMoneyBR(aluguel[1])
-
-  const premioLiquido = text.match(/Premio Liquido\s+R?\$?\s*([\d.,]+)/i)
-  if (premioLiquido) result.premio_liquido = parseMoneyBR(premioLiquido[1])
-
-  const premioTotal = text.match(/Pr[êe]mio\s+Total[:\s]+R\$\s*([\d.,]+)/i)
-  if (premioTotal) result.premio_total = parseMoneyBR(premioTotal[1])
-
-  const pagamento =
-    text.match(/Fatura\s+mensal\s+em\s+(\d+)\s*x\s+sem\s+juros[:\s]+R\$\s*([\d.,]+)/i) ||
-    text.match(/(\d+)\s*x\s+de\s+R\$\s*([\d.,]+)/i)
-  if (pagamento) {
-    result.parcelamento = Number.parseInt(pagamento[1], 10)
-    result.valor_parcela = parseMoneyBR(pagamento[2])
-  }
-
-  result.forma_pagamento = 'fatura_sem_entrada'
-  return result
-}
-
-function extrairDadosTooUpload(texto) {
-  const text = String(texto || '').replace(/\s+/g, ' ')
-  const result = {}
-
-  const numeroApolice = text.match(/AP[ÓO]LICE N[º°]\s+(\d+)/i)
-  if (numeroApolice) result.numero_apolice = numeroApolice[1].trim()
-
-  const proposta = text.match(/PROPOSTA N[º°]\s+(\d+)/i)
-  if (proposta) result.numero_proposta = proposta[1].trim()
-
-  const inicioVigencia = text.match(/IN[IÍ]CIO DE VIG[ÊE]NCIA DAS 24H\s+(\d{2}\/\d{2}\/\d{4})/i)
-  const fimVigencia = text.match(/T[ÉE]RMINO DE VIG[ÊE]NCIA DAS 24H\s+(\d{2}\/\d{2}\/\d{4})/i)
-  if (inicioVigencia) result.inicio_vigencia = parseDateBR(inicioVigencia[1])
-  if (fimVigencia) result.fim_vigencia = parseDateBR(fimVigencia[1])
-
-  const segurado = text.match(/DADOS DO SEGURADO[\s\S]{0,250}?\bSegurado:\s*(.+?)(?=\s+CPF\/CNPJ|\s+CPF|\s+CNPJ)/i)
-    || text.match(/\bSEGURADO\b\s*:?	*(.+?)(?=\s*(?:CPF|CNPJ|CELULAR|TELEFONE|FONE|E-?MAIL|Local do Risco|CEP|Tipo de loca))/i)
-  if (segurado) {
-    result.nome_proprietario = segurado[1].trim()
-  }
-
-  const seguradoDoc = text.match(/DADOS DO SEGURADO[\s\S]{0,250}?\bCPF\/CNPJ:\s*([\d./-]+)/i)
-    || text.match(/\bSEGURADO\b[\s\S]{0,120}?\bCPF\/CNPJ:\s*([\d./-]+)/i)
-  if (seguradoDoc) result.proprietario_documento = seguradoDoc[1].trim()
-
-  const localRisco = text.match(/Local do Risco:\s*(.+?)(?=\s+Bairro:|\s+Tipo de LOCA|$)/i)
-  if (localRisco) result.endereco_linha = localRisco[1].trim()
-
-  const bairro = text.match(/Bairro:\s*(.+?)(?=\s+Cidade:|\s+UF:|\s+CEP:)/i)
-  const cidade = text.match(/Cidade:\s*(.+?)(?=\s+UF:|\s+CEP:)/i)
-  const estado = text.match(/UF:\s*([A-Z]{2})/i)
-  const cep = text.match(/CEP:\s*([\d.-]+)/i)
-  if (bairro) result.bairro = bairro[1].trim()
-  if (cidade) result.cidade = cidade[1].trim()
-  if (estado) result.estado = estado[1].trim().toUpperCase()
-  if (cep) result.cep = cep[1].replace(/\D/g, '')
-
-  result.endereco = [
-    result.endereco_linha,
-    result.bairro,
-    result.cidade,
-    result.estado,
-  ].filter(Boolean).join(', ')
-
-  const tipoLocacao = text.match(/TIPO DE LOCACAO\\s+\\d+\\s*[-–]\\s*(\\w+)/i)
-  if (tipoLocacao) result.tipo_imovel = tipoLocacao[1].trim()
-
-  const aluguel = text.match(/Aluguel\s+([\d.,]+)\s+[\d.,]+\s+[\d.,]+/i)
-  if (aluguel) result.valor_aluguel = parseMoneyBR(aluguel[1])
-
-  const premioLiquido = text.match(/PR[ÊE]MIO L[ÍI]QUIDO:\s*([\d.,]+)/i)
-  if (premioLiquido) result.premio_liquido = parseMoneyBR(premioLiquido[1])
-
-  const premioTotal = [...text.matchAll(/PR[ÊE]MIO TOTAL:\s*([\d.,]+)/gi)]
-  if (premioTotal.length > 0) result.premio_total = parseMoneyBR(premioTotal[premioTotal.length - 1][1])
-
-  const valorParcela = text.match(/\b1\s+[\d.,]+\s+0,00\s+0,00\s+[\d.,]+\s+([\d.,]+)\s+\d{2}\/\d{2}\/\d{4}/i)
-  if (valorParcela) result.valor_parcela = parseMoneyBR(valorParcela[1])
-
-  const parcelas = [...text.matchAll(/\b(\d+)\s+[\d.,]+\s+0,00\s+0,00\s+[\d.,]+\s+[\d.,]+\s+\d{2}\/\d{2}\/\d{4}/gi)]
-  if (parcelas.length > 0) {
-    result.parcelamento = Number.parseInt(parcelas[parcelas.length - 1][1], 10)
-  }
-
-  result.forma_pagamento = 'fatura_sem_entrada'
-  return result
 }
 const InfoPill = memo(function InfoPill({ label, value, mono = false }) {
   return (
@@ -875,14 +655,11 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
     setExtraindo(true)
     setErro('')
     try {
-      const texto = await extractPdfText(pdfFile)
-      const parsed = seguradora === 'Pottencial Seguros'
-        ? extrairDadosPottencialUpload(texto)
-        : seguradora === 'TOO Seguros'
-          ? extrairDadosTooUpload(texto)
-          : extrairDadosPortoUpload(texto)
+      const { parseApolice } = await import('../lib/apoliceParser')
+      const { campos, extras, semParser } = await parseApolice(seguradora, pdfFile)
+      const parsed = { ...campos, ...extras }
       setDadosExtraidos(parsed)
-      if (!parsed.numero_apolice && !parsed.nome_locatario) {
+      if (semParser || (!parsed.numero_apolice && !parsed.nome_locatario)) {
         setErro(`Não foi possível identificar dados da apólice ${seguradora}. Verifique se o PDF é da seguradora selecionada.`)
       }
     } catch (err) {
@@ -1222,18 +999,27 @@ export default function ApoicesGestao() {
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
+    let frameId = null
 
-    const updateScrollState = () => {
+    const measureScrollState = () => {
       setCanScrollL(el.scrollLeft > 5)
       setCanScrollR(el.scrollLeft < el.scrollWidth - el.clientWidth - 5)
     }
+    const updateScrollState = () => {
+      if (frameId !== null) return
+      frameId = requestAnimationFrame(() => {
+        frameId = null
+        measureScrollState()
+      })
+    }
 
-    updateScrollState()
+    measureScrollState()
     el.addEventListener('scroll', updateScrollState, { passive: true })
     const resizeObserver = new ResizeObserver(updateScrollState)
     resizeObserver.observe(el)
 
     return () => {
+      if (frameId !== null) cancelAnimationFrame(frameId)
       el.removeEventListener('scroll', updateScrollState)
       resizeObserver.disconnect()
     }

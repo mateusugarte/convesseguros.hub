@@ -59,6 +59,21 @@ const tooltipStyle = (theme) => ({
 const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 const MESES_FULL = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
+function pad2(value) {
+  return String(value).padStart(2, '0')
+}
+
+function toLocalYmd(date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
+}
+
+function getMonthRange(ano, mes) {
+  return [
+    toLocalYmd(new Date(ano, mes - 1, 1)),
+    toLocalYmd(new Date(ano, mes, 0)),
+  ]
+}
+
 const SEG_COLORS = {
   'Porto Seguro': '#003595',
   'Tokio Marine': '#FBBA00',
@@ -149,18 +164,17 @@ export default function ApolicesDashboard() {
   const [segLogos, setSegLogos] = useState({})
   const [loading, setLoading] = useState(true)
 
-  const inicioMes = new Date(ano, mes - 1, 1).toISOString()
-  const fimMes = new Date(ano, mes, 0, 23, 59, 59).toISOString()
+  const [inicioMes, fimMes] = getMonthRange(ano, mes)
   const mesLabel = `${MESES_FULL[mes - 1]} ${ano}`
 
   const getRangeSeguradora = useCallback(() => {
     if (filtroSeg === 'mes') return [inicioMes, fimMes]
     if (filtroSeg === 'q90') {
       const d = new Date()
-      d.setDate(d.getDate() - 90)
-      return [d.toISOString(), null]
+      d.setDate(d.getDate() - 89)
+      return [toLocalYmd(d), toLocalYmd(new Date())]
     }
-    if (filtroSeg === 'ano') return [new Date(ano, 0, 1).toISOString(), new Date(ano, 11, 31, 23, 59, 59).toISOString()]
+    if (filtroSeg === 'ano') return [toLocalYmd(new Date(ano, 0, 1)), toLocalYmd(new Date(ano, 11, 31))]
     return [null, null]
   }, [filtroSeg, inicioMes, fimMes, ano])
 
@@ -257,13 +271,6 @@ export default function ApolicesDashboard() {
               value={kpis?.totalGeral ?? '—'}
               hint="base acumulada"
               tone="success"
-              icon={<TrendingUp className="h-4 w-4" />}
-            />
-            <MetricCard
-              label="Comissão"
-              value={formatMoneyBR(kpis?.totalComissao)}
-              hint="premiação líquida do período"
-              tone="secondary"
               icon={<TrendingUp className="h-4 w-4" />}
             />
             <MetricCard

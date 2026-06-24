@@ -15,9 +15,9 @@ import SecaoDocumentos from '../components/SecaoDocumentos'
 import { DatePicker } from '../components/ui/DatePicker'
 import { Select } from '../components/ui/Select'
 import { PageHeader, MetricCard, DataCard, Avatar } from '../components/ui'
-import { normalizeDisplayText } from '../lib/text'
+import { normalizeDisplayText, sanitizeProprietarioNome } from '../lib/text'
 import { formatDecimalBRInput } from '../lib/numberInput'
-import { parseApolice, sanitizeProprietarioNome } from '../lib/apoliceParser'
+import { parseApolice } from '../lib/apoliceParser'
 import { Upload, RefreshCw, Sparkles, X } from 'lucide-react'
 
 function fmtDt(v) {

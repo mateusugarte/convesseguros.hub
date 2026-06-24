@@ -3,6 +3,7 @@
  * Extrai campos do texto bruto via pdfjs-dist e regex específicos para cada layout.
  */
 import * as pdfjsLib from 'pdfjs-dist'
+import { sanitizeProprietarioNome as sanitizeProprietarioNomeText } from './text'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',

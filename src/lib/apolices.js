@@ -23,6 +23,34 @@ export function toNumber(value) {
   return parseDecimalBR(value)
 }
 
+function pad2(value) {
+  return String(value).padStart(2, '0')
+}
+
+function toLocalYmd(date) {
+  return [
+    date.getFullYear(),
+    pad2(date.getMonth() + 1),
+    pad2(date.getDate()),
+  ].join('-')
+}
+
+function parseLocalDate(value) {
+  if (!value) return null
+  if (value instanceof Date) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate())
+  }
+
+  const text = String(value)
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (match) {
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+  }
+
+  const parsed = new Date(text)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
 export function normalizePercent(value) {
   const parsed = toNumber(value)
   if (parsed === null) return null
@@ -53,19 +81,24 @@ export function formatMoneyBR(v) {
 // ── KPIs ─────────────────────────────────────────────────────────────────────
 
 export async function fetchKPIsApolices(inicioMes, fimMes) {
-  const inicio90 = new Date()
-  inicio90.setDate(inicio90.getDate() - 90)
+  const inicioMesDate = parseLocalDate(inicioMes) || new Date()
+  const fimMesDate = parseLocalDate(fimMes) || new Date()
+  const inicio90 = new Date(fimMesDate)
+  inicio90.setDate(inicio90.getDate() - 89)
 
-  const inicioMesAnt = new Date(new Date(inicioMes).getFullYear(), new Date(inicioMes).getMonth() - 1, 1).toISOString()
-  const fimMesAnt    = new Date(new Date(inicioMes).getFullYear(), new Date(inicioMes).getMonth(), 0, 23, 59, 59).toISOString()
+  const inicioMesAnt = toLocalYmd(new Date(inicioMesDate.getFullYear(), inicioMesDate.getMonth() - 1, 1))
+  const fimMesAnt = toLocalYmd(new Date(inicioMesDate.getFullYear(), inicioMesDate.getMonth(), 0))
+  const inicio90Ymd = toLocalYmd(inicio90)
+  const inicioMesYmd = toLocalYmd(inicioMesDate)
+  const fimMesYmd = toLocalYmd(fimMesDate)
 
   const [mesSel, ult90, total, mesAnt] = await Promise.all([
     supabase.from('apolices').select('id', { count: 'exact', head: true })
       .in('status_emissao', ['emitida', 'enviada'])
-      .gte('data_emissao', inicioMes).lte('data_emissao', fimMes),
+      .gte('data_emissao', inicioMesYmd).lte('data_emissao', fimMesYmd),
     supabase.from('apolices').select('id', { count: 'exact', head: true })
       .in('status_emissao', ['emitida', 'enviada'])
-      .gte('data_emissao', inicio90.toISOString()),
+      .gte('data_emissao', inicio90Ymd),
     supabase.from('apolices').select('id', { count: 'exact', head: true })
       .in('status_emissao', ['emitida', 'enviada']),
     supabase.from('apolices').select('id', { count: 'exact', head: true })
@@ -79,25 +112,21 @@ export async function fetchKPIsApolices(inicioMes, fimMes) {
     ? Math.round(((mesSelecionado - mesAnterior) / mesAnterior) * 100)
     : null
 
-  const [producaoMes, comissaoMes] = await Promise.all([
-    supabase.from('apolices').select('valor_producao', { count: 'exact' })
-      .in('status_emissao', ['emitida', 'enviada'])
-      .gte('data_emissao', inicioMes).lte('data_emissao', fimMes),
-    supabase.from('apolices').select('valor_comissao', { count: 'exact' })
-      .in('status_emissao', ['emitida', 'enviada'])
-      .gte('data_emissao', inicioMes).lte('data_emissao', fimMes),
-  ])
+  const { data: producaoMes } = await supabase
+    .from('apolices')
+    .select('premio_total, valor_producao', { count: 'exact' })
+    .in('status_emissao', ['emitida', 'enviada'])
+    .gte('data_emissao', inicioMesYmd)
+    .lte('data_emissao', fimMesYmd)
 
-  const totalProducaoPremio = (producaoMes.data || []).reduce((sum, item) => sum + (toNumber(item.premio_total ?? item.valor_producao) || 0), 0)
-  const totalComissao = (comissaoMes.data || []).reduce((sum, item) => sum + (toNumber(item.valor_comissao) || 0), 0)
+  const totalProducaoPremio = (producaoMes || []).reduce((sum, item) => sum + (toNumber(item.premio_total ?? item.valor_producao) || 0), 0)
 
   return {
     mesSelecionado,
     ultimos90:  ult90.count  || 0,
     totalGeral: total.count  || 0,
     variacaoMes,
-    totalProducao: totalProducaoPremio || totalProducao,
-    totalComissao,
+    totalProducao: totalProducaoPremio,
   }
 }
 
@@ -119,10 +148,11 @@ export async function fetchApolicesPorDia(inicioMes, fimMes) {
   })
 
   const resultado = []
-  const d = new Date(inicioMes)
-  const fim = new Date(fimMes)
+  const d = parseLocalDate(inicioMes)
+  const fim = parseLocalDate(fimMes)
+  if (!d || !fim) return []
   while (d <= fim) {
-    const key = d.toISOString().slice(0, 10)
+    const key = toLocalYmd(d)
     resultado.push({ dia: key, total: contagem[key] || 0 })
     d.setDate(d.getDate() + 1)
   }

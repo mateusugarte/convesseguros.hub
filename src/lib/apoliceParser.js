@@ -328,29 +328,48 @@ function parseTooSeguros(text) {
   if (vigI) r.inicio_vigencia = parseDateBR(vigI[1])
   if (vigF) r.fim_vigencia    = parseDateBR(vigF[1])
 
-  // Endereço — "Local do Risco: Avenida José Brumatti, 2856 - BLOCO 03 APTO 96"
-  const end    = text.match(/Local do Risco:\s*(.+?)(?=\s*Bairro:|$)/i)
-  const bairro = text.match(/Bairro:\s*(.+?)(?=\s*Cidade:|$)/i)
-  const cidade = text.match(/Cidade:\s*(.+?)(?=\s*UF:|$)/i)
-  if (end) {
-    let e = end[1].trim()
-    if (bairro) e += ' - ' + bairro[1].trim()
-    if (cidade) e += ' - ' + cidade[1].trim()
-    r.endereco = e
-  }
+  // Segurado / proprietário
+  const segurado =
+    text.match(/DADOS DO SEGURADO[\s\S]{0,250}?\bSegurado:\s*(.+?)(?=\s+CPF\/CNPJ|\s+CPF|\s+CNPJ)/i)
+    || text.match(/\bSEGURADO\b\s*:?\s*(.+?)(?=\s*(?:CPF|CNPJ|CELULAR|TELEFONE|FONE|E-?MAIL|ENDERE|Local do Risco|Bairro|Cidade))/i)
+  if (segurado) r.nome_proprietario = segurado[1].trim()
 
-  // CEP — "CEP: 07.160-445"
+  const seguradoDoc =
+    text.match(/DADOS DO SEGURADO[\s\S]{0,250}?\bCPF\/CNPJ:\s*([\d./-]+)/i)
+    || text.match(/\bSEGURADO\b[\s\S]{0,120}?\bCPF\/CNPJ:\s*([\d./-]+)/i)
+  if (seguradoDoc) r.proprietario_documento = seguradoDoc[1].trim()
+
+  // Endereço — "Local do Risco: Avenida José Brumatti, 2856 - BLOCO 03 APTO 96"
+  const localRisco = text.match(/Local do Risco:\s*(.+?)(?=\s+Bairro:|\s+Tipo de LOCA|$)/i)
+  const bairro = text.match(/Bairro:\s*(.+?)(?=\s+Cidade:|$)/i)
+  const cidade = text.match(/Cidade:\s*(.+?)(?=\s+UF:|$)/i)
+  const estado = text.match(/UF:\s*([A-Z]{2})/i)
   const cep = text.match(/CEP:\s*([\d.]+(?:-[\d]+)?)/i)
+  if (localRisco) r.endereco_linha = localRisco[1].trim()
+  if (bairro) r.bairro = bairro[1].trim()
+  if (cidade) r.cidade = cidade[1].trim()
+  if (estado) r.estado = estado[1].trim().toUpperCase()
   if (cep) r.cep = cep[1].replace(/[.\-]/g, '')
 
-  // Tipo de imóvel — "Imóvel - Residencial"
-  const tipo = text.match(/Im[óo]vel\s*-\s*(\w+)/i)
+  r.endereco = [
+    r.endereco_linha,
+    r.bairro,
+    r.cidade,
+    r.estado,
+  ].filter(Boolean).join(', ')
+
+  // Tipo de locação — "Imóvel - Residencial"
+  const tipo =
+    text.match(/TIPO DE LOCA[ÇC][ÃA]O[\s\S]{0,80}?\bIm[óo]vel\s*-\s*(Residencial|Comercial)/i)
+    || text.match(/Im[óo]vel\s*-\s*(Residencial|Comercial)/i)
   if (tipo) r.tipo_imovel = tipo[1]
 
-  // Proprietário (locador)
-  const locador = text.match(/PROPRIET[ÁA]RIO\s*:?\s*(.+?)(?=\s*CPF|\s*CNPJ|\s*CELULAR|\s*E-MAIL|\n)/i)
-    || text.match(/LOCADOR\s*:?\s*(.+?)(?=\s*CPF|\s*CNPJ|\s*CELULAR|\n)/i)
-  if (locador) r.nome_proprietario = locador[1].trim()
+  if (!r.proprietario_cel) {
+    const celSegurado =
+      text.match(/\b(?:CELULAR|TELEFONE|FONE)\b\s*:?\s*(\(?\d{2}\)?\s*\d{4,5}-?\d{4})/i)
+      || text.match(/\b(?:CELULAR|TELEFONE|FONE)\b[\s\S]{0,60}?(\(?\d{2}\)?\s*\d{4,5}-?\d{4})/i)
+    if (celSegurado) r.proprietario_cel = celSegurado[1].trim()
+  }
 
   // Aluguel — "Aluguel 1.400,00 42.000,00 2.946,76" (verba declarada = 1ª coluna)
   const alug = text.match(/Aluguel\s+([\d.,]+)\s+[\d.,]+\s+[\d.,]+/i)

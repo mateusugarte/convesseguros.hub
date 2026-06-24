@@ -226,11 +226,11 @@ function Pagination({ page, total, pageSize, onPage }) {
   const from = page * pageSize + 1, to = Math.min((page + 1) * pageSize, total)
   return (
     <div className="flex items-center justify-between px-4 py-3 border-t border-dark-border text-xs text-dark-muted">
-      <span>Mostrando {from}â€“{to} de {total}</span>
+      <span>Mostrando {from}–{to} de {total}</span>
       <div className="flex items-center gap-1">
         <button onClick={() => onPage(page - 1)} disabled={page === 0}
                 className="px-2.5 py-1 rounded-lg border border-dark-border hover:border-brand-accent/50 disabled:opacity-30 transition-colors">
-          â† Anterior
+          ← Anterior
         </button>
         {Array.from({ length: Math.min(5, pages) }, (_, i) => {
           const p = page < 3 ? i : page - 2 + i
@@ -244,7 +244,7 @@ function Pagination({ page, total, pageSize, onPage }) {
         })}
         <button onClick={() => onPage(page + 1)} disabled={page >= pages - 1}
                 className="px-2.5 py-1 rounded-lg border border-dark-border hover:border-brand-accent/50 disabled:opacity-30 transition-colors">
-          Próximo â†’
+          Próximo →
         </button>
       </div>
     </div>

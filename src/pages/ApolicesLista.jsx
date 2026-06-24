@@ -57,6 +57,10 @@ function nomeFicha(item) {
   return item.fichas?.nome_empresa || item.fichas?.nome_interessado || item.nome_interessado || '—'
 }
 
+function isApoliceSemFicha(item) {
+  return !item?.ficha_id && Boolean(item?.raw_data?.origem_upload_direto)
+}
+
 const PAGE_SIZE = 50
 
 export default function ApolicesLista() {
@@ -293,7 +297,16 @@ export default function ApolicesLista() {
                   <tr key={a.id} className="table-row" onClick={() => navigate(`/apolices/${a.id}`)}>
                     <td className="td text-xs font-mono whitespace-nowrap text-dark-muted">{fmtData(a.data_emissao)}</td>
                     <td className="td max-w-[140px] truncate font-medium text-dark-text">{resolverNome(a.imobiliaria) || '—'}</td>
-                    <td className="td max-w-[150px] truncate text-dark-text">{nomeFicha(a)}</td>
+                    <td className="td max-w-[220px] text-dark-text">
+                      <div className="min-w-0">
+                        <p className="truncate">{nomeFicha(a)}</p>
+                        {isApoliceSemFicha(a) && (
+                          <span className="mt-1 inline-flex items-center rounded-full bg-status-warning/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-status-warning">
+                            Apólice sem ficha vinculada
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="td font-mono text-xs text-dark-muted">{a.numero_apolice || '—'}</td>
                     <td className="td text-xs text-dark-muted">{a.seguradora || '—'}</td>
                     <td className="td"><StatusBadge status={a.status_emissao} /></td>

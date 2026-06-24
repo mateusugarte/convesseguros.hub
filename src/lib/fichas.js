@@ -735,7 +735,7 @@ export async function limparRetornoGeradoFicha(id, userId) {
 
   const { data, error } = await supabase.from('fichas').update({ raw_data: nextRaw }).eq('id', id).select('id')
   if (error) return error
-  if (!data || data.length === 0) return { message: 'Sem permissÃ£o para editar esta ficha.' }
+  if (!data || data.length === 0) return { message: 'Sem permissão para editar esta ficha.' }
   return null
 }
 

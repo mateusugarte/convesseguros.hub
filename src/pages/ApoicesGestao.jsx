@@ -12,6 +12,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Upload,
   X,
 } from 'lucide-react'
 import {
@@ -22,6 +23,8 @@ import {
   STATUS_EMISSAO_LABELS,
 } from '../lib/apolices'
 import { fetchFichasAprovadasEmissao } from '../lib/fichas'
+import { extractPdfText } from '../lib/apoliceParser'
+import { uploadDocumento } from '../lib/documentos'
 import { normalizeDisplayText } from '../lib/text'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useAuth } from '../contexts/AuthContext'
@@ -40,6 +43,7 @@ const COLUNAS = [
 const PRODUTO_ICON = { residencial_pf: Home, comercial_pf: Briefcase, pessoa_juridica: Building }
 const PRODUTO_COLOR = { residencial_pf: '#4A90D9', comercial_pf: '#10B981', pessoa_juridica: '#8B5CF6' }
 const PRODUTO_ABBR = { residencial_pf: 'RES. PF', comercial_pf: 'COM. PF', pessoa_juridica: 'PJ' }
+const SEGURADORAS_UPLOAD_DIRETO = ['Porto Seguro', 'Pottential Seguros', 'TOO Seguros']
 
 function getPeriodDates(filtro) {
   const now = new Date()
@@ -83,11 +87,15 @@ function nomeApolice(apolice) {
 }
 
 function produtoApolice(apolice) {
-  return apolice?.fichas?.produto || apolice?.produto
+  return apolice?.fichas?.produto || apolice?.produto || apolice?.raw_data?.produto
 }
 
 function documentoApolice(apolice) {
-  return apolice?.fichas?.cnpj || apolice?.fichas?.cpf || '—'
+  return apolice?.fichas?.cnpj || apolice?.fichas?.cpf || apolice?.raw_data?.cnpj || apolice?.raw_data?.cpf || '�'
+}
+
+function isApoliceSemFicha(apolice) {
+  return !apolice?.fichas && Boolean(apolice?.raw_data?.origem_upload_direto)
 }
 
 function statusBadgeClass(status) {
@@ -121,6 +129,232 @@ function resumoFicha(ficha) {
   }
 }
 
+function parseDateBR(str) {
+  if (!str) return ''
+  const parts = String(str).trim().split('/')
+  if (parts.length !== 3) return ''
+  const [d, m, y] = parts
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+}
+
+function parseMoneyBR(str) {
+  if (!str) return null
+  const clean = String(str).trim().replace(/\./g, '').replace(',', '.')
+  const value = Number.parseFloat(clean)
+  return Number.isFinite(value) ? value : null
+}
+
+function inferProdutoFianca({ documento, tipoImovel }) {
+  const digits = String(documento || '').replace(/\D/g, '')
+  const tipo = String(tipoImovel || '').toLowerCase()
+  if (digits.length > 11) return 'pessoa_juridica'
+  if (tipo.includes('comercial')) return 'comercial_pf'
+  return 'residencial_pf'
+}
+
+function extrairDadosPortoUpload(texto) {
+  const text = String(texto || '').replace(/\s+/g, ' ')
+  const result = {}
+
+  const numeroApolice = text.match(/59\s*\.?\s*0746\s*\.?\s*0000000\s*([0-9. ]{6,})/i)
+  if (numeroApolice) {
+    result.numero_apolice = numeroApolice[1].trim().replace(/\s+/g, '').replace(/^\.+|\.+$/g, '').split('.')[0]
+  }
+
+  const proposta = text.match(/PROPOSTA N[º°]\s+([\w.-]+)/i)
+  if (proposta) result.numero_proposta = proposta[1].trim()
+
+  const vigencia = text.match(/a partir das 24 horas do dia (\d{2}\/\d{2}\/\d{4}) at[eé] as 24 horas do dia (\d{2}\/\d{2}\/\d{4})/i)
+  if (vigencia) {
+    result.inicio_vigencia = parseDateBR(vigencia[1])
+    result.fim_vigencia = parseDateBR(vigencia[2])
+  }
+
+  const segurado = text.match(/DADOS DO SEGURADO\s+NOME\/RAZ[ÃA]O SOCIAL\s+(.+?)\s+NOME SOCIAL\s+CPF\/CNPJ\s+([\d./-]+)/i)
+  if (segurado) {
+    result.nome_proprietario = segurado[1].trim()
+    result.proprietario_documento = segurado[2].trim()
+  }
+
+  const localRisco = text.match(/LOCAL DE RISCO\s+(.+?)(?=\s+PRIMEIRO LOCAT[ÁA]RIO|\s+ESTIPULANTE)/i)
+  if (localRisco) {
+    result.endereco = localRisco[1].trim()
+    const partes = result.endereco.split(',').map(item => item.trim()).filter(Boolean)
+    result.endereco_linha = partes[0] || ''
+    result.cep = partes[1] ? partes[1].replace(/\D/g, '') : ''
+    if (partes[2]) {
+      const bairroCidadeEstado = partes[2].match(/(.+?)\s*-\s*([^,]+),\s*([A-Z]{2})$/i)
+      if (bairroCidadeEstado) {
+        result.bairro = bairroCidadeEstado[1].trim()
+        result.cidade = bairroCidadeEstado[2].trim()
+        result.estado = bairroCidadeEstado[3].trim().toUpperCase()
+      }
+    }
+  }
+
+  const locatario = text.match(/PRIMEIRO LOCAT[ÁA]RIO CPF\/CNPJ\s+([\d./-]+)\s+NOME\/RAZ[ÃA]O SOCIAL\s+(.+?)(?=\s+NOME SOCIAL|\s+PROFISS[ÃA]O|\s+ESTIPULANTE)/i)
+  if (locatario) {
+    result.documento_locatario = locatario[1].trim()
+    result.nome_locatario = locatario[2].trim()
+  }
+
+  const tipoLocacao = text.match(/TIPO DE LOCA[ÇC][ÃA]O\s+\d+\s*[–\-]\s*(\w+)/i)
+  if (tipoLocacao) result.tipo_imovel = tipoLocacao[1].trim()
+
+  const aluguel = text.match(/Aluguel\s+R\$\s*([\d.,]+)\s+\d+x/i)
+  if (aluguel) result.valor_aluguel = parseMoneyBR(aluguel[1])
+
+  const premioLiquido = text.match(/Pr[êe]mio L[íi]quido\s+R\$\s*([\d.,]+)/i)
+  if (premioLiquido) result.premio_liquido = parseMoneyBR(premioLiquido[1])
+
+  const valorParcela = text.match(/Valor da Parcela\s+R\$\s*([\d.,]+)/i)
+  if (valorParcela) result.valor_parcela = parseMoneyBR(valorParcela[1])
+
+  const parcelamento = text.match(/Fatura sem entrada\s+(\d+)X/i)
+  if (parcelamento) result.parcelamento = Number.parseInt(parcelamento[1], 10)
+
+  const premioTotal = text.match(/Pre[çc]o Total do Seguro\s+R\$\s*([\d.,]+)/i)
+  if (premioTotal) result.premio_total = parseMoneyBR(premioTotal[1])
+
+  result.forma_pagamento = 'fatura_sem_entrada'
+  return result
+}
+
+function extrairDadosPottencialUpload(texto) {
+  const text = String(texto || '').replace(/\s+/g, ' ')
+  const result = {}
+
+  const numeroApolice = text.match(/N[º°]\s*DA AP[ÓO]LICE\s+(\d{10,})/i)
+  if (numeroApolice) result.numero_apolice = numeroApolice[1].trim()
+
+  const proposta = text.match(/N[º°]\s*DA PROPOSTA\s+(\d+)/i)
+  if (proposta) result.numero_proposta = proposta[1].trim()
+
+  const vigencia = text.match(/Das 0h do dia\s+(\d{2}\/\d{2}\/\d{4})\s+às 0h do dia\s+(\d{2}\/\d{2}\/\d{4})/i)
+  if (vigencia) {
+    result.inicio_vigencia = parseDateBR(vigencia[1])
+    result.fim_vigencia = parseDateBR(vigencia[2])
+  }
+
+  const locatario = text.match(/LOCAT[ÁA]RIOS?\s+\(Garantidos\)\s+Nome:\s+(.+?)\s+CPF:\s+([\d./-]+)/i)
+  if (locatario) {
+    result.nome_locatario = locatario[1].trim()
+    result.documento_locatario = locatario[2].trim()
+  }
+
+  const locador = text.match(/LOCADOR\s+\(Segurado\)\s+Nome:\s+(.+?)\s+CPF:\s+([\d./-]+)/i)
+  if (locador) {
+    result.nome_proprietario = locador[1].trim()
+    result.proprietario_documento = locador[2].trim()
+  }
+
+  const tipoLocacao = text.match(/Tipo de loca[çc][ãa]o:\s+(Residencial|Comercial)/i)
+  if (tipoLocacao) result.tipo_imovel = tipoLocacao[1].trim()
+
+  const localRisco = text.match(/Local do Risco:\s+(.+?)(?=\s+Vig[êe]ncia do contrato de loca[çc][ãa]o:|\s+LOCAT[ÁA]RIOS?\s+\(Garantidos\))/i)
+  if (localRisco) {
+    result.endereco = localRisco[1].trim()
+    const enderecoMatch = result.endereco.match(/(.+?)\s+(\d{8})\s+([A-ZÀ-Ü\s]+?)\s+([A-ZÀ-Ü\s]+)\s+([A-Z]{2})$/i)
+    if (enderecoMatch) {
+      result.endereco_linha = enderecoMatch[1].trim()
+      result.cep = enderecoMatch[2].trim()
+      result.bairro = enderecoMatch[3].trim()
+      result.cidade = enderecoMatch[4].trim()
+      result.estado = enderecoMatch[5].trim().toUpperCase()
+    } else {
+      const cepMatch = result.endereco.match(/\b(\d{8})\b/)
+      if (cepMatch) result.cep = cepMatch[1]
+    }
+  }
+
+  const aluguel = text.match(/Aluguel\s+R\$\s*([\d.,]+)\s+R\$\s*[\d.,]+\s+R\$\s*[\d.,]+/i)
+  if (aluguel) result.valor_aluguel = parseMoneyBR(aluguel[1])
+
+  const premioLiquido = text.match(/Pr[êe]mio L[íi]quido\s+R\$\s*([\d.,]+)/i)
+  if (premioLiquido) result.premio_liquido = parseMoneyBR(premioLiquido[1])
+
+  const premioTotal = text.match(/Pr[êe]mio Total:\s+R\$\s*([\d.,]+)/i)
+  if (premioTotal) result.premio_total = parseMoneyBR(premioTotal[1])
+
+  const pagamento = text.match(/Fatura mensal em\s+(\d+)\s*x sem juros:\s+R\$\s*([\d.,]+)/i)
+  if (pagamento) {
+    result.parcelamento = Number.parseInt(pagamento[1], 10)
+    result.valor_parcela = parseMoneyBR(pagamento[2])
+  }
+
+  result.forma_pagamento = 'fatura_sem_entrada'
+  return result
+}
+
+
+function extrairDadosTooUpload(texto) {
+  const text = String(texto || '').replace(/\s+/g, ' ')
+  const result = {}
+
+  const numeroApolice = text.match(/AP[�O]LICE N[��]\s+(\d+)/i)
+  if (numeroApolice) result.numero_apolice = numeroApolice[1].trim()
+
+  const proposta = text.match(/PROPOSTA N[��]\s+(\d+)/i)
+  if (proposta) result.numero_proposta = proposta[1].trim()
+
+  const inicioVigencia = text.match(/IN[I�]CIO DE VIG[�E]NCIA DAS 24H\s+(\d{2}\/\d{2}\/\d{4})/i)
+  const fimVigencia = text.match(/T[�E]RMINO DE VIG[�E]NCIA DAS 24H\s+(\d{2}\/\d{2}\/\d{4})/i)
+  if (inicioVigencia) result.inicio_vigencia = parseDateBR(inicioVigencia[1])
+  if (fimVigencia) result.fim_vigencia = parseDateBR(fimVigencia[1])
+
+  const segurado = text.match(/DADOS DO SEGURADO[\s\S]{0,250}?\bSegurado:\s*(.+?)(?=\s+CPF\/CNPJ|\s+CPF|\s+CNPJ)/i)
+    || text.match(/\bSEGURADO\b\s*:?	*(.+?)(?=\s*(?:CPF|CNPJ|CELULAR|TELEFONE|FONE|E-?MAIL|Local do Risco|CEP|Tipo de loca))/i)
+  if (segurado) {
+    result.nome_proprietario = segurado[1].trim()
+  }
+
+  const seguradoDoc = text.match(/DADOS DO SEGURADO[\s\S]{0,250}?\bCPF\/CNPJ:\s*([\d./-]+)/i)
+    || text.match(/\bSEGURADO\b[\s\S]{0,120}?\bCPF\/CNPJ:\s*([\d./-]+)/i)
+  if (seguradoDoc) result.proprietario_documento = seguradoDoc[1].trim()
+
+  const localRisco = text.match(/Local do Risco:\s*(.+?)(?=\s+Bairro:|\s+Tipo de LOCA|$)/i)
+  if (localRisco) result.endereco_linha = localRisco[1].trim()
+
+  const bairro = text.match(/Bairro:\s*(.+?)(?=\s+Cidade:|\s+UF:|\s+CEP:)/i)
+  const cidade = text.match(/Cidade:\s*(.+?)(?=\s+UF:|\s+CEP:)/i)
+  const estado = text.match(/UF:\s*([A-Z]{2})/i)
+  const cep = text.match(/CEP:\s*([\d.-]+)/i)
+  if (bairro) result.bairro = bairro[1].trim()
+  if (cidade) result.cidade = cidade[1].trim()
+  if (estado) result.estado = estado[1].trim().toUpperCase()
+  if (cep) result.cep = cep[1].replace(/\D/g, '')
+
+  result.endereco = [
+    result.endereco_linha,
+    result.bairro,
+    result.cidade,
+    result.estado,
+  ].filter(Boolean).join(', ')
+
+  const tipoLocacao = text.match(/TIPO DE LOCA[�C][�A]O[\s\S]{0,80}?\bIm[�o]vel\s*-\s*(Residencial|Comercial)/i)
+    || text.match(/Im[�o]vel\s*-\s*(Residencial|Comercial)/i)
+  if (tipoLocacao) result.tipo_imovel = tipoLocacao[1].trim()
+
+  const aluguel = text.match(/Aluguel\s+([\d.,]+)\s+[\d.,]+\s+[\d.,]+/i)
+  if (aluguel) result.valor_aluguel = parseMoneyBR(aluguel[1])
+
+  const premioLiquido = text.match(/PR[�E]MIO L[�I]QUIDO:\s*([\d.,]+)/i)
+  if (premioLiquido) result.premio_liquido = parseMoneyBR(premioLiquido[1])
+
+  const premioTotal = [...text.matchAll(/PR[�E]MIO TOTAL:\s*([\d.,]+)/gi)]
+  if (premioTotal.length > 0) result.premio_total = parseMoneyBR(premioTotal[premioTotal.length - 1][1])
+
+  const valorParcela = text.match(/\b1\s+[\d.,]+\s+0,00\s+0,00\s+[\d.,]+\s+([\d.,]+)\s+\d{2}\/\d{2}\/\d{4}/i)
+  if (valorParcela) result.valor_parcela = parseMoneyBR(valorParcela[1])
+
+  const parcelas = [...text.matchAll(/\b(\d+)\s+[\d.,]+\s+0,00\s+0,00\s+[\d.,]+\s+[\d.,]+\s+\d{2}\/\d{2}\/\d{4}/gi)]
+  if (parcelas.length > 0) {
+    result.parcelamento = Number.parseInt(parcelas[parcelas.length - 1][1], 10)
+  }
+
+  result.forma_pagamento = 'fatura_sem_entrada'
+  return result
+}
 function InfoPill({ label, value, mono = false }) {
   return (
     <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2 py-1.5">
@@ -138,8 +372,8 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
   const emissorNome = apolice?.profiles?.nome || ''
   const statusLabel = STATUS_EMISSAO_LABELS[apolice?.status_emissao]?.label || apolice?.status_emissao || 'Recebida'
   const documento = documentoApolice(apolice)
-  const celular = apolice?.fichas?.celular || '—'
-  const tipoImovel = normalizeDisplayText(apolice?.fichas?.tipo_imovel) || '—'
+  const celular = apolice?.fichas?.celular || apolice?.raw_data?.celular || '�'
+  const tipoImovel = normalizeDisplayText(apolice?.fichas?.tipo_imovel || apolice?.raw_data?.tipo_imovel) || '�'
   const vigencia = [apolice?.inicio_vigencia, apolice?.fim_vigencia].filter(Boolean).join(' até ') || '—'
   const parcela = apolice?.valor_parcela ? formatMoneyBR(apolice.valor_parcela) : '—'
   const parcelamento = apolice?.parcelamento ? `${apolice.parcelamento}x` : '—'
@@ -179,6 +413,13 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
         <p className="text-[12.5px] font-semibold text-dark-text leading-snug truncate mb-0.5">
           {nomeApolice(apolice)}
         </p>
+        {isApoliceSemFicha(apolice) && (
+          <div className="mb-1">
+            <span className="inline-flex items-center rounded-full bg-status-warning/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-status-warning">
+              Apólice sem ficha vinculada
+            </span>
+          </div>
+        )}
         <p className="text-[10px] text-dark-muted truncate leading-none mb-1.5">
           {resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || '—')}
         </p>
@@ -247,7 +488,7 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
             <p className="text-[9px] text-dark-muted truncate">
               Imobiliária: {resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || '—')}
             </p>
-            {apolice?.fichas?.cep && <p className="text-[9px] text-dark-muted font-mono">CEP: {apolice.fichas.cep}</p>}
+            {(apolice?.fichas?.cep || apolice?.raw_data?.cep) && <p className="text-[9px] text-dark-muted font-mono">CEP: {apolice?.fichas?.cep || apolice?.raw_data?.cep}</p>}
             {apolice?.seguradora && <p className="text-[9px] text-dark-muted">Seguradora: {apolice.seguradora}</p>}
             {apolice?.valor_parcela && <p className="text-[9px] text-dark-muted">Parcela: {parcela}</p>}
           </div>
@@ -528,6 +769,219 @@ function ModalIniciarEmissao({ onClose, onCriado, toast, grupos, getAliases, use
           <button onClick={criarSolicitacao} disabled={!fichaSelecionada || criando} className="btn-primary text-sm">
             {criando ? 'Criando...' : 'Criar Solicitação'}
           </button>
+
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ModalUploadDireto({ onClose, onCriado, toast, grupos, user }) {
+  const [seguradora, setSeguradora] = useState('Porto Seguro')
+  const [imobiliaria, setImobiliaria] = useState('')
+  const [celular, setCelular] = useState('')
+  const [pdfFile, setPdfFile] = useState(null)
+  const [extraindo, setExtraindo] = useState(false)
+  const [criando, setCriando] = useState(false)
+  const [dadosExtraidos, setDadosExtraidos] = useState(null)
+  const [erro, setErro] = useState('')
+  const fileInputRef = useRef(null)
+
+  async function handleArquivo(file) {
+    setPdfFile(file)
+    setDadosExtraidos(null)
+    setErro('')
+    if (!file) return
+    setExtraindo(true)
+    try {
+      const texto = await extractPdfText(file)
+      const parsed = seguradora === 'Pottential Seguros'
+        ? extrairDadosPottentialUpload(texto)
+        : seguradora === 'TOO Seguros'
+          ? extrairDadosTooUpload(texto)
+          : extrairDadosPortoUpload(texto)
+      if (!parsed.numero_apolice || !parsed.nome_locatario || !parsed.documento_locatario) {
+        throw new Error(`Nao foi possivel identificar os dados principais da apolice ${seguradora}.`)
+      }
+      setDadosExtraidos(parsed)
+    } catch (error) {
+      setErro(error?.message || 'Erro ao ler o PDF da apolice.')
+    } finally {
+      setExtraindo(false)
+    }
+  }
+
+  async function criarUploadDireto() {
+    if (!pdfFile || !dadosExtraidos || !imobiliaria || !celular.trim()) return
+    setCriando(true)
+    const documento = dadosExtraidos.documento_locatario || ''
+    const digits = documento.replace(/\D/g, '')
+    const cpf = digits.length <= 11 ? documento : null
+    const cnpj = digits.length > 11 ? documento : null
+    const produto = inferProdutoFianca({ documento, tipoImovel: dadosExtraidos.tipo_imovel })
+    const payload = {
+      ficha_id: null,
+      imobiliaria,
+      produto,
+      nome_interessado: dadosExtraidos.nome_locatario,
+      numero_apolice: dadosExtraidos.numero_apolice || null,
+      numero_proposta: dadosExtraidos.numero_proposta || null,
+      seguradora,
+      status_emissao: 'emitida',
+      data_emissao: new Date().toISOString().slice(0, 10),
+      emitido_por: user?.id || null,
+      proprietario_nome: dadosExtraidos.nome_proprietario || null,
+      endereco: dadosExtraidos.endereco || null,
+      inicio_vigencia: dadosExtraidos.inicio_vigencia || null,
+      fim_vigencia: dadosExtraidos.fim_vigencia || null,
+      parcelamento: dadosExtraidos.parcelamento || null,
+      valor_parcela: dadosExtraidos.valor_parcela || null,
+      premio_liquido: dadosExtraidos.premio_liquido || null,
+      premio_total: dadosExtraidos.premio_total || null,
+      valor_producao: dadosExtraidos.premio_total || null,
+      forma_pagamento: dadosExtraidos.forma_pagamento || null,
+      raw_data: {
+        origem_upload_direto: true,
+        seguradora_upload: seguradora,
+        nome_interessado: dadosExtraidos.nome_locatario || null,
+        cpf,
+        cnpj,
+        celular: celular.trim(),
+        cep: dadosExtraidos.cep || null,
+        bairro: dadosExtraidos.bairro || null,
+        cidade: dadosExtraidos.cidade || null,
+        estado: dadosExtraidos.estado || null,
+        endereco_linha: dadosExtraidos.endereco_linha || null,
+        tipo_imovel: dadosExtraidos.tipo_imovel || null,
+        valor_aluguel: dadosExtraidos.valor_aluguel ?? null,
+        proprietario_documento: dadosExtraidos.proprietario_documento || null,
+        produto,
+      },
+    }
+
+    const { data, error } = await criarApolice(payload)
+    if (error) {
+      setCriando(false)
+      toast({ type: 'error', title: 'Erro ao criar apolice', message: error.message })
+      return
+    }
+
+    const { error: uploadError } = await uploadDocumento({
+      file: pdfFile,
+      apoliceId: data?.id,
+      cpfCnpj: cpf || cnpj,
+      userId: user?.id,
+    })
+
+    setCriando(false)
+
+    if (uploadError) {
+      toast({ type: 'error', title: 'Apolice criada, mas o PDF nao foi anexado', message: uploadError.message })
+    } else {
+      toast({ type: 'success', title: 'Apolice criada a partir do PDF' })
+    }
+
+    onCriado?.(data)
+    onClose?.()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
+      <div className="glass-panel rounded-3xl w-full max-w-4xl overflow-hidden">
+        <div className="flex items-center justify-between px-7 py-5 border-b border-dark-border">
+          <div>
+            <h2 className="text-xl font-bold text-dark-text">Upload Direto da Apolice</h2>
+            <p className="text-sm text-dark-muted mt-0.5">Cria a apolice ja emitida a partir do PDF, sem selecionar ficha.</p>
+          </div>
+          <button onClick={onClose} className="btn-ghost p-2 rounded-xl" aria-label="Fechar">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="px-7 py-6 space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Seguradora</label>
+              <select value={seguradora} onChange={event => setSeguradora(event.target.value)} className="select text-sm">
+                {SEGURADORAS_UPLOAD_DIRETO.map(item => (
+                  <option key={item} value={item}>{item}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Imobiliaria</label>
+              <select value={imobiliaria} onChange={event => setImobiliaria(event.target.value)} className="select text-sm">
+                <option value="">Selecione a imobiliaria</option>
+                {grupos.map(grupo => (
+                  <option key={grupo.id} value={grupo.nome_canonico}>{grupo.nome_canonico}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Celular do locatario</label>
+              <input value={celular} onChange={event => setCelular(event.target.value)} placeholder="Preenchimento manual" className="input text-sm" />
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-dark-border bg-dark-surface2/20 p-5 space-y-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              className="hidden"
+              onChange={event => handleArquivo(event.target.files?.[0] || null)}
+            />
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-2 rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-xs font-medium text-dark-text hover:border-brand-accent/40 transition-colors"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                {pdfFile ? pdfFile.name : 'Selecionar PDF da apolice'}
+              </button>
+              {extraindo && <span className="text-xs font-medium text-dark-muted">Lendo PDF...</span>}
+            </div>
+
+            {erro && <p className="text-xs font-medium text-status-danger">{erro}</p>}
+
+            {dadosExtraidos && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Locatario</p>
+                  <p className="mt-2 text-sm font-semibold text-dark-text">{dadosExtraidos.nome_locatario || '-'}</p>
+                  <p className="mt-1 text-xs text-dark-muted">{dadosExtraidos.documento_locatario || '-'}</p>
+                </div>
+                <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Imovel</p>
+                  <p className="mt-2 text-sm text-dark-text">{dadosExtraidos.endereco_linha || dadosExtraidos.endereco || '-'}</p>
+                  <p className="mt-1 text-xs text-dark-muted">{[dadosExtraidos.bairro, dadosExtraidos.cidade, dadosExtraidos.estado].filter(Boolean).join(' · ') || '-'}</p>
+                  <p className="mt-1 text-xs font-mono text-dark-muted">{dadosExtraidos.cep || '-'}</p>
+                </div>
+                <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Apolice</p>
+                  <p className="mt-2 text-sm text-dark-text">Numero: {dadosExtraidos.numero_apolice || '-'}</p>
+                  <p className="mt-1 text-xs text-dark-muted">Proposta: {dadosExtraidos.numero_proposta || '-'}</p>
+                  <p className="mt-1 text-xs text-dark-muted">Vigencia: {[dadosExtraidos.inicio_vigencia, dadosExtraidos.fim_vigencia].filter(Boolean).join(' ate ') || '-'}</p>
+                </div>
+                <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Financeiro</p>
+                  <p className="mt-2 text-sm text-dark-text">Parcela: {dadosExtraidos.valor_parcela ? formatMoneyBR(dadosExtraidos.valor_parcela) : '-'}</p>
+                  <p className="mt-1 text-xs text-dark-muted">Parcelamento: {dadosExtraidos.parcelamento ? `${dadosExtraidos.parcelamento}x` : '-'}</p>
+                  <p className="mt-1 text-xs text-dark-muted">Premio liquido: {dadosExtraidos.premio_liquido ? formatMoneyBR(dadosExtraidos.premio_liquido) : '-'}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 px-7 py-5 border-t border-dark-border">
+          <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
+          <button onClick={criarUploadDireto} disabled={!pdfFile || !dadosExtraidos || !imobiliaria || !celular.trim() || extraindo || criando} className="btn-primary text-sm">
+            {criando ? 'Criando...' : 'Criar Apolice'}
+          </button>
+
         </div>
       </div>
     </div>
@@ -545,6 +999,7 @@ export default function ApoicesGestao() {
   const [filtro, setFiltro] = useState('semana')
   const [imobFiltro, setImobFiltro] = useState('')
   const [modalIniciar, setModalIniciar] = useState(false)
+  const [modalUploadDireto, setModalUploadDireto] = useState(false)
   const [activeId, setActiveId] = useState(null)
 
   const scrollRef = useRef(null)
@@ -635,7 +1090,7 @@ export default function ApoicesGestao() {
 
     setApolices(prev => {
       const semDuplicata = prev.filter(item => item.id !== novaApolice.id)
-      return [{ ...novaApolice, status_emissao: 'recebida' }, ...semDuplicata]
+      return [{ ...novaApolice, status_emissao: novaApolice.status_emissao || 'recebida' }, ...semDuplicata]
     })
   }
 
@@ -693,6 +1148,13 @@ export default function ApoicesGestao() {
             <Plus className="w-4 h-4" />
             {modalIniciar ? 'Fechar emissão' : 'Iniciar Emissão'}
           </button>
+          <button
+            onClick={() => setModalUploadDireto(prev => !prev)}
+            className={`flex items-center gap-2 text-sm ${modalUploadDireto ? 'btn-secondary' : 'btn-primary'}`}
+          >
+            <Upload className="w-4 h-4" />
+            {modalUploadDireto ? 'Fechar upload direto' : 'Upload direto da apolice'}
+          </button>
         </div>
       </div>
 
@@ -703,6 +1165,16 @@ export default function ApoicesGestao() {
           toast={toast}
           grupos={grupos}
           getAliases={getAliases}
+          user={user}
+        />
+      )}
+
+      {modalUploadDireto && (
+        <ModalUploadDireto
+          onClose={() => setModalUploadDireto(false)}
+          onCriado={handleCriado}
+          toast={toast}
+          grupos={grupos}
           user={user}
         />
       )}
@@ -768,3 +1240,5 @@ export default function ApoicesGestao() {
     </div>
   )
 }
+
+

@@ -47,6 +47,34 @@ function toFloatOrNull(value) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+const AUTO_RENEWAL_COMPARE_FIELDS = [
+  'renovacao_premio_liquido_ano_anterior',
+  'renovacao_comissao_ano_anterior',
+  'renovacao_premio_liquido_ano_atual',
+  'renovacao_comissao_ano_atual',
+  'renovacao_diferenca_premio_liquido',
+  'renovacao_diferenca_comissao',
+]
+
+function pickDefined(source, fields) {
+  return fields.reduce((acc, field) => {
+    if (source[field] !== undefined) acc[field] = source[field]
+    return acc
+  }, {})
+}
+
+function omitKeys(source, keys) {
+  const blacklist = new Set(keys)
+  return Object.fromEntries(Object.entries(source).filter(([key]) => !blacklist.has(key)))
+}
+
+function isMissingColumnError(error, table, columns = []) {
+  const message = String(error?.message || '')
+  if (!message.includes(`column of '${table}'`)) return false
+  if (!columns.length) return true
+  return columns.some(column => message.includes(`'${column}'`))
+}
+
 function buildRenewalComparisonPayload(payload = {}, premioLiquidoAtual = 0, comissaoAtual = 0) {
   if (!payload.eh_renovacao) {
     return {
@@ -199,14 +227,42 @@ export async function getCotacoesAuto({ tipo, status, seguradora, inicio, fim } 
 
 export async function criarCotacaoAuto(payload) {
   const clienteId = await resolverClienteAutoId(payload)
+  const insertPayload = {
+    cliente_id: clienteId,
+    tipo: payload.tipo || 'novo',
+    status: payload.status || 'pendente',
+    ...pickDefined(payload, [
+      'origem_lead',
+      'nome_cliente',
+      'cpf_cliente',
+      'celular_cliente',
+      'email_cliente',
+      'estado_civil_cliente',
+      'profissao_cliente',
+      'condutor_nome',
+      'condutor_cpf',
+      'estado_civil_condutor',
+      'cep_pernoite',
+      'uso_veiculo',
+      'garagem_residencia',
+      'garagem_trabalho',
+      'garagem_estudo',
+      'jovens_18_26',
+      'modelo_veiculo',
+      'placa',
+      'veiculo_financiado',
+      'possui_kit_gas',
+      'possui_blindagem',
+      'isento_imposto',
+      'seguradora_preferencial',
+      'seguradora_mais_barata',
+      'vigencia_inicio',
+      'vigencia_fim',
+    ]),
+  }
   const { data, error } = await supabase
     .from('cotacoes_auto')
-    .insert({
-      ...payload,
-      cliente_id: clienteId,
-      tipo: payload.tipo || 'novo',
-      status: payload.status || 'pendente',
-    })
+    .insert(insertPayload)
     .select()
     .single()
   if (error) throw error
@@ -390,23 +446,60 @@ export async function emitirApoliceAuto(payload) {
       updated_at: new Date().toISOString(),
     }
 
-    const { error: emissaoError } = await supabase
+    let { error: emissaoError } = await supabase
       .from('emissoes_auto')
       .update(emissaoUpdate)
       .eq('id', payload.emissao_id)
+    if (isMissingColumnError(emissaoError, 'emissoes_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
+      ;({ error: emissaoError } = await supabase
+        .from('emissoes_auto')
+        .update(omitKeys(emissaoUpdate, AUTO_RENEWAL_COMPARE_FIELDS))
+        .eq('id', payload.emissao_id))
+    }
     if (emissaoError) throw emissaoError
   }
 
-  const { data, error } = await supabase
+  const apolicePayload = {
+    emissao_id: payload.emissao_id || null,
+    cliente_id: clienteId,
+    seguradora: payload.seguradora || null,
+    numero_apolice: payload.numero_apolice || null,
+    vigencia_inicio: payload.vigencia_inicio || null,
+    vigencia_fim: payload.vigencia_fim || null,
+    premio_liquido: premioLiquido,
+    pct_comissao: pctComissao,
+    valor_comissao: valorComissao,
+    forma_pagamento: payload.forma_pagamento || null,
+    parcelamento: payload.parcelamento || null,
+    tipo_producao: payload.tipo_producao || 'individual',
+    responsavel: payload.responsavel || null,
+    eh_renovacao: !!payload.eh_renovacao,
+    tem_repasse: !!payload.tem_repasse,
+    pct_repasse: payload.tem_repasse ? parseFloat(payload.pct_repasse) || null : null,
+    nome_repasse: payload.tem_repasse ? payload.nome_repasse || null : null,
+    valor_repasse: payload.tem_repasse ? valorRepasse : null,
+    nome_cliente: payload.nome_cliente || null,
+    cpf_cliente: payload.cpf_cliente || null,
+    celular_cliente: payload.celular_cliente || null,
+    condutor_nome: payload.condutor_nome || null,
+    condutor_cpf: payload.condutor_cpf || null,
+    modelo_veiculo: payload.modelo_veiculo || null,
+    placa: payload.placa || null,
+    ...comparativoRenovacao,
+  }
+
+  let { data, error } = await supabase
     .from('apolices_auto')
-    .insert({
-      ...payload,
-      cliente_id: clienteId,
-      valor_comissao: valorComissao,
-      valor_repasse: valorRepasse,
-    })
+    .insert(apolicePayload)
     .select()
     .single()
+  if (isMissingColumnError(error, 'apolices_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
+    ;({ data, error } = await supabase
+      .from('apolices_auto')
+      .insert(omitKeys(apolicePayload, AUTO_RENEWAL_COMPARE_FIELDS))
+      .select()
+      .single())
+  }
   if (error) throw error
   return data
 }
@@ -451,11 +544,18 @@ export async function criarEmissaoManualAuto(payload) {
     updated_at: new Date().toISOString(),
   }
 
-  const { data: emissao, error: emissaoError } = await supabase
+  let { data: emissao, error: emissaoError } = await supabase
     .from('emissoes_auto')
     .insert(emissaoPayload)
     .select()
     .single()
+  if (isMissingColumnError(emissaoError, 'emissoes_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
+    ;({ data: emissao, error: emissaoError } = await supabase
+      .from('emissoes_auto')
+      .insert(omitKeys(emissaoPayload, AUTO_RENEWAL_COMPARE_FIELDS))
+      .select()
+      .single())
+  }
   if (emissaoError) throw emissaoError
 
   const apolicePayload = {
@@ -487,11 +587,18 @@ export async function criarEmissaoManualAuto(payload) {
     placa: payload.placa || null,
   }
 
-  const { data: apolice, error: apoliceError } = await supabase
+  let { data: apolice, error: apoliceError } = await supabase
     .from('apolices_auto')
     .insert(apolicePayload)
     .select()
     .single()
+  if (isMissingColumnError(apoliceError, 'apolices_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
+    ;({ data: apolice, error: apoliceError } = await supabase
+      .from('apolices_auto')
+      .insert(omitKeys(apolicePayload, AUTO_RENEWAL_COMPARE_FIELDS))
+      .select()
+      .single())
+  }
   if (apoliceError) throw apoliceError
 
   return { emissao, apolice }
@@ -634,10 +741,10 @@ export async function getDashboardAutoMetrics() {
     supabase.from('cotacoes_auto').select('id').gte('created_at', inicio).lte('created_at', fim),
     supabase.from('renovacoes_auto').select('id').eq('status_renovacao', 'renovada').gte('created_at', inicio).lte('created_at', fim),
     supabase.from('renovacoes_auto').select('id').gte('vigencia_fim', proximoMes.inicio).lte('vigencia_fim', proximoMes.fim),
-    supabase.from('apolices_auto').select('valor_comissao, premio_liquido, eh_renovacao, renovacao_comissao_ano_atual, renovacao_premio_liquido_ano_atual').gte('created_at', inicio).lte('created_at', fim),
+    supabase.from('apolices_auto').select('*').gte('created_at', inicio).lte('created_at', fim),
     supabase.from('cotacoes_auto').select('id').eq('status', 'convertida').gte('created_at', inicio).lte('created_at', fim),
     supabase.from('renovacoes_auto').select('id').neq('status_cotacao', 'cotada_enviada'),
-    supabase.from('apolices_auto').select('valor_comissao, premio_liquido, eh_renovacao, renovacao_comissao_ano_atual, renovacao_premio_liquido_ano_atual').eq('eh_renovacao', true).gte('created_at', anoAnteriorInicio).lte('created_at', anoAnteriorFim),
+    supabase.from('apolices_auto').select('*').eq('eh_renovacao', true).gte('created_at', anoAnteriorInicio).lte('created_at', anoAnteriorFim),
   ])
 
   const totalCotacoesMes = cotacoesMes.data?.length ?? 0
@@ -646,9 +753,9 @@ export async function getDashboardAutoMetrics() {
   const renovacoesMesAtual = (apolicesMes.data ?? []).filter(item => item.eh_renovacao)
   const renovacoesAnoPassado = renovacoesAnoAnterior.data ?? []
   const renovacoesComissaoMesAtual = renovacoesMesAtual.reduce((sum, item) => sum + (item.renovacao_comissao_ano_atual ?? item.valor_comissao ?? 0), 0)
-  const renovacoesComissaoAnoAnterior = renovacoesAnoPassado.reduce((sum, item) => sum + (item.renovacao_comissao_ano_atual ?? item.valor_comissao ?? 0), 0)
+  const renovacoesComissaoAnoAnterior = renovacoesAnoPassado.reduce((sum, item) => sum + (item.renovacao_comissao_ano_anterior ?? item.renovacao_comissao_ano_atual ?? item.valor_comissao ?? 0), 0)
   const renovacoesPremioLiquidoMesAtual = renovacoesMesAtual.reduce((sum, item) => sum + (item.renovacao_premio_liquido_ano_atual ?? item.premio_liquido ?? 0), 0)
-  const renovacoesPremioLiquidoAnoAnterior = renovacoesAnoPassado.reduce((sum, item) => sum + (item.renovacao_premio_liquido_ano_atual ?? item.premio_liquido ?? 0), 0)
+  const renovacoesPremioLiquidoAnoAnterior = renovacoesAnoPassado.reduce((sum, item) => sum + (item.renovacao_premio_liquido_ano_anterior ?? item.renovacao_premio_liquido_ano_atual ?? item.premio_liquido ?? 0), 0)
   const taxaConversao = totalCotacoesMes > 0 ? Math.round((totalConvertidas / totalCotacoesMes) * 100) : 0
 
   return {

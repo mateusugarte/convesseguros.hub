@@ -822,13 +822,13 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     const novoStatus = COL_TO_STATUS[targetCol]
     if (!novoStatus) return
 
-    // Drag para recusado â†’ pede confirmação
+    // Drag para recusado → pede confirmação
     if (targetCol === 'recusado') {
       setPendingRecusado({ fichaId, fichaOriginal: ficha })
       return
     }
 
-    // Drag para aprovado â†’ pede seguradora, parcela, orçamento
+    // Drag para aprovado → pede seguradora, parcela, orçamento
     if (targetCol === 'aprovado') {
       setPendingAprovado({ fichaId, fichaOriginal: ficha })
       return

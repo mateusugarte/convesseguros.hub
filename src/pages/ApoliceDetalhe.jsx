@@ -164,12 +164,8 @@ export default function ApoliceDetalhe() {
   const [fichaCep, setFichaCep] = useState('')
   const [fichaValorAluguel, setFichaValorAluguel] = useState('')
   const [fichaImobiliaria, setFichaImobiliaria] = useState('')
-  const [fichaSeguradora, setFichaSeguradora] = useState('')
   const [fichaStatus, setFichaStatus] = useState('')
   const [fichaVigencia, setFichaVigencia] = useState('')
-  const [fichaPctComissao, setFichaPctComissao] = useState('')
-  const [fichaPctDesconto, setFichaPctDesconto] = useState('')
-  const [fichaParcelamento, setFichaParcelamento] = useState('')
   const [fichaObservacoes, setFichaObservacoes] = useState('')
   const [pdfFile, setPdfFile] = useState(null)
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState('')
@@ -203,23 +199,20 @@ export default function ApoliceDetalhe() {
         setPctDesconto(data.pct_desconto !== null && data.pct_desconto !== undefined ? formatDecimalBRInput(data.pct_desconto) : '')
         setFormaPagamento(data.forma_pagamento || '')
 
-        const fichaBase = data.fichas || {}
-        setFichaNome(normalizeDisplayText(fichaBase.nome_empresa || fichaBase.nome_interessado || '') || '')
-        setFichaCpf(fichaBase.cpf || '')
-        setFichaCnpj(fichaBase.cnpj || '')
-        setFichaCelular(fichaBase.celular || '')
-        setFichaProduto(fichaBase.produto || '')
-        setFichaTipoImovel(resolveFichaValor(fichaBase, 'tipo_imovel') || '')
-        setFichaCep(resolveFichaValor(fichaBase, 'cep') || '')
-        setFichaValorAluguel(formatDecimalBRInput(resolveFichaValor(fichaBase, 'valor_aluguel')))
-        setFichaImobiliaria(fichaBase.imobiliaria || '')
-        setFichaSeguradora(resolveFichaValor(fichaBase, 'seguradora') || '')
-        setFichaStatus(fichaBase.status || '')
-        setFichaVigencia(resolveFichaValor(fichaBase, 'vigencia') || '')
-        setFichaPctComissao(formatDecimalBRInput(resolveFichaValor(fichaBase, 'pct_comissao')))
-        setFichaPctDesconto(formatDecimalBRInput(resolveFichaValor(fichaBase, 'pct_desconto')))
-        setFichaParcelamento(resolveFichaValor(fichaBase, 'parcelamento') != null ? String(resolveFichaValor(fichaBase, 'parcelamento')) : '')
-        setFichaObservacoes(resolveFichaValor(fichaBase, 'observacoes') || '')
+        const fichaBase = data.fichas || null
+        const fichaOrigem = fichaBase || data.raw_data || {}
+        setFichaNome(normalizeDisplayText(fichaOrigem.nome_empresa || fichaOrigem.nome_interessado || '') || '')
+        setFichaCpf(fichaOrigem.cpf || '')
+        setFichaCnpj(fichaOrigem.cnpj || '')
+        setFichaCelular(fichaOrigem.celular || '')
+        setFichaProduto(fichaOrigem.produto || data.produto || '')
+        setFichaTipoImovel(resolveFichaValor(fichaOrigem, 'tipo_imovel') || '')
+        setFichaCep(resolveFichaValor(fichaOrigem, 'cep') || '')
+        setFichaValorAluguel(formatDecimalBRInput(resolveFichaValor(fichaOrigem, 'valor_aluguel')))
+        setFichaImobiliaria(fichaOrigem.imobiliaria || data.imobiliaria || '')
+        setFichaStatus(fichaOrigem.status || '')
+        setFichaVigencia(resolveFichaValor(fichaOrigem, 'vigencia') || '')
+        setFichaObservacoes(resolveFichaValor(fichaOrigem, 'observacoes') || '')
       } else {
         setLoadError('Apólice não encontrada.')
       }
@@ -244,6 +237,7 @@ export default function ApoliceDetalhe() {
   }, [pdfFile])
 
   async function salvar(statusOverride = null) {
+    const statusOverrideFinal = typeof statusOverride === 'string' ? statusOverride : null
     setSalvando(true)
     const meses = calcularMeses(inicioVigencia, fimVigencia)
     const parcelaNum = toNumber(valorParcela)
@@ -251,15 +245,12 @@ export default function ApoliceDetalhe() {
     const premioLiquidoNum = toNumber(premioLiquido)
     const premioTotal = calculatePremioTotal(parcelaNum, parcelasNum)
     const valorComissao = calculateValorComissao(premioLiquidoNum, pctComissao)
-    const statusFinal = statusOverride || statusEmissao
+    const statusFinal = statusOverrideFinal || statusEmissao
     const dataEmissao = ['emitida', 'enviada'].includes(statusFinal) ? (apolice?.data_emissao || new Date().toISOString().slice(0, 10)) : null
     const numeroApoliceFinal = numeroApolice.trim() || apolice?.numero_apolice || null
     const fichaBase = apolice?.fichas || null
     const fichaId = fichaBase?.id
     const fichaValorAluguelNum = fichaValorAluguel === '' ? null : toNumber(fichaValorAluguel)
-    const fichaPctComissaoNum = fichaPctComissao === '' ? null : toNumber(fichaPctComissao)
-    const fichaPctDescontoNum = fichaPctDesconto === '' ? null : toNumber(fichaPctDesconto)
-    const fichaParcelamentoNum = fichaParcelamento === '' ? null : toNumber(fichaParcelamento)
     const fichaPayload = fichaId ? {
       nome_interessado: fichaProduto === 'pessoa_juridica' ? null : fichaNome.trim() || null,
       nome_empresa: fichaProduto === 'pessoa_juridica' ? fichaNome.trim() || null : null,
@@ -271,12 +262,8 @@ export default function ApoliceDetalhe() {
       cep: fichaCep.trim() || null,
       valor_aluguel: fichaValorAluguelNum,
       imobiliaria: fichaImobiliaria.trim() || null,
-      seguradora: fichaSeguradora.trim() || null,
       status: fichaStatus || null,
       vigencia: fichaVigencia.trim() || null,
-      pct_comissao: fichaPctComissaoNum,
-      pct_desconto: fichaPctDescontoNum,
-      parcelamento: fichaParcelamentoNum,
       observacoes: fichaObservacoes.trim() || null,
       raw_data: {
         nome_interessado: fichaProduto === 'pessoa_juridica' ? null : fichaNome.trim() || null,
@@ -289,17 +276,12 @@ export default function ApoliceDetalhe() {
         cep: fichaCep.trim() || null,
         valor_aluguel: fichaValorAluguelNum,
         imobiliaria: fichaImobiliaria.trim() || null,
-        seguradora: fichaSeguradora.trim() || null,
         status: fichaStatus || null,
         vigencia: fichaVigencia.trim() || null,
-        pct_comissao: fichaPctComissaoNum,
-        pct_desconto: fichaPctDescontoNum,
-        parcelamento: fichaParcelamentoNum,
         observacoes: fichaObservacoes.trim() || null,
       },
     } : null
-    const [errApolice, errFicha] = await Promise.all([
-      atualizarApolice(id, {
+    const apolicePayload = {
       numero_apolice: numeroApoliceFinal,
       numero_proposta: numeroProposta.trim() || null,
       seguradora: seguradora || null,
@@ -320,7 +302,34 @@ export default function ApoliceDetalhe() {
       valor_producao: premioTotal,
       valor_comissao: valorComissao,
       data_emissao: dataEmissao,
-    }),
+    }
+
+    if (!fichaId) {
+      apolicePayload.imobiliaria = fichaImobiliaria.trim() || null
+      apolicePayload.produto = fichaProduto || null
+      apolicePayload.nome_interessado = fichaProduto === 'pessoa_juridica'
+        ? null
+        : (fichaNome.trim() || apolice?.nome_interessado || null)
+      apolicePayload.raw_data = {
+        ...(apolice?.raw_data || {}),
+        nome_interessado: fichaProduto === 'pessoa_juridica' ? null : fichaNome.trim() || null,
+        nome_empresa: fichaProduto === 'pessoa_juridica' ? fichaNome.trim() || null : null,
+        cpf: fichaProduto === 'pessoa_juridica' ? null : fichaCpf.trim() || null,
+        cnpj: fichaProduto === 'pessoa_juridica' ? fichaCnpj.trim() || null : null,
+        celular: fichaCelular.trim() || null,
+        produto: fichaProduto || null,
+        tipo_imovel: fichaTipoImovel.trim() || null,
+        cep: fichaCep.trim() || null,
+        valor_aluguel: fichaValorAluguelNum,
+        imobiliaria: fichaImobiliaria.trim() || null,
+        status: fichaStatus || null,
+        vigencia: fichaVigencia.trim() || null,
+        observacoes: fichaObservacoes.trim() || null,
+      }
+    }
+
+    const [errApolice, errFicha] = await Promise.all([
+      atualizarApolice(id, apolicePayload),
       fichaId ? editarFicha(fichaId, fichaPayload, user?.id) : Promise.resolve(null),
     ])
     setSalvando(false)
@@ -349,7 +358,7 @@ export default function ApoliceDetalhe() {
       file,
       apoliceId: apolice?.id,
       fichaId: ficha?.id,
-      cpfCnpj: ficha?.cpf || ficha?.cnpj,
+      cpfCnpj: ficha?.cpf || ficha?.cnpj || apolice?.raw_data?.cpf || apolice?.raw_data?.cnpj,
       userId: user?.id,
     })
     setAnexandoDoc(false)
@@ -440,6 +449,7 @@ export default function ApoliceDetalhe() {
   const siStatus = STATUS_EMISSAO_LABELS[apolice.status_emissao] || { label: apolice.status_emissao, color: '#6B7280' }
   const nomePrincipal = normalizeDisplayText(ficha?.nome_empresa || ficha?.nome_interessado || apolice.nome_interessado) || 'Apólice'
   const valorAluguelFicha = extracaoExtras?.valor_aluguel ?? apolice.valor_aluguel ?? ficha?.valor_aluguel
+  const dadosManuais = apolice.raw_data || {}
 
   return (
     <div className="space-y-5 pb-8 animate-fade-in">
@@ -456,7 +466,7 @@ export default function ApoliceDetalhe() {
               <ArrowLeft className="h-3.5 w-3.5" /> Voltar
             </button>
             <button
-              onClick={salvar}
+              onClick={() => salvar()}
               disabled={salvando}
               className="flex items-center gap-1.5 rounded-2xl bg-brand-secondary px-3 py-2 text-xs font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
             >
@@ -510,8 +520,14 @@ export default function ApoliceDetalhe() {
 
       <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
         <div className="space-y-5">
-          {ficha ? (
-            <DataCard title="Dados da Ficha" subtitle="Base de origem da apólice." bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
+          <DataCard title="Dados da Ficha" subtitle={ficha ? 'Base de origem da apólice.' : 'Dados preservados diretamente na apólice.'} bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
+              {!ficha && (
+                <div className="col-span-2">
+                  <span className="inline-flex items-center rounded-full bg-status-warning/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-status-warning">
+                    Apólice sem ficha vinculada
+                  </span>
+                </div>
+              )}
               <div className="col-span-2">
                 <EditField
                   label="Nome"
@@ -537,7 +553,6 @@ export default function ApoliceDetalhe() {
               <EditField label="CEP" value={fichaCep} onChange={setFichaCep} />
               <EditField label="Valor do Aluguel" type="text" inputMode="decimal" value={fichaValorAluguel} onChange={setFichaValorAluguel} placeholder="0,00" />
               <EditField label="Imobiliária" value={fichaImobiliaria} onChange={setFichaImobiliaria} />
-              <EditField label="Seguradora da Ficha" value={fichaSeguradora} onChange={setFichaSeguradora} />
               <SelectField
                 label="Status"
                 value={fichaStatus}
@@ -545,9 +560,6 @@ export default function ApoliceDetalhe() {
                 options={['pendente', 'em_cotacao', 'em_analise', 'aprovado', 'recusado', 'emitido', 'cancelado', 'cpf_invalido', 'expirada']
                   .map(value => ({ value, label: STATUS_LABELS[value]?.label || value }))}
               />
-              <EditField label="% Comissão" type="text" inputMode="decimal" value={fichaPctComissao} onChange={setFichaPctComissao} placeholder="10,00" />
-              <EditField label="% Desconto" type="text" inputMode="decimal" value={fichaPctDesconto} onChange={setFichaPctDesconto} placeholder="5,00" />
-              <EditField label="Parcelamento" type="number" value={fichaParcelamento} onChange={setFichaParcelamento} placeholder="12" />
               <div className="col-span-2">
                 <EditField label="Observações" value={fichaObservacoes} onChange={setFichaObservacoes} />
               </div>
@@ -561,11 +573,6 @@ export default function ApoliceDetalhe() {
                 </div>
               )}
             </DataCard>
-          ) : (
-            <DataCard title="Dados da Ficha" subtitle="Apólice anexada manualmente." bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
-              <div className="col-span-2 rounded-3xl border border-dashed border-dark-border/70 bg-dark-surface2/30 px-4 py-6 text-sm text-dark-muted">Apólice anexada manualmente</div>
-            </DataCard>
-          )}
 
           <DataCard title="Dados do Proprietário" subtitle="Campos que podem ser editados nesta tela." bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
             <EditField label="Nome" value={proprietarioNome} onChange={setProprietarioNome} placeholder="Nome do proprietário" />
@@ -742,10 +749,11 @@ export default function ApoliceDetalhe() {
           <SecaoDocumentos
             key={docsRefreshKey}
             apoliceId={apolice.id}
-            cpfCnpj={apolice.fichas?.cpf || apolice.fichas?.cnpj}
+            cpfCnpj={apolice.fichas?.cpf || apolice.fichas?.cnpj || apolice.raw_data?.cpf || apolice.raw_data?.cnpj}
           />
         </div>
       </div>
     </div>
   )
 }
+

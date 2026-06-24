@@ -454,7 +454,7 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
             </div>
             <div className="text-right">
               <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Parcela</p>
-              <p className="mt-0.5 text-[10px] font-semibold text-brand-accent">{parcela}</p>
+              <p className="mt-0.5 text-[10px] font-semibold" style={{ color: '#047857' }}>{parcela}</p>
             </div>
           </div>
         </div>

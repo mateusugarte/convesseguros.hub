@@ -640,7 +640,8 @@ export default function ApoliceDetalhe() {
                 onClick={handlePreencherInfo}
                 disabled={extraindo || anexandoDoc || !pdfFile || !getSeguradoraAutomacao()}
                 title={!pdfFile ? 'Envie o PDF da apólice primeiro' : !getSeguradoraAutomacao() ? 'Selecione a seguradora primeiro' : 'Ler PDF e preencher dados'}
-                className="inline-flex items-center gap-2 rounded-2xl bg-brand-secondary px-3 py-2 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                style={{ background: '#047857' }}
               >
                 {extraindo
                   ? <><RefreshCw className="h-3.5 w-3.5 animate-spin" />Lendo apólice...</>

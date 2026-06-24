@@ -43,7 +43,7 @@ const COLUNAS = [
 const PRODUTO_ICON = { residencial_pf: Home, comercial_pf: Briefcase, pessoa_juridica: Building }
 const PRODUTO_COLOR = { residencial_pf: '#4A90D9', comercial_pf: '#059669', pessoa_juridica: '#8B5CF6' }
 const PRODUTO_ABBR = { residencial_pf: 'RES. PF', comercial_pf: 'COM. PF', pessoa_juridica: 'PJ' }
-const SEGURADORAS_UPLOAD_DIRETO = ['Porto Seguro', 'Pottential Seguros', 'TOO Seguros']
+const SEGURADORAS_UPLOAD_DIRETO = ['Porto Seguro', 'Pottencial Seguros', 'TOO Seguros']
 
 function getPeriodDates(filtro) {
   const now = new Date()
@@ -799,9 +799,22 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
   )
 }
 
-function ModalUploadDireto({ onClose, onCriado, toast, grupos, user }) {
+function DadoCard({ label, value, mono = false, highlight = false, span2 = false }) {
+  return (
+    <div className={`rounded-xl border border-dark-border/60 bg-dark-surface/50 px-3 py-2.5${span2 ? ' col-span-2' : ''}`}>
+      <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-dark-muted mb-1">{label}</p>
+      <p className={`text-xs truncate ${mono ? 'font-mono' : 'font-medium'} ${highlight ? 'font-bold' : ''}`}
+         style={highlight ? { color: '#047857' } : undefined}>
+        {value || '—'}
+      </p>
+    </div>
+  )
+}
+
+function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
   const [seguradora, setSeguradora] = useState('Porto Seguro')
   const [imobiliaria, setImobiliaria] = useState('')
+  const [buscaImob, setBuscaImob] = useState('')
   const [celular, setCelular] = useState('')
   const [pdfFile, setPdfFile] = useState(null)
   const [extraindo, setExtraindo] = useState(false)
@@ -809,6 +822,19 @@ function ModalUploadDireto({ onClose, onCriado, toast, grupos, user }) {
   const [dadosExtraidos, setDadosExtraidos] = useState(null)
   const [erro, setErro] = useState('')
   const fileInputRef = useRef(null)
+
+  const gruposFiltrados = useMemo(() => {
+    const q = buscaImob.trim().toLowerCase()
+    if (!q) return grupos
+    return grupos.filter(g => g.nome_canonico.toLowerCase().includes(q))
+  }, [grupos, buscaImob])
+
+  function selecionarSeguradora(nome) {
+    setSeguradora(nome)
+    setPdfFile(null)
+    setDadosExtraidos(null)
+    setErro('')
+  }
 
   async function handleArquivo(file) {
     setPdfFile(file)
@@ -818,17 +844,17 @@ function ModalUploadDireto({ onClose, onCriado, toast, grupos, user }) {
     setExtraindo(true)
     try {
       const texto = await extractPdfText(file)
-      const parsed = seguradora === 'Pottential Seguros'
-        ? extrairDadosPottentialUpload(texto)
+      const parsed = seguradora === 'Pottencial Seguros'
+        ? extrairDadosPottencialUpload(texto)
         : seguradora === 'TOO Seguros'
           ? extrairDadosTooUpload(texto)
           : extrairDadosPortoUpload(texto)
       if (!parsed.numero_apolice || !parsed.nome_locatario || !parsed.documento_locatario) {
-        throw new Error(`Nao foi possivel identificar os dados principais da apolice ${seguradora}.`)
+        throw new Error(`Não foi possível identificar os dados principais da apólice ${seguradora}.`)
       }
       setDadosExtraidos(parsed)
-    } catch (error) {
-      setErro(error?.message || 'Erro ao ler o PDF da apolice.')
+    } catch (err) {
+      setErro(err?.message || 'Erro ao ler o PDF da apólice.')
     } finally {
       setExtraindo(false)
     }
@@ -863,29 +889,12 @@ function ModalUploadDireto({ onClose, onCriado, toast, grupos, user }) {
       premio_total: dadosExtraidos.premio_total || null,
       valor_producao: dadosExtraidos.premio_total || null,
       forma_pagamento: dadosExtraidos.forma_pagamento || null,
-      raw_data: {
-        origem_upload_direto: true,
-        seguradora_upload: seguradora,
-        nome_interessado: dadosExtraidos.nome_locatario || null,
-        cpf,
-        cnpj,
-        celular: celular.trim(),
-        cep: dadosExtraidos.cep || null,
-        bairro: dadosExtraidos.bairro || null,
-        cidade: dadosExtraidos.cidade || null,
-        estado: dadosExtraidos.estado || null,
-        endereco_linha: dadosExtraidos.endereco_linha || null,
-        tipo_imovel: dadosExtraidos.tipo_imovel || null,
-        valor_aluguel: dadosExtraidos.valor_aluguel ?? null,
-        proprietario_documento: dadosExtraidos.proprietario_documento || null,
-        produto,
-      },
     }
 
     const { data, error } = await criarApolice(payload)
     if (error) {
       setCriando(false)
-      toast({ type: 'error', title: 'Erro ao criar apolice', message: error.message })
+      toast({ type: 'error', title: 'Erro ao criar apólice', message: error.message })
       return
     }
 
@@ -897,114 +906,210 @@ function ModalUploadDireto({ onClose, onCriado, toast, grupos, user }) {
     })
 
     setCriando(false)
-
     if (uploadError) {
-      toast({ type: 'error', title: 'Apolice criada, mas o PDF nao foi anexado', message: uploadError.message })
+      toast({ type: 'error', title: 'Apólice criada, mas o PDF não foi anexado', message: uploadError.message })
     } else {
-      toast({ type: 'success', title: 'Apolice criada a partir do PDF' })
+      toast({ type: 'success', title: 'Apólice criada a partir do PDF' })
     }
-
     onCriado?.(data)
-    onClose?.()
+    onBack?.()
   }
 
+  const imobSelecionada = grupos.find(g => g.nome_canonico === imobiliaria)
+  const podeCriar = pdfFile && dadosExtraidos && imobiliaria && celular.trim() && !extraindo && !criando
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
-      <div className="glass-panel rounded-3xl w-full max-w-4xl overflow-hidden">
-        <div className="flex items-center justify-between px-7 py-5 border-b border-dark-border">
-          <div>
-            <h2 className="text-xl font-bold text-dark-text">Upload Direto da Apolice</h2>
-            <p className="text-sm text-dark-muted mt-0.5">Cria a apolice ja emitida a partir do PDF, sem selecionar ficha.</p>
-          </div>
-          <button onClick={onClose} className="btn-ghost p-2 rounded-xl" aria-label="Fechar">
-            <X className="w-4 h-4" />
-          </button>
+    <div className="card p-0 overflow-hidden animate-fade-in">
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
+        <button onClick={onBack} className="btn-ghost p-1.5 rounded-xl">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <div>
+          <h2 className="text-base font-bold text-dark-text">Upload Direto de Apólice</h2>
+          <p className="text-xs text-dark-muted">Registre uma apólice já emitida a partir do PDF, sem vincular ficha.</p>
         </div>
+      </div>
 
-        <div className="px-7 py-6 space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6">
+
+          {/* ── Coluna esquerda ─────────────────────────────────── */}
+          <div className="space-y-5">
+
+            {/* Seguradora */}
             <div>
-              <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Seguradora</label>
-              <select value={seguradora} onChange={event => setSeguradora(event.target.value)} className="select text-sm">
-                {SEGURADORAS_UPLOAD_DIRETO.map(item => (
-                  <option key={item} value={item}>{item}</option>
-                ))}
-              </select>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-dark-muted mb-3">Seguradora</p>
+              <div className="grid grid-cols-3 gap-2">
+                {SEGURADORAS_UPLOAD_DIRETO.map(nome => {
+                  const ativo = seguradora === nome
+                  return (
+                    <button
+                      key={nome}
+                      type="button"
+                      onClick={() => selecionarSeguradora(nome)}
+                      className={`flex flex-col items-center gap-2.5 p-3 rounded-2xl border-2 transition-all ${
+                        ativo
+                          ? 'border-[#047857] shadow-sm'
+                          : 'border-dark-border hover:border-dark-border/80 bg-dark-surface2/20 hover:bg-dark-surface2/40'
+                      }`}
+                      style={ativo ? { background: 'rgba(4,120,87,0.06)' } : undefined}
+                    >
+                      <SeguradoraBadge nome={nome} size="lg" showName={false} />
+                      <span className={`text-[10px] font-semibold text-center leading-tight ${ativo ? 'text-[#047857]' : 'text-dark-muted'}`}>
+                        {nome.replace(' Seguros', '').replace(' Seguro', '')}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
+
+            {/* Imobiliária */}
             <div>
-              <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Imobiliaria</label>
-              <select value={imobiliaria} onChange={event => setImobiliaria(event.target.value)} className="select text-sm">
-                <option value="">Selecione a imobiliaria</option>
-                {grupos.map(grupo => (
-                  <option key={grupo.id} value={grupo.nome_canonico}>{grupo.nome_canonico}</option>
-                ))}
-              </select>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-dark-muted mb-2">Imobiliária</p>
+              {imobSelecionada && (
+                <div className="flex items-center gap-2.5 mb-2 px-3 py-2 rounded-xl border-2 border-[#047857]" style={{ background: 'rgba(4,120,87,0.06)' }}>
+                  <Avatar name={imobSelecionada.nome_canonico} src={imobSelecionada.imagem_url || ''} size="sm" />
+                  <span className="text-xs font-semibold text-[#047857] truncate">{imobSelecionada.nome_canonico}</span>
+                  <button onClick={() => setImobiliaria('')} className="ml-auto text-dark-muted hover:text-dark-text">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+              <div className="relative mb-2">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-dark-muted pointer-events-none" />
+                <input
+                  value={buscaImob}
+                  onChange={e => setBuscaImob(e.target.value)}
+                  placeholder="Buscar imobiliária..."
+                  className="input text-xs pl-8 py-1.5"
+                />
+              </div>
+              <div className="max-h-44 overflow-y-auto space-y-0.5">
+                {gruposFiltrados.map(grupo => {
+                  const sel = imobiliaria === grupo.nome_canonico
+                  return (
+                    <button
+                      key={grupo.id}
+                      type="button"
+                      onClick={() => setImobiliaria(grupo.nome_canonico)}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all text-left ${
+                        sel
+                          ? 'border-[#047857]/40 bg-[#047857]/5'
+                          : 'border-transparent hover:border-dark-border hover:bg-dark-surface2/40'
+                      }`}
+                    >
+                      <Avatar name={grupo.nome_canonico} src={grupo.imagem_url || ''} size="sm" />
+                      <span className={`text-xs font-medium truncate flex-1 ${sel ? 'text-[#047857]' : 'text-dark-text'}`}>
+                        {grupo.nome_canonico}
+                      </span>
+                      {sel && <span className="text-[10px] font-bold text-[#047857]">✓</span>}
+                    </button>
+                  )
+                })}
+                {gruposFiltrados.length === 0 && (
+                  <p className="text-xs text-dark-muted py-3 text-center">Nenhuma imobiliária encontrada</p>
+                )}
+              </div>
             </div>
+
+            {/* Celular */}
             <div>
-              <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Celular do locatario</label>
-              <input value={celular} onChange={event => setCelular(event.target.value)} placeholder="Preenchimento manual" className="input text-sm" />
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-dark-muted mb-2">Celular do Locatário</p>
+              <input
+                value={celular}
+                onChange={e => setCelular(e.target.value)}
+                placeholder="(00) 00000-0000"
+                className="input text-sm"
+              />
             </div>
           </div>
 
-          <div className="rounded-3xl border border-dark-border bg-dark-surface2/20 p-5 space-y-4">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf"
-              className="hidden"
-              onChange={event => handleArquivo(event.target.files?.[0] || null)}
-            />
-
-            <div className="flex flex-wrap items-center gap-2">
+          {/* ── Coluna direita ──────────────────────────────────── */}
+          <div className="space-y-4">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-dark-muted mb-3">PDF da Apólice</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                className="hidden"
+                onChange={e => handleArquivo(e.target.files?.[0] || null)}
+              />
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-2 rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-xs font-medium text-dark-text hover:border-brand-accent/40 transition-colors"
+                className={`w-full flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2 border-dashed transition-all ${
+                  pdfFile
+                    ? 'border-[#047857]/40'
+                    : 'border-dark-border hover:border-dark-border/80 hover:bg-dark-surface2/30'
+                }`}
+                style={pdfFile ? { background: 'rgba(4,120,87,0.05)' } : undefined}
               >
-                <Upload className="h-3.5 w-3.5" />
-                {pdfFile ? pdfFile.name : 'Selecionar PDF da apolice'}
+                {extraindo ? (
+                  <>
+                    <RefreshCw className="w-7 h-7 text-dark-muted animate-spin" />
+                    <span className="text-sm text-dark-muted font-medium">Lendo PDF...</span>
+                  </>
+                ) : pdfFile ? (
+                  <>
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: '#047857' }}>
+                      <Upload className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-dark-text">{pdfFile.name}</p>
+                      <p className="text-xs text-dark-muted mt-0.5">Clique para trocar o arquivo</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-11 h-11 rounded-xl bg-dark-surface2 flex items-center justify-center">
+                      <Upload className="w-5 h-5 text-dark-muted" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-dark-text">Selecionar PDF</p>
+                      <p className="text-xs text-dark-muted mt-0.5">Clique para escolher o arquivo da apólice</p>
+                    </div>
+                  </>
+                )}
               </button>
-              {extraindo && <span className="text-xs font-medium text-dark-muted">Lendo PDF...</span>}
+
+              {erro && (
+                <div className="mt-3 flex items-start gap-2 p-3 rounded-xl border border-status-danger/25 bg-status-danger/8">
+                  <X className="w-3.5 h-3.5 text-status-danger mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-status-danger">{erro}</p>
+                </div>
+              )}
             </div>
 
-            {erro && <p className="text-xs font-medium text-status-danger">{erro}</p>}
-
             {dadosExtraidos && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Locatario</p>
-                  <p className="mt-2 text-sm font-semibold text-dark-text">{dadosExtraidos.nome_locatario || '-'}</p>
-                  <p className="mt-1 text-xs text-dark-muted">{dadosExtraidos.documento_locatario || '-'}</p>
-                </div>
-                <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Imovel</p>
-                  <p className="mt-2 text-sm text-dark-text">{dadosExtraidos.endereco_linha || dadosExtraidos.endereco || '-'}</p>
-                  <p className="mt-1 text-xs text-dark-muted">{[dadosExtraidos.bairro, dadosExtraidos.cidade, dadosExtraidos.estado].filter(Boolean).join(' Â· ') || '-'}</p>
-                  <p className="mt-1 text-xs font-mono text-dark-muted">{dadosExtraidos.cep || '-'}</p>
-                </div>
-                <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Apolice</p>
-                  <p className="mt-2 text-sm text-dark-text">Numero: {dadosExtraidos.numero_apolice || '-'}</p>
-                  <p className="mt-1 text-xs text-dark-muted">Proposta: {dadosExtraidos.numero_proposta || '-'}</p>
-                  <p className="mt-1 text-xs text-dark-muted">Vigencia: {[dadosExtraidos.inicio_vigencia, dadosExtraidos.fim_vigencia].filter(Boolean).join(' ate ') || '-'}</p>
-                </div>
-                <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Financeiro</p>
-                  <p className="mt-2 text-sm text-dark-text">Parcela: {dadosExtraidos.valor_parcela ? formatMoneyBR(dadosExtraidos.valor_parcela) : '-'}</p>
-                  <p className="mt-1 text-xs text-dark-muted">Parcelamento: {dadosExtraidos.parcelamento ? `${dadosExtraidos.parcelamento}x` : '-'}</p>
-                  <p className="mt-1 text-xs text-dark-muted">Premio liquido: {dadosExtraidos.premio_liquido ? formatMoneyBR(dadosExtraidos.premio_liquido) : '-'}</p>
+              <div className="animate-fade-in">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-dark-muted mb-3">Dados Extraídos</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <DadoCard label="Locatário" value={dadosExtraidos.nome_locatario} />
+                  <DadoCard label="Documento" value={dadosExtraidos.documento_locatario} mono />
+                  <DadoCard label="Nº Apólice" value={dadosExtraidos.numero_apolice} mono />
+                  <DadoCard label="Proposta" value={dadosExtraidos.numero_proposta} mono />
+                  <DadoCard label="Vigência" value={[dadosExtraidos.inicio_vigencia, dadosExtraidos.fim_vigencia].filter(Boolean).join(' → ') || null} />
+                  <DadoCard label="Parcela" value={dadosExtraidos.valor_parcela ? formatMoneyBR(dadosExtraidos.valor_parcela) : null} highlight />
+                  <DadoCard label="Prêmio Líquido" value={dadosExtraidos.premio_liquido ? formatMoneyBR(dadosExtraidos.premio_liquido) : null} />
+                  <DadoCard label="Parcelamento" value={dadosExtraidos.parcelamento ? `${dadosExtraidos.parcelamento}x` : null} />
+                  <DadoCard label="Imóvel" value={dadosExtraidos.endereco_linha || dadosExtraidos.endereco} span2 />
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 px-7 py-5 border-t border-dark-border">
-          <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
-          <button onClick={criarUploadDireto} disabled={!pdfFile || !dadosExtraidos || !imobiliaria || !celular.trim() || extraindo || criando} className="btn-primary text-sm">
-            {criando ? 'Criando...' : 'Criar Apolice'}
+        <div className="flex items-center justify-between gap-3 pt-5 mt-5 border-t border-dark-border">
+          <button onClick={onBack} className="btn-secondary text-sm">Cancelar</button>
+          <button
+            onClick={criarUploadDireto}
+            disabled={!podeCriar}
+            className="btn-primary text-sm"
+          >
+            {criando ? 'Criando...' : 'Criar Apólice'}
           </button>
-
         </div>
       </div>
     </div>
@@ -1022,7 +1127,6 @@ export default function ApoicesGestao() {
   const [filtro, setFiltro] = useState('total')
   const [imobFiltro, setImobFiltro] = useState('')
   const [workspace, setWorkspace] = useState('kanban')
-  const [modalUploadDireto, setModalUploadDireto] = useState(false)
   const [activeId, setActiveId] = useState(null)
 
   const scrollRef = useRef(null)
@@ -1172,11 +1276,11 @@ export default function ApoicesGestao() {
             {workspace === 'iniciar' ? 'Fechar emissão' : 'Iniciar Emissão'}
           </button>
           <button
-            onClick={() => setModalUploadDireto(prev => !prev)}
-            className={`flex items-center gap-2 text-sm ${modalUploadDireto ? 'btn-secondary' : 'btn-primary'}`}
+            onClick={() => setWorkspace(prev => (prev === 'upload' ? 'kanban' : 'upload'))}
+            className={`flex items-center gap-2 text-sm ${workspace === 'upload' ? 'btn-secondary' : 'btn-primary'}`}
           >
             <Upload className="w-4 h-4" />
-            {modalUploadDireto ? 'Fechar upload direto' : 'Upload direto da apolice'}
+            {workspace === 'upload' ? 'Fechar upload' : 'Upload direto'}
           </button>
         </div>
       </div>
@@ -1192,9 +1296,9 @@ export default function ApoicesGestao() {
         />
       )}
 
-      {modalUploadDireto && (
-        <ModalUploadDireto
-          onClose={() => setModalUploadDireto(false)}
+      {workspace === 'upload' && (
+        <UploadDiretoWorkspace
+          onBack={() => setWorkspace('kanban')}
           onCriado={handleCriado}
           toast={toast}
           grupos={grupos}
@@ -1202,7 +1306,7 @@ export default function ApoicesGestao() {
         />
       )}
 
-      {workspace === 'iniciar' ? null : loading ? (
+      {workspace !== 'kanban' ? null : loading ? (
         <KanbanSkeleton />
       ) : (
         <div className="relative">

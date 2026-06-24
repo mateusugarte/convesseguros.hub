@@ -131,7 +131,7 @@ export default function ApoliceDetalhe() {
   const navigate = useNavigate()
   const toast = useToast()
   const { user } = useAuth()
-  const { resolverNome } = useImobiliaria()
+  const { resolverNome, resolverImobiliariaInfo } = useImobiliaria()
 
   const [apolice, setApolice] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -200,7 +200,7 @@ export default function ApoliceDetalhe() {
         setFormaPagamento(data.forma_pagamento || '')
 
         const fichaBase = data.fichas || null
-        const fichaOrigem = fichaBase || data.raw_data || {}
+        const fichaOrigem = fichaBase || data || {}
         setFichaNome(normalizeDisplayText(fichaOrigem.nome_empresa || fichaOrigem.nome_interessado || '') || '')
         setFichaCpf(fichaOrigem.cpf || '')
         setFichaCnpj(fichaOrigem.cnpj || '')
@@ -552,7 +552,24 @@ export default function ApoliceDetalhe() {
               <EditField label="Tipo de Imóvel" value={fichaTipoImovel} onChange={setFichaTipoImovel} />
               <EditField label="CEP" value={fichaCep} onChange={setFichaCep} />
               <EditField label="Valor do Aluguel" type="text" inputMode="decimal" value={fichaValorAluguel} onChange={setFichaValorAluguel} placeholder="0,00" />
-              <EditField label="Imobiliária" value={fichaImobiliaria} onChange={setFichaImobiliaria} />
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted mb-1">Imobiliária</p>
+                {fichaImobiliaria && (() => {
+                  const imobInfo = resolverImobiliariaInfo(fichaImobiliaria)
+                  return (
+                    <div className="flex items-center gap-2 mb-1.5">
+                      {imobInfo?.imagem_url
+                        ? <img src={imobInfo.imagem_url} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+                        : <Avatar name={fichaImobiliaria} size="sm" />
+                      }
+                      <span className="text-sm font-medium text-dark-text truncate">
+                        {resolverNome(fichaImobiliaria)}
+                      </span>
+                    </div>
+                  )
+                })()}
+                <EditField value={fichaImobiliaria} onChange={setFichaImobiliaria} placeholder="Nome da imobiliária" />
+              </div>
               <SelectField
                 label="Status"
                 value={fichaStatus}

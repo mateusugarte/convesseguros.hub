@@ -369,7 +369,7 @@ function InfoPill({ label, value, mono = false }) {
   )
 }
 
-function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, dragListeners, dragAttributes }) {
+function KanbanCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen, isDragOverlay = false, dragListeners, dragAttributes }) {
   const [expandido, setExpandido] = useState(false)
   const produto = produtoApolice(apolice)
   const ProdutoIcon = PRODUTO_ICON[produto] || LayoutGrid
@@ -377,14 +377,20 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
   const emissorNome = apolice?.profiles?.nome || ''
   const statusLabel = STATUS_EMISSAO_LABELS[apolice?.status_emissao]?.label || apolice?.status_emissao || 'Recebida'
   const documento = documentoApolice(apolice)
-  const celular = apolice?.fichas?.celular || apolice?.raw_data?.celular || '—'
-  const tipoImovel = normalizeDisplayText(apolice?.fichas?.tipo_imovel || apolice?.raw_data?.tipo_imovel) || '—'
+  const semFicha = isApoliceSemFicha(apolice)
+  const celular = apolice?.fichas?.celular || apolice?.celular || '—'
+  const tipoImovel = normalizeDisplayText(apolice?.fichas?.tipo_imovel || apolice?.tipo_imovel) || '—'
   const vigencia = [apolice?.inicio_vigencia, apolice?.fim_vigencia].filter(Boolean).join(' até ') || '—'
   const parcela = apolice?.valor_parcela ? formatMoneyBR(apolice.valor_parcela) : '—'
   const parcelamento = apolice?.parcelamento ? `${apolice.parcelamento}x` : '—'
+  const nomeImob = resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || '')
+  const imobInfo = resolverImobiliariaInfo ? resolverImobiliariaInfo(apolice?.imobiliaria) : null
 
   return (
-    <div className={`kanban-card${isDragOverlay ? ' kanban-card-dragging' : ''}`} style={{ '--kanban-accent': produtoColor }}>
+    <div
+      className={`kanban-card${isDragOverlay ? ' kanban-card-dragging' : ''}`}
+      style={{ '--kanban-accent': semFicha ? '#F97316' : produtoColor }}
+    >
       {!isDragOverlay && (
         <button
           {...dragListeners}
@@ -418,16 +424,25 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
         <p className="text-[12.5px] font-semibold text-dark-text leading-snug truncate mb-0.5">
           {nomeApolice(apolice)}
         </p>
-        {isApoliceSemFicha(apolice) && (
-          <div className="mb-1">
-            <span className="inline-flex items-center rounded-full bg-status-warning/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-status-warning">
-              Apólice sem ficha vinculada
+        {semFicha && (
+          <div className="mb-1.5">
+            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em]"
+              style={{ background: 'rgba(249,115,22,0.14)', color: '#EA580C' }}>
+              <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: '#EA580C' }} />
+              Sem ficha vinculada
             </span>
           </div>
         )}
-        <p className="text-[10px] text-dark-muted truncate leading-none mb-1.5">
-          {resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || '—')}
-        </p>
+        <div className="flex items-center gap-1.5 mb-1.5 min-w-0">
+          {imobInfo?.imagem_url ? (
+            <img src={imobInfo.imagem_url} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+          ) : (
+            <Avatar name={nomeImob} size="sm" />
+          )}
+          <p className="text-[10px] text-dark-muted truncate leading-none">
+            {nomeImob || '—'}
+          </p>
+        </div>
 
         {apolice?.numero_apolice && (
           <p className="text-[10px] font-mono mb-1.5" style={{ color: '#2B5BA8' }}>
@@ -493,7 +508,7 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
             <p className="text-[9px] text-dark-muted truncate">
               Imobiliária: {resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || '—')}
             </p>
-            {(apolice?.fichas?.cep || apolice?.raw_data?.cep) && <p className="text-[9px] text-dark-muted font-mono">CEP: {apolice?.fichas?.cep || apolice?.raw_data?.cep}</p>}
+            {(apolice?.fichas?.cep || apolice?.cep) && <p className="text-[9px] text-dark-muted font-mono">CEP: {apolice?.fichas?.cep || apolice?.cep}</p>}
             {apolice?.seguradora && <p className="text-[9px] text-dark-muted">Seguradora: {apolice.seguradora}</p>}
             {apolice?.valor_parcela && <p className="text-[9px] text-dark-muted">Parcela: {parcela}</p>}
           </div>
@@ -503,7 +518,7 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
   )
 }
 
-function DraggableCard({ apolice, resolverNome, onOpen }) {
+function DraggableCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: apolice.id,
     data: { type: 'card' },
@@ -514,6 +529,7 @@ function DraggableCard({ apolice, resolverNome, onOpen }) {
       <KanbanCard
         apolice={apolice}
         resolverNome={resolverNome}
+        resolverImobiliariaInfo={resolverImobiliariaInfo}
         onOpen={onOpen}
         dragListeners={listeners}
         dragAttributes={attributes}
@@ -522,7 +538,7 @@ function DraggableCard({ apolice, resolverNome, onOpen }) {
   )
 }
 
-function DroppableColumn({ col, apolices, resolverNome, onOpen }) {
+function DroppableColumn({ col, apolices, resolverNome, resolverImobiliariaInfo, onOpen }) {
   const { setNodeRef, isOver } = useDroppable({ id: col.id })
 
   return (
@@ -555,6 +571,7 @@ function DroppableColumn({ col, apolices, resolverNome, onOpen }) {
             key={apolice.id}
             apolice={apolice}
             resolverNome={resolverNome}
+            resolverImobiliariaInfo={resolverImobiliariaInfo}
             onOpen={onOpen}
           />
         ))}
@@ -895,6 +912,11 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
       premio_total: dadosExtraidos.premio_total || null,
       valor_producao: dadosExtraidos.premio_total || null,
       forma_pagamento: dadosExtraidos.forma_pagamento || null,
+      cpf: cpf || null,
+      celular: celular.trim() || null,
+      tipo_imovel: dadosExtraidos.tipo_imovel || null,
+      cep: dadosExtraidos.cep || null,
+      valor_aluguel: dadosExtraidos.valor_aluguel || null,
     }
 
     const { data, error } = await criarApolice(payload)
@@ -1138,7 +1160,7 @@ export default function ApoicesGestao() {
   const navigate = useNavigate()
   const toast = useToast()
   const { user } = useAuth()
-  const { grupos, resolverNome, getAliases } = useImobiliaria()
+  const { grupos, resolverNome, resolverImobiliariaInfo, getAliases } = useImobiliaria()
 
   const [apolices, setApolices] = useState([])
   const [loading, setLoading] = useState(true)
@@ -1366,6 +1388,7 @@ export default function ApoicesGestao() {
                     col={col}
                     apolices={groups[col.id] || []}
                     resolverNome={resolverNome}
+                    resolverImobiliariaInfo={resolverImobiliariaInfo}
                     onOpen={id => navigate(`/apolices/${id}`)}
                   />
                 ))}
@@ -1374,7 +1397,7 @@ export default function ApoicesGestao() {
               <DragOverlay dropAnimation={null}>
                 {activeCard ? (
                   <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none' }}>
-                    <KanbanCard apolice={activeCard} resolverNome={resolverNome} isDragOverlay />
+                    <KanbanCard apolice={activeCard} resolverNome={resolverNome} resolverImobiliariaInfo={resolverImobiliariaInfo} isDragOverlay />
                   </div>
                 ) : null}
               </DragOverlay>

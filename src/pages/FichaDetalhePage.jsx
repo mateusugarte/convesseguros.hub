@@ -154,7 +154,7 @@ function Timeline({ ficha }) {
       label: `Finalizada — ${si?.label || ficha.status}`,
       sub: ficha.seguradora ? `Seguradora: ${ficha.seguradora}` : null,
       ts: ficha.finalizada_em,
-      color: ficha.status === 'aprovado' ? '#10B981' : ficha.status === 'recusado' ? '#EF4444' : '#4A90D9',
+      color: ficha.status === 'aprovado' ? '#059669' : ficha.status === 'recusado' ? '#EF4444' : '#4A90D9',
     })
   }
 
@@ -183,7 +183,7 @@ function Timeline({ ficha }) {
 
 const PROD_COLORS = {
   residencial_pf:  { bg: 'rgba(74,144,217,0.15)',  text: '#4A90D9',  border: 'rgba(74,144,217,0.3)' },
-  comercial_pf:    { bg: 'rgba(16,185,129,0.15)',  text: '#10B981',  border: 'rgba(16,185,129,0.3)' },
+  comercial_pf:    { bg: 'rgba(5,150,105,0.15)',   text: '#059669',  border: 'rgba(5,150,105,0.3)' },
   pessoa_juridica: { bg: 'rgba(139,92,246,0.15)',  text: '#8B5CF6',  border: 'rgba(139,92,246,0.3)' },
 }
 

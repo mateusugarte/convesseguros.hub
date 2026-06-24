@@ -37,11 +37,11 @@ const COLUNAS = [
   { id: 'recebida', label: 'Recebida', color: '#3B82F6' },
   { id: 'proposta_transmitida', label: 'Proposta Transmitida', color: '#F59E0B' },
   { id: 'emitida', label: 'Apólice Emitida', color: '#8B5CF6' },
-  { id: 'enviada', label: 'Apólice Enviada', color: '#10B981' },
+  { id: 'enviada', label: 'Apólice Enviada', color: '#059669' },
 ]
 
 const PRODUTO_ICON = { residencial_pf: Home, comercial_pf: Briefcase, pessoa_juridica: Building }
-const PRODUTO_COLOR = { residencial_pf: '#4A90D9', comercial_pf: '#10B981', pessoa_juridica: '#8B5CF6' }
+const PRODUTO_COLOR = { residencial_pf: '#4A90D9', comercial_pf: '#059669', pessoa_juridica: '#8B5CF6' }
 const PRODUTO_ABBR = { residencial_pf: 'RES. PF', comercial_pf: 'COM. PF', pessoa_juridica: 'PJ' }
 const SEGURADORAS_UPLOAD_DIRETO = ['Porto Seguro', 'Pottential Seguros', 'TOO Seguros']
 

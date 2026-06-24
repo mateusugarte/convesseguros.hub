@@ -20,7 +20,7 @@
   --color-muted:    78 89 117;
 
   /* Semantic */
-  --color-success:  16 185 129;
+  --color-success:  5 150 105;
   --color-warning:  249 115 22;
   --color-danger:   239 68 68;
   --color-info:     59 130 246;
@@ -121,7 +121,7 @@ html.dark {
   --color-text:     236 242 251;
   --color-muted:    149 160 178;
 
-  --color-success:  16 185 129;
+  --color-success:  5 150 105;
   --color-warning:  245 158 11;
   --color-danger:   239 68 68;
   --color-info:     59 130 246;

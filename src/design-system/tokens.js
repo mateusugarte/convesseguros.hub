@@ -34,7 +34,7 @@ export const AVATAR_COLORS = [
 
 // Semantic status colors — light/dark variants
 export const STATUS = {
-  success: { light: '#059669', dark: '#10B981' },
+  success: { light: '#047857', dark: '#059669' },
   warning: { light: '#D97706', dark: '#F59E0B' },
   danger:  { light: '#DC2626', dark: '#EF4444' },
   info:    { light: '#1D4ED8', dark: '#3B82F6' },
@@ -52,7 +52,7 @@ export const STATUS_COLORS = {
   pendente:     '#F97316',
   em_cotacao:   '#3B82F6',
   em_analise:   '#F5582A',
-  aprovado:     '#10B981',
+  aprovado:     '#059669',
   recusado:     '#EF4444',
   emitido:      '#2B5BA8',
   cancelado:    '#6B7280',

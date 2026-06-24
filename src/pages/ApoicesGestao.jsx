@@ -1,6 +1,7 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { memo } from 'react'
+import { startTransition } from 'react'
 import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core'
 import {
   Briefcase,
@@ -46,6 +47,8 @@ const PRODUTO_ICON = { residencial_pf: Home, comercial_pf: Briefcase, pessoa_jur
 const PRODUTO_COLOR = { residencial_pf: '#4A90D9', comercial_pf: '#059669', pessoa_juridica: '#8B5CF6' }
 const PRODUTO_ABBR = { residencial_pf: 'RES. PF', comercial_pf: 'COM. PF', pessoa_juridica: 'PJ' }
 const SEGURADORAS_UPLOAD_DIRETO = ['Porto Seguro', 'Pottencial Seguros', 'TOO Seguros']
+const KANBAN_INITIAL_BATCH = 12
+const KANBAN_BATCH_STEP = 10
 
 function getPeriodDates(filtro) {
   const now = new Date()
@@ -313,7 +316,13 @@ const DraggableCard = memo(function DraggableCard({ apolice, resolverNome, resol
   return (
     <div
       ref={setNodeRef}
-      style={{ opacity: isDragging ? 0.25 : 1, transition: isDragging ? 'none' : 'opacity 0.2s ease' }}
+      style={{
+        opacity: isDragging ? 0.25 : 1,
+        transition: isDragging ? 'none' : 'opacity 0.2s ease',
+        willChange: 'transform',
+        contentVisibility: 'auto',
+        containIntrinsicSize: '220px',
+      }}
     >
       <KanbanCard
         apolice={apolice}
@@ -325,6 +334,36 @@ const DraggableCard = memo(function DraggableCard({ apolice, resolverNome, resol
       />
     </div>
   )
+})
+
+const ColumnCardList = memo(function ColumnCardList({ apolices, resolverNome, resolverImobiliariaInfo, onOpen }) {
+  const [visibleCount, setVisibleCount] = useState(() => Math.min(apolices.length, KANBAN_INITIAL_BATCH))
+
+  useEffect(() => {
+    setVisibleCount(Math.min(apolices.length, KANBAN_INITIAL_BATCH))
+  }, [apolices])
+
+  useEffect(() => {
+    if (visibleCount >= apolices.length) return
+
+    const frameId = requestAnimationFrame(() => {
+      setVisibleCount(current => Math.min(apolices.length, current + KANBAN_BATCH_STEP))
+    })
+
+    return () => cancelAnimationFrame(frameId)
+  }, [apolices.length, visibleCount])
+
+  const visibleItems = useMemo(() => apolices.slice(0, visibleCount), [apolices, visibleCount])
+
+  return visibleItems.map(apolice => (
+    <DraggableCard
+      key={apolice.id}
+      apolice={apolice}
+      resolverNome={resolverNome}
+      resolverImobiliariaInfo={resolverImobiliariaInfo}
+      onOpen={onOpen}
+    />
+  ))
 })
 
 const DroppableColumn = memo(function DroppableColumn({ col, apolices, resolverNome, resolverImobiliariaInfo, onOpen }) {
@@ -349,21 +388,22 @@ const DroppableColumn = memo(function DroppableColumn({ col, apolices, resolverN
           borderColor: isOver ? `${col.color}66` : 'rgb(var(--color-border))',
           backgroundColor: isOver ? `${col.color}08` : 'rgb(var(--color-surface2) / 0.35)',
           boxShadow: isOver ? `inset 0 0 0 1px ${col.color}55` : 'none',
+          contentVisibility: 'auto',
+          containIntrinsicSize: '780px',
         }}
       >
         {apolices.length === 0 ? (
           <div className="flex items-center justify-center h-20 rounded-xl border border-dashed border-dark-border/50 text-[11px] text-dark-muted">
             Vazia
           </div>
-        ) : apolices.map(apolice => (
-          <DraggableCard
-            key={apolice.id}
-            apolice={apolice}
+        ) : (
+          <ColumnCardList
+            apolices={apolices}
             resolverNome={resolverNome}
             resolverImobiliariaInfo={resolverImobiliariaInfo}
             onOpen={onOpen}
           />
-        ))}
+        )}
       </div>
     </div>
   )
@@ -959,7 +999,7 @@ export default function ApoicesGestao() {
   const [canScrollL, setCanScrollL] = useState(false)
   const [canScrollR, setCanScrollR] = useState(false)
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 2 } }))
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -971,9 +1011,13 @@ export default function ApoicesGestao() {
         imobiliarias = aliases.length ? aliases : [imobFiltro]
       }
       const data = await fetchApolicesKanban({ dateFrom, dateTo, imobiliarias })
-      setApolices(data || [])
+      startTransition(() => {
+        setApolices(data || [])
+      })
     } catch {
-      setApolices([])
+      startTransition(() => {
+        setApolices([])
+      })
       toast({ type: 'error', title: 'Erro ao carregar apólices' })
     } finally {
       setLoading(false)
@@ -1037,9 +1081,11 @@ export default function ApoicesGestao() {
       return
     }
 
-    setApolices(prev => prev.map(item => (
-      item.id === id ? { ...item, status_emissao: novoStatus } : item
-    )))
+    startTransition(() => {
+      setApolices(prev => prev.map(item => (
+        item.id === id ? { ...item, status_emissao: novoStatus } : item
+      )))
+    })
 
     const error = await moverStatusApolice(id, novoStatus)
     if (error) {
@@ -1054,9 +1100,11 @@ export default function ApoicesGestao() {
       return
     }
 
-    setApolices(prev => {
-      const semDuplicata = prev.filter(item => item.id !== novaApolice.id)
-      return [{ ...novaApolice, status_emissao: novaApolice.status_emissao || 'recebida' }, ...semDuplicata]
+    startTransition(() => {
+      setApolices(prev => {
+        const semDuplicata = prev.filter(item => item.id !== novaApolice.id)
+        return [{ ...novaApolice, status_emissao: novaApolice.status_emissao || 'recebida' }, ...semDuplicata]
+      })
     })
   }
 

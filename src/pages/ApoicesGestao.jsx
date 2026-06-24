@@ -227,59 +227,62 @@ function extrairDadosPottencialUpload(texto) {
   const text = String(texto || '').replace(/\s+/g, ' ')
   const result = {}
 
-  const numeroApolice = text.match(/N[ÂºÂ°]\s*DA AP[Ã“O]LICE\s+(\d{10,})/i)
+  const numeroApolice =
+    text.match(/N[º°]\s*DA\s+AP[ÓO]LICE\s+(\d{8,})/i) ||
+    text.match(/AP[ÓO]LICE[:\s#]+(\d{8,})/i) ||
+    text.match(/N[º°]\s*AP[ÓO]LICE[:\s]+(\d+)/i)
   if (numeroApolice) result.numero_apolice = numeroApolice[1].trim()
 
-  const proposta = text.match(/N[ÂºÂ°]\s*DA PROPOSTA\s+(\d+)/i)
+  const proposta =
+    text.match(/N[º°]\s*DA\s+PROPOSTA[:\s]+(\d+)/i) ||
+    text.match(/PROPOSTA[:\s#]+(\d+)/i)
   if (proposta) result.numero_proposta = proposta[1].trim()
 
-  const vigencia = text.match(/Das 0h do dia\s+(\d{2}\/\d{2}\/\d{4})\s+às 0h do dia\s+(\d{2}\/\d{2}\/\d{4})/i)
+  const vigencia = text.match(/Das?\s+0h\s+do\s+dia\s+(\d{2}\/\d{2}\/\d{4})\s+.{0,10}0h\s+do\s+dia\s+(\d{2}\/\d{2}\/\d{4})/i)
   if (vigencia) {
     result.inicio_vigencia = parseDateBR(vigencia[1])
     result.fim_vigencia = parseDateBR(vigencia[2])
   }
 
-  const locatario = text.match(/LOCAT[ÃA]RIOS?\s+\(Garantidos\)\s+Nome:\s+(.+?)\s+CPF:\s+([\d./-]+)/i)
+  const locatario =
+    text.match(/LOCAT[ÁA]RIOS?\s+\(?Garantidos?\)?\s+Nome:\s+(.+?)\s+CPF:\s+([\d./-]+)/i) ||
+    text.match(/(?:LOCAT.{0,4}RIO|GARANTIDO)\s+Nome:\s+(.+?)\s+(?:CPF|CNPJ):\s+([\d./-]+)/i)
   if (locatario) {
     result.nome_locatario = locatario[1].trim()
     result.documento_locatario = locatario[2].trim()
   }
 
-  const locador = text.match(/LOCADOR\s+\(Segurado\)\s+Nome:\s+(.+?)\s+CPF:\s+([\d./-]+)/i)
+  const locador =
+    text.match(/LOCADOR\s+\(?Segurado\)?\s+Nome:\s+(.+?)\s+CPF:\s+([\d./-]+)/i) ||
+    text.match(/PROPRIET[ÁA]RIO\s+Nome:\s+(.+?)\s+(?:CPF|CNPJ):\s+([\d./-]+)/i)
   if (locador) {
     result.nome_proprietario = locador[1].trim()
     result.proprietario_documento = locador[2].trim()
   }
 
-  const tipoLocacao = text.match(/Tipo de loca[çc][ãa]o:\s+(Residencial|Comercial)/i)
+  const tipoLocacao = text.match(/Tipo\s+de\s+loca[çc][ãa]o:\s+(Residencial|Comercial)/i)
   if (tipoLocacao) result.tipo_imovel = tipoLocacao[1].trim()
 
-  const localRisco = text.match(/Local do Risco:\s+(.+?)(?=\s+Vig[êe]ncia do contrato de loca[çc][ãa]o:|\s+LOCAT[ÃA]RIOS?\s+\(Garantidos\))/i)
+  const localRisco = text.match(/Local\s+do\s+Risco:\s+(.+?)(?=\s+Vig.{1,4}ncia\s+do\s+contrato|\s+LOCAT)/i)
   if (localRisco) {
     result.endereco = localRisco[1].trim()
-    const enderecoMatch = result.endereco.match(/(.+?)\s+(\d{8})\s+([A-ZÀ-Ü\s]+?)\s+([A-ZÀ-Ü\s]+)\s+([A-Z]{2})$/i)
-    if (enderecoMatch) {
-      result.endereco_linha = enderecoMatch[1].trim()
-      result.cep = enderecoMatch[2].trim()
-      result.bairro = enderecoMatch[3].trim()
-      result.cidade = enderecoMatch[4].trim()
-      result.estado = enderecoMatch[5].trim().toUpperCase()
-    } else {
-      const cepMatch = result.endereco.match(/\b(\d{8})\b/)
-      if (cepMatch) result.cep = cepMatch[1]
-    }
+    const cepMatch = result.endereco.match(/\b(\d{5}-?\d{3}|\d{8})\b/)
+    if (cepMatch) result.cep = cepMatch[1].replace('-', '')
+    result.endereco_linha = result.endereco.split(/\s+\d{5}/)[0].trim()
   }
 
-  const aluguel = text.match(/Aluguel\s+R\$\s*([\d.,]+)\s+R\$\s*[\d.,]+\s+R\$\s*[\d.,]+/i)
+  const aluguel = text.match(/Aluguel\s+R\$\s*([\d.,]+)/i)
   if (aluguel) result.valor_aluguel = parseMoneyBR(aluguel[1])
 
-  const premioLiquido = text.match(/Pr[êe]mio L[íi]quido\s+R\$\s*([\d.,]+)/i)
+  const premioLiquido = text.match(/Pr[êe]mio\s+L[íi]quido\s+R\$\s*([\d.,]+)/i)
   if (premioLiquido) result.premio_liquido = parseMoneyBR(premioLiquido[1])
 
-  const premioTotal = text.match(/Pr[êe]mio Total:\s+R\$\s*([\d.,]+)/i)
+  const premioTotal = text.match(/Pr[êe]mio\s+Total[:\s]+R\$\s*([\d.,]+)/i)
   if (premioTotal) result.premio_total = parseMoneyBR(premioTotal[1])
 
-  const pagamento = text.match(/Fatura mensal em\s+(\d+)\s*x sem juros:\s+R\$\s*([\d.,]+)/i)
+  const pagamento =
+    text.match(/Fatura\s+mensal\s+em\s+(\d+)\s*x\s+sem\s+juros[:\s]+R\$\s*([\d.,]+)/i) ||
+    text.match(/(\d+)\s*x\s+de\s+R\$\s*([\d.,]+)/i)
   if (pagamento) {
     result.parcelamento = Number.parseInt(pagamento[1], 10)
     result.valor_parcela = parseMoneyBR(pagamento[2])
@@ -288,7 +291,6 @@ function extrairDadosPottencialUpload(texto) {
   result.forma_pagamento = 'fatura_sem_entrada'
   return result
 }
-
 
 function extrairDadosTooUpload(texto) {
   const text = String(texto || '').replace(/\s+/g, ' ')
@@ -836,23 +838,27 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
     setErro('')
   }
 
-  async function handleArquivo(file) {
+  function handleArquivo(file) {
     setPdfFile(file)
     setDadosExtraidos(null)
     setErro('')
-    if (!file) return
+  }
+
+  async function handleExtrair() {
+    if (!pdfFile) return
     setExtraindo(true)
+    setErro('')
     try {
-      const texto = await extractPdfText(file)
+      const texto = await extractPdfText(pdfFile)
       const parsed = seguradora === 'Pottencial Seguros'
         ? extrairDadosPottencialUpload(texto)
         : seguradora === 'TOO Seguros'
           ? extrairDadosTooUpload(texto)
           : extrairDadosPortoUpload(texto)
-      if (!parsed.numero_apolice || !parsed.nome_locatario || !parsed.documento_locatario) {
-        throw new Error(`Não foi possível identificar os dados principais da apólice ${seguradora}.`)
-      }
       setDadosExtraidos(parsed)
+      if (!parsed.numero_apolice && !parsed.nome_locatario) {
+        setErro(`Não foi possível identificar dados da apólice ${seguradora}. Verifique se o PDF é da seguradora selecionada.`)
+      }
     } catch (err) {
       setErro(err?.message || 'Erro ao ler o PDF da apólice.')
     } finally {
@@ -1073,6 +1079,18 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
                   </>
                 )}
               </button>
+
+              {pdfFile && !extraindo && (
+                <button
+                  type="button"
+                  onClick={handleExtrair}
+                  className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm transition-all text-white"
+                  style={{ background: '#047857' }}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Buscar Informações do PDF
+                </button>
+              )}
 
               {erro && (
                 <div className="mt-3 flex items-start gap-2 p-3 rounded-xl border border-status-danger/25 bg-status-danger/8">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core'
 import {
@@ -32,6 +32,7 @@ import { useToast } from '../contexts/ToastContext'
 import { KanbanSkeleton } from '../components/Skeleton'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import { Avatar } from '../components/ui'
+import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/kanbanDnd'
 
 const COLUNAS = [
   { id: 'recebida', label: 'Recebida', color: '#3B82F6' },
@@ -201,13 +202,13 @@ function extrairDadosPortoUpload(texto) {
     result.nome_locatario = locatario[2].trim()
   }
 
-  const tipoLocacao = text.match(/TIPO DE LOCA[ÇC][ÃA]O\s+\d+\s*[–\-]\s*(\w+)/i)
+  const tipoLocacao = text.match(/TIPO DE LOCACAO\s+\d+\s*[-–]\s*(\w+)/i)
   if (tipoLocacao) result.tipo_imovel = tipoLocacao[1].trim()
 
   const aluguel = text.match(/Aluguel\s+R\$\s*([\d.,]+)\s+\d+x/i)
   if (aluguel) result.valor_aluguel = parseMoneyBR(aluguel[1])
 
-  const premioLiquido = text.match(/Pr[êe]mio L[íi]quido\s+R\$\s*([\d.,]+)/i)
+  const premioLiquido = text.match(/Premio Liquido\s+R?\$?\s*([\d.,]+)/i)
   if (premioLiquido) result.premio_liquido = parseMoneyBR(premioLiquido[1])
 
   const valorParcela = text.match(/Valor da Parcela\s+R\$\s*([\d.,]+)/i)
@@ -228,14 +229,14 @@ function extrairDadosPottencialUpload(texto) {
   const result = {}
 
   const numeroApolice =
-    text.match(/N[º°]\s*DA\s+AP[ÓO]LICE\s+(\d{8,})/i) ||
-    text.match(/AP[ÓO]LICE[:\s#]+(\d{8,})/i) ||
-    text.match(/N[º°]\s*AP[ÓO]LICE[:\s]+(\d+)/i)
+    text.match(/N[º°]\\s*DA\\s+APOLICE\\s+(\\d{8,})/i) ||
+    text.match(/APOLICE[:\\s#]+(\\d{8,})/i) ||
+    text.match(/N[º°]\\s*APOLICE[:\\s]+(\\d+)/i)
   if (numeroApolice) result.numero_apolice = numeroApolice[1].trim()
 
   const proposta =
-    text.match(/N[º°]\s*DA\s+PROPOSTA[:\s]+(\d+)/i) ||
-    text.match(/PROPOSTA[:\s#]+(\d+)/i)
+    text.match(/N[º°]\\s*DA\\s+PROPOSTA[:\\s]+(\\d+)/i) ||
+    text.match(/PROPOSTA[:\\s#]+(\\d+)/i)
   if (proposta) result.numero_proposta = proposta[1].trim()
 
   const vigencia = text.match(/Das?\s+0h\s+do\s+dia\s+(\d{2}\/\d{2}\/\d{4})\s+.{0,10}0h\s+do\s+dia\s+(\d{2}\/\d{2}\/\d{4})/i)
@@ -274,7 +275,7 @@ function extrairDadosPottencialUpload(texto) {
   const aluguel = text.match(/Aluguel\s+R\$\s*([\d.,]+)/i)
   if (aluguel) result.valor_aluguel = parseMoneyBR(aluguel[1])
 
-  const premioLiquido = text.match(/Pr[êe]mio\s+L[íi]quido\s+R\$\s*([\d.,]+)/i)
+  const premioLiquido = text.match(/Premio Liquido\s+R?\$?\s*([\d.,]+)/i)
   if (premioLiquido) result.premio_liquido = parseMoneyBR(premioLiquido[1])
 
   const premioTotal = text.match(/Pr[êe]mio\s+Total[:\s]+R\$\s*([\d.,]+)/i)
@@ -336,8 +337,7 @@ function extrairDadosTooUpload(texto) {
     result.estado,
   ].filter(Boolean).join(', ')
 
-  const tipoLocacao = text.match(/TIPO DE LOCA[ÇC][ÃA]O[\s\S]{0,80}?\bIm[óo]vel\s*-\s*(Residencial|Comercial)/i)
-    || text.match(/Im[óo]vel\s*-\s*(Residencial|Comercial)/i)
+  const tipoLocacao = text.match(/TIPO DE LOCACAO\\s+\\d+\\s*[-–]\\s*(\\w+)/i)
   if (tipoLocacao) result.tipo_imovel = tipoLocacao[1].trim()
 
   const aluguel = text.match(/Aluguel\s+([\d.,]+)\s+[\d.,]+\s+[\d.,]+/i)
@@ -369,7 +369,7 @@ function InfoPill({ label, value, mono = false }) {
   )
 }
 
-function KanbanCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen, isDragOverlay = false }) {
+function KanbanCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen, isDragOverlay = false, dragListeners, dragAttributes }) {
   const [expandido, setExpandido] = useState(false)
   const produto = produtoApolice(apolice)
   const ProdutoIcon = PRODUTO_ICON[produto] || LayoutGrid
@@ -392,9 +392,17 @@ function KanbanCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen, is
       style={{ '--kanban-accent': semFicha ? '#F97316' : produtoColor }}
     >
       {!isDragOverlay && (
-        <div className="kanban-grip" aria-hidden>
+        <button
+          {...dragListeners}
+          {...dragAttributes}
+          type="button"
+          className="kanban-grip"
+          onClick={event => event.stopPropagation()}
+          tabIndex={-1}
+          aria-label="Arrastar apólice"
+        >
           <GripVertical className="w-3.5 h-3.5" />
-        </div>
+        </button>
       )}
 
       <div className="kanban-card-body cursor-pointer" onClick={() => !isDragOverlay && onOpen?.(apolice.id)}>
@@ -449,25 +457,29 @@ function KanbanCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen, is
           </div>
         )}
 
-        <div className="mt-2 grid grid-cols-2 gap-1.5">
-          <InfoPill label="Documento" value={documento} mono />
-          <InfoPill label="Celular" value={celular} />
-          <InfoPill label="Imóvel" value={tipoImovel} />
-          <InfoPill label="Parcelas" value={parcelamento} />
-        </div>
+        {!isDragOverlay && (
+          <>
+            <div className="mt-2 grid grid-cols-2 gap-1.5">
+              <InfoPill label="Documento" value={documento} mono />
+              <InfoPill label="Celular" value={celular} />
+              <InfoPill label="Imóvel" value={tipoImovel} />
+              <InfoPill label="Parcelas" value={parcelamento} />
+            </div>
 
-        <div className="mt-1.5 rounded-xl border border-dark-border/60 bg-dark-surface2/25 px-2 py-1.5">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Vigência</p>
-              <p className="mt-0.5 text-[10px] text-dark-text truncate">{vigencia}</p>
+            <div className="mt-1.5 rounded-xl border border-dark-border/60 bg-dark-surface2/25 px-2 py-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Vigência</p>
+                  <p className="mt-0.5 text-[10px] text-dark-text truncate">{vigencia}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Parcela</p>
+                  <p className="mt-0.5 text-[10px] font-semibold" style={{ color: '#047857' }}>{parcela}</p>
+                </div>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Parcela</p>
-              <p className="mt-0.5 text-[10px] font-semibold" style={{ color: '#047857' }}>{parcela}</p>
-            </div>
-          </div>
-        </div>
+          </>
+        )}
 
         <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-dark-border/40 mt-auto">
           {emissorNome ? (
@@ -520,15 +532,15 @@ function DraggableCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen 
   return (
     <div
       ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      style={{ opacity: isDragging ? 0.25 : 1, transition: isDragging ? 'none' : 'opacity 0.2s ease', cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none' }}
+      style={{ opacity: isDragging ? 0.25 : 1, transition: isDragging ? 'none' : 'opacity 0.2s ease' }}
     >
       <KanbanCard
         apolice={apolice}
         resolverNome={resolverNome}
         resolverImobiliariaInfo={resolverImobiliariaInfo}
         onOpen={onOpen}
+        dragListeners={listeners}
+        dragAttributes={attributes}
       />
     </div>
   )
@@ -1163,7 +1175,7 @@ export default function ApoicesGestao() {
   const [filtro, setFiltro] = useState('total')
   const [imobFiltro, setImobFiltro] = useState('')
   const [workspace, setWorkspace] = useState('kanban')
-  const [activeId, setActiveId] = useState(null)
+  const [activeCard, setActiveCard] = useState(null)
 
   const scrollRef = useRef(null)
   const [canScrollL, setCanScrollL] = useState(false)
@@ -1194,6 +1206,10 @@ export default function ApoicesGestao() {
     load()
   }, [load])
 
+  function openApolice(id) {
+    navigate(`/apolices/${id}`)
+  }
+
   const groups = useMemo(() => {
     const initial = Object.fromEntries(COLUNAS.map(col => [col.id, []]))
     for (const apolice of apolices) {
@@ -1223,7 +1239,7 @@ export default function ApoicesGestao() {
   }, [loading, apolices.length])
 
   async function handleDragEnd({ active, over }) {
-    setActiveId(null)
+    setActiveCard(null)
     if (!over) return
 
     const id = active.id
@@ -1256,8 +1272,6 @@ export default function ApoicesGestao() {
       return [{ ...novaApolice, status_emissao: novaApolice.status_emissao || 'recebida' }, ...semDuplicata]
     })
   }
-
-  const activeCard = activeId ? apolices.find(item => item.id === activeId) : null
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -1373,9 +1387,15 @@ export default function ApoicesGestao() {
           <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
             <DndContext
               sensors={sensors}
-              onDragStart={({ active }) => setActiveId(active.id)}
+              collisionDetection={kanbanPointerCollision}
+              onDragStart={({ active }) => {
+                const nextId = active.id
+                setActiveCard(apolices.find(item => item.id === nextId) || null)
+              }}
               onDragEnd={handleDragEnd}
-              onDragCancel={() => setActiveId(null)}
+              onDragCancel={() => {
+                setActiveCard(null)
+              }}
             >
               <div className="flex gap-3 min-w-max px-1">
                 {COLUNAS.map(col => (
@@ -1385,12 +1405,12 @@ export default function ApoicesGestao() {
                     apolices={groups[col.id] || []}
                     resolverNome={resolverNome}
                     resolverImobiliariaInfo={resolverImobiliariaInfo}
-                    onOpen={id => navigate(`/apolices/${id}`)}
+                    onOpen={openApolice}
                   />
                 ))}
               </div>
 
-              <DragOverlay dropAnimation={null}>
+              <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
                 {activeCard ? (
                   <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none' }}>
                     <KanbanCard apolice={activeCard} resolverNome={resolverNome} resolverImobiliariaInfo={resolverImobiliariaInfo} isDragOverlay />
@@ -1404,6 +1424,7 @@ export default function ApoicesGestao() {
     </div>
   )
 }
+
 
 
 

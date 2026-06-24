@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core'
 import {
@@ -36,8 +36,8 @@ import { Avatar } from '../components/ui'
 const COLUNAS = [
   { id: 'recebida', label: 'Recebida', color: '#3B82F6' },
   { id: 'proposta_transmitida', label: 'Proposta Transmitida', color: '#F59E0B' },
-  { id: 'emitida', label: 'Apólice Emitida', color: '#8B5CF6' },
-  { id: 'enviada', label: 'Apólice Enviada', color: '#10B981' },
+  { id: 'emitida', label: 'ApÃ³lice Emitida', color: '#8B5CF6' },
+  { id: 'enviada', label: 'ApÃ³lice Enviada', color: '#10B981' },
 ]
 
 const PRODUTO_ICON = { residencial_pf: Home, comercial_pf: Briefcase, pessoa_juridica: Building }
@@ -47,6 +47,9 @@ const SEGURADORAS_UPLOAD_DIRETO = ['Porto Seguro', 'Pottential Seguros', 'TOO Se
 
 function getPeriodDates(filtro) {
   const now = new Date()
+  if (filtro === 'total') {
+    return [null, null]
+  }
   if (filtro === 'hoje') {
     const start = new Date(now)
     start.setHours(0, 0, 0, 0)
@@ -91,7 +94,7 @@ function produtoApolice(apolice) {
 }
 
 function documentoApolice(apolice) {
-  return apolice?.fichas?.cnpj || apolice?.fichas?.cpf || apolice?.raw_data?.cnpj || apolice?.raw_data?.cpf || '�'
+  return apolice?.fichas?.cnpj || apolice?.fichas?.cpf || apolice?.raw_data?.cnpj || apolice?.raw_data?.cpf || '—'
 }
 
 function isApoliceSemFicha(apolice) {
@@ -122,7 +125,7 @@ function resumoFicha(ficha) {
 
   return {
     nome,
-    imobiliaria: normalizeDisplayText(ficha?.imobiliaria || raw?.imobiliaria) || 'Imobiliária não informada',
+    imobiliaria: normalizeDisplayText(ficha?.imobiliaria || raw?.imobiliaria) || 'ImobiliÃ¡ria nÃ£o informada',
     avatarUrl: ficha?.profiles?.avatar_url || raw?.avatar_url || '',
     emissorNome: ficha?.profiles?.nome || '',
     numeroOrcamento: String(raw?.numero_orcamento || '').trim(),
@@ -161,22 +164,22 @@ function extrairDadosPortoUpload(texto) {
     result.numero_apolice = numeroApolice[1].trim().replace(/\s+/g, '').replace(/^\.+|\.+$/g, '').split('.')[0]
   }
 
-  const proposta = text.match(/PROPOSTA N[º°]\s+([\w.-]+)/i)
+  const proposta = text.match(/PROPOSTA N[ÂºÂ°]\s+([\w.-]+)/i)
   if (proposta) result.numero_proposta = proposta[1].trim()
 
-  const vigencia = text.match(/a partir das 24 horas do dia (\d{2}\/\d{2}\/\d{4}) at[eé] as 24 horas do dia (\d{2}\/\d{2}\/\d{4})/i)
+  const vigencia = text.match(/a partir das 24 horas do dia (\d{2}\/\d{2}\/\d{4}) at[eÃ©] as 24 horas do dia (\d{2}\/\d{2}\/\d{4})/i)
   if (vigencia) {
     result.inicio_vigencia = parseDateBR(vigencia[1])
     result.fim_vigencia = parseDateBR(vigencia[2])
   }
 
-  const segurado = text.match(/DADOS DO SEGURADO\s+NOME\/RAZ[ÃA]O SOCIAL\s+(.+?)\s+NOME SOCIAL\s+CPF\/CNPJ\s+([\d./-]+)/i)
+  const segurado = text.match(/DADOS DO SEGURADO\s+NOME\/RAZ[ÃƒA]O SOCIAL\s+(.+?)\s+NOME SOCIAL\s+CPF\/CNPJ\s+([\d./-]+)/i)
   if (segurado) {
     result.nome_proprietario = segurado[1].trim()
     result.proprietario_documento = segurado[2].trim()
   }
 
-  const localRisco = text.match(/LOCAL DE RISCO\s+(.+?)(?=\s+PRIMEIRO LOCAT[ÁA]RIO|\s+ESTIPULANTE)/i)
+  const localRisco = text.match(/LOCAL DE RISCO\s+(.+?)(?=\s+PRIMEIRO LOCAT[ÃA]RIO|\s+ESTIPULANTE)/i)
   if (localRisco) {
     result.endereco = localRisco[1].trim()
     const partes = result.endereco.split(',').map(item => item.trim()).filter(Boolean)
@@ -192,19 +195,19 @@ function extrairDadosPortoUpload(texto) {
     }
   }
 
-  const locatario = text.match(/PRIMEIRO LOCAT[ÁA]RIO CPF\/CNPJ\s+([\d./-]+)\s+NOME\/RAZ[ÃA]O SOCIAL\s+(.+?)(?=\s+NOME SOCIAL|\s+PROFISS[ÃA]O|\s+ESTIPULANTE)/i)
+  const locatario = text.match(/PRIMEIRO LOCAT[ÃA]RIO CPF\/CNPJ\s+([\d./-]+)\s+NOME\/RAZ[ÃƒA]O SOCIAL\s+(.+?)(?=\s+NOME SOCIAL|\s+PROFISS[ÃƒA]O|\s+ESTIPULANTE)/i)
   if (locatario) {
     result.documento_locatario = locatario[1].trim()
     result.nome_locatario = locatario[2].trim()
   }
 
-  const tipoLocacao = text.match(/TIPO DE LOCA[ÇC][ÃA]O\s+\d+\s*[–\-]\s*(\w+)/i)
+  const tipoLocacao = text.match(/TIPO DE LOCA[Ã‡C][ÃƒA]O\s+\d+\s*[â€“\-]\s*(\w+)/i)
   if (tipoLocacao) result.tipo_imovel = tipoLocacao[1].trim()
 
   const aluguel = text.match(/Aluguel\s+R\$\s*([\d.,]+)\s+\d+x/i)
   if (aluguel) result.valor_aluguel = parseMoneyBR(aluguel[1])
 
-  const premioLiquido = text.match(/Pr[êe]mio L[íi]quido\s+R\$\s*([\d.,]+)/i)
+  const premioLiquido = text.match(/Pr[Ãªe]mio L[Ã­i]quido\s+R\$\s*([\d.,]+)/i)
   if (premioLiquido) result.premio_liquido = parseMoneyBR(premioLiquido[1])
 
   const valorParcela = text.match(/Valor da Parcela\s+R\$\s*([\d.,]+)/i)
@@ -213,7 +216,7 @@ function extrairDadosPortoUpload(texto) {
   const parcelamento = text.match(/Fatura sem entrada\s+(\d+)X/i)
   if (parcelamento) result.parcelamento = Number.parseInt(parcelamento[1], 10)
 
-  const premioTotal = text.match(/Pre[çc]o Total do Seguro\s+R\$\s*([\d.,]+)/i)
+  const premioTotal = text.match(/Pre[Ã§c]o Total do Seguro\s+R\$\s*([\d.,]+)/i)
   if (premioTotal) result.premio_total = parseMoneyBR(premioTotal[1])
 
   result.forma_pagamento = 'fatura_sem_entrada'
@@ -224,19 +227,19 @@ function extrairDadosPottencialUpload(texto) {
   const text = String(texto || '').replace(/\s+/g, ' ')
   const result = {}
 
-  const numeroApolice = text.match(/N[º°]\s*DA AP[ÓO]LICE\s+(\d{10,})/i)
+  const numeroApolice = text.match(/N[ÂºÂ°]\s*DA AP[Ã“O]LICE\s+(\d{10,})/i)
   if (numeroApolice) result.numero_apolice = numeroApolice[1].trim()
 
-  const proposta = text.match(/N[º°]\s*DA PROPOSTA\s+(\d+)/i)
+  const proposta = text.match(/N[ÂºÂ°]\s*DA PROPOSTA\s+(\d+)/i)
   if (proposta) result.numero_proposta = proposta[1].trim()
 
-  const vigencia = text.match(/Das 0h do dia\s+(\d{2}\/\d{2}\/\d{4})\s+às 0h do dia\s+(\d{2}\/\d{2}\/\d{4})/i)
+  const vigencia = text.match(/Das 0h do dia\s+(\d{2}\/\d{2}\/\d{4})\s+Ã s 0h do dia\s+(\d{2}\/\d{2}\/\d{4})/i)
   if (vigencia) {
     result.inicio_vigencia = parseDateBR(vigencia[1])
     result.fim_vigencia = parseDateBR(vigencia[2])
   }
 
-  const locatario = text.match(/LOCAT[ÁA]RIOS?\s+\(Garantidos\)\s+Nome:\s+(.+?)\s+CPF:\s+([\d./-]+)/i)
+  const locatario = text.match(/LOCAT[ÃA]RIOS?\s+\(Garantidos\)\s+Nome:\s+(.+?)\s+CPF:\s+([\d./-]+)/i)
   if (locatario) {
     result.nome_locatario = locatario[1].trim()
     result.documento_locatario = locatario[2].trim()
@@ -248,13 +251,13 @@ function extrairDadosPottencialUpload(texto) {
     result.proprietario_documento = locador[2].trim()
   }
 
-  const tipoLocacao = text.match(/Tipo de loca[çc][ãa]o:\s+(Residencial|Comercial)/i)
+  const tipoLocacao = text.match(/Tipo de loca[Ã§c][Ã£a]o:\s+(Residencial|Comercial)/i)
   if (tipoLocacao) result.tipo_imovel = tipoLocacao[1].trim()
 
-  const localRisco = text.match(/Local do Risco:\s+(.+?)(?=\s+Vig[êe]ncia do contrato de loca[çc][ãa]o:|\s+LOCAT[ÁA]RIOS?\s+\(Garantidos\))/i)
+  const localRisco = text.match(/Local do Risco:\s+(.+?)(?=\s+Vig[Ãªe]ncia do contrato de loca[Ã§c][Ã£a]o:|\s+LOCAT[ÃA]RIOS?\s+\(Garantidos\))/i)
   if (localRisco) {
     result.endereco = localRisco[1].trim()
-    const enderecoMatch = result.endereco.match(/(.+?)\s+(\d{8})\s+([A-ZÀ-Ü\s]+?)\s+([A-ZÀ-Ü\s]+)\s+([A-Z]{2})$/i)
+    const enderecoMatch = result.endereco.match(/(.+?)\s+(\d{8})\s+([A-ZÃ€-Ãœ\s]+?)\s+([A-ZÃ€-Ãœ\s]+)\s+([A-Z]{2})$/i)
     if (enderecoMatch) {
       result.endereco_linha = enderecoMatch[1].trim()
       result.cep = enderecoMatch[2].trim()
@@ -270,10 +273,10 @@ function extrairDadosPottencialUpload(texto) {
   const aluguel = text.match(/Aluguel\s+R\$\s*([\d.,]+)\s+R\$\s*[\d.,]+\s+R\$\s*[\d.,]+/i)
   if (aluguel) result.valor_aluguel = parseMoneyBR(aluguel[1])
 
-  const premioLiquido = text.match(/Pr[êe]mio L[íi]quido\s+R\$\s*([\d.,]+)/i)
+  const premioLiquido = text.match(/Pr[Ãªe]mio L[Ã­i]quido\s+R\$\s*([\d.,]+)/i)
   if (premioLiquido) result.premio_liquido = parseMoneyBR(premioLiquido[1])
 
-  const premioTotal = text.match(/Pr[êe]mio Total:\s+R\$\s*([\d.,]+)/i)
+  const premioTotal = text.match(/Pr[Ãªe]mio Total:\s+R\$\s*([\d.,]+)/i)
   if (premioTotal) result.premio_total = parseMoneyBR(premioTotal[1])
 
   const pagamento = text.match(/Fatura mensal em\s+(\d+)\s*x sem juros:\s+R\$\s*([\d.,]+)/i)
@@ -291,14 +294,14 @@ function extrairDadosTooUpload(texto) {
   const text = String(texto || '').replace(/\s+/g, ' ')
   const result = {}
 
-  const numeroApolice = text.match(/AP[�O]LICE N[��]\s+(\d+)/i)
+  const numeroApolice = text.match(/AP[ÓO]LICE N[º°]\s+(\d+)/i)
   if (numeroApolice) result.numero_apolice = numeroApolice[1].trim()
 
-  const proposta = text.match(/PROPOSTA N[��]\s+(\d+)/i)
+  const proposta = text.match(/PROPOSTA N[º°]\s+(\d+)/i)
   if (proposta) result.numero_proposta = proposta[1].trim()
 
-  const inicioVigencia = text.match(/IN[I�]CIO DE VIG[�E]NCIA DAS 24H\s+(\d{2}\/\d{2}\/\d{4})/i)
-  const fimVigencia = text.match(/T[�E]RMINO DE VIG[�E]NCIA DAS 24H\s+(\d{2}\/\d{2}\/\d{4})/i)
+  const inicioVigencia = text.match(/IN[IÍ]CIO DE VIG[ÊE]NCIA DAS 24H\s+(\d{2}\/\d{2}\/\d{4})/i)
+  const fimVigencia = text.match(/T[ÉE]RMINO DE VIG[ÊE]NCIA DAS 24H\s+(\d{2}\/\d{2}\/\d{4})/i)
   if (inicioVigencia) result.inicio_vigencia = parseDateBR(inicioVigencia[1])
   if (fimVigencia) result.fim_vigencia = parseDateBR(fimVigencia[1])
 
@@ -331,17 +334,17 @@ function extrairDadosTooUpload(texto) {
     result.estado,
   ].filter(Boolean).join(', ')
 
-  const tipoLocacao = text.match(/TIPO DE LOCA[�C][�A]O[\s\S]{0,80}?\bIm[�o]vel\s*-\s*(Residencial|Comercial)/i)
-    || text.match(/Im[�o]vel\s*-\s*(Residencial|Comercial)/i)
+  const tipoLocacao = text.match(/TIPO DE LOCA[ÇC][ÃA]O[\s\S]{0,80}?\bIm[óo]vel\s*-\s*(Residencial|Comercial)/i)
+    || text.match(/Im[óo]vel\s*-\s*(Residencial|Comercial)/i)
   if (tipoLocacao) result.tipo_imovel = tipoLocacao[1].trim()
 
   const aluguel = text.match(/Aluguel\s+([\d.,]+)\s+[\d.,]+\s+[\d.,]+/i)
   if (aluguel) result.valor_aluguel = parseMoneyBR(aluguel[1])
 
-  const premioLiquido = text.match(/PR[�E]MIO L[�I]QUIDO:\s*([\d.,]+)/i)
+  const premioLiquido = text.match(/PR[ÊE]MIO L[ÍI]QUIDO:\s*([\d.,]+)/i)
   if (premioLiquido) result.premio_liquido = parseMoneyBR(premioLiquido[1])
 
-  const premioTotal = [...text.matchAll(/PR[�E]MIO TOTAL:\s*([\d.,]+)/gi)]
+  const premioTotal = [...text.matchAll(/PR[ÊE]MIO TOTAL:\s*([\d.,]+)/gi)]
   if (premioTotal.length > 0) result.premio_total = parseMoneyBR(premioTotal[premioTotal.length - 1][1])
 
   const valorParcela = text.match(/\b1\s+[\d.,]+\s+0,00\s+0,00\s+[\d.,]+\s+([\d.,]+)\s+\d{2}\/\d{2}\/\d{4}/i)
@@ -359,7 +362,7 @@ function InfoPill({ label, value, mono = false }) {
   return (
     <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2 py-1.5">
       <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">{label}</p>
-      <p className={`mt-0.5 text-[10px] text-dark-text truncate${mono ? ' font-mono' : ''}`}>{value || '—'}</p>
+      <p className={`mt-0.5 text-[10px] text-dark-text truncate${mono ? ' font-mono' : ''}`}>{value || 'â€”'}</p>
     </div>
   )
 }
@@ -372,11 +375,11 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
   const emissorNome = apolice?.profiles?.nome || ''
   const statusLabel = STATUS_EMISSAO_LABELS[apolice?.status_emissao]?.label || apolice?.status_emissao || 'Recebida'
   const documento = documentoApolice(apolice)
-  const celular = apolice?.fichas?.celular || apolice?.raw_data?.celular || '�'
-  const tipoImovel = normalizeDisplayText(apolice?.fichas?.tipo_imovel || apolice?.raw_data?.tipo_imovel) || '�'
-  const vigencia = [apolice?.inicio_vigencia, apolice?.fim_vigencia].filter(Boolean).join(' até ') || '—'
-  const parcela = apolice?.valor_parcela ? formatMoneyBR(apolice.valor_parcela) : '—'
-  const parcelamento = apolice?.parcelamento ? `${apolice.parcelamento}x` : '—'
+  const celular = apolice?.fichas?.celular || apolice?.raw_data?.celular || '—'
+  const tipoImovel = normalizeDisplayText(apolice?.fichas?.tipo_imovel || apolice?.raw_data?.tipo_imovel) || '—'
+  const vigencia = [apolice?.inicio_vigencia, apolice?.fim_vigencia].filter(Boolean).join(' atÃ© ') || 'â€”'
+  const parcela = apolice?.valor_parcela ? formatMoneyBR(apolice.valor_parcela) : 'â€”'
+  const parcelamento = apolice?.parcelamento ? `${apolice.parcelamento}x` : 'â€”'
 
   return (
     <div className={`kanban-card${isDragOverlay ? ' kanban-card-dragging' : ''}`} style={{ '--kanban-accent': produtoColor }}>
@@ -416,12 +419,12 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
         {isApoliceSemFicha(apolice) && (
           <div className="mb-1">
             <span className="inline-flex items-center rounded-full bg-status-warning/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-status-warning">
-              Apólice sem ficha vinculada
+              ApÃ³lice sem ficha vinculada
             </span>
           </div>
         )}
         <p className="text-[10px] text-dark-muted truncate leading-none mb-1.5">
-          {resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || '—')}
+          {resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || 'â€”')}
         </p>
 
         {apolice?.numero_apolice && (
@@ -439,14 +442,14 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
         <div className="mt-2 grid grid-cols-2 gap-1.5">
           <InfoPill label="Documento" value={documento} mono />
           <InfoPill label="Celular" value={celular} />
-          <InfoPill label="Imóvel" value={tipoImovel} />
+          <InfoPill label="ImÃ³vel" value={tipoImovel} />
           <InfoPill label="Parcelas" value={parcelamento} />
         </div>
 
         <div className="mt-1.5 rounded-xl border border-dark-border/60 bg-dark-surface2/25 px-2 py-1.5">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Vigência</p>
+              <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">VigÃªncia</p>
               <p className="mt-0.5 text-[10px] text-dark-text truncate">{vigencia}</p>
             </div>
             <div className="text-right">
@@ -478,7 +481,7 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
               }}
               className="text-[9px] text-dark-muted hover:text-dark-text transition-colors px-1.5 py-0.5 rounded-md hover:bg-dark-surface2"
             >
-              {expandido ? '▲' : '▼ Detalhes'}
+              {expandido ? 'â–²' : 'â–¼ Detalhes'}
             </button>
           )}
         </div>
@@ -486,7 +489,7 @@ function KanbanCard({ apolice, resolverNome, onOpen, isDragOverlay = false, drag
         {expandido && !isDragOverlay && (
           <div className="space-y-0.5 pt-1.5 mt-1.5 border-t border-dark-border/40 animate-fade-in">
             <p className="text-[9px] text-dark-muted truncate">
-              Imobiliária: {resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || '—')}
+              ImobiliÃ¡ria: {resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || 'â€”')}
             </p>
             {(apolice?.fichas?.cep || apolice?.raw_data?.cep) && <p className="text-[9px] text-dark-muted font-mono">CEP: {apolice?.fichas?.cep || apolice?.raw_data?.cep}</p>}
             {apolice?.seguradora && <p className="text-[9px] text-dark-muted">Seguradora: {apolice.seguradora}</p>}
@@ -558,7 +561,7 @@ function DroppableColumn({ col, apolices, resolverNome, onOpen }) {
   )
 }
 
-function ModalIniciarEmissao({ onClose, onCriado, toast, grupos, getAliases, user }) {
+function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, user }) {
   const [imobFiltro, setImobFiltro] = useState('')
   const [busca, setBusca] = useState('')
   const [fichas, setFichas] = useState([])
@@ -620,50 +623,56 @@ function ModalIniciarEmissao({ onClose, onCriado, toast, grupos, getAliases, use
     setCriando(false)
 
     if (error) {
-      toast({ type: 'error', title: 'Erro ao criar solicitação', message: error.message })
+      toast({ type: 'error', title: 'Erro ao criar solicitaÃ§Ã£o', message: error.message })
       return
     }
 
-    toast({ type: 'success', title: 'Solicitação criada' })
+    toast({ type: 'success', title: 'SolicitaÃ§Ã£o criada' })
     onCriado?.()
-    onClose?.()
+    onBack?.()
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
-      <div className="glass-panel rounded-3xl w-full max-w-6xl overflow-hidden">
-        <div className="flex items-center justify-between px-7 py-5 border-b border-dark-border">
-          <div>
-            <h2 className="text-xl font-bold text-dark-text">Iniciar Emissão</h2>
-            <p className="text-sm text-dark-muted mt-0.5">Selecione uma ficha aprovada para criar a solicitação.</p>
+    <section className="glass-panel rounded-3xl overflow-hidden animate-fade-in">
+      <div className="flex items-center justify-between gap-4 px-7 py-5 border-b border-dark-border">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/20 bg-brand-accent/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-accent">
+            <Plus className="w-3.5 h-3.5" />
+            Area dedicada
           </div>
-          <button onClick={onClose} className="btn-ghost p-2 rounded-xl" aria-label="Fechar">
-            <X className="w-4 h-4" />
-          </button>
+          <h2 className="mt-3 text-xl font-bold text-dark-text">Iniciar EmissÃ£o</h2>
+          <p className="text-sm text-dark-muted mt-0.5">Selecione uma ficha aprovada para criar a solicitaÃ§Ã£o.</p>
         </div>
+        <button onClick={onBack} className="btn-secondary text-sm">
+          Voltar para gestÃ£o
+        </button>
+      </div>
 
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="px-7 py-6 space-y-5">
-          <div className="grid grid-cols-1 xl:grid-cols-[300px_minmax(0,1fr)] gap-4">
-            <div>
-              <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Imobiliária</label>
-              <select value={imobFiltro} onChange={event => setImobFiltro(event.target.value)} className="select text-sm">
-                <option value="">Todas as imobiliárias</option>
-                {grupos.map(grupo => (
-                  <option key={grupo.id} value={grupo.nome_canonico}>{grupo.nome_canonico}</option>
-                ))}
-              </select>
-            </div>
+          <div>
+            <div className="grid grid-cols-1 xl:grid-cols-[300px_minmax(0,1fr)] gap-4">
+              <div>
+                <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">ImobiliÃ¡ria</label>
+                <select value={imobFiltro} onChange={event => setImobFiltro(event.target.value)} className="select text-sm">
+                  <option value="">Todas as imobiliÃ¡rias</option>
+                  {grupos.map(grupo => (
+                    <option key={grupo.id} value={grupo.nome_canonico}>{grupo.nome_canonico}</option>
+                  ))}
+                </select>
+              </div>
 
-            <div>
-              <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Pesquisar fichas aprovadas</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted" />
-                <input
-                  value={busca}
-                  onChange={event => setBusca(event.target.value)}
-                  placeholder="Nome do cliente ou imobiliária"
-                  className="input pl-10"
-                />
+              <div>
+                <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Pesquisar fichas aprovadas</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted" />
+                  <input
+                    value={busca}
+                    onChange={event => setBusca(event.target.value)}
+                    placeholder="Nome do cliente ou imobiliÃ¡ria"
+                    className="input pl-10"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -672,7 +681,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast, grupos, getAliases, use
             <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border">
               <div>
                 <h3 className="text-lg font-semibold text-dark-text">Fichas aprovadas</h3>
-                <p className="text-sm text-dark-muted">Mostrando nome completo, foto e imobiliária.</p>
+                <p className="text-sm text-dark-muted">Mostrando nome completo, foto e imobiliÃ¡ria.</p>
               </div>
               <span className="text-sm text-dark-muted">{fichas.length} fichas</span>
             </div>
@@ -710,7 +719,7 @@ function ModalIniciarEmissao({ onClose, onCriado, toast, grupos, getAliases, use
                               <p className="mt-2 text-[11px] text-dark-muted truncate">Orcamentista: {resumo.emissorNome}</p>
                             )}
                             <p className="mt-2 text-[11px] font-mono text-dark-muted">
-                              Nº orçamento: {resumo.numeroOrcamento || 'Não informado'}
+                              NÂº orÃ§amento: {resumo.numeroOrcamento || 'NÃ£o informado'}
                             </p>
                           </div>
                         </div>
@@ -721,13 +730,15 @@ function ModalIniciarEmissao({ onClose, onCriado, toast, grupos, getAliases, use
               )}
             </div>
           </div>
+        </div>
 
-          <div className="rounded-3xl border border-dark-border bg-dark-surface2/20 p-5">
+        <aside className="border-t xl:border-t-0 xl:border-l border-dark-border bg-dark-surface2/20 px-7 py-6">
+          <div className="rounded-3xl border border-dark-border bg-white/80 p-5">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-dark-muted">Dados da emissão</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-dark-muted">Dados da emissÃ£o</h3>
                 <p className="text-sm text-dark-muted mt-1">
-                  Ao selecionar a ficha, o número do orçamento é preenchido automaticamente quando existir.
+                  Ao selecionar a ficha, o nÃºmero do orÃ§amento Ã© preenchido automaticamente quando existir.
                 </p>
               </div>
               {fichaSelecionada && (
@@ -739,14 +750,14 @@ function ModalIniciarEmissao({ onClose, onCriado, toast, grupos, getAliases, use
                     setNumeroOrcamento('')
                   }}
                 >
-                  Limpar seleção
+                  Limpar seleÃ§Ã£o
                 </button>
               )}
             </div>
 
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="mt-4 space-y-4">
               <div>
-                <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Nº do orçamento</label>
+                <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">NÂº do orÃ§amento</label>
                 <input
                   value={numeroOrcamento}
                   onChange={event => setNumeroOrcamento(event.target.value)}
@@ -756,23 +767,35 @@ function ModalIniciarEmissao({ onClose, onCriado, toast, grupos, getAliases, use
               </div>
               <div>
                 <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Ficha selecionada</label>
-                <div className="input text-sm bg-white/70">
+                <div className="input min-h-[44px] bg-white/70 flex items-center text-sm">
                   {fichaSelecionada ? resumoFicha(fichaSelecionada).nome : 'Nenhuma ficha selecionada'}
                 </div>
               </div>
+              {fichaSelecionada && (
+                <>
+                  <div className="rounded-2xl border border-dark-border/60 bg-dark-surface2/20 p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">ImobiliÃ¡ria</p>
+                    <p className="mt-2 text-sm font-semibold text-dark-text">{resumoFicha(fichaSelecionada).imobiliaria}</p>
+                  </div>
+                  <div className="rounded-2xl border border-dark-border/60 bg-dark-surface2/20 p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Resumo</p>
+                    <p className="mt-2 text-sm text-dark-text">Cliente: {resumoFicha(fichaSelecionada).nome}</p>
+                    <p className="mt-1 text-xs text-dark-muted">OrÃ§amento: {numeroOrcamento || 'NÃ£o informado'}</p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3">
+              <button onClick={onBack} className="btn-secondary text-sm">Cancelar</button>
+              <button onClick={criarSolicitacao} disabled={!fichaSelecionada || criando} className="btn-primary text-sm">
+                {criando ? 'Criando...' : 'Criar SolicitaÃ§Ã£o'}
+              </button>
             </div>
           </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 px-7 py-5 border-t border-dark-border">
-          <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
-          <button onClick={criarSolicitacao} disabled={!fichaSelecionada || criando} className="btn-primary text-sm">
-            {criando ? 'Criando...' : 'Criar Solicitação'}
-          </button>
-
-        </div>
+        </aside>
       </div>
-    </div>
+    </section>
   )
 }
 
@@ -956,7 +979,7 @@ function ModalUploadDireto({ onClose, onCriado, toast, grupos, user }) {
                 <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Imovel</p>
                   <p className="mt-2 text-sm text-dark-text">{dadosExtraidos.endereco_linha || dadosExtraidos.endereco || '-'}</p>
-                  <p className="mt-1 text-xs text-dark-muted">{[dadosExtraidos.bairro, dadosExtraidos.cidade, dadosExtraidos.estado].filter(Boolean).join(' · ') || '-'}</p>
+                  <p className="mt-1 text-xs text-dark-muted">{[dadosExtraidos.bairro, dadosExtraidos.cidade, dadosExtraidos.estado].filter(Boolean).join(' Â· ') || '-'}</p>
                   <p className="mt-1 text-xs font-mono text-dark-muted">{dadosExtraidos.cep || '-'}</p>
                 </div>
                 <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3">
@@ -998,7 +1021,7 @@ export default function ApoicesGestao() {
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('semana')
   const [imobFiltro, setImobFiltro] = useState('')
-  const [modalIniciar, setModalIniciar] = useState(false)
+  const [workspace, setWorkspace] = useState('kanban')
   const [modalUploadDireto, setModalUploadDireto] = useState(false)
   const [activeId, setActiveId] = useState(null)
 
@@ -1021,7 +1044,7 @@ export default function ApoicesGestao() {
       setApolices(data || [])
     } catch {
       setApolices([])
-      toast({ type: 'error', title: 'Erro ao carregar apólices' })
+      toast({ type: 'error', title: 'Erro ao carregar apÃ³lices' })
     } finally {
       setLoading(false)
     }
@@ -1077,7 +1100,7 @@ export default function ApoicesGestao() {
 
     const error = await moverStatusApolice(id, novoStatus)
     if (error) {
-      toast({ type: 'error', title: 'Erro ao mover apólice' })
+      toast({ type: 'error', title: 'Erro ao mover apÃ³lice' })
       load()
     }
   }
@@ -1100,8 +1123,8 @@ export default function ApoicesGestao() {
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="title-page text-dark-text">Gestão de Apólices</h1>
-          <p className="text-xs text-dark-muted mt-0.5">Arraste as apólices entre as colunas para atualizar o status</p>
+          <h1 className="title-page text-dark-text">GestÃ£o de ApÃ³lices</h1>
+          <p className="text-xs text-dark-muted mt-0.5">Arraste as apÃ³lices entre as colunas para atualizar o status</p>
         </div>
       </div>
 
@@ -1115,7 +1138,7 @@ export default function ApoicesGestao() {
                 filtro === item ? 'bg-brand-secondary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
               }`}
             >
-              {item === 'hoje' ? 'Hoje' : item === 'semana' ? 'Semana' : 'Mês'}
+              {item === 'hoje' ? 'Hoje' : item === 'semana' ? 'Semana' : 'MÃªs'}
             </button>
           ))}
         </div>
@@ -1127,7 +1150,7 @@ export default function ApoicesGestao() {
             className="select text-sm py-1.5"
             style={{ minWidth: '220px' }}
           >
-            <option value="">Todas as imobiliárias</option>
+            <option value="">Todas as imobiliÃ¡rias</option>
             {grupos.map(grupo => (
               <option key={grupo.id} value={grupo.nome_canonico}>{grupo.nome_canonico}</option>
             ))}
@@ -1142,11 +1165,11 @@ export default function ApoicesGestao() {
           </button>
 
           <button
-            onClick={() => setModalIniciar(prev => !prev)}
-            className={`flex items-center gap-2 text-sm ${modalIniciar ? 'btn-secondary' : 'btn-primary'}`}
+            onClick={() => setWorkspace(prev => (prev === 'iniciar' ? 'kanban' : 'iniciar'))}
+            className={`flex items-center gap-2 text-sm ${workspace === 'iniciar' ? 'btn-secondary' : 'btn-primary'}`}
           >
             <Plus className="w-4 h-4" />
-            {modalIniciar ? 'Fechar emissão' : 'Iniciar Emissão'}
+            {workspace === 'iniciar' ? 'Fechar emissÃ£o' : 'Iniciar EmissÃ£o'}
           </button>
           <button
             onClick={() => setModalUploadDireto(prev => !prev)}
@@ -1158,9 +1181,9 @@ export default function ApoicesGestao() {
         </div>
       </div>
 
-      {modalIniciar && (
-        <ModalIniciarEmissao
-          onClose={() => setModalIniciar(false)}
+      {workspace === 'iniciar' && (
+        <IniciarEmissaoWorkspace
+          onBack={() => setWorkspace('kanban')}
           onCriado={handleCriado}
           toast={toast}
           grupos={grupos}
@@ -1179,7 +1202,7 @@ export default function ApoicesGestao() {
         />
       )}
 
-      {loading ? (
+      {workspace === 'iniciar' ? null : loading ? (
         <KanbanSkeleton />
       ) : (
         <div className="relative">
@@ -1240,5 +1263,6 @@ export default function ApoicesGestao() {
     </div>
   )
 }
+
 
 

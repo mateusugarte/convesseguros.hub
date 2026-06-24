@@ -1,5 +1,6 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { memo } from 'react'
 import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core'
 import {
   Briefcase,
@@ -23,7 +24,7 @@ import {
   STATUS_EMISSAO_LABELS,
 } from '../lib/apolices'
 import { fetchFichasAprovadasEmissao } from '../lib/fichas'
-import { extractPdfText } from '../lib/apoliceParser'
+import { extractPdfText, sanitizeProprietarioNome } from '../lib/apoliceParser'
 import { uploadDocumento } from '../lib/documentos'
 import { normalizeDisplayText } from '../lib/text'
 import { useImobiliaria } from '../hooks/useImobiliaria'
@@ -360,16 +361,16 @@ function extrairDadosTooUpload(texto) {
   result.forma_pagamento = 'fatura_sem_entrada'
   return result
 }
-function InfoPill({ label, value, mono = false }) {
+const InfoPill = memo(function InfoPill({ label, value, mono = false }) {
   return (
     <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2 py-1.5">
       <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">{label}</p>
       <p className={`mt-0.5 text-[10px] text-dark-text truncate${mono ? ' font-mono' : ''}`}>{value || '—'}</p>
     </div>
   )
-}
+})
 
-function KanbanCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen, isDragOverlay = false, dragListeners, dragAttributes }) {
+const KanbanCard = memo(function KanbanCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen, isDragOverlay = false, dragListeners, dragAttributes }) {
   const [expandido, setExpandido] = useState(false)
   const produto = produtoApolice(apolice)
   const ProdutoIcon = PRODUTO_ICON[produto] || LayoutGrid
@@ -453,7 +454,7 @@ function KanbanCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen, is
 
         {apolice?.seguradora && (
           <div className="mb-1.5">
-            <SeguradoraBadge nome={apolice.seguradora} size="xs" />
+            <SeguradoraBadge nome={apolice.seguradora} size="xs" resolveMeta={false} />
           </div>
         )}
 
@@ -521,9 +522,9 @@ function KanbanCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen, is
       </div>
     </div>
   )
-}
+})
 
-function DraggableCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen }) {
+const DraggableCard = memo(function DraggableCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: apolice.id,
     data: { type: 'card' },
@@ -544,13 +545,13 @@ function DraggableCard({ apolice, resolverNome, resolverImobiliariaInfo, onOpen 
       />
     </div>
   )
-}
+})
 
-function DroppableColumn({ col, apolices, resolverNome, resolverImobiliariaInfo, onOpen }) {
+const DroppableColumn = memo(function DroppableColumn({ col, apolices, resolverNome, resolverImobiliariaInfo, onOpen }) {
   const { setNodeRef, isOver } = useDroppable({ id: col.id })
 
   return (
-    <div className="kanban-col flex flex-col flex-shrink-0">
+    <div className="kanban-col flex flex-col flex-shrink-0" style={{ contain: 'layout paint style' }}>
       <div className="kanban-col-header" style={{ background: `${col.color}14`, borderColor: `${col.color}45` }}>
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-2 h-2 rounded-full" style={{ background: col.color }} />
@@ -586,7 +587,7 @@ function DroppableColumn({ col, apolices, resolverNome, resolverImobiliariaInfo,
       </div>
     </div>
   )
-}
+})
 
 function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, user }) {
   const [imobFiltro, setImobFiltro] = useState('')
@@ -910,7 +911,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
       status_emissao: 'emitida',
       data_emissao: new Date().toISOString().slice(0, 10),
       emitido_por: user?.id || null,
-      proprietario_nome: dadosExtraidos.nome_proprietario || null,
+      proprietario_nome: sanitizeProprietarioNome(dadosExtraidos.nome_proprietario) || null,
       endereco: dadosExtraidos.endereco || null,
       inicio_vigencia: dadosExtraidos.inicio_vigencia || null,
       fim_vigencia: dadosExtraidos.fim_vigencia || null,
@@ -1206,9 +1207,9 @@ export default function ApoicesGestao() {
     load()
   }, [load])
 
-  function openApolice(id) {
+  const openApolice = useCallback((id) => {
     navigate(`/apolices/${id}`)
-  }
+  }, [navigate])
 
   const groups = useMemo(() => {
     const initial = Object.fromEntries(COLUNAS.map(col => [col.id, []]))

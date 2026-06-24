@@ -23,6 +23,7 @@ const SIZE = {
 }
 
 const SKIP = new Set(['de', 'da', 'do', 'seguros', 'seguro', 's/a', 'sa', 'ltda', 'cia'])
+const META_CACHE = new Map()
 
 function paleta(nome) {
   let h = 0
@@ -38,7 +39,7 @@ function iniciais(nome) {
   return (words[0][0] + words[1][0]).toUpperCase()
 }
 
-export default function SeguradoraBadge({ nome, logoUrl, logoPath, size = 'sm', showName = true, className = '' }) {
+export default function SeguradoraBadge({ nome, logoUrl, logoPath, size = 'sm', showName = true, className = '', resolveMeta = true }) {
   const [imgError, setImgError] = useState(false)
   const [resolvedLogo, setResolvedLogo] = useState(logoUrl || null)
 
@@ -51,17 +52,31 @@ export default function SeguradoraBadge({ nome, logoUrl, logoPath, size = 'sm', 
       return () => { active = false }
     }
 
+    if (!resolveMeta) {
+      setResolvedLogo(null)
+      return () => { active = false }
+    }
+
+    const cacheKey = normalizeDisplayText(nome) || nome
+    if (META_CACHE.has(cacheKey)) {
+      setResolvedLogo(META_CACHE.get(cacheKey))
+      return () => { active = false }
+    }
+
     setResolvedLogo(null)
-    findSeguradoraMetaByNome(normalizeDisplayText(nome) || nome)
+    findSeguradoraMetaByNome(cacheKey)
       .then(meta => {
-        if (active) setResolvedLogo(getEntityImageUrl(meta?.logo_path, meta?.logo_url || null))
+        if (!active) return
+        const nextLogo = getEntityImageUrl(meta?.logo_path, meta?.logo_url || null)
+        META_CACHE.set(cacheKey, nextLogo)
+        setResolvedLogo(nextLogo)
       })
       .catch(() => {
         if (active) setResolvedLogo(null)
       })
 
     return () => { active = false }
-  }, [nome, logoPath, logoUrl])
+  }, [nome, logoPath, logoUrl, resolveMeta])
 
   if (!nome) return null
 

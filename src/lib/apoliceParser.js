@@ -36,6 +36,19 @@ function fmt(val) {
   return String(val)
 }
 
+export function sanitizeProprietarioNome(value) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim()
+  if (!text) return ''
+
+  return text
+    .replace(/^\((?:segurado|propriet[aá]rio|locador)\)\s*/i, '')
+    .replace(/^(?:segurado|propriet[aá]rio|locador)\s*:\s*/i, '')
+    .replace(/^(?:nome)\s*:\s*/i, '')
+    .replace(/^(?:segurado|propriet[aá]rio|locador)\s+nome\s*:\s*/i, '')
+    .replace(/^\((?:segurado|propriet[aá]rio|locador)\)\s*nome\s*:\s*/i, '')
+    .trim()
+}
+
 // ─── Extração de texto do PDF ─────────────────────────────────────────────────
 
 export async function extractPdfText(file) {
@@ -443,6 +456,7 @@ export async function parseApolice(seguradora, file) {
   }
 
   const raw = parser(text)
+  if (raw.nome_proprietario) raw.nome_proprietario = sanitizeProprietarioNome(raw.nome_proprietario)
 
   // Separar campos que preenchem inputs dos extras informativos
   const { cep, tipo_imovel, valor_aluguel, forma_pagamento, ...camposForm } = raw

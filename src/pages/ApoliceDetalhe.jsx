@@ -17,7 +17,7 @@ import { Select } from '../components/ui/Select'
 import { PageHeader, MetricCard, DataCard, Avatar } from '../components/ui'
 import { normalizeDisplayText } from '../lib/text'
 import { formatDecimalBRInput } from '../lib/numberInput'
-import { parseApolice } from '../lib/apoliceParser'
+import { parseApolice, sanitizeProprietarioNome } from '../lib/apoliceParser'
 import { Upload, RefreshCw, Sparkles, X } from 'lucide-react'
 
 function fmtDt(v) {
@@ -187,7 +187,7 @@ export default function ApoliceDetalhe() {
         setNumeroProposta(data.numero_proposta || '')
         setSeguradora(data.seguradora || '')
         setStatusEmissao(data.status_emissao || '')
-        setProprietarioNome(data.proprietario_nome || '')
+        setProprietarioNome(sanitizeProprietarioNome(data.proprietario_nome || ''))
         setProprietarioCel(data.proprietario_cel || '')
         setEndereco(data.endereco || '')
         setInicioVigencia(data.inicio_vigencia || '')
@@ -379,7 +379,7 @@ export default function ApoliceDetalhe() {
         setExtracaoErro(`Seguradora "${seguradoraAtual}" ainda não possui parser configurado.`)
         return
       }
-      if (campos.nome_proprietario) setProprietarioNome(campos.nome_proprietario)
+      if (campos.nome_proprietario) setProprietarioNome(sanitizeProprietarioNome(campos.nome_proprietario))
       if (campos.proprietario_cel) setProprietarioCel(campos.proprietario_cel)
       if (campos.numero_apolice) setNumeroApolice(campos.numero_apolice)
       if (isLikelyPolicyNumber(campos.numero_proposta)) setNumeroProposta(campos.numero_proposta)

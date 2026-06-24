@@ -174,9 +174,8 @@ export async function fetchApolicesKanban({ dateFrom, dateTo, imobiliarias } = {
     .select(`
       id, status_emissao, created_at, data_transmissao,
       imobiliaria, numero_apolice, seguradora, valor_parcela, parcelamento,
-      premio_liquido, premio_total, valor_producao, valor_comissao, pct_comissao, pct_desconto,
-      proprietario_nome, inicio_vigencia, fim_vigencia, produto,
-      nome_interessado, emitido_por, celular, cpf, cep, tipo_imovel, valor_aluguel,
+      inicio_vigencia, fim_vigencia, produto,
+      nome_interessado, emitido_por, celular, cpf, cep, tipo_imovel,
       fichas!ficha_id(nome_interessado, nome_empresa, cpf, cnpj, produto, celular, cep, tipo_imovel, valor_aluguel),
       profiles!emitido_por(nome, avatar_url)
     `)

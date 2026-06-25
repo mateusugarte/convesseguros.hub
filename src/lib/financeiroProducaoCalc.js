@@ -21,6 +21,8 @@ export function agruparPorImobiliaria(rows) {
     cur.comissaoRecebidaEstimada += num(r.comissao_mensal)
     map.set(key, cur)
   }
+  // Ordena por comissão gerada (desc); desempate por nº de apólices (asc) só para
+  // tornar a ordenação determinística quando duas imobiliárias têm a mesma comissão.
   return [...map.values()].sort((a, b) => b.comissaoGerada - a.comissaoGerada || a.qtd - b.qtd)
 }
 

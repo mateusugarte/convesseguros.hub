@@ -506,7 +506,22 @@ export default function Layout() {
           />
           {(sidebarOpen || isMobile) && (
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-dark-text truncate">{profile?.nome}</p>
+                              <div className="flex items-center gap-2">
+                  <p className="text-xs font-semibold text-dark-text truncate flex-1">{profile?.nome}</p>
+                  <button
+                    onClick={() => { setNotificationsOpen(o => !o); setUserMenuOpen(false) }}
+                    className="relative inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-dark-border/70 bg-white/70 text-dark-muted transition-colors hover:text-dark-text hover:border-brand-accent/50"
+                    aria-label="Notificações"
+                    aria-expanded={notificationsOpen}
+                  >
+                    <Bell className="h-4 w-4" />
+                    {notifications.length > 0 && (
+                      <span className="absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-status-warning px-1 text-[9px] font-bold text-white">
+                        {notifications.length > 9 ? '9+' : notifications.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
               {abertasCount > 0 && (
                 <p className="text-[10px] mt-0.5">
                   <span
@@ -567,96 +582,6 @@ export default function Layout() {
                 : <Moon className="w-4 h-4 text-brand-accent" />
               }
             </button>
-
-            <div className="relative">
-            <button
-              onClick={() => { setNotificationsOpen(o => !o); setUserMenuOpen(false) }}
-              className="btn-ghost p-2 relative rounded-lg cursor-pointer"
-              aria-label="Notificacoes"
-              aria-expanded={notificationsOpen}
-            >
-              <Bell className="w-4 h-4" />
-              {notifications.length > 0 && (
-                <span className="absolute top-1.5 right-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-status-warning px-1 text-[9px] font-bold text-white">
-                  {notifications.length > 9 ? '9+' : notifications.length}
-                </span>
-              )}
-            </button>
-              {notificationsOpen && (
-                <>
-                  <div className="fixed inset-0 z-[399]" onClick={() => setNotificationsOpen(false)} />
-                  <div
-                    className="absolute right-0 top-full mt-2 w-[360px] z-[400] overflow-hidden rounded-2xl border py-1 animate-slide-up"
-                    style={{
-                      background: 'var(--shell-panel-bg)',
-                      backdropFilter: 'blur(18px) saturate(170%)',
-                      WebkitBackdropFilter: 'blur(18px) saturate(170%)',
-                      border: '1px solid var(--shell-panel-border)',
-                      boxShadow: 'var(--shadow-float)',
-                    }}
-                  >
-                    <div className="flex items-center justify-between gap-3 border-b border-dark-border px-4 py-3">
-                      <div>
-                        <p className="text-sm font-semibold text-dark-text">Notificações</p>
-                        <p className="text-xs text-dark-muted">Últimos eventos recebidos</p>
-                      </div>
-                      {notifications.length > 0 && (
-                        <span className="badge badge-info">{notifications.length}</span>
-                      )}
-                    </div>
-
-                    <div className="max-h-[360px] overflow-y-auto">
-                      {notifications.length ? (
-                        notifications.map(item => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => {
-                              setNotificationsOpen(false)
-                              if (item.href) navigate(item.href)
-                            }}
-                            className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-dark-surface2/60 transition-colors"
-                          >
-                            <span className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border ${
-                              item.type === 'auto'
-                                ? 'border-brand-accent/20 bg-brand-accent/10 text-brand-accent'
-                                : 'border-brand-primary/20 bg-brand-primary/10 text-brand-primary'
-                            }`}>
-                              <Bell className="h-4 w-4" />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-start justify-between gap-2">
-                                <p className="text-sm font-semibold text-dark-text truncate">{item.title}</p>
-                                <span className="text-[10px] text-dark-muted whitespace-nowrap">
-                                  {formatDistanceToNow(new Date(item.created_at), { addSuffix: true, locale: ptBR })}
-                                </span>
-                              </div>
-                              <p
-                                className="mt-1 text-xs text-dark-muted"
-                                style={{
-                                  display: '-webkit-box',
-                                  WebkitLineClamp: 2,
-                                  WebkitBoxOrient: 'vertical',
-                                  overflow: 'hidden',
-                                }}
-                              >
-                                {item.message}
-                              </p>
-                            </div>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="px-4 py-8 text-center">
-                          <p className="text-sm font-medium text-dark-text">Sem notificações</p>
-                          <p className="mt-1 text-xs text-dark-muted">Os eventos recentes aparecem aqui.</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
             <div className="relative ml-1">
               <button
                 onClick={() => setUserMenuOpen(o => !o)}
@@ -713,145 +638,6 @@ export default function Layout() {
             </div>
           </div>
           </header>
-        )}
-
-        {!hideWorkspaceTopbar && !isDashboardRoute && (
-          <div
-            className="fixed right-4 top-4 z-[320] flex items-center gap-2 rounded-[24px] px-2.5 py-2"
-            style={shellFloatingStyle}
-          >
-            <div className="relative">
-              <button
-                onClick={() => { setNotificationsOpen(o => !o); setUserMenuOpen(false) }}
-                className="btn-ghost p-2 relative rounded-xl cursor-pointer"
-                aria-label="Notificacoes"
-                aria-expanded={notificationsOpen}
-              >
-                <Bell className="w-4 h-4" />
-                {notifications.length > 0 && (
-                  <span className="absolute top-1.5 right-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-status-warning px-1 text-[9px] font-bold text-white">
-                    {notifications.length > 9 ? '9+' : notifications.length}
-                  </span>
-                )}
-              </button>
-              {notificationsOpen && (
-                <>
-                  <div className="fixed inset-0 z-[399]" onClick={() => setNotificationsOpen(false)} />
-                  <div
-                    className="absolute right-0 top-full mt-2 w-[360px] z-[400] overflow-hidden rounded-2xl border py-1 animate-slide-up"
-                    style={shellFloatingStyle}
-                  >
-                    <div className="flex items-center justify-between gap-3 border-b border-dark-border px-4 py-3">
-                      <div>
-                        <p className="text-sm font-semibold text-dark-text">Notificacoes</p>
-                        <p className="text-xs text-dark-muted">Ultimos eventos recebidos</p>
-                      </div>
-                      {notifications.length > 0 && (
-                        <span className="badge badge-info">{notifications.length}</span>
-                      )}
-                    </div>
-
-                    <div className="max-h-[360px] overflow-y-auto">
-                      {notifications.length ? (
-                        notifications.map(item => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => {
-                              setNotificationsOpen(false)
-                              if (item.href) navigate(item.href)
-                            }}
-                            className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-dark-surface2/60 transition-colors"
-                          >
-                            <span className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border ${
-                              item.type === 'auto'
-                                ? 'border-brand-accent/20 bg-brand-accent/10 text-brand-accent'
-                                : 'border-brand-primary/20 bg-brand-primary/10 text-brand-primary'
-                            }`}>
-                              <Bell className="h-4 w-4" />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-start justify-between gap-2">
-                                <p className="text-sm font-semibold text-dark-text truncate">{item.title}</p>
-                                <span className="text-[10px] text-dark-muted whitespace-nowrap">
-                                  {formatDistanceToNow(new Date(item.created_at), { addSuffix: true, locale: ptBR })}
-                                </span>
-                              </div>
-                              <p
-                                className="mt-1 text-xs text-dark-muted"
-                                style={{
-                                  display: '-webkit-box',
-                                  WebkitLineClamp: 2,
-                                  WebkitBoxOrient: 'vertical',
-                                  overflow: 'hidden',
-                                }}
-                              >
-                                {item.message}
-                              </p>
-                            </div>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="px-4 py-8 text-center">
-                          <p className="text-sm font-medium text-dark-text">Sem notificacoes</p>
-                          <p className="mt-1 text-xs text-dark-muted">Os eventos recentes aparecem aqui.</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="relative">
-              <button
-                onClick={() => setUserMenuOpen(o => !o)}
-                className="shell-user-button flex items-center gap-2 pl-2.5 pr-2 py-1.5 rounded-2xl border transition-all cursor-pointer shadow-sm"
-                style={{ borderColor: 'var(--shell-panel-border)' }}
-              >
-                <Avatar
-                  name={profile?.nome}
-                  src={profile?.avatar_url || ''}
-                  size="sm"
-                  className="ring-1 ring-white/20 shadow-sm"
-                />
-                <span className="hidden sm:block text-xs font-medium text-dark-text">{profile?.nome?.split(' ')[0]}</span>
-                <ChevronDown className={`w-3 h-3 text-dark-muted transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {userMenuOpen && (
-                <>
-                  <div className="fixed inset-0 z-[399]" onClick={() => setUserMenuOpen(false)} />
-                  <div
-                    className="absolute right-0 top-full mt-2 w-56 z-[400] py-1 animate-slide-up rounded-2xl overflow-hidden"
-                    style={shellFloatingStyle}
-                  >
-                    <div className="px-4 py-3 border-b border-dark-border">
-                      <p className="text-xs font-semibold text-dark-text truncate">{profile?.nome}</p>
-                      {abertasCount > 0 && (
-                        <p className="text-[10px] text-status-warning mt-0.5">{abertasCount} fichas em aberto</p>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => { setUserMenuOpen(false); navigate('/minhas-fichas') }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-dark-text hover:bg-dark-surface2 transition-colors cursor-pointer"
-                    >
-                      <User className="w-4 h-4 text-dark-muted" />
-                      Minhas Fichas
-                    </button>
-                    <div className="border-t border-dark-border my-1" />
-                    <button
-                      onClick={() => { setUserMenuOpen(false); signOut() }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-status-danger hover:bg-dark-surface2 transition-colors cursor-pointer"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Sair
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
         )}
 
         <main className={`flex h-full min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-transparent ${hideWorkspaceTopbar ? 'pt-0' : isDashboardRoute ? 'pt-4' : 'pt-2'}`}>

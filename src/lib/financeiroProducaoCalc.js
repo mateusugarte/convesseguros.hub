@@ -1,6 +1,6 @@
 // Helpers puros de agregação da Produção (Fase 2).
 // Sem imports de Supabase/Vite → testáveis com `node --test`.
-import { primeiroDiaMes, addMeses, formatMesAno } from './financeiroCalc.js'
+import { primeiroDiaMes, addMeses, formatMesAno, parseYmd } from './financeiroCalc.js'
 
 function num(value) {
   const n = Number(value)
@@ -67,4 +67,42 @@ export function agruparEvolucaoPorMes(rows, { desde, meses = 6 }) {
     out.push({ mes, label: formatMesAno(mes), premio: found ? found.premio : 0, comissao: found ? found.comissao : 0 })
   }
   return out
+}
+
+const MESES_CURTOS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
+// Monta 12 células (uma por mês do ano) mesclando produção/comissão (ledger, por emissão)
+// e a comissão recebida estimada (recebimentos, por mes_referencia).
+export function montarCalendarioAno({ ano, ledgerRows, recebimentoRows }) {
+  const cells = []
+  for (let m = 1; m <= 12; m++) {
+    cells.push({
+      mes: `${ano}-${String(m).padStart(2, '0')}-01`,
+      mesNum: m,
+      label: MESES_CURTOS[m - 1],
+      producao: 0,
+      comissaoGerada: 0,
+      recebidaEstimada: 0,
+      qtd: 0,
+    })
+  }
+  for (const r of ledgerRows || []) {
+    const d = parseYmd(r.data_emissao)
+    if (!d || d.getFullYear() !== ano) continue
+    const cell = cells[d.getMonth()]
+    cell.producao += num(r.premio_total)
+    cell.comissaoGerada += num(r.valor_comissao)
+    cell.qtd += 1
+  }
+  for (const r of recebimentoRows || []) {
+    const d = parseYmd(r.mes_referencia)
+    if (!d || d.getFullYear() !== ano) continue
+    cells[d.getMonth()].recebidaEstimada += num(r.valor_previsto)
+  }
+  return cells
+}
+
+// Ranking de imobiliárias por produção (prêmio total) desc.
+export function rankingImobiliarias(rows) {
+  return agruparPorImobiliaria(rows).sort((a, b) => b.premioTotal - a.premioTotal || a.qtd - b.qtd)
 }

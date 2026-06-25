@@ -47,3 +47,39 @@ test('agruparEvolucaoPorMes preenche todos os meses da janela com zeros', () => 
   assert.deepEqual(out.map(o => o.premio), [0, 1500, 0])
   assert.equal(out[1].label, 'Mai/2026')
 })
+
+import { montarCalendarioAno, rankingImobiliarias } from './financeiroProducaoCalc.js'
+
+test('montarCalendarioAno distribui produção/comissão/recebimentos nos 12 meses do ano', () => {
+  const ledgerRows = [
+    { data_emissao: '2026-01-10', premio_total: 1000, valor_comissao: 200 },
+    { data_emissao: '2026-01-20', premio_total: 500,  valor_comissao: 100 },
+    { data_emissao: '2026-03-05', premio_total: 800,  valor_comissao: 160 },
+    { data_emissao: '2025-12-31', premio_total: 999,  valor_comissao: 99 }, // ano diferente: ignorado
+  ]
+  const recebimentoRows = [
+    { mes_referencia: '2026-02-01', valor_previsto: 50 },
+    { mes_referencia: '2026-02-01', valor_previsto: 25 },
+  ]
+  const cells = montarCalendarioAno({ ano: 2026, ledgerRows, recebimentoRows })
+  assert.equal(cells.length, 12)
+  assert.equal(cells[0].label, 'Jan')
+  assert.equal(cells[0].producao, 1500)
+  assert.equal(cells[0].comissaoGerada, 300)
+  assert.equal(cells[0].qtd, 2)
+  assert.equal(cells[1].recebidaEstimada, 75)
+  assert.equal(cells[2].producao, 800)
+  assert.equal(cells[2].mesNum, 3)
+  assert.equal(cells[11].producao, 0)
+})
+
+test('rankingImobiliarias ordena por prêmio (produção) desc', () => {
+  const rows = [
+    { imobiliaria: 'Alpha', premio_total: 100, valor_comissao: 90, comissao_mensal: 9 },
+    { imobiliaria: 'Beta',  premio_total: 500, valor_comissao: 10, comissao_mensal: 1 },
+  ]
+  const out = rankingImobiliarias(rows)
+  assert.equal(out[0].imobiliaria, 'Beta')
+  assert.equal(out[0].premioTotal, 500)
+  assert.equal(out[1].imobiliaria, 'Alpha')
+})

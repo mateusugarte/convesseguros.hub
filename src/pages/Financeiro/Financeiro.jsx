@@ -5,7 +5,7 @@ import { ShieldCheck } from 'lucide-react'
 
 const TABS = [
   { to: '/financeiro', label: 'Visão Geral', end: true },
-  { label: 'Produção', disabled: true },
+  { to: '/financeiro/producao', label: 'Produção' },
   { label: 'Faturas', disabled: true },
 ]
 

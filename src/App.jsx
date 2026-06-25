@@ -33,6 +33,7 @@ const ApoliceDetalhe     = lazy(() => import('./pages/ApoliceDetalhe'))
 const Seguradoras        = lazy(() => import('./pages/Seguradoras'))
 const Financeiro          = lazy(() => import('./pages/Financeiro/Financeiro'))
 const FinanceiroVisaoGeral = lazy(() => import('./pages/Financeiro/FinanceiroVisaoGeral'))
+const FinanceiroProducao  = lazy(() => import('./pages/Financeiro/FinanceiroProducao'))
 
 // Área Auto
 const AutoDashboard  = lazy(() => import('./pages/auto/AutoDashboard'))
@@ -90,6 +91,7 @@ function AppRoutes() {
           <Route path="seguradoras" element={<Seguradoras />} />
           <Route path="financeiro" element={<AdminRoute><Financeiro /></AdminRoute>}>
             <Route index element={<FinanceiroVisaoGeral />} />
+            <Route path="producao" element={<FinanceiroProducao />} />
           </Route>
           <Route path="apolices" element={<ApolicesDashboard />} />
           <Route path="apolices/gestao" element={<ApoicesGestao />} />

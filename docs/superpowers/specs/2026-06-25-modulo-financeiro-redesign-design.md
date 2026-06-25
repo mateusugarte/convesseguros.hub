@@ -102,24 +102,23 @@ comissoes_recebimentos (
 - Rateio: `valor_previsto = round(valor_comissao / parcelamento, 2)`; a última
   parcela recebe o resíduo para que a soma feche com `valor_comissao`.
 
-### 4.3 `faturas_imobiliaria` (Fase 3) — registro auditável
+### 4.3 `faturas_imobiliaria` (Fase 3) — registro de pagamento (sempre ao vivo)
 
-Tabela única e registrada para conferência. 1 fatura por imobiliária por mês,
-com o pagamento (comissão da imobiliária) registrado na própria linha.
+Os valores da fatura são **calculados ao vivo** do ledger (não persistidos):
+- **Valor da fatura** = Σ `valor_parcela` das apólices com parcela devida no mês.
+- **Valor a pagar (repasse)** = `pct` × valor da fatura, com `pct` vindo de
+  `producao_comissao_imobiliaria` (o % salvo por imobiliária/mês — Fase 2).
+
+A tabela persiste **apenas o controle de pagamento** (para conferência/auditoria):
 
 ```
 faturas_imobiliaria (
   id              uuid pk default gen_random_uuid(),
   imobiliaria     text not null,
-  mes_referencia  date not null,           -- 1º dia do mês de competência
-  qtd_apolices    int not null default 0,  -- auto (apólices da competência)
-  valor_estimado  numeric not null default 0, -- auto: soma das parcelas mensais
-  valor_real      numeric,                 -- manual: fiança + incêndio informado
-  pct_comissao    numeric,                 -- default de imobiliarias.pct_comissao
-  valor_a_pagar   numeric,                 -- valor_real * pct_comissao / 100
+  mes_referencia  date not null,           -- 1º dia do mês
   status          text not null default 'pendente' check (status in ('pendente','pago')),
   data_pagamento  date,                    -- preenchido ao marcar como pago
-  pago_por        uuid references profiles(id), -- usuário responsável
+  pago_por        uuid references profiles(id),
   observacao      text,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
@@ -127,14 +126,13 @@ faturas_imobiliaria (
 )
 ```
 
-- `valor_a_pagar` recalculado quando `valor_real` ou `pct_comissao` mudam
-  (= `valor_real` × `pct_comissao` / 100). Sem conexão com os recebimentos.
-- **Competência:** apólice emitida dia 1–30 do mês M → fatura de M+1; emitida
-  dia 31 → fatura de M+2 (corte no dia 30). Inclui ativas e renovadas.
-- **Pagamento:** ao marcar como `pago`, registra `data_pagamento` + `pago_por`
-  + `observacao` na própria fatura (registro auditável; sem tabela separada).
-- Geração automática mensal via função/RPC `fn_gerar_faturas_mes(mes)` que cria/atualiza
-  1 fatura por imobiliária a partir das apólices da competência (count + soma das parcelas).
+- A linha é criada sob demanda ao **marcar como pago** (upsert por imobiliária/mês);
+  sem linha = `pendente`.
+- **Parcela devida no mês:** apólice contribui com `valor_parcela` nos meses do seu
+  ciclo de parcelas — 1ª parcela no mês seguinte à emissão, durante `parcelamento` meses
+  (mesmo cronograma da agenda). Inclui ativas e renovadas.
+- O cálculo do ciclo é **puro/testável** (a partir de `data_emissao` + `parcelamento`),
+  sem depender de tabela de cronograma.
 - **% da imobiliária:** o `pct_comissao` da fatura vem de `producao_comissao_imobiliaria`
   (ver 4.4) — o mesmo % mensal definido na Produção (Fase 2), não digitado de novo.
   O repasse devido = `pct_comissao` × **comissão gerada da imobiliária no mês**
@@ -221,13 +219,18 @@ producao_comissao_imobiliaria (
   e gráfico de evolução da imobiliária. Botão voltar.
 
 ### Fase 3 — Faturas
-- Tabela `faturas_imobiliaria` (registro auditável) + RPC de geração mensal por competência.
-- Lista de faturas (com logos), detalhe com lista de apólices (nº, cliente,
-  seguradora, imobiliária, parcela mensal, status, data de emissão).
-- Campo manual `valor_real` (informado pela imobiliária) + `% de repasse vindo de
-  `producao_comissao_imobiliaria` (Fase 2). Repasse devido = % × comissão gerada do mês.
-- Controle de pagamento (pendente/pago) com data + usuário responsável registrados na fatura.
-- Navegação fatura ↔ apólice preservando estado.
+- Migração `faturas_imobiliaria` (registro de pagamento) + RLS admin-only.
+- `financeiroFaturasCalc.js` (puro/testável): ciclo de parcelas (`apoliceBilladaNoMes`)
+  e `montarFaturasMes` (Σ `valor_parcela` por imobiliária + valor a pagar = % × fatura).
+- Aba **Faturas** (`/financeiro/faturas`): **seletor de mês** + **lista** de faturas
+  (uma por imobiliária, com logo): valor da fatura (Σ parcelas), % (da Produção),
+  valor a pagar, status pendente/pago, ação **marcar pago** (registra data + usuário).
+- **Detalhe da fatura** (`/financeiro/faturas/:imobiliaria/:mes`): lista das apólices
+  com parcela devida no mês (nº, cliente, seguradora, parcela, status, data de emissão);
+  clicar numa apólice abre `/apolices/:id` e o **voltar preserva o estado** (mês/scroll).
+- Valores **sempre ao vivo**; só o pagamento é persistido.
+- **Nota de consistência:** a base do repasse aqui é **% × valor da fatura (Σ parcelas)**,
+  diferente do "a repassar" da Produção (% × comissão gerada). A unificar se desejado.
 
 ## 8. Segurança
 

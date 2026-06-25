@@ -17,8 +17,20 @@ detalhe por imobiliaria (quebra por seguradora com % participacao + grafico).
 
 ## Status
 
-Fase 1 (Visao Geral) e Fase 2 (Producao) concluidas (codigo).
+Fase 1, Fase 2 e a **revisao de design** (Dashboard/Calendario/Ranking/Producao por
+selecao) concluidas (codigo). 13/13 testes passando; build verde.
 **Pendente: aplicar as migracoes no Supabase** (42 e 45) + smoke test manual.
+
+## Revisao de design (mais recente)
+
+- Visao Geral virou **Dashboard**: KPIs do mes (Producao=Σpremio, Comissao Gerada,
+  Recebida Estimada, Apolices) + **calendario anual** (`CalendarioAno.jsx`) + **ranking
+  de imobiliarias com fotos** por producao.
+- Producao virou **selecao**: escolher imobiliaria (Select ou via ranking) + mes →
+  producao do mes, % repasse editavel salvo, quebra por seguradora, grafico.
+  `FinanceiroProducaoDetalhe.jsx` foi absorvido (rota `:imobiliaria` pre-seleciona).
+- Producao = **Σ premio_total** dos seguros emitidos.
+- Helpers novos: `montarCalendarioAno`, `rankingImobiliarias` (testados).
 
 ## Arquivos alterados (Fase 2)
 

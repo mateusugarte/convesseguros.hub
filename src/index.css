@@ -1930,12 +1930,21 @@ html.dark .skeleton-surface {
 .app-shell-root,
 .ops-shell,
 .crm-shell {
-  height: 100vh;
-  min-height: 100vh;
+  height: auto;
+  min-height: 0;
 }
 
 .ops-shell {
   position: relative;
+}
+
+.app-shell-root.ops-shell,
+.app-shell-root.crm-shell {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: auto;
+  min-height: 0;
 }
 
 .ops-shell::before {

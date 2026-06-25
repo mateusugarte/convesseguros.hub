@@ -96,15 +96,15 @@ function nomeApolice(apolice) {
 }
 
 function produtoApolice(apolice) {
-  return apolice?.fichas?.produto || apolice?.produto || apolice?.raw_data?.produto
+  return apolice?.fichas?.produto || apolice?.produto || ''
 }
 
 function documentoApolice(apolice) {
-  return apolice?.fichas?.cnpj || apolice?.fichas?.cpf || apolice?.raw_data?.cnpj || apolice?.raw_data?.cpf || '—'
+  return apolice?.fichas?.cnpj || apolice?.fichas?.cpf || apolice?.cnpj || apolice?.cpf || '—'
 }
 
 function isApoliceSemFicha(apolice) {
-  return !apolice?.fichas && Boolean(apolice?.raw_data?.origem_upload_direto)
+  return !apolice?.ficha_id && !apolice?.fichas
 }
 
 function statusBadgeClass(status) {
@@ -318,7 +318,7 @@ const KanbanCard = memo(function KanbanCard({ apolice, resolverNome, resolverImo
             </p>
             {(apolice?.fichas?.cep || apolice?.cep) && <p className="text-[9px] text-dark-muted font-mono">CEP: {apolice?.fichas?.cep || apolice?.cep}</p>}
             {apolice?.seguradora && <p className="text-[9px] text-dark-muted">Seguradora: {apolice.seguradora}</p>}
-            {apolice?.raw_data?.email_proprietario && <p className="text-[9px] text-dark-muted break-all">Email proprietário: {apolice.raw_data.email_proprietario}</p>}
+            {apolice?.email_proprietario && <p className="text-[9px] text-dark-muted break-all">Email proprietário: {apolice.email_proprietario}</p>}
             {apolice?.valor_parcela && <p className="text-[9px] text-dark-muted">Parcela: {parcela}</p>}
           </div>
         )}
@@ -765,15 +765,13 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
       premio_total: dadosExtraidos.premio_total || null,
       valor_producao: dadosExtraidos.premio_total || null,
       forma_pagamento: dadosExtraidos.forma_pagamento || null,
+      email_proprietario: dadosExtraidos.email_proprietario || null,
       cpf: cpf || null,
       cnpj: cnpj || null,
       celular: celular.trim() || null,
       tipo_imovel: dadosExtraidos.tipo_imovel || null,
       cep: dadosExtraidos.cep || null,
       valor_aluguel: dadosExtraidos.valor_aluguel || null,
-      raw_data: {
-        email_proprietario: dadosExtraidos.email_proprietario || null,
-      },
     }
 
     const { data, error } = await criarApolice(payload)

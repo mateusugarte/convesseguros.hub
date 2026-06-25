@@ -206,7 +206,7 @@ export default function ApoliceDetalhe() {
         setStatusEmissao(data.status_emissao || '')
         setProprietarioNome(sanitizeProprietarioNome(data.proprietario_nome || ''))
         setProprietarioCel(data.proprietario_cel || '')
-        setProprietarioEmail(data.raw_data?.email_proprietario || '')
+        setProprietarioEmail(data.email_proprietario || '')
         setEndereco(data.endereco || '')
         setInicioVigencia(data.inicio_vigencia || '')
         setFimVigencia(data.fim_vigencia || '')
@@ -320,10 +320,7 @@ export default function ApoliceDetalhe() {
       valor_producao: premioTotal,
       valor_comissao: valorComissao,
       data_emissao: dataEmissao,
-      raw_data: {
-        ...(apolice?.raw_data || {}),
-        email_proprietario: proprietarioEmail.trim() || null,
-      },
+      email_proprietario: proprietarioEmail.trim() || null,
     }
 
     if (!fichaId) {
@@ -373,7 +370,7 @@ export default function ApoliceDetalhe() {
       file,
       apoliceId: apolice?.id,
       fichaId: ficha?.id,
-      cpfCnpj: ficha?.cpf || ficha?.cnpj || apolice?.raw_data?.cpf || apolice?.raw_data?.cnpj,
+      cpfCnpj: ficha?.cpf || ficha?.cnpj || apolice?.cpf || apolice?.cnpj,
       userId: user?.id,
     })
     setAnexandoDoc(false)
@@ -956,7 +953,7 @@ export default function ApoliceDetalhe() {
           <SecaoDocumentos
             key={docsRefreshKey}
             apoliceId={apolice.id}
-            cpfCnpj={apolice.fichas?.cpf || apolice.fichas?.cnpj || apolice.raw_data?.cpf || apolice.raw_data?.cnpj}
+            cpfCnpj={apolice.fichas?.cpf || apolice.fichas?.cnpj || apolice.cpf || apolice.cnpj}
           />
         </div>
       </div>

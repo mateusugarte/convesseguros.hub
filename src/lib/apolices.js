@@ -205,7 +205,7 @@ export async function fetchApolicesKanban({ dateFrom, dateTo, imobiliarias } = {
       id, status_emissao, created_at, data_transmissao,
       imobiliaria, numero_apolice, seguradora, valor_parcela, parcelamento,
       inicio_vigencia, fim_vigencia, produto,
-      nome_interessado, emitido_por, celular, cpf, cep, tipo_imovel,
+      nome_interessado, emitido_por, celular, cpf, cep, tipo_imovel, email_proprietario,
       fichas!ficha_id(nome_interessado, nome_empresa, cpf, cnpj, produto, celular, cep, tipo_imovel, valor_aluguel),
       profiles!emitido_por(nome, avatar_url)
     `)
@@ -228,7 +228,7 @@ export async function fetchApolicesLista({ dateFrom, dateTo, imobiliarias, segur
       id, data_emissao, imobiliaria, numero_apolice,
       seguradora, status_emissao, valor_parcela, parcelamento, premio_liquido,
       premio_total, valor_producao, valor_comissao, pct_comissao, pct_desconto, created_at,
-      nome_interessado, emitido_por, ficha_id,
+      nome_interessado, emitido_por, ficha_id, email_proprietario,
       fichas!ficha_id(nome_interessado, nome_empresa, cpf, cnpj),
       profiles!emitido_por(nome, avatar_url)
     `, { count: 'exact' })
@@ -393,6 +393,7 @@ export async function registrarApoliceDaFicha({
   emitidoPor,
   proprietarioNome,
   proprietarioCel,
+  emailProprietario,
   endereco,
   inicioVigencia,
   fimVigencia,
@@ -417,6 +418,7 @@ export async function registrarApoliceDaFicha({
     nome_interessado: nomeInteressado,
     proprietario_nome: proprietarioNome?.trim() || null,
     proprietario_cel: proprietarioCel?.trim() || null,
+    email_proprietario: emailProprietario?.trim() || null,
     numero_apolice: numeroApolice?.trim() || null,
     numero_proposta: numeroProposta?.trim() || null,
     seguradora: seguradora?.trim() || null,

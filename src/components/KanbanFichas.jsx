@@ -969,7 +969,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   }
 
   return (
-    <div className={`space-y-2.5 ${sortingFeedback ? 'kanban-sorting' : ''}`}>
+    <div className={`flex min-h-0 flex-1 flex-col gap-2.5 ${sortingFeedback ? 'kanban-sorting' : ''}`}>
       {sortingFeedback && (
         <div className="flex items-center justify-between rounded-2xl border border-brand-accent/20 bg-brand-accent/5 px-4 py-2 text-xs text-brand-accent animate-fade-in">
           <span className="inline-flex items-center gap-2 font-medium">
@@ -1028,7 +1028,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
         </div>
       )}
 
-      <div className="relative">
+      <div className="kanban-viewport relative min-h-0 flex-1">
         {/* Sombras de scroll */}
         {canScrollL && (
           <div className="absolute left-0 top-0 bottom-4 w-14 z-10 pointer-events-none"
@@ -1058,8 +1058,8 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
           onDragEnd={handleDragEnd}
           onDragCancel={() => setActiveId(null)}
         >
-      <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
-            <div className="flex min-w-max px-1" style={{ gap: 'var(--kanban-gap, 12px)' }}>
+          <div ref={scrollRef} className="kanban-scroll h-full overflow-x-auto pb-2">
+            <div className="flex h-full min-w-max items-stretch px-1" style={{ gap: 'var(--kanban-gap, 12px)' }}>
               {COLUMNS.map((column, i) => (
                 <MemoDroppableColumn
                   key={column.id}

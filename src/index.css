@@ -622,9 +622,9 @@ html.dark {
 }
 
   /* Kanban column body — responsive max-height */
-  .kanban-col-body {
-    min-height: 120px;
-    max-height: calc(100vh - 330px);
+.kanban-col-body {
+    min-height: 0;
+    max-height: none;
   }
 
   /* Kanban scroll container — snap behavior */
@@ -833,7 +833,7 @@ html.dark {
 /* ── App Root ─────────────────────────────────────────────────────────────── */
 .app-root {
   position: relative;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* ── Kanban: webkit scrollbar customizada ──────────────────────────────────── */
@@ -887,7 +887,7 @@ html.dark {
   }
 
   .kanban-viewport {
-    min-height: calc(100vh - 12.5rem);
+    min-height: 0;
   }
 }
 
@@ -1223,7 +1223,7 @@ html.dark .kanban-col-header {
   flex: 1 1 auto;
   padding: 12px;
   gap: 10px;
-  min-height: 280px;
+  min-height: 0;
   background:
     linear-gradient(180deg, rgba(255,255,255,0.62), rgba(247,248,250,0.88)),
     radial-gradient(circle at top, rgb(var(--brand-primary-rgb) / 0.03), transparent 72%);
@@ -1238,6 +1238,12 @@ html.dark .kanban-col-body {
 .kanban-viewport {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.kanban-scroll {
+  height: 100%;
 }
 
 .kanban-card {

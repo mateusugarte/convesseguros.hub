@@ -845,7 +845,7 @@ export default function Layout() {
         )}
 
         <main className={`flex-1 min-h-0 overflow-y-auto overscroll-contain bg-transparent ${hideWorkspaceTopbar ? 'pt-0' : isDashboardRoute ? 'pt-4' : 'pt-2'}`}>
-          <div className="mx-auto w-full min-w-0 max-w-[1720px] pb-20">
+          <div className="mx-auto flex min-h-full w-full min-w-0 max-w-[1720px] flex-col pb-6">
             <PageTransition>
               <Outlet />
             </PageTransition>

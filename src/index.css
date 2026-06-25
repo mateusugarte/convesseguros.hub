@@ -30,6 +30,12 @@ html.dark {
     min-height: 100%;
   }
 
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
   body {
     @apply text-dark-text antialiased;
     font-family: var(--font-heading, 'Plus Jakarta Sans', system-ui, sans-serif);
@@ -37,6 +43,8 @@ html.dark {
     transition: color 0.3s ease;
     background: transparent;
     min-height: 100dvh;
+    height: 100vh;
+    height: 100dvh;
     overflow-x: hidden;
     overflow-y: hidden;
   }
@@ -1917,9 +1925,17 @@ html.dark .skeleton-surface {
   }
 }
 
+.app-shell-root,
+.ops-shell,
+.crm-shell {
+  height: 100vh;
+  min-height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
+}
+
 .ops-shell {
   position: relative;
-  min-height: 100vh;
 }
 
 .ops-shell::before {

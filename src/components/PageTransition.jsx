@@ -17,6 +17,7 @@ export function PageTransition({ children }) {
 
   return (
     <div
+      className="flex min-h-full flex-1 flex-col"
       style={{
         opacity:    visible ? 1 : 0,
         transform:  visible ? 'none' : 'translateY(8px)',

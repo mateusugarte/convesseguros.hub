@@ -144,6 +144,17 @@ function inferProdutoFianca({ documento, tipoImovel }) {
   if (tipo.includes('comercial')) return 'comercial_pf'
   return 'residencial_pf'
 }
+
+function formatDocumentoTipo(documento) {
+  const digits = String(documento || '').replace(/\D/g, '')
+  if (!digits) return { cpf: null, cnpj: null, isPessoaJuridica: false }
+  return {
+    cpf: digits.length <= 11 ? documento : null,
+    cnpj: digits.length > 11 ? documento : null,
+    isPessoaJuridica: digits.length > 11,
+  }
+}
+
 const InfoPill = memo(function InfoPill({ label, value, mono = false }) {
   return (
     <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2 py-1.5">
@@ -218,27 +229,34 @@ const KanbanCard = memo(function KanbanCard({ apolice, resolverNome, resolverImo
             </span>
           </div>
         )}
-        <div className="flex items-center gap-1.5 mb-1.5 min-w-0">
-          {imobInfo?.imagem_url ? (
-            <img src={imobInfo.imagem_url} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
-          ) : (
-            <Avatar name={nomeImob} size="sm" />
-          )}
-          <p className="text-[10px] text-dark-muted truncate leading-none">
-            {nomeImob || '—'}
-          </p>
+        <div className="mb-2 grid grid-cols-2 gap-1.5">
+          <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2 py-1.5">
+            <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Seguradora</p>
+            <div className="mt-1 min-w-0">
+              {apolice?.seguradora
+                ? <SeguradoraBadge nome={apolice.seguradora} size="xs" showName className="max-w-full" />
+                : <p className="text-[10px] text-dark-muted">—</p>}
+            </div>
+          </div>
+          <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2 py-1.5">
+            <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Imobiliária</p>
+            <div className="mt-1 flex items-center gap-1.5 min-w-0">
+              {imobInfo?.imagem_url ? (
+                <img src={imobInfo.imagem_url} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" loading="lazy" decoding="async" />
+              ) : (
+                <Avatar name={nomeImob} size="sm" />
+              )}
+              <p className="text-[10px] text-dark-text truncate leading-none font-medium">
+                {nomeImob || '—'}
+              </p>
+            </div>
+          </div>
         </div>
 
         {apolice?.numero_apolice && (
           <p className="text-[10px] font-mono mb-1.5" style={{ color: '#2B5BA8' }}>
             {apolice.numero_apolice}
           </p>
-        )}
-
-        {apolice?.seguradora && (
-          <div className="mb-1.5">
-            <SeguradoraBadge nome={apolice.seguradora} size="xs" resolveMeta={false} />
-          </div>
         )}
 
         {!isDragOverlay && (
@@ -688,19 +706,26 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
     setPdfFile(file)
     setDadosExtraidos(null)
     setErro('')
+    if (file) {
+      void handleExtrair(file)
+    }
   }
 
-  async function handleExtrair() {
-    if (!pdfFile) return
+  async function handleExtrair(fileOverride = null) {
+    const fileAtual = fileOverride || pdfFile
+    if (!fileAtual) return
     setExtraindo(true)
     setErro('')
     try {
       const { parseApolice } = await import('../lib/apoliceParser')
-      const { campos, extras, semParser } = await parseApolice(seguradora, pdfFile)
+      const { campos, extras, semParser } = await parseApolice(seguradora, fileAtual)
       const parsed = { ...campos, ...extras }
       setDadosExtraidos(parsed)
       if (semParser || (!parsed.numero_apolice && !parsed.nome_locatario)) {
         setErro(`Não foi possível identificar dados da apólice ${seguradora}. Verifique se o PDF é da seguradora selecionada.`)
+      }
+      if (parsed.proprietario_cel && !celular.trim()) {
+        setCelular(parsed.proprietario_cel)
       }
     } catch (err) {
       setErro(err?.message || 'Erro ao ler o PDF da apólice.')
@@ -713,15 +738,14 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
     if (!pdfFile || !dadosExtraidos || !imobiliaria || !celular.trim()) return
     setCriando(true)
     const documento = dadosExtraidos.documento_locatario || ''
-    const digits = documento.replace(/\D/g, '')
-    const cpf = digits.length <= 11 ? documento : null
-    const cnpj = digits.length > 11 ? documento : null
+    const { cpf, cnpj, isPessoaJuridica } = formatDocumentoTipo(documento)
     const produto = inferProdutoFianca({ documento, tipoImovel: dadosExtraidos.tipo_imovel })
     const payload = {
       ficha_id: null,
       imobiliaria,
       produto,
-      nome_interessado: dadosExtraidos.nome_locatario,
+      nome_interessado: isPessoaJuridica ? null : (dadosExtraidos.nome_locatario || null),
+      nome_empresa: isPessoaJuridica ? (dadosExtraidos.nome_locatario || null) : null,
       numero_apolice: dadosExtraidos.numero_apolice || null,
       numero_proposta: dadosExtraidos.numero_proposta || null,
       seguradora,
@@ -739,6 +763,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
       valor_producao: dadosExtraidos.premio_total || null,
       forma_pagamento: dadosExtraidos.forma_pagamento || null,
       cpf: cpf || null,
+      cnpj: cnpj || null,
       celular: celular.trim() || null,
       tipo_imovel: dadosExtraidos.tipo_imovel || null,
       cep: dadosExtraidos.cep || null,
@@ -912,7 +937,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
                     </div>
                     <div className="text-center">
                       <p className="text-sm font-semibold text-dark-text">{pdfFile.name}</p>
-                      <p className="text-xs text-dark-muted mt-0.5">Clique para trocar o arquivo</p>
+                      <p className="text-xs text-dark-muted mt-0.5">Leitura automática iniciada. Clique para trocar o arquivo</p>
                     </div>
                   </>
                 ) : (
@@ -936,7 +961,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
                   style={{ background: '#047857' }}
                 >
                   <RefreshCw className="w-4 h-4" />
-                  Buscar Informações do PDF
+                  Reprocessar PDF
                 </button>
               )}
 

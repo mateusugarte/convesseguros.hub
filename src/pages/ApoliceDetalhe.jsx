@@ -11,6 +11,8 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ArrowLeft, Save, Trash2, Clock3, Building2, ShieldCheck, CalendarDays, Pencil, Check } from 'lucide-react'
 import SeguradoraSelect from '../components/SeguradoraSelect'
+import SeguradoraBadge from '../components/SeguradoraBadge'
+import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
 import SecaoDocumentos from '../components/SecaoDocumentos'
 import { DatePicker } from '../components/ui/DatePicker'
 import { Select } from '../components/ui/Select'
@@ -42,6 +44,19 @@ function calcularMeses(inicio, fim) {
 function isLikelyPolicyNumber(value) {
   const text = String(value || '').trim()
   return text.length > 0 && /^[0-9./-]+$/.test(text)
+}
+
+function inferProdutoFiancaFromDocumento(documento, tipoImovel) {
+  const digits = String(documento || '').replace(/\D/g, '')
+  const tipo = String(tipoImovel || '').toLowerCase()
+  if (digits.length > 11) return 'pessoa_juridica'
+  if (tipo.includes('comercial')) return 'comercial_pf'
+  return digits ? 'residencial_pf' : ''
+}
+
+function buildVigenciaLabel(inicio, fim) {
+  const partes = [inicio, fim].filter(Boolean).map(fmtData).filter(Boolean)
+  return partes.length ? partes.join(' até ') : ''
 }
 
 function ReadField({ label, value }) {
@@ -173,6 +188,7 @@ export default function ApoliceDetalhe() {
   const [anexandoDoc, setAnexandoDoc] = useState(false)
   const [extracaoExtras, setExtracaoExtras] = useState(null)
   const [extracaoErro, setExtracaoErro] = useState('')
+  const [extracaoResumo, setExtracaoResumo] = useState(null)
   const [docsRefreshKey, setDocsRefreshKey] = useState(0)
   const fileInputRef = useRef(null)
 
@@ -367,32 +383,125 @@ export default function ApoliceDetalhe() {
     return seguradora || apolice?.seguradora || ficha?.seguradora || ''
   }
 
-  async function handlePreencherInfo() {
+  async function handlePreencherInfo(fileOverride = null) {
     const seguradoraAtual = getSeguradoraAutomacao()
-    if (!pdfFile || !seguradoraAtual) return
+    const fileAtual = fileOverride || pdfFile
+    if (!fileAtual || !seguradoraAtual) return
     setExtraindo(true)
     setExtracaoErro('')
     setExtracaoExtras(null)
+    setExtracaoResumo(null)
     try {
-      const { campos, extras, semParser } = await parseApolice(seguradoraAtual, pdfFile)
+      const { campos, extras, semParser } = await parseApolice(seguradoraAtual, fileAtual)
       if (semParser) {
         setExtracaoErro(`Seguradora "${seguradoraAtual}" ainda não possui parser configurado.`)
         return
       }
-      if (campos.nome_proprietario) setProprietarioNome(sanitizeProprietarioNome(campos.nome_proprietario))
-      if (campos.proprietario_cel) setProprietarioCel(campos.proprietario_cel)
-      if (campos.numero_apolice) setNumeroApolice(campos.numero_apolice)
-      if (isLikelyPolicyNumber(campos.numero_proposta)) setNumeroProposta(campos.numero_proposta)
-      if (campos.endereco) setEndereco(campos.endereco)
-      if (campos.inicio_vigencia) setInicioVigencia(campos.inicio_vigencia)
-      if (campos.fim_vigencia) setFimVigencia(campos.fim_vigencia)
-      if (campos.parcelamento) setParcelamento(campos.parcelamento)
-      if (campos.valor_parcela) setValorParcela(campos.valor_parcela)
-      if (campos.premio_liquido) setPremioLiquido(campos.premio_liquido)
-      if (campos.forma_pagamento) setFormaPagamento(campos.forma_pagamento)
-      if (extras.cep || extras.tipo_imovel || extras.valor_aluguel != null) {
-        setExtracaoExtras(extras)
+      let camposApolice = 0
+      let camposFicha = 0
+
+      if (campos.nome_proprietario) {
+        setProprietarioNome(sanitizeProprietarioNome(campos.nome_proprietario))
+        camposApolice += 1
       }
+      if (campos.proprietario_cel) {
+        setProprietarioCel(campos.proprietario_cel)
+        camposApolice += 1
+      }
+      if (campos.numero_apolice) {
+        setNumeroApolice(campos.numero_apolice)
+        camposApolice += 1
+      }
+      if (isLikelyPolicyNumber(campos.numero_proposta)) {
+        setNumeroProposta(campos.numero_proposta)
+        camposApolice += 1
+      }
+      if (campos.endereco) {
+        setEndereco(campos.endereco)
+        camposApolice += 1
+      }
+      if (campos.inicio_vigencia) {
+        setInicioVigencia(campos.inicio_vigencia)
+        camposApolice += 1
+      }
+      if (campos.fim_vigencia) {
+        setFimVigencia(campos.fim_vigencia)
+        camposApolice += 1
+      }
+      if (campos.parcelamento) {
+        setParcelamento(campos.parcelamento)
+        camposApolice += 1
+      }
+      if (campos.valor_parcela) {
+        setValorParcela(campos.valor_parcela)
+        camposApolice += 1
+      }
+      if (campos.premio_liquido) {
+        setPremioLiquido(campos.premio_liquido)
+        camposApolice += 1
+      }
+      if (campos.forma_pagamento) {
+        setFormaPagamento(campos.forma_pagamento)
+        camposApolice += 1
+      }
+
+      if (campos.nome_locatario) {
+        setFichaNome(normalizeDisplayText(campos.nome_locatario) || campos.nome_locatario)
+        camposFicha += 1
+      }
+      if (campos.documento_locatario) {
+        const digits = String(campos.documento_locatario).replace(/\D/g, '')
+        if (digits.length > 11) {
+          setFichaCpf('')
+          setFichaCnpj(campos.documento_locatario)
+        } else {
+          setFichaCpf(campos.documento_locatario)
+          setFichaCnpj('')
+        }
+        const produtoInferido = inferProdutoFiancaFromDocumento(campos.documento_locatario, extras.tipo_imovel)
+        if (produtoInferido) setFichaProduto(produtoInferido)
+        camposFicha += 2
+      } else if (extras.tipo_imovel) {
+        const produtoInferido = inferProdutoFiancaFromDocumento('', extras.tipo_imovel)
+        if (produtoInferido && !fichaProduto) {
+          setFichaProduto(produtoInferido)
+          camposFicha += 1
+        }
+      }
+      if (campos.proprietario_cel && !fichaCelular) {
+        setFichaCelular(campos.proprietario_cel)
+        camposFicha += 1
+      }
+      if (extras.tipo_imovel) {
+        setFichaTipoImovel(extras.tipo_imovel)
+        camposFicha += 1
+      }
+      if (extras.cep) {
+        setFichaCep(extras.cep)
+        camposFicha += 1
+      }
+      if (extras.valor_aluguel != null) {
+        setFichaValorAluguel(formatDecimalBRInput(extras.valor_aluguel))
+        camposFicha += 1
+      }
+      const vigenciaFicha = buildVigenciaLabel(campos.inicio_vigencia, campos.fim_vigencia)
+      if (vigenciaFicha) {
+        setFichaVigencia(vigenciaFicha)
+        camposFicha += 1
+      }
+      if (campos.nome_locatario || extras.cep || extras.tipo_imovel || extras.valor_aluguel != null) {
+        setExtracaoExtras({
+          ...extras,
+          nome_locatario: campos.nome_locatario || null,
+          documento_locatario: campos.documento_locatario || null,
+          vigencia: vigenciaFicha || null,
+        })
+      }
+      setExtracaoResumo({
+        arquivo: fileAtual.name,
+        apolice: camposApolice,
+        ficha: camposFicha,
+      })
     } catch (err) {
       setExtracaoErro('Erro ao ler o PDF. Verifique se o arquivo é válido.')
     } finally {
@@ -442,7 +551,7 @@ export default function ApoliceDetalhe() {
   const siStatus = STATUS_EMISSAO_LABELS[apolice.status_emissao] || { label: apolice.status_emissao, color: '#6B7280' }
   const nomePrincipal = normalizeDisplayText(ficha?.nome_empresa || ficha?.nome_interessado || apolice.nome_interessado) || 'Apólice'
   const valorAluguelFicha = extracaoExtras?.valor_aluguel ?? apolice.valor_aluguel ?? ficha?.valor_aluguel
-  const dadosManuais = apolice.raw_data || {}
+  const imobInfo = resolverImobiliariaInfo(fichaImobiliaria || apolice.imobiliaria)
 
   return (
     <div className="space-y-5 pb-8 animate-fade-in">
@@ -513,6 +622,28 @@ export default function ApoliceDetalhe() {
 
       <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
         <div className="space-y-5">
+          <DataCard title="Contexto da Apólice" subtitle="Marcas e vínculo operacional desta emissão." bodyClassName="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-3xl border border-dark-border/70 bg-white/80 p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora vinculada</p>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <SeguradoraBadge nome={seguradora || apolice.seguradora || 'Não definida'} size="lg" className="min-w-0" />
+                <span className="rounded-full border border-dark-border/70 bg-dark-surface2/30 px-2.5 py-1 text-[10px] font-semibold text-dark-muted">
+                  {siStatus.label}
+                </span>
+              </div>
+            </div>
+            <div className="rounded-3xl border border-dark-border/70 bg-white/80 p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Imobiliária vinculada</p>
+              <div className="mt-3">
+                <ImobiliariaIdentity
+                  nome={resolverNome(fichaImobiliaria || apolice.imobiliaria)}
+                  imagemUrl={imobInfo?.imagem_url}
+                  imagemPath={imobInfo?.imagem_path}
+                  size="md"
+                />
+              </div>
+            </div>
+          </DataCard>
           <DataCard title="Dados da Ficha" subtitle={ficha ? 'Base de origem da apólice.' : 'Dados preservados diretamente na apólice.'} bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
               {!ficha && (
                 <div className="col-span-2">
@@ -619,6 +750,31 @@ export default function ApoliceDetalhe() {
               </span>
             </div>
 
+            <div className="rounded-3xl border border-dark-border/70 bg-gradient-to-br from-brand-secondary/5 via-white to-brand-accent/5 p-4">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-dark-text">Automação de preenchimento</p>
+                <p className="text-xs text-dark-muted">
+                  O PDF alimenta os dados da apólice e também os campos aproveitáveis da ficha, reduzindo retrabalho.
+                </p>
+              </div>
+              {extracaoResumo && (
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-dark-border/60 bg-white/80 px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Arquivo</p>
+                    <p className="mt-1 truncate text-xs font-medium text-dark-text">{extracaoResumo.arquivo}</p>
+                  </div>
+                  <div className="rounded-2xl border border-dark-border/60 bg-white/80 px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Campos da apólice</p>
+                    <p className="mt-1 text-xs font-semibold text-dark-text">{extracaoResumo.apolice} preenchidos</p>
+                  </div>
+                  <div className="rounded-2xl border border-dark-border/60 bg-white/80 px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Campos da ficha</p>
+                    <p className="mt-1 text-xs font-semibold text-dark-text">{extracaoResumo.ficha} preenchidos</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <input
               ref={fileInputRef}
               type="file"
@@ -629,8 +785,12 @@ export default function ApoliceDetalhe() {
                 setPdfFile(file)
                 setExtracaoExtras(null)
                 setExtracaoErro('')
+                setExtracaoResumo(null)
                 if (file) {
                   await anexarPdfComoDocumento(file)
+                  if (getSeguradoraAutomacao()) {
+                    await handlePreencherInfo(file)
+                  }
                 }
               }}
             />
@@ -655,13 +815,13 @@ export default function ApoliceDetalhe() {
               >
                 {extraindo
                   ? <><RefreshCw className="h-3.5 w-3.5 animate-spin" />Lendo apólice...</>
-                  : <><Sparkles className="h-3.5 w-3.5" />Preencher as informações</>}
+                  : <><Sparkles className="h-3.5 w-3.5" />Reprocessar preenchimento</>}
               </button>
 
               {pdfFile && (
                 <button
                   type="button"
-                  onClick={() => { setPdfFile(null); setExtracaoExtras(null); setExtracaoErro('') }}
+                  onClick={() => { setPdfFile(null); setExtracaoExtras(null); setExtracaoErro(''); setExtracaoResumo(null) }}
                   className="rounded-full p-1.5 text-dark-muted hover:text-red-500 hover:bg-red-50 transition-colors"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -670,7 +830,7 @@ export default function ApoliceDetalhe() {
             </div>
 
             {pdfPreviewUrl && (
-              <div className="overflow-hidden rounded-2xl border border-dark-border/70 bg-dark-surface2/10">
+              <div className="overflow-hidden rounded-3xl border border-dark-border/70 bg-dark-surface2/10">
                 <div className="flex items-center justify-between border-b border-dark-border/60 px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Pré-visualização do PDF</p>
                   {anexandoDoc && <span className="text-[10px] font-semibold text-brand-secondary">Anexando...</span>}
@@ -694,10 +854,22 @@ export default function ApoliceDetalhe() {
             )}
 
             {extracaoExtras && (
-              <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3 space-y-1.5">
+              <div className="rounded-3xl border border-dark-border/60 bg-white/80 p-4 space-y-2">
                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">
                   Informações extraídas da apólice
                 </p>
+                {extracaoExtras.nome_locatario && (
+                  <div className="flex items-center justify-between text-xs gap-3">
+                    <span className="text-dark-muted">Locatário</span>
+                    <span className="font-medium text-dark-text text-right">{extracaoExtras.nome_locatario}</span>
+                  </div>
+                )}
+                {extracaoExtras.documento_locatario && (
+                  <div className="flex items-center justify-between text-xs gap-3">
+                    <span className="text-dark-muted">Documento</span>
+                    <span className="font-mono font-medium text-dark-text text-right">{extracaoExtras.documento_locatario}</span>
+                  </div>
+                )}
                 {extracaoExtras.tipo_imovel && (
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-dark-muted">Tipo de imóvel</span>
@@ -718,6 +890,12 @@ export default function ApoliceDetalhe() {
                     <span className="font-medium text-status-success">
                       {formatMoneyBR(extracaoExtras.valor_aluguel)}
                     </span>
+                  </div>
+                )}
+                {extracaoExtras.vigencia && (
+                  <div className="flex items-center justify-between text-xs gap-3">
+                    <span className="text-dark-muted">Vigência</span>
+                    <span className="font-medium text-dark-text text-right">{extracaoExtras.vigencia}</span>
                   </div>
                 )}
               </div>

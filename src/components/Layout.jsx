@@ -307,7 +307,7 @@ export default function Layout() {
   }
 
   return (
-    <div className={`relative flex h-screen overflow-hidden ${shellClassName} ${!isMobile ? 'lg:gap-4' : ''}`}>
+    <div className={`relative flex min-h-[100dvh] overflow-hidden ${shellClassName} ${!isMobile ? 'lg:gap-4' : ''}`}>
       {isMobile && sidebarOpen && (
           <div
             className="fixed inset-0 z-[300]"

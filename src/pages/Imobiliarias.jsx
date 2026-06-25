@@ -942,7 +942,7 @@ export default function Imobiliarias() {
   const totalVinculos = Object.values(vinculacoes).reduce((acc, arr) => acc + (arr?.length || 0), 0)
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="min-h-full w-full space-y-5 animate-fade-in">
       <PageHeader
         eyebrow="Cadastro operacional"
         title="Imobiliárias"

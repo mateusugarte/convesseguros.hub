@@ -1692,11 +1692,6 @@ html.dark .skeleton-surface {
     --kanban-col-w: 220px;
     --kanban-gap: 8px;
   }
-
-  .ops-shell,
-  .crm-shell {
-    zoom: 0.85;
-  }
 }
 
 @media (max-width: 1280px) {
@@ -1930,8 +1925,8 @@ html.dark .skeleton-surface {
 .app-shell-root,
 .ops-shell,
 .crm-shell {
-  height: auto;
-  min-height: 0;
+  height: 100vh;
+  min-height: 100vh;
 }
 
 .ops-shell {
@@ -1943,8 +1938,9 @@ html.dark .skeleton-surface {
   position: fixed;
   inset: 0;
   width: 100vw;
-  height: auto;
-  min-height: 0;
+  height: 100vh;
+  min-height: 100vh;
+  isolation: isolate;
 }
 
 .ops-shell::before {

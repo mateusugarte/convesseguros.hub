@@ -808,7 +808,7 @@ function TabelaPassadas({ fichas, user, navigate, onEditar, resolverNome }) {
 
 function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, onRelatorio, viewToggle, selectorSlot, children }) {
   return (
-    <div className="flex min-h-full flex-col gap-5 animate-fade-in">
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-5 animate-fade-in">
       <PageHeader
         eyebrow="Mesa operacional"
         title={prodInfo?.label || 'Fichas'}
@@ -849,7 +849,9 @@ function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, 
         {selectorSlot}
       </DataCard>
 
-      {children}
+      <div className="flex min-h-0 flex-1 flex-col">
+        {children}
+      </div>
     </div>
   )
 }

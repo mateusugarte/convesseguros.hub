@@ -209,7 +209,7 @@ export default function ApolicesDashboard() {
   }, [producaoSeg])
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="min-h-full w-full space-y-5 animate-fade-in">
       <PageHeader
         eyebrow="Apólices"
         title="Dashboard de Apólices"

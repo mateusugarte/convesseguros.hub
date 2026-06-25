@@ -1139,7 +1139,7 @@ export default function ApoicesGestao() {
   }
 
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-4 animate-fade-in">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="title-page text-dark-text">Gestão de Apólices</h1>
@@ -1224,7 +1224,7 @@ export default function ApoicesGestao() {
       {workspace !== 'kanban' ? null : loading ? (
         <KanbanSkeleton />
       ) : (
-        <div className="relative kanban-viewport min-h-[calc(100vh-16rem)]">
+        <div className="relative kanban-viewport min-h-0 flex-1">
           {canScrollL && (
             <>
               <div className="absolute left-0 top-0 bottom-4 w-16 z-10 pointer-events-none" style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }} />

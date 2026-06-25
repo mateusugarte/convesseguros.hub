@@ -520,7 +520,7 @@ export default function Layout() {
         )}
       </aside>
 
-      <div className="flex min-w-0 min-h-0 flex-1 flex-col px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
+      <div className="flex h-full min-w-0 min-h-0 w-full flex-1 flex-col overflow-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
         {!hideWorkspaceTopbar && isDashboardRoute && (
           <header className="shell-topbar sticky top-3 z-[300] h-16 flex items-center justify-between px-5 flex-shrink-0 topbar-glass rounded-[28px]" style={shellTopbarStyle}>
           <div className="flex items-center gap-3">
@@ -851,8 +851,8 @@ export default function Layout() {
           </div>
         )}
 
-        <main className={`flex-1 min-h-0 overflow-y-auto overscroll-contain bg-transparent ${hideWorkspaceTopbar ? 'pt-0' : isDashboardRoute ? 'pt-4' : 'pt-2'}`}>
-          <div className="flex min-h-full w-full min-w-0 flex-1 flex-col">
+        <main className={`flex h-full min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-transparent ${hideWorkspaceTopbar ? 'pt-0' : isDashboardRoute ? 'pt-4' : 'pt-2'}`}>
+          <div className="flex h-full min-h-full w-full min-w-0 flex-1 flex-col">
             <PageTransition>
               <Outlet />
             </PageTransition>

@@ -314,7 +314,7 @@ export default function Dashboard() {
   if (query.isLoading) return <DashboardSkeleton />
 
   return (
-    <div className="relative isolate space-y-6 animate-fade-in">
+    <div className="relative isolate min-h-full w-full space-y-6 animate-fade-in">
       <div className="pointer-events-none absolute inset-x-0 top-[-7rem] -z-10 h-[25rem] overflow-hidden" aria-hidden="true">
         <div className="absolute left-[8%] top-8 h-72 w-72 rounded-full bg-brand-accent/20 blur-3xl" />
         <div className="absolute right-[10%] top-10 h-80 w-80 rounded-full bg-brand-secondary/18 blur-3xl" />

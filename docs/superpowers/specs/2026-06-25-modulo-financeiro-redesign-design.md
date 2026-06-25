@@ -135,6 +135,35 @@ faturas_imobiliaria (
   + `observacao` na própria fatura (registro auditável; sem tabela separada).
 - Geração automática mensal via função/RPC `fn_gerar_faturas_mes(mes)` que cria/atualiza
   1 fatura por imobiliária a partir das apólices da competência (count + soma das parcelas).
+- **% da imobiliária:** o `pct_comissao` da fatura vem de `producao_comissao_imobiliaria`
+  (ver 4.4) — o mesmo % mensal definido na Produção (Fase 2), não digitado de novo.
+  O repasse devido = `pct_comissao` × **comissão gerada da imobiliária no mês**
+  (base unificada; `valor_real` permanece como informação da imobiliária, não como base do repasse).
+
+### 4.4 `producao_comissao_imobiliaria` (Fase 2) — % de repasse por imobiliária/mês
+
+Percentual definido manualmente pelo usuário, salvo por imobiliária e por mês.
+Aplica-se sobre a **comissão gerada daquela imobiliária no mês**; o valor a repassar é
+calculado (não precisa ser persistido, deriva do ledger), mas o `%` é histórico e auditável.
+
+```
+producao_comissao_imobiliaria (
+  id              uuid pk default gen_random_uuid(),
+  imobiliaria     text not null,
+  mes_referencia  date not null,           -- 1º dia do mês
+  pct_comissao    numeric,                 -- definido pelo usuário; default = imobiliarias.pct_comissao
+  atualizado_por  uuid references profiles(id),
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now(),
+  unique (imobiliaria, mes_referencia)
+)
+```
+
+- Valor a repassar (exibido) = `pct_comissao` × Σ `valor_comissao` das apólices da
+  imobiliária emitidas no mês (base = comissão gerada da própria imobiliária).
+- Default ao abrir um mês sem registro: `imobiliarias.pct_comissao` (valor único atual),
+  até o usuário salvar o % daquele mês.
+- Este é o mesmo % que a Fatura (Fase 3) usa como repasse — fonte única da verdade.
 
 ## 5. Camada de dados (lib)
 
@@ -142,12 +171,18 @@ faturas_imobiliaria (
   - `fetchIndicadoresMes({ ano, mes })` → comissão gerada, recebida estimada, apólices.
   - `fetchAgendaRecebimentos({ inicio, fim })` → agrupado por `mes_referencia`.
   - `fetchProjecaoProximosMeses({ meses })` → soma por mês futuro.
-  - `fetchProducaoImobiliarias({ inicio, fim })` / `fetchProducaoPorSeguradora(imobiliaria, ...)`.
+  - `fetchProducaoImobiliarias({ inicio, fim })` → agregação por imobiliária (qtd, prêmio,
+    comissão gerada, recebida estimada) + `pct_comissao` salvo do mês + valor a repassar.
+  - `fetchProducaoPorSeguradora({ imobiliaria, inicio, fim })` → quebra por seguradora
+    (qtd, prêmio, comissão, % de participação dentro da imobiliária).
+  - `fetchEvolucaoProducao({ imobiliaria?, meses })` → série mensal (prêmio/comissão) p/ gráfico.
+  - `salvarPctImobiliaria({ imobiliaria, mes, pct, userId })` → upsert em `producao_comissao_imobiliaria`.
   - `fetchFaturas({ mes })`, `gerarFaturasMes(mes)`, `fetchFaturaDetalhe(id)`.
-  - `salvarFaturaValores(id, { valorReal, pctComissao })`.
   - `marcarFaturaPaga(id, { dataPagamento, pagoPor, observacao })` / `reabrirFatura(id)`.
-- `src/lib/logosResolver.js` (novo) — mapeia nome de imobiliária/seguradora → logo,
-  usando catálogos com `nome_canonico` + aliases (cache em memória).
+- `src/lib/financeiroProducaoCalc.js` (novo, puro/testável) — `agruparPorImobiliaria`,
+  `agruparPorSeguradora` (com % de participação), `agruparEvolucaoPorMes`.
+- `src/lib/imobiliariasLogos.js` (novo) — resolver nome→logo de imobiliária via catálogo
+  `imobiliarias` + aliases (cache). Seguradoras usam o `SeguradoraBadge` existente (auto-resolve).
 
 ## 6. Camada de UI
 
@@ -174,15 +209,23 @@ faturas_imobiliaria (
 - Filtro de período (mês/ano + comparativo simples).
 
 ### Fase 2 — Produção
-- `logosResolver.js`; página Produção por imobiliária → drill-down seguradora,
-  com logos, prêmio, comissão gerada, recebida estimada e % de participação;
-  filtros de período / comparativo mensal / evolução histórica.
+- Migração: tabela `producao_comissao_imobiliaria` (% por imobiliária/mês), RLS admin-only.
+- `financeiroProducaoCalc.js` (puro/testável) + `imobiliariasLogos.js` (resolver de logo).
+- Base de tempo **por emissão** (consistente com a Comissão Gerada da Fase 1).
+- Aba **Produção** (`/financeiro/producao`): lista de imobiliárias com logo, nº apólices,
+  prêmio total, comissão gerada, recebida estimada, **% editável salvo por mês** e
+  **valor a repassar** (= % × comissão gerada da imobiliária). Gráfico de evolução
+  (recharts) + comparativo vs. mês anterior.
+- **Detalhe dedicado** (`/financeiro/producao/:imobiliaria`): cabeçalho com logo, cards do
+  período, quebra por seguradora (qtd, prêmio, comissão, % de participação na imobiliária),
+  e gráfico de evolução da imobiliária. Botão voltar.
 
 ### Fase 3 — Faturas
 - Tabela `faturas_imobiliaria` (registro auditável) + RPC de geração mensal por competência.
 - Lista de faturas (com logos), detalhe com lista de apólices (nº, cliente,
   seguradora, imobiliária, parcela mensal, status, data de emissão).
-- Campos manuais (valor real, % comissão) + cálculo automático de valor a pagar.
+- Campo manual `valor_real` (informado pela imobiliária) + `% de repasse vindo de
+  `producao_comissao_imobiliaria` (Fase 2). Repasse devido = % × comissão gerada do mês.
 - Controle de pagamento (pendente/pago) com data + usuário responsável registrados na fatura.
 - Navegação fatura ↔ apólice preservando estado.
 

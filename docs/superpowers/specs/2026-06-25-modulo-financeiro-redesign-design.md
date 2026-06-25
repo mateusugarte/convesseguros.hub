@@ -30,11 +30,19 @@ sem impactar outras áreas do sistema. O módulo deve controlar:
 - **Faturas e repasses como tabelas registradas e auditáveis** (conferência).
 - **Navegação em sub-rotas aninhadas sob `/financeiro`** (mantém o `AdminRoute`).
 
-### Defaults de cálculo assumidos
+### Defaults de cálculo confirmados
 
-- Agenda de recebimentos **começa na `data_emissao`** (parcela 1 = mês da emissão).
+- **Agenda de recebimentos:** começa na `data_emissao`, mas a **1ª parcela cai no
+  mês seguinte** (apólice emitida hoje → comissão entra no mês que vem).
+  Parcela _n_ → `mes_referencia` = mês da emissão + _n_.
+- **Competência da fatura:** apólice emitida **dia 1–30** entra na fatura do **mês
+  seguinte**; emitida **dia 31** entra na fatura do **2º mês** (corte no dia 30).
 - Produção e faturas contam apenas `status_emissao IN ('emitida','enviada')`
-  **E** `status_apolice = 'ativa'` (exclui cancelada, expirada, recusada/encerrada).
+  **E** `status_apolice IN ('ativa','renovada')` (exclui cancelada, expirada,
+  recusada/encerrada). **Renovadas entram no mesmo formato.**
+- **Pagamento da fatura:** `valor_a_pagar` = `valor_real` × `pct_comissao`
+  (% informado pelo usuário), sem conexão com os recebimentos. Pagamento registrado
+  na própria fatura (registro auditável); sem tabela separada de repasses.
 - Logos resolvidos por nome → `nome_canonico` + aliases das tabelas
   `imobiliarias` / `seguradoras`.
 
@@ -75,7 +83,8 @@ comissoes_recebimentos (
   apolice_id      uuid not null references apolices(id) on delete cascade,
   numero_parcela  int not null,            -- 1..parcelamento
   total_parcelas  int not null,
-  mes_referencia  date not null,           -- 1º dia do mês (data_emissao + (n-1) meses)
+  mes_referencia  date not null,           -- 1º dia do mês = mês da emissão + numero_parcela
+                                           -- (1ª parcela cai no mês seguinte à emissão)
   valor_previsto  numeric not null,        -- comissao_total / parcelamento (última absorve resto)
   seguradora      text,                    -- denormalizado p/ agrupamento
   imobiliaria     text,                    -- denormalizado p/ agrupamento
@@ -86,23 +95,31 @@ comissoes_recebimentos (
 ```
 
 - Gerada/regenerada por trigger quando `valor_comissao`, `parcelamento`,
-  `data_emissao` ou status mudam, somente para apólices ativas/emitidas.
+  `data_emissao` ou status mudam, somente para apólices emitidas/enviadas com
+  `status_apolice IN ('ativa','renovada')`.
+- 1ª parcela cai no mês seguinte à emissão: `mes_referencia(n) =
+  date_trunc('month', data_emissao) + n meses`.
 - Rateio: `valor_previsto = round(valor_comissao / parcelamento, 2)`; a última
   parcela recebe o resíduo para que a soma feche com `valor_comissao`.
 
-### 4.3 `faturas_imobiliaria` (Fase 3)
+### 4.3 `faturas_imobiliaria` (Fase 3) — registro auditável
+
+Tabela única e registrada para conferência. 1 fatura por imobiliária por mês,
+com o pagamento (comissão da imobiliária) registrado na própria linha.
 
 ```
 faturas_imobiliaria (
   id              uuid pk default gen_random_uuid(),
   imobiliaria     text not null,
-  mes_referencia  date not null,           -- 1º dia do mês
-  qtd_apolices    int not null default 0,  -- auto (apólices ativas/emitidas no mês)
+  mes_referencia  date not null,           -- 1º dia do mês de competência
+  qtd_apolices    int not null default 0,  -- auto (apólices da competência)
   valor_estimado  numeric not null default 0, -- auto: soma das parcelas mensais
   valor_real      numeric,                 -- manual: fiança + incêndio informado
   pct_comissao    numeric,                 -- default de imobiliarias.pct_comissao
   valor_a_pagar   numeric,                 -- valor_real * pct_comissao / 100
   status          text not null default 'pendente' check (status in ('pendente','pago')),
+  data_pagamento  date,                    -- preenchido ao marcar como pago
+  pago_por        uuid references profiles(id), -- usuário responsável
   observacao      text,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
@@ -110,32 +127,14 @@ faturas_imobiliaria (
 )
 ```
 
-- `valor_a_pagar` recalculado quando `valor_real` ou `pct_comissao` mudam.
-- `status` derivado: `pago` quando a soma dos repasses cobre `valor_a_pagar`.
+- `valor_a_pagar` recalculado quando `valor_real` ou `pct_comissao` mudam
+  (= `valor_real` × `pct_comissao` / 100). Sem conexão com os recebimentos.
+- **Competência:** apólice emitida dia 1–30 do mês M → fatura de M+1; emitida
+  dia 31 → fatura de M+2 (corte no dia 30). Inclui ativas e renovadas.
+- **Pagamento:** ao marcar como `pago`, registra `data_pagamento` + `pago_por`
+  + `observacao` na própria fatura (registro auditável; sem tabela separada).
 - Geração automática mensal via função/RPC `fn_gerar_faturas_mes(mes)` que cria/atualiza
-  1 fatura por imobiliária a partir das apólices ativas/emitidas (count + soma das parcelas).
-
-### 4.4 `repasses_comissao` (Fase 3) — registro auditável
-
-Cada pagamento/repasse é uma linha, preservando histórico para conferência.
-
-```
-repasses_comissao (
-  id               uuid pk default gen_random_uuid(),
-  fatura_id        uuid not null references faturas_imobiliaria(id) on delete cascade,
-  valor_pago       numeric not null,
-  data_pagamento   date not null,
-  pago_por         uuid references profiles(id),  -- usuário responsável
-  forma_pagamento  text,
-  observacao       text,
-  comprovante_path text,                            -- opcional (storage)
-  created_at       timestamptz not null default now()
-)
-índices: (fatura_id), (data_pagamento)
-```
-
-- Ao inserir/remover repasse, recalcula o `status` da fatura
-  (`pago` se Σ `valor_pago` ≥ `valor_a_pagar`).
+  1 fatura por imobiliária a partir das apólices da competência (count + soma das parcelas).
 
 ## 5. Camada de dados (lib)
 
@@ -146,7 +145,7 @@ repasses_comissao (
   - `fetchProducaoImobiliarias({ inicio, fim })` / `fetchProducaoPorSeguradora(imobiliaria, ...)`.
   - `fetchFaturas({ mes })`, `gerarFaturasMes(mes)`, `fetchFaturaDetalhe(id)`.
   - `salvarFaturaValores(id, { valorReal, pctComissao })`.
-  - `registrarRepasse(faturaId, dados)`, `fetchRepasses(faturaId)`.
+  - `marcarFaturaPaga(id, { dataPagamento, pagoPor, observacao })` / `reabrirFatura(id)`.
 - `src/lib/logosResolver.js` (novo) — mapeia nome de imobiliária/seguradora → logo,
   usando catálogos com `nome_canonico` + aliases (cache em memória).
 
@@ -179,12 +178,12 @@ repasses_comissao (
   com logos, prêmio, comissão gerada, recebida estimada e % de participação;
   filtros de período / comparativo mensal / evolução histórica.
 
-### Fase 3 — Faturas e Repasses
-- Tabelas `faturas_imobiliaria` + `repasses_comissao` + RPC de geração mensal.
+### Fase 3 — Faturas
+- Tabela `faturas_imobiliaria` (registro auditável) + RPC de geração mensal por competência.
 - Lista de faturas (com logos), detalhe com lista de apólices (nº, cliente,
   seguradora, imobiliária, parcela mensal, status, data de emissão).
 - Campos manuais (valor real, % comissão) + cálculo automático de valor a pagar.
-- Registro de repasses (auditável) + controle de pagamento (pendente/pago).
+- Controle de pagamento (pendente/pago) com data + usuário responsável registrados na fatura.
 - Navegação fatura ↔ apólice preservando estado.
 
 ## 8. Segurança

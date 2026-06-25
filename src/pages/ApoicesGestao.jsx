@@ -724,8 +724,8 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
       if (semParser || (!parsed.numero_apolice && !parsed.nome_locatario)) {
         setErro(`Não foi possível identificar dados da apólice ${seguradora}. Verifique se o PDF é da seguradora selecionada.`)
       }
-      if (parsed.proprietario_cel && !celular.trim()) {
-        setCelular(parsed.proprietario_cel)
+      if ((parsed.celular_locatario || parsed.proprietario_cel) && !celular.trim()) {
+        setCelular(parsed.celular_locatario || parsed.proprietario_cel)
       }
     } catch (err) {
       setErro(err?.message || 'Erro ao ler o PDF da apólice.')

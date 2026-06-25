@@ -133,6 +133,7 @@ export default function Layout() {
   })
 
   const isCommercialRoute = location.pathname.startsWith('/comercial')
+  const isDashboardRoute = location.pathname === '/'
   const isJornadasRoute = location.pathname.startsWith('/comercial/jornadas')
   const shellClassName = isCommercialRoute ? 'crm-shell' : 'ops-shell'
   const workspaceLabel = isCommercialRoute ? 'CRM comercial' : 'Core ops'
@@ -304,6 +305,13 @@ export default function Layout() {
     borderBottom: '1px solid var(--shell-topbar-border)',
     backdropFilter: 'blur(18px) saturate(160%)',
     WebkitBackdropFilter: 'blur(18px) saturate(160%)',
+  }
+  const shellFloatingStyle = {
+    background: 'var(--shell-panel-bg)',
+    border: '1px solid var(--shell-panel-border)',
+    boxShadow: 'var(--shadow-float)',
+    backdropFilter: 'blur(18px) saturate(170%)',
+    WebkitBackdropFilter: 'blur(18px) saturate(170%)',
   }
 
   return (
@@ -506,7 +514,7 @@ export default function Layout() {
       </aside>
 
       <div className="flex min-w-0 min-h-0 flex-1 flex-col px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
-        {!hideWorkspaceTopbar && (
+        {!hideWorkspaceTopbar && isDashboardRoute && (
           <header className="shell-topbar sticky top-3 z-[300] h-16 flex items-center justify-between px-5 flex-shrink-0 topbar-glass rounded-[28px]" style={shellTopbarStyle}>
           <div className="flex items-center gap-3">
             <button
@@ -697,7 +705,146 @@ export default function Layout() {
           </header>
         )}
 
-        <main className={`flex-1 min-h-0 overflow-y-auto overscroll-contain bg-transparent ${hideWorkspaceTopbar ? 'pt-0' : 'pt-4'}`}>
+        {!hideWorkspaceTopbar && !isDashboardRoute && (
+          <div
+            className="fixed right-4 top-4 z-[320] flex items-center gap-2 rounded-[24px] px-2.5 py-2"
+            style={shellFloatingStyle}
+          >
+            <div className="relative">
+              <button
+                onClick={() => { setNotificationsOpen(o => !o); setUserMenuOpen(false) }}
+                className="btn-ghost p-2 relative rounded-xl cursor-pointer"
+                aria-label="Notificacoes"
+                aria-expanded={notificationsOpen}
+              >
+                <Bell className="w-4 h-4" />
+                {notifications.length > 0 && (
+                  <span className="absolute top-1.5 right-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-status-warning px-1 text-[9px] font-bold text-white">
+                    {notifications.length > 9 ? '9+' : notifications.length}
+                  </span>
+                )}
+              </button>
+              {notificationsOpen && (
+                <>
+                  <div className="fixed inset-0 z-[399]" onClick={() => setNotificationsOpen(false)} />
+                  <div
+                    className="absolute right-0 top-full mt-2 w-[360px] z-[400] overflow-hidden rounded-2xl border py-1 animate-slide-up"
+                    style={shellFloatingStyle}
+                  >
+                    <div className="flex items-center justify-between gap-3 border-b border-dark-border px-4 py-3">
+                      <div>
+                        <p className="text-sm font-semibold text-dark-text">Notificacoes</p>
+                        <p className="text-xs text-dark-muted">Ultimos eventos recebidos</p>
+                      </div>
+                      {notifications.length > 0 && (
+                        <span className="badge badge-info">{notifications.length}</span>
+                      )}
+                    </div>
+
+                    <div className="max-h-[360px] overflow-y-auto">
+                      {notifications.length ? (
+                        notifications.map(item => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              setNotificationsOpen(false)
+                              if (item.href) navigate(item.href)
+                            }}
+                            className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-dark-surface2/60 transition-colors"
+                          >
+                            <span className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border ${
+                              item.type === 'auto'
+                                ? 'border-brand-accent/20 bg-brand-accent/10 text-brand-accent'
+                                : 'border-status-success/20 bg-status-success/10 text-status-success'
+                            }`}>
+                              <Bell className="h-4 w-4" />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="text-sm font-semibold text-dark-text truncate">{item.title}</p>
+                                <span className="text-[10px] text-dark-muted whitespace-nowrap">
+                                  {formatDistanceToNow(new Date(item.created_at), { addSuffix: true, locale: ptBR })}
+                                </span>
+                              </div>
+                              <p
+                                className="mt-1 text-xs text-dark-muted"
+                                style={{
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                }}
+                              >
+                                {item.message}
+                              </p>
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-8 text-center">
+                          <p className="text-sm font-medium text-dark-text">Sem notificacoes</p>
+                          <p className="mt-1 text-xs text-dark-muted">Os eventos recentes aparecem aqui.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="relative">
+              <button
+                onClick={() => setUserMenuOpen(o => !o)}
+                className="shell-user-button flex items-center gap-2 pl-2.5 pr-2 py-1.5 rounded-2xl border transition-all cursor-pointer shadow-sm"
+                style={{ borderColor: 'var(--shell-panel-border)' }}
+              >
+                <Avatar
+                  name={profile?.nome}
+                  src={profile?.avatar_url || ''}
+                  size="sm"
+                  className="ring-1 ring-white/20 shadow-sm"
+                />
+                <span className="hidden sm:block text-xs font-medium text-dark-text">{profile?.nome?.split(' ')[0]}</span>
+                <ChevronDown className={`w-3 h-3 text-dark-muted transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {userMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-[399]" onClick={() => setUserMenuOpen(false)} />
+                  <div
+                    className="absolute right-0 top-full mt-2 w-56 z-[400] py-1 animate-slide-up rounded-2xl overflow-hidden"
+                    style={shellFloatingStyle}
+                  >
+                    <div className="px-4 py-3 border-b border-dark-border">
+                      <p className="text-xs font-semibold text-dark-text truncate">{profile?.nome}</p>
+                      {abertasCount > 0 && (
+                        <p className="text-[10px] text-status-warning mt-0.5">{abertasCount} fichas em aberto</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => { setUserMenuOpen(false); navigate('/minhas-fichas') }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-dark-text hover:bg-dark-surface2 transition-colors cursor-pointer"
+                    >
+                      <User className="w-4 h-4 text-dark-muted" />
+                      Minhas Fichas
+                    </button>
+                    <div className="border-t border-dark-border my-1" />
+                    <button
+                      onClick={() => { setUserMenuOpen(false); signOut() }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-status-danger hover:bg-dark-surface2 transition-colors cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sair
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        <main className={`flex-1 min-h-0 overflow-y-auto overscroll-contain bg-transparent ${hideWorkspaceTopbar ? 'pt-0' : isDashboardRoute ? 'pt-4' : 'pt-2'}`}>
           <div className="mx-auto w-full min-w-0 max-w-[1720px] pb-20">
             <PageTransition>
               <Outlet />

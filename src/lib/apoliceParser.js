@@ -251,6 +251,135 @@ function parseTokioMarine(text) {
   return r
 }
 
+function parseTokioMarineV2(text) {
+  const r = {}
+  const normalized = normalizeText(text)
+
+  const ap = normalized.match(/Ap[Ã³o]lice:\s*(\d+)/i)
+  if (ap) r.numero_apolice = ap[1].trim()
+
+  const vig = normalized.match(/Vig[Ãªe]ncia:\s*a partir das 24 horas do dia (\d{2}\/\d{2}\/\d{4}) at[eÃ©] [Ã a]s 24 horas do dia (\d{2}\/\d{2}\/\d{4})/i)
+  if (vig) {
+    r.inicio_vigencia = parseDateBR(vig[1])
+    r.fim_vigencia = parseDateBR(vig[2])
+  }
+
+  const localSection = normalized.match(
+    /Local do Risco:\s*(.+?)\s+N[uÃº]mero Logradouro:\s*(\d+)\s+Complemento:\s*(.+?)\s+Bairro:\s*(.+?)\s+Cidade:\s*(.+?)\s+CEP:\s*([\d]{5}-?[\d]{3})\s+UF:\s*([A-Z]{2})/i
+  )
+  if (localSection) {
+    const [, logradouro, numero, complemento, bairro, cidade, cep, uf] = localSection
+    r.endereco = [logradouro.trim(), numero.trim(), complemento.trim(), bairro.trim(), cidade.trim(), uf.trim()]
+      .filter(Boolean)
+      .join(', ')
+    r.cep = cep.replace('-', '')
+  }
+
+  const tipoIm = normalized.match(/Tipo de Im[Ã³o]vel:\s*(\w+)/i)
+  if (tipoIm) r.tipo_imovel = tipoIm[1]
+
+  const alug = normalized.match(/Aluguel\s+At[eÃ©] \d+ vezes a verba declarada\s+([\d.,]+)\s+([\d.,]+)/i)
+  if (alug) r.valor_aluguel = parseMoneyBR(alug[2])
+
+  const headerNames = normalized.match(
+    /\d+\/\d+\s+(.+?)\s+Nome Social:\s+(.+?)\s+Nome Social:\s+Tokio Marine Aluguel - Ap[Ã³o]lice de Seguro/i
+  )
+  const cpfs = [...normalized.matchAll(/CPF:\s*(\d{3}\.\d{3}\.\d{3}-\d{2})/gi)].map(match => match[1].trim())
+  const celulares = [...normalized.matchAll(/Celular:\s*(\(\d{2}\)\s*\d{4,5}-\d{4})/gi)].map(match => match[1].trim())
+
+  if (headerNames) {
+    r.nome_proprietario = headerNames[1].trim()
+    r.nome_locatario = headerNames[2].trim()
+    if (cpfs[0]) r.proprietario_documento = cpfs[0]
+    if (cpfs[1]) r.documento_locatario = cpfs[1]
+    if (celulares[0]) r.proprietario_cel = celulares[0]
+    if (celulares[1]) r.celular_locatario = celulares[1]
+  }
+
+  const premioTot = normalized.match(/Pr[Ãªe]mio L[Ã­i]quido Total R\$[:\s]+([\d.,]+)/i)
+  if (premioTot) r.premio_liquido = parseMoneyBR(premioTot[1])
+
+  const ptot = normalized.match(/Pr[Ãªe]mio Total:\s*R\$\s*([\d.,]+)/i)
+  if (ptot) r.premio_total = parseMoneyBR(ptot[1])
+
+  const parc1 = normalized.match(/\b0?1\s+([\d.,]+)\s+\d{2}\/\d{2}\/\d{4}\s+Ficha/i)
+  if (parc1) r.valor_parcela = parseMoneyBR(parc1[1])
+
+  const allRows = [...normalized.matchAll(/\b(\d{2})\s+[\d.,]+\s+\d{2}\/\d{2}\/\d{4}\s+Ficha/gi)]
+  if (allRows.length > 0) r.parcelamento = parseInt(allRows[allRows.length - 1][1], 10)
+
+  if (/Cobran[çc]a:\s*Ficha/i.test(normalized)) {
+    r.forma_pagamento = 'fatura_sem_entrada'
+  }
+
+  return r
+}
+
+function parseTokioMarineV3(text) {
+  const r = {}
+  const normalized = normalizeText(text)
+  const page3Index = normalized.indexOf('3/7 ')
+  const page3Text = page3Index >= 0 ? normalized.slice(page3Index) : normalized
+
+  const ap = normalized.match(/Ap\S*lice:\s*(\d+)/i)
+  if (ap) r.numero_apolice = ap[1].trim()
+
+  const vig = normalized.match(/Vig\S*ncia:\s*a partir das 24 horas do dia (\d{2}\/\d{2}\/\d{4}) at\S* [\S]*s 24 horas do dia (\d{2}\/\d{2}\/\d{4})/i)
+  if (vig) {
+    r.inicio_vigencia = parseDateBR(vig[1])
+    r.fim_vigencia = parseDateBR(vig[2])
+  }
+
+  const localSection = normalized.match(
+    /Local do Risco:\s*(.+?)\s+N\S*mero Logradouro:\s*(\d+)\s+Complemento:\s*(.+?)\s+Bairro:\s*(.+?)\s+Cidade:\s*(.+?)\s+CEP:\s*([\d]{5}-?[\d]{3})\s+UF:\s*([A-Z]{2})/i
+  )
+  if (localSection) {
+    const [, logradouro, numero, complemento, bairro, cidade, cep, uf] = localSection
+    r.endereco = [logradouro.trim(), numero.trim(), complemento.trim(), bairro.trim(), cidade.trim(), uf.trim()]
+      .filter(Boolean)
+      .join(', ')
+    r.cep = cep.replace('-', '')
+  }
+
+  const tipoIm = normalized.match(/Tipo de Im\S*vel:\s*(\w+)/i)
+  if (tipoIm) r.tipo_imovel = tipoIm[1]
+
+  const alug = normalized.match(/Aluguel\s+At\S* \d+ vezes a verba declarada\s+([\d.,]+)\s+([\d.,]+)/i)
+  if (alug) r.valor_aluguel = parseMoneyBR(alug[2])
+
+  const proprietarioMatch = page3Text.match(/\d+\/\d+\s+(.+?)\s+Nome Social:/i)
+  const locatarioMatch = page3Text.match(/Nome Social:\s+(.+?)\s+Nome Social:\s+Tokio Marine Aluguel/i)
+  const cpfs = [...page3Text.matchAll(/CPF:\s*(\d{3}\.\d{3}\.\d{3}-\d{2})/gi)].map(match => match[1].trim())
+  const celulares = [...page3Text.matchAll(/Celular:\s*(\(\d{2}\)\s*\d{4,5}-\d{4})/gi)].map(match => match[1].trim())
+
+  if (proprietarioMatch && locatarioMatch) {
+    r.nome_proprietario = proprietarioMatch[1].trim()
+    r.nome_locatario = locatarioMatch[1].trim()
+    if (cpfs[0]) r.proprietario_documento = cpfs[0]
+    if (cpfs[1]) r.documento_locatario = cpfs[1]
+    if (celulares[0]) r.proprietario_cel = celulares[0]
+    if (celulares[1]) r.celular_locatario = celulares[1]
+  }
+
+  const premioTot = normalized.match(/Pr\S*mio L\S*quido Total R\$[:\s]+([\d.,]+)/i)
+  if (premioTot) r.premio_liquido = parseMoneyBR(premioTot[1])
+
+  const ptot = normalized.match(/Pr\S*mio Total:\s*R\$\s*([\d.,]+)/i)
+  if (ptot) r.premio_total = parseMoneyBR(ptot[1])
+
+  const parc1 = normalized.match(/\b0?1\s+([\d.,]+)\s+\d{2}\/\d{2}\/\d{4}\s+Ficha/i)
+  if (parc1) r.valor_parcela = parseMoneyBR(parc1[1])
+
+  const allRows = [...normalized.matchAll(/\b(\d{2})\s+[\d.,]+\s+\d{2}\/\d{2}\/\d{4}\s+Ficha/gi)]
+  if (allRows.length > 0) r.parcelamento = parseInt(allRows[allRows.length - 1][1], 10)
+
+  if (/Cobran[çc]a:\s*Ficha/i.test(normalized)) {
+    r.forma_pagamento = 'fatura_sem_entrada'
+  }
+
+  return r
+}
+
 function parseTooSeguros(text) {
   const r = {}
   const normalized = normalizeText(text)
@@ -336,8 +465,8 @@ const PARSERS = {
   porto: parsePortoSeguro,
   'porto seguro': parsePortoSeguro,
   pottencial: parsePottencial,
-  tokio: parseTokioMarine,
-  'tokio marine': parseTokioMarine,
+  tokio: parseTokioMarineV3,
+  'tokio marine': parseTokioMarineV3,
   too: parseTooSeguros,
   'too seguros': parseTooSeguros,
 }

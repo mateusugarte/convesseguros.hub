@@ -468,8 +468,8 @@ export default function ApoliceDetalhe() {
           camposFicha += 1
         }
       }
-      if (campos.proprietario_cel && !fichaCelular) {
-        setFichaCelular(campos.proprietario_cel)
+      if ((campos.celular_locatario || campos.proprietario_cel) && !fichaCelular) {
+        setFichaCelular(campos.celular_locatario || campos.proprietario_cel)
         camposFicha += 1
       }
       if (extras.tipo_imovel) {

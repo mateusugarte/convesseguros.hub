@@ -10,32 +10,39 @@ Claude
 
 ## Objetivo
 
-Reestruturacao do modulo financeiro (Seguro Fianca) — **Fase 1: Visao Geral**.
-Comissao Gerada no mes, Comissao Recebida Estimada (agenda mes a mes rateada por
-parcelas) e contagem de apolices, com a base que gera os recebimentos futuros.
+Reestruturacao do modulo financeiro (Seguro Fianca) — **Fase 2: Producao**.
+Producao por imobiliaria (logo, nº apolices, premio, comissao gerada, recebida
+estimada, % de repasse editavel salvo por mes, valor a repassar) + pagina de
+detalhe por imobiliaria (quebra por seguradora com % participacao + grafico).
 
 ## Status
 
-Concluido (codigo) — **pendente aplicacao da migracao no Supabase** e smoke test manual.
+Fase 1 (Visao Geral) e Fase 2 (Producao) concluidas (codigo).
+**Pendente: aplicar as migracoes no Supabase** (42 e 45) + smoke test manual.
 
-## Arquivos alterados
+## Arquivos alterados (Fase 2)
 
-- `supabase/42_financeiro_recebimentos.sql` — criado (tabela `comissoes_recebimentos`,
-  trigger `tg_sync_apolice_recebimentos`, backfill, RLS admin-only, `status_apolice` no ledger)
-- `src/lib/financeiroCalc.js` — criado (helpers puros de data/agregacao) + `financeiroCalc.test.mjs` (node --test, 7/7)
-- `src/lib/financeiro.js` — criado (camada de dados: comissao gerada, contagem, recebimentos)
-- `src/pages/Financeiro/Financeiro.jsx` — criado (hub com sub-abas + Outlet)
-- `src/pages/Financeiro/FinanceiroVisaoGeral.jsx` — criado (conteudo da aba)
-- `src/pages/Financeiro/CONTEXT.md` — criado
-- `src/pages/Financeiro.jsx` — removido (movido para a pasta)
-- `src/App.jsx` — rota `/financeiro` aninhada (index → FinanceiroVisaoGeral)
-- `package.json` — script `test` (node --test)
-- Docs: `docs/superpowers/specs/2026-06-25-modulo-financeiro-redesign-design.md`,
-  `docs/superpowers/plans/2026-06-25-financeiro-fase1-visao-geral.md`
+- `supabase/45_producao_comissao_imobiliaria.sql` — criado (% por imobiliaria/mes, RLS admin-only)
+- `src/lib/financeiroProducaoCalc.js` (+ `.test.mjs`, node --test) — agregacoes puras
+- `src/lib/imobiliariasLogos.js` — resolver de logo/% default por nome/alias
+- `src/lib/financeiro.js` — fetchProducaoLedger, fetchPctImobiliarias, salvarPctImobiliaria
+- `src/pages/Financeiro/EvolucaoChart.jsx` — grafico de evolucao (recharts)
+- `src/pages/Financeiro/FinanceiroProducao.jsx` — lista por imobiliaria (% editavel)
+- `src/pages/Financeiro/FinanceiroProducaoDetalhe.jsx` — detalhe por seguradora
+- `src/pages/Financeiro/Financeiro.jsx` — aba Producao habilitada
+- `src/App.jsx` — rotas `producao` e `producao/:imobiliaria`
+- Docs: spec atualizado (4.4 + Fase 2/3); plano `2026-06-25-financeiro-fase2-producao.md`
 
 ## Proximo Passo
 
-1. **Aplicar `supabase/42_financeiro_recebimentos.sql` no Supabase SQL Editor** e rodar as
-   queries de verificacao do plano (soma das parcelas = comissao; 1a parcela no mes seguinte).
-2. Smoke test: login admin → `/financeiro` → conferir cards e agenda.
-3. Iniciar **Fase 2 (Producao por imobiliaria/seguradora + logos)** quando aprovado.
+1. **Aplicar no Supabase SQL Editor (em ordem):** `42_financeiro_recebimentos.sql` e
+   `45_producao_comissao_imobiliaria.sql`. Rodar verificacoes do plano da Fase 1.
+2. Smoke test: login admin → `/financeiro` (Visao Geral) e `/financeiro/producao`
+   (editar %, abrir detalhe de imobiliaria).
+3. **Fase 3 — Faturas** (geracao mensal por competencia, lista+detalhe, navegacao
+   fatura↔apolice, pagamento). O % de repasse ja unificado vem da Fase 2.
+
+## Observacao
+
+Commits `t2`/`t3` ("setor financeiro") foram feitos em paralelo por outro autor na
+`main`, em arquivos diferentes (apolices/fichas/layout/css) — sem conflito com a Fase 2.

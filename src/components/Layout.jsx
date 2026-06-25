@@ -364,7 +364,7 @@ export default function Layout() {
                 <span className="badge badge-info shrink-0">Live</span>
               </div>
               <div className="mt-3 flex items-center gap-2 text-[11px] text-dark-muted">
-                <span className="h-1.5 w-1.5 rounded-full bg-status-success" />
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'rgb(var(--brand-primary-rgb))' }} />
                 <span className="truncate">{workspaceLead}</span>
                 <span className="ml-auto shrink-0 rounded-full border border-dark-border/70 px-2 py-0.5 text-[10px] font-semibold text-dark-muted">
                   {abertasCount} em cotação
@@ -397,7 +397,7 @@ export default function Layout() {
                       <button
                         onClick={() => toggleExpand(item.to)}
                         title={(!sidebarOpen && !isMobile) ? item.label : undefined}
-                        className={`shell-nav-item w-full flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-250 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-dark-text pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`}
+                        className={`shell-nav-item w-full flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-250 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-white pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`}
                       >
                         <Icon className="w-4 h-4 flex-shrink-0" />
                         {(sidebarOpen || isMobile) && (
@@ -418,7 +418,7 @@ export default function Layout() {
                               to={sub.to}
                               end={sub.end}
                               className={({ isActive }) =>
-                                `shell-subnav-item flex items-center px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${isActive ? 'shell-subnav-item-active text-brand-secondary' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60'}`
+                                `shell-subnav-item flex items-center px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${isActive ? 'shell-subnav-item-active text-white' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60'}`
                               }
                             >
                               {sub.label}
@@ -456,7 +456,7 @@ export default function Layout() {
                     end={item.end}
                     title={(!sidebarOpen && !isMobile) ? item.label : undefined}
                     className={({ isActive }) =>
-                      `shell-nav-item flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-250 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-dark-text pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60 hover:translate-x-0.5 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`
+                      `shell-nav-item flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-250 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-white pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60 hover:translate-x-0.5 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`
                     }
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
@@ -484,8 +484,8 @@ export default function Layout() {
               {abertasCount > 0 && (
                 <p className="text-[10px] mt-0.5">
                   <span
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-brand-secondary font-semibold"
-                    style={{ background: 'rgb(var(--brand-primary-rgb) / 0.10)' }}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-white font-semibold"
+                    style={{ background: 'rgb(var(--brand-primary-rgb))' }}
                   >
                     {abertasCount} em cotacao
                   </span>
@@ -610,7 +610,7 @@ export default function Layout() {
                             <span className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border ${
                               item.type === 'auto'
                                 ? 'border-brand-accent/20 bg-brand-accent/10 text-brand-accent'
-                                : 'border-status-success/20 bg-status-success/10 text-status-success'
+                                : 'border-brand-primary/20 bg-brand-primary/10 text-brand-primary'
                             }`}>
                               <Bell className="h-4 w-4" />
                             </span>
@@ -756,7 +756,7 @@ export default function Layout() {
                             <span className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border ${
                               item.type === 'auto'
                                 ? 'border-brand-accent/20 bg-brand-accent/10 text-brand-accent'
-                                : 'border-status-success/20 bg-status-success/10 text-status-success'
+                                : 'border-brand-primary/20 bg-brand-primary/10 text-brand-primary'
                             }`}>
                               <Bell className="h-4 w-4" />
                             </span>

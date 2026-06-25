@@ -34,6 +34,7 @@ import { useToast } from '../contexts/ToastContext'
 import { KanbanSkeleton } from '../components/Skeleton'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import { Avatar } from '../components/ui'
+import ImobiliariaSelect from '../components/ImobiliariaSelect'
 import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/kanbanDnd'
 
 const COLUNAS = [
@@ -276,7 +277,7 @@ const KanbanCard = memo(function KanbanCard({ apolice, resolverNome, resolverImo
                 </div>
                 <div className="text-right">
                   <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Parcela</p>
-                  <p className="mt-0.5 text-[10px] font-semibold" style={{ color: '#047857' }}>{parcela}</p>
+                  <p className="mt-0.5 text-[10px] font-semibold" style={{ color: '#000079' }}>{parcela}</p>
                 </div>
               </div>
             </div>
@@ -317,6 +318,7 @@ const KanbanCard = memo(function KanbanCard({ apolice, resolverNome, resolverImo
             </p>
             {(apolice?.fichas?.cep || apolice?.cep) && <p className="text-[9px] text-dark-muted font-mono">CEP: {apolice?.fichas?.cep || apolice?.cep}</p>}
             {apolice?.seguradora && <p className="text-[9px] text-dark-muted">Seguradora: {apolice.seguradora}</p>}
+            {apolice?.raw_data?.email_proprietario && <p className="text-[9px] text-dark-muted break-all">Email proprietário: {apolice.raw_data.email_proprietario}</p>}
             {apolice?.valor_parcela && <p className="text-[9px] text-dark-muted">Parcela: {parcela}</p>}
           </div>
         )}
@@ -520,12 +522,13 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
             <div className="grid grid-cols-1 xl:grid-cols-[300px_minmax(0,1fr)] gap-4">
               <div>
                 <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Imobiliária</label>
-                <select value={imobFiltro} onChange={event => setImobFiltro(event.target.value)} className="select text-sm">
-                  <option value="">Todas as imobiliárias</option>
-                  {grupos.map(grupo => (
-                    <option key={grupo.id} value={grupo.nome_canonico}>{grupo.nome_canonico}</option>
-                  ))}
-                </select>
+                <ImobiliariaSelect
+                  value={imobFiltro}
+                  onChange={setImobFiltro}
+                  placeholder="Todas as imobiliárias"
+                  allLabel="Todas as imobiliárias"
+                  className="text-sm"
+                />
               </div>
 
               <div>
@@ -670,7 +673,7 @@ function DadoCard({ label, value, mono = false, highlight = false, span2 = false
     <div className={`rounded-xl border border-dark-border/60 bg-dark-surface/50 px-3 py-2.5${span2 ? ' col-span-2' : ''}`}>
       <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-dark-muted mb-1">{label}</p>
       <p className={`text-xs truncate ${mono ? 'font-mono' : 'font-medium'} ${highlight ? 'font-bold' : ''}`}
-         style={highlight ? { color: '#047857' } : undefined}>
+         style={highlight ? { color: '#000079' } : undefined}>
         {value || '—'}
       </p>
     </div>
@@ -768,6 +771,9 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
       tipo_imovel: dadosExtraidos.tipo_imovel || null,
       cep: dadosExtraidos.cep || null,
       valor_aluguel: dadosExtraidos.valor_aluguel || null,
+      raw_data: {
+        email_proprietario: dadosExtraidos.email_proprietario || null,
+      },
     }
 
     const { data, error } = await criarApolice(payload)
@@ -828,13 +834,13 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
                       onClick={() => selecionarSeguradora(nome)}
                       className={`flex flex-col items-center gap-2.5 p-3 rounded-2xl border-2 transition-all ${
                         ativo
-                          ? 'border-[#047857] shadow-sm'
+                          ? 'border-brand-primary shadow-sm'
                           : 'border-dark-border hover:border-dark-border/80 bg-dark-surface2/20 hover:bg-dark-surface2/40'
                       }`}
-                      style={ativo ? { background: 'rgba(4,120,87,0.06)' } : undefined}
+                      style={ativo ? { background: 'rgb(var(--brand-primary-rgb) / 0.06)' } : undefined}
                     >
                       <SeguradoraBadge nome={nome} size="lg" showName={false} />
-                      <span className={`text-[10px] font-semibold text-center leading-tight ${ativo ? 'text-[#047857]' : 'text-dark-muted'}`}>
+                      <span className={`text-[10px] font-semibold text-center leading-tight ${ativo ? 'text-brand-primary' : 'text-dark-muted'}`}>
                         {nome.replace(' Seguros', '').replace(' Seguro', '')}
                       </span>
                     </button>
@@ -847,9 +853,9 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-dark-muted mb-2">Imobiliária</p>
               {imobSelecionada && (
-                <div className="flex items-center gap-2.5 mb-2 px-3 py-2 rounded-xl border-2 border-[#047857]" style={{ background: 'rgba(4,120,87,0.06)' }}>
+                <div className="flex items-center gap-2.5 mb-2 px-3 py-2 rounded-xl border-2 border-brand-primary" style={{ background: 'rgb(var(--brand-primary-rgb) / 0.06)' }}>
                   <Avatar name={imobSelecionada.nome_canonico} src={imobSelecionada.imagem_url || ''} size="sm" />
-                  <span className="text-xs font-semibold text-[#047857] truncate">{imobSelecionada.nome_canonico}</span>
+                  <span className="text-xs font-semibold text-brand-primary truncate">{imobSelecionada.nome_canonico}</span>
                   <button onClick={() => setImobiliaria('')} className="ml-auto text-dark-muted hover:text-dark-text">
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -874,15 +880,15 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
                       onClick={() => setImobiliaria(grupo.nome_canonico)}
                       className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all text-left ${
                         sel
-                          ? 'border-[#047857]/40 bg-[#047857]/5'
+                          ? 'border-brand-primary/40 bg-brand-primary/5'
                           : 'border-transparent hover:border-dark-border hover:bg-dark-surface2/40'
                       }`}
                     >
                       <Avatar name={grupo.nome_canonico} src={grupo.imagem_url || ''} size="sm" />
-                      <span className={`text-xs font-medium truncate flex-1 ${sel ? 'text-[#047857]' : 'text-dark-text'}`}>
+                      <span className={`text-xs font-medium truncate flex-1 ${sel ? 'text-brand-primary' : 'text-dark-text'}`}>
                         {grupo.nome_canonico}
                       </span>
-                      {sel && <span className="text-[10px] font-bold text-[#047857]">✓</span>}
+                      {sel && <span className="text-[10px] font-bold text-brand-primary">✓</span>}
                     </button>
                   )
                 })}
@@ -920,7 +926,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
                 onClick={() => fileInputRef.current?.click()}
                 className={`w-full flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2 border-dashed transition-all ${
                   pdfFile
-                    ? 'border-[#047857]/40'
+                    ? 'border-brand-primary/40'
                     : 'border-dark-border hover:border-dark-border/80 hover:bg-dark-surface2/30'
                 }`}
                 style={pdfFile ? { background: 'rgba(4,120,87,0.05)' } : undefined}
@@ -932,7 +938,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
                   </>
                 ) : pdfFile ? (
                   <>
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: '#047857' }}>
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: '#000079' }}>
                       <Upload className="w-5 h-5 text-white" />
                     </div>
                     <div className="text-center">
@@ -958,7 +964,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
                   type="button"
                   onClick={handleExtrair}
                   className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm transition-all text-white"
-                  style={{ background: '#047857' }}
+                  style={{ background: '#000079' }}
                 >
                   <RefreshCw className="w-4 h-4" />
                   Reprocessar PDF
@@ -978,6 +984,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-dark-muted mb-3">Dados Extraídos</p>
                 <div className="grid grid-cols-2 gap-2">
                   <DadoCard label="Locatário" value={dadosExtraidos.nome_locatario} />
+                  <DadoCard label="Email do proprietário" value={dadosExtraidos.email_proprietario} span2 />
                   <DadoCard label="Documento" value={dadosExtraidos.documento_locatario} mono />
                   <DadoCard label="Nº Apólice" value={dadosExtraidos.numero_apolice} mono />
                   <DadoCard label="Proposta" value={dadosExtraidos.numero_proposta} mono />

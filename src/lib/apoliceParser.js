@@ -35,6 +35,22 @@ function normalizeText(text) {
   return String(text || '').replace(/\s+/g, ' ').trim()
 }
 
+const EMAIL_RE = /([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i
+
+function extractOwnerEmail(text, sectionRegexes = []) {
+  for (const regex of sectionRegexes) {
+    const match = text.match(regex)
+    if (!match) continue
+    const start = typeof match.index === 'number' ? match.index : text.search(regex)
+    const snippet = start >= 0 ? text.slice(start, start + 420) : text
+    const email = snippet.match(EMAIL_RE)
+    if (email) return email[1].trim()
+  }
+
+  const generic = text.match(/\b(?:E-?MAIL|EMAIL)\b\s*:?\s*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i)
+  return generic ? generic[1].trim() : null
+}
+
 export async function extractPdfText(file) {
   const arrayBuffer = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
@@ -118,6 +134,13 @@ function parsePortoSeguro(text) {
     if (segurado) r.nome_proprietario = segurado[1].trim()
   }
 
+  const email = extractOwnerEmail(normalized, [
+    /DADOS?\s+DO\s+SEGURADO[\s\S]{0,260}?(?:E-?MAIL|EMAIL)[:\s]*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i,
+    /\bSEGURADO\b[\s\S]{0,260}?(?:E-?MAIL|EMAIL)[:\s]*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i,
+    /\bLOCADOR\b[\s\S]{0,260}?(?:E-?MAIL|EMAIL)[:\s]*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i,
+  ])
+  if (email) r.email_proprietario = email
+
   const celSegurado =
     normalized.match(/\b(?:CELULAR|TELEFONE|FONE)\b\s*:?\s*(\(?\d{2}\)?\s*\d{4,5}-?\d{4})/i) ||
     normalized.match(/\b(?:CELULAR|TELEFONE|FONE)\b[\s\S]{0,60}?(\(?\d{2}\)?\s*\d{4,5}-?\d{4})/i)
@@ -177,6 +200,13 @@ function parsePottencial(text) {
     r.nome_proprietario = locador[1].trim()
     if (locador[2] && !r.proprietario_documento) r.proprietario_documento = locador[2].trim()
   }
+
+  const email = extractOwnerEmail(normalized, [
+    /LOCADOR\s*(?:\(Segurado\))?[\s\S]{0,260}?(?:E-?MAIL|EMAIL)[:\s]*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i,
+    /PROPRIET[ÁA]RIO[\s\S]{0,260}?(?:E-?MAIL|EMAIL)[:\s]*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i,
+    /DADOS?\s+DO\s+SEGURADO[\s\S]{0,260}?(?:E-?MAIL|EMAIL)[:\s]*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i,
+  ])
+  if (email) r.email_proprietario = email
 
   const alug = normalized.match(/Aluguel\s+R\$\s*([\d.,]+)\s+R\$/i)
   if (alug) r.valor_aluguel = parseMoneyBR(alug[1])
@@ -361,6 +391,12 @@ function parseTokioMarineV3(text) {
     if (celulares[1]) r.celular_locatario = celulares[1]
   }
 
+  const email = extractOwnerEmail(page3Text, [
+    /Nome Social:[\s\S]{0,260}?(?:E-?MAIL|EMAIL)[:\s]*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i,
+    /PROPRIET[ÁA]RIO[\s\S]{0,260}?(?:E-?MAIL|EMAIL)[:\s]*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i,
+  ])
+  if (email) r.email_proprietario = email
+
   const premioTot = normalized.match(/Pr\S*mio L\S*quido Total R\$[:\s]+([\d.,]+)/i)
   if (premioTot) r.premio_liquido = parseMoneyBR(premioTot[1])
 
@@ -414,6 +450,14 @@ function parseTooSeguros(text) {
     normalized.match(/DADOS DO GARANTIDO[\s\S]{0,200}?\bCPF(?:\/CNPJ)?:\s*([\d./-]+)/i) ||
     normalized.match(/\bGarantido:\s*.+?\s+CPF(?:\/CNPJ)?:\s*([\d./-]+)/i)
   if (garantidoDoc) r.documento_locatario = garantidoDoc[1].trim()
+
+  const email = extractOwnerEmail(normalized, [
+    /DADOS DO SEGURADO[\s\S]{0,260}?(?:E-?MAIL|EMAIL)[:\s]*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i,
+    /\bSEGURADO\b[\s\S]{0,260}?(?:E-?MAIL|EMAIL)[:\s]*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i,
+    /\bLOCADOR\b[\s\S]{0,260}?(?:E-?MAIL|EMAIL)[:\s]*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i,
+    /\bGARANTIDO\b[\s\S]{0,260}?(?:E-?MAIL|EMAIL)[:\s]*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i,
+  ])
+  if (email) r.email_proprietario = email
 
   const localRisco = normalized.match(/Local do Risco:\s*(.+?)(?=\s+Bairro:|\s+Tipo de LOCA|$)/i)
   const bairro = normalized.match(/Bairro:\s*(.+?)(?=\s+Cidade:|$)/i)

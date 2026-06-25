@@ -20,6 +20,7 @@ const SIZE = {
   md: { dim: 'w-7 h-7', rounded: 'rounded-md', text: 'text-[11px]', nameText: 'text-xs' },
   lg: { dim: 'w-9 h-9', rounded: 'rounded-lg', text: 'text-sm', nameText: 'text-sm' },
   xl: { dim: 'w-14 h-14', rounded: 'rounded-xl', text: 'text-sm', nameText: 'text-sm' },
+  xxl: { dim: 'w-20 h-20', rounded: 'rounded-2xl', text: 'text-xl', nameText: 'text-base' },
 }
 
 const SKIP = new Set(['de', 'da', 'do', 'seguros', 'seguro', 's/a', 'sa', 'ltda', 'cia'])

@@ -31,6 +31,12 @@ const SIZES = {
     title: 'text-base',
     subtitle: 'text-sm',
   },
+  xxl: {
+    wrapper: 'gap-4',
+    logo: 'h-20 w-20 rounded-[24px]',
+    title: 'text-lg',
+    subtitle: 'text-sm',
+  },
 }
 
 export default function ImobiliariaIdentity({

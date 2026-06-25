@@ -37,19 +37,16 @@ async function fetchApolicesComissoesRows({ inicio, fim, imobiliaria, withStatus
     : rows
 }
 
-// Comissão Gerada no mês: soma de valor_comissao das apólices emitidas no período.
 export async function fetchComissaoGerada({ inicio, fim }) {
   const data = await fetchApolicesComissoesRows({ inicio, fim })
   return (data || []).reduce((sum, r) => sum + (toNumber(r.valor_comissao) || 0), 0)
 }
 
-// Quantidade de apólices emitidas no período.
 export async function fetchApolicesEmitidasCount({ inicio, fim }) {
   const data = await fetchApolicesComissoesRows({ inicio, fim })
   return data.length
 }
 
-// Parcelas de comissão (agenda) cujo mes_referencia cai no intervalo.
 export async function fetchRecebimentos({ inicio, fim }) {
   let q = supabase
     .from('comissoes_recebimentos')
@@ -62,18 +59,14 @@ export async function fetchRecebimentos({ inicio, fim }) {
   return data || []
 }
 
-// ── Produção (Fase 2) ─────────────────────────────────────────────────────────
-
 const STATUS_EMISSAO_PROD = ['emitida', 'enviada']
 const FILTRO_STATUS_APOLICE_PROD = 'status_apolice.in.(ativa,renovada),status_apolice.is.null'
 
-// Linhas do ledger para agregação de produção (base = emissão).
 export async function fetchProducaoLedger({ inicio, fim, imobiliaria } = {}) {
   const data = await fetchApolicesComissoesRows({ inicio, fim, imobiliaria })
   return data
 }
 
-// % de repasse salvo de cada imobiliária para um mês (1º dia do mês).
 export async function fetchPctImobiliarias({ mes }) {
   const { data, error } = await supabase
     .from('producao_comissao_imobiliaria')
@@ -85,7 +78,24 @@ export async function fetchPctImobiliarias({ mes }) {
   return map
 }
 
-// Upsert do % de uma imobiliária para um mês.
+export async function fetchPctImobiliariasAno({ ano }) {
+  const inicio = `${ano}-01-01`
+  const fim = `${ano}-12-31`
+  const { data, error } = await supabase
+    .from('producao_comissao_imobiliaria')
+    .select('imobiliaria, mes_referencia, pct_comissao')
+    .gte('mes_referencia', inicio)
+    .lte('mes_referencia', fim)
+  if (error) throw error
+  const map = {}
+  for (const r of data || []) {
+    const mes = r.mes_referencia
+    if (!map[mes]) map[mes] = {}
+    map[mes][r.imobiliaria] = r.pct_comissao
+  }
+  return map
+}
+
 export async function salvarPctImobiliaria({ imobiliaria, mes, pct, userId }) {
   const { error } = await supabase
     .from('producao_comissao_imobiliaria')
@@ -102,7 +112,6 @@ export async function salvarPctImobiliaria({ imobiliaria, mes, pct, userId }) {
   return error
 }
 
-// Lista de imobiliárias distintas presentes no ledger (para o seletor da Produção).
 export async function fetchImobiliariasDistintas() {
   const { data, error } = await supabase
     .from('apolices_comissoes')
@@ -112,43 +121,123 @@ export async function fetchImobiliariasDistintas() {
   return [...new Set((data || []).map(r => r.imobiliaria).filter(Boolean))].sort((a, b) => a.localeCompare(b))
 }
 
-// ── Faturas (Fase 3) ──────────────────────────────────────────────────────────
+async function fetchFaturasLedgerPage({ imobiliaria, from, to, withStatusApolice = true }) {
+  const selectFields = withStatusApolice
+    ? 'imobiliaria, valor_parcela, parcelamento, data_emissao, numero_apolice, nome_interessado, seguradora, apolice_id, status_emissao, status_apolice'
+    : 'imobiliaria, valor_parcela, parcelamento, data_emissao, numero_apolice, nome_interessado, seguradora, apolice_id, status_emissao'
 
-// Ledger paginado para o cálculo das faturas (sempre ao vivo).
+  let q = supabase
+    .from('apolices_comissoes')
+    .select(selectFields)
+    .in('status_emissao', STATUS_EMISSAO_PROD)
+    .range(from, to)
+
+  if (withStatusApolice) q = q.or(FILTRO_STATUS_APOLICE_PROD)
+  if (imobiliaria) q = q.eq('imobiliaria', imobiliaria)
+
+  const { data, error } = await q
+  if (error) {
+    if (withStatusApolice && isMissingColumnError(error, 'status_apolice')) {
+      return fetchFaturasLedgerPage({ imobiliaria, from, to, withStatusApolice: false })
+    }
+    throw error
+  }
+  return data || []
+}
+
 export async function fetchFaturasLedger({ imobiliaria } = {}) {
   const pageSize = 1000
   let all = []
   let from = 0
   while (true) {
-    let q = supabase
-      .from('apolices_comissoes')
-      .select('imobiliaria, valor_parcela, parcelamento, data_emissao, numero_apolice, nome_interessado, seguradora, apolice_id, status_emissao')
-      .in('status_emissao', STATUS_EMISSAO_PROD)
-      .range(from, from + pageSize - 1)
-    if (imobiliaria) q = q.eq('imobiliaria', imobiliaria)
-    const { data, error } = await q
-    if (error) throw error
-    all = all.concat(data || [])
+    const data = await fetchFaturasLedgerPage({ imobiliaria, from, to: from + pageSize - 1 })
+    all = all.concat(data)
     if (!data || data.length < pageSize) break
     from += pageSize
   }
   return all
 }
 
-// Status de pagamento das faturas de um mês (1º dia do mês).
+const FATURAS_STATUS_SELECT = 'imobiliaria, mes_referencia, status, data_pagamento, pago_por, observacao, valor_real_fatura, valor_fatura_calculado, pct_comissao, valor_a_pagar'
+const FATURAS_STATUS_SELECT_BASE = 'imobiliaria, mes_referencia, status, data_pagamento, pago_por, observacao'
+
 export async function fetchFaturasStatus({ mes }) {
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('faturas_imobiliaria')
-    .select('imobiliaria, status, data_pagamento, pago_por, observacao')
+    .select(FATURAS_STATUS_SELECT)
     .eq('mes_referencia', mes)
+  if (error && isMissingColumnError(error, 'valor_real_fatura')) {
+    const retry = await supabase
+      .from('faturas_imobiliaria')
+      .select(FATURAS_STATUS_SELECT_BASE)
+      .eq('mes_referencia', mes)
+    data = retry.data
+    error = retry.error
+  }
   if (error) throw error
   const map = {}
   for (const r of data || []) map[r.imobiliaria] = r
   return map
 }
 
-export async function marcarFaturaPaga({ imobiliaria, mes, userId, observacao }) {
-  const { error } = await supabase.from('faturas_imobiliaria').upsert(
+export async function fetchFaturasStatusAno({ ano }) {
+  const inicio = `${ano}-01-01`
+  const fim = `${ano}-12-31`
+  let { data, error } = await supabase
+    .from('faturas_imobiliaria')
+    .select(FATURAS_STATUS_SELECT)
+    .gte('mes_referencia', inicio)
+    .lte('mes_referencia', fim)
+  if (error && isMissingColumnError(error, 'valor_real_fatura')) {
+    const retry = await supabase
+      .from('faturas_imobiliaria')
+      .select(FATURAS_STATUS_SELECT_BASE)
+      .gte('mes_referencia', inicio)
+      .lte('mes_referencia', fim)
+    data = retry.data
+    error = retry.error
+  }
+  if (error) throw error
+  const map = {}
+  for (const r of data || []) {
+    const mes = r.mes_referencia
+    if (!map[mes]) map[mes] = {}
+    map[mes][r.imobiliaria] = r
+  }
+  return map
+}
+
+export async function salvarFaturaConferencia({ imobiliaria, mes, valorRealFatura, valorFatura, pct, valorAPagar, observacao }) {
+  let { error } = await supabase.from('faturas_imobiliaria').upsert(
+    {
+      imobiliaria,
+      mes_referencia: mes,
+      valor_real_fatura: valorRealFatura ?? null,
+      valor_fatura_calculado: valorFatura ?? null,
+      pct_comissao: pct ?? null,
+      valor_a_pagar: valorAPagar ?? null,
+      observacao: observacao || null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'imobiliaria,mes_referencia' },
+  )
+  if (error && isMissingColumnError(error, 'valor_real_fatura')) {
+    const retry = await supabase.from('faturas_imobiliaria').upsert(
+      {
+        imobiliaria,
+        mes_referencia: mes,
+        observacao: observacao || null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'imobiliaria,mes_referencia' },
+    )
+    error = retry.error
+  }
+  return error
+}
+
+export async function marcarFaturaPaga({ imobiliaria, mes, userId, observacao, valorRealFatura, valorFatura, pct, valorAPagar }) {
+  let { error } = await supabase.from('faturas_imobiliaria').upsert(
     {
       imobiliaria,
       mes_referencia: mes,
@@ -156,10 +245,29 @@ export async function marcarFaturaPaga({ imobiliaria, mes, userId, observacao })
       data_pagamento: new Date().toISOString().slice(0, 10),
       pago_por: userId || null,
       observacao: observacao || null,
+      valor_real_fatura: valorRealFatura ?? null,
+      valor_fatura_calculado: valorFatura ?? null,
+      pct_comissao: pct ?? null,
+      valor_a_pagar: valorAPagar ?? null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'imobiliaria,mes_referencia' },
   )
+  if (error && isMissingColumnError(error, 'valor_real_fatura')) {
+    const retry = await supabase.from('faturas_imobiliaria').upsert(
+      {
+        imobiliaria,
+        mes_referencia: mes,
+        status: 'pago',
+        data_pagamento: new Date().toISOString().slice(0, 10),
+        pago_por: userId || null,
+        observacao: observacao || null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'imobiliaria,mes_referencia' },
+    )
+    error = retry.error
+  }
   return error
 }
 

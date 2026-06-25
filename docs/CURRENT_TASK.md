@@ -2,59 +2,50 @@
 
 ## Responsavel Atual
 
-Claude
+Codex
 
 ## Pagina
 
-`src/pages/Financeiro/` — modulo financeiro (redesign)
+`src/pages/Financeiro/` - modulo financeiro (redesign)
 
 ## Objetivo
 
-Reestruturacao do modulo financeiro (Seguro Fianca) — **Fase 2: Producao**.
-Producao por imobiliaria (logo, nº apolices, premio, comissao gerada, recebida
-estimada, % de repasse editavel salvo por mes, valor a repassar) + pagina de
-detalhe por imobiliaria (quebra por seguradora com % participacao + grafico).
+Reestruturacao do modulo financeiro do Seguro Fianca para controlar comissoes,
+producao por imobiliaria/seguradora, faturas mensais, repasses e pagamento.
 
 ## Status
 
-Fase 1, Fase 2 e a **revisao de design** (Dashboard/Calendario/Ranking/Producao por
-selecao) concluidas (codigo). 13/13 testes passando; build verde.
-**Pendente: aplicar as migracoes no Supabase** (42 e 45) + smoke test manual.
+Fases 1, 2 e 3 concluidas no codigo.
 
-## Revisao de design (mais recente)
+- Fase 1: dashboard, comissao gerada, recebida estimada e agenda.
+- Fase 2: producao por imobiliaria, ranking, calendario, seguradoras e percentual de repasse salvo por mes.
+- Fase 3: faturas por competencia, calendario anual de faturas, detalhe por imobiliaria, valor real informado, pagamento/reabertura e navegacao para apolice preservando estado.
 
-- Visao Geral virou **Dashboard**: KPIs do mes (Producao=Σpremio, Comissao Gerada,
-  Recebida Estimada, Apolices) + **calendario anual** (`CalendarioAno.jsx`) + **ranking
-  de imobiliarias com fotos** por producao.
-- Producao virou **selecao**: escolher imobiliaria (Select ou via ranking) + mes →
-  producao do mes, % repasse editavel salvo, quebra por seguradora, grafico.
-  `FinanceiroProducaoDetalhe.jsx` foi absorvido (rota `:imobiliaria` pre-seleciona).
-- Producao = **Σ premio_total** dos seguros emitidos.
-- Helpers novos: `montarCalendarioAno`, `rankingImobiliarias` (testados).
+Validacao local mais recente:
 
-## Arquivos alterados (Fase 2)
+- `npm.cmd test` - 17 testes passando.
+- `npm.cmd run build` - build verde.
+- `npm.cmd run check:page-contexts` - falha apenas por pendencias pre-existentes fora de Financeiro: `src/pages/auto/*` e `src/pages/comercial/GestaoComercial.jsx`.
 
-- `supabase/45_producao_comissao_imobiliaria.sql` — criado (% por imobiliaria/mes, RLS admin-only)
-- `src/lib/financeiroProducaoCalc.js` (+ `.test.mjs`, node --test) — agregacoes puras
-- `src/lib/imobiliariasLogos.js` — resolver de logo/% default por nome/alias
-- `src/lib/financeiro.js` — fetchProducaoLedger, fetchPctImobiliarias, salvarPctImobiliaria
-- `src/pages/Financeiro/EvolucaoChart.jsx` — grafico de evolucao (recharts)
-- `src/pages/Financeiro/FinanceiroProducao.jsx` — lista por imobiliaria (% editavel)
-- `src/pages/Financeiro/FinanceiroProducaoDetalhe.jsx` — detalhe por seguradora
-- `src/pages/Financeiro/Financeiro.jsx` — aba Producao habilitada
-- `src/App.jsx` — rotas `producao` e `producao/:imobiliaria`
-- Docs: spec atualizado (4.4 + Fase 2/3); plano `2026-06-25-financeiro-fase2-producao.md`
+## Banco pendente
 
-## Proximo Passo
+Aplicar no Supabase SQL Editor, em ordem:
 
-1. **Aplicar no Supabase SQL Editor (em ordem):** `42_financeiro_recebimentos.sql` e
-   `45_producao_comissao_imobiliaria.sql`. Rodar verificacoes do plano da Fase 1.
-2. Smoke test: login admin → `/financeiro` (Visao Geral) e `/financeiro/producao`
-   (editar %, abrir detalhe de imobiliaria).
-3. **Fase 3 — Faturas** (geracao mensal por competencia, lista+detalhe, navegacao
-   fatura↔apolice, pagamento). O % de repasse ja unificado vem da Fase 2.
+1. `supabase/42_financeiro_recebimentos.sql`
+2. `supabase/45_producao_comissao_imobiliaria.sql`
+3. `supabase/46_faturas_imobiliaria.sql`
+4. `supabase/47_faturas_imobiliaria_conferencia.sql`
+
+## Smoke test pendente
+
+Com usuario admin:
+
+1. Abrir `/financeiro` e conferir KPIs, calendario anual e ranking.
+2. Abrir `/financeiro/producao`, selecionar imobiliaria/mes e salvar percentual.
+3. Abrir `/financeiro/faturas`, selecionar mes no calendario, informar valor real, marcar pago/reabrir.
+4. Abrir detalhe da fatura, navegar para uma apolice e voltar preservando mes/estado.
 
 ## Observacao
 
-Commits `t2`/`t3` ("setor financeiro") foram feitos em paralelo por outro autor na
-`main`, em arquivos diferentes (apolices/fichas/layout/css) — sem conflito com a Fase 2.
+O modulo tolera leitura de faturas mesmo antes da migracao 47; os campos novos de
+conferencia so persistem apos a migracao ser aplicada.

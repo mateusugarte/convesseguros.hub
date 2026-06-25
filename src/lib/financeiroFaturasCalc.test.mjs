@@ -27,13 +27,27 @@ test('montarFaturasMes agrupa por imobiliária, soma parcelas e aplica %', () =>
     rows,
     mesRef: '2026-03-01',
     pctMap: { Alpha: 10, Beta: 20 },
-    statusMap: { Alpha: { status: 'pago', data_pagamento: '2026-03-02' } },
+    statusMap: {
+      Alpha: {
+        status: 'pago',
+        data_pagamento: '2026-03-02',
+        valor_real_fatura: 650,
+        valor_fatura_calculado: 500,
+        pct_comissao: 10,
+        valor_a_pagar: 50,
+        observacao: 'conferido',
+      },
+    },
   })
   assert.equal(out.length, 2)
   assert.equal(out[0].imobiliaria, 'Alpha')
   assert.equal(out[0].valorFatura, 500)
   assert.equal(out[0].valorAPagar, 50)
   assert.equal(out[0].status, 'pago')
+  assert.equal(out[0].valorRealFatura, 650)
+  assert.equal(out[0].valorFaturaSnapshot, 500)
+  assert.equal(out[0].valorAPagarSnapshot, 50)
+  assert.equal(out[0].observacao, 'conferido')
   assert.equal(out[1].imobiliaria, 'Beta')
   assert.equal(out[1].valorFatura, 100)
   assert.equal(out[1].valorAPagar, 20)

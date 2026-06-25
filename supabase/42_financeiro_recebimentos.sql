@@ -59,7 +59,11 @@ DECLARE
   v_comissao numeric;
   v_base date;
 BEGIN
-  -- Mantém status_apolice atualizado no ledger (linha criada pelo trigger tg_sync_apolice_comissao)
+  -- Mantém status_apolice atualizado no ledger (linha criada pelo trigger tg_sync_apolice_comissao).
+  -- DEPENDÊNCIA DE ORDEM: triggers FOR EACH ROW do mesmo tipo disparam em ordem
+  -- alfabética de nome. tg_sync_apolice_comissao ('c') roda ANTES de
+  -- tg_sync_apolice_recebimentos ('r'), garantindo que a linha do ledger já exista
+  -- aqui. Se algum desses triggers for renomeado, este UPDATE vira no-op silencioso.
   UPDATE public.apolices_comissoes
      SET status_apolice = COALESCE(NEW.status_apolice, 'ativa'),
          updated_at = NOW()

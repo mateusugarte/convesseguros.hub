@@ -307,7 +307,7 @@ export default function Layout() {
   }
 
   return (
-    <div className={`relative flex min-h-[100dvh] overflow-hidden ${shellClassName} ${!isMobile ? 'lg:gap-4' : ''}`}>
+    <div className={`relative flex h-[100dvh] min-h-[100dvh] overflow-hidden ${shellClassName} ${!isMobile ? 'lg:gap-4' : ''}`}>
       {isMobile && sidebarOpen && (
           <div
             className="fixed inset-0 z-[300]"
@@ -323,7 +323,7 @@ export default function Layout() {
       <aside
         className={`shell-sidebar ${isMobile
           ? `fixed left-0 top-0 h-full z-[400] transition-[width,transform] duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
-          : 'relative z-[200] h-full shrink-0 transition-[width] duration-200'
+          : 'sticky top-0 z-[200] h-[100dvh] shrink-0 transition-[width,box-shadow,transform] duration-300'
         } flex flex-col ${sidebarWidth}`}
         style={shellSidebarStyle}
       >
@@ -389,7 +389,7 @@ export default function Layout() {
                       <button
                         onClick={() => toggleExpand(item.to)}
                         title={(!sidebarOpen && !isMobile) ? item.label : undefined}
-                        className={`shell-nav-item w-full flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-dark-text pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`}
+                        className={`shell-nav-item w-full flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-250 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-dark-text pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`}
                       >
                         <Icon className="w-4 h-4 flex-shrink-0" />
                         {(sidebarOpen || isMobile) && (
@@ -448,7 +448,7 @@ export default function Layout() {
                     end={item.end}
                     title={(!sidebarOpen && !isMobile) ? item.label : undefined}
                     className={({ isActive }) =>
-                      `shell-nav-item flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-dark-text pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60 hover:translate-x-0.5 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`
+                      `shell-nav-item flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-250 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-dark-text pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60 hover:translate-x-0.5 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`
                     }
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
@@ -505,7 +505,7 @@ export default function Layout() {
         )}
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
+      <div className="flex min-w-0 min-h-0 flex-1 flex-col px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
         {!hideWorkspaceTopbar && (
           <header className="shell-topbar sticky top-3 z-[300] h-16 flex items-center justify-between px-5 flex-shrink-0 topbar-glass rounded-[28px]" style={shellTopbarStyle}>
           <div className="flex items-center gap-3">
@@ -697,7 +697,7 @@ export default function Layout() {
           </header>
         )}
 
-        <main className={`flex-1 overflow-y-auto bg-transparent ${hideWorkspaceTopbar ? 'pt-0' : 'pt-4'}`}>
+        <main className={`flex-1 min-h-0 overflow-y-auto overscroll-contain bg-transparent ${hideWorkspaceTopbar ? 'pt-0' : 'pt-4'}`}>
           <div className="mx-auto w-full min-w-0 max-w-[1720px] pb-20">
             <PageTransition>
               <Outlet />

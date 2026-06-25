@@ -38,6 +38,7 @@ html.dark {
     background: transparent;
     min-height: 100dvh;
     overflow-x: hidden;
+    overflow-y: hidden;
   }
 
   h1, h2, h3, h4, .font-heading {
@@ -1757,6 +1758,9 @@ html.dark .skeleton-surface {
 .shell-sidebar {
   position: relative;
   isolation: isolate;
+  overflow: hidden;
+  border-right: 1px solid var(--shell-sidebar-border);
+  box-shadow: var(--shell-sidebar-shadow);
 }
 
 .shell-sidebar::before {
@@ -1766,6 +1770,19 @@ html.dark .skeleton-surface {
   background:
     radial-gradient(circle at 12% 10%, var(--shell-ambient-top), transparent 34%),
     radial-gradient(circle at 88% 92%, var(--shell-ambient-bottom), transparent 28%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.shell-sidebar::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  right: 0;
+  bottom: 12px;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(255,255,255,0.48), transparent);
+  opacity: 0.55;
   pointer-events: none;
   z-index: 0;
 }
@@ -1791,7 +1808,7 @@ html.dark .skeleton-surface {
     position: relative;
     overflow: hidden;
     border-radius: 18px;
-    transition: transform 180ms ease, background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+    transition: transform 220ms ease, background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease;
     will-change: transform;
   }
 
@@ -1814,10 +1831,15 @@ html.dark .skeleton-surface {
     transform: scaleY(1);
   }
 
+  .shell-nav-item:hover {
+    transform: translateX(2px);
+  }
+
   .shell-nav-item-active {
     background: var(--shell-nav-active-bg);
     border: 1px solid var(--shell-nav-active-border);
     box-shadow: 0 8px 18px rgb(var(--brand-primary-rgb) / 0.10);
+    transform: translateX(1px);
   }
 
   .shell-nav-item-active::before {
@@ -1830,7 +1852,7 @@ html.dark .skeleton-surface {
     border-radius: 14px;
     position: relative;
     overflow: hidden;
-    transition: transform 160ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    transition: transform 180ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
   }
 
   .shell-subnav-item::before {
@@ -1859,9 +1881,24 @@ html.dark .skeleton-surface {
   transform: translateX(1px);
 }
 
-  .shell-subnav-item-active::before {
+.shell-subnav-item-active::before {
     opacity: 1;
     transform: translateY(-50%) scale(1);
+}
+
+.shell-sidebar-card {
+  animation: shell-card-in 240ms var(--ease-decel, ease-out) both;
+}
+
+@keyframes shell-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .ops-shell {

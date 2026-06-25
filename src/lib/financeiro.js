@@ -94,3 +94,13 @@ export async function salvarPctImobiliaria({ imobiliaria, mes, pct, userId }) {
     )
   return error
 }
+
+// Lista de imobiliárias distintas presentes no ledger (para o seletor da Produção).
+export async function fetchImobiliariasDistintas() {
+  const { data, error } = await supabase
+    .from('apolices_comissoes')
+    .select('imobiliaria')
+    .not('imobiliaria', 'is', null)
+  if (error) throw error
+  return [...new Set((data || []).map(r => r.imobiliaria).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+}

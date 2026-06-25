@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { PageHeader, MetricCard, DataCard, EmptyState } from '../../components/ui'
 import { Select } from '../../components/ui/Select'
 import ImobiliariaIdentity from '../../components/ImobiliariaIdentity'
+import SeguradoraBadge from '../../components/SeguradoraBadge'
 import EvolucaoChart from './EvolucaoChart'
 import { useAuth } from '../../contexts/AuthContext'
-import { fetchProducaoLedger, fetchPctImobiliarias, salvarPctImobiliaria } from '../../lib/financeiro'
+import {
+  fetchProducaoLedger, fetchPctImobiliarias, salvarPctImobiliaria, fetchImobiliariasDistintas,
+} from '../../lib/financeiro'
+import { agruparPorSeguradora, agruparEvolucaoPorMes } from '../../lib/financeiroProducaoCalc'
 import { fetchImobiliariasCatalogMap, resolveImobiliaria } from '../../lib/imobiliariasLogos'
-import { agruparPorImobiliaria, agruparEvolucaoPorMes } from '../../lib/financeiroProducaoCalc'
 import { primeiroDiaMes, addMeses } from '../../lib/financeiroCalc'
 import { formatMoneyBR } from '../../lib/apolices'
 import { parseDecimalBR } from '../../lib/numberInput'
-import { Building2, Coins, TrendingUp, Percent } from 'lucide-react'
+import { Building2, Coins, TrendingUp, FileText, Percent, Shield } from 'lucide-react'
 
 const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 const EVOLUCAO_MESES = 6
@@ -24,88 +27,96 @@ function rangeMes(ano, mes) {
 
 export default function FinanceiroProducao() {
   const navigate = useNavigate()
+  const { imobiliaria: imobParam } = useParams()
+  const selecionada = imobParam ? decodeURIComponent(imobParam) : ''
   const { user } = useAuth()
   const agora = new Date()
   const [ano, setAno] = useState(agora.getFullYear())
   const [mes, setMes] = useState(agora.getMonth() + 1)
+  const [opcoes, setOpcoes] = useState([])
   const [rows, setRows] = useState([])
   const [evolucaoRows, setEvolucaoRows] = useState([])
-  const [pctMap, setPctMap] = useState({})
   const [catalogo, setCatalogo] = useState(null)
-  const [edits, setEdits] = useState({})
-  const [loading, setLoading] = useState(true)
+  const [pct, setPct] = useState('')
+  const [pctSalvo, setPctSalvo] = useState(null)
+  const [loading, setLoading] = useState(false)
 
   const [inicio, fim] = useMemo(() => rangeMes(ano, mes), [ano, mes])
   const mesRef = useMemo(() => primeiroDiaMes(inicio), [inicio])
 
+  // Opções do seletor + catálogo (uma vez)
   useEffect(() => {
+    let mounted = true
+    Promise.all([fetchImobiliariasDistintas(), fetchImobiliariasCatalogMap()])
+      .then(([nomes, cat]) => {
+        if (!mounted) return
+        setOpcoes(nomes)
+        setCatalogo(cat)
+      }).catch(() => {})
+    return () => { mounted = false }
+  }, [])
+
+  // Dados da imobiliária selecionada
+  useEffect(() => {
+    if (!selecionada) { setRows([]); setEvolucaoRows([]); return }
     let mounted = true
     setLoading(true)
     const desdeEvolucao = addMeses(mesRef, -(EVOLUCAO_MESES - 1))
     Promise.all([
-      fetchProducaoLedger({ inicio, fim }),
-      fetchProducaoLedger({ inicio: desdeEvolucao, fim }),
+      fetchProducaoLedger({ inicio, fim, imobiliaria: selecionada }),
+      fetchProducaoLedger({ inicio: desdeEvolucao, fim, imobiliaria: selecionada }),
       fetchPctImobiliarias({ mes: mesRef }),
-      fetchImobiliariasCatalogMap(),
-    ]).then(([prod, evol, pct, cat]) => {
+    ]).then(([prod, evol, pctMap]) => {
       if (!mounted) return
       setRows(prod)
       setEvolucaoRows(evol)
-      setPctMap(pct)
-      setCatalogo(cat)
-      setEdits({})
+      const salvo = pctMap[selecionada]
+      setPctSalvo(salvo ?? null)
+      const meta = resolveImobiliaria(catalogo, selecionada)
+      setPct(salvo != null ? String(salvo) : (meta?.pctComissao != null ? String(meta.pctComissao) : ''))
       setLoading(false)
     }).catch(() => { if (mounted) setLoading(false) })
     return () => { mounted = false }
-  }, [inicio, fim, mesRef])
+  }, [selecionada, inicio, fim, mesRef, catalogo])
 
-  const imobiliarias = useMemo(() => agruparPorImobiliaria(rows), [rows])
+  const seguradoras = useMemo(() => agruparPorSeguradora(rows), [rows])
   const evolucao = useMemo(
     () => agruparEvolucaoPorMes(evolucaoRows, { desde: addMeses(mesRef, -(EVOLUCAO_MESES - 1)), meses: EVOLUCAO_MESES }),
     [evolucaoRows, mesRef],
   )
-  const totalComissaoGerada = useMemo(() => imobiliarias.reduce((s, i) => s + i.comissaoGerada, 0), [imobiliarias])
-  const totalPremio = useMemo(() => imobiliarias.reduce((s, i) => s + i.premioTotal, 0), [imobiliarias])
-
-  function pctAtual(imob) {
-    if (edits[imob] !== undefined) return edits[imob]
-    if (pctMap[imob] !== undefined && pctMap[imob] !== null) return String(pctMap[imob])
-    const meta = resolveImobiliaria(catalogo, imob)
-    return meta?.pctComissao != null ? String(meta.pctComissao) : ''
-  }
-
-  function valorRepassar(imob, comissaoGerada) {
-    const pct = parseDecimalBR(pctAtual(imob))
-    return pct != null ? (pct / 100) * comissaoGerada : 0
-  }
-
-  async function salvarPct(imob) {
-    const raw = edits[imob]
-    if (raw === undefined) return
-    const pct = parseDecimalBR(raw)
-    const err = await salvarPctImobiliaria({ imobiliaria: imob, mes: mesRef, pct, userId: user?.id })
-    if (!err) setPctMap(prev => ({ ...prev, [imob]: pct }))
-  }
-
+  const producao = useMemo(() => seguradoras.reduce((s, x) => s + x.premio, 0), [seguradoras])
+  const comissaoGerada = useMemo(() => seguradoras.reduce((s, x) => s + x.comissao, 0), [seguradoras])
+  const valorRepassar = (() => {
+    const p = parseDecimalBR(pct)
+    return p != null ? (p / 100) * comissaoGerada : 0
+  })()
+  const meta = resolveImobiliaria(catalogo, selecionada)
   const mesLabel = `${MESES_ABBR[mes - 1]} ${ano}`
+
+  async function salvarPct() {
+    const p = parseDecimalBR(pct)
+    if (p === pctSalvo) return
+    const err = await salvarPctImobiliaria({ imobiliaria: selecionada, mes: mesRef, pct: p, userId: user?.id })
+    if (!err) setPctSalvo(p)
+  }
 
   return (
     <div className="space-y-5">
       <PageHeader
         eyebrow="Financeiro · Produção"
         title="Produção por imobiliária"
-        description="Produção emitida no mês por imobiliária, com o percentual de repasse aplicado sobre a comissão gerada."
-        stats={(
-          <>
-            <MetricCard label="Comissão Gerada" value={formatMoneyBR(totalComissaoGerada)} hint={mesLabel} tone="secondary" icon={<TrendingUp className="h-4 w-4" />} />
-            <MetricCard label="Prêmio Total" value={formatMoneyBR(totalPremio)} hint={mesLabel} tone="accent" icon={<Coins className="h-4 w-4" />} />
-            <MetricCard label="Imobiliárias" value={imobiliarias.length} hint="com produção no mês" tone="success" icon={<Building2 className="h-4 w-4" />} />
-          </>
-        )}
+        description="Selecione a imobiliária e o mês. Produção é a soma do prêmio total dos seguros emitidos."
+        actions={selecionada ? (<ImobiliariaIdentity nome={selecionada} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="lg" />) : null}
       />
 
-      <DataCard title="Período" subtitle="Selecione o mês">
+      <DataCard title="Seleção" subtitle="Imobiliária e mês">
         <div className="flex flex-wrap items-center gap-3">
+          <Select
+            value={selecionada}
+            onChange={v => navigate(v ? `/financeiro/producao/${encodeURIComponent(v)}` : '/financeiro/producao')}
+            options={[{ value: '', label: 'Selecione a imobiliária...' }, ...opcoes.map(n => ({ value: n, label: n }))]}
+            className="min-w-[260px]"
+          />
           <Select
             value={String(ano)}
             onChange={v => setAno(Number(v))}
@@ -126,61 +137,73 @@ export default function FinanceiroProducao() {
         </div>
       </DataCard>
 
-      <DataCard title="Evolução" subtitle={`Comissão gerada nos últimos ${EVOLUCAO_MESES} meses`}>
-        <EvolucaoChart data={evolucao} />
-      </DataCard>
-
-      <DataCard title="Imobiliárias" subtitle="Clique para ver o detalhe por seguradora">
-        {loading ? (
-          <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
-        ) : imobiliarias.length === 0 ? (
-          <EmptyState title="Sem produção no mês" description="Nenhuma apólice emitida no período selecionado." icon={<Building2 className="h-6 w-6" />} />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="table-table text-sm">
-              <thead className="table-thead">
-                <tr>
-                  {['Imobiliária', 'Apólices', 'Prêmio', 'Comissão gerada', 'Recebida estimada', '% repasse', 'A repassar'].map(h => (
-                    <th key={h} className="th whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-dark-border">
-                {imobiliarias.map(item => {
-                  const meta = resolveImobiliaria(catalogo, item.imobiliaria)
-                  return (
-                    <tr key={item.imobiliaria} className="hover:bg-dark-surface2/40">
-                      <td className="td">
-                        <button onClick={() => navigate(`/financeiro/producao/${encodeURIComponent(item.imobiliaria)}`)} className="text-left">
-                          <ImobiliariaIdentity nome={item.imobiliaria} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="sm" />
-                        </button>
-                      </td>
-                      <td className="td font-mono text-xs">{item.qtd}</td>
-                      <td className="td font-mono text-xs">{formatMoneyBR(item.premioTotal)}</td>
-                      <td className="td font-mono text-xs">{formatMoneyBR(item.comissaoGerada)}</td>
-                      <td className="td font-mono text-xs">{formatMoneyBR(item.comissaoRecebidaEstimada)}</td>
-                      <td className="td">
-                        <div className="flex items-center gap-1">
-                          <input
-                            value={pctAtual(item.imobiliaria)}
-                            onChange={e => setEdits(prev => ({ ...prev, [item.imobiliaria]: e.target.value }))}
-                            onBlur={() => salvarPct(item.imobiliaria)}
-                            inputMode="decimal"
-                            className="w-16 rounded-lg border border-dark-border bg-dark-surface2 px-2 py-1 text-right text-xs text-dark-text focus:border-brand-secondary focus:outline-none"
-                            placeholder="0"
-                          />
-                          <Percent className="h-3 w-3 text-dark-muted" />
-                        </div>
-                      </td>
-                      <td className="td font-mono text-xs font-semibold text-emerald-400">{formatMoneyBR(valorRepassar(item.imobiliaria, item.comissaoGerada))}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+      {!selecionada ? (
+        <DataCard title="Produção">
+          <EmptyState title="Selecione uma imobiliária" description="Escolha uma imobiliária no seletor acima para ver a produção do mês." icon={<Building2 className="h-6 w-6" />} />
+        </DataCard>
+      ) : (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <MetricCard label="Produção" value={formatMoneyBR(producao)} hint={mesLabel} tone="accent" icon={<Coins className="h-4 w-4" />} />
+            <MetricCard label="Comissão gerada" value={formatMoneyBR(comissaoGerada)} hint={mesLabel} tone="secondary" icon={<TrendingUp className="h-4 w-4" />} />
+            <MetricCard label="Apólices" value={rows.length} hint={mesLabel} tone="success" icon={<FileText className="h-4 w-4" />} />
+            <MetricCard label="A repassar" value={formatMoneyBR(valorRepassar)} hint="% × comissão gerada" tone="warning" icon={<Percent className="h-4 w-4" />} />
           </div>
-        )}
-      </DataCard>
+
+          <DataCard title="Repasse da imobiliária" subtitle="Percentual sobre a comissão gerada, salvo para o mês">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1">
+                <input
+                  value={pct}
+                  onChange={e => setPct(e.target.value)}
+                  onBlur={salvarPct}
+                  inputMode="decimal"
+                  className="w-20 rounded-lg border border-dark-border bg-dark-surface2 px-2 py-1.5 text-right text-sm text-dark-text focus:border-brand-secondary focus:outline-none"
+                  placeholder="0"
+                />
+                <Percent className="h-4 w-4 text-dark-muted" />
+              </div>
+              <span className="text-sm text-dark-muted">→ a repassar</span>
+              <span className="text-sm font-semibold text-emerald-400">{formatMoneyBR(valorRepassar)}</span>
+            </div>
+          </DataCard>
+
+          <DataCard title="Evolução" subtitle={`Comissão gerada nos últimos ${EVOLUCAO_MESES} meses`}>
+            <EvolucaoChart data={evolucao} />
+          </DataCard>
+
+          <DataCard title="Por seguradora" subtitle="Quebra da produção do mês por seguradora">
+            {loading ? (
+              <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
+            ) : seguradoras.length === 0 ? (
+              <EmptyState title="Sem produção no mês" description="Nenhuma apólice emitida no período para esta imobiliária." icon={<Shield className="h-6 w-6" />} />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="table-table text-sm">
+                  <thead className="table-thead">
+                    <tr>
+                      {['Seguradora', 'Apólices', 'Prêmio', 'Comissão', 'Participação'].map(h => (
+                        <th key={h} className="th whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-dark-border">
+                    {seguradoras.map(item => (
+                      <tr key={item.seguradora}>
+                        <td className="td"><SeguradoraBadge nome={item.seguradora} size="md" /></td>
+                        <td className="td font-mono text-xs">{item.qtd}</td>
+                        <td className="td font-mono text-xs">{formatMoneyBR(item.premio)}</td>
+                        <td className="td font-mono text-xs">{formatMoneyBR(item.comissao)}</td>
+                        <td className="td font-mono text-xs">{item.pctParticipacao}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </DataCard>
+        </>
+      )}
     </div>
   )
 }

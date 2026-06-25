@@ -250,3 +250,38 @@ producao_comissao_imobiliaria (
 - Conciliação bancária real / integração com extrato.
 - Exportação PDF/Excel das faturas (pode virar fase futura).
 - Seguro incêndio como produto separado (entra apenas como componente do "valor real").
+
+## 11. Revisão de design — Dashboard / Calendário / Ranking / Produção por seleção
+
+Revisão das telas das Fases 1 e 2 (decidida em 2026-06-25). Substitui as listas por
+um dashboard com calendário e ranking, e troca a Produção em lista por seleção.
+
+### Definições
+
+- **Produção = Σ `premio_total`** de todas as apólices emitidas (base por emissão).
+  Este é o indicador-título; comissão gerada/recebida são secundários.
+- Calendário aplica-se à **Visão Geral** (calendário anual) e às **Faturas** (Fase 3).
+
+### Visão Geral (vira Dashboard)
+
+- Seletor de **ano**.
+- **KPIs do mês selecionado:** Produção (Σ prêmio), Comissão Gerada, Recebida Estimada, Apólices.
+- **Calendário anual:** grade de 12 meses; cada célula mostra a Produção (Σ prêmio) e a
+  comissão do mês; o mês selecionado fica destacado; clicar numa célula seleciona o mês
+  (atualiza KPIs + ranking). Substitui a agenda em lista.
+- **Ranking de imobiliárias** do mês selecionado, com **foto/logo**, ordenado por Produção
+  (Σ prêmio). Clicar numa imobiliária abre a Produção dela (`/financeiro/producao/:imobiliaria`).
+
+### Produção (vira seleção, não lista)
+
+- Aba `/financeiro/producao`: **Select de imobiliária** + seletor de mês. Ao escolher a
+  imobiliária, mostra a **produção do mês** (Σ prêmio total), a quebra por seguradora
+  (logos + % de participação) e o **% de repasse editável salvo por mês** + valor a repassar.
+- A rota `/financeiro/producao/:imobiliaria` renderiza a mesma página com a imobiliária
+  pré-selecionada (usada pelo clique no ranking). A página de detalhe separada é absorvida.
+
+### Pure/UI
+
+- `financeiroProducaoCalc.js`: `montarCalendarioAno` (mescla ledger + recebimentos em 12 meses)
+  e `rankingImobiliarias` (ordena por prêmio). `CalendarioAno.jsx` (componente de grade).
+- `agruparPorImobiliaria` passa a ser ordenado/exibido por **prêmio** (produção).

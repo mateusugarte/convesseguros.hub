@@ -37,6 +37,26 @@ async function fetchApolicesComissoesRows({ inicio, fim, imobiliaria, withStatus
     : rows
 }
 
+async function fetchApolicesDiretasRows({ inicio, fim, imobiliaria } = {}) {
+  let q = supabase
+    .from('apolices')
+    .select('id, imobiliaria, seguradora, premio_total, valor_producao, valor_comissao, parcelamento, data_emissao, status_emissao')
+    .in('status_emissao', STATUS_EMISSAO)
+
+  if (inicio) q = q.gte('data_emissao', inicio)
+  if (fim) q = q.lte('data_emissao', fim)
+  if (imobiliaria) q = q.eq('imobiliaria', imobiliaria)
+
+  const { data, error } = await q
+  if (error) throw error
+
+  return (data || []).map(row => ({
+    ...row,
+    premio_total: row.premio_total ?? row.valor_producao ?? null,
+    comissao_mensal: row.comissao_mensal ?? ((Number(row.valor_comissao) || 0) / Math.max(Number(row.parcelamento) || 1, 1)),
+  }))
+}
+
 export async function fetchComissaoGerada({ inicio, fim }) {
   const data = await fetchApolicesComissoesRows({ inicio, fim })
   return (data || []).reduce((sum, r) => sum + (toNumber(r.valor_comissao) || 0), 0)
@@ -56,7 +76,35 @@ export async function fetchRecebimentos({ inicio, fim }) {
   if (fim) q = q.lte('mes_referencia', fim)
   const { data, error } = await q
   if (error) throw error
-  return data || []
+  if ((data || []).length > 0) return data || []
+
+  const apolices = await fetchApolicesDiretasRows({ inicio, fim })
+  const fallback = []
+  for (const ap of apolices) {
+    const parcelas = Math.max(1, Number(ap.parcelamento) || 1)
+    const valorComissao = toNumber(ap.valor_comissao) || 0
+    if (!valorComissao) continue
+    const base = ap.data_emissao ? new Date(ap.data_emissao) : null
+    if (!base || Number.isNaN(base.getTime())) continue
+
+    const parcelaBase = Math.round((valorComissao / parcelas) * 100) / 100
+    for (let n = 1; n <= parcelas; n++) {
+      const ref = new Date(base.getFullYear(), base.getMonth() + n, 1)
+      const valorPrevisto = n < parcelas
+        ? parcelaBase
+        : Math.round((valorComissao - parcelaBase * (parcelas - 1)) * 100) / 100
+      fallback.push({
+        mes_referencia: ref.toISOString().slice(0, 10),
+        valor_previsto: valorPrevisto,
+        numero_parcela: n,
+        total_parcelas: parcelas,
+        seguradora: ap.seguradora || null,
+        imobiliaria: ap.imobiliaria || null,
+        apolice_id: ap.id || null,
+      })
+    }
+  }
+  return fallback
 }
 
 const STATUS_EMISSAO_PROD = ['emitida', 'enviada']
@@ -64,7 +112,8 @@ const FILTRO_STATUS_APOLICE_PROD = 'status_apolice.in.(ativa,renovada),status_ap
 
 export async function fetchProducaoLedger({ inicio, fim, imobiliaria } = {}) {
   const data = await fetchApolicesComissoesRows({ inicio, fim, imobiliaria })
-  return data
+  if (data.length > 0) return data
+  return fetchApolicesDiretasRows({ inicio, fim, imobiliaria })
 }
 
 export async function fetchPctImobiliarias({ mes }) {
@@ -113,8 +162,13 @@ export async function salvarPctImobiliaria({ imobiliaria, mes, pct, userId }) {
 }
 
 export async function fetchImobiliariasDistintas() {
+  const ledger = await fetchApolicesComissoesRows({})
+  if (ledger.length > 0) {
+    return [...new Set(ledger.map(r => r.imobiliaria).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+  }
+
   const { data, error } = await supabase
-    .from('apolices_comissoes')
+    .from('apolices')
     .select('imobiliaria')
     .not('imobiliaria', 'is', null)
   if (error) throw error

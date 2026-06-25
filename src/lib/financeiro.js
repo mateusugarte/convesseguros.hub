@@ -45,3 +45,52 @@ export async function fetchRecebimentos({ inicio, fim }) {
   if (error) throw error
   return data || []
 }
+
+// ── Produção (Fase 2) ─────────────────────────────────────────────────────────
+
+const STATUS_EMISSAO_PROD = ['emitida', 'enviada']
+const FILTRO_STATUS_APOLICE_PROD = 'status_apolice.in.(ativa,renovada),status_apolice.is.null'
+
+// Linhas do ledger para agregação de produção (base = emissão).
+export async function fetchProducaoLedger({ inicio, fim, imobiliaria } = {}) {
+  let q = supabase
+    .from('apolices_comissoes')
+    .select('imobiliaria, seguradora, premio_total, valor_comissao, comissao_mensal, data_emissao')
+    .in('status_emissao', STATUS_EMISSAO_PROD)
+    .or(FILTRO_STATUS_APOLICE_PROD)
+  if (inicio) q = q.gte('data_emissao', inicio)
+  if (fim) q = q.lte('data_emissao', fim)
+  if (imobiliaria) q = q.eq('imobiliaria', imobiliaria)
+  const { data, error } = await q
+  if (error) throw error
+  return data || []
+}
+
+// % de repasse salvo de cada imobiliária para um mês (1º dia do mês).
+export async function fetchPctImobiliarias({ mes }) {
+  const { data, error } = await supabase
+    .from('producao_comissao_imobiliaria')
+    .select('imobiliaria, pct_comissao')
+    .eq('mes_referencia', mes)
+  if (error) throw error
+  const map = {}
+  for (const r of data || []) map[r.imobiliaria] = r.pct_comissao
+  return map
+}
+
+// Upsert do % de uma imobiliária para um mês.
+export async function salvarPctImobiliaria({ imobiliaria, mes, pct, userId }) {
+  const { error } = await supabase
+    .from('producao_comissao_imobiliaria')
+    .upsert(
+      {
+        imobiliaria,
+        mes_referencia: mes,
+        pct_comissao: pct,
+        atualizado_por: userId || null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'imobiliaria,mes_referencia' },
+    )
+  return error
+}

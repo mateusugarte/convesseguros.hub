@@ -343,7 +343,7 @@ export default function Layout() {
         style={shellSidebarStyle}
       >
         <div
-          className={`flex items-center h-16 px-4 border-b flex-shrink-0 ${!sidebarOpen && !isMobile ? 'justify-center' : 'gap-3'}`}
+          className={`flex items-center h-16 border-b flex-shrink-0 ${!sidebarOpen && !isMobile ? 'justify-between gap-2 px-2' : 'gap-3 px-4'}`}
           style={{ borderColor: 'var(--shell-panel-border)' }}
         >
           <div className="w-9 h-9 rounded-2xl overflow-hidden flex-shrink-0 ring-1 ring-black/5 shadow-sm">
@@ -357,6 +357,25 @@ export default function Layout() {
               </div>
               <p className="text-[10px] mt-0.5 truncate tracking-[0.18em] uppercase text-dark-muted">{workspaceLabel}</p>
             </div>
+          )}
+
+          {!isMobile && (
+            <button
+              onClick={() => setSidebarOpen(o => !o)}
+              className="ml-auto flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-2xl transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
+              style={{
+                background: 'var(--shell-panel-bg)',
+                border: '1px solid var(--shell-panel-border)',
+                boxShadow: 'var(--shell-panel-shadow)',
+              }}
+              title={sidebarOpen ? 'Recolher menu' : 'Expandir menu'}
+              aria-label={sidebarOpen ? 'Recolher menu' : 'Expandir menu'}
+            >
+              {sidebarOpen
+                ? <ChevronLeft className="w-3.5 h-3.5 text-dark-muted" />
+                : <ChevronRight className="w-3.5 h-3.5 text-dark-muted" />
+              }
+            </button>
           )}
         </div>
 
@@ -502,22 +521,6 @@ export default function Layout() {
           )}
         </div>
 
-        {!isMobile && (
-          <button
-            onClick={() => setSidebarOpen(o => !o)}
-            className="absolute -right-3 top-[72px] w-7 h-7 rounded-full flex items-center justify-center transition-all z-50 cursor-pointer"
-            style={{
-              background: 'var(--shell-panel-bg)',
-              border: '1px solid var(--shell-panel-border)',
-              boxShadow: 'var(--shell-panel-shadow)',
-            }}
-          >
-            {sidebarOpen
-              ? <ChevronLeft className="w-3.5 h-3.5 text-dark-muted" />
-              : <ChevronRight className="w-3.5 h-3.5 text-dark-muted" />
-            }
-          </button>
-        )}
       </aside>
 
       <div className="flex h-full min-w-0 min-h-0 w-full flex-1 flex-col overflow-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">

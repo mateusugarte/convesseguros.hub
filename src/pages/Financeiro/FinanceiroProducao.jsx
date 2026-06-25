@@ -62,15 +62,16 @@ export default function FinanceiroProducao() {
     let mounted = true
     setLoading(true)
     const desdeEvolucao = addMeses(mesRef, -(EVOLUCAO_MESES - 1))
-    Promise.all([
+    Promise.allSettled([
       fetchProducaoLedger({ inicio, fim, imobiliaria: selecionada }),
       fetchProducaoLedger({ inicio: desdeEvolucao, fim, imobiliaria: selecionada }),
       fetchPctImobiliarias({ mes: mesRef }),
     ]).then(([prod, evol, pctMap]) => {
       if (!mounted) return
-      setRows(prod)
-      setEvolucaoRows(evol)
-      const salvo = pctMap[selecionada]
+      setRows(prod.status === 'fulfilled' ? prod.value : [])
+      setEvolucaoRows(evol.status === 'fulfilled' ? evol.value : [])
+      const pctMapValue = pctMap.status === 'fulfilled' ? pctMap.value : {}
+      const salvo = pctMapValue[selecionada]
       setPctSalvo(salvo ?? null)
       const meta = resolveImobiliaria(catalogo, selecionada)
       setPct(salvo != null ? String(salvo) : (meta?.pctComissao != null ? String(meta.pctComissao) : ''))

@@ -28,15 +28,15 @@ export default function FinanceiroVisaoGeral() {
     setLoading(true)
     const inicio = `${ano}-01-01`
     const fim = `${ano}-12-31`
-    Promise.all([
+    Promise.allSettled([
       fetchProducaoLedger({ inicio, fim }),
       fetchRecebimentos({ inicio, fim }),
       fetchImobiliariasCatalogMap(),
     ]).then(([led, rec, cat]) => {
       if (!mounted) return
-      setLedger(led)
-      setRecebimentos(rec)
-      setCatalogo(cat)
+      setLedger(led.status === 'fulfilled' ? led.value : [])
+      setRecebimentos(rec.status === 'fulfilled' ? rec.value : [])
+      setCatalogo(cat.status === 'fulfilled' ? cat.value : null)
       setLoading(false)
     }).catch(() => { if (mounted) setLoading(false) })
     return () => { mounted = false }

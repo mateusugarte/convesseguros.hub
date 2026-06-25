@@ -319,6 +319,7 @@ function DroppableColumn({
     animationDelay: `${colIndex * 28}ms`,
     animationFillMode: 'both',
     scrollSnapAlign: 'start',
+    height: '100%',
   }
 
   if (collapsed) {
@@ -361,7 +362,7 @@ function DroppableColumn({
   }
 
   return (
-    <div className="kanban-col animate-fade-in flex flex-col" style={animStyle}>
+    <div className="kanban-col animate-fade-in flex flex-col h-full" style={animStyle}>
       {/* Header */}
       <div
         className="kanban-col-header flex flex-col gap-3"
@@ -433,6 +434,7 @@ function DroppableColumn({
           backgroundColor: isOver ? column.color + '0b' : 'rgb(var(--color-surface2) / 0.28)',
           boxShadow:       isOver ? `inset 0 0 0 1px ${column.color}20, 0 0 24px ${column.color}12` : '0 12px 30px rgba(15,23,42,0.05)',
           transition:      'border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease',
+          minHeight:       'min(56vh, 620px)',
         }}
       >
         {fichas.length === 0 ? (
@@ -1028,7 +1030,10 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
         </div>
       )}
 
-      <div className="kanban-viewport relative min-h-0 flex-1">
+      <div
+        className="kanban-viewport relative min-h-0 flex-1"
+        style={{ height: 'max(68vh, 640px)' }}
+      >
         {/* Sombras de scroll */}
         {canScrollL && (
           <div className="absolute left-0 top-0 bottom-4 w-14 z-10 pointer-events-none"

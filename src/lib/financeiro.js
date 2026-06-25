@@ -122,9 +122,8 @@ export async function fetchFaturasLedger({ imobiliaria } = {}) {
   while (true) {
     let q = supabase
       .from('apolices_comissoes')
-      .select('imobiliaria, valor_parcela, parcelamento, data_emissao, numero_apolice, nome_interessado, seguradora, apolice_id, status_emissao, status_apolice')
+      .select('imobiliaria, valor_parcela, parcelamento, data_emissao, numero_apolice, nome_interessado, seguradora, apolice_id, status_emissao')
       .in('status_emissao', STATUS_EMISSAO_PROD)
-      .or(FILTRO_STATUS_APOLICE_PROD)
       .range(from, from + pageSize - 1)
     if (imobiliaria) q = q.eq('imobiliaria', imobiliaria)
     const { data, error } = await q

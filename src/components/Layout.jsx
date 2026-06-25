@@ -314,12 +314,15 @@ export default function Layout() {
     WebkitBackdropFilter: 'blur(18px) saturate(170%)',
   }
 
-  const contentOffsetClass = !isMobile
-    ? sidebarOpen ? 'lg:ml-[300px]' : 'lg:ml-[108px]'
-    : ''
+  const shellGridStyle = !isMobile
+    ? { gridTemplateColumns: sidebarOpen ? '284px minmax(0, 1fr)' : '92px minmax(0, 1fr)' }
+    : undefined
 
   return (
-    <div className={`app-shell-root relative flex overflow-hidden ${shellClassName}`}>
+    <div
+      className={`app-shell-root relative overflow-hidden ${isMobile ? 'block' : 'grid'} ${shellClassName}`}
+      style={shellGridStyle}
+    >
       {isMobile && sidebarOpen && (
           <div
             className="fixed inset-0 z-[300]"
@@ -335,7 +338,7 @@ export default function Layout() {
       <aside
         className={`shell-sidebar ${isMobile
           ? `fixed left-0 top-0 h-full z-[400] transition-[width,transform] duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
-          : 'fixed left-0 top-0 bottom-0 z-[200] h-screen min-h-screen shrink-0 transition-[width,box-shadow,transform] duration-300'
+          : 'relative z-[200] h-full min-h-0 transition-[width,box-shadow,transform] duration-300'
         } flex flex-col ${sidebarWidth}`}
         style={shellSidebarStyle}
       >
@@ -517,7 +520,7 @@ export default function Layout() {
         )}
       </aside>
 
-      <div className={`flex min-w-0 min-h-0 flex-1 flex-col px-3 py-3 transition-[margin] duration-300 sm:px-4 sm:py-4 lg:px-5 lg:py-5 ${contentOffsetClass}`}>
+      <div className="flex min-w-0 min-h-0 flex-1 flex-col px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
         {!hideWorkspaceTopbar && isDashboardRoute && (
           <header className="shell-topbar sticky top-3 z-[300] h-16 flex items-center justify-between px-5 flex-shrink-0 topbar-glass rounded-[28px]" style={shellTopbarStyle}>
           <div className="flex items-center gap-3">

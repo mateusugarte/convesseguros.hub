@@ -41,10 +41,12 @@ html.dark {
     font-family: var(--font-heading, 'Plus Jakarta Sans', system-ui, sans-serif);
     letter-spacing: -0.01em;
     transition: color 0.3s ease;
-    background: transparent;
-    min-height: 100dvh;
     height: 100vh;
-    height: 100dvh;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 8% 8%, var(--shell-ambient-top, rgb(var(--brand-primary-rgb) / 0.06)), transparent 34%),
+      radial-gradient(circle at 92% 92%, var(--shell-ambient-bottom, rgb(var(--brand-secondary-rgb) / 0.10)), transparent 26%),
+      linear-gradient(180deg, rgb(var(--color-bg)), rgb(var(--color-surface2)));
     overflow-x: hidden;
     overflow-y: hidden;
   }
@@ -1930,8 +1932,6 @@ html.dark .skeleton-surface {
 .crm-shell {
   height: 100vh;
   min-height: 100vh;
-  height: 100dvh;
-  min-height: 100dvh;
 }
 
 .ops-shell {

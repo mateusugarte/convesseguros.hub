@@ -191,7 +191,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
     setSalvando(true)
     try {
       let imobId
-      const aliasesNormalizados = [...new Set(aliasesModal.map(v => v.trim()).filter(Boolean))]
+      const aliasesNormalizados = aliasesModal.map(v => v.trim()).filter(Boolean)
 
       if (ehEditar && imobAtual) {
         // Atualizar nome canônico

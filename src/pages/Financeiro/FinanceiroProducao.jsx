@@ -76,7 +76,7 @@ export default function FinanceiroProducao() {
 
   function valorRepassar(imob, comissaoGerada) {
     const pct = parseDecimalBR(pctAtual(imob))
-    return pct ? (pct / 100) * comissaoGerada : 0
+    return pct != null ? (pct / 100) * comissaoGerada : 0
   }
 
   async function salvarPct(imob) {

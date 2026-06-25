@@ -16,7 +16,7 @@ function Tip({ active, payload, label }) {
 }
 
 export default function EvolucaoChart({ data }) {
-  if (!data?.length || data.every(d => d.comissao === 0 && d.premio === 0)) {
+  if (!data?.length || data.every(d => d.comissao === 0)) {
     return <div className="flex h-[220px] items-center justify-center text-sm text-dark-muted">Sem dados no período</div>
   }
   return (

@@ -1197,6 +1197,8 @@ html.dark .shell-subnav-item-active {
   width: var(--kanban-col-w, 286px);
   min-height: 100%;
   height: 100%;
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   border-radius: 28px;
@@ -1219,6 +1221,8 @@ html.dark .kanban-col {
 }
 
 .kanban-col-header {
+  position: relative;
+  z-index: 3;
   padding: 14px 14px 12px;
   min-height: 56px;
   border-radius: 28px 28px 18px 18px;
@@ -1233,6 +1237,8 @@ html.dark .kanban-col-header {
 }
 
 .kanban-col-body {
+  position: relative;
+  z-index: 1;
   flex: 1 1 auto;
   padding: 12px;
   gap: 10px;
@@ -1264,6 +1270,7 @@ html.dark .kanban-col-body {
 
 .kanban-card {
   position: relative;
+  z-index: 0;
   overflow: hidden;
   padding: 10px 10px 10px 8px;
   border-radius: 18px;
@@ -2161,3 +2168,6 @@ html.dark .ops-empty-state {
     linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)),
     var(--glass-bg-heavy);
 }
+
+
+

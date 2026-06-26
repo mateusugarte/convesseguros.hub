@@ -259,6 +259,7 @@ function summarizeRows(rows) {
     }
   })
 
+  summary.totalFichas = summary.aprovadas + summary.cobranca
   summary.taxaEmissao = summary.aprovadas > 0 ? (summary.emitidas / summary.aprovadas) * 100 : 0
   summary.taxaRecuperacao = summary.cobranca > 0 ? (summary.recuperadas / summary.cobranca) * 100 : 0
   summary.mediaEmissao = summary.tempoEmissao.length
@@ -1616,7 +1617,7 @@ export default function Relatorio() {
         className="border-brand-secondary/20 bg-[linear-gradient(135deg,rgba(0,0,121,0.06),rgba(255,255,255,0.98),rgba(34,71,170,0.08))] shadow-[0_20px_48px_rgba(15,23,42,0.08)]"
       >
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <MetricCard label="Total de fichas" value={summary.aprovadas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
+          <MetricCard label="Total de fichas" value={summary.totalFichas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
           <MetricCard label="Apólices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
           <MetricCard label="Taxa geral de emissão" value={`${summary.taxaEmissao.toFixed(1)}%`} tone="accent" icon={<BarChart2 className="h-4 w-4" />} />
           <MetricCard label="Em cobrança" value={summary.cobranca} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
@@ -1850,6 +1851,7 @@ export default function Relatorio() {
     </div>
   )
 }
+
 
 
 

@@ -1,17 +1,13 @@
-// Camada de dados do Financeiro lendo DIRETAMENTE de `apolices` (fonte real).
-// Corrige o bug de ler `status_apolice` do ledger `apolices_comissoes` (coluna inexistente lá)
-// e normaliza cada apólice para o formato consumido pelas agregações (premio_total,
-// valor_comissao e comissao_mensal já calculados pela fórmula oficial).
 import { supabase } from './supabase'
 import {
   toNumber, parcelasApolice, producaoApolice, comissaoTotalApolice, comissaoMensalApolice,
 } from './financeiroCalc.js'
+import { apoliceAtivaHoje, apoliceAtivaNoMes } from './financeiroElegibilidade.js'
+import { fetchImobiliariasCatalogMap, resolveCanonicalImobiliariaName } from './imobiliariasLogos'
 
 const STATUS_EMISSAO = ['emitida', 'enviada']
-// Produtos do Seguro Fiança (apólices de auto vivem em outras tabelas).
 const PRODUTOS_FIANCA = ['residencial_pf', 'comercial_pf', 'pessoa_juridica']
 const FILTRO_PRODUTO_FIANCA = `produto.is.null,produto.in.(${PRODUTOS_FIANCA.join(',')})`
-const FILTRO_STATUS_ATIVA = 'status_apolice.in.(ativa,renovada),status_apolice.is.null'
 
 const SELECT_FIELDS = [
   'id', 'data_emissao', 'imobiliaria', 'seguradora', 'numero_apolice', 'nome_interessado',
@@ -20,18 +16,16 @@ const SELECT_FIELDS = [
   'pct_desconto', 'inicio_vigencia', 'fim_vigencia', 'forma_pagamento',
 ].join(', ')
 
-// Formas de pagamento elegíveis para compor a fatura da imobiliária.
 export const FORMAS_PAGAMENTO_FATURA = ['fatura_sem_entrada', 'fatura_com_entrada']
 
-// Normaliza a apólice crua para o formato do "ledger" consumido pelas agregações/calendário.
-export function normalizeApoliceRow(raw) {
+export function normalizeApoliceRow(raw, catalogo) {
   const parcelas = parcelasApolice(raw)
   const premioTotal = producaoApolice(raw)
   const valorParcela = toNumber(raw.valor_parcela) || (parcelas ? premioTotal / parcelas : 0)
   return {
     id: raw.id,
     apolice_id: raw.id,
-    imobiliaria: raw.imobiliaria || null,
+    imobiliaria: resolveCanonicalImobiliariaName(catalogo, raw.imobiliaria) || null,
     seguradora: raw.seguradora || null,
     numero_apolice: raw.numero_apolice || null,
     nome_interessado: raw.nome_interessado || null,
@@ -52,15 +46,13 @@ export function normalizeApoliceRow(raw) {
   }
 }
 
-// Busca apólices de fiança com filtros opcionais, paginando.
-// - inicio/fim: intervalo em data_emissao (YYYY-MM-DD).
-// - imobiliaria/seguradora: filtros exatos.
-// - somenteAtivas: restringe a status_apolice ativa/renovada (ou nulo).
-// - formasPagamento: restringe a forma_pagamento IN [...] quando informado.
-export async function fetchApolicesFianca({ inicio, fim, imobiliaria, seguradora, somenteAtivas = false, formasPagamento } = {}) {
+export async function fetchApolicesFianca({ inicio, fim, imobiliaria, seguradora, somenteAtivas = false, formasPagamento, referenciaAtiva } = {}) {
+  const catalogo = await fetchImobiliariasCatalogMap().catch(() => null)
+  const imobiliariaCanonica = imobiliaria ? resolveCanonicalImobiliariaName(catalogo, imobiliaria) : ''
   const pageSize = 1000
   let all = []
   let from = 0
+
   while (true) {
     let q = supabase
       .from('apolices')
@@ -70,10 +62,8 @@ export async function fetchApolicesFianca({ inicio, fim, imobiliaria, seguradora
       .order('data_emissao', { ascending: false })
       .range(from, from + pageSize - 1)
 
-    if (somenteAtivas) q = q.or(FILTRO_STATUS_ATIVA)
     if (inicio) q = q.gte('data_emissao', inicio)
     if (fim) q = q.lte('data_emissao', fim)
-    if (imobiliaria) q = q.eq('imobiliaria', imobiliaria)
     if (seguradora) q = q.eq('seguradora', seguradora)
     if (formasPagamento?.length) q = q.in('forma_pagamento', formasPagamento)
 
@@ -84,27 +74,30 @@ export async function fetchApolicesFianca({ inicio, fim, imobiliaria, seguradora
     if (page.length < pageSize) break
     from += pageSize
   }
-  return all.map(normalizeApoliceRow)
+
+  return all
+    .map(row => normalizeApoliceRow(row, catalogo))
+    .filter(row => {
+      if (imobiliariaCanonica && row.imobiliaria !== imobiliariaCanonica) return false
+      if (!somenteAtivas) return true
+      return referenciaAtiva ? apoliceAtivaNoMes(row, referenciaAtiva) : apoliceAtivaHoje(row)
+    })
 }
 
-// Apólices ativas (sem corte de data) — para "ver apólices ativas" e "apólices que contam".
-export async function fetchApolicesAtivas({ imobiliaria, seguradora } = {}) {
-  return fetchApolicesFianca({ imobiliaria, seguradora, somenteAtivas: true })
+export async function fetchApolicesAtivas({ imobiliaria, seguradora, mesRef } = {}) {
+  return fetchApolicesFianca({ imobiliaria, seguradora, somenteAtivas: true, referenciaAtiva: mesRef })
 }
 
-// Apólices ativas elegíveis para fatura: apenas formas de pagamento "fatura".
-// Usada por fetchFaturasLedger para garantir que apenas apólices faturadas entrem no cálculo.
 export async function fetchApolicesParaFatura({ imobiliaria, seguradora } = {}) {
   return fetchApolicesFianca({
     imobiliaria,
     seguradora,
-    somenteAtivas: true,
     formasPagamento: FORMAS_PAGAMENTO_FATURA,
   })
 }
 
-// Lista de imobiliárias distintas que possuem apólices de fiança emitidas.
 export async function fetchImobiliariasComApolices() {
+  const catalogo = await fetchImobiliariasCatalogMap().catch(() => null)
   const { data, error } = await supabase
     .from('apolices')
     .select('imobiliaria')
@@ -112,5 +105,10 @@ export async function fetchImobiliariasComApolices() {
     .or(FILTRO_PRODUTO_FIANCA)
     .not('imobiliaria', 'is', null)
   if (error) throw error
-  return [...new Set((data || []).map(r => r.imobiliaria).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+
+  const nomes = (data || [])
+    .map(r => resolveCanonicalImobiliariaName(catalogo, r.imobiliaria))
+    .filter(Boolean)
+
+  return [...new Set(nomes)].sort((a, b) => a.localeCompare(b))
 }

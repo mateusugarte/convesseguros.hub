@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { PageHeader, DataCard } from '../../components/ui'
 import ImobiliariaIdentity from '../../components/ImobiliariaIdentity'
+import RegisteredSeguradorasStrip from '../../components/financeiro/RegisteredSeguradorasStrip'
 import ApolicesListView from '../../components/financeiro/ApolicesListView'
 import { fetchApolicesAtivas, fetchApolicesFianca } from '../../lib/financeiroApolices'
 import { fetchImobiliariasCatalogMap, resolveImobiliaria } from '../../lib/imobiliariasLogos'
 import { ArrowLeft } from 'lucide-react'
 
-// P√°gina dedicada de ap√≥lices da imobili√°ria (sem modal).
-// tipo=ativas ‚Üí todas as ativas; tipo=emitidas ‚Üí emitidas no per√≠odo (ini/fim).
 export default function FinanceiroProducaoApolices() {
   const navigate = useNavigate()
   const { imobiliaria: imobParam } = useParams()
@@ -18,13 +17,13 @@ export default function FinanceiroProducaoApolices() {
   const ini = searchParams.get('ini') || ''
   const fim = searchParams.get('fim') || ''
   const label = searchParams.get('label') || ''
+  const mesRef = searchParams.get('mesRef') || ''
 
   const [apolices, setApolices] = useState([])
   const [catalogo, setCatalogo] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const scrollKey = `financeiro-producao-apolices-scroll:${selecionada}:${tipo}`
-  // Query para voltar √† produ√ß√£o preservando o per√≠odo selecionado.
   const voltarQuery = searchParams.toString()
 
   useEffect(() => {
@@ -32,7 +31,7 @@ export default function FinanceiroProducaoApolices() {
     setLoading(true)
     const fetcher = tipo === 'emitidas'
       ? fetchApolicesFianca({ imobiliaria: selecionada, inicio: ini || undefined, fim: fim || undefined })
-      : fetchApolicesAtivas({ imobiliaria: selecionada })
+      : fetchApolicesAtivas({ imobiliaria: selecionada, mesRef: mesRef || undefined })
     Promise.all([fetcher, fetchImobiliariasCatalogMap()])
       .then(([list, cat]) => {
         if (!mounted) return
@@ -42,9 +41,8 @@ export default function FinanceiroProducaoApolices() {
       })
       .catch(() => { if (mounted) setLoading(false) })
     return () => { mounted = false }
-  }, [selecionada, tipo, ini, fim])
+  }, [selecionada, tipo, ini, fim, mesRef])
 
-  // Restaura o scroll ao voltar do detalhe da ap√≥lice.
   useEffect(() => {
     if (loading) return
     const saved = sessionStorage.getItem(scrollKey)
@@ -60,8 +58,10 @@ export default function FinanceiroProducaoApolices() {
   }
 
   const meta = resolveImobiliaria(catalogo, selecionada)
-  const titulo = tipo === 'emitidas' ? 'Ap√≥lices emitidas' : 'Ap√≥lices ativas'
-  const sub = tipo === 'emitidas' ? (label ? `Emitidas em ${label}` : 'Emitidas no per√≠odo') : 'Todas as ap√≥lices ativas da imobili√°ria'
+  const titulo = tipo === 'emitidas' ? 'ApÛlices emitidas' : 'ApÛlices ativas'
+  const sub = tipo === 'emitidas'
+    ? (label ? `Emitidas em ${label}` : 'Emitidas no perÌodo')
+    : (label ? `Ativas em ${label}` : 'ApÛlices ativas da imobili·ria')
 
   return (
     <div className="space-y-5">
@@ -69,17 +69,20 @@ export default function FinanceiroProducaoApolices() {
         onClick={() => navigate(`/financeiro/producao/${encodeURIComponent(selecionada)}${voltarQuery ? `?${voltarQuery}` : ''}`)}
         className="inline-flex items-center gap-1.5 text-sm text-dark-muted transition-colors hover:text-dark-text"
       >
-        <ArrowLeft className="h-4 w-4" /> Voltar para a produ√ß√£o
+        <ArrowLeft className="h-4 w-4" /> Voltar para a produÁ„o
       </button>
 
-      <PageHeader
-        eyebrow={`Financeiro ¬∑ Produ√ß√£o ¬∑ ${titulo}`}
-        title={selecionada}
-        description={sub}
-        actions={<ImobiliariaIdentity nome={selecionada} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="lg" />}
-      />
+      <section className="overflow-hidden rounded-[30px] border border-emerald-500/15 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_40%),linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.92))] px-6 py-6 shadow-[0_26px_70px_-42px_rgba(16,185,129,0.55)]">
+        <PageHeader
+          eyebrow={`Financeiro ∑ ProduÁ„o ∑ ${titulo}`}
+          title={selecionada}
+          description={sub}
+          actions={<ImobiliariaIdentity nome={selecionada} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="lg" />}
+        />
+        <RegisteredSeguradorasStrip seguradoras={meta?.registeredSeguradoras} size="sm" className="mt-4" />
+      </section>
 
-      <DataCard title={titulo} subtitle="Clique em uma ap√≥lice para abrir os detalhes">
+      <DataCard title={titulo} subtitle="Clique em uma apÛlice para abrir os detalhes" className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,244,0.88))]">
         <ApolicesListView apolices={apolices} loading={loading} onRowClick={abrirApolice} />
       </DataCard>
     </div>

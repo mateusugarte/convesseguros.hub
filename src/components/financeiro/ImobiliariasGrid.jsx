@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search, Building2 } from 'lucide-react'
+import { Search, Building2, ArrowRight } from 'lucide-react'
 import ImobiliariaIdentity from '../ImobiliariaIdentity'
 import { EmptyState } from '../ui'
 import { fetchImobiliariasCatalogMap, resolveImobiliaria } from '../../lib/imobiliariasLogos'
 import { fetchImobiliariasComApolices } from '../../lib/financeiroApolices'
+import RegisteredSeguradorasStrip from './RegisteredSeguradorasStrip'
 
-// Grid de cards de imobiliárias (logo + nome) com busca por nome.
-// Lista as imobiliárias que possuem apólices de fiança (nome real vindo de `apolices`),
-// resolvendo o logo pelo catálogo de imobiliárias. onSelect(nome) ao clicar.
 export default function ImobiliariasGrid({ onSelect }) {
   const [nomes, setNomes] = useState([])
   const [catalogo, setCatalogo] = useState(null)
@@ -35,28 +33,35 @@ export default function ImobiliariasGrid({ onSelect }) {
 
   return (
     <div className="space-y-4">
-      <div className="relative max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-muted" />
+      <div className="relative max-w-md">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-700/55" />
         <input
           value={busca}
           onChange={e => setBusca(e.target.value)}
-          placeholder="Buscar imobiliária..."
-          className="w-full rounded-xl border border-dark-border bg-dark-surface2 py-2 pl-9 pr-3 text-sm text-dark-text focus:border-brand-secondary focus:outline-none"
+          placeholder="Buscar imobili�ria..."
+          className="w-full rounded-2xl border border-emerald-500/15 bg-white/80 py-3 pl-10 pr-4 text-sm text-dark-text shadow-sm outline-none transition-colors focus:border-emerald-500/40"
         />
       </div>
       {loading ? (
         <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
       ) : lista.length === 0 ? (
-        <EmptyState title="Nenhuma imobiliária" description="Nenhuma imobiliária com apólices emitidas encontrada." icon={<Building2 className="h-6 w-6" />} />
+        <EmptyState title="Nenhuma imobili�ria" description="Nenhuma imobili�ria com ap�lices emitidas encontrada." icon={<Building2 className="h-6 w-6" />} />
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {lista.map(({ nome, meta }) => (
             <button
               key={nome}
               onClick={() => onSelect?.(nome)}
-              className="flex items-center gap-3 rounded-2xl border border-dark-border/70 bg-dark-surface2/40 px-4 py-3 text-left transition-colors hover:border-brand-secondary"
+              className="group overflow-hidden rounded-[26px] border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.92))] px-4 py-4 text-left shadow-[0_18px_48px_-32px_rgba(16,185,129,0.55)] transition-all hover:-translate-y-0.5 hover:border-emerald-500/30"
             >
-              <ImobiliariaIdentity nome={nome} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="md" />
+              <div className="flex items-start justify-between gap-3">
+                <ImobiliariaIdentity nome={nome} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="md" />
+                <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-emerald-700/50 opacity-0 transition-opacity group-hover:opacity-100" />
+              </div>
+              <div className="mt-3 space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800/55">Seguradoras cadastradas</p>
+                <RegisteredSeguradorasStrip seguradoras={meta?.registeredSeguradoras} limit={3} />
+              </div>
             </button>
           ))}
         </div>

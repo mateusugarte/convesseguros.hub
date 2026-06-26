@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PageHeader, DataCard, EmptyState } from '../../components/ui'
+import { DataCard, EmptyState } from '../../components/ui'
 import { Select } from '../../components/ui/Select'
 import CalendarioAno from './CalendarioAno'
 import ImobiliariaIdentity from '../../components/ImobiliariaIdentity'
+import RegisteredSeguradorasStrip from '../../components/financeiro/RegisteredSeguradorasStrip'
 import SeguradoraBarChart from '../../components/financeiro/SeguradoraBarChart'
 import { fetchProducaoLedger, fetchRecebimentos } from '../../lib/financeiro'
 import { montarCalendarioAno, rankingImobiliarias, agruparPorSeguradora } from '../../lib/financeiroProducaoCalc'
@@ -13,29 +14,29 @@ import { formatMoneyBR } from '../../lib/apolices'
 import { Coins, TrendingUp, FileText, Building2, ArrowRight } from 'lucide-react'
 
 const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-const MEDALHA = ['text-amber-400', 'text-slate-300', 'text-orange-400']
+const MEDALHA = ['text-amber-500', 'text-slate-400', 'text-orange-500']
 
 function KpiCard({ label, value, hint, icon, accent = false, color = 'brand-secondary' }) {
   const colorMap = {
-    'brand-secondary': { bg: 'bg-brand-secondary/10', text: 'text-brand-secondary', border: 'border-brand-secondary/20' },
-    emerald: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
-    amber: { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20' },
-    sky: { bg: 'bg-sky-500/10', text: 'text-sky-400', border: 'border-sky-500/20' },
+    'brand-secondary': { bg: 'bg-emerald-500/12', text: 'text-emerald-700', border: 'border-emerald-500/20' },
+    emerald: { bg: 'bg-emerald-500/12', text: 'text-emerald-700', border: 'border-emerald-500/20' },
+    amber: { bg: 'bg-amber-500/12', text: 'text-amber-600', border: 'border-amber-500/20' },
+    sky: { bg: 'bg-sky-500/12', text: 'text-sky-600', border: 'border-sky-500/20' },
   }
   const c = colorMap[color] || colorMap['brand-secondary']
   return (
-    <div className={`relative overflow-hidden rounded-2xl border bg-dark-surface2/50 p-5 ${accent ? c.border : 'border-dark-border/70'}`}>
+    <div className={`relative overflow-hidden rounded-[26px] border bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.88))] p-5 shadow-[0_20px_50px_-36px_rgba(16,185,129,0.5)] ${accent ? c.border : 'border-emerald-500/12'}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="mb-1 text-xs font-medium uppercase tracking-wide text-dark-muted">{label}</p>
           <p className="truncate text-2xl font-bold text-dark-text">{value}</p>
           {hint && <p className="mt-1 text-xs text-dark-muted">{hint}</p>}
         </div>
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${c.bg} ${c.text}`}>
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border ${c.bg} ${c.text} ${c.border}`}>
           {icon}
         </div>
       </div>
-      {accent && <div className={`absolute bottom-0 left-0 h-0.5 w-full ${c.bg}`} />}
+      {accent && <div className={`absolute bottom-0 left-0 h-1 w-full ${c.bg}`} />}
     </div>
   )
 }
@@ -81,7 +82,6 @@ export default function FinanceiroVisaoGeral() {
   }), [ledger, ano, mes])
 
   const ranking = useMemo(() => rankingImobiliarias(rowsDoMes), [rowsDoMes])
-
   const porSeguradora = useMemo(() => agruparPorSeguradora(rowsDoMes), [rowsDoMes])
   const producaoSeguradora = useMemo(
     () => porSeguradora.map(s => ({ seguradora: s.seguradora, value: s.premio, qtd: s.qtd })),
@@ -97,55 +97,24 @@ export default function FinanceiroVisaoGeral() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <p className="mb-1 text-xs font-medium uppercase tracking-wider text-dark-muted">Financeiro Â· Dashboard</p>
-        <h1 className="text-2xl font-bold text-dark-text">VisÃ£o geral do Seguro FianÃ§a</h1>
-        <p className="mt-1 text-sm text-dark-muted">
-          Selecione o mÃªs no calendÃ¡rio para ver os indicadores do perÃ­odo.
+      <section className="overflow-hidden rounded-[32px] border border-emerald-500/15 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_42%),linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.92))] px-6 py-6 shadow-[0_28px_72px_-44px_rgba(16,185,129,0.5)]">
+        <p className="mb-1 inline-flex rounded-full border border-emerald-500/15 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800/70">Financeiro · Produção</p>
+        <h1 className="text-3xl font-bold text-dark-text">Visão geral do Seguro Fiança</h1>
+        <p className="mt-2 max-w-2xl text-sm text-dark-muted">
+          Leia produção, comissão, recebimento estimado e o ranking consolidado do mês com uma visualização mais clara das imobiliárias e seguradoras ativas.
         </p>
-      </div>
+      </section>
 
-      {/* KPIs */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
-          label="ProduÃ§Ã£o do mÃªs"
-          value={formatMoneyBR(cell.producao)}
-          hint={mesLabel}
-          icon={<Coins className="h-5 w-5" />}
-          color="brand-secondary"
-          accent
-        />
-        <KpiCard
-          label="ComissÃ£o gerada"
-          value={formatMoneyBR(cell.comissaoGerada)}
-          hint={mesLabel}
-          icon={<TrendingUp className="h-5 w-5" />}
-          color="emerald"
-          accent
-        />
-        <KpiCard
-          label="Recebida estimada"
-          value={formatMoneyBR(cell.recebidaEstimada)}
-          hint={`a receber em ${mesLabel}`}
-          icon={<Coins className="h-5 w-5" />}
-          color="amber"
-          accent
-        />
-        <KpiCard
-          label="ApÃ³lices emitidas"
-          value={cell.qtd}
-          hint={mesLabel}
-          icon={<FileText className="h-5 w-5" />}
-          color="sky"
-          accent
-        />
+        <KpiCard label="Produção do mês" value={formatMoneyBR(cell.producao)} hint={mesLabel} icon={<Coins className="h-5 w-5" />} color="brand-secondary" accent />
+        <KpiCard label="Comissão gerada" value={formatMoneyBR(cell.comissaoGerada)} hint={mesLabel} icon={<TrendingUp className="h-5 w-5" />} color="emerald" accent />
+        <KpiCard label="Recebida estimada" value={formatMoneyBR(cell.recebidaEstimada)} hint={`a receber em ${mesLabel}`} icon={<Coins className="h-5 w-5" />} color="amber" accent />
+        <KpiCard label="Apólices emitidas" value={cell.qtd} hint={mesLabel} icon={<FileText className="h-5 w-5" />} color="sky" accent />
       </div>
 
-      {/* CalendÃ¡rio anual */}
       <DataCard
-        title="CalendÃ¡rio anual"
-        subtitle="ProduÃ§Ã£o por mÃªs â€” clique para selecionar o perÃ­odo"
+        title="Calendário anual"
+        subtitle="Produção por mês · clique para selecionar o período"
         actions={(
           <Select
             value={String(ano)}
@@ -154,6 +123,7 @@ export default function FinanceiroVisaoGeral() {
             className="w-28"
           />
         )}
+        className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,250,0.9))]"
       >
         {loading ? (
           <div className="py-16 text-center text-sm text-dark-muted">Carregando...</div>
@@ -162,79 +132,59 @@ export default function FinanceiroVisaoGeral() {
         )}
       </DataCard>
 
-      {/* GrÃ¡ficos lado a lado */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <DataCard
-          title="ProduÃ§Ã£o por seguradora"
-          subtitle={`PrÃªmio total emitido â€” ${mesLabel}`}
-        >
+        <DataCard title="Produção por seguradora" subtitle={`Prêmio total emitido · ${mesLabel}`} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.9))]">
           {loading ? (
             <div className="py-16 text-center text-sm text-dark-muted">Carregando...</div>
           ) : (
             <div className="pt-1">
-              <SeguradoraBarChart
-                data={producaoSeguradora}
-                color="bg-brand-secondary"
-                emptyLabel="Sem produÃ§Ã£o no mÃªs"
-                height={280}
-              />
+              <SeguradoraBarChart data={producaoSeguradora} color="bg-emerald-600" emptyLabel="Sem produção no mês" height={280} />
             </div>
           )}
         </DataCard>
-        <DataCard
-          title="ComissÃ£o por seguradora"
-          subtitle={`ComissÃ£o total gerada â€” ${mesLabel}`}
-        >
+        <DataCard title="Comissão por seguradora" subtitle={`Comissão total gerada · ${mesLabel}`} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.9))]">
           {loading ? (
             <div className="py-16 text-center text-sm text-dark-muted">Carregando...</div>
           ) : (
             <div className="pt-1">
-              <SeguradoraBarChart
-                data={comissaoSeguradora}
-                color="bg-emerald-500"
-                emptyLabel="Sem comissÃ£o no mÃªs"
-                height={280}
-              />
+              <SeguradoraBarChart data={comissaoSeguradora} color="bg-emerald-500" emptyLabel="Sem comissão no mês" height={280} />
             </div>
           )}
         </DataCard>
       </div>
 
-      {/* Ranking de imobiliÃ¡rias */}
-      <DataCard
-        title={`Ranking de imobiliÃ¡rias â€” ${mesLabel}`}
-        subtitle="Por produÃ§Ã£o (prÃªmio total) no perÃ­odo selecionado"
-      >
+      <DataCard title={`Ranking de imobiliárias · ${mesLabel}`} subtitle="Por produção no período selecionado" className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,244,0.88))]">
         {loading ? (
           <div className="py-16 text-center text-sm text-dark-muted">Carregando...</div>
         ) : ranking.length === 0 ? (
-          <EmptyState
-            title="Sem produÃ§Ã£o no mÃªs"
-            description="Nenhuma apÃ³lice emitida no mÃªs selecionado."
-            icon={<Building2 className="h-6 w-6" />}
-          />
+          <EmptyState title="Sem produção no mês" description="Nenhuma apólice emitida no mês selecionado." icon={<Building2 className="h-6 w-6" />} />
         ) : (
           <div className="space-y-2">
             {ranking.map((item, i) => {
               const meta = resolveImobiliaria(catalogo, item.imobiliaria)
-              const pct = maxRanking > 0 ? Math.max(6, Math.round((item.premioTotal / maxRanking) * 100)) : 0
+              const pct = maxRanking > 0 ? Math.max(8, Math.round((item.premioTotal / maxRanking) * 100)) : 0
               return (
                 <button
                   key={item.imobiliaria}
                   onClick={() => navigate(`/financeiro/producao/${encodeURIComponent(item.imobiliaria)}`)}
-                  className="group relative flex w-full items-center justify-between gap-3 overflow-hidden rounded-2xl border border-dark-border/70 bg-dark-surface2/40 px-4 py-3 text-left transition-colors hover:border-dark-border"
+                  className="group relative w-full overflow-hidden rounded-[24px] border border-emerald-500/15 bg-white/92 px-4 py-4 text-left shadow-[0_18px_48px_-36px_rgba(16,185,129,0.45)] transition-all hover:-translate-y-0.5 hover:border-emerald-500/30"
                 >
-                  <div className="absolute inset-y-0 left-0 bg-brand-secondary/8 transition-all group-hover:bg-brand-secondary/12" style={{ width: `${pct}%` }} />
-                  <div className="relative flex min-w-0 items-center gap-3">
-                    <span className={`w-6 shrink-0 text-center text-sm font-bold ${MEDALHA[i] || 'text-dark-muted'}`}>{i + 1}</span>
-                    <ImobiliariaIdentity nome={item.imobiliaria} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="sm" />
-                  </div>
-                  <div className="relative flex shrink-0 items-center gap-3">
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-dark-text">{formatMoneyBR(item.premioTotal)}</p>
-                      <p className="text-[11px] text-dark-muted">{item.qtd} apÃ³lice{item.qtd !== 1 ? 's' : ''}</p>
+                  <div className="absolute inset-y-0 left-0 bg-[linear-gradient(90deg,rgba(16,185,129,0.15),rgba(52,211,153,0.04))] transition-all" style={{ width: `${pct}%` }} />
+                  <div className="relative flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1 space-y-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className={`w-6 shrink-0 text-center text-sm font-bold ${MEDALHA[i] || 'text-dark-muted'}`}>{i + 1}</span>
+                        <ImobiliariaIdentity nome={item.imobiliaria} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="sm" />
+                      </div>
+                      <RegisteredSeguradorasStrip seguradoras={meta?.registeredSeguradoras} limit={4} />
                     </div>
-                    <ArrowRight className="h-4 w-4 shrink-0 text-dark-muted opacity-0 transition-opacity group-hover:opacity-100" />
+                    <div className="relative flex shrink-0 items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-dark-text">{formatMoneyBR(item.premioTotal)}</p>
+                        <p className="text-[11px] text-dark-muted">{item.qtd} apólice{item.qtd !== 1 ? 's' : ''}</p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 shrink-0 text-emerald-700/50 opacity-0 transition-opacity group-hover:opacity-100" />
+                    </div>
                   </div>
                 </button>
               )

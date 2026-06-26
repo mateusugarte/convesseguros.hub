@@ -1,4 +1,5 @@
 import { primeiroDiaMes, addMeses } from './financeiroCalc.js'
+import { apoliceAtivaNoMes } from './financeiroElegibilidade.js'
 
 function num(value) {
   const n = Number(value)
@@ -15,10 +16,14 @@ export function apoliceBilladaNoMes(row, mesRef) {
   return alvo >= inicio && alvo <= fim
 }
 
+export function apoliceContaNaFaturaNoMes(row, mesRef) {
+  return apoliceBilladaNoMes(row, mesRef) && apoliceAtivaNoMes(row, mesRef)
+}
+
 export function montarFaturasMes({ rows, mesRef, pctMap = {}, statusMap = {} }) {
   const map = new Map()
   for (const r of rows || []) {
-    if (!apoliceBilladaNoMes(r, mesRef)) continue
+    if (!apoliceContaNaFaturaNoMes(r, mesRef)) continue
     const key = r.imobiliaria || 'Sem imobiliaria'
     const cur = map.get(key) || { imobiliaria: key, qtd: 0, valorFatura: 0 }
     cur.qtd += 1

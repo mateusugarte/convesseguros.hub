@@ -1,18 +1,18 @@
-// Helpers puros de agregação da Produção (Fase 2).
-// Sem imports de Supabase/Vite → testáveis com `node --test`.
+// Helpers puros de agrega��o da Produ��o (Fase 2).
+// Sem imports de Supabase/Vite ? test�veis com `node --test`.
 import { primeiroDiaMes, addMeses, formatMesAno, parseYmd } from './financeiroCalc.js'
-import { apoliceBilladaNoMes } from './financeiroFaturasCalc.js'
+import { apoliceBilladaNoMes, apoliceContaNaFaturaNoMes } from './financeiroFaturasCalc.js'
+import { apoliceAtivaNoMes } from './financeiroElegibilidade.js'
 
 function num(value) {
   const n = Number(value)
   return Number.isFinite(n) ? n : 0
 }
 
-// rows do ledger: [{ imobiliaria, premio_total, valor_comissao, comissao_mensal }]
 export function agruparPorImobiliaria(rows) {
   const map = new Map()
   for (const r of rows || []) {
-    const key = r.imobiliaria || 'Sem imobiliária'
+    const key = r.imobiliaria || 'Sem imobili�ria'
     const cur = map.get(key) || {
       imobiliaria: key, qtd: 0, premioTotal: 0, comissaoGerada: 0, comissaoRecebidaEstimada: 0,
     }
@@ -22,12 +22,9 @@ export function agruparPorImobiliaria(rows) {
     cur.comissaoRecebidaEstimada += num(r.comissao_mensal)
     map.set(key, cur)
   }
-  // Ordena por comissão gerada (desc); desempate por nº de apólices (asc) só para
-  // tornar a ordenação determinística quando duas imobiliárias têm a mesma comissão.
   return [...map.values()].sort((a, b) => b.comissaoGerada - a.comissaoGerada || a.qtd - b.qtd)
 }
 
-// rows do ledger de UMA imobiliária: [{ seguradora, premio_total, valor_comissao }]
 export function agruparPorSeguradora(rows) {
   const map = new Map()
   for (const r of rows || []) {
@@ -48,8 +45,6 @@ export function agruparPorSeguradora(rows) {
   return lista.sort((a, b) => b.comissao - a.comissao)
 }
 
-// rows do ledger: [{ data_emissao, premio_total, valor_comissao }]
-// Retorna sempre `meses` itens a partir de `desde` (1º dia do mês), preenchendo zeros.
 export function agruparEvolucaoPorMes(rows, { desde, meses = 6 }) {
   const base = primeiroDiaMes(desde)
   const map = new Map()
@@ -72,8 +67,6 @@ export function agruparEvolucaoPorMes(rows, { desde, meses = 6 }) {
 
 const MESES_CURTOS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
-// Monta 12 células (uma por mês do ano) mesclando produção/comissão (ledger, por emissão)
-// e a comissão recebida estimada (recebimentos, por mes_referencia).
 export function montarCalendarioAno({ ano, ledgerRows, recebimentoRows }) {
   const cells = []
   for (let m = 1; m <= 12; m++) {
@@ -103,15 +96,10 @@ export function montarCalendarioAno({ ano, ledgerRows, recebimentoRows }) {
   return cells
 }
 
-// Ranking de imobiliárias por produção (prêmio total) desc.
 export function rankingImobiliarias(rows) {
   return agruparPorImobiliaria(rows).sort((a, b) => b.premioTotal - a.premioTotal || a.qtd - b.qtd)
 }
 
-// Gera o calendário de comissão parcelada a partir das apólices (já normalizadas).
-// Para cada apólice distribui `valor_comissao` em `parcelamento` meses, começando no
-// mês seguinte à emissão (regra: 1ª parcela cai no mês posterior à data de emissão).
-// Retorna linhas no formato de recebimento: { mes_referencia, valor_previsto, ... }.
 export function gerarParcelasComissao(rows) {
   const out = []
   for (const r of rows || []) {
@@ -140,28 +128,23 @@ export function gerarParcelasComissao(rows) {
   return out
 }
 
-// Comissão estimada a receber NO PRÓXIMO MÊS: soma da comissão mensal das apólices
-// (ativas) cujo parcelamento ainda cobre o mês seguinte ao mesRef informado.
-// As apólices emitidas no mês atual entram naturalmente, pois sua 1ª parcela cai no mês seguinte.
 export function comissaoEstimadaProximoMes(rows, mesRef) {
   const proximo = addMeses(primeiroDiaMes(mesRef), 1)
   let total = 0
   for (const r of rows || []) {
-    if (apoliceBilladaNoMes(r, proximo)) total += num(r.comissao_mensal)
+    if (apoliceBilladaNoMes(r, proximo) && apoliceAtivaNoMes(r, proximo)) total += num(r.comissao_mensal)
   }
   return total
 }
 
-// Soma das parcelas (valor_parcela) das apólices billadas num mês de referência.
 export function somarFaturaNoMes(rows, mesRef) {
   let total = 0
   for (const r of rows || []) {
-    if (apoliceBilladaNoMes(r, mesRef)) total += num(r.valor_parcela)
+    if (apoliceContaNaFaturaNoMes(r, mesRef)) total += num(r.valor_parcela)
   }
   return total
 }
 
-// Soma das parcelas previstas que caem dentro de [inicio, fim] (mes_referencia).
 export function somarRecebimentoNoPeriodo(recebimentoRows, { inicio, fim }) {
   const ini = inicio ? primeiroDiaMes(inicio) : null
   const f = fim ? primeiroDiaMes(fim) : null

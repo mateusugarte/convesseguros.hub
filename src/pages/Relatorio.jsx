@@ -14,7 +14,6 @@ import {
   Building2,
   CheckSquare,
   Copy,
-  GripVertical,
   LayoutGrid,
   MoveRight,
   Search,
@@ -29,6 +28,7 @@ import { ptBR } from 'date-fns/locale'
 import { supabase } from '../lib/supabase'
 import { editarFicha } from '../lib/fichas'
 import { registrarApoliceDaFicha, formatMoneyBR, toNumber } from '../lib/apolices'
+import { fetchSeguradorasPorProduto } from '../lib/seguradoras'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { useImobiliaria } from '../hooks/useImobiliaria'
@@ -129,16 +129,16 @@ function getReportRange(periodo, ano, mes) {
 
 function getOperacionalStatus(ficha) {
   const raw = ficha?.raw_data || {}
-  if (ficha?.status === 'aprovado') return { id: 'aprovada', label: 'Aprovada', color: 'badge-success' }
-  if (ficha?.status === 'emitido' && ficha?.numero_apolice && raw.recovered_after_cobranca) {
+  if (ficha?._hasEmittedPolicy && raw.recovered_after_cobranca) {
     return { id: 'recuperados', label: 'Recuperada', color: 'badge-purple' }
   }
-  if (ficha?.status === 'emitido' && ficha?.retorno_enviado && !ficha?.numero_apolice) {
+  if (ficha?.retorno_enviado && !ficha?._hasEmittedPolicy) {
     return { id: 'enviado_cobranca', label: 'Enviado Cobrança', color: 'badge-blue' }
   }
-  if (ficha?.status === 'emitido' && ficha?.numero_apolice) {
+  if (ficha?._hasEmittedPolicy) {
     return { id: 'emitida', label: 'Emitida', color: 'badge-purple' }
   }
+  if (ficha?.status === 'aprovado') return { id: 'aprovada', label: 'Aprovada', color: 'badge-success' }
   if (ficha?.status === 'cancelado') return { id: 'desistiu', label: 'Desistiu', color: 'badge-muted' }
   if (ficha?.status === 'expirada') return { id: 'expirada', label: 'Expirada', color: 'badge-muted' }
   if (ficha?.status === 'recusado') return { id: 'recusada', label: 'Recusada', color: 'badge-danger' }
@@ -175,11 +175,27 @@ function isRecovered(ficha) {
 }
 
 function isInCobrança(ficha) {
-  return ficha?.status === 'emitido' && Boolean(ficha?.retorno_enviado) && !ficha?.numero_apolice
+  return Boolean(ficha?.retorno_enviado) && !ficha?._hasEmittedPolicy
 }
 
 function isEmitida(ficha) {
-  return ficha?.status === 'emitido' && Boolean(ficha?.numero_apolice) && !isRecovered(ficha)
+  return Boolean(ficha?._hasEmittedPolicy) && !isRecovered(ficha)
+}
+
+function getEffectiveSeguradora(ficha) {
+  return ficha?._effectiveSeguradora || ficha?.seguradora || null
+}
+
+function getEffectiveNumeroApolice(ficha) {
+  return ficha?._effectiveNumeroApolice || ficha?.numero_apolice || null
+}
+
+function getEffectiveDataEmissao(ficha) {
+  return ficha?._effectiveDataEmissao || ficha?.data_emissao || null
+}
+
+function getCanonicalImobiliariaNome(ficha) {
+  return ficha?._imobiliariaNome || '—'
 }
 
 function buildCopyLines(fichas, coluna) {
@@ -187,7 +203,7 @@ function buildCopyLines(fichas, coluna) {
   return fichas
     .map(f => {
       const nome = getNomeFicha(f)
-      const imob = normalizeDisplayText(f.imobiliaria) || '—'
+      const imob = getCanonicalImobiliariaNome(f)
       const data = formatDateBR(f.created_at)
       const cep = f.cep || '—'
       return `${nome} - ${imob} - ${data} - Status (${status}) - ${cep}`
@@ -216,18 +232,17 @@ function summarizeRows(rows) {
   }
 
   rows.forEach(ficha => {
-    const op = getOperacionalStatus(ficha)
     if (ficha.status === 'aprovado') summary.aprovadas += 1
     if (ficha.status === 'recusado') summary.recusadas += 1
     if (ficha.status === 'expirada') summary.expiradas += 1
     if (isInCobrança(ficha)) summary.cobranca += 1
     if (isRecovered(ficha)) summary.recuperadas += 1
     if (isEmitida(ficha) || isRecovered(ficha)) summary.emitidas += 1
-    if (ficha.status === 'aprovado' && !ficha.numero_apolice) summary.aprovadasSemApolice += 1
+    if (ficha.status === 'aprovado' && !ficha._hasEmittedPolicy) summary.aprovadasSemApolice += 1
 
-    if (ficha.status === 'emitido' && ficha.data_emissao && ficha.finalizada_em) {
-      const start = new Date(ficha.finalizada_em)
-      const end = new Date(ficha.data_emissao)
+    if (ficha._hasEmittedPolicy && getEffectiveDataEmissao(ficha) && ficha.created_at) {
+      const start = new Date(ficha.created_at)
+      const end = new Date(getEffectiveDataEmissao(ficha))
       const days = (end - start) / (1000 * 60 * 60 * 24)
       if (Number.isFinite(days) && days >= 0) summary.tempoEmissao.push(days)
     }
@@ -259,7 +274,7 @@ function groupByImobiliaria(rows, resolverNome) {
   const map = new Map()
 
   rows.forEach(ficha => {
-    const key = resolverNome(ficha.imobiliaria || '—')
+    const key = getCanonicalImobiliariaNome(ficha) || resolverNome(ficha.imobiliaria || '—')
     const current = map.get(key) || {
       nome: key,
       total: 0,
@@ -278,13 +293,13 @@ function groupByImobiliaria(rows, resolverNome) {
 
     current.total += 1
     if (ficha.status === 'aprovado') current.aprovadas += 1
-    if (ficha.status === 'aprovado' && !ficha.numero_apolice) current.aprovadasSemApolice += 1
+    if (ficha.status === 'aprovado' && !ficha._hasEmittedPolicy) current.aprovadasSemApolice += 1
     if (isEmitida(ficha)) current.emitidas += 1
     if (isRecovered(ficha)) current.recuperadas += 1
     if (isInCobrança(ficha)) current.cobranca += 1
 
-    if (ficha.status === 'emitido' && ficha.data_emissao && ficha.finalizada_em) {
-      const days = (new Date(ficha.data_emissao) - new Date(ficha.finalizada_em)) / (1000 * 60 * 60 * 24)
+    if (ficha._hasEmittedPolicy && getEffectiveDataEmissao(ficha) && ficha.created_at) {
+      const days = (new Date(getEffectiveDataEmissao(ficha)) - new Date(ficha.created_at)) / (1000 * 60 * 60 * 24)
       if (Number.isFinite(days) && days >= 0) current.tempoEmissao.push(days)
     }
 
@@ -315,7 +330,11 @@ function groupByImobiliaria(rows, resolverNome) {
 }
 
 function extractSeguradoraMeta(seg) {
-  const aliases = Array.isArray(seg?.seguradora_aliases) ? seg.seguradora_aliases.map(item => item?.alias).filter(Boolean) : []
+  const aliases = Array.isArray(seg?.aliases)
+    ? seg.aliases.filter(Boolean)
+    : Array.isArray(seg?.seguradora_aliases)
+      ? seg.seguradora_aliases.map(item => item?.alias).filter(Boolean)
+      : []
   return {
     id: seg.id,
     nome: seg.nome_canonico,
@@ -326,7 +345,7 @@ function extractSeguradoraMeta(seg) {
 }
 
 function matchesSeguradora(ficha, seguradoraMeta) {
-  const value = normalizeKey(ficha.seguradora)
+  const value = normalizeKey(getEffectiveSeguradora(ficha))
   return seguradoraMeta.aliases.some(alias => normalizeKey(alias) === value)
 }
 
@@ -359,8 +378,10 @@ function RelatorioCard({ ficha, onOpen, selected, onToggleSelect, dragListeners,
 
   return (
     <div
+      {...(!selectionMode && dragListeners ? dragListeners : {})}
+      {...(!selectionMode && dragAttributes ? dragAttributes : {})}
       className={`kanban-card relative ${selected ? 'ring-2 ring-brand-accent' : ''}`}
-      style={{ '--kanban-accent': prodColor }}
+      style={{ '--kanban-accent': prodColor, cursor: selectionMode ? 'pointer' : 'grab' }}
       onClick={() => (selectionMode ? onToggleSelect(ficha.id) : onOpen(ficha.id))}
     >
       <div className="kanban-card-body">
@@ -383,7 +404,7 @@ function RelatorioCard({ ficha, onOpen, selected, onToggleSelect, dragListeners,
 
         <div className="space-y-1.5">
           <p className="text-[12.5px] font-semibold leading-snug text-dark-text">{nome}</p>
-          <p className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">{normalizeDisplayText(ficha.imobiliaria) || 'Imobiliária não informada'}</p>
+          <p className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">{getCanonicalImobiliariaNome(ficha) || 'Imobiliária não informada'}</p>
         </div>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
@@ -393,9 +414,9 @@ function RelatorioCard({ ficha, onOpen, selected, onToggleSelect, dragListeners,
               {doc}
             </span>
           )}
-          {ficha.numero_apolice && (
+          {getEffectiveNumeroApolice(ficha) && (
             <span className="rounded-full px-2 py-1 text-[10px] font-mono" style={{ background: '#2247aa15', color: '#2247aa' }}>
-              Apólice: {ficha.numero_apolice}
+              Apólice: {getEffectiveNumeroApolice(ficha)}
             </span>
           )}
         </div>
@@ -412,19 +433,6 @@ function RelatorioCard({ ficha, onOpen, selected, onToggleSelect, dragListeners,
         {ficha.observacoes && (
           <p className="mt-2 line-clamp-2 text-[11px] text-dark-muted">{ficha.observacoes}</p>
         )}
-
-        {!selectionMode && dragListeners && dragAttributes && (
-          <button
-            {...dragListeners}
-            {...dragAttributes}
-            type="button"
-            className="kanban-grip"
-            onClick={event => event.stopPropagation()}
-            aria-label="Arrastar ficha"
-          >
-            <GripVertical className="h-3.5 w-3.5" />
-          </button>
-        )}
       </div>
     </div>
   )
@@ -434,7 +442,7 @@ function DraggableRelatorioCard({ ficha, onOpen, selected, onToggleSelect, selec
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ficha.id })
 
   return (
-    <div ref={setNodeRef} style={{ opacity: isDragging ? 0.35 : 1, cursor: 'default', touchAction: 'none' }}>
+    <div ref={setNodeRef} style={{ opacity: isDragging ? 0.35 : 1, touchAction: 'none' }}>
       <RelatorioCard
         ficha={ficha}
         onOpen={onOpen}
@@ -572,9 +580,7 @@ function PeriodControl({ periodo, ano, mes, anos, onPeriod, onAno, onMes }) {
   )
 }
 
-function SelectedToolbar({ count, onClear, onSelectAll, onMove, onBulkCopy, options, target, setTarget, selectionMode }) {
-  if (!selectionMode) return null
-
+function SelectedToolbar({ count, onClear, onSelectAll, onInvertSelection, onMove, onBulkCopy, options, target, setTarget }) {
   return (
     <DataCard className="border-brand-accent/15 bg-brand-accent/5" bodyClassName="py-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -586,7 +592,13 @@ function SelectedToolbar({ count, onClear, onSelectAll, onMove, onBulkCopy, opti
           <button type="button" onClick={onSelectAll} className="btn-secondary text-xs">
             Selecionar todos
           </button>
-          <button type="button" onClick={onBulkCopy} className="btn-secondary text-xs">
+          <button type="button" onClick={onClear} className="btn-secondary text-xs" disabled={count === 0}>
+            Deselecionar todos
+          </button>
+          <button type="button" onClick={onInvertSelection} className="btn-secondary text-xs">
+            Inverter seleção
+          </button>
+          <button type="button" onClick={onBulkCopy} className="btn-secondary text-xs" disabled={count === 0}>
             Copiar selecionadas
           </button>
           <Select
@@ -598,11 +610,8 @@ function SelectedToolbar({ count, onClear, onSelectAll, onMove, onBulkCopy, opti
             ]}
             className="w-52"
           />
-          <button type="button" onClick={onMove} className="btn-primary text-xs" disabled={!target}>
+          <button type="button" onClick={onMove} className="btn-primary text-xs" disabled={!target || count === 0}>
             Mover
-          </button>
-          <button type="button" onClick={onClear} className="btn-secondary text-xs">
-            Limpar
           </button>
         </div>
       </div>
@@ -628,7 +637,7 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
   const [emitidoPor, setEmitidoPor] = useState(user?.id || '')
   const [proprietarioNome, setProprietarioNome] = useState(normalizeDisplayText(ficha.nome_empresa || ficha.nome_interessado) || '')
   const [proprietarioCel, setProprietarioCel] = useState(ficha.celular || '')
-  const [numeroApolice, setNumeroApolice] = useState(ficha.numero_apolice || '')
+  const [numeroApolice, setNumeroApolice] = useState(getEffectiveNumeroApolice(ficha) || '')
   const [numeroProposta, setNumeroProposta] = useState('')
   const [endereco, setEndereco] = useState(ficha.cep || '')
   const [inicioVigencia, setInicioVigencia] = useState('')
@@ -639,7 +648,7 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
   const [pctComissao, setPctComissao] = useState(ficha.pct_comissao ?? '')
   const [pctDesconto, setPctDesconto] = useState(ficha.pct_desconto ?? '')
   const [formaPagamento, setFormaPagamento] = useState('')
-  const [seguradora, setSeguradora] = useState(ficha.seguradora || '')
+  const [seguradora, setSeguradora] = useState(getEffectiveSeguradora(ficha) || '')
 
   const meses = inicioVigencia && fimVigencia
     ? Math.max(0, Math.round((new Date(fimVigencia) - new Date(inicioVigencia)) / (1000 * 60 * 60 * 24 * 30)))
@@ -824,12 +833,12 @@ export default function Relatorio() {
         const [yearsRows, imobRows, segRows] = await Promise.all([
           fetchAllRows(() => supabase.from('fichas').select('created_at').in('status', REPORT_STATUSES)),
           supabase.from('imobiliarias').select('id, nome_canonico, imagem_url, imagem_path, ativa').order('nome_canonico'),
-          supabase.from('seguradoras').select('id, nome_canonico, logo_url, logo_path, seguradora_aliases(alias)').order('nome_canonico'),
+          fetchSeguradorasPorProduto('fianca'),
         ])
 
         setYears([...new Set(yearsRows.map(row => new Date(row.created_at).getFullYear()))].sort((a, b) => b - a))
         setImobiliarias(imobRows.data || [])
-        setSeguradoras((segRows.data || []).map(extractSeguradoraMeta))
+        setSeguradoras((segRows || []).map(extractSeguradoraMeta))
       } catch (error) {
         toast({ type: 'error', title: 'Erro ao carregar cadastros', message: error.message })
       }
@@ -876,7 +885,48 @@ export default function Relatorio() {
         if (error) throw error
         if (!active) return
 
-        setRows(data || [])
+        const fichaRows = data || []
+        const fichaIds = fichaRows.map(item => item.id).filter(Boolean)
+        let apolicesByFicha = new Map()
+
+        if (fichaIds.length > 0) {
+          const { data: apolicesData, error: apolicesError } = await supabase
+            .from('apolices')
+            .select('id, ficha_id, numero_apolice, data_emissao, status_emissao, seguradora')
+            .in('ficha_id', fichaIds)
+
+          if (apolicesError) throw apolicesError
+
+          apolicesByFicha = new Map()
+          ;(apolicesData || []).forEach(apolice => {
+            const current = apolicesByFicha.get(apolice.ficha_id)
+            if (!current) {
+              apolicesByFicha.set(apolice.ficha_id, apolice)
+              return
+            }
+
+            const currentDate = new Date(current.data_emissao || 0).getTime()
+            const nextDate = new Date(apolice.data_emissao || 0).getTime()
+            if (nextDate >= currentDate) apolicesByFicha.set(apolice.ficha_id, apolice)
+          })
+        }
+
+        setRows(fichaRows.map(ficha => {
+          const apolice = apolicesByFicha.get(ficha.id) || null
+          const hasPolicy = Boolean(
+            (apolice?.numero_apolice && ['emitida', 'enviada'].includes(apolice?.status_emissao || 'emitida')) ||
+            ficha.numero_apolice
+          )
+
+          return {
+            ...ficha,
+            _apolice: apolice,
+            _hasEmittedPolicy: hasPolicy,
+            _effectiveNumeroApolice: apolice?.numero_apolice || ficha.numero_apolice || null,
+            _effectiveDataEmissao: apolice?.data_emissao || ficha.data_emissao || null,
+            _effectiveSeguradora: apolice?.seguradora || ficha.seguradora || null,
+          }
+        }))
       } catch (error) {
         if (!active) return
         toast({ type: 'error', title: 'Erro ao carregar relatórios', message: error.message })
@@ -926,6 +976,7 @@ export default function Relatorio() {
       _oper: getOperacionalStatus(item),
       _key: resolverNome(item.imobiliaria),
       _logo: resolverImobiliariaInfo(item.imobiliaria),
+      _imobiliariaNome: resolverImobiliariaInfo(item.imobiliaria)?.nome_canonico || resolverNome(item.imobiliaria) || item.imobiliaria || '—',
     }))
   }, [rows, resolverNome, resolverImobiliariaInfo])
 
@@ -988,15 +1039,25 @@ export default function Relatorio() {
     setSelectedIds(visibleIds)
   }
 
+  function clearSelection() {
+    setSelectedIds([])
+    setMoveTarget('')
+  }
+
+  function invertSelection() {
+    setSelectedIds(prev => visibleIds.filter(id => !prev.includes(id)))
+  }
+
   function selectAllColumn(colunaId) {
     const ids = (columnMap[colunaId] || []).map(item => item.id)
     setSelectedIds(ids)
   }
 
   async function copyColumn(colunaId) {
-    const text = buildCopyLines(columnMap[colunaId] || [], colunaId)
+    const selectedInColumn = (columnMap[colunaId] || []).filter(item => selectedIds.includes(item.id))
+    const text = buildCopyLines(selectedInColumn, colunaId)
     if (!text) {
-      toast({ type: 'info', title: 'Nenhum registro para copiar' })
+      toast({ type: 'info', title: 'Selecione os cards que deseja copiar nesta coluna' })
       return
     }
     await navigator.clipboard.writeText(text)
@@ -1009,7 +1070,7 @@ export default function Relatorio() {
       const item = map.get(id)
       if (!item) return null
       const status = item._oper?.label || '—'
-      return `${item._nome} - ${normalizeDisplayText(item.imobiliaria) || '—'} - ${formatDateBR(item.created_at)} - Status (${status}) - ${item.cep || '—'}`
+      return `${item._nome} - ${getCanonicalImobiliariaNome(item)} - ${formatDateBR(item.created_at)} - Status (${status}) - ${item.cep || '—'}`
     }).filter(Boolean).join('\n')
 
     if (!text) {
@@ -1158,7 +1219,23 @@ export default function Relatorio() {
     setPendingEmissao(null)
     setRows(prev => prev.map(item => (
       item.id === pendingEmissao.ficha.id
-        ? { ...item, status: 'emitido', retorno_enviado: false, numero_apolice: payload.numeroApolice, seguradora: payload.seguradora, data_emissao: new Date().toISOString().slice(0, 10), raw_data: { ...(item.raw_data || {}), recovered_after_cobranca: wasInCobrança, recovered_after_cobranca_em: wasInCobrança ? new Date().toISOString() : null } }
+        ? {
+            ...item,
+            status: 'emitido',
+            retorno_enviado: false,
+            numero_apolice: payload.numeroApolice,
+            seguradora: payload.seguradora,
+            data_emissao: new Date().toISOString().slice(0, 10),
+            _hasEmittedPolicy: true,
+            _effectiveNumeroApolice: payload.numeroApolice,
+            _effectiveSeguradora: payload.seguradora,
+            _effectiveDataEmissao: new Date().toISOString().slice(0, 10),
+            raw_data: {
+              ...(item.raw_data || {}),
+              recovered_after_cobranca: wasInCobrança,
+              recovered_after_cobranca_em: wasInCobrança ? new Date().toISOString() : null,
+            },
+          }
         : item
     )))
   }
@@ -1245,9 +1322,8 @@ export default function Relatorio() {
 
   if (isDetail) {
     const currentImob = imobiliarias.find(item => String(item.id) === String(imobiliariaId))
-    const title = currentImob?.nome_canonico || resolverNome(currentImob?.nome_canonico) || 'Imobiliária'
+    const title = currentImob?.nome_canonico || 'Imobiliária'
     const logoMeta = currentImob ? getEntityImageUrl(currentImob.imagem_path, currentImob.imagem_url) : null
-    const selectedSelectionMode = selectedIds.length > 0
 
     return (
       <div className="space-y-5 animate-fade-in">
@@ -1268,14 +1344,14 @@ export default function Relatorio() {
 
         <SelectedToolbar
           count={selectedIds.length}
-          onClear={() => setSelectedIds([])}
+          onClear={clearSelection}
           onSelectAll={selectAllVisible}
+          onInvertSelection={invertSelection}
           onMove={moveSelected}
           onBulkCopy={copySelected}
           options={COLUNAS.filter(col => col.id !== 'emitida' && col.id !== 'recuperados')}
           target={moveTarget}
           setTarget={setMoveTarget}
-          selectionMode={selectedSelectionMode}
         />
 
         <DataCard
@@ -1313,7 +1389,7 @@ export default function Relatorio() {
                     onToggleSelect={toggleSelected}
                     onCopy={copyColumn}
                     onSelectAll={selectAllColumn}
-                    selectionMode={selectedSelectionMode}
+                    selectionMode={selectionMode}
                     colIndex={index}
                   />
                 ))}
@@ -1372,7 +1448,7 @@ export default function Relatorio() {
 
       <div className="grid gap-4 xl:grid-cols-3">
         <MetricCard label="Conversão geral" value={`${summary.taxaEmissao.toFixed(1)}%`} hint="Apólices emitidas ÷ fichas aprovadas" />
-        <MetricCard label="Tempo médio até emissão" value={summary.mediaEmissao != null ? `${summary.mediaEmissao.toFixed(1)} dias` : '—'} hint="Entre aprovação e emissão" />
+        <MetricCard label="Tempo médio até emissão" value={summary.mediaEmissao != null ? `${summary.mediaEmissao.toFixed(1)} dias` : '—'} hint="Entre criação da ficha e emissão" />
         <MetricCard label="Tempo médio em cobrança" value={summary.mediaCobrança != null ? `${summary.mediaCobrança.toFixed(1)} dias` : '—'} hint="Entre cobrança e emissão/atual" />
       </div>
 
@@ -1380,7 +1456,7 @@ export default function Relatorio() {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {seguradoras.map(seg => {
             const approved = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && item.status === 'aprovado').length
-            const pending = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && item.status === 'aprovado' && !item.numero_apolice).length
+            const pending = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && item.status === 'aprovado' && !item._hasEmittedPolicy).length
             return (
               <div key={seg.id} className="rounded-3xl border border-dark-border/60 bg-white/60 p-4">
                 <div className="flex items-start justify-between gap-3">

@@ -6,6 +6,7 @@ import { ptBR } from 'date-fns/locale'
 import { X, Pencil, Trash2, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import ImobiliariaIdentity from './ImobiliariaIdentity'
+import FichaStatusBadge from './FichaStatusBadge'
 import { Avatar } from './ui'
 import { formatMoneyBR } from '../lib/apolices'
 import { formatDecimalBRInput } from '../lib/numberInput'
@@ -98,6 +99,7 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
             </h2>
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
               <span className={`badge ${si.color}`}>{si.label}</span>
+              <FichaStatusBadge ficha={ficha} />
               <span className="text-xs text-dark-muted">{PRODUTO_LABELS[ficha.produto] ?? ficha.produto}</span>
             </div>
           </div>

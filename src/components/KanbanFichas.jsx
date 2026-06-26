@@ -12,6 +12,7 @@ import { useToast } from '../contexts/ToastContext'
 import { supabase } from '../lib/supabase'
 import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/kanbanDnd'
 import ImobiliariaIdentity from './ImobiliariaIdentity'
+import FichaStatusBadge from './FichaStatusBadge'
 import ModalFinalizar from './ModalFinalizar'
 import {
   Home, Briefcase, Building, LayoutGrid, RefreshCw,
@@ -215,6 +216,10 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
             <SeguradoraBadge nome={ficha.seguradora} size="xs" />
           </div>
         )}
+
+        <div className="mb-1.5">
+          <FichaStatusBadge ficha={ficha} />
+        </div>
 
         {/* Rodapé: orçamentista + ações */}
         <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-dark-border/40 mt-auto">

@@ -1,7 +1,14 @@
 // Helpers puros do módulo financeiro.
 // Sem imports de Supabase/Vite → unit-testáveis com `node --test`.
+import { parseDecimalBR } from './numberInput.js'
 
 const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
+// Converte string BR/number → number (0 quando inválido).
+export function toNumber(value) {
+  const n = parseDecimalBR(value)
+  return Number.isFinite(n) ? n : 0
+}
 
 export function pad2(value) {
   return String(value).padStart(2, '0')
@@ -70,4 +77,41 @@ export function projetarProximosMeses(recebimentos, { mesesAFrente = 6, referenc
     })
   }
   return out
+}
+
+// ── Cálculo de comissão/produção por apólice (fonte: tabela `apolices`) ──
+// Fórmula oficial: comissão total = % comissão × prêmio líquido; mensal = total ÷ parcelas.
+
+// Normaliza percentual: 5 → 0.05; 0.05 → 0.05; 12,5 → 0.125.
+export function pctNormalizado(pct) {
+  const p = toNumber(pct)
+  return p > 1 ? p / 100 : p
+}
+
+// Base de comissão: prêmio líquido, com fallback para prêmio total / valor de produção.
+export function premioLiquidoApolice(row) {
+  return toNumber(row?.premio_liquido) || toNumber(row?.premio_total) || toNumber(row?.valor_producao) || 0
+}
+
+// Número de parcelas (mínimo 1).
+export function parcelasApolice(row) {
+  return Math.max(1, toNumber(row?.parcelamento) || 1)
+}
+
+// Comissão total gerada pela apólice: % comissão × prêmio líquido.
+// Fallback para valor_comissao já gravado quando o cálculo não é possível.
+export function comissaoTotalApolice(row) {
+  const calc = premioLiquidoApolice(row) * pctNormalizado(row?.pct_comissao)
+  if (calc > 0) return calc
+  return toNumber(row?.valor_comissao) || 0
+}
+
+// Comissão mensal estimada: comissão total ÷ nº de parcelas.
+export function comissaoMensalApolice(row) {
+  return comissaoTotalApolice(row) / parcelasApolice(row)
+}
+
+// Produção (prêmio total) da apólice, com fallback para parcela × parcelas.
+export function producaoApolice(row) {
+  return toNumber(row?.premio_total) || toNumber(row?.valor_producao) || (toNumber(row?.valor_parcela) * parcelasApolice(row)) || 0
 }

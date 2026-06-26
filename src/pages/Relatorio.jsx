@@ -1,227 +1,502 @@
-﻿import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
-  fetchAnosRelatorio,
-  fetchMesesRelatorio,
-  fetchFichasRelatorio,
-  PRODUTO_LABELS,
-} from '../lib/fichas'
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useDroppable,
+  useDraggable,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
 import {
-  registrarApoliceDaFicha,
-  calculatePremioTotal,
-  calculateValorComissao,
-  formatMoneyBR,
-  toNumber,
-} from '../lib/apolices'
-import { supabase } from '../lib/supabase'
-import { useImobiliaria } from '../hooks/useImobiliaria'
-import ImobiliariaSelect from '../components/ImobiliariaSelect'
-import { Select } from '../components/ui/Select'
-import { DatePicker } from '../components/ui/DatePicker'
-import { useAuth } from '../contexts/AuthContext'
-import { useToast } from '../contexts/ToastContext'
+  BarChart2,
+  Building2,
+  CheckSquare,
+  Copy,
+  GripVertical,
+  LayoutGrid,
+  MoveRight,
+  Search,
+  Square,
+  ArrowLeft,
+  ChevronRight,
+  RefreshCw,
+  ShieldCheck,
+} from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { BarChart2, GripVertical } from 'lucide-react'
-import { PageHeader, MetricCard, DataCard } from '../components/ui'
-import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/kanbanDnd'
+import { supabase } from '../lib/supabase'
+import { editarFicha } from '../lib/fichas'
+import { registrarApoliceDaFicha, formatMoneyBR, toNumber } from '../lib/apolices'
+import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../contexts/ToastContext'
+import { useImobiliaria } from '../hooks/useImobiliaria'
+import { PageHeader, MetricCard, DataCard, Select } from '../components/ui'
+import SeguradoraBadge from '../components/SeguradoraBadge'
+import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
+import FichaStatusBadge from '../components/FichaStatusBadge'
 import { normalizeDisplayText } from '../lib/text'
-import SeguradoraSelect from '../components/SeguradoraSelect'
+import { getEntityImageUrl } from '../lib/entityMedia'
+import { BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
-const MESES_FULL = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
-const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-
-const COLUNAS = [
-  { id: 'aprovada', label: 'Aprovada', color: '#0f766e' },
-  { id: 'emitida', label: 'Emitida', color: '#000079' },
-  { id: 'enviado_cobranca', label: 'Enviado Cobrança', color: '#2247aa' },
-  { id: 'recuperados', label: 'RECUPERADOS (emitidas)', color: '#4b6cc2' },
-  { id: 'desistiu', label: 'Desistiu da Locação', color: '#a2d6da' },
-  { id: 'expirada', label: 'Expirada', color: '#6B7280' },
+const PERIOD_OPTIONS = [
+  { value: 'mes', label: 'Mês' },
+  { value: 'ano', label: 'Ano' },
+  { value: 'historico', label: 'Histórico' },
 ]
 
-const COLUNA_TO_UPDATE = {
-  aprovada: { status: 'aprovado', retorno_enviado: false },
-  emitida: { status: 'emitido', retorno_enviado: false },
-  enviado_cobranca: { status: 'emitido', retorno_enviado: true },
-  recuperados: { status: 'emitido', retorno_enviado: true },
-  desistiu: { status: 'cancelado', retorno_enviado: false },
-  expirada: { status: 'expirada', retorno_enviado: false },
+const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+const MESES_FULL = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+
+const COLUNAS = [
+  { id: 'aprovada', label: 'Aprovadas', color: '#0f766e', copyStatus: 'Aprovada' },
+  { id: 'emitida', label: 'Emitidas', color: '#000079', copyStatus: 'Emitida' },
+  { id: 'enviado_cobranca', label: 'Enviado Cobrança', color: '#2247aa', copyStatus: 'Enviado Cobrança' },
+  { id: 'recuperados', label: 'RECUPERADOS', color: '#4b6cc2', copyStatus: 'Recuperada' },
+  { id: 'desistiu', label: 'Desistiu da Locação', color: '#a2d6da', copyStatus: 'Desistiu' },
+  { id: 'expirada', label: 'Expirada', color: '#6b7280', copyStatus: 'Expirada' },
+]
+
+const REPORT_STATUSES = ['aprovado', 'emitido', 'cancelado', 'expirada', 'recusado']
+const STORAGE_PREFIX = 'relatorio-fian-ca-scroll'
+
+function pad2(value) {
+  return String(value).padStart(2, '0')
 }
 
-const PRODUTO_COLOR = {
-  residencial_pf: '#000079',
-  comercial_pf: '#0f766e',
-  pessoa_juridica: '#7fbec4',
+function toLocalYmd(date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
 }
 
-function getColuna(ficha) {
-  if (ficha.status === 'aprovado') return 'aprovada'
-  if (ficha.status === 'emitido' && ficha.numero_apolice) return 'recuperados'
-  if (ficha.status === 'emitido' && ficha.retorno_enviado && !ficha.numero_apolice) return 'enviado_cobranca'
-  if (ficha.status === 'emitido' && !ficha.retorno_enviado && !ficha.numero_apolice) return 'emitida'
-  if (ficha.status === 'cancelado') return 'desistiu'
-  if (ficha.status === 'expirada') return 'expirada'
+function getMonthRange(ano, mes) {
+  return [toLocalYmd(new Date(ano, mes - 1, 1)), toLocalYmd(new Date(ano, mes, 0, 23, 59, 59))]
+}
+
+function getYearRange(ano) {
+  return [toLocalYmd(new Date(ano, 0, 1)), toLocalYmd(new Date(ano, 11, 31, 23, 59, 59))]
+}
+
+function formatDateBR(value) {
+  if (!value) return '—'
+  try {
+    return format(parseISO(String(value)), 'dd/MM/yyyy', { locale: ptBR })
+  } catch {
+    return String(value).slice(0, 10)
+  }
+}
+
+function formatDateTimeBR(value) {
+  if (!value) return null
+  try {
+    return format(parseISO(String(value)), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+  } catch {
+    return String(value)
+  }
+}
+
+function normalizeKey(value) {
+  return normalizeDisplayText(String(value || '')).toLowerCase().trim()
+}
+
+async function fetchAllRows(queryFactory, pageSize = 1000) {
+  let all = []
+  let offset = 0
+
+  while (true) {
+    const { data, error } = await queryFactory().range(offset, offset + pageSize - 1)
+    if (error) throw error
+    if (!data || data.length === 0) break
+    all = all.concat(data)
+    if (data.length < pageSize) break
+    offset += pageSize
+  }
+
+  return all
+}
+
+function getPeriodoLabel(periodo, ano, mes) {
+  if (periodo === 'historico') return 'Histórico'
+  if (periodo === 'ano') return String(ano)
+  return `${MESES_FULL[mes - 1]} ${ano}`
+}
+
+function getReportRange(periodo, ano, mes) {
+  if (periodo === 'historico') return [null, null]
+  if (periodo === 'ano') return getYearRange(ano)
+  return getMonthRange(ano, mes)
+}
+
+function getOperacionalStatus(ficha) {
+  const raw = ficha?.raw_data || {}
+  if (ficha?.status === 'aprovado') return { id: 'aprovada', label: 'Aprovada', color: 'badge-success' }
+  if (ficha?.status === 'emitido' && ficha?.numero_apolice && raw.recovered_after_cobranca) {
+    return { id: 'recuperados', label: 'Recuperada', color: 'badge-purple' }
+  }
+  if (ficha?.status === 'emitido' && ficha?.retorno_enviado && !ficha?.numero_apolice) {
+    return { id: 'enviado_cobranca', label: 'Enviado Cobrança', color: 'badge-blue' }
+  }
+  if (ficha?.status === 'emitido' && ficha?.numero_apolice) {
+    return { id: 'emitida', label: 'Emitida', color: 'badge-purple' }
+  }
+  if (ficha?.status === 'cancelado') return { id: 'desistiu', label: 'Desistiu', color: 'badge-muted' }
+  if (ficha?.status === 'expirada') return { id: 'expirada', label: 'Expirada', color: 'badge-muted' }
+  if (ficha?.status === 'recusado') return { id: 'recusada', label: 'Recusada', color: 'badge-danger' }
   return null
 }
 
-function maskCpf(cpf) {
-  if (!cpf) return null
-  const d = cpf.replace(/\D/g, '')
-  if (d.length === 11) return `***.${d.slice(3, 6)}.${d.slice(6, 9)}-**`
-  return cpf
+function getColuna(ficha) {
+  const op = getOperacionalStatus(ficha)
+  return op?.id || null
 }
 
-function maskCnpj(cnpj) {
-  if (!cnpj) return null
-  const d = cnpj.replace(/\D/g, '')
-  if (d.length === 14) return `**.${d.slice(2, 5)}.${d.slice(5, 8)}/****-**`
-  return cnpj
+function getNomeFicha(ficha) {
+  if (!ficha) return '—'
+  if (ficha.produto === 'pessoa_juridica') {
+    return normalizeDisplayText(ficha.nome_empresa || ficha.nome_interessado) || '—'
+  }
+  return normalizeDisplayText(ficha.nome_interessado) || '—'
 }
 
-function docMask(ficha) {
-  return ficha.produto === 'pessoa_juridica' ? maskCnpj(ficha.cnpj) : maskCpf(ficha.cpf)
+function getDocumento(ficha) {
+  const digits = String(ficha?.produto === 'pessoa_juridica' ? ficha?.cnpj : ficha?.cpf || '').replace(/\D/g, '')
+  if (!digits) return null
+  if (digits.length === 14) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12, 14)}`
+  if (digits.length === 11) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`
+  return String(ficha?.produto === 'pessoa_juridica' ? ficha?.cnpj : ficha?.cpf || '')
 }
 
-function nomePrincipal(ficha) {
-  return ficha.produto === 'pessoa_juridica'
-    ? (normalizeDisplayText(ficha.nome_empresa || ficha.nome_interessado) || '—')
-    : (normalizeDisplayText(ficha.nome_interessado) || '—')
+function getRecoveryStart(ficha) {
+  return ficha?.raw_data?.retorno_enviado_em || ficha?.raw_data?.cobranca_started_at || null
 }
 
-function stringColor(str) {
-  const c = ['#000079', '#0f766e', '#a2d6da', '#4b6cc2', '#c3f0f2', '#dcffff', '#2247aa']
-  let h = 0
-  for (let i = 0; i < (str || '').length; i++) h = str.charCodeAt(i) + ((h << 5) - h)
-  return c[Math.abs(h) % c.length]
+function isRecovered(ficha) {
+  return Boolean(ficha?.raw_data?.recovered_after_cobranca)
 }
 
-function initials(n) {
-  return (n || '').split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase() || '?'
+function isInCobrança(ficha) {
+  return ficha?.status === 'emitido' && Boolean(ficha?.retorno_enviado) && !ficha?.numero_apolice
 }
 
-function RelatorioCard({ ficha, onClick, dragListeners, dragAttributes, isDragOverlay = false }) {
-  const prodColor = PRODUTO_COLOR[ficha.produto] || '#6B7280'
-  const doc = docMask(ficha)
-  const nome = nomePrincipal(ficha)
-  const orc = ficha.orcamentista_forms
-  const imobiliaria = ficha.imobiliaria || 'Imobiliaria nao informada'
+function isEmitida(ficha) {
+  return ficha?.status === 'emitido' && Boolean(ficha?.numero_apolice) && !isRecovered(ficha)
+}
+
+function buildCopyLines(fichas, coluna) {
+  const status = COLUNAS.find(c => c.id === coluna)?.copyStatus || coluna
+  return fichas
+    .map(f => {
+      const nome = getNomeFicha(f)
+      const imob = normalizeDisplayText(f.imobiliaria) || '—'
+      const data = formatDateBR(f.created_at)
+      const cep = f.cep || '—'
+      return `${nome} - ${imob} - ${data} - Status (${status}) - ${cep}`
+    })
+    .join('\n')
+}
+
+function formatCurrencyValue(value) {
+  const n = toNumber(value)
+  if (n === null) return null
+  return formatMoneyBR(n)
+}
+
+function summarizeRows(rows) {
+  const summary = {
+    total: rows.length,
+    aprovadas: 0,
+    emitidas: 0,
+    recusadas: 0,
+    expiradas: 0,
+    cobranca: 0,
+    recuperadas: 0,
+    aprovadasSemApolice: 0,
+    tempoEmissao: [],
+    tempoCobrança: [],
+  }
+
+  rows.forEach(ficha => {
+    const op = getOperacionalStatus(ficha)
+    if (ficha.status === 'aprovado') summary.aprovadas += 1
+    if (ficha.status === 'recusado') summary.recusadas += 1
+    if (ficha.status === 'expirada') summary.expiradas += 1
+    if (isInCobrança(ficha)) summary.cobranca += 1
+    if (isRecovered(ficha)) summary.recuperadas += 1
+    if (isEmitida(ficha) || isRecovered(ficha)) summary.emitidas += 1
+    if (ficha.status === 'aprovado' && !ficha.numero_apolice) summary.aprovadasSemApolice += 1
+
+    if (ficha.status === 'emitido' && ficha.data_emissao && ficha.finalizada_em) {
+      const start = new Date(ficha.finalizada_em)
+      const end = new Date(ficha.data_emissao)
+      const days = (end - start) / (1000 * 60 * 60 * 24)
+      if (Number.isFinite(days) && days >= 0) summary.tempoEmissao.push(days)
+    }
+
+    const cobrançaStart = getRecoveryStart(ficha)
+    if (cobrançaStart) {
+      const start = new Date(cobrançaStart)
+      const end = ficha?.raw_data?.recovered_after_cobranca_em
+        ? new Date(ficha.raw_data.recovered_after_cobranca_em)
+        : new Date()
+      const days = (end - start) / (1000 * 60 * 60 * 24)
+      if (Number.isFinite(days) && days >= 0) summary.tempoCobrança.push(days)
+    }
+  })
+
+  summary.taxaEmissao = summary.aprovadas > 0 ? (summary.emitidas / summary.aprovadas) * 100 : 0
+  summary.taxaRecuperacao = summary.cobranca > 0 ? (summary.recuperadas / summary.cobranca) * 100 : 0
+  summary.mediaEmissao = summary.tempoEmissao.length
+    ? summary.tempoEmissao.reduce((a, b) => a + b, 0) / summary.tempoEmissao.length
+    : null
+  summary.mediaCobrança = summary.tempoCobrança.length
+    ? summary.tempoCobrança.reduce((a, b) => a + b, 0) / summary.tempoCobrança.length
+    : null
+
+  return summary
+}
+
+function groupByImobiliaria(rows, resolverNome) {
+  const map = new Map()
+
+  rows.forEach(ficha => {
+    const key = resolverNome(ficha.imobiliaria || '—')
+    const current = map.get(key) || {
+      nome: key,
+      total: 0,
+      aprovadas: 0,
+      emitidas: 0,
+      recuperadas: 0,
+      cobranca: 0,
+      mediaEmissao: null,
+      mediaCobrança: null,
+      logoUrl: null,
+      logoPath: null,
+      aprovadasSemApolice: 0,
+      tempoEmissao: [],
+      tempoCobrança: [],
+    }
+
+    current.total += 1
+    if (ficha.status === 'aprovado') current.aprovadas += 1
+    if (ficha.status === 'aprovado' && !ficha.numero_apolice) current.aprovadasSemApolice += 1
+    if (isEmitida(ficha)) current.emitidas += 1
+    if (isRecovered(ficha)) current.recuperadas += 1
+    if (isInCobrança(ficha)) current.cobranca += 1
+
+    if (ficha.status === 'emitido' && ficha.data_emissao && ficha.finalizada_em) {
+      const days = (new Date(ficha.data_emissao) - new Date(ficha.finalizada_em)) / (1000 * 60 * 60 * 24)
+      if (Number.isFinite(days) && days >= 0) current.tempoEmissao.push(days)
+    }
+
+    const cobrançaStart = getRecoveryStart(ficha)
+    if (cobrançaStart) {
+      const end = ficha?.raw_data?.recovered_after_cobranca_em
+        ? new Date(ficha.raw_data.recovered_after_cobranca_em)
+        : new Date()
+      const days = (end - new Date(cobrançaStart)) / (1000 * 60 * 60 * 24)
+      if (Number.isFinite(days) && days >= 0) current.tempoCobrança.push(days)
+    }
+
+    map.set(key, current)
+  })
+
+  return [...map.values()].map(item => ({
+    ...item,
+    taxaConversao: item.aprovadas > 0 ? (item.emitidas / item.aprovadas) * 100 : 0,
+    taxaRecuperacao: item.cobranca > 0 ? (item.recuperadas / item.cobranca) * 100 : 0,
+    score:
+      ((item.aprovadas > 0 ? (item.aprovadas / Math.max(item.total, 1)) : 0) * 35) +
+      ((item.emitidas > 0 && item.aprovadas > 0 ? (item.emitidas / item.aprovadas) : 0) * 35) +
+      ((item.cobranca > 0 ? (item.recuperadas / item.cobranca) : 0) * 20) -
+      ((item.tempoEmissao.length ? item.tempoEmissao.reduce((a, b) => a + b, 0) / item.tempoEmissao.length : 0) * 2),
+    mediaEmissao: item.tempoEmissao.length ? item.tempoEmissao.reduce((a, b) => a + b, 0) / item.tempoEmissao.length : null,
+    mediaCobrança: item.tempoCobrança.length ? item.tempoCobrança.reduce((a, b) => a + b, 0) / item.tempoCobrança.length : null,
+  })).sort((a, b) => b.score - a.score)
+}
+
+function extractSeguradoraMeta(seg) {
+  const aliases = Array.isArray(seg?.seguradora_aliases) ? seg.seguradora_aliases.map(item => item?.alias).filter(Boolean) : []
+  return {
+    id: seg.id,
+    nome: seg.nome_canonico,
+    logoUrl: seg.logo_url || null,
+    logoPath: seg.logo_path || null,
+    aliases: [seg.nome_canonico, ...aliases],
+  }
+}
+
+function matchesSeguradora(ficha, seguradoraMeta) {
+  const value = normalizeKey(ficha.seguradora)
+  return seguradoraMeta.aliases.some(alias => normalizeKey(alias) === value)
+}
+
+function ChartCard({ title, subtitle, data, dataKey = 'value', xKey = 'name', color = '#000079', formatter = v => v }) {
+  return (
+    <DataCard title={title} subtitle={subtitle} className="h-full">
+      <div className="h-72">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} layout="vertical" margin={{ top: 8, right: 18, left: 12, bottom: 8 }}>
+            <CartesianGrid stroke="rgba(148,163,184,0.18)" strokeDasharray="3 3" />
+            <XAxis type="number" tick={{ fontSize: 11 }} />
+            <YAxis type="category" dataKey={xKey} width={120} tick={{ fontSize: 11 }} />
+            <Tooltip
+              formatter={value => formatter(value)}
+              labelStyle={{ fontWeight: 600 }}
+            />
+            <Bar dataKey={dataKey} fill={color} radius={[0, 12, 12, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </DataCard>
+  )
+}
+
+function RelatorioCard({ ficha, onOpen, selected, onToggleSelect, dragListeners, dragAttributes, selectionMode }) {
+  const nome = getNomeFicha(ficha)
+  const doc = getDocumento(ficha)
+  const op = getOperacionalStatus(ficha)
+  const prodColor = ficha.produto === 'pessoa_juridica' ? '#4b6cc2' : ficha.produto === 'comercial_pf' ? '#0f766e' : '#000079'
 
   return (
     <div
-      className={`kanban-card${isDragOverlay ? ' kanban-card-dragging' : ''}`}
+      className={`kanban-card relative ${selected ? 'ring-2 ring-brand-accent' : ''}`}
       style={{ '--kanban-accent': prodColor }}
-      onClick={onClick}
+      onClick={() => (selectionMode ? onToggleSelect(ficha.id) : onOpen(ficha.id))}
     >
-      {!isDragOverlay && dragListeners && dragAttributes && (
-        <button
-          {...dragListeners}
-          {...dragAttributes}
-          type="button"
-          className="kanban-grip"
-          onClick={e => e.stopPropagation()}
-          aria-label="Arrastar ficha"
-        >
-          <GripVertical className="w-3.5 h-3.5" />
-        </button>
-      )}
       <div className="kanban-card-body">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <span
-            className="inline-flex rounded-full px-2 py-1 text-[10px] font-semibold"
-            style={{ background: `${prodColor}20`, color: prodColor }}
-          >
-            {PRODUTO_LABELS[ficha.produto] || ficha.produto}
-          </span>
-          <span className="text-[10px] text-dark-muted font-mono">
-            {format(parseISO(ficha.created_at), 'dd/MM', { locale: ptBR })}
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={event => { event.stopPropagation(); onToggleSelect(ficha.id) }}
+              className="rounded-lg p-1 hover:bg-dark-surface2"
+              aria-label="Selecionar card"
+            >
+              {selected ? <CheckSquare className="h-4 w-4 text-brand-secondary" /> : <Square className="h-4 w-4 text-dark-muted" />}
+            </button>
+            <span className="inline-flex rounded-full px-2 py-1 text-[10px] font-semibold" style={{ background: `${prodColor}20`, color: prodColor }}>
+              {normalizeDisplayText(ficha.produto) || ficha.produto || 'Fiança'}
+            </span>
+          </div>
+          <span className="text-[10px] font-mono text-dark-muted">{formatDateBR(ficha.created_at)}</span>
         </div>
 
         <div className="space-y-1.5">
           <p className="text-[12.5px] font-semibold leading-snug text-dark-text">{nome}</p>
-          <p className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">{imobiliaria}</p>
+          <p className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">{normalizeDisplayText(ficha.imobiliaria) || 'Imobiliária não informada'}</p>
         </div>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
+          <FichaStatusBadge ficha={ficha} />
           {doc && (
             <span className="rounded-full border border-dark-border/60 bg-dark-surface2/70 px-2 py-1 text-[10px] font-mono text-dark-muted">
               {doc}
             </span>
           )}
-
           {ficha.numero_apolice && (
-            <span
-              className="rounded-full px-2 py-1 text-[10px] font-mono"
-              style={{ background: '#2247aa15', color: '#2247aa' }}
-            >
-            Apólice: {ficha.numero_apolice}
+            <span className="rounded-full px-2 py-1 text-[10px] font-mono" style={{ background: '#2247aa15', color: '#2247aa' }}>
+              Apólice: {ficha.numero_apolice}
             </span>
-        )}
-
+          )}
         </div>
 
-        {orc && (
+        {op && (
           <div className="mt-3 flex items-center gap-1.5 border-t border-dark-border/50 pt-2">
-            <div
-              className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
-              style={{ background: stringColor(orc) }}
-            >
-              {initials(orc)}
-            </div>
             <div className="min-w-0">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Orcamentista</p>
-              <p className="truncate text-[10px] text-dark-text">{orc}</p>
+              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Status operacional</p>
+              <span className={`badge ${op.color}`}>{op.label}</span>
             </div>
           </div>
+        )}
+
+        {ficha.observacoes && (
+          <p className="mt-2 line-clamp-2 text-[11px] text-dark-muted">{ficha.observacoes}</p>
+        )}
+
+        {!selectionMode && dragListeners && dragAttributes && (
+          <button
+            {...dragListeners}
+            {...dragAttributes}
+            type="button"
+            className="kanban-grip"
+            onClick={event => event.stopPropagation()}
+            aria-label="Arrastar ficha"
+          >
+            <GripVertical className="h-3.5 w-3.5" />
+          </button>
         )}
       </div>
     </div>
   )
 }
 
-function DraggableRelatorioCard({ ficha, onFichaClick }) {
+function DraggableRelatorioCard({ ficha, onOpen, selected, onToggleSelect, selectionMode }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ficha.id })
 
   return (
-    <div
-      ref={setNodeRef}
-      onClick={() => onFichaClick(ficha.id)}
-      style={{ opacity: isDragging ? 0.35 : 1, cursor: 'default', touchAction: 'none' }}
-    >
-      <RelatorioCard ficha={ficha} onClick={() => {}} dragListeners={listeners} dragAttributes={attributes} />
+    <div ref={setNodeRef} style={{ opacity: isDragging ? 0.35 : 1, cursor: 'default', touchAction: 'none' }}>
+      <RelatorioCard
+        ficha={ficha}
+        onOpen={onOpen}
+        selected={selected}
+        onToggleSelect={onToggleSelect}
+        dragListeners={listeners}
+        dragAttributes={attributes}
+        selectionMode={selectionMode}
+      />
     </div>
   )
 }
 
-function KanbanColuna({ coluna, fichas, onFichaClick, colIndex }) {
+function KanbanColuna({
+  coluna,
+  fichas,
+  onOpen,
+  selectedIds,
+  onToggleSelect,
+  onCopy,
+  onSelectAll,
+  selectionMode,
+  colIndex,
+}) {
   const { isOver, setNodeRef } = useDroppable({ id: coluna.id })
 
   return (
-    <div
-      className="kanban-col animate-fade-in flex flex-col"
-      style={{ animationDelay: `${colIndex * 40}ms`, animationFillMode: 'both' }}
-    >
+    <div className="kanban-col animate-fade-in flex flex-col" style={{ animationDelay: `${colIndex * 40}ms`, animationFillMode: 'both' }}>
       <div
         className="kanban-col-header flex items-center justify-between flex-shrink-0"
         style={{ background: `${coluna.color}18`, borderColor: `${coluna.color}50` }}
       >
         <div className="flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 rounded-full" style={{ background: coluna.color }} />
+          <div className="h-1.5 w-1.5 rounded-full" style={{ background: coluna.color }} />
           <span className="text-[11px] font-semibold" style={{ color: coluna.color }}>{coluna.label}</span>
         </div>
-        <span
-          className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded"
-          style={{ background: `${coluna.color}25`, color: coluna.color }}
-        >
-          {fichas.length}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded" style={{ background: `${coluna.color}25`, color: coluna.color }}>
+            {fichas.length}
+          </span>
+          <button
+            type="button"
+            onClick={event => { event.stopPropagation(); onSelectAll(coluna.id) }}
+            className="rounded-lg border border-dark-border/60 px-2 py-1 text-[10px] font-medium text-dark-muted transition-colors hover:border-brand-accent/40 hover:text-dark-text"
+            title="Selecionar todos desta coluna"
+          >
+            Todos
+          </button>
+          <button
+            type="button"
+            onClick={event => { event.stopPropagation(); onCopy(coluna.id) }}
+            className="rounded-lg border border-dark-border/60 px-2 py-1 text-[10px] font-medium text-dark-muted transition-colors hover:border-brand-accent/40 hover:text-dark-text"
+            title="Copiar informações da coluna"
+          >
+            Copiar
+          </button>
+        </div>
       </div>
 
       <div
         ref={setNodeRef}
-        className="kanban-col-body flex-1 p-1.5 space-y-1.5 overflow-y-auto transition-colors duration-150"
+        className="kanban-col-body flex-1 space-y-1.5 overflow-y-auto p-1.5 transition-colors duration-150"
         style={{
           borderColor: isOver ? `${coluna.color}80` : 'rgb(var(--color-border))',
           backgroundColor: isOver ? `${coluna.color}08` : 'rgb(var(--color-surface2) / 0.4)',
@@ -230,86 +505,120 @@ function KanbanColuna({ coluna, fichas, onFichaClick, colIndex }) {
       >
         {fichas.length === 0 ? (
           <div className="kanban-empty">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="kanban-empty-icon">
-              <rect x="3" y="3" width="18" height="18" rx="3" strokeDasharray="4 2" />
-            </svg>
+            <Square className="kanban-empty-icon h-5 w-5" />
             <span className="kanban-empty-text">Vazia</span>
           </div>
         ) : (
-          fichas.map(f => <DraggableRelatorioCard key={f.id} ficha={f} onFichaClick={onFichaClick} />)
+          fichas.map(ficha => (
+            <DraggableRelatorioCard
+              key={ficha.id}
+              ficha={ficha}
+              onOpen={onOpen}
+              selected={selectedIds.has(ficha.id)}
+              onToggleSelect={onToggleSelect}
+              selectionMode={selectionMode}
+            />
+          ))
         )}
       </div>
     </div>
   )
 }
 
-function MesPicker({ mes, mesesDisp, onMes }) {
+function PeriodControl({ periodo, ano, mes, anos, onPeriod, onAno, onMes }) {
   return (
-    <div className="flex items-center gap-1 flex-wrap">
-      {MESES_ABBR.map((label, i) => {
-        const m = i + 1
-        const has = mesesDisp.includes(m)
-        const active = mes === m
-        return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-1 rounded-2xl border border-dark-border/60 bg-white/70 p-1">
+        {PERIOD_OPTIONS.map(opt => (
           <button
-            key={m}
-            onClick={() => has && onMes(m)}
-            disabled={!has}
-            title={!has ? 'Sem fichas neste mes' : MESES_FULL[i]}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              active ? 'bg-brand-secondary text-white shadow-sm'
-                : has ? 'text-dark-text hover:bg-dark-surface2'
-                  : 'text-dark-muted/35 cursor-not-allowed'
+            key={opt.value}
+            type="button"
+            onClick={() => onPeriod(opt.value)}
+            className={`rounded-xl px-3 py-1.5 text-xs font-medium transition-all ${
+              periodo === opt.value ? 'bg-brand-secondary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
             }`}
           >
-            {label}
+            {opt.label}
           </button>
-        )
-      })}
-    </div>
-  )
-}
+        ))}
+      </div>
 
-function calcularMeses(inicio, fim) {
-  if (!inicio || !fim) return 0
-  return Math.max(0, Math.round((new Date(fim) - new Date(inicio)) / (1000 * 60 * 60 * 24 * 30)))
-}
-
-function FieldShell({ label, required, children }) {
-  return (
-    <div className="group relative rounded-3xl border border-transparent px-2 py-1.5 transition-all hover:border-brand-accent/20 hover:bg-dark-surface2/20">
-      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-dark-muted">
-        {label}{required && <span className="ml-0.5 text-status-danger">*</span>}
-      </label>
-      <div className="relative">{children}</div>
-    </div>
-  )
-}
-
-function EditField({ label, value, onChange, type = 'text', placeholder, required }) {
-  return (
-    <FieldShell label={label} required={required}>
-      {type === 'date' ? (
-        <DatePicker value={value || ''} onChange={onChange} className="w-full" />
-      ) : (
-        <input
-          type={type}
-          value={value || ''}
-          onChange={e => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="input text-sm"
+      {periodo !== 'historico' && (
+        <Select
+          value={String(ano)}
+          onChange={value => onAno(Number(value))}
+          options={anos.map(item => ({ value: String(item), label: String(item) }))}
+          className="w-24"
         />
       )}
-    </FieldShell>
+
+      {periodo === 'mes' && (
+        <div className="flex items-center gap-1 flex-wrap">
+          {MESES_ABBR.map((label, index) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => onMes(index + 1)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                mes === index + 1 ? 'bg-brand-secondary text-white shadow-sm' : 'text-dark-text hover:bg-dark-surface2'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
-function SelectField({ label, value, onChange, options, required }) {
-  const normalized = options.map(o => (typeof o === 'string' ? { value: o, label: o } : o))
+function SelectedToolbar({ count, onClear, onSelectAll, onMove, onBulkCopy, options, target, setTarget, selectionMode }) {
+  if (!selectionMode) return null
+
   return (
-    <FieldShell label={label} required={required}>
-      <Select value={value || ''} onChange={onChange} options={normalized} placeholder="Selecione..." className="w-full" />
-    </FieldShell>
+    <DataCard className="border-brand-accent/15 bg-brand-accent/5" bodyClassName="py-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Seleção em massa</p>
+          <p className="mt-1 text-sm text-dark-text">{count} ficha{count !== 1 ? 's' : ''} selecionada{count !== 1 ? 's' : ''}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={onSelectAll} className="btn-secondary text-xs">
+            Selecionar todos
+          </button>
+          <button type="button" onClick={onBulkCopy} className="btn-secondary text-xs">
+            Copiar selecionadas
+          </button>
+          <Select
+            value={target}
+            onChange={setTarget}
+            options={[
+              { value: '', label: 'Mover para coluna...' },
+              ...options.map(opt => ({ value: opt.id, label: opt.label })),
+            ]}
+            className="w-52"
+          />
+          <button type="button" onClick={onMove} className="btn-primary text-xs" disabled={!target}>
+            Mover
+          </button>
+          <button type="button" onClick={onClear} className="btn-secondary text-xs">
+            Limpar
+          </button>
+        </div>
+      </div>
+    </DataCard>
+  )
+}
+
+function EmptyState({ title, description, icon: Icon }) {
+  return (
+    <DataCard className="py-16 text-center">
+      <div className="flex flex-col items-center justify-center gap-2 text-dark-muted">
+        <Icon className="h-8 w-8 opacity-30" />
+        <p className="text-sm font-medium text-dark-text">{title}</p>
+        <p className="max-w-md text-xs text-dark-muted">{description}</p>
+      </div>
+    </DataCard>
   )
 }
 
@@ -332,12 +641,14 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
   const [formaPagamento, setFormaPagamento] = useState('')
   const [seguradora, setSeguradora] = useState(ficha.seguradora || '')
 
-  const meses = calcularMeses(inicioVigencia, fimVigencia)
+  const meses = inicioVigencia && fimVigencia
+    ? Math.max(0, Math.round((new Date(fimVigencia) - new Date(inicioVigencia)) / (1000 * 60 * 60 * 24 * 30)))
+    : 0
   const qtdParcelas = toNumber(parcelamento) || 0
   const valorParcelaNum = toNumber(valorParcela) || 0
   const premioLiquidoNum = toNumber(premioLiquido) || 0
-  const premioTotal = calculatePremioTotal(valorParcelaNum, qtdParcelas)
-  const valorComissao = calculateValorComissao(premioLiquidoNum, pctComissao)
+  const premioTotal = qtdParcelas > 0 && valorParcelaNum > 0 ? valorParcelaNum * qtdParcelas : null
+  const valorComissao = premioLiquidoNum > 0 && pctComissao !== '' ? (premioLiquidoNum * (toNumber(pctComissao) > 1 ? toNumber(pctComissao) / 100 : toNumber(pctComissao))) : null
 
   const obrigatoriosOK = proprietarioNome.trim() && numeroApolice.trim()
     && inicioVigencia && fimVigencia && parcelamento && valorParcela && formaPagamento && seguradora
@@ -351,70 +662,71 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
     <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 animate-fade-in">
       <div className="modal-backdrop" onClick={!salvando ? onCancelar : undefined} />
       <div className="relative glass-modal w-full max-w-2xl overflow-hidden border border-dark-border">
-        <div className="px-6 py-4 border-b border-dark-border flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 border-b border-dark-border px-6 py-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Emissão pelo relatório mensal</p>
-            <h3 className="mt-1 text-lg font-semibold text-dark-text">
-              {normalizeDisplayText(ficha.nome_interessado || ficha.nome_empresa) || 'Ficha selecionada'}
-            </h3>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Emissão pelo relatório</p>
+            <h3 className="mt-1 text-lg font-semibold text-dark-text">{normalizeDisplayText(ficha.nome_interessado || ficha.nome_empresa) || 'Ficha selecionada'}</h3>
           </div>
           <button onClick={onCancelar} className="text-dark-muted hover:text-dark-text" disabled={salvando}>×</button>
         </div>
-        <div className="px-6 py-5 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <EditField label="Nome do Proprietário" value={proprietarioNome} onChange={setProprietarioNome} placeholder="João da Silva" required />
-            <EditField label="Celular do Proprietário" value={proprietarioCel} onChange={setProprietarioCel} placeholder="(11) 99999-9999" />
-            <EditField label="Número da Apólice" value={numeroApolice} onChange={setNumeroApolice} placeholder="000000000" required />
-            <EditField label="Número da Proposta" value={numeroProposta} onChange={setNumeroProposta} placeholder="Opcional" />
+
+        <div className="space-y-4 px-6 py-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Nome do Proprietário" value={proprietarioNome} onChange={setProprietarioNome} required />
+            <Field label="Celular do Proprietário" value={proprietarioCel} onChange={setProprietarioCel} />
+            <Field label="Número da Apólice" value={numeroApolice} onChange={setNumeroApolice} required />
+            <Field label="Número da Proposta" value={numeroProposta} onChange={setNumeroProposta} />
             <div className="sm:col-span-2">
-              <EditField label="Endereço do Imóvel" value={endereco} onChange={setEndereco} placeholder="Rua, número, bairro, cidade" />
+              <Field label="Endereço do Imóvel" value={endereco} onChange={setEndereco} />
             </div>
-            <EditField label="Início da Vigência" type="date" value={inicioVigencia} onChange={setInicioVigencia} required />
-            <EditField label="Fim da Vigência" type="date" value={fimVigencia} onChange={setFimVigencia} required />
-            <div>
-              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Tempo de Vigência</label>
-              <div className="input text-sm text-dark-muted bg-dark-surface2/50">{meses > 0 ? `${meses} meses` : '—'}</div>
-            </div>
-            <EditField label="Parcelamento (vezes)" type="number" value={parcelamento} onChange={setParcelamento} placeholder="Ex: 12" required />
-            <EditField label="Valor da Parcela (R$)" type="number" value={valorParcela} onChange={setValorParcela} placeholder="0,00" required />
-            <EditField label="Prêmio Líquido (R$)" type="number" value={premioLiquido} onChange={setPremioLiquido} placeholder="0,00" required />
-            <EditField label="% Comissão" type="number" value={pctComissao} onChange={setPctComissao} placeholder="Ex: 10" required />
-            <EditField label="% Desconto" type="number" value={pctDesconto} onChange={setPctDesconto} placeholder="Ex: 5" required />
-            <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Prêmio total</p>
-              <p className="mt-1 font-semibold">{premioTotal != null ? formatMoneyBR(premioTotal) : '—'}</p>
-            </div>
-            <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Comissão calculada</p>
-              <p className="mt-1 font-semibold">{valorComissao != null ? formatMoneyBR(valorComissao) : '—'}</p>
-            </div>
-            <SelectField
-              label="Forma de Pagamento"
-              value={formaPagamento}
-              onChange={setFormaPagamento}
-              options={[
-                { value: '', label: 'Selecione...' },
-                { value: 'fatura_sem_entrada', label: 'Fatura sem entrada' },
-                { value: 'fatura_com_entrada', label: 'Fatura com entrada' },
-                { value: 'cartao_credito', label: 'Cartão de crédito' },
-              ]}
-              required
-            />
-            <FieldShell label="Seguradora" required>
-              <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={ficha.produto} required />
-            </FieldShell>
+            <Field type="date" label="Início da Vigência" value={inicioVigencia} onChange={setInicioVigencia} required />
+            <Field type="date" label="Fim da Vigência" value={fimVigencia} onChange={setFimVigencia} required />
+            <ReadOnly label="Tempo de Vigência" value={meses > 0 ? `${meses} meses` : '—'} />
+            <Field type="number" label="Parcelamento (vezes)" value={parcelamento} onChange={setParcelamento} required />
+            <Field type="number" label="Valor da Parcela (R$)" value={valorParcela} onChange={setValorParcela} required />
+            <Field type="number" label="Prêmio Líquido (R$)" value={premioLiquido} onChange={setPremioLiquido} required />
+            <Field type="number" label="% Comissão" value={pctComissao} onChange={setPctComissao} required />
+            <Field type="number" label="% Desconto" value={pctDesconto} onChange={setPctDesconto} required />
+            <ReadOnly label="Prêmio total" value={premioTotal != null ? formatMoneyBR(premioTotal) : '—'} />
+            <ReadOnly label="Comissão calculada" value={valorComissao != null ? formatMoneyBR(valorComissao) : '—'} />
             <div className="sm:col-span-2">
-              <SelectField
-                label="Emissor"
+              <Select
+                value={formaPagamento}
+                onChange={setFormaPagamento}
+                options={[
+                  { value: '', label: 'Selecione...' },
+                  { value: 'fatura_sem_entrada', label: 'Fatura sem entrada' },
+                  { value: 'fatura_com_entrada', label: 'Fatura com entrada' },
+                  { value: 'cartao_credito', label: 'Cartão de crédito' },
+                ]}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Select
+                value={seguradora}
+                onChange={setSeguradora}
+                options={[
+                  { value: '', label: 'Selecione...' },
+                  { value: 'Porto Seguro', label: 'Porto Seguro' },
+                  { value: 'Pottencial Seguros', label: 'Pottencial Seguros' },
+                  { value: 'TOO Seguros', label: 'TOO Seguros' },
+                  { value: 'Tokio Marine', label: 'Tokio Marine' },
+                  { value: 'Junto Seguros', label: 'Junto Seguros' },
+                  { value: 'Outras', label: 'Outras' },
+                ]}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Select
                 value={emitidoPor}
                 onChange={setEmitidoPor}
-                options={profiles.map(p => ({ value: p.id, label: p.nome }))}
-                required
+                options={profiles.map(profile => ({ value: profile.id, label: profile.nome }))}
               />
             </div>
           </div>
         </div>
-        <div className="px-6 py-4 border-t border-dark-border flex items-center justify-end gap-3">
+
+        <div className="flex items-center justify-end gap-3 border-t border-dark-border px-6 py-4">
           <button onClick={onCancelar} className="btn-secondary text-sm" disabled={salvando}>Cancelar</button>
           <button
             onClick={() => obrigatoriosOK && onConfirmar({
@@ -423,6 +735,7 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
               numeroApolice,
               numeroProposta,
               endereco,
+              seguradora,
               inicioVigencia,
               fimVigencia,
               parcelamento,
@@ -431,7 +744,6 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
               pctComissao,
               pctDesconto,
               formaPagamento,
-              seguradora,
               emitidoPor,
             })}
             disabled={!obrigatoriosOK || salvando}
@@ -445,112 +757,354 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
   )
 }
 
+function Field({ label, value, onChange, type = 'text', required = false }) {
+  return (
+    <div className="group relative rounded-3xl border border-transparent px-2 py-1.5 transition-all hover:border-brand-accent/20 hover:bg-dark-surface2/20">
+      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-dark-muted">
+        {label}{required && <span className="ml-0.5 text-status-danger">*</span>}
+      </label>
+      <div className="relative">
+        <input
+          type={type}
+          value={value || ''}
+          onChange={event => onChange(event.target.value)}
+          className="input text-sm"
+        />
+      </div>
+    </div>
+  )
+}
+
+function ReadOnly({ label, value }) {
+  return (
+    <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 px-4 py-3 text-sm text-dark-text">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">{label}</p>
+      <p className="mt-1 font-semibold">{value}</p>
+    </div>
+  )
+}
+
 export default function Relatorio() {
   const navigate = useNavigate()
-  const { getAliases } = useImobiliaria()
-  const agora = new Date()
+  const location = useLocation()
+  const { imobiliariaId } = useParams()
   const toast = useToast()
+  const { user } = useAuth()
+  const { resolverNome, resolverImobiliariaInfo, getAliases } = useImobiliaria()
 
-  const [ano, setAno] = useState(agora.getFullYear())
-  const [mes, setMes] = useState(agora.getMonth() + 1)
-  const [imobiliaria, setImobiliaria] = useState('')
-  const [anos, setAnos] = useState([agora.getFullYear()])
-  const [mesesDisp, setMesesDisp] = useState([agora.getMonth() + 1])
-  const [fichas, setFichas] = useState([])
-  const [loading, setLoading] = useState(false)
+  const query = useMemo(() => new URLSearchParams(location.search), [location.search])
+  const agora = new Date()
+  const periodo = query.get('periodo') || 'mes'
+  const ano = Number(query.get('ano') || agora.getFullYear())
+  const mes = Number(query.get('mes') || agora.getMonth() + 1)
+
+  const [rows, setRows] = useState([])
+  const [years, setYears] = useState([agora.getFullYear()])
+  const [imobiliarias, setImobiliarias] = useState([])
+  const [seguradoras, setSeguradoras] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [selectedIds, setSelectedIds] = useState([])
+  const [moveTarget, setMoveTarget] = useState('')
   const [activeId, setActiveId] = useState(null)
   const [pendingEmissao, setPendingEmissao] = useState(null)
   const [salvandoEmissao, setSalvandoEmissao] = useState(false)
+  const scrollRef = useRef(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
-  const scrollRef = useRef(null)
-  const [canScrollL, setCanScrollL] = useState(false)
-  const [canScrollR, setCanScrollR] = useState(false)
+  const isDetail = Boolean(imobiliariaId)
+  const currentPath = `${location.pathname}${location.search}`
+  const scrollKey = `${STORAGE_PREFIX}-${currentPath}`
+  const [rangeStart, rangeEnd] = getReportRange(periodo, ano, mes)
+  const periodoLabel = getPeriodoLabel(periodo, ano, mes)
 
   useEffect(() => {
-    fetchAnosRelatorio().then(years => {
-      if (!years.length) return
-      setAnos(years)
-      if (!years.includes(agora.getFullYear())) setAno(years[0])
-    })
-  }, [])
+    async function loadStatic() {
+      try {
+        const [yearsRows, imobRows, segRows] = await Promise.all([
+          fetchAllRows(() => supabase.from('fichas').select('created_at').in('status', REPORT_STATUSES)),
+          supabase.from('imobiliarias').select('id, nome_canonico, imagem_url, imagem_path, ativa').order('nome_canonico'),
+          supabase.from('seguradoras').select('id, nome_canonico, logo_url, logo_path, seguradora_aliases(alias)').order('nome_canonico'),
+        ])
 
-  useEffect(() => {
-    fetchMesesRelatorio(ano).then(meses => {
-      setMesesDisp(meses)
-      if (meses.length && !meses.includes(mes)) setMes(meses[meses.length - 1])
-    })
-  }, [ano])
-
-  const getAliasesRef = useRef(getAliases)
-  getAliasesRef.current = getAliases
-
-  const carregarFichas = useCallback(async () => {
-    setLoading(true)
-    let aliases = null
-    if (imobiliaria) {
-      aliases = await getAliasesRef.current(imobiliaria)
-      if (!aliases.length) aliases = [imobiliaria]
+        setYears([...new Set(yearsRows.map(row => new Date(row.created_at).getFullYear()))].sort((a, b) => b - a))
+        setImobiliarias(imobRows.data || [])
+        setSeguradoras((segRows.data || []).map(extractSeguradoraMeta))
+      } catch (error) {
+        toast({ type: 'error', title: 'Erro ao carregar cadastros', message: error.message })
+      }
     }
-    const data = await fetchFichasRelatorio(ano, mes, aliases)
-    setFichas(data)
-    setLoading(false)
-  }, [ano, mes, imobiliaria])
+
+    loadStatic()
+  }, [toast])
 
   useEffect(() => {
-    carregarFichas()
-  }, [carregarFichas])
+    let active = true
 
-  function checkScroll() {
+    async function loadRows() {
+      setLoading(true)
+      try {
+        let imobiliariaAliases = null
+        if (isDetail) {
+          const imob = imobiliarias.find(item => String(item.id) === String(imobiliariaId))
+          if (!imob) {
+            const { data } = await supabase.from('imobiliarias').select('id, nome_canonico, imagem_url, imagem_path, ativa').eq('id', imobiliariaId).single()
+            if (data) {
+              const { data: aliasData } = await supabase.from('imobiliaria_aliases').select('alias').eq('imobiliaria_id', data.id)
+              imobiliariaAliases = [data.nome_canonico, ...(aliasData || []).map(item => item.alias).filter(Boolean)]
+            }
+          } else {
+            const aliases = await getAliases(imob.nome_canonico)
+            imobiliariaAliases = aliases.length ? aliases : [imob.nome_canonico]
+          }
+        }
+
+        let query = supabase
+          .from('fichas')
+          .select('id, created_at, finalizada_em, nome_interessado, nome_empresa, cpf, cnpj, cep, imobiliaria, status, produto, retorno_enviado, seguradora, orcamentista_forms, observacoes, raw_data, numero_apolice, data_emissao, valor_aluguel, assumida')
+          .in('status', REPORT_STATUSES)
+          .order('created_at', { ascending: false })
+
+        if (rangeStart && rangeEnd) {
+          query = query.gte('created_at', rangeStart).lte('created_at', rangeEnd)
+        }
+        if (imobiliariaAliases?.length) {
+          query = query.in('imobiliaria', imobiliariaAliases)
+        }
+
+        const { data, error } = await query
+        if (error) throw error
+        if (!active) return
+
+        setRows(data || [])
+      } catch (error) {
+        if (!active) return
+        toast({ type: 'error', title: 'Erro ao carregar relatórios', message: error.message })
+        setRows([])
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+
+    loadRows()
+    return () => { active = false }
+  }, [ano, mes, periodo, rangeStart, rangeEnd, imobiliariaId, imobiliarias, getAliases, isDetail, toast])
+
+  useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    setCanScrollL(el.scrollLeft > 5)
-    setCanScrollR(el.scrollLeft < el.scrollWidth - el.clientWidth - 5)
+
+    const saved = Number(sessionStorage.getItem(scrollKey) || 0)
+    if (saved > 0) {
+      requestAnimationFrame(() => {
+        el.scrollLeft = saved
+      })
+    }
+  }, [scrollKey, rows.length, loading])
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return undefined
+    const onScroll = () => {
+      sessionStorage.setItem(scrollKey, String(el.scrollLeft))
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [scrollKey])
+
+  const filteredImobiliarias = useMemo(() => {
+    const term = normalizeKey(search)
+    const base = imobiliarias.filter(item => item?.nome_canonico)
+    if (!term) return base
+    return base.filter(item => normalizeKey(item.nome_canonico).includes(term))
+  }, [imobiliarias, search])
+
+  const rowsWithHelpers = useMemo(() => {
+    return rows.map(item => ({
+      ...item,
+      _nome: getNomeFicha(item),
+      _oper: getOperacionalStatus(item),
+      _key: resolverNome(item.imobiliaria),
+      _logo: resolverImobiliariaInfo(item.imobiliaria),
+    }))
+  }, [rows, resolverNome, resolverImobiliariaInfo])
+
+  const summary = useMemo(() => summarizeRows(rowsWithHelpers), [rowsWithHelpers])
+  const groupedByImob = useMemo(() => groupByImobiliaria(rowsWithHelpers, resolverNome), [rowsWithHelpers, resolverNome])
+
+  const columnMap = useMemo(() => {
+    const map = Object.fromEntries(COLUNAS.map(col => [col.id, []]))
+    rowsWithHelpers.forEach(item => {
+      const col = getColuna(item)
+      if (col && map[col]) map[col].push(item)
+    })
+    return map
+  }, [rowsWithHelpers])
+
+  const visibleIds = useMemo(() => rowsWithHelpers.map(item => item.id), [rowsWithHelpers])
+  const selectionMode = selectedIds.length > 0
+  const activeFicha = activeId ? rowsWithHelpers.find(item => item.id === activeId) : null
+
+  function updateQuery(next) {
+    const params = new URLSearchParams(location.search)
+    Object.entries(next).forEach(([key, value]) => {
+      if (value === null || value === undefined || value === '') params.delete(key)
+      else params.set(key, String(value))
+    })
+    navigate({ pathname: isDetail ? `/relatorio/${imobiliariaId}` : '/relatorio', search: params.toString() ? `?${params.toString()}` : '' }, { replace: true })
   }
 
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    checkScroll()
-    el.addEventListener('scroll', checkScroll, { passive: true })
-    const ro = new ResizeObserver(checkScroll)
-    ro.observe(el)
-    return () => {
-      el.removeEventListener('scroll', checkScroll)
-      ro.disconnect()
+  function onChangePeriodo(next) {
+    if (next === 'historico') {
+      updateQuery({ periodo: next })
+      return
     }
-  }, [loading, imobiliaria])
+    updateQuery({ periodo: next, ano, mes })
+  }
+
+  function onChangeAno(next) {
+    updateQuery({ ano: next })
+  }
+
+  function onChangeMes(next) {
+    updateQuery({ mes: next })
+  }
+
+  function openFicha(id) {
+    const scrollLeft = scrollRef.current?.scrollLeft || 0
+    navigate(`/fichas/${id}`, {
+      state: {
+        backTo: currentPath,
+        backState: { scrollLeft },
+      },
+    })
+  }
+
+  function toggleSelected(id) {
+    setSelectedIds(prev => (prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]))
+  }
+
+  function selectAllVisible() {
+    setSelectedIds(visibleIds)
+  }
+
+  function selectAllColumn(colunaId) {
+    const ids = (columnMap[colunaId] || []).map(item => item.id)
+    setSelectedIds(ids)
+  }
+
+  async function copyColumn(colunaId) {
+    const text = buildCopyLines(columnMap[colunaId] || [], colunaId)
+    if (!text) {
+      toast({ type: 'info', title: 'Nenhum registro para copiar' })
+      return
+    }
+    await navigator.clipboard.writeText(text)
+    toast({ type: 'success', title: 'Informações copiadas' })
+  }
+
+  async function copySelected() {
+    const map = new Map(rowsWithHelpers.map(item => [item.id, item]))
+    const text = selectedIds.map(id => {
+      const item = map.get(id)
+      if (!item) return null
+      const status = item._oper?.label || '—'
+      return `${item._nome} - ${normalizeDisplayText(item.imobiliaria) || '—'} - ${formatDateBR(item.created_at)} - Status (${status}) - ${item.cep || '—'}`
+    }).filter(Boolean).join('\n')
+
+    if (!text) {
+      toast({ type: 'info', title: 'Nenhum registro para copiar' })
+      return
+    }
+
+    await navigator.clipboard.writeText(text)
+    toast({ type: 'success', title: 'Selecionadas copiadas' })
+  }
+
+  async function moveSelected() {
+    if (!moveTarget || selectedIds.length === 0) return
+    if (moveTarget === 'emitida' || moveTarget === 'recuperados') {
+      toast({ type: 'info', title: 'Use a emissão individual', message: 'Essas colunas dependem de dados da apólice e não são movidas em massa.' })
+      return
+    }
+
+    const payloadByTarget = {
+      aprovada: { status: 'aprovado', retorno_enviado: false, raw_data: { recovered_after_cobranca: false, recovered_after_cobranca_em: null } },
+      enviado_cobranca: {
+        status: 'emitido',
+        retorno_enviado: true,
+        raw_data: { recovered_after_cobranca: false, retorno_enviado_em: new Date().toISOString() },
+      },
+      desistiu: { status: 'cancelado', retorno_enviado: false, raw_data: { recovered_after_cobranca: false, recovered_after_cobranca_em: null } },
+      expirada: { status: 'expirada', retorno_enviado: false, raw_data: { recovered_after_cobranca: false, recovered_after_cobranca_em: null } },
+    }
+
+    const patch = payloadByTarget[moveTarget]
+    if (!patch) return
+
+    const targetIds = [...selectedIds]
+    const updated = rowsWithHelpers.map(item => (
+      targetIds.includes(item.id)
+        ? {
+            ...item,
+            status: patch.status,
+            retorno_enviado: patch.retorno_enviado,
+            raw_data: { ...(item.raw_data || {}), ...patch.raw_data },
+          }
+        : item
+    ))
+    setRows(updated)
+
+    const results = await Promise.all(targetIds.map(id => editarFicha(id, patch, user?.id)))
+    const failed = results.find(result => result)
+    if (failed) {
+      toast({ type: 'error', title: 'Erro ao mover fichas', message: failed.message || 'Não foi possível concluir a operação.' })
+      setSelectedIds([])
+      setMoveTarget('')
+      return
+    }
+
+    toast({ type: 'success', title: `${targetIds.length} ficha${targetIds.length !== 1 ? 's' : ''} movida${targetIds.length !== 1 ? 's' : ''}` })
+    setSelectedIds([])
+    setMoveTarget('')
+  }
 
   async function handleDragEnd({ active, over }) {
     setActiveId(null)
     if (!over) return
-    const fichaId = active.id
-    const targetCol = over.id
-    const ficha = fichas.find(f => f.id === fichaId)
+
+    const ficha = rowsWithHelpers.find(item => item.id === active.id)
     if (!ficha) return
-    const sourceCol = getColuna(ficha)
-    if (sourceCol === targetCol) return
-    const update = COLUNA_TO_UPDATE[targetCol]
-    if (!update) return
+    const targetCol = over.id
+    if (getColuna(ficha) === targetCol) return
 
     if (targetCol === 'emitida') {
-      setPendingEmissao({ fichaId, ficha })
+      setPendingEmissao({ fichaId: ficha.id, ficha })
       return
     }
 
-    setFichas(prev => prev.map(f => {
-      if (f.id !== fichaId) return f
-      return { ...f, status: update.status, retorno_enviado: update.retorno_enviado }
-    }))
+    if (targetCol === 'recuperados') {
+      toast({ type: 'info', title: 'Recuperação depende da emissão', message: 'A coluna RECUPERADOS é preenchida quando a emissão é registrada após cobrança.' })
+      return
+    }
 
-    const { error } = await supabase.from('fichas').update({
-      status: update.status,
-      retorno_enviado: update.retorno_enviado,
-    }).eq('id', fichaId)
+    const patch = targetCol === 'aprovada'
+      ? { status: 'aprovado', retorno_enviado: false, raw_data: { ...(ficha.raw_data || {}), recovered_after_cobranca: false, recovered_after_cobranca_em: null } }
+      : targetCol === 'enviado_cobranca'
+        ? { status: 'emitido', retorno_enviado: true, raw_data: { ...(ficha.raw_data || {}), recovered_after_cobranca: false, retorno_enviado_em: ficha.raw_data?.retorno_enviado_em || new Date().toISOString() } }
+        : targetCol === 'desistiu'
+          ? { status: 'cancelado', retorno_enviado: false, raw_data: { ...(ficha.raw_data || {}), recovered_after_cobranca: false, recovered_after_cobranca_em: null } }
+          : { status: 'expirada', retorno_enviado: false, raw_data: { ...(ficha.raw_data || {}), recovered_after_cobranca: false, recovered_after_cobranca_em: null } }
 
-    if (error) {
-      toast({ type: 'error', title: 'Erro ao mover ficha' })
-      carregarFichas()
+    setRows(prev => prev.map(item => (
+      item.id === ficha.id
+        ? { ...item, ...patch, raw_data: patch.raw_data }
+        : item
+    )))
+
+    const err = await editarFicha(ficha.id, patch, user?.id)
+    if (err) {
+      toast({ type: 'error', title: 'Erro ao mover ficha', message: err.message })
     } else {
       toast({ type: 'success', title: 'Ficha movida' })
     }
@@ -559,6 +1113,10 @@ export default function Relatorio() {
   async function handleConfirmarEmissao(payload) {
     if (!pendingEmissao) return
     setSalvandoEmissao(true)
+
+    const recoveryStart = getRecoveryStart(pendingEmissao.ficha)
+    const wasInCobrança = Boolean(pendingEmissao.ficha?.retorno_enviado || recoveryStart)
+
     const { error } = await registrarApoliceDaFicha({
       ficha: pendingEmissao.ficha,
       proprietarioNome: payload.proprietarioNome,
@@ -577,163 +1135,373 @@ export default function Relatorio() {
       formaPagamento: payload.formaPagamento,
       emitidoPor: payload.emitidoPor,
     })
+
+    if (!error && wasInCobrança) {
+      await editarFicha(pendingEmissao.ficha.id, {
+        retorno_enviado: false,
+        raw_data: {
+          ...(pendingEmissao.ficha.raw_data || {}),
+          recovered_after_cobranca: true,
+          recovered_after_cobranca_em: new Date().toISOString(),
+        },
+      }, user?.id)
+    }
+
     setSalvandoEmissao(false)
     if (error) {
       toast({ type: 'error', title: 'Erro ao registrar emissão', message: error.message })
       setPendingEmissao(null)
-      carregarFichas()
       return
     }
-    toast({ type: 'success', title: 'Emissão registrada' })
+
+    toast({ type: 'success', title: wasInCobrança ? 'Emissão recuperada registrada' : 'Emissão registrada' })
     setPendingEmissao(null)
-    carregarFichas()
+    setRows(prev => prev.map(item => (
+      item.id === pendingEmissao.ficha.id
+        ? { ...item, status: 'emitido', retorno_enviado: false, numero_apolice: payload.numeroApolice, seguradora: payload.seguradora, data_emissao: new Date().toISOString().slice(0, 10), raw_data: { ...(item.raw_data || {}), recovered_after_cobranca: wasInCobrança, recovered_after_cobranca_em: wasInCobrança ? new Date().toISOString() : null } }
+        : item
+    )))
   }
 
-  const colunaMap = Object.fromEntries(COLUNAS.map(c => [c.id, []]))
-  fichas.forEach(f => {
-    const col = getColuna(f)
-    if (col && colunaMap[col]) colunaMap[col].push(f)
-  })
+  const emptyCopy = !loading && rows.length === 0
 
-  const activeFicha = activeId ? fichas.find(f => f.id === activeId) : null
-  const totalAprovadas = fichas.filter(f => f.status === 'aprovado' || f.status === 'emitido').length
-  const totalEmitidas = fichas.filter(f => f.status === 'emitido').length
-  const totalRecuperados = fichas.filter(f => f.status === 'emitido' && f.numero_apolice).length
-  const taxaRecuperacao = totalAprovadas > 0 ? ((totalRecuperados / totalAprovadas) * 100).toFixed(1) : '0.0'
-  const desistiram = fichas.filter(f => f.status === 'cancelado').length
-  const pendentesEmissao = fichas.filter(f => f.status === 'aprovado').length
+  const topImobiliariasAprovadas = useMemo(() => {
+    return [...groupedByImob]
+      .sort((a, b) => b.aprovadas - a.aprovadas)
+      .slice(0, 10)
+      .map(item => ({ name: item.nome, value: item.aprovadas }))
+  }, [groupedByImob])
+
+  const topImobiliariasEmitidas = useMemo(() => {
+    return [...groupedByImob]
+      .sort((a, b) => b.emitidas - a.emitidas)
+      .slice(0, 10)
+      .map(item => ({ name: item.nome, value: item.emitidas }))
+  }, [groupedByImob])
+
+  const piorConversao = useMemo(() => {
+    return [...groupedByImob]
+      .filter(item => item.aprovadas > 0)
+      .sort((a, b) => a.taxaConversao - b.taxaConversao)
+      .slice(0, 10)
+      .map(item => ({ name: item.nome, value: Number(item.taxaConversao.toFixed(1)) }))
+  }, [groupedByImob])
+
+  const topRecuperacao = useMemo(() => {
+    return [...groupedByImob]
+      .filter(item => item.recuperadas > 0)
+      .sort((a, b) => b.recuperadas - a.recuperadas)
+      .slice(0, 10)
+      .map(item => ({ name: item.nome, value: item.recuperadas }))
+  }, [groupedByImob])
+
+  const eficienciaRows = useMemo(() => {
+    return [...groupedByImob]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10)
+  }, [groupedByImob])
+
+  const overviewActions = (
+    <div className="flex flex-wrap items-center gap-3">
+      <PeriodControl
+        periodo={periodo}
+        ano={ano}
+        mes={mes}
+        anos={years}
+        onPeriod={onChangePeriodo}
+        onAno={onChangeAno}
+        onMes={onChangeMes}
+      />
+      {isDetail && (
+        <button
+          type="button"
+          onClick={() => navigate({ pathname: '/relatorio', search: location.search }, { replace: false })}
+          className="flex items-center gap-1.5 rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted transition-colors hover:border-brand-accent/50 hover:text-dark-text"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Visão geral
+        </button>
+      )}
+    </div>
+  )
+
+  if (loading) {
+    return (
+      <div className="space-y-5 animate-fade-in">
+        <PageHeader
+          eyebrow="Relatórios operacionais"
+          title={isDetail ? 'Relatório por Imobiliária' : 'Relatórios Fiança'}
+          description="Carregando dados do painel..."
+          actions={overviewActions}
+        />
+        <DataCard className="py-16 text-center">
+          <div className="flex items-center justify-center gap-2 text-dark-muted text-sm">
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            Carregando relatórios...
+          </div>
+        </DataCard>
+      </div>
+    )
+  }
+
+  if (isDetail) {
+    const currentImob = imobiliarias.find(item => String(item.id) === String(imobiliariaId))
+    const title = currentImob?.nome_canonico || resolverNome(currentImob?.nome_canonico) || 'Imobiliária'
+    const logoMeta = currentImob ? getEntityImageUrl(currentImob.imagem_path, currentImob.imagem_url) : null
+    const selectedSelectionMode = selectedIds.length > 0
+
+    return (
+      <div className="space-y-5 animate-fade-in">
+        <PageHeader
+          eyebrow="Relatórios operacionais"
+          title={title}
+          description={`Kanban analítico da imobiliária em ${periodoLabel}.`}
+          actions={overviewActions}
+          stats={
+            <>
+              <MetricCard label="Total" value={summary.total} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
+              <MetricCard label="Aprovadas" value={summary.aprovadas} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
+              <MetricCard label="Emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
+              <MetricCard label="Recuperadas" value={summary.recuperadas} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
+            </>
+          }
+        />
+
+        <SelectedToolbar
+          count={selectedIds.length}
+          onClear={() => setSelectedIds([])}
+          onSelectAll={selectAllVisible}
+          onMove={moveSelected}
+          onBulkCopy={copySelected}
+          options={COLUNAS.filter(col => col.id !== 'emitida' && col.id !== 'recuperados')}
+          target={moveTarget}
+          setTarget={setMoveTarget}
+          selectionMode={selectedSelectionMode}
+        />
+
+        <DataCard
+          title="Filtros"
+          subtitle="Use mês, ano ou histórico. O histórico do Kanban é salvo por imobiliária e período."
+          actions={<span className="badge badge-info">{periodoLabel}</span>}
+        >
+          <PeriodControl
+            periodo={periodo}
+            ano={ano}
+            mes={mes}
+            anos={years}
+            onPeriod={onChangePeriodo}
+            onAno={onChangeAno}
+            onMes={onChangeMes}
+          />
+        </DataCard>
+
+        <DataCard title="Kanban mensal" subtitle="Arraste fichas entre colunas para atualizar o status.">
+          <DndContext
+            sensors={sensors}
+            onDragStart={({ active }) => setActiveId(active.id)}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => setActiveId(null)}
+          >
+            <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
+              <div className="flex min-w-max gap-3 px-1">
+                {COLUNAS.map((coluna, index) => (
+                  <KanbanColuna
+                    key={coluna.id}
+                    coluna={coluna}
+                    fichas={columnMap[coluna.id] || []}
+                    onOpen={openFicha}
+                    selectedIds={new Set(selectedIds)}
+                    onToggleSelect={toggleSelected}
+                    onCopy={copyColumn}
+                    onSelectAll={selectAllColumn}
+                    selectionMode={selectedSelectionMode}
+                    colIndex={index}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <DragOverlay dropAnimation={null}>
+              {activeFicha && (
+                <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none' }}>
+                  <RelatorioCard
+                    ficha={activeFicha}
+                    onOpen={() => {}}
+                    selected={false}
+                    onToggleSelect={() => {}}
+                    selectionMode={false}
+                  />
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
+        </DataCard>
+
+        {pendingEmissao && (
+          <ModalEmitirApolice
+            ficha={pendingEmissao.ficha}
+            salvando={salvandoEmissao}
+            onCancelar={() => !salvandoEmissao && setPendingEmissao(null)}
+            onConfirmar={handleConfirmarEmissao}
+          />
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-5 animate-fade-in">
       <PageHeader
-        eyebrow="Relatório operacional"
-        title="Relatório por Imobiliária"
-        description="Fichas finalizadas filtradas por imobiliária e período, com fluxo Kanban preservado."
-        actions={
-          <div style={{ minWidth: '220px' }}>
-            <ImobiliariaSelect value={imobiliaria} onChange={setImobiliaria} />
-          </div>
-        }
+        eyebrow="Relatórios operacionais"
+        title="Relatórios Fiança"
+        description={`Painel analítico do período ${periodoLabel}. Acompanhe desempenho por imobiliária, seguradora, emissão e recuperação após cobrança.`}
+        actions={overviewActions}
       />
 
-      <DataCard title="Filtros" description="Ano, mês e imobiliária controlam o recorte mensal exibido abaixo." className="space-y-3">
-        <div className="flex flex-wrap items-center gap-4">
-          <Select
-            value={String(ano)}
-            onChange={v => {
-              setAno(Number(v))
-              setImobiliaria('')
-            }}
-            options={anos.map(a => ({ value: String(a), label: String(a) }))}
-            className="w-24"
-          />
-
-          <MesPicker
-            mes={mes}
-            mesesDisp={mesesDisp}
-            onMes={m => {
-              setMes(m)
-              setImobiliaria('')
-            }}
-          />
+      <DataCard title="Métricas do período" subtitle="Leitura executiva do recorte selecionado.">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <MetricCard label="Total de fichas" value={summary.total} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
+          <MetricCard label="Fichas aprovadas" value={summary.aprovadas} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
+          <MetricCard label="Apólices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
+          <MetricCard label="Taxa geral de emissão" value={`${summary.taxaEmissao.toFixed(1)}%`} tone="accent" icon={<BarChart2 className="h-4 w-4" />} />
+          <MetricCard label="Fichas recusadas" value={summary.recusadas} tone="warning" icon={<Square className="h-4 w-4" />} />
+          <MetricCard label="Fichas expiradas" value={summary.expiradas} tone="warning" icon={<Square className="h-4 w-4" />} />
+          <MetricCard label="Em cobrança" value={summary.cobranca} tone="secondary" icon={<MoveRight className="h-4 w-4" />} />
+          <MetricCard label="Recuperadas" value={summary.recuperadas} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
         </div>
-
-        <p className="text-xs text-dark-muted">
-          <span className="font-medium text-dark-text">{imobiliaria || 'Todas as imobiliárias'}</span>
-          {' '}· {MESES_FULL[mes - 1]} {ano}
-        </p>
       </DataCard>
 
-      {loading ? (
-        <div className="flex items-center justify-center h-48 gap-2 text-dark-muted text-sm">
-          <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          Carregando fichas...
+      <div className="grid gap-4 xl:grid-cols-3">
+        <MetricCard label="Conversão geral" value={`${summary.taxaEmissao.toFixed(1)}%`} hint="Apólices emitidas ÷ fichas aprovadas" />
+        <MetricCard label="Tempo médio até emissão" value={summary.mediaEmissao != null ? `${summary.mediaEmissao.toFixed(1)} dias` : '—'} hint="Entre aprovação e emissão" />
+        <MetricCard label="Tempo médio em cobrança" value={summary.mediaCobrança != null ? `${summary.mediaCobrança.toFixed(1)} dias` : '—'} hint="Entre cobrança e emissão/atual" />
+      </div>
+
+      <DataCard title="Aprovações por seguradora" subtitle="Identifica onde existem aprovações pendentes de emissão.">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {seguradoras.map(seg => {
+            const approved = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && item.status === 'aprovado').length
+            const pending = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && item.status === 'aprovado' && !item.numero_apolice).length
+            return (
+              <div key={seg.id} className="rounded-3xl border border-dark-border/60 bg-white/60 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <SeguradoraBadge nome={seg.nome} logoUrl={seg.logoUrl} logoPath={seg.logoPath} size="md" />
+                  <span className="badge badge-info">{approved} aprovadas</span>
+                </div>
+                <p className="mt-3 text-xs text-dark-muted">{pending} sem apólice emitida</p>
+              </div>
+            )
+          })}
         </div>
-      ) : fichas.length === 0 ? (
-        <DataCard className="py-16 text-center">
-          <div className="flex flex-col items-center justify-center gap-2 text-dark-muted">
-            <BarChart2 className="w-8 h-8 opacity-30" />
-            <p className="text-sm">
-              Nenhuma ficha encontrada para {imobiliaria || 'todas as imobiliárias'} em {MESES_FULL[mes - 1]} {ano}
-            </p>
+      </DataCard>
+
+      <DataCard
+        title="Imobiliárias"
+        subtitle="Clique em uma imobiliária para abrir o relatório individual."
+        actions={
+          <div className="relative min-w-[260px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-dark-muted" />
+            <input
+              value={search}
+              onChange={event => setSearch(event.target.value)}
+              placeholder="Buscar por nome..."
+              className="input w-full pl-9"
+            />
           </div>
-        </DataCard>
-      ) : (
-        <div className="space-y-4">
-          <DataCard title="Indicadores" description="Resumo do recorte selecionado." className="overflow-hidden">
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-              <MetricCard label="Total no período" value={fichas.length} />
-              <MetricCard label="Aprovadas" value={totalAprovadas} />
-              <MetricCard label="Aguardando emissão" value={pendentesEmissao} />
-              <MetricCard label="Apólices emitidas" value={totalEmitidas} />
-              <MetricCard label="Recuperados" value={totalRecuperados} />
-              <MetricCard label="Taxa recuperação" value={`${taxaRecuperacao}%`} />
-            </div>
-            <p className="mt-3 text-xs text-dark-muted">
-              {desistiram} ficha{desistiram !== 1 ? 's' : ''} desistiram no período.
-            </p>
-          </DataCard>
+        }
+      >
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {filteredImobiliarias.map(imob => {
+            const meta = resolverImobiliariaInfo(imob.nome_canonico) || imob
+            return (
+              <button
+                key={imob.id}
+                type="button"
+                onClick={() => navigate(`/relatorio/${imob.id}${location.search}`)}
+                className="group rounded-3xl border border-dark-border/60 bg-white/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-brand-accent/40 hover:shadow-sm"
+              >
+                <ImobiliariaIdentity
+                  nome={imob.nome_canonico}
+                  imagemUrl={meta.imagem_url}
+                  imagemPath={meta.imagem_path}
+                  size="md"
+                />
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <span className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">
+                    {imob.ativa ? 'Ativa' : 'Inativa'}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-dark-muted transition-transform group-hover:translate-x-0.5" />
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </DataCard>
 
-          <DataCard title="Kanban mensal" description="Arraste fichas entre colunas para atualizar o status." className="relative overflow-hidden">
-            {canScrollL && (
-              <div
-                className="absolute left-0 top-0 bottom-4 w-12 z-10 pointer-events-none"
-                style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }}
-              />
-            )}
-            {canScrollR && (
-              <div
-                className="absolute right-0 top-0 bottom-4 w-12 z-10 pointer-events-none"
-                style={{ background: 'linear-gradient(to left, rgb(var(--color-bg)), transparent)' }}
-              />
-            )}
+      <div className="grid gap-4 xl:grid-cols-2">
+        <ChartCard
+          title="Top 10 - Mais aprovaram"
+          subtitle="Quantidade de fichas aprovadas."
+          data={topImobiliariasAprovadas}
+          dataKey="value"
+          xKey="name"
+          color="#0f766e"
+        />
+        <ChartCard
+          title="Top 10 - Mais emitiram"
+          subtitle="Quantidade de apólices emitidas."
+          data={topImobiliariasEmitidas}
+          dataKey="value"
+          xKey="name"
+          color="#000079"
+        />
+        <ChartCard
+          title="Menor conversão"
+          subtitle="Menor emissão sobre aprovadas."
+          data={piorConversao}
+          dataKey="value"
+          xKey="name"
+          color="#a2d6da"
+          formatter={value => `${Number(value).toFixed(1)}%`}
+        />
+        <ChartCard
+          title="Recuperação após cobrança"
+          subtitle="Imobiliárias que mais recuperam emissões."
+          data={topRecuperacao}
+          dataKey="value"
+          xKey="name"
+          color="#4b6cc2"
+        />
+      </div>
 
-            <DndContext
-              sensors={sensors}
-              collisionDetection={kanbanPointerCollision}
-              onDragStart={({ active }) => setActiveId(active.id)}
-              onDragEnd={handleDragEnd}
-              onDragCancel={() => setActiveId(null)}
-            >
-              <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
-                <div className="flex gap-3 min-w-max px-1">
-                  {COLUNAS.map((col, i) => (
-                    <KanbanColuna
-                      key={col.id}
-                      coluna={col}
-                      fichas={colunaMap[col.id] || []}
-                      onFichaClick={id => navigate(`/fichas/${id}`)}
-                      colIndex={i}
-                    />
-                  ))}
+      <DataCard title="Ranking de eficiência" subtitle="Pontuação baseada em aprovação, conversão, recuperação e velocidade.">
+        <div className="space-y-2">
+          {eficienciaRows.map((row, index) => (
+            <div key={row.nome} className="flex items-center justify-between rounded-2xl border border-dark-border/50 bg-white/60 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-secondary/10 text-xs font-bold text-brand-secondary">
+                  {index + 1}
+                </span>
+                <div>
+                  <p className="font-medium text-dark-text">{row.nome}</p>
+                  <p className="text-[11px] text-dark-muted">{row.aprovadas} aprovadas · {row.emitidas} emitidas · {row.recuperadas} recuperadas</p>
                 </div>
               </div>
-
-              <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
-                {activeFicha && (
-                  <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none' }}>
-                    <RelatorioCard ficha={activeFicha} onClick={() => {}} isDragOverlay />
-                  </div>
-                )}
-              </DragOverlay>
-            </DndContext>
-          </DataCard>
+              <div className="text-right">
+                <p className="text-sm font-semibold text-dark-text">{row.score.toFixed(1)}</p>
+                <p className="text-[11px] text-dark-muted">score</p>
+              </div>
+            </div>
+          ))}
         </div>
-      )}
-      {pendingEmissao && (
-        <ModalEmitirApolice
-          ficha={pendingEmissao.ficha}
-          salvando={salvandoEmissao}
-          onCancelar={() => !salvandoEmissao && setPendingEmissao(null)}
-          onConfirmar={handleConfirmarEmissao}
+      </DataCard>
+
+      {emptyCopy && (
+        <EmptyState
+          icon={BarChart2}
+          title="Nenhuma ficha encontrada"
+          description={`Não há registros para ${periodoLabel}. Ajuste o período ou escolha outra imobiliária.`}
         />
       )}
     </div>
   )
 }
-
-
-

@@ -4,8 +4,9 @@ import { PageHeader, MetricCard, DataCard, EmptyState } from '../../components/u
 import { Select } from '../../components/ui/Select'
 import CalendarioAno from './CalendarioAno'
 import ImobiliariaIdentity from '../../components/ImobiliariaIdentity'
+import SeguradoraBarChart from '../../components/financeiro/SeguradoraBarChart'
 import { fetchProducaoLedger, fetchRecebimentos } from '../../lib/financeiro'
-import { montarCalendarioAno, rankingImobiliarias } from '../../lib/financeiroProducaoCalc'
+import { montarCalendarioAno, rankingImobiliarias, agruparPorSeguradora } from '../../lib/financeiroProducaoCalc'
 import { fetchImobiliariasCatalogMap, resolveImobiliaria } from '../../lib/imobiliariasLogos'
 import { parseYmd } from '../../lib/financeiroCalc'
 import { formatMoneyBR } from '../../lib/apolices'
@@ -48,13 +49,22 @@ export default function FinanceiroVisaoGeral() {
   )
   const cell = cells[mes - 1] || { producao: 0, comissaoGerada: 0, recebidaEstimada: 0, qtd: 0 }
 
-  const ranking = useMemo(() => {
-    const doMes = ledger.filter(r => {
-      const d = parseYmd(r.data_emissao)
-      return d && d.getFullYear() === ano && d.getMonth() + 1 === mes
-    })
-    return rankingImobiliarias(doMes)
-  }, [ledger, ano, mes])
+  const rowsDoMes = useMemo(() => ledger.filter(r => {
+    const d = parseYmd(r.data_emissao)
+    return d && d.getFullYear() === ano && d.getMonth() + 1 === mes
+  }), [ledger, ano, mes])
+
+  const ranking = useMemo(() => rankingImobiliarias(rowsDoMes), [rowsDoMes])
+
+  const porSeguradora = useMemo(() => agruparPorSeguradora(rowsDoMes), [rowsDoMes])
+  const producaoSeguradora = useMemo(
+    () => porSeguradora.map(s => ({ seguradora: s.seguradora, value: s.premio, qtd: s.qtd })),
+    [porSeguradora],
+  )
+  const comissaoSeguradora = useMemo(
+    () => porSeguradora.map(s => ({ seguradora: s.seguradora, value: s.comissao })),
+    [porSeguradora],
+  )
 
   const mesLabel = `${MESES_ABBR[mes - 1]} ${ano}`
 
@@ -92,6 +102,23 @@ export default function FinanceiroVisaoGeral() {
           <CalendarioAno cells={cells} mesSelecionado={mes} onSelectMes={setMes} />
         )}
       </DataCard>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <DataCard title="Produção por seguradora" subtitle={`Prêmio total emitido — ${mesLabel}`}>
+          {loading ? (
+            <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
+          ) : (
+            <SeguradoraBarChart data={producaoSeguradora} color="bg-brand-secondary" emptyLabel="Sem produção no mês" />
+          )}
+        </DataCard>
+        <DataCard title="Comissão gerada por seguradora" subtitle={`Comissão total — ${mesLabel}`}>
+          {loading ? (
+            <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
+          ) : (
+            <SeguradoraBarChart data={comissaoSeguradora} color="bg-emerald-500" emptyLabel="Sem comissão no mês" />
+          )}
+        </DataCard>
+      </div>
 
       <DataCard title={`Ranking de imobiliárias — ${mesLabel}`} subtitle="Por produção (prêmio total) no mês">
         {loading ? (

@@ -18,6 +18,7 @@ import ModalFicha from '../components/ModalFicha'
 import ModalAssumir from '../components/ModalAssumir'
 import ModalFinalizar from '../components/ModalFinalizar'
 import SecaoDocumentos from '../components/SecaoDocumentos'
+import FichaStatusBadge from '../components/FichaStatusBadge'
 import { Select } from '../components/ui/Select'
 import { normalizeDisplayText } from '../lib/text'
 

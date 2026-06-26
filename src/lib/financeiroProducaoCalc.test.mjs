@@ -83,3 +83,37 @@ test('rankingImobiliarias ordena por prêmio (produção) desc', () => {
   assert.equal(out[0].premioTotal, 500)
   assert.equal(out[1].imobiliaria, 'Alpha')
 })
+
+import { gerarParcelasComissao, somarRecebimentoNoPeriodo } from './financeiroProducaoCalc.js'
+
+test('gerarParcelasComissao distribui a comissão a partir do mês seguinte à emissão', () => {
+  const rows = [
+    { id: 'a1', imobiliaria: 'Alpha', seguradora: 'Porto', data_emissao: '2026-06-15', valor_comissao: 580, parcelamento: 29 },
+  ]
+  const out = gerarParcelasComissao(rows)
+  assert.equal(out.length, 29)
+  // 1ª parcela cai em julho (mês seguinte à emissão de junho)
+  assert.equal(out[0].mes_referencia, '2026-07-01')
+  assert.equal(out[0].valor_previsto, 20)
+  // soma das parcelas reconstrói o total
+  const total = out.reduce((s, r) => s + r.valor_previsto, 0)
+  assert.equal(Math.round(total * 100) / 100, 580)
+})
+
+test('gerarParcelasComissao ignora apólices sem comissão ou sem data', () => {
+  const rows = [
+    { id: 'x', data_emissao: '2026-06-15', valor_comissao: 0, parcelamento: 12 },
+    { id: 'y', data_emissao: null, valor_comissao: 100, parcelamento: 12 },
+  ]
+  assert.equal(gerarParcelasComissao(rows).length, 0)
+})
+
+test('somarRecebimentoNoPeriodo filtra por mes_referencia dentro do intervalo', () => {
+  const rec = [
+    { mes_referencia: '2026-07-01', valor_previsto: 20 },
+    { mes_referencia: '2026-08-01', valor_previsto: 20 },
+    { mes_referencia: '2026-09-01', valor_previsto: 20 },
+  ]
+  assert.equal(somarRecebimentoNoPeriodo(rec, { inicio: '2026-08-01', fim: '2026-08-31' }), 20)
+  assert.equal(somarRecebimentoNoPeriodo(rec, { inicio: '2026-07-01', fim: '2026-09-30' }), 60)
+})

@@ -27,6 +27,7 @@ import ModalFinalizar from '../components/ModalFinalizar'
 import ModalFicha from '../components/ModalFicha'
 import KanbanFichas from '../components/KanbanFichas'
 import RelatorioMensal from '../components/RelatorioMensal'
+import FichaStatusBadge from '../components/FichaStatusBadge'
 import { AVATAR_COLORS, BRAND, PRODUTO_COLORS, STATUS_CHART_COLORS as TOKEN_STATUS_CHART_COLORS } from '../design-system/tokens'
 import {
   Home, Briefcase, Building, LayoutGrid,
@@ -730,7 +731,12 @@ function TabelaAberta({ fichas, user, navigate, onDetalhe, onAssumir, onFinaliza
                 {(resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || '—'}
               </td>
               <td className="td text-dark-text max-w-[150px] truncate">{nome || '—'}</td>
-              <td className="td"><span className={`badge ${si.color}`}>{si.label}</span></td>
+              <td className="td">
+                <div className="flex flex-wrap gap-1">
+                  <span className={`badge ${si.color}`}>{si.label}</span>
+                  <FichaStatusBadge ficha={f} />
+                </div>
+              </td>
               <td className="td">
                 {f.profiles?.nome ? <OrcBadge nome={f.profiles.nome} isMe={isMe} /> : <span className="text-xs text-status-warning font-medium">Livre</span>}
               </td>
@@ -788,7 +794,12 @@ function TabelaPassadas({ fichas, user, navigate, onEditar, resolverNome }) {
               </td>
               <td className="td font-medium text-dark-text max-w-[130px] truncate">{(resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || '—'}</td>
               <td className="td text-dark-text max-w-[130px] truncate">{nome || '—'}</td>
-              <td className="td"><span className={`badge ${si.color}`}>{si.label}</span></td>
+              <td className="td">
+                <div className="flex flex-wrap gap-1">
+                  <span className={`badge ${si.color}`}>{si.label}</span>
+                  <FichaStatusBadge ficha={f} />
+                </div>
+              </td>
               <td className="td"><AvatarOrcamentista nome={f.profiles?.nome} /></td>
               <td className="td text-dark-muted text-xs">{f.seguradora || '—'}</td>
               <td className="td" onClick={e => e.stopPropagation()}>

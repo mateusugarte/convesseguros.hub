@@ -1,66 +1,64 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { PageHeader, MetricCard, DataCard, EmptyState } from '../../components/ui'
-import { Select } from '../../components/ui/Select'
 import ImobiliariaIdentity from '../../components/ImobiliariaIdentity'
-import SeguradoraBadge from '../../components/SeguradoraBadge'
 import EvolucaoChart from './EvolucaoChart'
+import PeriodoFilter from '../../components/financeiro/PeriodoFilter'
+import RankingSeguradoras from '../../components/financeiro/RankingSeguradoras'
+import ApolicesListPanel from '../../components/financeiro/ApolicesListPanel'
 import { useAuth } from '../../contexts/AuthContext'
+import { fetchProducaoLedger, fetchPctImobiliarias, salvarPctImobiliaria } from '../../lib/financeiro'
+import { fetchApolicesAtivas } from '../../lib/financeiroApolices'
 import {
-  fetchProducaoLedger, fetchPctImobiliarias, salvarPctImobiliaria, fetchImobiliariasDistintas,
-} from '../../lib/financeiro'
-import { agruparPorSeguradora, agruparEvolucaoPorMes } from '../../lib/financeiroProducaoCalc'
+  agruparPorSeguradora, agruparEvolucaoPorMes, gerarParcelasComissao, somarRecebimentoNoPeriodo,
+} from '../../lib/financeiroProducaoCalc'
 import { fetchImobiliariasCatalogMap, resolveImobiliaria } from '../../lib/imobiliariasLogos'
-import { primeiroDiaMes, addMeses } from '../../lib/financeiroCalc'
+import { addMeses } from '../../lib/financeiroCalc'
 import { formatMoneyBR } from '../../lib/apolices'
 import { parseDecimalBR } from '../../lib/numberInput'
-import { Building2, Coins, TrendingUp, FileText, Percent, Shield } from 'lucide-react'
+import { ArrowLeft, Coins, TrendingUp, Wallet, Percent, FileText, Shield } from 'lucide-react'
 
-const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 const EVOLUCAO_MESES = 6
-
-function pad2(v) { return String(v).padStart(2, '0') }
-function ymd(y, m, d) { return `${y}-${pad2(m)}-${pad2(d)}` }
-function rangeMes(ano, mes) {
-  return [ymd(ano, mes, 1), ymd(ano, mes, new Date(ano, mes, 0).getDate())]
-}
 
 export default function FinanceiroProducao() {
   const navigate = useNavigate()
   const { imobiliaria: imobParam } = useParams()
   const selecionada = imobParam ? decodeURIComponent(imobParam) : ''
   const { user } = useAuth()
-  const agora = new Date()
-  const [ano, setAno] = useState(agora.getFullYear())
-  const [mes, setMes] = useState(agora.getMonth() + 1)
-  const [opcoes, setOpcoes] = useState([])
-  const [rows, setRows] = useState([])
+
+  const [periodo, setPeriodo] = useState(null)
+  const [rows, setRows] = useState([])           // emitidas no período
+  const [todasRows, setTodasRows] = useState([]) // todas emitidas (para recebimento estimado)
   const [evolucaoRows, setEvolucaoRows] = useState([])
   const [catalogo, setCatalogo] = useState(null)
   const [pct, setPct] = useState('')
   const [pctSalvo, setPctSalvo] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  const [inicio, fim] = useMemo(() => rangeMes(ano, mes), [ano, mes])
-  const mesRef = useMemo(() => primeiroDiaMes(inicio), [inicio])
+  const [panel, setPanel] = useState({ open: false, title: '', apolices: [], loading: false })
 
-  // Opções do seletor + catálogo (uma vez)
   useEffect(() => {
     let mounted = true
-    Promise.all([fetchImobiliariasDistintas(), fetchImobiliariasCatalogMap()])
-      .then(([nomes, cat]) => {
-        if (!mounted) return
-        setOpcoes(nomes)
-        setCatalogo(cat)
-      }).catch(() => {})
+    fetchImobiliariasCatalogMap().then(cat => { if (mounted) setCatalogo(cat) }).catch(() => {})
     return () => { mounted = false }
   }, [])
 
-  // Dados da imobiliária selecionada
+  // Apólices de todo o histórico da imobiliária (base do recebimento estimado).
   useEffect(() => {
-    if (!selecionada) { setRows([]); setEvolucaoRows([]); return }
+    if (!selecionada) { setTodasRows([]); return }
+    let mounted = true
+    fetchProducaoLedger({ imobiliaria: selecionada })
+      .then(r => { if (mounted) setTodasRows(r) })
+      .catch(() => { if (mounted) setTodasRows([]) })
+    return () => { mounted = false }
+  }, [selecionada])
+
+  // Dados do período selecionado.
+  useEffect(() => {
+    if (!selecionada || !periodo) { setRows([]); setEvolucaoRows([]); return }
     let mounted = true
     setLoading(true)
+    const { inicio, fim, mesRef } = periodo
     const desdeEvolucao = addMeses(mesRef, -(EVOLUCAO_MESES - 1))
     Promise.allSettled([
       fetchProducaoLedger({ inicio, fim, imobiliaria: selecionada }),
@@ -78,133 +76,139 @@ export default function FinanceiroProducao() {
       setLoading(false)
     }).catch(() => { if (mounted) setLoading(false) })
     return () => { mounted = false }
-  }, [selecionada, inicio, fim, mesRef, catalogo])
+  }, [selecionada, periodo, catalogo])
 
   const seguradoras = useMemo(() => agruparPorSeguradora(rows), [rows])
   const evolucao = useMemo(
-    () => agruparEvolucaoPorMes(evolucaoRows, { desde: addMeses(mesRef, -(EVOLUCAO_MESES - 1)), meses: EVOLUCAO_MESES }),
-    [evolucaoRows, mesRef],
+    () => (periodo ? agruparEvolucaoPorMes(evolucaoRows, { desde: addMeses(periodo.mesRef, -(EVOLUCAO_MESES - 1)), meses: EVOLUCAO_MESES }) : []),
+    [evolucaoRows, periodo],
   )
   const producao = useMemo(() => seguradoras.reduce((s, x) => s + x.premio, 0), [seguradoras])
   const comissaoGerada = useMemo(() => seguradoras.reduce((s, x) => s + x.comissao, 0), [seguradoras])
+  const comissaoEstimada = useMemo(() => {
+    if (!periodo) return 0
+    return somarRecebimentoNoPeriodo(gerarParcelasComissao(todasRows), { inicio: periodo.inicio, fim: periodo.fim })
+  }, [todasRows, periodo])
+
+  const producaoSeguradora = useMemo(() => seguradoras.map(s => ({ seguradora: s.seguradora, value: s.premio, qtd: s.qtd })), [seguradoras])
+  const comissaoSeguradora = useMemo(() => seguradoras.map(s => ({ seguradora: s.seguradora, value: s.comissao })), [seguradoras])
+
   const valorRepassar = (() => {
     const p = parseDecimalBR(pct)
     return p != null ? (p / 100) * comissaoGerada : 0
   })()
   const meta = resolveImobiliaria(catalogo, selecionada)
-  const mesLabel = `${MESES_ABBR[mes - 1]} ${ano}`
+  const mesLabel = periodo?.label || ''
 
   async function salvarPct() {
+    if (!periodo) return
     const p = parseDecimalBR(pct)
     if (p === pctSalvo) return
-    const err = await salvarPctImobiliaria({ imobiliaria: selecionada, mes: mesRef, pct: p, userId: user?.id })
+    const err = await salvarPctImobiliaria({ imobiliaria: selecionada, mes: periodo.mesRef, pct: p, userId: user?.id })
     if (!err) setPctSalvo(p)
+  }
+
+  function abrirEmitidas() {
+    setPanel({ open: true, title: `Apólices emitidas — ${mesLabel}`, apolices: rows, loading: false })
+  }
+
+  async function abrirAtivas() {
+    setPanel({ open: true, title: 'Apólices ativas', apolices: [], loading: true })
+    try {
+      const ativas = await fetchApolicesAtivas({ imobiliaria: selecionada })
+      setPanel({ open: true, title: 'Apólices ativas', apolices: ativas, loading: false })
+    } catch {
+      setPanel({ open: true, title: 'Apólices ativas', apolices: [], loading: false })
+    }
   }
 
   return (
     <div className="space-y-5">
+      <button
+        onClick={() => navigate('/financeiro/producao')}
+        className="inline-flex items-center gap-1.5 text-sm text-dark-muted transition-colors hover:text-dark-text"
+      >
+        <ArrowLeft className="h-4 w-4" /> Voltar para imobiliárias
+      </button>
+
       <PageHeader
         eyebrow="Financeiro · Produção"
-        title="Produção por imobiliária"
-        description="Selecione a imobiliária e o mês. Produção é a soma do prêmio total dos seguros emitidos."
-        actions={selecionada ? (<ImobiliariaIdentity nome={selecionada} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="lg" />) : null}
+        title={selecionada}
+        description="Produção, comissão e rankings por seguradora no período selecionado."
+        actions={<ImobiliariaIdentity nome={selecionada} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="lg" />}
       />
 
-      <DataCard title="Seleção" subtitle="Imobiliária e mês">
+      <DataCard title="Período" subtitle="Escolha um mês ou um intervalo livre">
+        <PeriodoFilter onChange={setPeriodo} />
+      </DataCard>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="Comissão gerada" value={formatMoneyBR(comissaoGerada)} hint={mesLabel} tone="secondary" icon={<TrendingUp className="h-4 w-4" />} />
+        <MetricCard label="Comissão estimada a receber" value={formatMoneyBR(comissaoEstimada)} hint={`parcelas no período · ${mesLabel}`} tone="accent" icon={<Wallet className="h-4 w-4" />} />
+        <MetricCard label="Produção" value={formatMoneyBR(producao)} hint={`${rows.length} apólice${rows.length !== 1 ? 's' : ''} · ${mesLabel}`} tone="success" icon={<Coins className="h-4 w-4" />} />
+        <MetricCard label="A repassar" value={formatMoneyBR(valorRepassar)} hint="% × comissão gerada" tone="warning" icon={<Percent className="h-4 w-4" />} />
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <button onClick={abrirAtivas} className="inline-flex items-center gap-2 rounded-2xl bg-brand-secondary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90">
+          <Shield className="h-4 w-4" /> Ver apólices ativas
+        </button>
+        <button onClick={abrirEmitidas} className="inline-flex items-center gap-2 rounded-2xl border border-dark-border px-4 py-2.5 text-sm font-medium text-dark-text transition-colors hover:border-brand-secondary">
+          <FileText className="h-4 w-4" /> Apólices emitidas no período
+        </button>
+      </div>
+
+      <DataCard title="Repasse da imobiliária" subtitle="Percentual sobre a comissão gerada, salvo para o mês">
         <div className="flex flex-wrap items-center gap-3">
-          <Select
-            value={selecionada}
-            onChange={v => navigate(v ? `/financeiro/producao/${encodeURIComponent(v)}` : '/financeiro/producao')}
-            options={[{ value: '', label: 'Selecione a imobiliária...' }, ...opcoes.map(n => ({ value: n, label: n }))]}
-            className="min-w-[260px]"
-          />
-          <Select
-            value={String(ano)}
-            onChange={v => setAno(Number(v))}
-            options={[agora.getFullYear() + 1, agora.getFullYear(), agora.getFullYear() - 1, agora.getFullYear() - 2].map(a => ({ value: String(a), label: String(a) }))}
-            className="w-28"
-          />
-          <div className="flex flex-wrap items-center gap-1">
-            {MESES_ABBR.map((label, i) => (
-              <button
-                key={label}
-                onClick={() => setMes(i + 1)}
-                className={`rounded-xl px-2.5 py-1.5 text-xs font-medium transition-colors ${mes === i + 1 ? 'bg-brand-secondary text-white' : 'text-dark-muted hover:bg-dark-surface2 hover:text-dark-text'}`}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="flex items-center gap-1">
+            <input
+              value={pct}
+              onChange={e => setPct(e.target.value)}
+              onBlur={salvarPct}
+              inputMode="decimal"
+              className="w-20 rounded-lg border border-dark-border bg-dark-surface2 px-2 py-1.5 text-right text-sm text-dark-text focus:border-brand-secondary focus:outline-none"
+              placeholder="0"
+            />
+            <Percent className="h-4 w-4 text-dark-muted" />
           </div>
+          <span className="text-sm text-dark-muted">→ a repassar</span>
+          <span className="text-sm font-semibold text-emerald-400">{formatMoneyBR(valorRepassar)}</span>
         </div>
       </DataCard>
 
-      {!selecionada ? (
-        <DataCard title="Produção">
-          <EmptyState title="Selecione uma imobiliária" description="Escolha uma imobiliária no seletor acima para ver a produção do mês." icon={<Building2 className="h-6 w-6" />} />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <DataCard title="Produção por seguradora" subtitle={`Prêmio total — ${mesLabel}`}>
+          {loading ? (
+            <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
+          ) : (
+            <RankingSeguradoras data={producaoSeguradora} emptyLabel="Sem produção no período" />
+          )}
         </DataCard>
-      ) : (
-        <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard label="Produção" value={formatMoneyBR(producao)} hint={mesLabel} tone="accent" icon={<Coins className="h-4 w-4" />} />
-            <MetricCard label="Comissão gerada" value={formatMoneyBR(comissaoGerada)} hint={mesLabel} tone="secondary" icon={<TrendingUp className="h-4 w-4" />} />
-            <MetricCard label="Apólices" value={rows.length} hint={mesLabel} tone="success" icon={<FileText className="h-4 w-4" />} />
-            <MetricCard label="A repassar" value={formatMoneyBR(valorRepassar)} hint="% × comissão gerada" tone="warning" icon={<Percent className="h-4 w-4" />} />
-          </div>
+        <DataCard title="Comissão por seguradora" subtitle={`Comissão gerada — ${mesLabel}`}>
+          {loading ? (
+            <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
+          ) : (
+            <RankingSeguradoras data={comissaoSeguradora} emptyLabel="Sem comissão no período" />
+          )}
+        </DataCard>
+      </div>
 
-          <DataCard title="Repasse da imobiliária" subtitle="Percentual sobre a comissão gerada, salvo para o mês">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-1">
-                <input
-                  value={pct}
-                  onChange={e => setPct(e.target.value)}
-                  onBlur={salvarPct}
-                  inputMode="decimal"
-                  className="w-20 rounded-lg border border-dark-border bg-dark-surface2 px-2 py-1.5 text-right text-sm text-dark-text focus:border-brand-secondary focus:outline-none"
-                  placeholder="0"
-                />
-                <Percent className="h-4 w-4 text-dark-muted" />
-              </div>
-              <span className="text-sm text-dark-muted">→ a repassar</span>
-              <span className="text-sm font-semibold text-emerald-400">{formatMoneyBR(valorRepassar)}</span>
-            </div>
-          </DataCard>
+      <DataCard title="Evolução" subtitle={`Comissão gerada nos últimos ${EVOLUCAO_MESES} meses`}>
+        {evolucao.length === 0 ? (
+          <EmptyState title="Sem dados" description="Selecione um período para ver a evolução." icon={<TrendingUp className="h-6 w-6" />} />
+        ) : (
+          <EvolucaoChart data={evolucao} />
+        )}
+      </DataCard>
 
-          <DataCard title="Evolução" subtitle={`Comissão gerada nos últimos ${EVOLUCAO_MESES} meses`}>
-            <EvolucaoChart data={evolucao} />
-          </DataCard>
-
-          <DataCard title="Por seguradora" subtitle="Quebra da produção do mês por seguradora">
-            {loading ? (
-              <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
-            ) : seguradoras.length === 0 ? (
-              <EmptyState title="Sem produção no mês" description="Nenhuma apólice emitida no período para esta imobiliária." icon={<Shield className="h-6 w-6" />} />
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="table-table text-sm">
-                  <thead className="table-thead">
-                    <tr>
-                      {['Seguradora', 'Apólices', 'Prêmio', 'Comissão', 'Participação'].map(h => (
-                        <th key={h} className="th whitespace-nowrap">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-dark-border">
-                    {seguradoras.map(item => (
-                      <tr key={item.seguradora}>
-                        <td className="td"><SeguradoraBadge nome={item.seguradora} size="md" /></td>
-                        <td className="td font-mono text-xs">{item.qtd}</td>
-                        <td className="td font-mono text-xs">{formatMoneyBR(item.premio)}</td>
-                        <td className="td font-mono text-xs">{formatMoneyBR(item.comissao)}</td>
-                        <td className="td font-mono text-xs">{item.pctParticipacao}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </DataCard>
-        </>
-      )}
+      <ApolicesListPanel
+        isOpen={panel.open}
+        onClose={() => setPanel(p => ({ ...p, open: false }))}
+        title={panel.title}
+        subtitle={selecionada}
+        apolices={panel.apolices}
+        loading={panel.loading}
+      />
     </div>
   )
 }

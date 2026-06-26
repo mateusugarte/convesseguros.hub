@@ -106,3 +106,50 @@ export function montarCalendarioAno({ ano, ledgerRows, recebimentoRows }) {
 export function rankingImobiliarias(rows) {
   return agruparPorImobiliaria(rows).sort((a, b) => b.premioTotal - a.premioTotal || a.qtd - b.qtd)
 }
+
+// Gera o calendário de comissão parcelada a partir das apólices (já normalizadas).
+// Para cada apólice distribui `valor_comissao` em `parcelamento` meses, começando no
+// mês seguinte à emissão (regra: 1ª parcela cai no mês posterior à data de emissão).
+// Retorna linhas no formato de recebimento: { mes_referencia, valor_previsto, ... }.
+export function gerarParcelasComissao(rows) {
+  const out = []
+  for (const r of rows || []) {
+    const parcelas = Math.max(1, Number(r.parcelamento) || 1)
+    const valorComissao = num(r.valor_comissao)
+    if (!valorComissao) continue
+    const base = primeiroDiaMes(r.data_emissao)
+    if (!base) continue
+    const parcelaBase = Math.round((valorComissao / parcelas) * 100) / 100
+    for (let n = 1; n <= parcelas; n++) {
+      const mes = addMeses(base, n)
+      const valorPrevisto = n < parcelas
+        ? parcelaBase
+        : Math.round((valorComissao - parcelaBase * (parcelas - 1)) * 100) / 100
+      out.push({
+        mes_referencia: mes,
+        valor_previsto: valorPrevisto,
+        numero_parcela: n,
+        total_parcelas: parcelas,
+        seguradora: r.seguradora || null,
+        imobiliaria: r.imobiliaria || null,
+        apolice_id: r.id || r.apolice_id || null,
+      })
+    }
+  }
+  return out
+}
+
+// Soma das parcelas previstas que caem dentro de [inicio, fim] (mes_referencia).
+export function somarRecebimentoNoPeriodo(recebimentoRows, { inicio, fim }) {
+  const ini = inicio ? primeiroDiaMes(inicio) : null
+  const f = fim ? primeiroDiaMes(fim) : null
+  let total = 0
+  for (const r of recebimentoRows || []) {
+    const mes = primeiroDiaMes(r.mes_referencia)
+    if (!mes) continue
+    if (ini && mes < ini) continue
+    if (f && mes > f) continue
+    total += num(r.valor_previsto)
+  }
+  return total
+}

@@ -23,6 +23,7 @@ const LOGO = 'https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/
 
 const NAV_GROUPS = [
   {
+    label: 'Fiança',
     items: [
       { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
       {
@@ -37,11 +38,7 @@ const NAV_GROUPS = [
         ],
       },
       { to: '/minhas-fichas', icon: User, label: 'Minhas Fichas' },
-    ],
-  },
-  {
-    label: 'Gestao',
-    items: [
+      { to: '/relatorio', icon: BarChart2, label: 'Relatorios' },
       {
         to: '/apolices',
         icon: FileCheck,
@@ -52,10 +49,14 @@ const NAV_GROUPS = [
           { to: '/apolices/lista', label: 'Pesquisa' },
         ],
       },
-      { to: '/imobiliarias', icon: Building2, label: 'Imobiliarias' },
-      { to: '/seguradoras', icon: Shield, label: 'Seguradoras' },
       { to: '/financeiro', icon: Coins, label: 'Financeiro', adminOnly: true },
-      { to: '/relatorio', icon: BarChart2, label: 'Relatorios' },
+      { to: '/imobiliarias', icon: Building2, label: 'Imobiliarias' },
+    ],
+  },
+  {
+    label: 'Gestao',
+    items: [
+      { to: '/seguradoras', icon: Shield, label: 'Seguradoras' },
     ],
   },
   {

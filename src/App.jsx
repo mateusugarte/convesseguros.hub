@@ -33,8 +33,12 @@ const ApoliceDetalhe     = lazy(() => import('./pages/ApoliceDetalhe'))
 const Seguradoras        = lazy(() => import('./pages/Seguradoras'))
 const Financeiro          = lazy(() => import('./pages/Financeiro/Financeiro'))
 const FinanceiroVisaoGeral = lazy(() => import('./pages/Financeiro/FinanceiroVisaoGeral'))
+const FinanceiroProducaoLista = lazy(() => import('./pages/Financeiro/FinanceiroProducaoLista'))
 const FinanceiroProducao  = lazy(() => import('./pages/Financeiro/FinanceiroProducao'))
+const FinanceiroFaturasLista  = lazy(() => import('./pages/Financeiro/FinanceiroFaturasLista'))
 const FinanceiroFaturas       = lazy(() => import('./pages/Financeiro/FinanceiroFaturas'))
+const FinanceiroFaturaImobiliaria = lazy(() => import('./pages/Financeiro/FinanceiroFaturaImobiliaria'))
+const FinanceiroFaturasSeguradora = lazy(() => import('./pages/Financeiro/FinanceiroFaturasSeguradora'))
 const FinanceiroFaturaDetalhe = lazy(() => import('./pages/Financeiro/FinanceiroFaturaDetalhe'))
 
 // Área Auto
@@ -88,14 +92,18 @@ function AppRoutes() {
           <Route path="emissoes" element={<GestaoEmissoes />} />
           <Route path="minhas-fichas" element={<MinhasFichas />} />
           <Route path="relatorio" element={<Relatorio />} />
+          <Route path="relatorio/:imobiliariaId" element={<Relatorio />} />
           <Route path="imobiliarias" element={<Imobiliarias />} />
           <Route path="imobiliarias/:id" element={<ImobiliariaDetalhe />} />
           <Route path="seguradoras" element={<Seguradoras />} />
           <Route path="financeiro" element={<AdminRoute><Financeiro /></AdminRoute>}>
             <Route index element={<FinanceiroVisaoGeral />} />
-            <Route path="producao" element={<FinanceiroProducao />} />
+            <Route path="producao" element={<FinanceiroProducaoLista />} />
             <Route path="producao/:imobiliaria" element={<FinanceiroProducao />} />
-            <Route path="faturas" element={<FinanceiroFaturas />} />
+            <Route path="faturas" element={<FinanceiroFaturasLista />} />
+            <Route path="faturas/conferencia" element={<FinanceiroFaturas />} />
+            <Route path="faturas/seguradora/:seguradora" element={<FinanceiroFaturasSeguradora />} />
+            <Route path="faturas/:imobiliaria" element={<FinanceiroFaturaImobiliaria />} />
             <Route path="faturas/:imobiliaria/:mes" element={<FinanceiroFaturaDetalhe />} />
           </Route>
           <Route path="apolices" element={<ApolicesDashboard />} />

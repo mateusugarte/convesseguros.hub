@@ -20,9 +20,19 @@ const STATUS_BADGE = {
   expirada: 'bg-amber-500/15 text-amber-400',
 }
 
-// Tabela de apólices com filtro por seguradora (sem modal).
-// onRowClick(apolice) opcional → linha vira clicável.
-export default function ApolicesListView({ apolices = [], loading = false, onRowClick, showImobiliaria = false }) {
+// Tabela de apólices com filtro por seguradora.
+// Props opcionais de visibilidade de colunas (todas true por padrão):
+//   showImobiliaria, showEmissao, showComissaoMensal, showVigencia
+// onRowClick(apolice) → linha clicável.
+export default function ApolicesListView({
+  apolices = [],
+  loading = false,
+  onRowClick,
+  showImobiliaria = false,
+  showEmissao = true,
+  showComissaoMensal = true,
+  showVigencia = true,
+}) {
   const [seg, setSeg] = useState('')
 
   const seguradoras = useMemo(
@@ -33,6 +43,21 @@ export default function ApolicesListView({ apolices = [], loading = false, onRow
     () => (seg ? apolices.filter(a => a.seguradora === seg) : apolices),
     [apolices, seg],
   )
+
+  const headers = [
+    'Seguradora',
+    'Cliente',
+    ...(showImobiliaria ? ['Imobiliária'] : []),
+    'Nº apólice',
+    ...(showEmissao ? ['Emissão'] : []),
+    'Produção',
+    'Comissão',
+    ...(showComissaoMensal ? ['Comissão/mês'] : []),
+    'Parcelas',
+    'Parcela',
+    ...(showVigencia ? ['Vigência'] : []),
+    'Status',
+  ]
 
   return (
     <div className="space-y-4">
@@ -55,10 +80,7 @@ export default function ApolicesListView({ apolices = [], loading = false, onRow
           <table className="table-table text-sm">
             <thead className="table-thead">
               <tr>
-                {[
-                  'Seguradora', 'Cliente', ...(showImobiliaria ? ['Imobiliária'] : []), 'Nº apólice',
-                  'Prêmio', 'Comissão', 'Parcelamento', 'Parcela', 'Vigência', 'Status',
-                ].map(h => (
+                {headers.map(h => (
                   <th key={h} className="th whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -74,11 +96,15 @@ export default function ApolicesListView({ apolices = [], loading = false, onRow
                   <td className="td whitespace-nowrap">{a.nome_interessado || '—'}</td>
                   {showImobiliaria && <td className="td whitespace-nowrap">{a.imobiliaria || '—'}</td>}
                   <td className="td whitespace-nowrap font-mono text-xs">{a.numero_apolice || '—'}</td>
+                  {showEmissao && <td className="td whitespace-nowrap font-mono text-xs">{fmtData(a.data_emissao)}</td>}
                   <td className="td whitespace-nowrap font-mono text-xs">{formatMoneyBR(a.premio_total)}</td>
                   <td className="td whitespace-nowrap font-mono text-xs">{formatMoneyBR(a.valor_comissao)}</td>
+                  {showComissaoMensal && (
+                    <td className="td whitespace-nowrap font-mono text-xs text-emerald-400">{formatMoneyBR(a.comissao_mensal)}</td>
+                  )}
                   <td className="td font-mono text-xs">{a.parcelamento}x</td>
                   <td className="td whitespace-nowrap font-mono text-xs">{formatMoneyBR(a.valor_parcela)}</td>
-                  <td className="td whitespace-nowrap font-mono text-xs">{vigencia(a)}</td>
+                  {showVigencia && <td className="td whitespace-nowrap font-mono text-xs">{vigencia(a)}</td>}
                   <td className="td">
                     <span className={`rounded-lg px-2 py-0.5 text-[11px] font-medium ${STATUS_BADGE[a.status_apolice] || 'bg-dark-surface2 text-dark-muted'}`}>
                       {a.status_apolice || '—'}

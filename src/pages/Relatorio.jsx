@@ -38,6 +38,7 @@ import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
 import FichaStatusBadge from '../components/FichaStatusBadge'
 import { normalizeDisplayText } from '../lib/text'
 import { getEntityImageUrl } from '../lib/entityMedia'
+import { getFichaOperationalState, isFichaPendingEmission } from '../lib/fichaOperational'
 import { BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 const PERIOD_OPTIONS = [
@@ -54,6 +55,7 @@ const COLUNAS = [
   { id: 'emitida', label: 'Emitidas', color: '#000079', copyStatus: 'Emitida' },
   { id: 'enviado_cobranca', label: 'Enviado Cobrança', color: '#2247aa', copyStatus: 'Enviado Cobrança' },
   { id: 'recuperados', label: 'RECUPERADOS', color: '#4b6cc2', copyStatus: 'Recuperada' },
+  { id: 'expirada', label: 'Expiradas', color: '#6B7280', copyStatus: 'Expirada' },
 ]
 
 const REPORT_STATUSES = ['aprovado', 'emitido']
@@ -126,18 +128,8 @@ function getReportRange(periodo, ano, mes) {
 }
 
 function getOperacionalStatus(ficha) {
-  const raw = ficha?.raw_data || {}
-  if (ficha?._hasEmittedPolicy && raw.recovered_after_cobranca) {
-    return { id: 'recuperados', label: 'Recuperada', color: 'badge-purple' }
-  }
-  if (ficha?.retorno_enviado && !ficha?._hasEmittedPolicy) {
-    return { id: 'enviado_cobranca', label: 'Enviado Cobrança', color: 'badge-blue' }
-  }
-  if (ficha?._hasEmittedPolicy) {
-    return { id: 'emitida', label: 'Emitida', color: 'badge-purple' }
-  }
-  if (ficha?.status === 'aprovado') return { id: 'aprovada', label: 'Aprovada', color: 'badge-success' }
-  return null
+  const meta = getFichaOperationalState(ficha)
+  return meta ? { id: meta.id, label: meta.label, color: meta.className } : null
 }
 
 function getColuna(ficha) {
@@ -194,9 +186,7 @@ function getCanonicalImobiliariaNome(ficha) {
 }
 
 function isEligibleReportRow(ficha) {
-  if (ficha?._hasEmittedPolicy) return true
-  if (!REPORT_STATUSES.includes(ficha?.status)) return false
-  return ficha?.status === 'aprovado' || Boolean(ficha?.retorno_enviado)
+  return Boolean(getColuna(ficha))
 }
 
 function buildCopyLines(fichas, coluna) {
@@ -221,20 +211,24 @@ function formatCurrencyValue(value) {
 function summarizeRows(rows) {
   const summary = {
     total: rows.length,
-    aprovadas: rows.length,
+    aprovadas: 0,
     emitidas: 0,
     cobranca: 0,
     recuperadas: 0,
+    expiradas: 0,
     aprovadasSemApolice: 0,
     tempoEmissao: [],
     tempoCobrança: [],
   }
 
   rows.forEach(ficha => {
+    const coluna = getColuna(ficha)
+    if (coluna === 'aprovada') summary.aprovadas += 1
+    if (coluna === 'expirada') summary.expiradas += 1
     if (isInCobrança(ficha)) summary.cobranca += 1
     if (isRecovered(ficha)) summary.recuperadas += 1
     if (isEmitida(ficha)) summary.emitidas += 1
-    if (!ficha._hasEmittedPolicy) summary.aprovadasSemApolice += 1
+    if (isFichaPendingEmission(ficha)) summary.aprovadasSemApolice += 1
 
     if (ficha._hasEmittedPolicy && getEffectiveDataEmissao(ficha) && ficha.created_at) {
       const start = new Date(ficha.created_at)
@@ -287,9 +281,11 @@ function groupByImobiliaria(rows, resolverNome) {
       tempoCobrança: [],
     }
 
+    const coluna = getColuna(ficha)
     current.total += 1
-    current.aprovadas += 1
-    if (!ficha._hasEmittedPolicy) current.aprovadasSemApolice += 1
+    if (coluna === 'aprovada') current.aprovadas += 1
+    if (coluna === 'expirada') current.expiradas += 1
+    if (isFichaPendingEmission(ficha)) current.aprovadasSemApolice += 1
     if (isEmitida(ficha)) current.emitidas += 1
     if (isRecovered(ficha)) current.recuperadas += 1
     if (isInCobrança(ficha)) current.cobranca += 1
@@ -1033,6 +1029,9 @@ export default function Relatorio() {
 
   const summary = useMemo(() => summarizeRows(rowsWithHelpers), [rowsWithHelpers])
   const groupedByImob = useMemo(() => groupByImobiliaria(rowsWithHelpers, resolverNome), [rowsWithHelpers, resolverNome])
+  const pendingByImobiliaria = useMemo(() => {
+    return new Map(groupedByImob.map(item => [normalizeKey(item.nome), item.aprovadasSemApolice || 0]))
+  }, [groupedByImob])
 
   const columnMap = useMemo(() => {
     const map = Object.fromEntries(COLUNAS.map(col => [col.id, []]))
@@ -1077,7 +1076,7 @@ export default function Relatorio() {
     navigate(`/fichas/${id}`, {
       state: {
         backTo: currentPath,
-        backState: { scrollLeft },
+        backState: { scrollLeft, scrollTop: window.scrollY },
       },
     })
   }
@@ -1396,7 +1395,9 @@ export default function Relatorio() {
             <>
               <MetricCard label="Total" value={summary.total} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
               <MetricCard label="Aprovadas" value={summary.aprovadas} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
+              <MetricCard label="Em cobranca" value={summary.cobranca} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
               <MetricCard label="Emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
+              <MetricCard label="Expiradas" value={summary.expiradas} tone="accent" icon={<Square className="h-4 w-4" />} />
               <MetricCard label="Recuperadas" value={summary.recuperadas} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
             </>
           }
@@ -1536,8 +1537,8 @@ export default function Relatorio() {
       <DataCard title="Aprovações por seguradora" subtitle="Identifica onde existem aprovações pendentes de emissão.">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {seguradoras.map(seg => {
-            const approved = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && item.status === 'aprovado').length
-            const pending = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && item.status === 'aprovado' && !item._hasEmittedPolicy).length
+            const approved = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && getColuna(item) === 'aprovada').length
+            const pending = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && isFichaPendingEmission(item)).length
             return (
               <div key={seg.id} className="rounded-3xl border border-dark-border/60 bg-white/60 p-4">
                 <div className="flex items-start justify-between gap-3">
@@ -1569,12 +1570,16 @@ export default function Relatorio() {
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {filteredImobiliarias.map(imob => {
             const meta = resolverImobiliariaInfo(imob.nome_canonico) || imob
+            const pendingCount = pendingByImobiliaria.get(normalizeKey(imob.nome_canonico)) || 0
+            const hasPending = pendingCount > 0
             return (
               <button
                 key={imob.id}
                 type="button"
                 onClick={() => navigate(`/relatorio/${imob.id}${location.search}`)}
-                className="group rounded-3xl border border-dark-border/60 bg-white/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-brand-accent/40 hover:shadow-sm"
+                className={hasPending
+                  ? 'group rounded-3xl border border-orange-300 bg-orange-50/80 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-orange-400 hover:shadow-sm shadow-[0_12px_28px_rgba(249,115,22,0.14)]'
+                  : 'group rounded-3xl border border-dark-border/60 bg-white/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-brand-accent/40 hover:shadow-sm'}
               >
                 <ImobiliariaIdentity
                   nome={imob.nome_canonico}
@@ -1583,9 +1588,16 @@ export default function Relatorio() {
                   size="md"
                 />
                 <div className="mt-3 flex items-center justify-between gap-3">
-                  <span className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">
-                    {imob.ativa ? 'Ativa' : 'Inativa'}
-                  </span>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">
+                      {imob.ativa ? 'Ativa' : 'Inativa'}
+                    </span>
+                    {hasPending && (
+                      <span className="inline-flex w-fit rounded-full bg-orange-100 px-2.5 py-1 text-[10px] font-semibold text-orange-700">
+                        Pendencias: {pendingCount}
+                      </span>
+                    )}
+                  </div>
                   <ChevronRight className="h-4 w-4 text-dark-muted transition-transform group-hover:translate-x-0.5" />
                 </div>
               </button>
@@ -1662,5 +1674,11 @@ export default function Relatorio() {
     </div>
   )
 }
+
+
+
+
+
+
 
 

@@ -5,6 +5,7 @@ import ImobiliariaIdentity from '../../components/ImobiliariaIdentity'
 import EvolucaoChart from './EvolucaoChart'
 import PeriodoFilter from '../../components/financeiro/PeriodoFilter'
 import RankingSeguradoras from '../../components/financeiro/RankingSeguradoras'
+import ApolicesListView from '../../components/financeiro/ApolicesListView'
 import { useAuth } from '../../contexts/AuthContext'
 import { fetchProducaoLedger, fetchPctImobiliarias, salvarPctImobiliaria } from '../../lib/financeiro'
 import { fetchApolicesAtivas } from '../../lib/financeiroApolices'
@@ -219,6 +220,23 @@ export default function FinanceiroProducao() {
           <EmptyState title="Sem dados" description="Selecione um período para ver a evolução." icon={<TrendingUp className="h-6 w-6" />} />
         ) : (
           <EvolucaoChart data={evolucao} />
+        )}
+      </DataCard>
+
+      <DataCard
+        title="Apólices emitidas no período"
+        subtitle={mesLabel ? `${rows.length} apólice${rows.length !== 1 ? 's' : ''} emitidas em ${mesLabel}` : 'Selecione um período'}
+      >
+        {loading ? (
+          <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
+        ) : (
+          <ApolicesListView
+            apolices={rows}
+            onRowClick={a => { navigate(`/apolices/${a.id}`) }}
+            showEmissao
+            showComissaoMensal
+            showVigencia
+          />
         )}
       </DataCard>
     </div>

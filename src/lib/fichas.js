@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { normalizeImobiliaria } from './normalizeImobiliaria'
 import { normalizeDisplayText } from './text'
+import { getFichaDisplayStatus, getFichaOperationalState, isFichaApprovedOperational, mapFichasWithOperationalStatus, withFichaOperationalStatus } from './fichaOperational'
 
 export { normalizeImobiliaria }
 
@@ -68,12 +69,15 @@ export async function fetchKPIs(inicioFiltro, fimFiltro) {
 export async function fetchEmitidas(inicio, fim) {
   const now = new Date()
   const defaultInicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-  let q = supabase.from('fichas').select('*', { count: 'exact', head: true })
-    .eq('status', 'emitido')
-    .gte('created_at', inicio || defaultInicio)
-  if (fim) q = q.lte('created_at', fim)
-  const { count } = await q
-  return count || 0
+  const data = await fetchAllRows(() => {
+    let q = supabase.from('fichas')
+      .select('created_at, status, numero_apolice, data_emissao, retorno_enviado, raw_data')
+      .in('status', ['emitido'])
+      .gte('created_at', inicio || defaultInicio)
+    if (fim) q = q.lte('created_at', fim)
+    return q
+  })
+  return data.filter(item => ['emitida', 'recuperados'].includes(getFichaOperationalState(item)?.id)).length
 }
 
 // ── Batch helper — bypasses Supabase max_rows=1000 via pagination ─────────────
@@ -123,13 +127,16 @@ export async function fetchFichasPorDia(dias = 30) {
 
 export async function fetchTopImobiliarias(limite = 5, inicioFiltro, fimFiltro) {
   const data = await fetchAllRows(() => {
-    let q = supabase.from('fichas').select('imobiliaria').eq('status', 'aprovado').not('imobiliaria', 'is', null)
+    let q = supabase.from('fichas')
+      .select('imobiliaria, status, created_at, numero_apolice, data_emissao, retorno_enviado, raw_data')
+      .in('status', ['aprovado', 'emitido', 'expirada'])
+      .not('imobiliaria', 'is', null)
     if (inicioFiltro) q = q.gte('created_at', inicioFiltro)
-    if (fimFiltro)    q = q.lte('created_at', fimFiltro)
+    if (fimFiltro) q = q.lte('created_at', fimFiltro)
     return q
   })
   const contagem = {}
-  data.forEach(f => {
+  data.filter(item => isFichaApprovedOperational(item)).forEach(f => {
     const nome = normalizeImobiliaria(f.imobiliaria) || f.imobiliaria
     contagem[nome] = (contagem[nome] || 0) + 1
   })
@@ -137,18 +144,23 @@ export async function fetchTopImobiliarias(limite = 5, inicioFiltro, fimFiltro) 
 }
 
 export async function fetchDistribuicaoStatus(inicioFiltro, fimFiltro) {
-  const statuses = Object.keys(STATUS_LABELS)
-  const results = await Promise.all(
-    statuses.map(s => {
-      let q = supabase.from('fichas').select('*', { count: 'exact', head: true }).eq('status', s)
-      if (inicioFiltro) q = q.gte('created_at', inicioFiltro)
-      if (fimFiltro)    q = q.lte('created_at', fimFiltro)
-      return q
-    })
-  )
-  return statuses
-    .map((s, i) => ({ status: s, label: STATUS_LABELS[s]?.label ?? s, value: results[i].count || 0 }))
-    .filter(x => x.value > 0)
+  const data = await fetchAllRows(() => {
+    let q = supabase.from('fichas').select('created_at, status, numero_apolice, data_emissao, retorno_enviado, raw_data')
+    if (inicioFiltro) q = q.gte('created_at', inicioFiltro)
+    if (fimFiltro) q = q.lte('created_at', fimFiltro)
+    return q
+  })
+
+  const counts = new Map()
+  data.forEach(item => {
+    const status = getFichaDisplayStatus(item)
+    if (!status) return
+    counts.set(status, (counts.get(status) || 0) + 1)
+  })
+
+  return [...counts.entries()]
+    .map(([status, value]) => ({ status, label: STATUS_LABELS[status]?.label ?? status, value }))
+    .filter(item => item.value > 0)
     .sort((a, b) => b.value - a.value)
 }
 
@@ -209,16 +221,16 @@ export async function fetchFichasPorProdutoMes() {
   const inicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
   const fim    = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString()
   const data = await fetchAllRows(() =>
-    supabase.from('fichas').select('produto, status').gte('created_at', inicio).lte('created_at', fim)
+    supabase.from('fichas').select('produto, status, created_at, numero_apolice, data_emissao, retorno_enviado, raw_data').gte('created_at', inicio).lte('created_at', fim)
   )
   const produtos = ['residencial_pf', 'comercial_pf', 'pessoa_juridica']
   return produtos.map(p => {
     const fs = data.filter(f => f.produto === p)
     return {
       name: PRODUTO_LABELS[p],
-      total:     fs.length,
-      aprovadas: fs.filter(f => f.status === 'aprovado').length,
-      recusadas: fs.filter(f => f.status === 'recusado').length,
+      total: fs.length,
+      aprovadas: fs.filter(f => getFichaDisplayStatus(f) === 'aprovado').length,
+      recusadas: fs.filter(f => getFichaDisplayStatus(f) === 'recusado').length,
     }
   })
 }
@@ -406,14 +418,14 @@ export async function fetchFichaDetalhe(id) {
   if (!data) return data
 
   const raw = data.raw_data || {}
-  return {
+  return withFichaOperationalStatus({
     ...data,
     valor_aluguel: data.valor_aluguel ?? raw.valor_aluguel ?? null,
     valor_iptu: data.valor_iptu ?? raw.valor_iptu ?? null,
     valor_condominio: data.valor_condominio ?? raw.valor_condominio ?? null,
     total_rendimentos: data.total_rendimentos ?? raw.total_rendimentos ?? null,
     capital_social: data.capital_social ?? raw.capital_social ?? null,
-  }
+  })
 }
 
 export async function fetchAnosDisponiveis(produto) {
@@ -439,16 +451,17 @@ export async function fetchMesesDisponiveis(produto, ano) {
 }
 
 export async function fetchFichasKanban({ produto, dateFrom, dateTo }) {
-  return fetchAllRows(() => {
+  const data = await fetchAllRows(() => {
     let q = supabase
       .from('fichas')
-      .select('id,created_at,finalizada_em,produto,imobiliaria,nome_interessado,nome_empresa,cpf,cnpj,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,profiles!orcamentista_id(nome, avatar_url)')
+      .select('id,created_at,finalizada_em,produto,imobiliaria,nome_interessado,nome_empresa,cpf,cnpj,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,numero_apolice,data_emissao,raw_data,profiles!orcamentista_id(nome, avatar_url)')
       .order('created_at', { ascending: false })
     if (produto && produto !== 'todos') q = q.eq('produto', produto)
     if (dateFrom) q = q.gte('created_at', dateFrom)
     if (dateTo)   q = q.lte('created_at', dateTo)
     return q
   })
+  return mapFichasWithOperationalStatus(data)
 }
 
 export async function fetchKPIsVisaoGeral(inicioFiltro, fimFiltro) {
@@ -897,3 +910,4 @@ export async function fetchRankingFichasMensal(inicioFiltro, fimFiltro) {
     return new Date(b.latestAt) - new Date(a.latestAt)
   })
 }
+

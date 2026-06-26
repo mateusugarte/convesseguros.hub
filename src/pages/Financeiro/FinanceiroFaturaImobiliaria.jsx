@@ -51,7 +51,8 @@ export default function FinanceiroFaturaImobiliaria() {
   const [loading, setLoading] = useState(true)
   const [valorRealDraft, setValorRealDraft] = useState('')
   const [saving, setSaving] = useState(false)
-  const [segAberta, setSegAberta] = useState('')
+  // Seguradora selecionada no filtro ('' = todas)
+  const [segFiltro, setSegFiltro] = useState('')
 
   const mesRef = `${ano}-${pad2(mes)}-01`
   const proximoMesRef = addMeses(mesRef, 1)
@@ -87,22 +88,27 @@ export default function FinanceiroFaturaImobiliaria() {
     if (saved) { window.scrollTo(0, Number(saved) || 0); sessionStorage.removeItem(SCROLL_KEY) }
   }, [loading])
 
+  // Apólices filtradas pela seguradora selecionada (ou todas).
+  const ledgerFiltrado = useMemo(
+    () => (segFiltro ? ledger.filter(r => r.seguradora === segFiltro) : ledger),
+    [ledger, segFiltro],
+  )
+
   const fatura = useMemo(() => {
-    const lista = montarFaturasMes({ rows: ledger, mesRef, pctMap, statusMap })
+    const lista = montarFaturasMes({ rows: ledgerFiltrado, mesRef, pctMap, statusMap })
     return lista.find(f => f.imobiliaria === selecionada)
       || { imobiliaria: selecionada, qtd: 0, valorFatura: 0, valorAPagar: 0, pct: pctMap[selecionada] ?? null, status: 'pendente', valorRealFatura: null }
-  }, [ledger, mesRef, pctMap, statusMap, selecionada])
+  }, [ledgerFiltrado, mesRef, pctMap, statusMap, selecionada])
 
-  // Apólices emitidas no mês selecionado (entram na fatura do mês seguinte).
-  const emitidasNoMes = useMemo(() => ledger.filter(r => {
+  // Apólices emitidas no mês selecionado do ledger filtrado (estimativa do próximo mês).
+  const emitidasNoMes = useMemo(() => ledgerFiltrado.filter(r => {
     const d = parseYmd(r.data_emissao)
     return d && d.getFullYear() === ano && d.getMonth() + 1 === mes
-  }), [ledger, ano, mes])
+  }), [ledgerFiltrado, ano, mes])
   const valorNovasEmissoes = useMemo(() => emitidasNoMes.reduce((s, r) => s + num(r.valor_parcela), 0), [emitidasNoMes])
-  // Estimativa próximo mês = fatura atual + parcelas das novas emissões.
   const estimativaProximo = fatura.valorFatura + valorNovasEmissoes
 
-  // Agrupamento por seguradora (apólices ativas da imobiliária).
+  // Grupos por seguradora (sempre do ledger completo para o seletor).
   const segGroups = useMemo(() => {
     const map = new Map()
     for (const r of ledger) {
@@ -120,7 +126,17 @@ export default function FinanceiroFaturaImobiliaria() {
       .sort((a, b) => b.valorFatura - a.valorFatura || a.seguradora.localeCompare(b.seguradora))
   }, [ledger, mesRef, ano, mes])
 
-  const segSelecionada = segGroups.find(g => g.seguradora === segAberta) || null
+  // Apólices para exibir na lista (filtradas pela seguradora selecionada no seletor).
+  const apolicesParaLista = useMemo(
+    () => (segFiltro ? ledger.filter(r => r.seguradora === segFiltro) : ledger),
+    [ledger, segFiltro],
+  )
+
+  // Total de apólices que faturam no mês, respeitando o filtro de seguradora.
+  const ativasFiltradas = useMemo(
+    () => ledgerFiltrado.filter(r => apoliceBilladaNoMes(r, mesRef)),
+    [ledgerFiltrado, mesRef],
+  )
 
   useEffect(() => { setValorRealDraft(moneyDraft(fatura.valorRealFatura)) }, [mesRef, fatura.valorRealFatura])
 
@@ -161,6 +177,11 @@ export default function FinanceiroFaturaImobiliaria() {
     navigate(`/apolices/${a.id}`)
   }
 
+  const segOptions = [
+    { value: '', label: 'Todas as seguradoras' },
+    ...segGroups.map(g => ({ value: g.seguradora, label: g.seguradora })),
+  ]
+
   return (
     <div className="space-y-5">
       <button
@@ -173,10 +194,11 @@ export default function FinanceiroFaturaImobiliaria() {
       <PageHeader
         eyebrow={`Financeiro · Fatura · ${mesLabel}`}
         title={selecionada}
-        description="Fatura do mês, estimativa do próximo mês e faturas por seguradora."
+        description="Fatura do mês, estimativa do próximo mês e apólices elegíveis por seguradora."
         actions={<ImobiliariaIdentity nome={selecionada} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="lg" />}
       />
 
+      {/* Seletor de competência */}
       <DataCard title="Competência" subtitle="Selecione o mês da fatura">
         <div className="flex flex-wrap items-center gap-3">
           <Select
@@ -199,11 +221,59 @@ export default function FinanceiroFaturaImobiliaria() {
         </div>
       </DataCard>
 
+      {/* Seletor de seguradora */}
+      {segGroups.length > 0 && (
+        <DataCard title="Filtrar por seguradora" subtitle="Filtra os valores e apólices abaixo pela seguradora selecionada">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSegFiltro('')}
+              className={`rounded-xl px-3 py-1.5 text-xs font-medium transition-colors ${segFiltro === '' ? 'bg-brand-secondary text-white' : 'border border-dark-border text-dark-muted hover:text-dark-text'}`}
+            >
+              Todas
+            </button>
+            {segGroups.map(g => (
+              <button
+                key={g.seguradora}
+                onClick={() => setSegFiltro(prev => prev === g.seguradora ? '' : g.seguradora)}
+                className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-medium transition-colors ${segFiltro === g.seguradora ? 'bg-brand-secondary text-white' : 'border border-dark-border text-dark-muted hover:text-dark-text'}`}
+              >
+                <SeguradoraBadge nome={g.seguradora} size="xs" />
+              </button>
+            ))}
+          </div>
+        </DataCard>
+      )}
+
+      {/* KPIs */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Fatura do mês" value={formatMoneyBR(fatura.valorFatura)} hint={`${fatura.qtd} apólice${fatura.qtd !== 1 ? 's' : ''} · ${mesLabel}`} tone="accent" icon={<Receipt className="h-4 w-4" />} />
-        <MetricCard label="A pagar" value={formatMoneyBR(fatura.valorAPagar)} hint={fatura.pct != null ? `${fatura.pct}% × fatura` : 'sem % definido'} tone="secondary" icon={<Percent className="h-4 w-4" />} />
-        <MetricCard label="Estimativa próximo mês" value={formatMoneyBR(estimativaProximo)} hint={`atual + ${emitidasNoMes.length} nova(s) → ${proximoLabel}`} tone="warning" icon={<Wallet className="h-4 w-4" />} />
-        <MetricCard label="Apólices ativas" value={ledger.length} hint={selecionada} tone="success" icon={<Shield className="h-4 w-4" />} />
+        <MetricCard
+          label="Fatura do mês"
+          value={formatMoneyBR(fatura.valorFatura)}
+          hint={`${fatura.qtd} apólice${fatura.qtd !== 1 ? 's' : ''} · ${mesLabel}${segFiltro ? ` · ${segFiltro}` : ''}`}
+          tone="accent"
+          icon={<Receipt className="h-4 w-4" />}
+        />
+        <MetricCard
+          label="A pagar"
+          value={formatMoneyBR(fatura.valorAPagar)}
+          hint={fatura.pct != null ? `${fatura.pct}% × fatura` : 'sem % definido'}
+          tone="secondary"
+          icon={<Percent className="h-4 w-4" />}
+        />
+        <MetricCard
+          label="Estimativa próximo mês"
+          value={formatMoneyBR(estimativaProximo)}
+          hint={`atual + ${emitidasNoMes.length} nova(s) → ${proximoLabel}`}
+          tone="warning"
+          icon={<Wallet className="h-4 w-4" />}
+        />
+        <MetricCard
+          label={segFiltro ? `Ativas (${segFiltro})` : 'Apólices ativas'}
+          value={ativasFiltradas.length}
+          hint={selecionada}
+          tone="success"
+          icon={<Shield className="h-4 w-4" />}
+        />
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -221,6 +291,7 @@ export default function FinanceiroFaturaImobiliaria() {
         </button>
       </div>
 
+      {/* Conferência */}
       <DataCard title="Conferência" subtitle="Informe o valor real e registre o pagamento">
         <div className="flex flex-wrap items-end gap-4">
           <div>
@@ -247,57 +318,61 @@ export default function FinanceiroFaturaImobiliaria() {
         </div>
       </DataCard>
 
-      <DataCard title="Faturas por seguradora" subtitle="Clique numa seguradora para ver os detalhes">
+      {/* Resumo por seguradora */}
+      <DataCard
+        title="Resumo por seguradora"
+        subtitle={`Contribuição de cada seguradora para a fatura de ${mesLabel}`}
+      >
         {loading ? (
           <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
         ) : segGroups.length === 0 ? (
-          <div className="py-8 text-center text-sm text-dark-muted">Sem apólices ativas para esta imobiliária.</div>
+          <div className="py-8 text-center text-sm text-dark-muted">Sem apólices elegíveis para fatura nesta imobiliária.</div>
         ) : (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {segGroups.map(g => {
-                const ativo = g.seguradora === segAberta
-                return (
-                  <button
-                    key={g.seguradora}
-                    onClick={() => setSegAberta(ativo ? '' : g.seguradora)}
-                    className={`rounded-2xl border px-4 py-3 text-left transition-colors ${ativo ? 'border-brand-secondary bg-brand-secondary/10' : 'border-dark-border/70 bg-dark-surface2/40 hover:border-brand-secondary'}`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <SeguradoraBadge nome={g.seguradora} size="md" />
-                      <span className="rounded-md bg-dark-surface2 px-2 py-0.5 text-[11px] font-medium text-dark-muted">{g.ativas} ativas</span>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <p className="text-dark-muted">Fatura do mês</p>
-                        <p className="font-semibold text-dark-text">{formatMoneyBR(g.valorFatura)}</p>
-                      </div>
-                      <div>
-                        <p className="text-dark-muted">Estimativa próx.</p>
-                        <p className="font-semibold text-dark-text">{formatMoneyBR(g.estimativa)}</p>
-                      </div>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-
-            {segSelecionada && (
-              <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/20 p-4">
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <SeguradoraBadge nome={segSelecionada.seguradora} size="md" />
-                    <span className="text-xs text-dark-muted">· {segSelecionada.ativas} apólices ativas</span>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {segGroups.map(g => {
+              const ativa = segFiltro === g.seguradora
+              return (
+                <button
+                  key={g.seguradora}
+                  onClick={() => setSegFiltro(prev => prev === g.seguradora ? '' : g.seguradora)}
+                  className={`rounded-2xl border px-4 py-3 text-left transition-colors ${ativa ? 'border-brand-secondary bg-brand-secondary/10' : 'border-dark-border/70 bg-dark-surface2/40 hover:border-brand-secondary'}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <SeguradoraBadge nome={g.seguradora} size="md" />
+                    <span className="rounded-md bg-dark-surface2 px-2 py-0.5 text-[11px] font-medium text-dark-muted">{g.ativas} ativas</span>
                   </div>
-                  <div className="flex gap-4 text-xs">
-                    <span className="text-dark-muted">Fatura: <strong className="text-dark-text">{formatMoneyBR(segSelecionada.valorFatura)}</strong></span>
-                    <span className="text-dark-muted">Estimativa: <strong className="text-dark-text">{formatMoneyBR(segSelecionada.estimativa)}</strong></span>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <p className="text-dark-muted">Fatura do mês</p>
+                      <p className="font-semibold text-dark-text">{formatMoneyBR(g.valorFatura)}</p>
+                    </div>
+                    <div>
+                      <p className="text-dark-muted">Estimativa próx.</p>
+                      <p className="font-semibold text-dark-text">{formatMoneyBR(g.estimativa)}</p>
+                    </div>
                   </div>
-                </div>
-                <ApolicesListView apolices={segSelecionada.apolices} onRowClick={abrirApolice} />
-              </div>
-            )}
+                </button>
+              )
+            })}
           </div>
+        )}
+      </DataCard>
+
+      {/* Lista de apólices elegíveis */}
+      <DataCard
+        title={segFiltro ? `Apólices — ${segFiltro}` : 'Apólices elegíveis para fatura'}
+        subtitle={`Forma de pagamento: Fatura${segFiltro ? ` · filtradas por ${segFiltro}` : ' — todas as seguradoras'}`}
+      >
+        {loading ? (
+          <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
+        ) : (
+          <ApolicesListView
+            apolices={apolicesParaLista}
+            onRowClick={abrirApolice}
+            showEmissao
+            showComissaoMensal
+            showVigencia
+          />
         )}
       </DataCard>
     </div>

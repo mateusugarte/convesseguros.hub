@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { fetchApolicesFianca, fetchApolicesAtivas, fetchImobiliariasComApolices } from './financeiroApolices'
+import { fetchApolicesFianca, fetchApolicesAtivas, fetchApolicesParaFatura, fetchImobiliariasComApolices } from './financeiroApolices'
 import { gerarParcelasComissao, somarRecebimentoNoPeriodo } from './financeiroProducaoCalc'
 import { primeiroDiaMes } from './financeiroCalc'
 
@@ -92,9 +92,9 @@ export async function fetchImobiliariasDistintas() {
   return fetchImobiliariasComApolices()
 }
 
-// Apólices ativas (com valor de parcela) que alimentam as faturas, lidas de `apolices`.
+// Apólices ativas elegíveis para fatura (forma_pagamento = fatura_sem_entrada | fatura_com_entrada).
 export async function fetchFaturasLedger({ imobiliaria, seguradora } = {}) {
-  return fetchApolicesAtivas({ imobiliaria, seguradora })
+  return fetchApolicesParaFatura({ imobiliaria, seguradora })
 }
 
 const FATURAS_STATUS_SELECT = 'imobiliaria, mes_referencia, status, data_pagamento, pago_por, observacao, valor_real_fatura, valor_fatura_calculado, pct_comissao, valor_a_pagar'

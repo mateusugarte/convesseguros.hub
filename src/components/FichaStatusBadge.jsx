@@ -1,12 +1,4 @@
-const OPERATIONAL_STATES = {
-  aprovada: { label: 'Aprovada', className: 'badge-success' },
-  emitida: { label: 'Emitida', className: 'badge-purple' },
-  enviada_cobranca: { label: 'Enviado Cobrança', className: 'badge-blue' },
-  recuperada: { label: 'Recuperada', className: 'badge-purple' },
-  desistiu: { label: 'Desistiu', className: 'badge-muted' },
-  expirada: { label: 'Expirada', className: 'badge-muted' },
-  recusada: { label: 'Recusada', className: 'badge-danger' },
-}
+import { getFichaOperationalState } from '../lib/fichaOperational'
 
 const STATUS_FALLBACK = {
   pendente: 'Pendente',
@@ -21,17 +13,7 @@ const STATUS_FALLBACK = {
 }
 
 export function getFichaOperationalMeta(ficha = {}) {
-  const raw = ficha?.raw_data || {}
-  const recovered = Boolean(raw.recovered_after_cobranca)
-
-  if (ficha.status === 'aprovado') return OPERATIONAL_STATES.aprovada
-  if (ficha.status === 'emitido' && ficha.numero_apolice && recovered) return OPERATIONAL_STATES.recuperada
-  if (ficha.status === 'emitido' && ficha.retorno_enviado && !ficha.numero_apolice) return OPERATIONAL_STATES.enviada_cobranca
-  if (ficha.status === 'emitido' && ficha.numero_apolice) return OPERATIONAL_STATES.emitida
-  if (ficha.status === 'cancelado') return OPERATIONAL_STATES.desistiu
-  if (ficha.status === 'expirada') return OPERATIONAL_STATES.expirada
-  if (ficha.status === 'recusado') return OPERATIONAL_STATES.recusada
-  return null
+  return getFichaOperationalState(ficha)
 }
 
 export default function FichaStatusBadge({ ficha, className = '' }) {

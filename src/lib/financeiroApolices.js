@@ -17,8 +17,11 @@ const SELECT_FIELDS = [
   'id', 'data_emissao', 'imobiliaria', 'seguradora', 'numero_apolice', 'nome_interessado',
   'produto', 'status_emissao', 'status_apolice', 'parcelamento', 'valor_parcela',
   'premio_liquido', 'premio_total', 'valor_producao', 'valor_comissao', 'pct_comissao',
-  'pct_desconto', 'inicio_vigencia', 'fim_vigencia',
+  'pct_desconto', 'inicio_vigencia', 'fim_vigencia', 'forma_pagamento',
 ].join(', ')
+
+// Formas de pagamento elegíveis para compor a fatura da imobiliária.
+export const FORMAS_PAGAMENTO_FATURA = ['fatura_sem_entrada', 'fatura_com_entrada']
 
 // Normaliza a apólice crua para o formato do "ledger" consumido pelas agregações/calendário.
 export function normalizeApoliceRow(raw) {
@@ -35,6 +38,7 @@ export function normalizeApoliceRow(raw) {
     produto: raw.produto || null,
     status_emissao: raw.status_emissao || null,
     status_apolice: raw.status_apolice || null,
+    forma_pagamento: raw.forma_pagamento || null,
     data_emissao: raw.data_emissao || null,
     inicio_vigencia: raw.inicio_vigencia || null,
     fim_vigencia: raw.fim_vigencia || null,
@@ -52,7 +56,8 @@ export function normalizeApoliceRow(raw) {
 // - inicio/fim: intervalo em data_emissao (YYYY-MM-DD).
 // - imobiliaria/seguradora: filtros exatos.
 // - somenteAtivas: restringe a status_apolice ativa/renovada (ou nulo).
-export async function fetchApolicesFianca({ inicio, fim, imobiliaria, seguradora, somenteAtivas = false } = {}) {
+// - formasPagamento: restringe a forma_pagamento IN [...] quando informado.
+export async function fetchApolicesFianca({ inicio, fim, imobiliaria, seguradora, somenteAtivas = false, formasPagamento } = {}) {
   const pageSize = 1000
   let all = []
   let from = 0
@@ -70,6 +75,7 @@ export async function fetchApolicesFianca({ inicio, fim, imobiliaria, seguradora
     if (fim) q = q.lte('data_emissao', fim)
     if (imobiliaria) q = q.eq('imobiliaria', imobiliaria)
     if (seguradora) q = q.eq('seguradora', seguradora)
+    if (formasPagamento?.length) q = q.in('forma_pagamento', formasPagamento)
 
     const { data, error } = await q
     if (error) throw error
@@ -84,6 +90,17 @@ export async function fetchApolicesFianca({ inicio, fim, imobiliaria, seguradora
 // Apólices ativas (sem corte de data) — para "ver apólices ativas" e "apólices que contam".
 export async function fetchApolicesAtivas({ imobiliaria, seguradora } = {}) {
   return fetchApolicesFianca({ imobiliaria, seguradora, somenteAtivas: true })
+}
+
+// Apólices ativas elegíveis para fatura: apenas formas de pagamento "fatura".
+// Usada por fetchFaturasLedger para garantir que apenas apólices faturadas entrem no cálculo.
+export async function fetchApolicesParaFatura({ imobiliaria, seguradora } = {}) {
+  return fetchApolicesFianca({
+    imobiliaria,
+    seguradora,
+    somenteAtivas: true,
+    formasPagamento: FORMAS_PAGAMENTO_FATURA,
+  })
 }
 
 // Lista de imobiliárias distintas que possuem apólices de fiança emitidas.

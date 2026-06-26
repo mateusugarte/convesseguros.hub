@@ -1221,8 +1221,9 @@ html.dark .kanban-col {
 }
 
 .kanban-col-header {
-  position: relative;
-  z-index: 3;
+  position: sticky;
+  top: 0;
+  z-index: 5;
   padding: 14px 14px 12px;
   min-height: 56px;
   border-radius: 28px 28px 18px 18px;
@@ -2168,6 +2169,7 @@ html.dark .ops-empty-state {
     linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)),
     var(--glass-bg-heavy);
 }
+
 
 
 

@@ -208,6 +208,7 @@ export default function FinanceiroProducao() {
         subtitle={selecionada}
         apolices={panel.apolices}
         loading={panel.loading}
+        showImobiliaria
       />
     </div>
   )

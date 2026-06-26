@@ -9,11 +9,11 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 import {
   BarChart2,
-  Building2,
+  ChevronLeft,
   CheckSquare,
-  Copy,
   LayoutGrid,
   MoveRight,
   Search,
@@ -54,11 +54,9 @@ const COLUNAS = [
   { id: 'emitida', label: 'Emitidas', color: '#000079', copyStatus: 'Emitida' },
   { id: 'enviado_cobranca', label: 'Enviado Cobrança', color: '#2247aa', copyStatus: 'Enviado Cobrança' },
   { id: 'recuperados', label: 'RECUPERADOS', color: '#4b6cc2', copyStatus: 'Recuperada' },
-  { id: 'desistiu', label: 'Desistiu da Locação', color: '#a2d6da', copyStatus: 'Desistiu' },
-  { id: 'expirada', label: 'Expirada', color: '#6b7280', copyStatus: 'Expirada' },
 ]
 
-const REPORT_STATUSES = ['aprovado', 'emitido', 'cancelado', 'expirada', 'recusado']
+const REPORT_STATUSES = ['aprovado', 'emitido']
 const STORAGE_PREFIX = 'relatorio-fian-ca-scroll'
 
 function pad2(value) {
@@ -139,9 +137,6 @@ function getOperacionalStatus(ficha) {
     return { id: 'emitida', label: 'Emitida', color: 'badge-purple' }
   }
   if (ficha?.status === 'aprovado') return { id: 'aprovada', label: 'Aprovada', color: 'badge-success' }
-  if (ficha?.status === 'cancelado') return { id: 'desistiu', label: 'Desistiu', color: 'badge-muted' }
-  if (ficha?.status === 'expirada') return { id: 'expirada', label: 'Expirada', color: 'badge-muted' }
-  if (ficha?.status === 'recusado') return { id: 'recusada', label: 'Recusada', color: 'badge-danger' }
   return null
 }
 
@@ -175,11 +170,11 @@ function isRecovered(ficha) {
 }
 
 function isInCobrança(ficha) {
-  return Boolean(ficha?.retorno_enviado) && !ficha?._hasEmittedPolicy
+  return getColuna(ficha) === 'enviado_cobranca'
 }
 
 function isEmitida(ficha) {
-  return Boolean(ficha?._hasEmittedPolicy) && !isRecovered(ficha)
+  return Boolean(ficha?._hasEmittedPolicy)
 }
 
 function getEffectiveSeguradora(ficha) {
@@ -196,6 +191,12 @@ function getEffectiveDataEmissao(ficha) {
 
 function getCanonicalImobiliariaNome(ficha) {
   return ficha?._imobiliariaNome || '—'
+}
+
+function isEligibleReportRow(ficha) {
+  if (ficha?._hasEmittedPolicy) return true
+  if (!REPORT_STATUSES.includes(ficha?.status)) return false
+  return ficha?.status === 'aprovado' || Boolean(ficha?.retorno_enviado)
 }
 
 function buildCopyLines(fichas, coluna) {
@@ -220,10 +221,8 @@ function formatCurrencyValue(value) {
 function summarizeRows(rows) {
   const summary = {
     total: rows.length,
-    aprovadas: 0,
+    aprovadas: rows.length,
     emitidas: 0,
-    recusadas: 0,
-    expiradas: 0,
     cobranca: 0,
     recuperadas: 0,
     aprovadasSemApolice: 0,
@@ -232,13 +231,10 @@ function summarizeRows(rows) {
   }
 
   rows.forEach(ficha => {
-    if (ficha.status === 'aprovado') summary.aprovadas += 1
-    if (ficha.status === 'recusado') summary.recusadas += 1
-    if (ficha.status === 'expirada') summary.expiradas += 1
     if (isInCobrança(ficha)) summary.cobranca += 1
     if (isRecovered(ficha)) summary.recuperadas += 1
-    if (isEmitida(ficha) || isRecovered(ficha)) summary.emitidas += 1
-    if (ficha.status === 'aprovado' && !ficha._hasEmittedPolicy) summary.aprovadasSemApolice += 1
+    if (isEmitida(ficha)) summary.emitidas += 1
+    if (!ficha._hasEmittedPolicy) summary.aprovadasSemApolice += 1
 
     if (ficha._hasEmittedPolicy && getEffectiveDataEmissao(ficha) && ficha.created_at) {
       const start = new Date(ficha.created_at)
@@ -292,8 +288,8 @@ function groupByImobiliaria(rows, resolverNome) {
     }
 
     current.total += 1
-    if (ficha.status === 'aprovado') current.aprovadas += 1
-    if (ficha.status === 'aprovado' && !ficha._hasEmittedPolicy) current.aprovadasSemApolice += 1
+    current.aprovadas += 1
+    if (!ficha._hasEmittedPolicy) current.aprovadasSemApolice += 1
     if (isEmitida(ficha)) current.emitidas += 1
     if (isRecovered(ficha)) current.recuperadas += 1
     if (isInCobrança(ficha)) current.cobranca += 1
@@ -439,10 +435,18 @@ function RelatorioCard({ ficha, onOpen, selected, onToggleSelect, dragListeners,
 }
 
 function DraggableRelatorioCard({ ficha, onOpen, selected, onToggleSelect, selectionMode }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ficha.id })
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: ficha.id })
 
   return (
-    <div ref={setNodeRef} style={{ opacity: isDragging ? 0.35 : 1, touchAction: 'none' }}>
+    <div
+      ref={setNodeRef}
+      style={{
+        opacity: isDragging ? 0.2 : 1,
+        touchAction: 'none',
+        transform: CSS.Translate.toString(transform),
+        zIndex: isDragging ? 20 : 'auto',
+      }}
+    >
       <RelatorioCard
         ficha={ficha}
         onOpen={onOpen}
@@ -868,34 +872,81 @@ export default function Relatorio() {
           }
         }
 
-        let query = supabase
-          .from('fichas')
-          .select('id, created_at, finalizada_em, nome_interessado, nome_empresa, cpf, cnpj, cep, imobiliaria, status, produto, retorno_enviado, seguradora, orcamentista_forms, observacoes, raw_data, numero_apolice, data_emissao, valor_aluguel, assumida')
-          .in('status', REPORT_STATUSES)
-          .order('created_at', { ascending: false })
+        const createdRowsQuery = () => {
+          let query = supabase
+            .from('fichas')
+            .select('id, created_at, finalizada_em, nome_interessado, nome_empresa, cpf, cnpj, cep, imobiliaria, status, produto, retorno_enviado, seguradora, orcamentista_forms, observacoes, raw_data, numero_apolice, data_emissao, valor_aluguel, assumida')
+            .in('status', REPORT_STATUSES)
+            .order('created_at', { ascending: false })
 
-        if (rangeStart && rangeEnd) {
-          query = query.gte('created_at', rangeStart).lte('created_at', rangeEnd)
-        }
-        if (imobiliariaAliases?.length) {
-          query = query.in('imobiliaria', imobiliariaAliases)
+          if (rangeStart && rangeEnd) {
+            query = query.gte('created_at', rangeStart).lte('created_at', rangeEnd)
+          }
+          if (imobiliariaAliases?.length) {
+            query = query.in('imobiliaria', imobiliariaAliases)
+          }
+
+          return query
         }
 
-        const { data, error } = await query
-        if (error) throw error
+        const apolicesRangeRowsQuery = () => {
+          let query = supabase
+            .from('apolices')
+            .select('id, ficha_id, numero_apolice, data_emissao, status_emissao, seguradora, imobiliaria')
+            .in('status_emissao', ['emitida', 'enviada'])
+
+          if (rangeStart && rangeEnd) {
+            query = query.gte('data_emissao', rangeStart).lte('data_emissao', rangeEnd)
+          }
+          if (imobiliariaAliases?.length) {
+            query = query.in('imobiliaria', imobiliariaAliases)
+          }
+
+          return query
+        }
+
+        const [createdRows, emittedRangeRows] = await Promise.all([
+          fetchAllRows(createdRowsQuery),
+          fetchAllRows(apolicesRangeRowsQuery),
+        ])
         if (!active) return
 
-        const fichaRows = data || []
+        const baseRows = createdRows || []
+        const emittedIds = (emittedRangeRows || []).map(item => item.ficha_id).filter(Boolean)
+        const allIds = [...new Set([...baseRows.map(item => item.id), ...emittedIds])]
+
+        if (allIds.length === 0) {
+          setRows([])
+          return
+        }
+
+        const finalRows = await fetchAllRows(() => {
+          let query = supabase
+            .from('fichas')
+            .select('id, created_at, finalizada_em, nome_interessado, nome_empresa, cpf, cnpj, cep, imobiliaria, status, produto, retorno_enviado, seguradora, orcamentista_forms, observacoes, raw_data, numero_apolice, data_emissao, valor_aluguel, assumida')
+            .in('id', allIds)
+            .order('created_at', { ascending: false })
+
+          if (imobiliariaAliases?.length) {
+            query = query.in('imobiliaria', imobiliariaAliases)
+          }
+
+          return query
+        })
+        if (!active) return
+
+        const fichaRows = finalRows || []
         const fichaIds = fichaRows.map(item => item.id).filter(Boolean)
         let apolicesByFicha = new Map()
 
         if (fichaIds.length > 0) {
-          const { data: apolicesData, error: apolicesError } = await supabase
-            .from('apolices')
-            .select('id, ficha_id, numero_apolice, data_emissao, status_emissao, seguradora')
-            .in('ficha_id', fichaIds)
-
-          if (apolicesError) throw apolicesError
+          const apolicesData = await fetchAllRows(() => (
+            supabase
+              .from('apolices')
+              .select('id, ficha_id, numero_apolice, data_emissao, status_emissao, seguradora, imobiliaria')
+              .in('ficha_id', fichaIds)
+              .in('status_emissao', ['emitida', 'enviada'])
+          ))
 
           apolicesByFicha = new Map()
           ;(apolicesData || []).forEach(apolice => {
@@ -926,7 +977,7 @@ export default function Relatorio() {
             _effectiveDataEmissao: apolice?.data_emissao || ficha.data_emissao || null,
             _effectiveSeguradora: apolice?.seguradora || ficha.seguradora || null,
           }
-        }))
+        }).filter(isEligibleReportRow))
       } catch (error) {
         if (!active) return
         toast({ type: 'error', title: 'Erro ao carregar relatórios', message: error.message })
@@ -1031,6 +1082,13 @@ export default function Relatorio() {
     })
   }
 
+  function scrollKanban(direction) {
+    scrollRef.current?.scrollBy({
+      left: direction * 360,
+      behavior: 'smooth',
+    })
+  }
+
   function toggleSelected(id) {
     setSelectedIds(prev => (prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]))
   }
@@ -1096,13 +1154,12 @@ export default function Relatorio() {
         retorno_enviado: true,
         raw_data: { recovered_after_cobranca: false, retorno_enviado_em: new Date().toISOString() },
       },
-      desistiu: { status: 'cancelado', retorno_enviado: false, raw_data: { recovered_after_cobranca: false, recovered_after_cobranca_em: null } },
-      expirada: { status: 'expirada', retorno_enviado: false, raw_data: { recovered_after_cobranca: false, recovered_after_cobranca_em: null } },
     }
 
     const patch = payloadByTarget[moveTarget]
     if (!patch) return
 
+    const previousRows = rows
     const targetIds = [...selectedIds]
     const updated = rowsWithHelpers.map(item => (
       targetIds.includes(item.id)
@@ -1119,6 +1176,7 @@ export default function Relatorio() {
     const results = await Promise.all(targetIds.map(id => editarFicha(id, patch, user?.id)))
     const failed = results.find(result => result)
     if (failed) {
+      setRows(previousRows)
       toast({ type: 'error', title: 'Erro ao mover fichas', message: failed.message || 'Não foi possível concluir a operação.' })
       setSelectedIds([])
       setMoveTarget('')
@@ -1153,10 +1211,11 @@ export default function Relatorio() {
       ? { status: 'aprovado', retorno_enviado: false, raw_data: { ...(ficha.raw_data || {}), recovered_after_cobranca: false, recovered_after_cobranca_em: null } }
       : targetCol === 'enviado_cobranca'
         ? { status: 'emitido', retorno_enviado: true, raw_data: { ...(ficha.raw_data || {}), recovered_after_cobranca: false, retorno_enviado_em: ficha.raw_data?.retorno_enviado_em || new Date().toISOString() } }
-        : targetCol === 'desistiu'
-          ? { status: 'cancelado', retorno_enviado: false, raw_data: { ...(ficha.raw_data || {}), recovered_after_cobranca: false, recovered_after_cobranca_em: null } }
-          : { status: 'expirada', retorno_enviado: false, raw_data: { ...(ficha.raw_data || {}), recovered_after_cobranca: false, recovered_after_cobranca_em: null } }
+        : null
 
+    if (!patch) return
+
+    const previousRows = rows
     setRows(prev => prev.map(item => (
       item.id === ficha.id
         ? { ...item, ...patch, raw_data: patch.raw_data }
@@ -1165,6 +1224,7 @@ export default function Relatorio() {
 
     const err = await editarFicha(ficha.id, patch, user?.id)
     if (err) {
+      setRows(previousRows)
       toast({ type: 'error', title: 'Erro ao mover ficha', message: err.message })
     } else {
       toast({ type: 'success', title: 'Ficha movida' })
@@ -1370,7 +1430,30 @@ export default function Relatorio() {
           />
         </DataCard>
 
-        <DataCard title="Kanban mensal" subtitle="Arraste fichas entre colunas para atualizar o status.">
+        <DataCard
+          title="Kanban mensal"
+          subtitle="Arraste fichas entre colunas para atualizar o status."
+          actions={
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => scrollKanban(-1)}
+                className="rounded-xl border border-dark-border/60 p-2 text-dark-muted transition-colors hover:border-brand-accent/40 hover:text-dark-text"
+                aria-label="Rolar kanban para a esquerda"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollKanban(1)}
+                className="rounded-xl border border-dark-border/60 p-2 text-dark-muted transition-colors hover:border-brand-accent/40 hover:text-dark-text"
+                aria-label="Rolar kanban para a direita"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          }
+        >
           <DndContext
             sensors={sensors}
             onDragStart={({ active }) => setActiveId(active.id)}
@@ -1439,8 +1522,6 @@ export default function Relatorio() {
           <MetricCard label="Fichas aprovadas" value={summary.aprovadas} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
           <MetricCard label="Apólices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
           <MetricCard label="Taxa geral de emissão" value={`${summary.taxaEmissao.toFixed(1)}%`} tone="accent" icon={<BarChart2 className="h-4 w-4" />} />
-          <MetricCard label="Fichas recusadas" value={summary.recusadas} tone="warning" icon={<Square className="h-4 w-4" />} />
-          <MetricCard label="Fichas expiradas" value={summary.expiradas} tone="warning" icon={<Square className="h-4 w-4" />} />
           <MetricCard label="Em cobrança" value={summary.cobranca} tone="secondary" icon={<MoveRight className="h-4 w-4" />} />
           <MetricCard label="Recuperadas" value={summary.recuperadas} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
         </div>
@@ -1581,3 +1662,5 @@ export default function Relatorio() {
     </div>
   )
 }
+
+

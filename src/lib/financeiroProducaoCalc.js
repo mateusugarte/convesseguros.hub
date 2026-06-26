@@ -1,6 +1,7 @@
 // Helpers puros de agregação da Produção (Fase 2).
 // Sem imports de Supabase/Vite → testáveis com `node --test`.
 import { primeiroDiaMes, addMeses, formatMesAno, parseYmd } from './financeiroCalc.js'
+import { apoliceBilladaNoMes } from './financeiroFaturasCalc.js'
 
 function num(value) {
   const n = Number(value)
@@ -137,6 +138,27 @@ export function gerarParcelasComissao(rows) {
     }
   }
   return out
+}
+
+// Comissão estimada a receber NO PRÓXIMO MÊS: soma da comissão mensal das apólices
+// (ativas) cujo parcelamento ainda cobre o mês seguinte ao mesRef informado.
+// As apólices emitidas no mês atual entram naturalmente, pois sua 1ª parcela cai no mês seguinte.
+export function comissaoEstimadaProximoMes(rows, mesRef) {
+  const proximo = addMeses(primeiroDiaMes(mesRef), 1)
+  let total = 0
+  for (const r of rows || []) {
+    if (apoliceBilladaNoMes(r, proximo)) total += num(r.comissao_mensal)
+  }
+  return total
+}
+
+// Soma das parcelas (valor_parcela) das apólices billadas num mês de referência.
+export function somarFaturaNoMes(rows, mesRef) {
+  let total = 0
+  for (const r of rows || []) {
+    if (apoliceBilladaNoMes(r, mesRef)) total += num(r.valor_parcela)
+  }
+  return total
 }
 
 // Soma das parcelas previstas que caem dentro de [inicio, fim] (mes_referencia).

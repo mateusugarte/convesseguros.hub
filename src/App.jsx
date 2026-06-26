@@ -35,10 +35,10 @@ const Financeiro          = lazy(() => import('./pages/Financeiro/Financeiro'))
 const FinanceiroVisaoGeral = lazy(() => import('./pages/Financeiro/FinanceiroVisaoGeral'))
 const FinanceiroProducaoLista = lazy(() => import('./pages/Financeiro/FinanceiroProducaoLista'))
 const FinanceiroProducao  = lazy(() => import('./pages/Financeiro/FinanceiroProducao'))
+const FinanceiroProducaoApolices = lazy(() => import('./pages/Financeiro/FinanceiroProducaoApolices'))
 const FinanceiroFaturasLista  = lazy(() => import('./pages/Financeiro/FinanceiroFaturasLista'))
 const FinanceiroFaturas       = lazy(() => import('./pages/Financeiro/FinanceiroFaturas'))
 const FinanceiroFaturaImobiliaria = lazy(() => import('./pages/Financeiro/FinanceiroFaturaImobiliaria'))
-const FinanceiroFaturasSeguradora = lazy(() => import('./pages/Financeiro/FinanceiroFaturasSeguradora'))
 const FinanceiroFaturaDetalhe = lazy(() => import('./pages/Financeiro/FinanceiroFaturaDetalhe'))
 
 // Área Auto
@@ -100,9 +100,9 @@ function AppRoutes() {
             <Route index element={<FinanceiroVisaoGeral />} />
             <Route path="producao" element={<FinanceiroProducaoLista />} />
             <Route path="producao/:imobiliaria" element={<FinanceiroProducao />} />
+            <Route path="producao/:imobiliaria/apolices" element={<FinanceiroProducaoApolices />} />
             <Route path="faturas" element={<FinanceiroFaturasLista />} />
             <Route path="faturas/conferencia" element={<FinanceiroFaturas />} />
-            <Route path="faturas/seguradora/:seguradora" element={<FinanceiroFaturasSeguradora />} />
             <Route path="faturas/:imobiliaria" element={<FinanceiroFaturaImobiliaria />} />
             <Route path="faturas/:imobiliaria/:mes" element={<FinanceiroFaturaDetalhe />} />
           </Route>

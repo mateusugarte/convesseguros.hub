@@ -1,19 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { PageHeader, MetricCard, DataCard, EmptyState } from '../../components/ui'
 import ImobiliariaIdentity from '../../components/ImobiliariaIdentity'
 import EvolucaoChart from './EvolucaoChart'
 import PeriodoFilter from '../../components/financeiro/PeriodoFilter'
 import RankingSeguradoras from '../../components/financeiro/RankingSeguradoras'
-import ApolicesListPanel from '../../components/financeiro/ApolicesListPanel'
 import { useAuth } from '../../contexts/AuthContext'
 import { fetchProducaoLedger, fetchPctImobiliarias, salvarPctImobiliaria } from '../../lib/financeiro'
 import { fetchApolicesAtivas } from '../../lib/financeiroApolices'
 import {
-  agruparPorSeguradora, agruparEvolucaoPorMes, gerarParcelasComissao, somarRecebimentoNoPeriodo,
+  agruparPorSeguradora, agruparEvolucaoPorMes, comissaoEstimadaProximoMes,
 } from '../../lib/financeiroProducaoCalc'
 import { fetchImobiliariasCatalogMap, resolveImobiliaria } from '../../lib/imobiliariasLogos'
-import { addMeses } from '../../lib/financeiroCalc'
+import { addMeses, formatMesAno } from '../../lib/financeiroCalc'
 import { formatMoneyBR } from '../../lib/apolices'
 import { parseDecimalBR } from '../../lib/numberInput'
 import { ArrowLeft, Coins, TrendingUp, Wallet, Percent, FileText, Shield } from 'lucide-react'
@@ -25,17 +24,25 @@ export default function FinanceiroProducao() {
   const { imobiliaria: imobParam } = useParams()
   const selecionada = imobParam ? decodeURIComponent(imobParam) : ''
   const { user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [periodo, setPeriodo] = useState(null)
   const [rows, setRows] = useState([])           // emitidas no período
-  const [todasRows, setTodasRows] = useState([]) // todas emitidas (para recebimento estimado)
+  const [ativasRows, setAtivasRows] = useState([]) // apólices ativas (estimativa do próximo mês)
   const [evolucaoRows, setEvolucaoRows] = useState([])
   const [catalogo, setCatalogo] = useState(null)
   const [pct, setPct] = useState('')
   const [pctSalvo, setPctSalvo] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  const [panel, setPanel] = useState({ open: false, title: '', apolices: [], loading: false })
+  // Estado inicial do período vindo da URL (restaurado ao voltar da lista de apólices).
+  const periodoInicial = useMemo(() => ({
+    modo: searchParams.get('modo') || 'mes',
+    ano: searchParams.get('ano'),
+    mes: searchParams.get('mes'),
+    inicio: searchParams.get('ini'),
+    fim: searchParams.get('fim'),
+  }), []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let mounted = true
@@ -43,15 +50,24 @@ export default function FinanceiroProducao() {
     return () => { mounted = false }
   }, [])
 
-  // Apólices de todo o histórico da imobiliária (base do recebimento estimado).
+  // Apólices ativas da imobiliária (base do recebimento estimado e dos cálculos).
   useEffect(() => {
-    if (!selecionada) { setTodasRows([]); return }
+    if (!selecionada) { setAtivasRows([]); return }
     let mounted = true
-    fetchProducaoLedger({ imobiliaria: selecionada })
-      .then(r => { if (mounted) setTodasRows(r) })
-      .catch(() => { if (mounted) setTodasRows([]) })
+    fetchApolicesAtivas({ imobiliaria: selecionada })
+      .then(r => { if (mounted) setAtivasRows(r) })
+      .catch(() => { if (mounted) setAtivasRows([]) })
     return () => { mounted = false }
   }, [selecionada])
+
+  // Sincroniza o período na URL (para preservar ao navegar).
+  useEffect(() => {
+    if (!periodo) return
+    const next = periodo.modo === 'intervalo'
+      ? { modo: 'intervalo', ini: periodo.inicio, fim: periodo.fim }
+      : { modo: 'mes', ano: String(periodo.ano), mes: String(periodo.mes) }
+    setSearchParams(next, { replace: true })
+  }, [periodo, setSearchParams])
 
   // Dados do período selecionado.
   useEffect(() => {
@@ -85,10 +101,11 @@ export default function FinanceiroProducao() {
   )
   const producao = useMemo(() => seguradoras.reduce((s, x) => s + x.premio, 0), [seguradoras])
   const comissaoGerada = useMemo(() => seguradoras.reduce((s, x) => s + x.comissao, 0), [seguradoras])
-  const comissaoEstimada = useMemo(() => {
-    if (!periodo) return 0
-    return somarRecebimentoNoPeriodo(gerarParcelasComissao(todasRows), { inicio: periodo.inicio, fim: periodo.fim })
-  }, [todasRows, periodo])
+  // Comissão estimada = próximo mês, com base nas apólices ativas (inclui emitidas no mês atual).
+  const comissaoEstimada = useMemo(
+    () => (periodo ? comissaoEstimadaProximoMes(ativasRows, periodo.mesRef) : 0),
+    [ativasRows, periodo],
+  )
 
   const producaoSeguradora = useMemo(() => seguradoras.map(s => ({ seguradora: s.seguradora, value: s.premio, qtd: s.qtd })), [seguradoras])
   const comissaoSeguradora = useMemo(() => seguradoras.map(s => ({ seguradora: s.seguradora, value: s.comissao })), [seguradoras])
@@ -99,6 +116,7 @@ export default function FinanceiroProducao() {
   })()
   const meta = resolveImobiliaria(catalogo, selecionada)
   const mesLabel = periodo?.label || ''
+  const proximoLabel = periodo ? formatMesAno(addMeses(periodo.mesRef, 1)) : ''
 
   async function salvarPct() {
     if (!periodo) return
@@ -108,18 +126,15 @@ export default function FinanceiroProducao() {
     if (!err) setPctSalvo(p)
   }
 
-  function abrirEmitidas() {
-    setPanel({ open: true, title: `Apólices emitidas — ${mesLabel}`, apolices: rows, loading: false })
-  }
-
-  async function abrirAtivas() {
-    setPanel({ open: true, title: 'Apólices ativas', apolices: [], loading: true })
-    try {
-      const ativas = await fetchApolicesAtivas({ imobiliaria: selecionada })
-      setPanel({ open: true, title: 'Apólices ativas', apolices: ativas, loading: false })
-    } catch {
-      setPanel({ open: true, title: 'Apólices ativas', apolices: [], loading: false })
+  function irParaApolices(tipo) {
+    const qs = new URLSearchParams(searchParams)
+    qs.set('tipo', tipo)
+    if (tipo === 'emitidas' && periodo) {
+      qs.set('ini', periodo.inicio)
+      qs.set('fim', periodo.fim)
+      qs.set('label', periodo.label)
     }
+    navigate(`/financeiro/producao/${encodeURIComponent(selecionada)}/apolices?${qs.toString()}`)
   }
 
   return (
@@ -139,21 +154,27 @@ export default function FinanceiroProducao() {
       />
 
       <DataCard title="Período" subtitle="Escolha um mês ou um intervalo livre">
-        <PeriodoFilter onChange={setPeriodo} />
+        <PeriodoFilter onChange={setPeriodo} initial={periodoInicial} />
       </DataCard>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Comissão gerada" value={formatMoneyBR(comissaoGerada)} hint={mesLabel} tone="secondary" icon={<TrendingUp className="h-4 w-4" />} />
-        <MetricCard label="Comissão estimada a receber" value={formatMoneyBR(comissaoEstimada)} hint={`parcelas no período · ${mesLabel}`} tone="accent" icon={<Wallet className="h-4 w-4" />} />
+        <MetricCard label="Comissão estimada (próx. mês)" value={formatMoneyBR(comissaoEstimada)} hint={proximoLabel ? `a receber em ${proximoLabel}` : 'apólices ativas'} tone="accent" icon={<Wallet className="h-4 w-4" />} />
         <MetricCard label="Produção" value={formatMoneyBR(producao)} hint={`${rows.length} apólice${rows.length !== 1 ? 's' : ''} · ${mesLabel}`} tone="success" icon={<Coins className="h-4 w-4" />} />
         <MetricCard label="A repassar" value={formatMoneyBR(valorRepassar)} hint="% × comissão gerada" tone="warning" icon={<Percent className="h-4 w-4" />} />
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <button onClick={abrirAtivas} className="inline-flex items-center gap-2 rounded-2xl bg-brand-secondary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90">
-          <Shield className="h-4 w-4" /> Ver apólices ativas
+        <button
+          onClick={() => irParaApolices('ativas')}
+          className="inline-flex items-center gap-2 rounded-2xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-600"
+        >
+          <Shield className="h-4 w-4" /> Ver apólices ativas ({ativasRows.length})
         </button>
-        <button onClick={abrirEmitidas} className="inline-flex items-center gap-2 rounded-2xl border border-dark-border px-4 py-2.5 text-sm font-medium text-dark-text transition-colors hover:border-brand-secondary">
+        <button
+          onClick={() => irParaApolices('emitidas')}
+          className="inline-flex items-center gap-2 rounded-2xl border border-dark-border px-4 py-2.5 text-sm font-medium text-dark-text transition-colors hover:border-brand-secondary"
+        >
           <FileText className="h-4 w-4" /> Apólices emitidas no período
         </button>
       </div>
@@ -200,16 +221,6 @@ export default function FinanceiroProducao() {
           <EvolucaoChart data={evolucao} />
         )}
       </DataCard>
-
-      <ApolicesListPanel
-        isOpen={panel.open}
-        onClose={() => setPanel(p => ({ ...p, open: false }))}
-        title={panel.title}
-        subtitle={selecionada}
-        apolices={panel.apolices}
-        loading={panel.loading}
-        showImobiliaria
-      />
     </div>
   )
 }

@@ -117,3 +117,28 @@ test('somarRecebimentoNoPeriodo filtra por mes_referencia dentro do intervalo', 
   assert.equal(somarRecebimentoNoPeriodo(rec, { inicio: '2026-08-01', fim: '2026-08-31' }), 20)
   assert.equal(somarRecebimentoNoPeriodo(rec, { inicio: '2026-07-01', fim: '2026-09-30' }), 60)
 })
+
+import { comissaoEstimadaProximoMes, somarFaturaNoMes } from './financeiroProducaoCalc.js'
+
+test('comissaoEstimadaProximoMes soma comissão mensal das ativas que billam no mês seguinte', () => {
+  const rows = [
+    // emitida em jun → 1ª parcela jul; estimativa para jul (mesRef jun) conta
+    { data_emissao: '2026-06-10', parcelamento: 29, comissao_mensal: 68.96 },
+    // emitida em jan/2026, 29 parcelas → cobre jul; conta
+    { data_emissao: '2026-01-10', parcelamento: 29, comissao_mensal: 20 },
+    // emitida em jan/2024, 12 parcelas → já encerrou; NÃO conta
+    { data_emissao: '2024-01-10', parcelamento: 12, comissao_mensal: 100 },
+  ]
+  const total = comissaoEstimadaProximoMes(rows, '2026-06-01')
+  assert.equal(Math.round(total * 100) / 100, 88.96)
+})
+
+test('somarFaturaNoMes soma valor_parcela das apólices billadas no mês', () => {
+  const rows = [
+    { data_emissao: '2026-06-10', parcelamento: 29, valor_parcela: 50 }, // billa a partir de jul
+    { data_emissao: '2026-05-10', parcelamento: 29, valor_parcela: 30 }, // billa em jul
+  ]
+  assert.equal(somarFaturaNoMes(rows, '2026-07-01'), 80)
+  // em junho, só a de maio billa (a de junho começa em julho)
+  assert.equal(somarFaturaNoMes(rows, '2026-06-01'), 30)
+})

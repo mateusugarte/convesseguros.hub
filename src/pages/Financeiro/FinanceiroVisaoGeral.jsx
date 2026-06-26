@@ -136,7 +136,7 @@ export default function FinanceiroVisaoGeral() {
                   className="flex w-full items-center justify-between gap-3 rounded-2xl border border-dark-border/70 bg-dark-surface2/40 px-4 py-3 text-left transition-colors hover:border-dark-border"
                 >
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="w-6 text-center text-sm font-bold text-dark-muted">{i + 1}</span>
+                    <span className={`w-6 text-center text-sm font-bold ${['text-amber-400', 'text-slate-300', 'text-orange-400'][i] || 'text-dark-muted'}`}>{i + 1}</span>
                     <ImobiliariaIdentity nome={item.imobiliaria} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="sm" />
                   </div>
                   <div className="text-right">

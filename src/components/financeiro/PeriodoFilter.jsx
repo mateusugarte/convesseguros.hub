@@ -16,13 +16,14 @@ function fmtData(value) {
 
 // Filtro de período: modo "Mês" (ano + mês) e modo "Intervalo" (datas livres, sem limite).
 // Emite { inicio, fim, label, mesRef } via onChange sempre que muda.
-export default function PeriodoFilter({ onChange }) {
+// `initial` permite restaurar o estado (ex.: ao voltar de outra página).
+export default function PeriodoFilter({ onChange, initial }) {
   const agora = new Date()
-  const [modo, setModo] = useState('mes')
-  const [ano, setAno] = useState(agora.getFullYear())
-  const [mes, setMes] = useState(agora.getMonth() + 1)
-  const [inicio, setInicio] = useState('')
-  const [fim, setFim] = useState('')
+  const [modo, setModo] = useState(initial?.modo === 'intervalo' ? 'intervalo' : 'mes')
+  const [ano, setAno] = useState(initial?.ano ? Number(initial.ano) : agora.getFullYear())
+  const [mes, setMes] = useState(initial?.mes ? Number(initial.mes) : agora.getMonth() + 1)
+  const [inicio, setInicio] = useState(initial?.inicio || '')
+  const [fim, setFim] = useState(initial?.fim || '')
 
   useEffect(() => {
     if (modo === 'mes') {

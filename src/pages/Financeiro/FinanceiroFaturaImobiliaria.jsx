@@ -3,7 +3,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { PageHeader, MetricCard, DataCard } from '../../components/ui'
 import { Select } from '../../components/ui/Select'
 import ImobiliariaIdentity from '../../components/ImobiliariaIdentity'
-import ApolicesListPanel from '../../components/financeiro/ApolicesListPanel'
+import SeguradoraBadge from '../../components/SeguradoraBadge'
+import ApolicesListView from '../../components/financeiro/ApolicesListView'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   fetchFaturasLedger, fetchPctImobiliarias, fetchFaturasStatus,
@@ -11,13 +12,13 @@ import {
 } from '../../lib/financeiro'
 import { montarFaturasMes, apoliceBilladaNoMes } from '../../lib/financeiroFaturasCalc'
 import { fetchImobiliariasCatalogMap, resolveImobiliaria } from '../../lib/imobiliariasLogos'
-import { parseYmd } from '../../lib/financeiroCalc'
+import { parseYmd, addMeses, formatMesAno } from '../../lib/financeiroCalc'
 import { formatMoneyBR } from '../../lib/apolices'
-import { ArrowLeft, Receipt, Percent, Wallet, Check, RotateCcw, FileText, CalendarPlus } from 'lucide-react'
+import { ArrowLeft, Receipt, Percent, Wallet, Shield, Check, RotateCcw, FileText, CalendarPlus } from 'lucide-react'
 
 const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 function pad2(v) { return String(v).padStart(2, '0') }
-
+function num(v) { return Number(v) || 0 }
 function parseMoneyInput(value) {
   const raw = String(value || '').trim()
   if (!raw) return null
@@ -29,6 +30,8 @@ function moneyDraft(value) {
   if (value == null) return ''
   return String(Number(value).toFixed(2)).replace('.', ',')
 }
+
+const SCROLL_KEY = 'financeiro-fatura-imob-scroll'
 
 export default function FinanceiroFaturaImobiliaria() {
   const navigate = useNavigate()
@@ -48,16 +51,14 @@ export default function FinanceiroFaturaImobiliaria() {
   const [loading, setLoading] = useState(true)
   const [valorRealDraft, setValorRealDraft] = useState('')
   const [saving, setSaving] = useState(false)
-  const [panel, setPanel] = useState({ open: false, title: '', apolices: [] })
+  const [segAberta, setSegAberta] = useState('')
 
   const mesRef = `${ano}-${pad2(mes)}-01`
-  const proximoMesRef = mes === 12 ? `${ano + 1}-01-01` : `${ano}-${pad2(mes + 1)}-01`
+  const proximoMesRef = addMeses(mesRef, 1)
   const mesLabel = `${MESES_ABBR[mes - 1]} ${ano}`
-  const proximoLabel = mes === 12 ? `${MESES_ABBR[0]} ${ano + 1}` : `${MESES_ABBR[mes]} ${ano}`
+  const proximoLabel = formatMesAno(proximoMesRef)
 
-  useEffect(() => {
-    setSearchParams({ mes: mesRef }, { replace: true })
-  }, [mesRef, setSearchParams])
+  useEffect(() => { setSearchParams({ mes: mesRef }, { replace: true }) }, [mesRef, setSearchParams])
 
   useEffect(() => {
     if (!selecionada) return
@@ -79,27 +80,47 @@ export default function FinanceiroFaturaImobiliaria() {
     return () => { mounted = false }
   }, [selecionada, mesRef])
 
+  // Restaura scroll ao voltar do detalhe da apólice.
+  useEffect(() => {
+    if (loading) return
+    const saved = sessionStorage.getItem(SCROLL_KEY)
+    if (saved) { window.scrollTo(0, Number(saved) || 0); sessionStorage.removeItem(SCROLL_KEY) }
+  }, [loading])
+
   const fatura = useMemo(() => {
     const lista = montarFaturasMes({ rows: ledger, mesRef, pctMap, statusMap })
-    return lista.find(f => f.imobiliaria === selecionada) || { imobiliaria: selecionada, qtd: 0, valorFatura: 0, valorAPagar: 0, pct: pctMap[selecionada] ?? null, status: 'pendente', valorRealFatura: null }
+    return lista.find(f => f.imobiliaria === selecionada)
+      || { imobiliaria: selecionada, qtd: 0, valorFatura: 0, valorAPagar: 0, pct: pctMap[selecionada] ?? null, status: 'pendente', valorRealFatura: null }
   }, [ledger, mesRef, pctMap, statusMap, selecionada])
 
-  // Apólices que contam na fatura do mês.
-  const apolicesNaFatura = useMemo(
-    () => ledger.filter(r => apoliceBilladaNoMes(r, mesRef)),
-    [ledger, mesRef],
-  )
-
-  // Estimativa do mês que vem: apólices emitidas dentro do mês selecionado
-  // (a 1ª parcela delas cai na fatura do mês seguinte).
+  // Apólices emitidas no mês selecionado (entram na fatura do mês seguinte).
   const emitidasNoMes = useMemo(() => ledger.filter(r => {
     const d = parseYmd(r.data_emissao)
     return d && d.getFullYear() === ano && d.getMonth() + 1 === mes
   }), [ledger, ano, mes])
-  const estimativaProximo = useMemo(
-    () => emitidasNoMes.reduce((s, r) => s + (Number(r.valor_parcela) || 0), 0),
-    [emitidasNoMes],
-  )
+  const valorNovasEmissoes = useMemo(() => emitidasNoMes.reduce((s, r) => s + num(r.valor_parcela), 0), [emitidasNoMes])
+  // Estimativa próximo mês = fatura atual + parcelas das novas emissões.
+  const estimativaProximo = fatura.valorFatura + valorNovasEmissoes
+
+  // Agrupamento por seguradora (apólices ativas da imobiliária).
+  const segGroups = useMemo(() => {
+    const map = new Map()
+    for (const r of ledger) {
+      const key = r.seguradora || 'Sem seguradora'
+      const cur = map.get(key) || { seguradora: key, ativas: 0, valorFatura: 0, novas: 0, apolices: [] }
+      cur.ativas += 1
+      if (apoliceBilladaNoMes(r, mesRef)) cur.valorFatura += num(r.valor_parcela)
+      const d = parseYmd(r.data_emissao)
+      if (d && d.getFullYear() === ano && d.getMonth() + 1 === mes) cur.novas += num(r.valor_parcela)
+      cur.apolices.push(r)
+      map.set(key, cur)
+    }
+    return [...map.values()]
+      .map(g => ({ ...g, estimativa: g.valorFatura + g.novas }))
+      .sort((a, b) => b.valorFatura - a.valorFatura || a.seguradora.localeCompare(b.seguradora))
+  }, [ledger, mesRef, ano, mes])
+
+  const segSelecionada = segGroups.find(g => g.seguradora === segAberta) || null
 
   useEffect(() => { setValorRealDraft(moneyDraft(fatura.valorRealFatura)) }, [mesRef, fatura.valorRealFatura])
 
@@ -108,19 +129,13 @@ export default function FinanceiroFaturaImobiliaria() {
   function updateStatus(patch) {
     setStatusMap(prev => ({ ...prev, [selecionada]: { ...(prev[selecionada] || {}), ...patch } }))
   }
-
   function snapshotPayload() {
     return {
-      imobiliaria: selecionada,
-      mes: mesRef,
+      imobiliaria: selecionada, mes: mesRef,
       valorRealFatura: parseMoneyInput(valorRealDraft) ?? fatura.valorRealFatura,
-      valorFatura: fatura.valorFatura,
-      pct: fatura.pct,
-      valorAPagar: fatura.valorAPagar,
-      observacao: fatura.observacao,
+      valorFatura: fatura.valorFatura, pct: fatura.pct, valorAPagar: fatura.valorAPagar, observacao: fatura.observacao,
     }
   }
-
   async function salvarValorReal() {
     setSaving(true)
     const valor = parseMoneyInput(valorRealDraft)
@@ -128,7 +143,6 @@ export default function FinanceiroFaturaImobiliaria() {
     if (!err) updateStatus({ valor_real_fatura: valor, valor_fatura_calculado: fatura.valorFatura, pct_comissao: fatura.pct, valor_a_pagar: fatura.valorAPagar })
     setSaving(false)
   }
-
   async function togglePago() {
     setSaving(true)
     if (fatura.status === 'pago') {
@@ -140,6 +154,11 @@ export default function FinanceiroFaturaImobiliaria() {
       if (!err) updateStatus({ status: 'pago', data_pagamento: new Date().toISOString().slice(0, 10), pago_por: user?.id || null, valor_real_fatura: payload.valorRealFatura, valor_fatura_calculado: fatura.valorFatura, pct_comissao: fatura.pct, valor_a_pagar: fatura.valorAPagar })
     }
     setSaving(false)
+  }
+
+  function abrirApolice(a) {
+    sessionStorage.setItem(SCROLL_KEY, String(window.scrollY))
+    navigate(`/apolices/${a.id}`)
   }
 
   return (
@@ -154,7 +173,7 @@ export default function FinanceiroFaturaImobiliaria() {
       <PageHeader
         eyebrow={`Financeiro · Fatura · ${mesLabel}`}
         title={selecionada}
-        description="Fatura do mês, estimativa do próximo mês e apólices que entram no cálculo."
+        description="Fatura do mês, estimativa do próximo mês e faturas por seguradora."
         actions={<ImobiliariaIdentity nome={selecionada} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="lg" />}
       />
 
@@ -183,22 +202,22 @@ export default function FinanceiroFaturaImobiliaria() {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Fatura do mês" value={formatMoneyBR(fatura.valorFatura)} hint={`${fatura.qtd} apólice${fatura.qtd !== 1 ? 's' : ''} · ${mesLabel}`} tone="accent" icon={<Receipt className="h-4 w-4" />} />
         <MetricCard label="A pagar" value={formatMoneyBR(fatura.valorAPagar)} hint={fatura.pct != null ? `${fatura.pct}% × fatura` : 'sem % definido'} tone="secondary" icon={<Percent className="h-4 w-4" />} />
-        <MetricCard label="Estimativa próximo mês" value={formatMoneyBR(estimativaProximo)} hint={`emitidas em ${mesLabel} → ${proximoLabel}`} tone="warning" icon={<Wallet className="h-4 w-4" />} />
-        <MetricCard label="Status" value={fatura.status === 'pago' ? 'Pago' : 'Pendente'} hint={mesLabel} tone={fatura.status === 'pago' ? 'success' : 'warning'} icon={<CalendarPlus className="h-4 w-4" />} />
+        <MetricCard label="Estimativa próximo mês" value={formatMoneyBR(estimativaProximo)} hint={`atual + ${emitidasNoMes.length} nova(s) → ${proximoLabel}`} tone="warning" icon={<Wallet className="h-4 w-4" />} />
+        <MetricCard label="Apólices ativas" value={ledger.length} hint={selecionada} tone="success" icon={<Shield className="h-4 w-4" />} />
       </div>
 
       <div className="flex flex-wrap gap-3">
         <button
-          onClick={() => setPanel({ open: true, title: `Apólices que contam na fatura — ${mesLabel}`, apolices: apolicesNaFatura })}
+          onClick={() => navigate(`/financeiro/faturas/${encodeURIComponent(selecionada)}/${mesRef}`)}
           className="inline-flex items-center gap-2 rounded-2xl bg-brand-secondary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
         >
-          <FileText className="h-4 w-4" /> Ver apólices que contam ({apolicesNaFatura.length})
+          <FileText className="h-4 w-4" /> Ver apólices que contam ({fatura.qtd})
         </button>
         <button
-          onClick={() => setPanel({ open: true, title: `Estimativa da fatura de ${proximoLabel}`, apolices: emitidasNoMes })}
+          onClick={() => navigate(`/financeiro/faturas/${encodeURIComponent(selecionada)}/${proximoMesRef}`)}
           className="inline-flex items-center gap-2 rounded-2xl border border-dark-border px-4 py-2.5 text-sm font-medium text-dark-text transition-colors hover:border-brand-secondary"
         >
-          <CalendarPlus className="h-4 w-4" /> Estimativa do mês que vem ({emitidasNoMes.length})
+          <CalendarPlus className="h-4 w-4" /> Ver fatura de {proximoLabel}
         </button>
       </div>
 
@@ -206,16 +225,14 @@ export default function FinanceiroFaturaImobiliaria() {
         <div className="flex flex-wrap items-end gap-4">
           <div>
             <label className="mb-1 block text-xs text-dark-muted">Valor real informado</label>
-            <div className="flex items-center gap-1.5">
-              <input
-                value={valorRealDraft}
-                onChange={e => setValorRealDraft(e.target.value)}
-                onBlur={salvarValorReal}
-                inputMode="decimal"
-                placeholder="0,00"
-                className="h-9 w-32 rounded-lg border border-dark-border bg-dark-surface2 px-2 text-right font-mono text-sm text-dark-text outline-none focus:border-brand-secondary"
-              />
-            </div>
+            <input
+              value={valorRealDraft}
+              onChange={e => setValorRealDraft(e.target.value)}
+              onBlur={salvarValorReal}
+              inputMode="decimal"
+              placeholder="0,00"
+              className="h-9 w-32 rounded-lg border border-dark-border bg-dark-surface2 px-2 text-right font-mono text-sm text-dark-text outline-none focus:border-brand-secondary"
+            />
           </div>
           <button
             onClick={togglePago}
@@ -224,17 +241,65 @@ export default function FinanceiroFaturaImobiliaria() {
           >
             {fatura.status === 'pago' ? (<><RotateCcw className="h-4 w-4" /> Reabrir fatura</>) : (<><Check className="h-4 w-4" /> Marcar como paga</>)}
           </button>
+          <span className={`inline-flex h-9 items-center rounded-lg px-3 text-xs font-medium ${fatura.status === 'pago' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'}`}>
+            {fatura.status === 'pago' ? 'Pago' : 'Pendente'}
+          </span>
         </div>
       </DataCard>
 
-      <ApolicesListPanel
-        isOpen={panel.open}
-        onClose={() => setPanel(p => ({ ...p, open: false }))}
-        title={panel.title}
-        subtitle={selecionada}
-        apolices={panel.apolices}
-        loading={loading}
-      />
+      <DataCard title="Faturas por seguradora" subtitle="Clique numa seguradora para ver os detalhes">
+        {loading ? (
+          <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
+        ) : segGroups.length === 0 ? (
+          <div className="py-8 text-center text-sm text-dark-muted">Sem apólices ativas para esta imobiliária.</div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {segGroups.map(g => {
+                const ativo = g.seguradora === segAberta
+                return (
+                  <button
+                    key={g.seguradora}
+                    onClick={() => setSegAberta(ativo ? '' : g.seguradora)}
+                    className={`rounded-2xl border px-4 py-3 text-left transition-colors ${ativo ? 'border-brand-secondary bg-brand-secondary/10' : 'border-dark-border/70 bg-dark-surface2/40 hover:border-brand-secondary'}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <SeguradoraBadge nome={g.seguradora} size="md" />
+                      <span className="rounded-md bg-dark-surface2 px-2 py-0.5 text-[11px] font-medium text-dark-muted">{g.ativas} ativas</span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <p className="text-dark-muted">Fatura do mês</p>
+                        <p className="font-semibold text-dark-text">{formatMoneyBR(g.valorFatura)}</p>
+                      </div>
+                      <div>
+                        <p className="text-dark-muted">Estimativa próx.</p>
+                        <p className="font-semibold text-dark-text">{formatMoneyBR(g.estimativa)}</p>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            {segSelecionada && (
+              <div className="rounded-2xl border border-dark-border/70 bg-dark-surface2/20 p-4">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <SeguradoraBadge nome={segSelecionada.seguradora} size="md" />
+                    <span className="text-xs text-dark-muted">· {segSelecionada.ativas} apólices ativas</span>
+                  </div>
+                  <div className="flex gap-4 text-xs">
+                    <span className="text-dark-muted">Fatura: <strong className="text-dark-text">{formatMoneyBR(segSelecionada.valorFatura)}</strong></span>
+                    <span className="text-dark-muted">Estimativa: <strong className="text-dark-text">{formatMoneyBR(segSelecionada.estimativa)}</strong></span>
+                  </div>
+                </div>
+                <ApolicesListView apolices={segSelecionada.apolices} onRowClick={abrirApolice} />
+              </div>
+            )}
+          </div>
+        )}
+      </DataCard>
     </div>
   )
 }

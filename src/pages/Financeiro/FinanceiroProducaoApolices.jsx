@@ -58,10 +58,10 @@ export default function FinanceiroProducaoApolices() {
   }
 
   const meta = resolveImobiliaria(catalogo, selecionada)
-  const titulo = tipo === 'emitidas' ? 'ApÛlices emitidas' : 'ApÛlices ativas'
+  const titulo = tipo === 'emitidas' ? 'Ap√≥lices emitidas' : 'Ap√≥lices ativas'
   const sub = tipo === 'emitidas'
-    ? (label ? `Emitidas em ${label}` : 'Emitidas no perÌodo')
-    : (label ? `Ativas em ${label}` : 'ApÛlices ativas da imobili·ria')
+    ? (label ? `Emitidas em ${label}` : 'Emitidas no per√≠odo')
+    : (label ? `Ativas em ${label}` : 'Ap√≥lices ativas da imobili√°ria')
 
   return (
     <div className="space-y-5">
@@ -69,12 +69,12 @@ export default function FinanceiroProducaoApolices() {
         onClick={() => navigate(`/financeiro/producao/${encodeURIComponent(selecionada)}${voltarQuery ? `?${voltarQuery}` : ''}`)}
         className="inline-flex items-center gap-1.5 text-sm text-dark-muted transition-colors hover:text-dark-text"
       >
-        <ArrowLeft className="h-4 w-4" /> Voltar para a produÁ„o
+        <ArrowLeft className="h-4 w-4" /> Voltar para a produ√ß√£o
       </button>
 
       <section className="overflow-hidden rounded-[30px] border border-emerald-500/15 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_40%),linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.92))] px-6 py-6 shadow-[0_26px_70px_-42px_rgba(16,185,129,0.55)]">
         <PageHeader
-          eyebrow={`Financeiro ∑ ProduÁ„o ∑ ${titulo}`}
+          eyebrow={`Financeiro ¬∑ Produ√ß√£o ¬∑ ${titulo}`}
           title={selecionada}
           description={sub}
           actions={<ImobiliariaIdentity nome={selecionada} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="lg" />}
@@ -82,7 +82,7 @@ export default function FinanceiroProducaoApolices() {
         <RegisteredSeguradorasStrip seguradoras={meta?.registeredSeguradoras} size="sm" className="mt-4" />
       </section>
 
-      <DataCard title={titulo} subtitle="Clique em uma apÛlice para abrir os detalhes" className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,244,0.88))]">
+      <DataCard title={titulo} subtitle="Clique em uma ap√≥lice para abrir os detalhes" className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,244,0.88))]">
         <ApolicesListView apolices={apolices} loading={loading} onRowClick={abrirApolice} />
       </DataCard>
     </div>

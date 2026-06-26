@@ -66,13 +66,13 @@ export default function FinanceiroFaturaDetalhe() {
 
       <section className="overflow-hidden rounded-[30px] border border-emerald-500/15 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_40%),linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.92))] px-6 py-6 shadow-[0_26px_70px_-42px_rgba(16,185,129,0.55)]">
         <PageHeader
-          eyebrow={`Financeiro · Fatura · ${formatMesAno(mesRef)}`}
+          eyebrow={`Financeiro Â· Fatura Â· ${formatMesAno(mesRef)}`}
           title={meta?.nomeCanonico || imobiliaria}
-          description="Apólices com parcela devida no mês."
+          description="ApÃ³lices com parcela devida no mÃªs."
           actions={(<ImobiliariaIdentity nome={imobiliaria} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="lg" />)}
           stats={(
             <>
-              <MetricCard label="Apólices" value={apolices.length} hint={formatMesAno(mesRef)} tone="success" icon={<FileText className="h-4 w-4" />} className="border border-emerald-500/15 bg-white/85" />
+              <MetricCard label="ApÃ³lices" value={apolices.length} hint={formatMesAno(mesRef)} tone="success" icon={<FileText className="h-4 w-4" />} className="border border-emerald-500/15 bg-white/85" />
               <MetricCard label="Valor da fatura" value={formatMoneyBR(valorFatura)} hint="soma das parcelas" tone="accent" icon={<Coins className="h-4 w-4" />} className="border border-emerald-500/15 bg-white/85" />
             </>
           )}
@@ -80,17 +80,17 @@ export default function FinanceiroFaturaDetalhe() {
         <RegisteredSeguradorasStrip seguradoras={meta?.registeredSeguradoras} size="sm" className="mt-4" />
       </section>
 
-      <DataCard title="Apólices da fatura" subtitle="Clique para abrir a apólice" className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,244,0.88))]">
+      <DataCard title="ApÃ³lices da fatura" subtitle="Clique para abrir a apÃ³lice" className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,244,0.88))]">
         {loading ? (
           <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
         ) : apolices.length === 0 ? (
-          <EmptyState title="Sem apólices no mês" description="Nenhuma parcela devida no mês para esta imobiliária." icon={<Receipt className="h-6 w-6" />} />
+          <EmptyState title="Sem apÃ³lices no mÃªs" description="Nenhuma parcela devida no mÃªs para esta imobiliÃ¡ria." icon={<Receipt className="h-6 w-6" />} />
         ) : (
           <div className="overflow-x-auto">
             <table className="table-table text-sm">
               <thead className="table-thead">
                 <tr>
-                  {['Apólice', 'Cliente', 'Seguradora', 'Parcela', 'Emissão'].map(h => (
+                  {['ApÃ³lice', 'Cliente', 'Seguradora', 'Parcela', 'EmissÃ£o'].map(h => (
                     <th key={h} className="th whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -98,8 +98,8 @@ export default function FinanceiroFaturaDetalhe() {
               <tbody className="divide-y divide-dark-border">
                 {apolices.map(a => (
                   <tr key={a.apolice_id} className="cursor-pointer hover:bg-dark-surface2/40" onClick={() => abrirApolice(a.apolice_id)}>
-                    <td className="td font-mono text-xs text-dark-muted">{a.numero_apolice || '—'}</td>
-                    <td className="td max-w-[200px] truncate">{a.nome_interessado || '—'}</td>
+                    <td className="td font-mono text-xs text-dark-muted">{a.numero_apolice || 'â€”'}</td>
+                    <td className="td max-w-[200px] truncate">{a.nome_interessado || 'â€”'}</td>
                     <td className="td"><SeguradoraBadge nome={a.seguradora} size="sm" /></td>
                     <td className="td font-mono text-xs">{formatMoneyBR(a.valor_parcela)}</td>
                     <td className="td text-xs text-dark-muted whitespace-nowrap">{String(a.data_emissao).slice(0, 10)}</td>

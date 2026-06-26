@@ -3,7 +3,7 @@ import { formatMoneyBR } from '../../lib/apolices'
 
 const MEDALHA = ['text-amber-500', 'text-slate-400', 'text-orange-500']
 
-export default function RankingSeguradoras({ data = [], emptyLabel = 'Sem dados no período' }) {
+export default function RankingSeguradoras({ data = [], emptyLabel = 'Sem dados no perÃ­odo' }) {
   const lista = [...data].filter(d => Number(d.value) > 0).sort((a, b) => b.value - a.value)
   if (!lista.length) return <div className="py-8 text-center text-sm text-dark-muted">{emptyLabel}</div>
   const max = Math.max(...lista.map(d => Number(d.value) || 0))
@@ -25,7 +25,7 @@ export default function RankingSeguradoras({ data = [], emptyLabel = 'Sem dados 
               </div>
               <div className="text-right">
                 <p className="text-sm font-semibold text-dark-text">{formatMoneyBR(d.value)}</p>
-                {d.qtd != null && <p className="text-[11px] text-dark-muted">{d.qtd} apólice{d.qtd !== 1 ? 's' : ''}</p>}
+                {d.qtd != null && <p className="text-[11px] text-dark-muted">{d.qtd} apÃ³lice{d.qtd !== 1 ? 's' : ''}</p>}
               </div>
             </div>
           </div>

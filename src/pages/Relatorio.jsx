@@ -22,6 +22,10 @@ import {
   ChevronRight,
   RefreshCw,
   ShieldCheck,
+  FileText,
+  ExternalLink,
+  AlertTriangle,
+  BellRing,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -60,6 +64,7 @@ const COLUNAS = [
 
 const REPORT_STATUSES = ['aprovado', 'emitido']
 const STORAGE_PREFIX = 'relatorio-fian-ca-scroll'
+const COBRANCA_TOGGLE_STORAGE = 'relatorio-cobranca-toggle'
 
 function pad2(value) {
   return String(value).padStart(2, '0')
@@ -208,6 +213,12 @@ function formatCurrencyValue(value) {
   return formatMoneyBR(n)
 }
 
+function getPeriodoScopeKey(periodo, ano, mes) {
+  if (periodo === 'historico') return 'historico'
+  if (periodo === 'ano') return `ano:${ano}`
+  return `mes:${ano}:${mes}`
+}
+
 function summarizeRows(rows) {
   const summary = {
     total: rows.length,
@@ -272,6 +283,7 @@ function groupByImobiliaria(rows, resolverNome) {
       emitidas: 0,
       recuperadas: 0,
       cobranca: 0,
+      expiradas: 0,
       mediaEmissao: null,
       mediaCobrança: null,
       logoUrl: null,
@@ -362,18 +374,28 @@ function ChartCard({ title, subtitle, data, dataKey = 'value', xKey = 'name', co
   )
 }
 
-function RelatorioCard({ ficha, onOpen, selected, onToggleSelect, dragListeners, dragAttributes, selectionMode }) {
+function RelatorioCard({ ficha, onOpen, onOpenPolicy, selected, onToggleSelect, dragListeners, dragAttributes, selectionMode }) {
   const nome = getNomeFicha(ficha)
   const doc = getDocumento(ficha)
   const op = getOperacionalStatus(ficha)
   const prodColor = ficha.produto === 'pessoa_juridica' ? '#4b6cc2' : ficha.produto === 'comercial_pf' ? '#0f766e' : '#000079'
+  const isEmissaoCard = isEmitida(ficha)
+  const cardVisual = op?.id === 'aprovada'
+    ? { background: 'linear-gradient(180deg, rgba(236,253,245,0.98), rgba(220,252,231,0.92))', border: '1px solid rgba(15,118,110,0.24)', shadow: '0 18px 36px rgba(15,118,110,0.12)' }
+    : op?.id === 'enviado_cobranca'
+      ? { background: 'linear-gradient(180deg, rgba(239,246,255,0.98), rgba(219,234,254,0.92))', border: '1px solid rgba(34,71,170,0.26)', shadow: '0 18px 36px rgba(34,71,170,0.12)' }
+      : isEmissaoCard
+        ? { background: 'linear-gradient(180deg, rgba(238,242,255,0.98), rgba(224,231,255,0.94))', border: '1px solid rgba(0,0,121,0.22)', shadow: '0 18px 36px rgba(0,0,121,0.12)' }
+        : op?.id === 'expirada'
+          ? { background: 'linear-gradient(180deg, rgba(248,250,252,0.98), rgba(226,232,240,0.94))', border: '1px solid rgba(100,116,139,0.24)', shadow: '0 18px 36px rgba(100,116,139,0.10)' }
+          : { background: 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96))', border: '1px solid rgba(148,163,184,0.20)', shadow: '0 16px 32px rgba(15,23,42,0.08)' }
 
   return (
     <div
       {...(!selectionMode && dragListeners ? dragListeners : {})}
       {...(!selectionMode && dragAttributes ? dragAttributes : {})}
       className={`kanban-card relative ${selected ? 'ring-2 ring-brand-accent' : ''}`}
-      style={{ '--kanban-accent': prodColor, cursor: selectionMode ? 'pointer' : 'grab' }}
+      style={{ '--kanban-accent': prodColor, cursor: selectionMode ? 'pointer' : 'grab', background: cardVisual.background, border: cardVisual.border, boxShadow: cardVisual.shadow }}
       onClick={() => (selectionMode ? onToggleSelect(ficha.id) : onOpen(ficha.id))}
     >
       <div className="kanban-card-body">
@@ -422,6 +444,26 @@ function RelatorioCard({ ficha, onOpen, selected, onToggleSelect, dragListeners,
           </div>
         )}
 
+        {isEmissaoCard && !selectionMode && (
+          <div className="mt-3 grid grid-cols-2 gap-2 border-t border-dark-border/50 pt-3">
+            <button
+              type="button"
+              onClick={event => { event.stopPropagation(); onOpen(ficha.id) }}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-dark-border/60 bg-white/85 px-2.5 py-2 text-[10px] font-semibold text-dark-text transition-colors hover:border-brand-accent/45 hover:text-brand-accent"
+            >
+              <FileText className="h-3.5 w-3.5" /> Abrir ficha
+            </button>
+            <button
+              type="button"
+              disabled={!ficha?._apolice?.id}
+              onClick={event => { event.stopPropagation(); if (ficha?._apolice?.id) onOpenPolicy?.(ficha._apolice.id) }}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-secondary px-2.5 py-2 text-[10px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <ExternalLink className="h-3.5 w-3.5" /> Abrir apolice
+            </button>
+          </div>
+        )}
+
         {ficha.observacoes && (
           <p className="mt-2 line-clamp-2 text-[11px] text-dark-muted">{ficha.observacoes}</p>
         )}
@@ -430,7 +472,7 @@ function RelatorioCard({ ficha, onOpen, selected, onToggleSelect, dragListeners,
   )
 }
 
-function DraggableRelatorioCard({ ficha, onOpen, selected, onToggleSelect, selectionMode }) {
+function DraggableRelatorioCard({ ficha, onOpen, onOpenPolicy, selected, onToggleSelect, selectionMode }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: ficha.id })
 
   return (
@@ -446,6 +488,7 @@ function DraggableRelatorioCard({ ficha, onOpen, selected, onToggleSelect, selec
       <RelatorioCard
         ficha={ficha}
         onOpen={onOpen}
+        onOpenPolicy={onOpenPolicy}
         selected={selected}
         onToggleSelect={onToggleSelect}
         dragListeners={listeners}
@@ -460,6 +503,7 @@ function KanbanColuna({
   coluna,
   fichas,
   onOpen,
+  onOpenPolicy,
   selectedIds,
   onToggleSelect,
   onCopy,
@@ -522,6 +566,7 @@ function KanbanColuna({
               key={ficha.id}
               ficha={ficha}
               onOpen={onOpen}
+              onOpenPolicy={onOpenPolicy}
               selected={selectedIds.has(ficha.id)}
               onToggleSelect={onToggleSelect}
               selectionMode={selectionMode}
@@ -818,12 +863,20 @@ export default function Relatorio() {
   const [activeId, setActiveId] = useState(null)
   const [pendingEmissao, setPendingEmissao] = useState(null)
   const [salvandoEmissao, setSalvandoEmissao] = useState(false)
+  const [cobrancaToggleMap, setCobrancaToggleMap] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(COBRANCA_TOGGLE_STORAGE) || '{}')
+    } catch {
+      return {}
+    }
+  })
   const scrollRef = useRef(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const isDetail = Boolean(imobiliariaId)
   const currentPath = `${location.pathname}${location.search}`
   const scrollKey = `${STORAGE_PREFIX}-${currentPath}`
+  const periodoScopeKey = getPeriodoScopeKey(periodo, ano, mes)
   const [rangeStart, rangeEnd] = getReportRange(periodo, ano, mes)
   const periodoLabel = getPeriodoLabel(periodo, ano, mes)
 
@@ -991,13 +1044,25 @@ export default function Relatorio() {
     const el = scrollRef.current
     if (!el) return
 
-    const saved = Number(sessionStorage.getItem(scrollKey) || 0)
+    const stateScroll = Number(location.state?.scrollLeft || 0)
+    const saved = stateScroll || Number(sessionStorage.getItem(scrollKey) || 0)
     if (saved > 0) {
       requestAnimationFrame(() => {
         el.scrollLeft = saved
       })
     }
-  }, [scrollKey, rows.length, loading])
+  }, [location.state, scrollKey, rows.length, loading])
+
+  useEffect(() => {
+    if (typeof location.state?.scrollTop !== 'number') return
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: location.state.scrollTop, behavior: 'auto' })
+    })
+  }, [location.state])
+
+  useEffect(() => {
+    localStorage.setItem(COBRANCA_TOGGLE_STORAGE, JSON.stringify(cobrancaToggleMap))
+  }, [cobrancaToggleMap])
 
   useEffect(() => {
     const el = scrollRef.current
@@ -1029,8 +1094,8 @@ export default function Relatorio() {
 
   const summary = useMemo(() => summarizeRows(rowsWithHelpers), [rowsWithHelpers])
   const groupedByImob = useMemo(() => groupByImobiliaria(rowsWithHelpers, resolverNome), [rowsWithHelpers, resolverNome])
-  const pendingByImobiliaria = useMemo(() => {
-    return new Map(groupedByImob.map(item => [normalizeKey(item.nome), item.aprovadasSemApolice || 0]))
+  const groupedByImobMap = useMemo(() => {
+    return new Map(groupedByImob.map(item => [normalizeKey(item.nome), item]))
   }, [groupedByImob])
 
   const columnMap = useMemo(() => {
@@ -1071,9 +1136,35 @@ export default function Relatorio() {
     updateQuery({ mes: next })
   }
 
+  function getCobrancaToggleKey(imobKey) {
+    return `${periodoScopeKey}:${imobKey}`
+  }
+
+  function isCobrancaDone(imobKey) {
+    return Boolean(cobrancaToggleMap[getCobrancaToggleKey(imobKey)])
+  }
+
+  function toggleCobrancaDone(imobKey) {
+    const storageKey = getCobrancaToggleKey(imobKey)
+    setCobrancaToggleMap(prev => ({
+      ...prev,
+      [storageKey]: !prev[storageKey],
+    }))
+  }
+
   function openFicha(id) {
     const scrollLeft = scrollRef.current?.scrollLeft || 0
     navigate(`/fichas/${id}`, {
+      state: {
+        backTo: currentPath,
+        backState: { scrollLeft, scrollTop: window.scrollY },
+      },
+    })
+  }
+
+  function openApolice(id) {
+    const scrollLeft = scrollRef.current?.scrollLeft || 0
+    navigate(`/apolices/${id}`, {
       state: {
         backTo: currentPath,
         backState: { scrollLeft, scrollTop: window.scrollY },
@@ -1393,7 +1484,7 @@ export default function Relatorio() {
           actions={overviewActions}
           stats={
             <>
-              <MetricCard label="Total" value={summary.total} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
+              <MetricCard label="Total fichas" value={summary.aprovadas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
               <MetricCard label="Aprovadas" value={summary.aprovadas} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
               <MetricCard label="Em cobranca" value={summary.cobranca} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
               <MetricCard label="Emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
@@ -1469,6 +1560,7 @@ export default function Relatorio() {
                     coluna={coluna}
                     fichas={columnMap[coluna.id] || []}
                     onOpen={openFicha}
+                    onOpenPolicy={openApolice}
                     selectedIds={new Set(selectedIds)}
                     onToggleSelect={toggleSelected}
                     onCopy={copyColumn}
@@ -1486,6 +1578,7 @@ export default function Relatorio() {
                   <RelatorioCard
                     ficha={activeFicha}
                     onOpen={() => {}}
+                    onOpenPolicy={() => {}}
                     selected={false}
                     onToggleSelect={() => {}}
                     selectionMode={false}
@@ -1517,14 +1610,19 @@ export default function Relatorio() {
         actions={overviewActions}
       />
 
-      <DataCard title="Métricas do período" subtitle="Leitura executiva do recorte selecionado.">
+      <DataCard
+        title="Métricas do período"
+        subtitle="Leitura executiva do recorte selecionado."
+        className="border-brand-secondary/20 bg-[linear-gradient(135deg,rgba(0,0,121,0.06),rgba(255,255,255,0.98),rgba(34,71,170,0.08))] shadow-[0_20px_48px_rgba(15,23,42,0.08)]"
+      >
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <MetricCard label="Total de fichas" value={summary.total} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
-          <MetricCard label="Fichas aprovadas" value={summary.aprovadas} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
+          <MetricCard label="Total de fichas" value={summary.aprovadas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
           <MetricCard label="Apólices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
           <MetricCard label="Taxa geral de emissão" value={`${summary.taxaEmissao.toFixed(1)}%`} tone="accent" icon={<BarChart2 className="h-4 w-4" />} />
-          <MetricCard label="Em cobrança" value={summary.cobranca} tone="secondary" icon={<MoveRight className="h-4 w-4" />} />
+          <MetricCard label="Em cobrança" value={summary.cobranca} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
+          <MetricCard label="Pendentes sem apolice" value={summary.aprovadasSemApolice} tone="warning" icon={<BellRing className="h-4 w-4" />} />
           <MetricCard label="Recuperadas" value={summary.recuperadas} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
+          <MetricCard label="Expiradas" value={summary.expiradas} tone="secondary" icon={<Square className="h-4 w-4" />} />
         </div>
       </DataCard>
 
@@ -1555,6 +1653,7 @@ export default function Relatorio() {
       <DataCard
         title="Imobiliárias"
         subtitle="Clique em uma imobiliária para abrir o relatório individual."
+        className="border-dark-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.98))] shadow-[0_18px_40px_rgba(15,23,42,0.08)]"
         actions={
           <div className="relative min-w-[260px]">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-dark-muted" />
@@ -1570,37 +1669,114 @@ export default function Relatorio() {
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {filteredImobiliarias.map(imob => {
             const meta = resolverImobiliariaInfo(imob.nome_canonico) || imob
-            const pendingCount = pendingByImobiliaria.get(normalizeKey(imob.nome_canonico)) || 0
+            const imobMetrics = groupedByImob.find(item => normalizeKey(item.nome) === normalizeKey(imob.nome_canonico)) || {
+              aprovadas: 0,
+              emitidas: 0,
+              cobranca: 0,
+              recuperadas: 0,
+              expiradas: 0,
+              aprovadasSemApolice: 0,
+            }
+            const pendingCount = imobMetrics.aprovadasSemApolice || 0
+            const requiresSend = (imobMetrics.aprovadas + imobMetrics.recuperadas + imobMetrics.expiradas) > 0
+            const toggleKey = `${periodoScopeKey}:${imob.id}`
+            const cobrancaDone = Boolean(cobrancaToggleMap?.[toggleKey])
             const hasPending = pendingCount > 0
+            const cardClass = requiresSend
+              ? 'group rounded-[28px] border border-red-300 bg-[linear-gradient(180deg,rgba(254,242,242,0.98),rgba(254,226,226,0.92))] p-4 text-left transition-all hover:-translate-y-0.5 hover:border-red-400 hover:shadow-[0_18px_36px_rgba(220,38,38,0.18)] shadow-[0_16px_34px_rgba(220,38,38,0.12)]'
+              : cobrancaDone && hasPending
+                ? 'group rounded-[28px] border border-orange-300 bg-[linear-gradient(180deg,rgba(255,247,237,0.98),rgba(254,215,170,0.35))] p-4 text-left transition-all hover:-translate-y-0.5 hover:border-orange-400 hover:shadow-[0_18px_36px_rgba(249,115,22,0.18)] shadow-[0_16px_34px_rgba(249,115,22,0.12)]'
+                : hasPending
+                  ? 'group rounded-[28px] border border-brand-accent/30 bg-[linear-gradient(180deg,rgba(239,246,255,0.98),rgba(219,234,254,0.88))] p-4 text-left transition-all hover:-translate-y-0.5 hover:border-brand-accent/50 hover:shadow-[0_18px_36px_rgba(34,71,170,0.16)] shadow-[0_16px_34px_rgba(34,71,170,0.10)]'
+                  : 'group rounded-[28px] border border-dark-border/60 bg-white/80 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-brand-accent/40 hover:shadow-sm'
             return (
-              <button
+              <div
                 key={imob.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => navigate(`/relatorio/${imob.id}${location.search}`)}
-                className={hasPending
-                  ? 'group rounded-3xl border border-orange-300 bg-orange-50/80 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-orange-400 hover:shadow-sm shadow-[0_12px_28px_rgba(249,115,22,0.14)]'
-                  : 'group rounded-3xl border border-dark-border/60 bg-white/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-brand-accent/40 hover:shadow-sm'}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    navigate(`/relatorio/${imob.id}${location.search}`)
+                  }
+                }}
+                className={cardClass}
               >
-                <ImobiliariaIdentity
-                  nome={imob.nome_canonico}
-                  imagemUrl={meta.imagem_url}
-                  imagemPath={meta.imagem_path}
-                  size="md"
-                />
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">
-                      {imob.ativa ? 'Ativa' : 'Inativa'}
+                <div className="flex items-start justify-between gap-3">
+                  <ImobiliariaIdentity
+                    nome={imob.nome_canonico}
+                    imagemUrl={meta.imagem_url}
+                    imagemPath={meta.imagem_path}
+                    size="md"
+                  />
+                  <button
+                    type="button"
+                    onClick={event => {
+                      event.stopPropagation()
+                      const nextValue = !cobrancaDone
+                      setCobrancaToggleMap(prev => {
+                        const next = { ...(prev || {}), [toggleKey]: nextValue }
+                        try { localStorage.setItem(COBRANCA_TOGGLE_STORAGE, JSON.stringify(next)) } catch {}
+                        return next
+                      })
+                    }}
+                    className={cobrancaDone
+                      ? 'inline-flex items-center gap-2 rounded-full border border-orange-300 bg-orange-100 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-orange-800'
+                      : 'inline-flex items-center gap-2 rounded-full border border-dark-border/70 bg-white/85 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted hover:border-brand-accent/35 hover:text-dark-text'}
+                    aria-pressed={cobrancaDone}
+                  >
+                    <span className={`h-2.5 w-2.5 rounded-full ${cobrancaDone ? 'bg-orange-500' : 'bg-slate-300'}`} />
+                    Cobrado todos
+                  </button>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${imob.ativa ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}`}>
+                    {imob.ativa ? 'Ativa' : 'Inativa'}
+                  </span>
+                  {requiresSend && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-[10px] font-semibold text-red-700">
+                      <AlertTriangle className="h-3 w-3" /> Enviar cobrança imob
                     </span>
-                    {hasPending && (
-                      <span className="inline-flex w-fit rounded-full bg-orange-100 px-2.5 py-1 text-[10px] font-semibold text-orange-700">
-                        Pendencias: {pendingCount}
-                      </span>
-                    )}
+                  )}
+                  {!requiresSend && cobrancaDone && hasPending && (
+                    <span className="inline-flex rounded-full bg-orange-100 px-2.5 py-1 text-[10px] font-semibold text-orange-700">
+                      Cobrado todos
+                    </span>
+                  )}
+                  {!requiresSend && hasPending && (
+                    <span className="inline-flex rounded-full bg-white/85 px-2.5 py-1 text-[10px] font-semibold text-brand-accent shadow-sm">
+                      Pendências: {pendingCount}
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-4 grid grid-cols-3 gap-2 text-[11px]">
+                  <div className="rounded-2xl bg-white/70 px-3 py-2">
+                    <p className="text-dark-muted">Aprovadas</p>
+                    <p className="mt-1 text-sm font-semibold text-dark-text">{imobMetrics.aprovadas}</p>
+                  </div>
+                  <div className="rounded-2xl bg-white/70 px-3 py-2">
+                    <p className="text-dark-muted">Cobrança</p>
+                    <p className="mt-1 text-sm font-semibold text-dark-text">{imobMetrics.cobranca}</p>
+                  </div>
+                  <div className="rounded-2xl bg-white/70 px-3 py-2">
+                    <p className="text-dark-muted">Emitidas</p>
+                    <p className="mt-1 text-sm font-semibold text-dark-text">{imobMetrics.emitidas}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">Prioridade operacional</span>
+                    <span className={requiresSend ? 'text-xs font-semibold text-red-700' : cobrancaDone && hasPending ? 'text-xs font-semibold text-orange-700' : hasPending ? 'text-xs font-semibold text-brand-accent' : 'text-xs font-semibold text-emerald-700'}>
+                      {requiresSend ? 'Existem fichas fora de cobrança' : cobrancaDone && hasPending ? 'Todas as cobranças foram enviadas' : hasPending ? 'Fichas aguardando emissão' : 'Operação em dia'}
+                    </span>
                   </div>
                   <ChevronRight className="h-4 w-4 text-dark-muted transition-transform group-hover:translate-x-0.5" />
                 </div>
-              </button>
+              </div>
             )
           })}
         </div>
@@ -1674,6 +1850,8 @@ export default function Relatorio() {
     </div>
   )
 }
+
+
 
 
 

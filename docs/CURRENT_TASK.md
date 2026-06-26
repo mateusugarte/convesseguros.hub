@@ -15,7 +15,7 @@ producao por imobiliaria/seguradora, faturas mensais, repasses e pagamento.
 
 ## Status
 
-Refinamento v2 concluido no codigo.
+Refinamento v2 concluido no codigo. Codificacao UTF-8 corrigida em toda a area financeira.
 
 ### Rodada 3 (refinamento v2 — 2026-06-26)
 - Faturas: corrigido bug crítico — `fetchFaturasLedger` agora filtra por `forma_pagamento IN ('fatura_sem_entrada','fatura_com_entrada')` via nova função `fetchApolicesParaFatura`. Campo `forma_pagamento` adicionado ao SELECT e ao normalizeApoliceRow.

@@ -4,8 +4,8 @@ import { useAuth } from '../../contexts/AuthContext'
 import { ShieldCheck } from 'lucide-react'
 
 const TABS = [
-  { to: '/financeiro', label: 'Visão Geral', end: true },
-  { to: '/financeiro/producao', label: 'Produção' },
+  { to: '/financeiro', label: 'VisÃ£o Geral', end: true },
+  { to: '/financeiro/producao', label: 'ProduÃ§Ã£o' },
   { to: '/financeiro/faturas', label: 'Faturas' },
 ]
 
@@ -16,8 +16,8 @@ export default function Financeiro() {
     return (
       <DataCard title="Acesso restrito">
         <EmptyState
-          title="Área financeira restrita"
-          description="Somente perfis marcados como admin conseguem visualizar comissões e produção."
+          title="Ãrea financeira restrita"
+          description="Somente perfis marcados como admin conseguem visualizar comissÃµes e produÃ§Ã£o."
           icon={<ShieldCheck className="h-6 w-6" />}
         />
       </DataCard>
@@ -33,7 +33,7 @@ export default function Financeiro() {
             title="Em breve"
             className="cursor-not-allowed rounded-2xl px-3 py-2 text-xs font-medium text-dark-muted/50"
           >
-            {tab.label} · em breve
+            {tab.label} Â· em breve
           </span>
         ) : (
           <NavLink

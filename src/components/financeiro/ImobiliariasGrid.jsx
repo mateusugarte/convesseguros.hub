@@ -38,14 +38,14 @@ export default function ImobiliariasGrid({ onSelect }) {
         <input
           value={busca}
           onChange={e => setBusca(e.target.value)}
-          placeholder="Buscar imobiliária..."
+          placeholder="Buscar imobiliÃ¡ria..."
           className="w-full rounded-2xl border border-emerald-500/15 bg-white/80 py-3 pl-10 pr-4 text-sm text-dark-text shadow-sm outline-none transition-colors focus:border-emerald-500/40"
         />
       </div>
       {loading ? (
         <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
       ) : lista.length === 0 ? (
-        <EmptyState title="Nenhuma imobiliária" description="Nenhuma imobiliária com apólices emitidas encontrada." icon={<Building2 className="h-6 w-6" />} />
+        <EmptyState title="Nenhuma imobiliÃ¡ria" description="Nenhuma imobiliÃ¡ria com apÃ³lices emitidas encontrada." icon={<Building2 className="h-6 w-6" />} />
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {lista.map(({ nome, meta }) => (

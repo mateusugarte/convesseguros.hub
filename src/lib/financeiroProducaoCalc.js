@@ -1,5 +1,5 @@
-// Helpers puros de agregaÁ„o da ProduÁ„o (Fase 2).
-// Sem imports de Supabase/Vite ? test·veis com `node --test`.
+// Helpers puros de agrega√ß√£o da Produ√ß√£o (Fase 2).
+// Sem imports de Supabase/Vite ? test√°veis com `node --test`.
 import { primeiroDiaMes, addMeses, formatMesAno, parseYmd } from './financeiroCalc.js'
 import { apoliceBilladaNoMes, apoliceContaNaFaturaNoMes } from './financeiroFaturasCalc.js'
 import { apoliceAtivaNoMes } from './financeiroElegibilidade.js'
@@ -12,7 +12,7 @@ function num(value) {
 export function agruparPorImobiliaria(rows) {
   const map = new Map()
   for (const r of rows || []) {
-    const key = r.imobiliaria || 'Sem imobili·ria'
+    const key = r.imobiliaria || 'Sem imobili√°ria'
     const cur = map.get(key) || {
       imobiliaria: key, qtd: 0, premioTotal: 0, comissaoGerada: 0, comissaoRecebidaEstimada: 0,
     }

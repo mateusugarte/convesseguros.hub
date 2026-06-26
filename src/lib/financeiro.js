@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { fetchApolicesFianca, fetchApolicesAtivas, fetchApolicesParaFatura, fetchImobiliariasComApolices } from './financeiroApolices'
+import { fetchApolicesFianca, fetchApolicesAtivas, fetchImobiliariasComApolices } from './financeiroApolices'
 import { gerarParcelasComissao, somarRecebimentoNoPeriodo } from './financeiroProducaoCalc'
 import { primeiroDiaMes } from './financeiroCalc'
 
@@ -8,7 +8,6 @@ function isMissingColumnError(error, columnName) {
   return message.includes(`'${columnName.toLowerCase()}'`) || message.includes(`"${columnName.toLowerCase()}"`) || message.includes(columnName.toLowerCase())
 }
 
-// Comissão gerada = Σ comissão total das apólices emitidas no período (sem divisão por parcelas).
 export async function fetchComissaoGerada({ inicio, fim }) {
   const rows = await fetchApolicesFianca({ inicio, fim })
   return rows.reduce((sum, r) => sum + (Number(r.valor_comissao) || 0), 0)
@@ -19,8 +18,6 @@ export async function fetchApolicesEmitidasCount({ inicio, fim }) {
   return rows.length
 }
 
-// Calendário de comissão parcelada: gera as parcelas de TODAS as apólices emitidas e
-// (opcionalmente) filtra as que caem dentro de [inicio, fim] por mes_referencia.
 export async function fetchRecebimentos({ inicio, fim } = {}) {
   const rows = await fetchApolicesFianca({})
   const parcelas = gerarParcelasComissao(rows)
@@ -38,7 +35,6 @@ export async function fetchRecebimentos({ inicio, fim } = {}) {
 
 export { somarRecebimentoNoPeriodo }
 
-// Produção/comissão gerada por emissão no período (apólices emitidas, todas as situações).
 export async function fetchProducaoLedger({ inicio, fim, imobiliaria } = {}) {
   return fetchApolicesFianca({ inicio, fim, imobiliaria })
 }
@@ -92,9 +88,8 @@ export async function fetchImobiliariasDistintas() {
   return fetchImobiliariasComApolices()
 }
 
-// Apólices ativas elegíveis para fatura (forma_pagamento = fatura_sem_entrada | fatura_com_entrada).
-export async function fetchFaturasLedger({ imobiliaria, seguradora } = {}) {
-  return fetchApolicesParaFatura({ imobiliaria, seguradora })
+export async function fetchFaturasLedger({ imobiliaria, seguradora, mesRef } = {}) {
+  return fetchApolicesAtivas({ imobiliaria, seguradora, mesRef })
 }
 
 const FATURAS_STATUS_SELECT = 'imobiliaria, mes_referencia, status, data_pagamento, pago_por, observacao, valor_real_fatura, valor_fatura_calculado, pct_comissao, valor_a_pagar'

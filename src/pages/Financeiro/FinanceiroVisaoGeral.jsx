@@ -98,23 +98,23 @@ export default function FinanceiroVisaoGeral() {
   return (
     <div className="space-y-6">
       <section className="overflow-hidden rounded-[32px] border border-emerald-500/15 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_42%),linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.92))] px-6 py-6 shadow-[0_28px_72px_-44px_rgba(16,185,129,0.5)]">
-        <p className="mb-1 inline-flex rounded-full border border-emerald-500/15 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800/70">Financeiro · Produção</p>
-        <h1 className="text-3xl font-bold text-dark-text">Visão geral do Seguro Fiança</h1>
+        <p className="mb-1 inline-flex rounded-full border border-emerald-500/15 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800/70">Financeiro Â· ProduÃ§Ã£o</p>
+        <h1 className="text-3xl font-bold text-dark-text">VisÃ£o geral do Seguro FianÃ§a</h1>
         <p className="mt-2 max-w-2xl text-sm text-dark-muted">
-          Leia produção, comissão, recebimento estimado e o ranking consolidado do mês com uma visualização mais clara das imobiliárias e seguradoras ativas.
+          Leia produÃ§Ã£o, comissÃ£o, recebimento estimado e o ranking consolidado do mÃªs com uma visualizaÃ§Ã£o mais clara das imobiliÃ¡rias e seguradoras ativas.
         </p>
       </section>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Produção do mês" value={formatMoneyBR(cell.producao)} hint={mesLabel} icon={<Coins className="h-5 w-5" />} color="brand-secondary" accent />
-        <KpiCard label="Comissão gerada" value={formatMoneyBR(cell.comissaoGerada)} hint={mesLabel} icon={<TrendingUp className="h-5 w-5" />} color="emerald" accent />
+        <KpiCard label="ProduÃ§Ã£o do mÃªs" value={formatMoneyBR(cell.producao)} hint={mesLabel} icon={<Coins className="h-5 w-5" />} color="brand-secondary" accent />
+        <KpiCard label="ComissÃ£o gerada" value={formatMoneyBR(cell.comissaoGerada)} hint={mesLabel} icon={<TrendingUp className="h-5 w-5" />} color="emerald" accent />
         <KpiCard label="Recebida estimada" value={formatMoneyBR(cell.recebidaEstimada)} hint={`a receber em ${mesLabel}`} icon={<Coins className="h-5 w-5" />} color="amber" accent />
-        <KpiCard label="Apólices emitidas" value={cell.qtd} hint={mesLabel} icon={<FileText className="h-5 w-5" />} color="sky" accent />
+        <KpiCard label="ApÃ³lices emitidas" value={cell.qtd} hint={mesLabel} icon={<FileText className="h-5 w-5" />} color="sky" accent />
       </div>
 
       <DataCard
-        title="Calendário anual"
-        subtitle="Produção por mês · clique para selecionar o período"
+        title="CalendÃ¡rio anual"
+        subtitle="ProduÃ§Ã£o por mÃªs â€” clique para selecionar o perÃ­odo"
         actions={(
           <Select
             value={String(ano)}
@@ -133,31 +133,31 @@ export default function FinanceiroVisaoGeral() {
       </DataCard>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <DataCard title="Produção por seguradora" subtitle={`Prêmio total emitido · ${mesLabel}`} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.9))]">
+        <DataCard title="ProduÃ§Ã£o por seguradora" subtitle={`PrÃªmio total emitido â€” ${mesLabel}`} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.9))]">
           {loading ? (
             <div className="py-16 text-center text-sm text-dark-muted">Carregando...</div>
           ) : (
             <div className="pt-1">
-              <SeguradoraBarChart data={producaoSeguradora} color="bg-emerald-600" emptyLabel="Sem produção no mês" height={280} />
+              <SeguradoraBarChart data={producaoSeguradora} color="bg-emerald-600" emptyLabel="Sem produÃ§Ã£o no mÃªs" height={280} />
             </div>
           )}
         </DataCard>
-        <DataCard title="Comissão por seguradora" subtitle={`Comissão total gerada · ${mesLabel}`} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.9))]">
+        <DataCard title="ComissÃ£o por seguradora" subtitle={`ComissÃ£o total gerada â€” ${mesLabel}`} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.9))]">
           {loading ? (
             <div className="py-16 text-center text-sm text-dark-muted">Carregando...</div>
           ) : (
             <div className="pt-1">
-              <SeguradoraBarChart data={comissaoSeguradora} color="bg-emerald-500" emptyLabel="Sem comissão no mês" height={280} />
+              <SeguradoraBarChart data={comissaoSeguradora} color="bg-emerald-500" emptyLabel="Sem comissÃ£o no mÃªs" height={280} />
             </div>
           )}
         </DataCard>
       </div>
 
-      <DataCard title={`Ranking de imobiliárias · ${mesLabel}`} subtitle="Por produção no período selecionado" className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,244,0.88))]">
+      <DataCard title={`Ranking de imobiliÃ¡rias â€” ${mesLabel}`} subtitle="Por produÃ§Ã£o no perÃ­odo selecionado" className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,244,0.88))]">
         {loading ? (
           <div className="py-16 text-center text-sm text-dark-muted">Carregando...</div>
         ) : ranking.length === 0 ? (
-          <EmptyState title="Sem produção no mês" description="Nenhuma apólice emitida no mês selecionado." icon={<Building2 className="h-6 w-6" />} />
+          <EmptyState title="Sem produÃ§Ã£o no mÃªs" description="Nenhuma apÃ³lice emitida no mÃªs selecionado." icon={<Building2 className="h-6 w-6" />} />
         ) : (
           <div className="space-y-2">
             {ranking.map((item, i) => {
@@ -181,7 +181,7 @@ export default function FinanceiroVisaoGeral() {
                     <div className="relative flex shrink-0 items-center gap-3">
                       <div className="text-right">
                         <p className="text-sm font-semibold text-dark-text">{formatMoneyBR(item.premioTotal)}</p>
-                        <p className="text-[11px] text-dark-muted">{item.qtd} apólice{item.qtd !== 1 ? 's' : ''}</p>
+                        <p className="text-[11px] text-dark-muted">{item.qtd} apÃ³lice{item.qtd !== 1 ? 's' : ''}</p>
                       </div>
                       <ArrowRight className="h-4 w-4 shrink-0 text-emerald-700/50 opacity-0 transition-opacity group-hover:opacity-100" />
                     </div>

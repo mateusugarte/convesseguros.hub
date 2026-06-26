@@ -52,13 +52,13 @@ export default function FinanceiroProducao() {
   }, [])
 
   useEffect(() => {
-    if (!selecionada || !periodo?.mesRef) { setAtivasRows([]); return }
+    if (!selecionada) { setAtivasRows([]); return }
     let mounted = true
-    fetchApolicesAtivas({ imobiliaria: selecionada, mesRef: periodo.mesRef })
+    fetchApolicesAtivas({ imobiliaria: selecionada })
       .then(r => { if (mounted) setAtivasRows(r) })
       .catch(() => { if (mounted) setAtivasRows([]) })
     return () => { mounted = false }
-  }, [selecionada, periodo?.mesRef])
+  }, [selecionada])
 
   useEffect(() => {
     if (!periodo) return
@@ -143,32 +143,32 @@ export default function FinanceiroProducao() {
         onClick={() => navigate('/financeiro/producao')}
         className="inline-flex items-center gap-1.5 text-sm text-dark-muted transition-colors hover:text-dark-text"
       >
-        <ArrowLeft className="h-4 w-4" /> Voltar para imobiliárias
+        <ArrowLeft className="h-4 w-4" /> Voltar para imobiliÃ¡rias
       </button>
 
       <section className="overflow-hidden rounded-[30px] border border-emerald-500/15 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_40%),linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.92))] px-6 py-6 shadow-[0_26px_70px_-42px_rgba(16,185,129,0.55)]">
         <PageHeader
-          eyebrow="Financeiro · Produção"
+          eyebrow="Financeiro Â· ProduÃ§Ã£o"
           title={selecionada}
-          description="Produção, comissão e rankings por seguradora no período selecionado."
+          description="ProduÃ§Ã£o, comissÃ£o e rankings por seguradora no perÃ­odo selecionado."
           actions={<ImobiliariaIdentity nome={selecionada} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="lg" />}
         />
         <RegisteredSeguradorasStrip seguradoras={meta?.registeredSeguradoras} size="sm" className="mt-4" />
       </section>
 
       <DataCard
-        title="Período"
-        subtitle="Escolha um mês ou um intervalo livre"
+        title="PerÃ­odo"
+        subtitle="Escolha um mÃªs ou um intervalo livre"
         className="overflow-hidden border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,250,0.9))]"
       >
         <PeriodoFilter onChange={setPeriodo} initial={periodoInicial} />
       </DataCard>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Comissão gerada" value={formatMoneyBR(comissaoGerada)} hint={mesLabel} tone="secondary" icon={<TrendingUp className="h-4 w-4" />} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.88))]" />
-        <MetricCard label="Comissão estimada (próx. mês)" value={formatMoneyBR(comissaoEstimada)} hint={proximoLabel ? `a receber em ${proximoLabel}` : 'apólices ativas'} tone="accent" icon={<Wallet className="h-4 w-4" />} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(220,252,231,0.84))]" />
-        <MetricCard label="Produção" value={formatMoneyBR(producao)} hint={`${rows.length} apólice${rows.length !== 1 ? 's' : ''} · ${mesLabel}`} tone="success" icon={<Coins className="h-4 w-4" />} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.92))]" />
-        <MetricCard label="A repassar" value={formatMoneyBR(valorRepassar)} hint="% × comissão gerada" tone="warning" icon={<Percent className="h-4 w-4" />} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(254,249,195,0.55))]" />
+        <MetricCard label="ComissÃ£o gerada" value={formatMoneyBR(comissaoGerada)} hint={mesLabel} tone="secondary" icon={<TrendingUp className="h-4 w-4" />} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.88))]" />
+        <MetricCard label="ComissÃ£o estimada (prÃ³x. mÃªs)" value={formatMoneyBR(comissaoEstimada)} hint={proximoLabel ? `a receber em ${proximoLabel}` : 'apÃ³lices ativas'} tone="accent" icon={<Wallet className="h-4 w-4" />} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(220,252,231,0.84))]" />
+        <MetricCard label="ProduÃ§Ã£o" value={formatMoneyBR(producao)} hint={`${rows.length} apÃ³lice${rows.length !== 1 ? 's' : ''} Â· ${mesLabel}`} tone="success" icon={<Coins className="h-4 w-4" />} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.92))]" />
+        <MetricCard label="A repassar" value={formatMoneyBR(valorRepassar)} hint="% Ã— comissÃ£o gerada" tone="warning" icon={<Percent className="h-4 w-4" />} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(254,249,195,0.55))]" />
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -176,17 +176,17 @@ export default function FinanceiroProducao() {
           onClick={() => irParaApolices('ativas')}
           className="inline-flex items-center gap-2 rounded-2xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-600"
         >
-          <Shield className="h-4 w-4" /> Ver apólices ativas ({ativasRows.length})
+          <Shield className="h-4 w-4" /> Ver apÃ³lices ativas ({ativasRows.length})
         </button>
         <button
           onClick={() => irParaApolices('emitidas')}
           className="inline-flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-white/80 px-4 py-2.5 text-sm font-medium text-dark-text transition-colors hover:border-emerald-500/40"
         >
-          <FileText className="h-4 w-4" /> Apólices emitidas no período
+          <FileText className="h-4 w-4" /> ApÃ³lices emitidas no perÃ­odo
         </button>
       </div>
 
-      <DataCard title="Repasse da imobiliária" subtitle="Percentual sobre a comissão gerada, salvo para o mês" className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,244,0.88))]">
+      <DataCard title="Repasse da imobiliÃ¡ria" subtitle="Percentual sobre a comissÃ£o gerada, salvo para o mÃªs" className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,244,0.88))]">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1 rounded-2xl border border-emerald-500/15 bg-white/90 px-3 py-2 shadow-sm">
             <input
@@ -199,39 +199,39 @@ export default function FinanceiroProducao() {
             />
             <Percent className="h-4 w-4 text-emerald-700/60" />
           </div>
-          <span className="text-sm text-dark-muted">? a repassar</span>
+          <span className="text-sm text-dark-muted">â†’ a repassar</span>
           <span className="text-sm font-semibold text-emerald-600">{formatMoneyBR(valorRepassar)}</span>
         </div>
       </DataCard>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <DataCard title="Produção por seguradora" subtitle={`Prêmio total · ${mesLabel}`} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.9))]">
+        <DataCard title="ProduÃ§Ã£o por seguradora" subtitle={`PrÃªmio total â€” ${mesLabel}`} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.9))]">
           {loading ? (
             <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
           ) : (
-            <RankingSeguradoras data={producaoSeguradora} emptyLabel="Sem produção no período" />
+            <RankingSeguradoras data={producaoSeguradora} emptyLabel="Sem produÃ§Ã£o no perÃ­odo" />
           )}
         </DataCard>
-        <DataCard title="Comissão por seguradora" subtitle={`Comissão gerada · ${mesLabel}`} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.9))]">
+        <DataCard title="ComissÃ£o por seguradora" subtitle={`ComissÃ£o gerada â€” ${mesLabel}`} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.9))]">
           {loading ? (
             <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
           ) : (
-            <RankingSeguradoras data={comissaoSeguradora} emptyLabel="Sem comissão no período" />
+            <RankingSeguradoras data={comissaoSeguradora} emptyLabel="Sem comissÃ£o no perÃ­odo" />
           )}
         </DataCard>
       </div>
 
-      <DataCard title="Evolução" subtitle={`Comissão gerada nos últimos ${EVOLUCAO_MESES} meses`} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,250,0.9))]">
+      <DataCard title="EvoluÃ§Ã£o" subtitle={`ComissÃ£o gerada nos Ãºltimos ${EVOLUCAO_MESES} meses`} className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,250,0.9))]">
         {evolucao.length === 0 ? (
-          <EmptyState title="Sem dados" description="Selecione um período para ver a evolução." icon={<TrendingUp className="h-6 w-6" />} />
+          <EmptyState title="Sem dados" description="Selecione um perÃ­odo para ver a evoluÃ§Ã£o." icon={<TrendingUp className="h-6 w-6" />} />
         ) : (
           <EvolucaoChart data={evolucao} />
         )}
       </DataCard>
 
       <DataCard
-        title="Apólices emitidas no período"
-        subtitle={mesLabel ? `${rows.length} apólice${rows.length !== 1 ? 's' : ''} emitidas em ${mesLabel}` : 'Selecione um período'}
+        title="ApÃ³lices emitidas no perÃ­odo"
+        subtitle={mesLabel ? `${rows.length} apÃ³lice${rows.length !== 1 ? 's' : ''} emitidas em ${mesLabel}` : 'Selecione um perÃ­odo'}
         className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,244,0.86))]"
       >
         {loading ? (

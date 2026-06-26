@@ -5,6 +5,11 @@ function norm(value) {
   return (normalizeDisplayText(value) || String(value || '')).toLowerCase().trim()
 }
 
+function isMissingColumnError(error, columnName) {
+  const message = String(error?.message || '').toLowerCase()
+  return message.includes(`'${columnName.toLowerCase()}'`) || message.includes(`"${columnName.toLowerCase()}"`) || message.includes(columnName.toLowerCase())
+}
+
 let cache = null
 
 export async function fetchImobiliariasCatalogMap({ force = false } = {}) {
@@ -19,7 +24,18 @@ export async function fetchImobiliariasCatalogMap({ force = false } = {}) {
       .select('imobiliaria_id, seguradoras:seguradora_id(id, nome_canonico, logo_url, logo_path)'),
   ])
 
-  if (error) throw error
+  let imobiliariasData = data
+  let imobiliariasError = error
+
+  if (imobiliariasError && isMissingColumnError(imobiliariasError, 'pct_comissao')) {
+    const retry = await supabase
+      .from('imobiliarias')
+      .select('id, nome_canonico, imagem_url, imagem_path, imobiliaria_aliases(alias)')
+    imobiliariasData = retry.data?.map(item => ({ ...item, pct_comissao: null }))
+    imobiliariasError = retry.error
+  }
+
+  if (imobiliariasError) throw imobiliariasError
   if (vinculacoesError) throw vinculacoesError
 
   const seguradorasPorImobiliariaId = new Map()
@@ -37,7 +53,7 @@ export async function fetchImobiliariasCatalogMap({ force = false } = {}) {
   }
 
   const map = new Map()
-  for (const im of data || []) {
+  for (const im of imobiliariasData || []) {
     const meta = {
       id: im.id,
       nomeCanonico: im.nome_canonico,

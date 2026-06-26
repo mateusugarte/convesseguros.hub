@@ -177,20 +177,20 @@ export default function FinanceiroFaturaImobiliaria() {
         onClick={() => navigate(`/financeiro/faturas?mes=${mesRef}`)}
         className="inline-flex items-center gap-1.5 text-sm text-dark-muted transition-colors hover:text-dark-text"
       >
-        <ArrowLeft className="h-4 w-4" /> Voltar para imobiliárias
+        <ArrowLeft className="h-4 w-4" /> Voltar para imobiliÃ¡rias
       </button>
 
       <section className="overflow-hidden rounded-[30px] border border-emerald-500/15 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_40%),linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.92))] px-6 py-6 shadow-[0_26px_70px_-42px_rgba(16,185,129,0.55)]">
         <PageHeader
-          eyebrow={`Financeiro · Fatura · ${mesLabel}`}
+          eyebrow={`Financeiro Â· Fatura Â· ${mesLabel}`}
           title={selecionada}
-          description="Fatura do mês, estimativa do próximo mês e apólices elegíveis por seguradora."
+          description="Fatura do mÃªs, estimativa do prÃ³ximo mÃªs e apÃ³lices elegÃ­veis por seguradora."
           actions={<ImobiliariaIdentity nome={selecionada} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="lg" />}
         />
         <RegisteredSeguradorasStrip seguradoras={meta?.registeredSeguradoras} size="sm" className="mt-4" />
       </section>
 
-      <DataCard title="Competência" subtitle="Selecione o mês da fatura" className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,250,0.9))]">
+      <DataCard title="CompetÃªncia" subtitle="Selecione o mÃªs da fatura" className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,250,0.9))]">
         <div className="flex flex-wrap items-center gap-3">
           <Select
             value={String(ano)}
@@ -213,7 +213,7 @@ export default function FinanceiroFaturaImobiliaria() {
       </DataCard>
 
       {segGroups.length > 0 && (
-        <DataCard title="Filtrar por seguradora" subtitle="Filtra os valores e apólices abaixo pela seguradora selecionada" className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,244,0.86))]">
+        <DataCard title="Filtrar por seguradora" subtitle="Filtra os valores e apÃ³lices abaixo pela seguradora selecionada" className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,244,0.86))]">
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSegFiltro('')}
@@ -236,9 +236,9 @@ export default function FinanceiroFaturaImobiliaria() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Fatura do mês"
+          label="Fatura do mÃªs"
           value={formatMoneyBR(fatura.valorFatura)}
-          hint={`${fatura.qtd} apólice${fatura.qtd !== 1 ? 's' : ''} · ${mesLabel}${segFiltro ? ` · ${segFiltro}` : ''}`}
+          hint={`${fatura.qtd} apÃ³lice${fatura.qtd !== 1 ? 's' : ''} Â· ${mesLabel}${segFiltro ? ` Â· ${segFiltro}` : ''}`}
           tone="accent"
           icon={<Receipt className="h-4 w-4" />}
           className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.88))]"
@@ -246,21 +246,21 @@ export default function FinanceiroFaturaImobiliaria() {
         <MetricCard
           label="A pagar"
           value={formatMoneyBR(fatura.valorAPagar)}
-          hint={fatura.pct != null ? `${fatura.pct}% × fatura` : 'sem % definido'}
+          hint={fatura.pct != null ? `${fatura.pct}% Ã— fatura` : 'sem % definido'}
           tone="secondary"
           icon={<Percent className="h-4 w-4" />}
           className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,250,0.9))]"
         />
         <MetricCard
-          label="Estimativa próximo mês"
+          label="Estimativa prÃ³ximo mÃªs"
           value={formatMoneyBR(estimativaProximo)}
-          hint={`atual + ${emitidasNoMes.length} nova(s) ? ${proximoLabel}`}
+          hint={`atual + ${emitidasNoMes.length} nova(s) â†’ ${proximoLabel}`}
           tone="warning"
           icon={<Wallet className="h-4 w-4" />}
           className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(254,249,195,0.55))]"
         />
         <MetricCard
-          label={segFiltro ? `Ativas (${segFiltro})` : 'Apólices ativas'}
+          label={segFiltro ? `Ativas (${segFiltro})` : 'ApÃ³lices ativas'}
           value={apolicesAtivasMes.length}
           hint={selecionada}
           tone="success"
@@ -274,7 +274,7 @@ export default function FinanceiroFaturaImobiliaria() {
           onClick={() => navigate(`/financeiro/faturas/${encodeURIComponent(selecionada)}/${mesRef}`)}
           className="inline-flex items-center gap-2 rounded-2xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
         >
-          <FileText className="h-4 w-4" /> Ver apólices que contam ({fatura.qtd})
+          <FileText className="h-4 w-4" /> Ver apÃ³lices que contam ({fatura.qtd})
         </button>
         <button
           onClick={() => navigate(`/financeiro/faturas/${encodeURIComponent(selecionada)}/${proximoMesRef}`)}
@@ -284,7 +284,7 @@ export default function FinanceiroFaturaImobiliaria() {
         </button>
       </div>
 
-      <DataCard title="Conferência" subtitle="Informe o valor real e registre o pagamento" className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,244,0.86))]">
+      <DataCard title="ConferÃªncia" subtitle="Informe o valor real e registre o pagamento" className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,244,0.86))]">
         <div className="flex flex-wrap items-end gap-4">
           <div>
             <label className="mb-1 block text-xs text-dark-muted">Valor real informado</label>
@@ -312,13 +312,13 @@ export default function FinanceiroFaturaImobiliaria() {
 
       <DataCard
         title="Resumo por seguradora"
-        subtitle={`Contribuição de cada seguradora para a fatura de ${mesLabel}`}
+        subtitle={`ContribuiÃ§Ã£o de cada seguradora para a fatura de ${mesLabel}`}
         className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.9))]"
       >
         {loading ? (
           <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
         ) : segGroups.length === 0 ? (
-          <div className="py-8 text-center text-sm text-dark-muted">Sem apólices elegíveis para fatura nesta imobiliária.</div>
+          <div className="py-8 text-center text-sm text-dark-muted">Sem apÃ³lices elegÃ­veis para fatura nesta imobiliÃ¡ria.</div>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {segGroups.map(g => {
@@ -335,11 +335,11 @@ export default function FinanceiroFaturaImobiliaria() {
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div>
-                      <p className="text-dark-muted">Fatura do mês</p>
+                      <p className="text-dark-muted">Fatura do mÃªs</p>
                       <p className="font-semibold text-dark-text">{formatMoneyBR(g.valorFatura)}</p>
                     </div>
                     <div>
-                      <p className="text-dark-muted">Estimativa próx.</p>
+                      <p className="text-dark-muted">Estimativa prÃ³x.</p>
                       <p className="font-semibold text-dark-text">{formatMoneyBR(g.estimativa)}</p>
                     </div>
                   </div>
@@ -351,8 +351,8 @@ export default function FinanceiroFaturaImobiliaria() {
       </DataCard>
 
       <DataCard
-        title={segFiltro ? `Apólices que contam · ${segFiltro}` : 'Apólices que contam na fatura'}
-        subtitle={`Parcelas programadas para ${mesLabel}${segFiltro ? ` · filtradas por ${segFiltro}` : ''}`}
+        title={segFiltro ? `ApÃ³lices que contam â€” ${segFiltro}` : 'ApÃ³lices que contam na fatura'}
+        subtitle={`Parcelas programadas para ${mesLabel}${segFiltro ? ` Â· filtradas por ${segFiltro}` : ''}`}
         className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,244,0.86))]"
       >
         {loading ? (

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
@@ -27,7 +27,7 @@ import { DatePicker } from './ui/DatePicker'
 import { AVATAR_COLORS, PRODUTO_COLORS } from '../design-system/tokens'
 import { normalizeDisplayText } from '../lib/text'
 
-// ── Colunas ───────────────────────────────────────────────────────────────────
+// -- Colunas -------------------------------------------------------------------
 
 const COLUMNS = [
   { id: 'pendente',   label: 'Pendentes',     color: '#4c67b0' },
@@ -39,6 +39,8 @@ const COLUMNS = [
   { id: 'emitido',    label: 'Emitidas',      color: '#2247aa' },
   { id: 'expirada',   label: 'Expiradas',     color: '#6B7280' },
 ]
+
+const LOWER_CARD_COLUMNS = new Set(['em_analise', 'aprovado', 'recusado', 'emitido'])
 
 const COL_TO_STATUS = {
   pendente: 'pendente', assumidas: 'em_cotacao', minhas: 'em_cotacao',
@@ -62,7 +64,7 @@ const PERIODOS = [
   { key: 'custom', label: 'Personalizado' },
 ]
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 
 function getPeriodDates(periodo, customFrom, customTo) {
   const now = new Date()
@@ -148,12 +150,12 @@ function nomePrincipal(ficha) {
       || rd.empresa
       || rd.nome_fantasia
       || rd.nome
-    ) || '—'
+    ) || ''
   }
-  return normalizeDisplayText(ficha.nome_interessado || rd.nome || rd.nome_interessado) || '—'
+  return normalizeDisplayText(ficha.nome_interessado || rd.nome || rd.nome_interessado) || ''
 }
 
-// ── FichaCard (visual puro, sem lógica de drag) ───────────────────────────────
+// -- FichaCard (visual puro, sem lógica de drag) -------------------------------
 
 function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isDragOverlay, isNew, resolverNome, resolveImobiliariaInfo }) {
   const ProdIcon  = PRODUTO_ICON[ficha.produto] || LayoutGrid
@@ -203,7 +205,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
 
         {/* Imobiliária */}
         <ImobiliariaIdentity
-          nome={(resolverNome ? resolverNome(ficha.imobiliaria) : ficha.imobiliaria) || '—'}
+          nome={(resolverNome ? resolverNome(ficha.imobiliaria) : ficha.imobiliaria) || ''}
           imagemUrl={imobiliaria?.imagem_url}
           imagemPath={imobiliaria?.imagem_path}
           size="sm"
@@ -256,7 +258,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
           </div>
         </div>
 
-        {/* Botão retorno — visível em todos exceto pendente */}
+        {/* Botão retorno  visível em todos exceto pendente */}
         {showRetorno && !isDragOverlay && (
           <button
             onPointerDown={e => e.stopPropagation()}
@@ -278,7 +280,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
   )
 }
 
-// ── DraggableCard ─────────────────────────────────────────────────────────────
+// -- DraggableCard -------------------------------------------------------------
 // O drag fica no handle para manter o overlay estável durante o movimento
 
 function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onToggleRetorno, isNew, resolverNome, resolveImobiliariaInfo }) {
@@ -311,7 +313,7 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onTog
   )
 }
 
-// ── DroppableColumn ───────────────────────────────────────────────────────────
+// -- DroppableColumn -----------------------------------------------------------
 
 function DroppableColumn({
   column, fichas, userId, onDetalhe, onAssumir, onFinalizar, onToggleRetorno,
@@ -340,7 +342,7 @@ function DroppableColumn({
         >
           <button
             onClick={onToggleCollapse}
-            title={`${column.label} (${fichas.length}) — expandir`}
+            title={`${column.label} (${fichas.length})  expandir`}
             className="flex flex-col items-center gap-1.5 hover:opacity-80 transition-opacity"
           >
             <div
@@ -428,7 +430,7 @@ function DroppableColumn({
         </div>
       </div>
 
-      {/* Body — zona de drop */}
+      {/* Body  zona de drop */}
       <div
         ref={setNodeRef}
         className="kanban-col-body flex-1 p-2 space-y-2 overflow-y-auto"
@@ -469,7 +471,7 @@ function DroppableColumn({
   )
 }
 
-// ── ModalConfirmarRecusado ────────────────────────────────────────────────────
+// -- ModalConfirmarRecusado ----------------------------------------------------
 
 function ModalConfirmarRecusado({ onConfirmar, salvando }) {
   const [retorno, setRetorno] = useState(null)
@@ -501,7 +503,7 @@ function ModalConfirmarRecusado({ onConfirmar, salvando }) {
   )
 }
 
-// ── ModalConfirmarAprovado ────────────────────────────────────────────────────
+// -- ModalConfirmarAprovado ----------------------------------------------------
 
 function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) {
   const [seguradora,      setSeguradora]      = useState('')
@@ -589,7 +591,7 @@ function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) 
   )
 }
 
-// ── KanbanFichas ──────────────────────────────────────────────────────────────
+// -- KanbanFichas --------------------------------------------------------------
 
 export default function KanbanFichas({ produto, externalDateFrom, externalDateTo, contextState }) {
   const { user }         = useAuth()
@@ -835,13 +837,13 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     const novoStatus = COL_TO_STATUS[targetCol]
     if (!novoStatus) return
 
-    // Drag para recusado → pede confirmação
+    // Drag para recusado ? pede confirmação
     if (targetCol === 'recusado') {
       setPendingRecusado({ fichaId, fichaOriginal: ficha })
       return
     }
 
-    // Drag para aprovado → pede seguradora, parcela, orçamento
+    // Drag para aprovado ? pede seguradora, parcela, orçamento
     if (targetCol === 'aprovado') {
       setPendingAprovado({ fichaId, fichaOriginal: ficha })
       return
@@ -1010,7 +1012,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
             <div className="flex items-center gap-1.5 text-xs text-dark-muted rounded-full border border-dark-border bg-white/70 px-3 py-1.5">
               <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
               <DatePicker value={customFrom} onChange={v => setCustomFrom(v)} />
-              <span>—</span>
+              <span></span>
               <DatePicker value={customTo} onChange={v => setCustomTo(v)} />
             </div>
           )}
@@ -1137,6 +1139,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     </div>
   )
 }
+
 
 
 

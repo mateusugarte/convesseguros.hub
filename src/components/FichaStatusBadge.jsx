@@ -2,13 +2,13 @@ import { getFichaOperationalState } from '../lib/fichaOperational'
 
 const STATUS_FALLBACK = {
   pendente: 'Pendente',
-  em_cotacao: 'Em Cotação',
-  em_analise: 'Em Análise',
+  em_cotacao: 'Em CotaÃ§Ã£o',
+  em_analise: 'Em AnÃ¡lise',
   aprovado: 'Aprovado',
   recusado: 'Recusado',
   emitido: 'Emitido',
   cancelado: 'Cancelado',
-  cpf_invalido: 'CPF Inválido',
+  cpf_invalido: 'CPF InvÃ¡lido',
   expirada: 'Expirada',
 }
 

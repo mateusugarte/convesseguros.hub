@@ -22,11 +22,11 @@ import FichaStatusBadge from '../components/FichaStatusBadge'
 import { Select } from '../components/ui/Select'
 import { normalizeDisplayText } from '../lib/text'
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// ââ helpers ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 function fmtDt(v) {
   if (!v) return null
-  try { return format(parseISO(v), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) } catch { return v }
+  try { return format(parseISO(v), "dd/MM/yyyy 'Ã s' HH:mm", { locale: ptBR }) } catch { return v }
 }
 function fmtBRL(v) {
   return formatMoneyBR(v)
@@ -36,7 +36,7 @@ function resolveFichaValor(ficha, field) {
   return ficha?.[field] ?? ficha?.raw_data?.[field] ?? null
 }
 
-// ── InlineField — campo editável com click ────────────────────────────────────
+// ââ InlineField â campo editÃ¡vel com click ââââââââââââââââââââââââââââââââââââ
 
 function InlineField({ label, value, onSave, type = 'text', rows, formatter, inputMode }) {
   const [editing, setEditing] = useState(false)
@@ -108,7 +108,7 @@ function InlineField({ label, value, onSave, type = 'text', rows, formatter, inp
           onClick={() => { setDraft(formatDraft(value)); setEditing(true) }}
           className="text-sm text-dark-text cursor-pointer group flex items-center gap-1.5 hover:text-brand-accent transition-colors"
         >
-          <span>{formatter ? (formatter(value) || <span className="text-dark-muted/40 italic">—</span>) : (value || <span className="text-dark-muted/40 italic">—</span>)}</span>
+          <span>{formatter ? (formatter(value) || <span className="text-dark-muted/40 italic">â</span>) : (value || <span className="text-dark-muted/40 italic">â</span>)}</span>
           <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-40 flex-shrink-0 transition-opacity" />
         </p>
       )}
@@ -116,7 +116,7 @@ function InlineField({ label, value, onSave, type = 'text', rows, formatter, inp
   )
 }
 
-// ── ReadField — campo read-only ───────────────────────────────────────────────
+// ââ ReadField â campo read-only âââââââââââââââââââââââââââââââââââââââââââââââ
 
 function ReadField({ label, value }) {
   if (!value && value !== 0 && value !== false) return null
@@ -128,7 +128,7 @@ function ReadField({ label, value }) {
   )
 }
 
-// ── Timeline ──────────────────────────────────────────────────────────────────
+// ââ Timeline ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 function Timeline({ ficha }) {
   const events = []
@@ -143,7 +143,7 @@ function Timeline({ ficha }) {
   if (ficha.assumida_em) {
     events.push({
       label: `Assumida por ${ficha.profiles?.nome || 'desconhecido'}`,
-      sub: 'Status → Em Cotação',
+      sub: 'Status â Em CotaÃ§Ã£o',
       ts: ficha.assumida_em,
       color: '#F59E0B',
     })
@@ -152,7 +152,7 @@ function Timeline({ ficha }) {
   if (ficha.finalizada_em) {
     const si = STATUS_LABELS[ficha.status]
     events.push({
-      label: `Finalizada — ${si?.label || ficha.status}`,
+      label: `Finalizada â ${si?.label || ficha.status}`,
       sub: ficha.seguradora ? `Seguradora: ${ficha.seguradora}` : null,
       ts: ficha.finalizada_em,
       color: ficha.status === 'aprovado' ? '#059669' : ficha.status === 'recusado' ? '#EF4444' : '#4A90D9',
@@ -180,7 +180,7 @@ function Timeline({ ficha }) {
   )
 }
 
-// ── ProdutoBadge ──────────────────────────────────────────────────────────────
+// ââ ProdutoBadge ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 const PROD_COLORS = {
   residencial_pf:  { bg: 'rgba(74,144,217,0.15)',  text: '#4A90D9',  border: 'rgba(74,144,217,0.3)' },
@@ -190,7 +190,7 @@ const PROD_COLORS = {
 
 const COTACAO_STATUS_OPTIONS = [
   { value: '', label: 'Sem status' },
-  { value: 'em_analise', label: 'Em análise' },
+  { value: 'em_analise', label: 'Em anÃ¡lise' },
   { value: 'aprovado', label: 'Aprovado' },
   { value: 'recusado', label: 'Recusado' },
   { value: 'sem_cadastro', label: 'Sem cadastro' },
@@ -306,19 +306,19 @@ function buildCotacaoMessageData(ficha, cotacoes = [], biometriaUrl = '') {
     const seguradoraTexto = seguradoraEscolhida ? `*${normalizeDisplayText(seguradoraEscolhida).toUpperCase()}*` : '*SEGURADORA*'
 
     return {
-      title: `_*PRÉ - APROVADO -- ${tipoAprovacao}*_`,
+      title: `_*PRÃ - APROVADO -- ${tipoAprovacao}*_`,
       body: [
         `_*${nomeLocatario}*_`,
         '',
         ...linhas.filter(Boolean),
         '',
-        '_Aguardamos a realização da biometria facial para obtenção da aprovação._',
+        '_Aguardamos a realizaÃ§Ã£o da biometria facial para obtenÃ§Ã£o da aprovaÃ§Ã£o._',
         '----------------------------------',
-        ` Segue acima o PDF do orçamento pela ${seguradoraTexto}, que é por onde ficou mais em conta:`,
+        ` Segue acima o PDF do orÃ§amento pela ${seguradoraTexto}, que Ã© por onde ficou mais em conta:`,
         '',
-        '⚠️ *Solicitamos que confira os dados do anexo antes de enviar ao cliente. Caso identifique qualquer divergência, nos informe imediatamente para realizarmos o ajuste.*',
+        'â ï¸ *Solicitamos que confira os dados do anexo antes de enviar ao cliente. Caso identifique qualquer divergÃªncia, nos informe imediatamente para realizarmos o ajuste.*',
         '',
-        ` Segue link de biometria ${seguradoraTexto} de _*${nomeLocatario}*_ enviado para o SMS do nº *${celular || '—'}*:`,
+        ` Segue link de biometria ${seguradoraTexto} de _*${nomeLocatario}*_ enviado para o SMS do nÂº *${celular || 'â'}*:`,
         linkBiometria || 'Cole o link de biometria aqui',
       ].join('\n'),
       status: 'aprovado',
@@ -360,7 +360,7 @@ function aplicarEmTodas(cotacoes, field, value) {
   return cotacoes.map(item => ({ ...item, [field]: value }))
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// ââ Main ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export default function FichaDetalhePage() {
   const { id }    = useParams()
   const navigate  = useNavigate()
@@ -477,7 +477,7 @@ export default function FichaDetalhePage() {
       setDeleting(false)
       toast({ type: 'error', title: 'Erro ao excluir ficha' })
     } else {
-      toast({ type: 'success', title: 'Ficha excluída' })
+      toast({ type: 'success', title: 'Ficha excluÃ­da' })
       navigate(backTo, { replace: true, state: backState || undefined })
     }
   }
@@ -497,8 +497,8 @@ export default function FichaDetalhePage() {
   if (!ficha) {
     return (
       <div className="text-center py-20">
-        <p className="text-dark-muted">Ficha não encontrada</p>
-        <button onClick={() => navigate(backTo, { replace: true, state: backState || undefined })} className="btn-secondary mt-4">← Voltar</button>
+        <p className="text-dark-muted">Ficha nÃ£o encontrada</p>
+        <button onClick={() => navigate(backTo, { replace: true, state: backState || undefined })} className="btn-secondary mt-4">â Voltar</button>
       </div>
     )
   }
@@ -597,7 +597,7 @@ export default function FichaDetalhePage() {
       <PageHeader
         eyebrow="Ficha individual"
         title={nomePrincipal}
-        description={`Detalhe completo de ${ficha.imobiliaria || 'imobiliária não informada'}. Mantenha a edição, a finalização e os documentos no mesmo fluxo.`}
+        description={`Detalhe completo de ${ficha.imobiliaria || 'imobiliÃ¡ria nÃ£o informada'}. Mantenha a ediÃ§Ã£o, a finalizaÃ§Ã£o e os documentos no mesmo fluxo.`}
         actions={(
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <button
@@ -649,7 +649,7 @@ export default function FichaDetalhePage() {
                   onClick={() => setConfirm(false)}
                   className="px-2.5 py-1.5 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text transition-colors"
                 >
-                  Não
+                  NÃ£o
                 </button>
               </div>
             )}
@@ -667,20 +667,20 @@ export default function FichaDetalhePage() {
             <MetricCard
               label="Produto"
               value={PRODUTO_LABELS[ficha.produto] ?? ficha.produto}
-              hint="linha de negócio"
+              hint="linha de negÃ³cio"
               tone="secondary"
               icon={<Building2 className="w-4 h-4" />}
             />
             <MetricCard
-              label="Responsável"
+              label="ResponsÃ¡vel"
               value={ficha.profiles?.nome || 'Livre'}
-              hint={ficha.assumida_em ? 'já assumida' : 'aguardando ação'}
+              hint={ficha.assumida_em ? 'jÃ¡ assumida' : 'aguardando aÃ§Ã£o'}
               tone={isMe ? 'success' : 'warning'}
               icon={<UserRound className="w-4 h-4" />}
             />
             <MetricCard
               label="Recebida em"
-              value={fmtDt(ficha.created_at) || '—'}
+              value={fmtDt(ficha.created_at) || 'â'}
               hint="entrada original"
               tone="secondary"
               icon={<Clock3 className="w-4 h-4" />}
@@ -689,20 +689,20 @@ export default function FichaDetalhePage() {
         )}
       />
 
-      {/* ── Body: 2 colunas ── */}
+      {/* ââ Body: 2 colunas ââ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-        {/* ── Coluna Esquerda: Dados ── */}
+        {/* ââ Coluna Esquerda: Dados ââ */}
         <div className="lg:col-span-2 space-y-4">
 
-          {/* Identificação */}
+          {/* IdentificaÃ§Ã£o */}
           <DataCard title={isPJ ? 'Empresa' : 'Interessado'} bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
             {isPJ ? (
               <>
                 <ReadField label="Nome da Empresa" value={ficha.nome_empresa} />
                 <ReadField label="CNPJ" value={ficha.cnpj} />
                 <div className="col-span-2">
-                  <ReadField label="CPF dos Sócios" value={ficha.cpf_socios} />
+                  <ReadField label="CPF dos SÃ³cios" value={ficha.cpf_socios} />
                 </div>
               </>
             ) : (
@@ -715,8 +715,8 @@ export default function FichaDetalhePage() {
             <ReadField label="E-mail" value={ficha.email} />
           </DataCard>
 
-          {/* Imóvel */}
-          <DataCard title="Dados do Imóvel" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
+          {/* ImÃ³vel */}
+          <DataCard title="Dados do ImÃ³vel" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
             <div className="col-span-2">
               <ImobiliariaIdentity
                 nome={resolverNome(ficha.imobiliaria) || ficha.imobiliaria}
@@ -726,15 +726,15 @@ export default function FichaDetalhePage() {
                 emphasis
               />
             </div>
-            <ReadField label="Imobiliária" value={resolverNome(ficha.imobiliaria) || ficha.imobiliaria} />
+            <ReadField label="ImobiliÃ¡ria" value={resolverNome(ficha.imobiliaria) || ficha.imobiliaria} />
             <ReadField label="Tipo" value={ficha.tipo_imovel} />
             <ReadField label="CEP" value={ficha.cep} />
             <ReadField label="Aluguel" value={fmtBRL(resolveFichaValor(ficha, 'valor_aluguel'))} />
             <ReadField label="IPTU" value={fmtBRL(resolveFichaValor(ficha, 'valor_iptu'))} />
-            <ReadField label="Condomínio" value={fmtBRL(resolveFichaValor(ficha, 'valor_condominio'))} />
+            <ReadField label="CondomÃ­nio" value={fmtBRL(resolveFichaValor(ficha, 'valor_condominio'))} />
             <div className="col-span-2">
               <InlineField
-                label="Observações"
+                label="ObservaÃ§Ãµes"
                 value={ficha.observacoes}
                 onSave={v => updateField('observacoes', v)}
                 rows={3}
@@ -742,23 +742,23 @@ export default function FichaDetalhePage() {
             </div>
           </DataCard>
 
-          {/* Campos extras — Comercial PF e PJ */}
+          {/* Campos extras â Comercial PF e PJ */}
           {isComPlus && (
             <DataCard title="Dados Complementares" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
               <ReadField label="Atividade" value={ficha.atividade} />
               <ReadField label="Total de Rendimentos" value={fmtBRL(resolveFichaValor(ficha, 'total_rendimentos'))} />
               <ReadField label="Capital Social" value={fmtBRL(resolveFichaValor(ficha, 'capital_social'))} />
-              <ReadField label="Motivo da Locação" value={ficha.motivo_locacao} />
-              <ReadField label="Vigência" value={ficha.vigencia} />
-              {isPJ && <ReadField label="Opção Tributária" value={ficha.opcao_tributaria} />}
+              <ReadField label="Motivo da LocaÃ§Ã£o" value={ficha.motivo_locacao} />
+              <ReadField label="VigÃªncia" value={ficha.vigencia} />
+              {isPJ && <ReadField label="OpÃ§Ã£o TributÃ¡ria" value={ficha.opcao_tributaria} />}
             </DataCard>
           )}
 
-          {/* Controle interno — campos editáveis */}
+          {/* Controle interno â campos editÃ¡veis */}
           <DataCard title="Controle Interno" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
-            <ReadField label="Orçamentista (Forms)" value={ficha.orcamentista_forms} />
+            <ReadField label="OrÃ§amentista (Forms)" value={ficha.orcamentista_forms} />
             <InlineField
-              label="% Comissão padrão"
+              label="% ComissÃ£o padrÃ£o"
               value={ficha.pct_comissao != null ? String(ficha.pct_comissao) : ''}
               type="text"
               inputMode="decimal"
@@ -780,7 +780,7 @@ export default function FichaDetalhePage() {
               onSave={v => updateField('parcelamento', v ? parseInt(v, 10) : null)}
             />
             <InlineField
-              label="Número do Orçamento"
+              label="NÃºmero do OrÃ§amento"
               value={ficha.numero_orcamento != null ? String(ficha.numero_orcamento) : ''}
               onSave={v => updateField('numero_orcamento', v)}
             />
@@ -805,42 +805,42 @@ export default function FichaDetalhePage() {
                 >
                   <div className={`w-3.5 h-3.5 bg-white rounded-full mt-0.75 transition-transform ${ficha.retorno_enviado ? 'translate-x-4' : 'translate-x-0.5'} m-[3px]`} />
                 </div>
-                <span className="text-sm text-dark-text">{ficha.retorno_enviado ? 'Sim' : 'Não'}</span>
+                <span className="text-sm text-dark-text">{ficha.retorno_enviado ? 'Sim' : 'NÃ£o'}</span>
               </label>
             </div>
             <ReadField
-              label="Passado pela imobiliária"
+              label="Passado pela imobiliÃ¡ria"
               value={Object.prototype.hasOwnProperty.call(ficha.raw_data || {}, 'passado_pela_imobiliaria')
-                ? (ficha.raw_data?.passado_pela_imobiliaria ? 'Sim' : 'Não')
+                ? (ficha.raw_data?.passado_pela_imobiliaria ? 'Sim' : 'NÃ£o')
                 : null}
             />
           </DataCard>
 
-          <DataCard title="Cotação e retorno" bodyClassName="space-y-5">
+          <DataCard title="CotaÃ§Ã£o e retorno" bodyClassName="space-y-5">
             <div className="rounded-[28px] border border-brand-accent/20 bg-brand-accent/5 p-4 md:p-5">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-accent">Resumo do preenchimento</p>
                   <p className="mt-1 text-sm text-dark-muted">
-                    Ajuste a comissão por seguradora abaixo. O valor da ficha pode servir como padrão, mas cada card pode ser editado individualmente.
+                    Ajuste a comissÃ£o por seguradora abaixo. O valor da ficha pode servir como padrÃ£o, mas cada card pode ser editado individualmente.
                   </p>
                 </div>
                 <div className="inline-flex items-center rounded-full border border-dark-border bg-dark-surface px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">
-                  Automação manual
+                  AutomaÃ§Ã£o manual
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div className="rounded-2xl border border-dark-border/70 bg-white/70 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissão padrão da ficha</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">ComissÃ£o padrÃ£o da ficha</p>
                   <p className="mt-1 text-lg font-semibold text-dark-text">
                     {ficha.pct_comissao != null && ficha.pct_comissao !== ''
                       ? `${formatDecimalBRInput(ficha.pct_comissao)}%`
-                      : '—'}
+                      : 'â'}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-dark-border/70 bg-white/70 px-4 py-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Parcelamento base</p>
-                  <p className="mt-1 text-lg font-semibold text-dark-text">{ficha.parcelamento != null && ficha.parcelamento !== '' ? `${ficha.parcelamento}x` : '—'}</p>
+                  <p className="mt-1 text-lg font-semibold text-dark-text">{ficha.parcelamento != null && ficha.parcelamento !== '' ? `${ficha.parcelamento}x` : 'â'}</p>
                 </div>
                 <div className="rounded-2xl border border-dark-border/70 bg-white/70 px-4 py-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Seguradoras exibidas</p>
@@ -925,7 +925,7 @@ export default function FichaDetalhePage() {
                       />
                       <div className="sm:col-span-2">
                         <InlineField
-                          label="Comissão da seguradora"
+                          label="ComissÃ£o da seguradora"
                           value={cotacao.pct_comissao !== '' && cotacao.pct_comissao != null ? String(cotacao.pct_comissao) : ''}
                           type="text"
                           inputMode="decimal"
@@ -936,8 +936,8 @@ export default function FichaDetalhePage() {
                           {cotacao.pct_comissao !== '' && cotacao.pct_comissao != null
                             ? 'Valor salvo individualmente para esta seguradora.'
                             : ficha.pct_comissao != null && ficha.pct_comissao !== ''
-                              ? `Usa o padrão da ficha: ${ficha.pct_comissao}%`
-                              : 'Preencha para registrar a comissão desta seguradora.'}
+                              ? `Usa o padrÃ£o da ficha: ${ficha.pct_comissao}%`
+                              : 'Preencha para registrar a comissÃ£o desta seguradora.'}
                         </p>
                       </div>
                     </div>
@@ -948,11 +948,11 @@ export default function FichaDetalhePage() {
           </DataCard>
         </div>
 
-        {/* ── Coluna Direita: Timeline + Meta ── */}
+        {/* ââ Coluna Direita: Timeline + Meta ââ */}
         <div className="space-y-4">
 
           {/* Meta info */}
-          <DataCard title="Informações" bodyClassName="space-y-3">
+          <DataCard title="InformaÃ§Ãµes" bodyClassName="space-y-3">
             <div className="space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-dark-muted">Recebida em</span>
@@ -976,7 +976,7 @@ export default function FichaDetalhePage() {
           </DataCard>
 
           {/* Timeline */}
-          <DataCard title="Histórico">
+          <DataCard title="HistÃ³rico">
             <Timeline ficha={ficha} />
           </DataCard>
 
@@ -1011,12 +1011,12 @@ export default function FichaDetalhePage() {
           >
             <div className="rounded-2xl border border-brand-accent/20 bg-brand-accent/5 px-4 py-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-accent">
-                {retornoSalvo?.texto ? 'Última mensagem salva' : 'Mensagem pronta para gerar'}
+                {retornoSalvo?.texto ? 'Ãltima mensagem salva' : 'Mensagem pronta para gerar'}
               </p>
               <p className="mt-1 text-xs text-dark-muted">
                 {retornoSalvo?.texto
-                  ? `A ficha mantém o texto gerado, o link de biometria e as cotações usadas na última geração${retornoSalvo?.gerado_em ? ` · ${fmtDt(retornoSalvo.gerado_em)}` : ''}.`
-                  : 'Clique em gerar para salvar a mensagem dentro da ficha e manter o retorno sempre disponível.'}
+                  ? `A ficha mantÃ©m o texto gerado, o link de biometria e as cotaÃ§Ãµes usadas na Ãºltima geraÃ§Ã£o${retornoSalvo?.gerado_em ? ` Â· ${fmtDt(retornoSalvo.gerado_em)}` : ''}.`
+                  : 'Clique em gerar para salvar a mensagem dentro da ficha e manter o retorno sempre disponÃ­vel.'}
               </p>
             </div>
 
@@ -1039,12 +1039,12 @@ export default function FichaDetalhePage() {
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-accent">
-                    {mensagemExibida ? 'Mensagem gerada' : 'Aguardando geração'}
+                    {mensagemExibida ? 'Mensagem gerada' : 'Aguardando geraÃ§Ã£o'}
                   </p>
                   <p className="mt-1 text-xs text-dark-muted">
                     {mensagemExibida
-                      ? `O texto abaixo pode ser copiado e enviado${retornoSalvo?.gerado_em ? ` · salvo em ${fmtDt(retornoSalvo.gerado_em)}` : ''}.`
-                      : 'A mensagem será montada ao clicar no botão acima.'}
+                      ? `O texto abaixo pode ser copiado e enviado${retornoSalvo?.gerado_em ? ` Â· salvo em ${fmtDt(retornoSalvo.gerado_em)}` : ''}.`
+                      : 'A mensagem serÃ¡ montada ao clicar no botÃ£o acima.'}
                   </p>
                 </div>
                 {retornoSalvo?.status && (
@@ -1057,7 +1057,7 @@ export default function FichaDetalhePage() {
                 readOnly
                 value={mensagemExibida}
                 rows={16}
-                placeholder="A mensagem gerada aparecerá aqui."
+                placeholder="A mensagem gerada aparecerÃ¡ aqui."
                 className="w-full resize-none rounded-2xl border border-dark-border bg-dark-surface px-4 py-3 font-mono text-[12px] leading-5 text-dark-text outline-none"
               />
             </div>
@@ -1067,12 +1067,12 @@ export default function FichaDetalhePage() {
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">
-                      Cotações usadas
+                      CotaÃ§Ãµes usadas
                     </p>
                     <p className="mt-1 text-xs text-dark-muted">
                       {retornoSalvo?.seguradora_escolhida
-                        ? `A última geração foi vinculada à seguradora ${normalizeDisplayText(retornoSalvo.seguradora_escolhida).toUpperCase()}.`
-                        : 'Clique em uma seguradora para marcá-la como escolhida.'}
+                        ? `A Ãºltima geraÃ§Ã£o foi vinculada Ã  seguradora ${normalizeDisplayText(retornoSalvo.seguradora_escolhida).toUpperCase()}.`
+                        : 'Clique em uma seguradora para marcÃ¡-la como escolhida.'}
                     </p>
                   </div>
                 </div>
@@ -1083,7 +1083,7 @@ export default function FichaDetalhePage() {
                       cotacao.status === 'recusado'
                         ? 'Recusado'
                         : cotacao.status === 'aprovado'
-                          ? `${cotacao.parcelamento || '—'}x · ${cotacao.valor_parcela != null && cotacao.valor_parcela !== '' ? formatMoney(cotacao.valor_parcela) : '—'}`
+                          ? `${cotacao.parcelamento || 'â'}x Â· ${cotacao.valor_parcela != null && cotacao.valor_parcela !== '' ? formatMoney(cotacao.valor_parcela) : 'â'}`
                           : cotacao.status === 'sem_cadastro'
                             ? 'Sem cadastro'
                             : 'Pendente'
@@ -1134,7 +1134,7 @@ export default function FichaDetalhePage() {
                             {statusLabel}
                           </p>
                           <p className="text-[10px] uppercase tracking-[0.16em] text-dark-muted">
-                            comissão {ficha.pct_comissao != null && ficha.pct_comissao !== '' ? `${ficha.pct_comissao}%` : '—'}
+                            comissÃ£o {ficha.pct_comissao != null && ficha.pct_comissao !== '' ? `${ficha.pct_comissao}%` : 'â'}
                           </p>
                         </div>
                       </button>

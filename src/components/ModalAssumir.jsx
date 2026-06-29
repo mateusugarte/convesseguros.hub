@@ -12,7 +12,7 @@ export default function ModalAssumir({ id, onClose, onSuccess }) {
     setLoading(true)
     setError('')
     const err = await assumirFicha(id, user.id)
-    if (err) setError('Não foi possível assumir a ficha.')
+    if (err) setError('NÃ£o foi possÃ­vel assumir a ficha.')
     else onSuccess()
     setLoading(false)
   }
@@ -31,13 +31,13 @@ export default function ModalAssumir({ id, onClose, onSuccess }) {
           </div>
           <div>
             <h2 className="font-bold text-dark-text">Assumir Ficha</h2>
-            <p className="text-xs text-dark-muted">Esta ação não pode ser desfeita</p>
+            <p className="text-xs text-dark-muted">Esta aÃ§Ã£o nÃ£o pode ser desfeita</p>
           </div>
         </div>
 
         <div className="modal-shell-body space-y-4">
         <p className="text-sm text-dark-muted leading-relaxed">
-          Ao assumir, a ficha passará para <span className="text-status-warning font-medium">Em Cotação</span> e ficará sob sua responsabilidade.
+          Ao assumir, a ficha passarÃ¡ para <span className="text-status-warning font-medium">Em CotaÃ§Ã£o</span> e ficarÃ¡ sob sua responsabilidade.
         </p>
 
         {error && (

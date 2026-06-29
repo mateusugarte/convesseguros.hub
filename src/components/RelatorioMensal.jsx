@@ -1,4 +1,4 @@
-ï»¿import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { fetchRelatorioMensal, PRODUTO_LABELS } from '../lib/fichas'
 import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
 import { normalizeDisplayText } from '../lib/text'

@@ -436,6 +436,7 @@ function DroppableColumn({
           border:          isOver ? `1.5px dashed ${column.color}70` : '1px solid rgb(var(--color-border))',
           borderTop:       'none',
           borderRadius:    '0 0 18px 18px',
+          marginTop:       '10px',
           backgroundColor: isOver ? column.color + '0b' : 'rgb(var(--color-surface2) / 0.28)',
           boxShadow:       isOver ? `inset 0 0 0 1px ${column.color}20, 0 0 24px ${column.color}12` : '0 12px 30px rgba(15,23,42,0.05)',
           transition:      'border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease',

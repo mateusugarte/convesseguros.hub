@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { fetchApolicesFianca, fetchApolicesAtivas, fetchImobiliariasComApolices } from './financeiroApolices'
+import { fetchApolicesFianca, fetchApolicesAtivas, fetchApolicesParaFatura, fetchImobiliariasComApolices } from './financeiroApolices'
 import { gerarParcelasComissao, somarRecebimentoNoPeriodo } from './financeiroProducaoCalc'
 import { primeiroDiaMes } from './financeiroCalc'
 
@@ -88,8 +88,8 @@ export async function fetchImobiliariasDistintas() {
   return fetchImobiliariasComApolices()
 }
 
-export async function fetchFaturasLedger({ imobiliaria, seguradora, mesRef } = {}) {
-  return fetchApolicesAtivas({ imobiliaria, seguradora, mesRef })
+export async function fetchFaturasLedger({ imobiliaria, seguradora } = {}) {
+  return fetchApolicesParaFatura({ imobiliaria, seguradora })
 }
 
 const FATURAS_STATUS_SELECT = 'imobiliaria, mes_referencia, status, data_pagamento, pago_por, observacao, valor_real_fatura, valor_fatura_calculado, pct_comissao, valor_a_pagar'

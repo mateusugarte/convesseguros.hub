@@ -15,7 +15,12 @@ producao por imobiliaria/seguradora, faturas mensais, repasses e pagamento.
 
 ## Status
 
-Refinamento v2 concluido no codigo. Codificacao UTF-8 corrigida em toda a area financeira.
+Refinamento v2 concluido. Dois bugs criticos corrigidos em 2026-06-29 (ver rodada 4).
+
+### Rodada 4 (bugfix — 2026-06-29)
+- Faturas: `fetchFaturasLedger` corrigido para chamar `fetchApolicesParaFatura` em vez de `fetchApolicesAtivas`. Agora filtra por `forma_pagamento IN ('fatura_sem_entrada','fatura_com_entrada')` e exclui boletos/à vista.
+- Producao: removida dependencia de `catalogo` do efeito principal de fetch. `catalogo` tinha cache em memoria (resolve instantaneamente na segunda visita) e cancelava o fetch de dados antes dos numeros aparecerem. Separado em efeito proprio so para setar `pct` default do catalogo.
+- 30 testes passando; build verde.
 
 ### Rodada 3 (refinamento v2 — 2026-06-26)
 - Faturas: corrigido bug crítico — `fetchFaturasLedger` agora filtra por `forma_pagamento IN ('fatura_sem_entrada','fatura_com_entrada')` via nova função `fetchApolicesParaFatura`. Campo `forma_pagamento` adicionado ao SELECT e ao normalizeApoliceRow.

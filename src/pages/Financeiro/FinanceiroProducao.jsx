@@ -85,12 +85,17 @@ export default function FinanceiroProducao() {
       const pctMapValue = pctMap.status === 'fulfilled' ? pctMap.value : {}
       const salvo = pctMapValue[selecionada]
       setPctSalvo(salvo ?? null)
-      const meta = resolveImobiliaria(catalogo, selecionada)
-      setPct(salvo != null ? String(salvo) : (meta?.pctComissao != null ? String(meta.pctComissao) : ''))
+      if (salvo != null) setPct(String(salvo))
       setLoading(false)
     }).catch(() => { if (mounted) setLoading(false) })
     return () => { mounted = false }
-  }, [selecionada, periodo, catalogo])
+  }, [selecionada, periodo]) // catalogo não é dependência aqui — evita double-fetch ao voltar de subpáginas
+
+  useEffect(() => {
+    if (!catalogo || !selecionada || pctSalvo != null) return
+    const meta = resolveImobiliaria(catalogo, selecionada)
+    if (meta?.pctComissao != null) setPct(String(meta.pctComissao))
+  }, [catalogo, selecionada, pctSalvo])
 
   const seguradoras = useMemo(() => agruparPorSeguradora(rows), [rows])
   const evolucao = useMemo(

@@ -9,7 +9,6 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { CSS } from '@dnd-kit/utilities'
 import {
   BarChart2,
   ChevronLeft,
@@ -43,6 +42,7 @@ import FichaStatusBadge from '../components/FichaStatusBadge'
 import { normalizeDisplayText } from '../lib/text'
 import { getEntityImageUrl } from '../lib/entityMedia'
 import { getFichaOperationalState, isFichaPendingEmission } from '../lib/fichaOperational'
+import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/kanbanDnd'
 import { BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 const PERIOD_OPTIONS = [
@@ -160,6 +160,34 @@ function getDocumento(ficha) {
 
 function getRecoveryStart(ficha) {
   return ficha?.raw_data?.retorno_enviado_em || ficha?.raw_data?.cobranca_started_at || null
+}
+
+function buildAprovadaPatch(ficha) {
+  return {
+    status: 'aprovado',
+    retorno_enviado: false,
+    raw_data: {
+      ...(ficha?.raw_data || {}),
+      recovered_after_cobranca: false,
+      recovered_after_cobranca_em: null,
+      retorno_enviado_em: null,
+      cobranca_started_at: null,
+    },
+  }
+}
+
+function buildCobrancaPatch(ficha, sentAt = new Date().toISOString()) {
+  return {
+    status: 'aprovado',
+    retorno_enviado: true,
+    raw_data: {
+      ...(ficha?.raw_data || {}),
+      recovered_after_cobranca: false,
+      recovered_after_cobranca_em: null,
+      retorno_enviado_em: sentAt,
+      cobranca_started_at: sentAt,
+    },
+  }
 }
 
 function isRecovered(ficha) {
@@ -379,6 +407,7 @@ function RelatorioCard({ ficha, onOpen, onOpenPolicy, selected, onToggleSelect, 
   const nome = getNomeFicha(ficha)
   const doc = getDocumento(ficha)
   const op = getOperacionalStatus(ficha)
+  const cobrancaSentAt = getRecoveryStart(ficha)
   const prodColor = ficha.produto === 'pessoa_juridica' ? '#4b6cc2' : ficha.produto === 'comercial_pf' ? '#0f766e' : '#000079'
   const isEmissaoCard = isEmitida(ficha)
   const cardVisual = op?.id === 'aprovada'
@@ -445,6 +474,13 @@ function RelatorioCard({ ficha, onOpen, onOpenPolicy, selected, onToggleSelect, 
           </div>
         )}
 
+        {op?.id === 'enviado_cobranca' && cobrancaSentAt && (
+          <div className="mt-2 rounded-2xl border border-brand-accent/15 bg-brand-accent/5 px-3 py-2">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-brand-accent">Cobran?a enviada</p>
+            <p className="mt-1 text-[11px] text-dark-text">{formatDateTimeBR(cobrancaSentAt) || formatDateBR(cobrancaSentAt)}</p>
+          </div>
+        )}
+
         {isEmissaoCard && !selectionMode && (
           <div className="mt-3 grid grid-cols-2 gap-2 border-t border-dark-border/50 pt-3">
             <button
@@ -474,7 +510,7 @@ function RelatorioCard({ ficha, onOpen, onOpenPolicy, selected, onToggleSelect, 
 }
 
 function DraggableRelatorioCard({ ficha, onOpen, onOpenPolicy, selected, onToggleSelect, selectionMode }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: ficha.id })
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ficha.id })
 
   return (
     <div
@@ -482,8 +518,7 @@ function DraggableRelatorioCard({ ficha, onOpen, onOpenPolicy, selected, onToggl
       style={{
         opacity: isDragging ? 0.2 : 1,
         touchAction: 'none',
-        transform: CSS.Translate.toString(transform),
-        zIndex: isDragging ? 20 : 'auto',
+        transition: isDragging ? 'none' : 'opacity 0.15s ease',
       }}
     >
       <RelatorioCard
@@ -509,6 +544,9 @@ function KanbanColuna({
   onToggleSelect,
   onCopy,
   onSelectAll,
+  onConfirmCobranca,
+  canConfirmCobranca,
+  pendingCobrancaCount,
   selectionMode,
   colIndex,
 }) {
@@ -544,6 +582,17 @@ function KanbanColuna({
           >
             Copiar
           </button>
+          {coluna.id === 'enviado_cobranca' && (
+            <button
+              type="button"
+              onClick={event => { event.stopPropagation(); onConfirmCobranca() }}
+              disabled={!canConfirmCobranca}
+              className="rounded-lg bg-brand-secondary px-2.5 py-1 text-[10px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
+              title="Registrar envio de cobran?a para as fichas selecionadas"
+            >
+              Marcar envio{pendingCobrancaCount > 0 ? ` (${pendingCobrancaCount})` : ''}
+            </button>
+          )}
         </div>
       </div>
 
@@ -812,6 +861,58 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
   )
 }
 
+function ModalConfirmarCobranca({ fichas, salvando, onCancelar, onConfirmar }) {
+  const preview = fichas.slice(0, 5)
+
+  return (
+    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 animate-fade-in">
+      <div className="modal-backdrop" onClick={!salvando ? onCancelar : undefined} />
+      <div className="relative glass-modal w-full max-w-xl overflow-hidden border border-dark-border">
+        <div className="flex items-center justify-between gap-3 border-b border-dark-border px-6 py-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Confirmar cobran?a</p>
+            <h3 className="mt-1 text-lg font-semibold text-dark-text">
+              Registrar envio para {fichas.length} ficha{fichas.length !== 1 ? 's' : ''}
+            </h3>
+          </div>
+          <button onClick={onCancelar} className="text-dark-muted hover:text-dark-text" disabled={salvando}>?</button>
+        </div>
+
+        <div className="space-y-4 px-6 py-5">
+          <div className="rounded-3xl border border-brand-accent/15 bg-brand-accent/5 p-4">
+            <p className="text-sm text-dark-text">
+              Ao confirmar, as fichas selecionadas ser?o registradas como <strong>cobran?a enviada</strong> e a data do envio ser? salva automaticamente.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            {preview.map(ficha => (
+              <div key={ficha.id} className="rounded-2xl border border-dark-border/60 bg-white/70 px-3 py-2">
+                <p className="text-sm font-semibold text-dark-text">{getNomeFicha(ficha)}</p>
+                <p className="text-[11px] text-dark-muted">{getCanonicalImobiliariaNome(ficha)}</p>
+              </div>
+            ))}
+            {fichas.length > preview.length && (
+              <p className="text-xs text-dark-muted">
+                + {fichas.length - preview.length} ficha{fichas.length - preview.length !== 1 ? 's' : ''} adicional{fichas.length - preview.length !== 1 ? 'is' : ''}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-dark-border px-6 py-4">
+          <button type="button" onClick={onCancelar} className="btn-secondary" disabled={salvando}>
+            Cancelar
+          </button>
+          <button type="button" onClick={onConfirmar} className="btn-primary" disabled={salvando}>
+            {salvando ? 'Salvando...' : 'Confirmar envio'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function Field({ label, value, onChange, type = 'text', required = false }) {
   return (
     <div className="group relative rounded-3xl border border-transparent px-2 py-1.5 transition-all hover:border-brand-accent/20 hover:bg-dark-surface2/20">
@@ -864,6 +965,8 @@ export default function Relatorio() {
   const [activeId, setActiveId] = useState(null)
   const [pendingEmissao, setPendingEmissao] = useState(null)
   const [salvandoEmissao, setSalvandoEmissao] = useState(false)
+  const [pendingCobranca, setPendingCobranca] = useState(null)
+  const [salvandoCobranca, setSalvandoCobranca] = useState(false)
   const [cobrancaToggleMap, setCobrancaToggleMap] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem(COBRANCA_TOGGLE_STORAGE) || '{}')
@@ -873,7 +976,7 @@ export default function Relatorio() {
   })
   const scrollRef = useRef(null)
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
   const isDetail = Boolean(imobiliariaId)
   const currentPath = `${location.pathname}${location.search}`
   const scrollKey = `${STORAGE_PREFIX}-${currentPath}`
@@ -1109,6 +1212,12 @@ export default function Relatorio() {
   }, [rowsWithHelpers])
 
   const visibleIds = useMemo(() => rowsWithHelpers.map(item => item.id), [rowsWithHelpers])
+  const selectedRows = useMemo(() => rowsWithHelpers.filter(item => selectedIds.includes(item.id)), [rowsWithHelpers, selectedIds])
+  const pendingCobrancaCount = useMemo(
+    () => selectedRows.filter(item => getColuna(item) === 'aprovada').length,
+    [selectedRows],
+  )
+  const canConfirmCobranca = selectedRows.length > 0 && selectedRows.every(item => getColuna(item) === 'aprovada')
   const selectionMode = selectedIds.length > 0
   const activeFicha = activeId ? rowsWithHelpers.find(item => item.id === activeId) : null
 
@@ -1233,48 +1342,85 @@ export default function Relatorio() {
 
   async function moveSelected() {
     if (!moveTarget || selectedIds.length === 0) return
-    if (moveTarget === 'emitida' || moveTarget === 'recuperados') {
-      toast({ type: 'info', title: 'Use a emissão individual', message: 'Essas colunas dependem de dados da apólice e não são movidas em massa.' })
+    if (moveTarget !== 'aprovada') return
+
+    if (selectedRows.some(item => getColuna(item) !== 'enviado_cobranca')) {
+      toast({ type: 'info', title: 'Selecione apenas fichas da coluna Enviado Cobran?a', message: 'O retorno em massa para Aprovadas s? pode ser feito com fichas que j? estavam em cobran?a.' })
       return
     }
 
-    const payloadByTarget = {
-      aprovada: { status: 'aprovado', retorno_enviado: false, raw_data: { recovered_after_cobranca: false, recovered_after_cobranca_em: null } },
-      enviado_cobranca: {
-        status: 'emitido',
-        retorno_enviado: true,
-        raw_data: { recovered_after_cobranca: false, retorno_enviado_em: new Date().toISOString() },
-      },
-    }
-
-    const patch = payloadByTarget[moveTarget]
-    if (!patch) return
-
     const previousRows = rows
-    const targetIds = [...selectedIds]
-    const updated = rowsWithHelpers.map(item => (
-      targetIds.includes(item.id)
-        ? {
-            ...item,
-            status: patch.status,
-            retorno_enviado: patch.retorno_enviado,
-            raw_data: { ...(item.raw_data || {}), ...patch.raw_data },
-          }
-        : item
-    ))
-    setRows(updated)
+    const targetRows = [...selectedRows]
+    const patchById = new Map(targetRows.map(item => [item.id, buildAprovadaPatch(item)]))
 
-    const results = await Promise.all(targetIds.map(id => editarFicha(id, patch, user?.id)))
+    setRows(prev => prev.map(item => (
+      patchById.has(item.id)
+        ? { ...item, ...patchById.get(item.id), raw_data: patchById.get(item.id).raw_data }
+        : item
+    )))
+
+    const results = await Promise.all(targetRows.map(item => editarFicha(item.id, patchById.get(item.id), user?.id)))
     const failed = results.find(result => result)
     if (failed) {
       setRows(previousRows)
-      toast({ type: 'error', title: 'Erro ao mover fichas', message: failed.message || 'Não foi possível concluir a operação.' })
+      toast({ type: 'error', title: 'Erro ao mover fichas', message: failed.message || 'N?o foi poss?vel concluir a opera??o.' })
       setSelectedIds([])
       setMoveTarget('')
       return
     }
 
-    toast({ type: 'success', title: `${targetIds.length} ficha${targetIds.length !== 1 ? 's' : ''} movida${targetIds.length !== 1 ? 's' : ''}` })
+    toast({ type: 'success', title: `${targetRows.length} ficha${targetRows.length !== 1 ? 's' : ''} retornou${targetRows.length !== 1 ? 'aram' : ''} para Aprovadas` })
+    setSelectedIds([])
+    setMoveTarget('')
+  }
+
+  function openConfirmarCobranca() {
+    if (selectedRows.length === 0) {
+      toast({ type: 'info', title: 'Selecione pelo menos uma ficha', message: 'Use a sele??o do card ou o bot?o Todos da coluna Aprovadas.' })
+      return
+    }
+
+    if (!canConfirmCobranca) {
+      toast({ type: 'info', title: 'Selecione apenas fichas aprovadas', message: 'Para enviar cobran?a, escolha cards da coluna Aprovadas e confirme o envio.' })
+      return
+    }
+
+    setPendingCobranca({
+      ids: selectedRows.map(item => item.id),
+      fichas: selectedRows,
+    })
+  }
+
+  async function handleConfirmarCobranca() {
+    if (!pendingCobranca?.fichas?.length) return
+
+    setSalvandoCobranca(true)
+    const sentAt = new Date().toISOString()
+    const previousRows = rows
+    const patchById = new Map(
+      pendingCobranca.fichas.map(item => [item.id, buildCobrancaPatch(item, sentAt)]),
+    )
+
+    setRows(prev => prev.map(item => (
+      patchById.has(item.id)
+        ? { ...item, ...patchById.get(item.id), raw_data: patchById.get(item.id).raw_data }
+        : item
+    )))
+
+    const results = await Promise.all(
+      pendingCobranca.fichas.map(item => editarFicha(item.id, patchById.get(item.id), user?.id)),
+    )
+    const failed = results.find(result => result)
+
+    setSalvandoCobranca(false)
+    if (failed) {
+      setRows(previousRows)
+      toast({ type: 'error', title: 'Erro ao registrar cobran?a', message: failed.message || 'N?o foi poss?vel salvar o envio de cobran?a.' })
+      return
+    }
+
+    toast({ type: 'success', title: `${pendingCobranca.fichas.length} cobran?a${pendingCobranca.fichas.length !== 1 ? 's' : ''} registrada${pendingCobranca.fichas.length !== 1 ? 's' : ''}` })
+    setPendingCobranca(null)
     setSelectedIds([])
     setMoveTarget('')
   }
@@ -1294,15 +1440,16 @@ export default function Relatorio() {
     }
 
     if (targetCol === 'recuperados') {
-      toast({ type: 'info', title: 'Recuperação depende da emissão', message: 'A coluna RECUPERADOS é preenchida quando a emissão é registrada após cobrança.' })
+      toast({ type: 'info', title: 'Recupera??o depende da emiss?o', message: 'A coluna RECUPERADOS ? preenchida quando a emiss?o ? registrada ap?s cobran?a.' })
       return
     }
 
-    const patch = targetCol === 'aprovada'
-      ? { status: 'aprovado', retorno_enviado: false, raw_data: { ...(ficha.raw_data || {}), recovered_after_cobranca: false, recovered_after_cobranca_em: null } }
-      : targetCol === 'enviado_cobranca'
-        ? { status: 'emitido', retorno_enviado: true, raw_data: { ...(ficha.raw_data || {}), recovered_after_cobranca: false, retorno_enviado_em: ficha.raw_data?.retorno_enviado_em || new Date().toISOString() } }
-        : null
+    if (targetCol === 'enviado_cobranca') {
+      toast({ type: 'info', title: 'Confirma??o obrigat?ria', message: 'Selecione as fichas aprovadas e use "Marcar envio" na coluna Enviado Cobran?a.' })
+      return
+    }
+
+    const patch = targetCol === 'aprovada' ? buildAprovadaPatch(ficha) : null
 
     if (!patch) return
 
@@ -1502,7 +1649,7 @@ export default function Relatorio() {
           onInvertSelection={invertSelection}
           onMove={moveSelected}
           onBulkCopy={copySelected}
-          options={COLUNAS.filter(col => col.id !== 'emitida' && col.id !== 'recuperados')}
+          options={COLUNAS.filter(col => col.id === 'aprovada')}
           target={moveTarget}
           setTarget={setMoveTarget}
         />
@@ -1525,7 +1672,7 @@ export default function Relatorio() {
 
         <DataCard
           title="Kanban mensal"
-          subtitle="Arraste fichas entre colunas para atualizar o status."
+          subtitle="Arraste fichas entre colunas para atualizar o status. Para cobran?a, selecione as aprovadas e confirme o envio."
           actions={
             <div className="flex items-center gap-2">
               <button
@@ -1549,6 +1696,7 @@ export default function Relatorio() {
         >
           <DndContext
             sensors={sensors}
+            collisionDetection={kanbanPointerCollision}
             onDragStart={({ active }) => setActiveId(active.id)}
             onDragEnd={handleDragEnd}
             onDragCancel={() => setActiveId(null)}
@@ -1566,6 +1714,9 @@ export default function Relatorio() {
                     onToggleSelect={toggleSelected}
                     onCopy={copyColumn}
                     onSelectAll={selectAllColumn}
+                    onConfirmCobranca={openConfirmarCobranca}
+                    canConfirmCobranca={canConfirmCobranca}
+                    pendingCobrancaCount={pendingCobrancaCount}
                     selectionMode={selectionMode}
                     colIndex={index}
                   />
@@ -1573,7 +1724,7 @@ export default function Relatorio() {
               </div>
             </div>
 
-            <DragOverlay dropAnimation={null}>
+            <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
               {activeFicha && (
                 <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none' }}>
                   <RelatorioCard
@@ -1596,6 +1747,14 @@ export default function Relatorio() {
             salvando={salvandoEmissao}
             onCancelar={() => !salvandoEmissao && setPendingEmissao(null)}
             onConfirmar={handleConfirmarEmissao}
+          />
+        )}
+        {pendingCobranca && (
+          <ModalConfirmarCobranca
+            fichas={pendingCobranca.fichas}
+            salvando={salvandoCobranca}
+            onCancelar={() => !salvandoCobranca && setPendingCobranca(null)}
+            onConfirmar={handleConfirmarCobranca}
           />
         )}
       </div>

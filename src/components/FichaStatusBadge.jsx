@@ -2,13 +2,13 @@ import { getFichaOperationalState } from '../lib/fichaOperational'
 
 const STATUS_FALLBACK = {
   pendente: 'Pendente',
-  em_cotacao: 'Em CotaÃ§Ã£o',
-  em_analise: 'Em AnÃ¡lise',
+  em_cotacao: 'Em Cotação',
+  em_analise: 'Em Análise',
   aprovado: 'Aprovado',
   recusado: 'Recusado',
   emitido: 'Emitido',
   cancelado: 'Cancelado',
-  cpf_invalido: 'CPF InvÃ¡lido',
+  cpf_invalido: 'CPF Inválido',
   expirada: 'Expirada',
 }
 
@@ -26,3 +26,4 @@ export default function FichaStatusBadge({ ficha, className = '' }) {
   if (!label) return null
   return <span className={`badge badge-info ${className}`.trim()}>{label}</span>
 }
+

@@ -8,9 +8,9 @@ const STATUS_FINAIS = [
   { value: 'aprovado',     label: 'Aprovado',     color: 'text-status-success' },
   { value: 'recusado',     label: 'Recusado',     color: 'text-status-danger' },
   { value: 'emitido',      label: 'Emitido',      color: 'text-brand-accent' },
-  { value: 'em_analise',   label: 'Em AnÃ¡lise',   color: 'text-brand-accent' },
+  { value: 'em_analise',   label: 'Em Análise',   color: 'text-brand-accent' },
   { value: 'cancelado',    label: 'Cancelado',    color: 'text-dark-muted' },
-  { value: 'cpf_invalido', label: 'CPF InvÃ¡lido', color: 'text-status-warning' },
+  { value: 'cpf_invalido', label: 'CPF Inválido', color: 'text-status-warning' },
   { value: 'expirada',     label: 'Expirada',     color: 'text-dark-muted' },
 ]
 
@@ -52,7 +52,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
     })
     if (err) {
       console.error('Erro ao finalizar ficha:', err)
-      setError(err.message || 'NÃ£o foi possÃ­vel finalizar a ficha.')
+      setError(err.message || 'Não foi possível finalizar a ficha.')
     } else onSuccess()
     setLoading(false)
   }
@@ -107,14 +107,14 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
               <div className="rounded-2xl border border-brand-accent/20 bg-brand-accent/5 px-4 py-3">
                 <div className="flex items-center gap-2 text-brand-accent">
                   <ShieldCheck className="w-4 h-4" />
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">Seguradora jÃ¡ definida</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">Seguradora já definida</span>
                 </div>
                 <p className="mt-1 text-sm font-semibold text-dark-text">{seguradoraDefinida}</p>
               </div>
             ) : (
               status === 'recusado' ? (
                 <div className="rounded-2xl border border-dashed border-dark-border bg-dark-surface2 px-4 py-3 text-sm text-dark-muted">
-                  Ficha recusada: nÃ£o Ã© necessÃ¡rio selecionar seguradora.
+                  Ficha recusada: não é necessário selecionar seguradora.
                 </div>
               ) : (
                 <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={ficha?.produto} required />
@@ -130,7 +130,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
                 onChange={e => setPassadoPelaImobiliaria(e.target.checked)}
                 className="w-5 h-5 rounded accent-brand-accent"
               />
-              <span className="text-sm text-dark-text">Passado pela imobiliÃ¡ria?</span>
+              <span className="text-sm text-dark-text">Passado pela imobiliária?</span>
             </label>
           )}
 
@@ -155,10 +155,11 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
         <div className="modal-shell-footer flex gap-3 px-6 pb-5 pt-4 border-t border-dark-border/60">
           <button onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
           <button onClick={handleFinalizar} disabled={loading || !status} className="btn-primary flex-1">
-            {loading ? 'Salvando...' : status === 'aprovado' ? 'AvanÃ§ar' : 'Finalizar Ficha'}
+            {loading ? 'Salvando...' : status === 'aprovado' ? 'Avançar' : 'Finalizar Ficha'}
           </button>
         </div>
       </div>
     </div>
   )
 }
+

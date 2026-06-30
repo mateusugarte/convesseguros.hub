@@ -60,7 +60,7 @@ function ModalVenda({ leads, onClose, onSave }) {
           <div className="border-b border-dark-border/50 p-6 lg:border-b-0 lg:border-r">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-brand-accent">Nova venda</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-status-info">Nova venda</p>
                 <h2 className="mt-2 text-2xl font-black tracking-tight text-dark-text">Registrar fechamento</h2>
                 <p className="mt-2 text-sm text-dark-muted">Formalize o ganho, a comissão e o contexto do fechamento sem sair da área comercial.</p>
               </div>
@@ -152,7 +152,7 @@ function ModalVenda({ leads, onClose, onSave }) {
 
           <aside className="bg-[linear-gradient(180deg,rgba(239,246,255,0.9),rgba(255,255,255,0.96))] p-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-dark-muted">Resumo do fechamento</p>
-            <div className="mt-5 rounded-[26px] border border-dark-border/50 bg-white/80 p-5 shadow-sm">
+            <div className="mt-5 rounded-[26px] border border-dark-border/50 bg-dark-surface/80 p-5 shadow-sm">
               {selectedLead ? (
                 <CrmAvatarBadge name={selectedLead.nome} subtitle={selectedLead.origem || 'Lead vinculado'} />
               ) : (
@@ -197,7 +197,7 @@ function ModalVenda({ leads, onClose, onSave }) {
 function SalesTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-2xl border border-dark-border/60 bg-white/95 px-3 py-2 shadow-xl">
+    <div className="rounded-2xl border border-dark-border/60 bg-dark-surface/95 px-3 py-2 shadow-xl">
       <p className="text-xs font-semibold text-dark-text">{label}</p>
       {payload.map(item => (
         <div key={item.dataKey} className="mt-1 flex items-center justify-between gap-5 text-xs">
@@ -294,7 +294,7 @@ export default function Vendas() {
         title="Cockpit executivo de vendas"
         description="Acompanhe receita, metas, performance por produto e os fechamentos que realmente movem o comercial."
         aside={(
-          <div className="rounded-[24px] border border-dark-border/60 bg-white/70 px-4 py-3 text-sm shadow-sm">
+          <div className="rounded-[24px] border border-dark-border/60 bg-dark-surface/70 px-4 py-3 text-sm shadow-sm">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-dark-muted">Meta operacional</p>
             <p className="mt-1 text-2xl font-black text-dark-text">{metaAtual}</p>
             <p className="mt-1 text-xs text-dark-muted">vendas alvo no período atual</p>
@@ -317,8 +317,8 @@ export default function Vendas() {
 
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <CrmSegmentedControl options={PERIOD_OPTIONS} value={periodo} onChange={setPeriodo} />
-        <div className="flex flex-wrap items-center gap-2 rounded-[22px] border border-dark-border/60 bg-white/70 px-3 py-2 shadow-sm">
-          <Flag className="h-4 w-4 text-brand-accent" />
+        <div className="flex flex-wrap items-center gap-2 rounded-[22px] border border-dark-border/60 bg-dark-surface/70 px-3 py-2 shadow-sm">
+          <Flag className="h-4 w-4 text-status-info" />
           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-dark-muted">Meta</span>
           <input
             type="number"
@@ -449,15 +449,15 @@ export default function Vendas() {
 
         <div className="space-y-4">
           <CrmSectionCard title="Meta e performance" subtitle="Acompanhamento de progresso do time nesta janela.">
-            <div className="rounded-[26px] border border-dark-border/50 bg-white/70 p-4">
+            <div className="rounded-[26px] border border-dark-border/50 bg-dark-surface/70 p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-dark-muted">Execução</p>
                   <p className="mt-2 text-3xl font-black text-dark-text">{progress}%</p>
                   <p className="mt-1 text-sm text-dark-muted">{stats.count} vendas registradas de uma meta de {metaAtual}.</p>
                 </div>
-                <div className="rounded-2xl bg-brand-accent/10 px-3 py-2 text-right">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-accent">Receita alvo</p>
+                <div className="rounded-2xl bg-status-info/10 px-3 py-2 text-right">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-status-info">Receita alvo</p>
                   <p className="mt-1 text-lg font-black text-dark-text">{formatMoney(stats.ticket * metaAtual)}</p>
                 </div>
               </div>
@@ -468,7 +468,7 @@ export default function Vendas() {
 
             <div className="mt-4 grid gap-3">
               {productPerformance.slice(0, 3).map(item => (
-                <div key={item.produto} className="rounded-[22px] border border-dark-border/50 bg-white/55 p-4">
+                <div key={item.produto} className="rounded-[22px] border border-dark-border/50 bg-dark-surface/55 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-dark-text">{item.label}</p>
@@ -494,7 +494,7 @@ export default function Vendas() {
             ) : (
               <div className="space-y-3">
                 {topClosings.map((sale, index) => (
-                  <div key={sale.id} className="rounded-[22px] border border-dark-border/50 bg-white/60 p-3">
+                  <div key={sale.id} className="rounded-[22px] border border-dark-border/50 bg-dark-surface/60 p-3">
                     <div className="flex items-start gap-3">
                       <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-amber-500/12 text-sm font-black text-amber-600">
                         {index + 1}

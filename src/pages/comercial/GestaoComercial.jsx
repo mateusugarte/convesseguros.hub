@@ -812,10 +812,10 @@ export default function GestaoComercial() {
           <CrmSectionCard title="Desempenho por vendedor" subtitle="Leitura rápida da produção e dos gargalos do time." className="md:col-span-2 xl:col-span-4">
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {teamOverview.map(item => (
-                <div key={item.id} className="rounded-[22px] border border-dark-border/50 bg-white/60 p-4">
+                <div key={item.id} className="rounded-[22px] border border-dark-border/50 bg-dark-surface/60 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <p className="font-semibold text-dark-text">{item.nome}</p>
-                    <span className="rounded-full bg-brand-accent/10 px-2 py-1 text-[11px] font-semibold text-brand-accent">
+                    <span className="rounded-full bg-status-info/10 px-2 py-1 text-[11px] font-semibold text-status-info">
                       {item.leads} leads
                     </span>
                   </div>
@@ -877,13 +877,13 @@ export default function GestaoComercial() {
                 </div>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
-                <button type="button" onClick={() => setIncludeRepassed(v => !v)} className={`rounded-2xl border px-3 py-2 text-left text-sm ${includeRepassed ? 'border-brand-accent bg-brand-accent/10 text-brand-accent' : 'border-dark-border text-dark-muted'}`}>
+                <button type="button" onClick={() => setIncludeRepassed(v => !v)} className={`rounded-2xl border px-3 py-2 text-left text-sm ${includeRepassed ? 'border-status-info bg-status-info/10 text-status-info' : 'border-dark-border text-dark-muted'}`}>
                   Incluir leads repassados
                 </button>
-                <button type="button" onClick={() => setIncludeContacted(v => !v)} className={`rounded-2xl border px-3 py-2 text-left text-sm ${includeContacted ? 'border-brand-accent bg-brand-accent/10 text-brand-accent' : 'border-dark-border text-dark-muted'}`}>
+                <button type="button" onClick={() => setIncludeContacted(v => !v)} className={`rounded-2xl border px-3 py-2 text-left text-sm ${includeContacted ? 'border-status-info bg-status-info/10 text-status-info' : 'border-dark-border text-dark-muted'}`}>
                   Incluir leads contatados
                 </button>
-                <button type="button" onClick={() => setOnlyNew(v => !v)} className={`rounded-2xl border px-3 py-2 text-left text-sm ${onlyNew ? 'border-brand-accent bg-brand-accent/10 text-brand-accent' : 'border-dark-border text-dark-muted'}`}>
+                <button type="button" onClick={() => setOnlyNew(v => !v)} className={`rounded-2xl border px-3 py-2 text-left text-sm ${onlyNew ? 'border-status-info bg-status-info/10 text-status-info' : 'border-dark-border text-dark-muted'}`}>
                   Somente leads novos
                 </button>
               </div>
@@ -895,7 +895,7 @@ export default function GestaoComercial() {
                       key={item}
                       type="button"
                       onClick={() => setObjective(item)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${objective === item ? 'bg-brand-accent text-white' : 'bg-slate-900/[0.04] text-dark-muted hover:text-dark-text'}`}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${objective === item ? 'bg-status-info text-white' : 'bg-slate-900/[0.04] text-dark-muted hover:text-dark-text'}`}
                     >
                       {item}
                     </button>
@@ -956,7 +956,7 @@ export default function GestaoComercial() {
                           return (
                             <tr
                               key={row.id}
-                              className={`border-b border-dark-border/40 align-top last:border-b-0 cursor-pointer ${selectedRowId === row.id ? 'bg-brand-accent/5' : 'hover:bg-white/60'}`}
+                              className={`border-b border-dark-border/40 align-top last:border-b-0 cursor-pointer ${selectedRowId === row.id ? 'bg-status-info/5' : 'hover:bg-dark-surface/60'}`}
                               onClick={() => setSelectedRowId(row.id)}
                             >
                               <td className="px-3 py-4">
@@ -965,7 +965,7 @@ export default function GestaoComercial() {
                                 <p className="mt-1 text-xs text-dark-muted">{row.produtoInteresse ? COMERCIAL_PRODUTO_OPTIONS.find(product => product.id === row.produtoInteresse)?.label || row.produtoInteresse : 'Sem produto'}</p>
                                 <div className="mt-2 flex flex-wrap gap-1.5">
                                   <span className="rounded-full bg-slate-900/[0.05] px-2 py-0.5 text-[10px] font-semibold text-dark-muted">Lista {generationCount || 0}x</span>
-                                  {existing?.responsavelId && <span className="rounded-full bg-brand-accent/10 px-2 py-0.5 text-[10px] font-semibold text-brand-accent">Repassado</span>}
+                                  {existing?.responsavelId && <span className="rounded-full bg-status-info/10 px-2 py-0.5 text-[10px] font-semibold text-status-info">Repassado</span>}
                                   {existing?.contatadoEm && <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">Contatado</span>}
                                 </div>
                               </td>
@@ -1006,7 +1006,7 @@ export default function GestaoComercial() {
               </div>
 
               <div className="space-y-3">
-                <div className="rounded-[22px] border border-dark-border/50 bg-white/60 p-4">
+                <div className="rounded-[22px] border border-dark-border/50 bg-dark-surface/60 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Área de tratamento</p>
                   {selectedDraft ? (
                     <div className="mt-3 space-y-3">
@@ -1054,23 +1054,23 @@ export default function GestaoComercial() {
 
           <CrmSectionCard title="Leads por vendedor" subtitle="Lista e kanban das carteiras atuais do time." className="xl:col-span-2">
             <div className="mb-4 flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => setViewMode('lista')} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${viewMode === 'lista' ? 'bg-brand-accent text-white' : 'bg-slate-900/[0.05] text-dark-muted'}`}>
+              <button type="button" onClick={() => setViewMode('lista')} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${viewMode === 'lista' ? 'bg-status-info text-white' : 'bg-slate-900/[0.05] text-dark-muted'}`}>
                 Lista
               </button>
-              <button type="button" onClick={() => setViewMode('kanban')} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${viewMode === 'kanban' ? 'bg-brand-accent text-white' : 'bg-slate-900/[0.05] text-dark-muted'}`}>
+              <button type="button" onClick={() => setViewMode('kanban')} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${viewMode === 'kanban' ? 'bg-status-info text-white' : 'bg-slate-900/[0.05] text-dark-muted'}`}>
                 Kanban
               </button>
             </div>
 
             <div className="space-y-4">
               {sellerBoards.map(member => (
-                <div key={member.id} className="rounded-[22px] border border-dark-border/50 bg-white/60 p-4">
+                <div key={member.id} className="rounded-[22px] border border-dark-border/50 bg-dark-surface/60 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="font-semibold text-dark-text">{member.nome}</p>
                       <p className="text-xs text-dark-muted">{member.leads.length} leads · {member.contato} contatados · {member.repassados} repassados</p>
                     </div>
-                    <span className="rounded-full bg-brand-accent/10 px-2 py-1 text-[11px] font-semibold text-brand-accent">
+                    <span className="rounded-full bg-status-info/10 px-2 py-1 text-[11px] font-semibold text-status-info">
                       {member.totalGenerations} gerações
                     </span>
                   </div>
@@ -1097,7 +1097,7 @@ export default function GestaoComercial() {
                               <td className="px-3 py-3 text-xs text-dark-muted">{formatPhone(lead.celular)} · {lead.email || '—'}</td>
                               <td className="px-3 py-3 text-xs text-dark-muted">
                                 <div className="flex flex-wrap gap-1.5">
-                                  {lead.listaGeradaCount > 0 && <span className="rounded-full bg-brand-accent/10 px-2 py-0.5 text-[10px] font-semibold text-brand-accent">Lista {lead.listaGeradaCount}x</span>}
+                                  {lead.listaGeradaCount > 0 && <span className="rounded-full bg-status-info/10 px-2 py-0.5 text-[10px] font-semibold text-status-info">Lista {lead.listaGeradaCount}x</span>}
                                   {lead.contatadoEm && <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Contatado</span>}
                                   {lead.repassadoEm && <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-700">Repassado</span>}
                                 </div>
@@ -1114,12 +1114,12 @@ export default function GestaoComercial() {
                           key={lead.id}
                           type="button"
                           onClick={() => navigate(`/comercial/leads/${lead.id}`)}
-                          className="rounded-[18px] border border-dark-border/50 bg-white/70 p-3 text-left transition-colors hover:border-brand-accent/40"
+                          className="rounded-[18px] border border-dark-border/50 bg-dark-surface/70 p-3 text-left transition-colors hover:border-status-info/40"
                         >
                           <p className="font-semibold text-dark-text">{lead.nome}</p>
                           <p className="mt-1 text-xs text-dark-muted">{lead.imobiliaria || lead.origem}</p>
                           <div className="mt-2 flex flex-wrap gap-1.5">
-                            {lead.listaGeradaCount > 0 && <span className="rounded-full bg-brand-accent/10 px-2 py-0.5 text-[10px] font-semibold text-brand-accent">Lista {lead.listaGeradaCount}x</span>}
+                            {lead.listaGeradaCount > 0 && <span className="rounded-full bg-status-info/10 px-2 py-0.5 text-[10px] font-semibold text-status-info">Lista {lead.listaGeradaCount}x</span>}
                             {lead.contatadoEm && <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Contatado</span>}
                             {lead.repassadoEm && <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-700">Repassado</span>}
                           </div>
@@ -1150,7 +1150,7 @@ export default function GestaoComercial() {
                       key={imob.id}
                       type="button"
                       onClick={() => navigate(`/imobiliarias/${imob.id}`)}
-                      className="w-full rounded-[22px] border border-dark-border/50 bg-white/60 p-4 text-left transition-colors hover:border-brand-accent/40"
+                      className="w-full rounded-[22px] border border-dark-border/50 bg-dark-surface/60 p-4 text-left transition-colors hover:border-status-info/40"
                     >
                       <div className="flex items-start gap-4">
                         <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-dark-border/40 bg-white">
@@ -1173,7 +1173,7 @@ export default function GestaoComercial() {
                           <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-dark-muted">
                             <span className="rounded-full bg-slate-900/[0.05] px-2 py-1">Comissão {flow.recebeComissao ? 'sim' : 'não'}</span>
                             {flow.pctComissao && <span className="rounded-full bg-slate-900/[0.05] px-2 py-1">{flow.pctComissao}%</span>}
-                            <span className="rounded-full bg-brand-accent/10 px-2 py-1 text-brand-accent">{apolicesPorImob[String(imob.nome_canonico || '').toLowerCase()] || 0} apólices</span>
+                            <span className="rounded-full bg-status-info/10 px-2 py-1 text-status-info">{apolicesPorImob[String(imob.nome_canonico || '').toLowerCase()] || 0} apólices</span>
                           </div>
                           <div className="mt-3 flex flex-wrap gap-2">
                             <button
@@ -1207,9 +1207,9 @@ export default function GestaoComercial() {
               {[...partnerOverview]
                 .sort((a, b) => (apolicesPorImob[b.nome.toLowerCase()] || 0) - (apolicesPorImob[a.nome.toLowerCase()] || 0))
                 .map(item => (
-                <div key={item.nome} className="rounded-[18px] border border-dark-border/50 bg-white/60 p-4">
+                <div key={item.nome} className="rounded-[18px] border border-dark-border/50 bg-dark-surface/60 p-4">
                   <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-brand-accent" />
+                    <Building2 className="h-4 w-4 text-status-info" />
                     <p className="font-semibold text-dark-text">{item.nome}</p>
                   </div>
                   <p className="mt-2 text-sm text-dark-muted">{apolicesPorImob[item.nome.toLowerCase()] || 0} apólices emitidas conosco.</p>
@@ -1224,7 +1224,7 @@ export default function GestaoComercial() {
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
           <CrmSectionCard title="Planning & Growth" subtitle="Define foco, cadência e prioridades do mês.">
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="rounded-[22px] border border-dark-border/50 bg-white/60 p-4 md:col-span-2">
+              <div className="rounded-[22px] border border-dark-border/50 bg-dark-surface/60 p-4 md:col-span-2">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Mês de planejamento</p>
@@ -1233,22 +1233,22 @@ export default function GestaoComercial() {
                   <span className="badge badge-info">Objetivos por setor</span>
                 </div>
               </div>
-              <div className="rounded-[22px] border border-dark-border/50 bg-white/60 p-4">
+              <div className="rounded-[22px] border border-dark-border/50 bg-dark-surface/60 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Setor de fichas</p>
                 <p className="mt-2 text-sm font-semibold text-dark-text">Objetivo de fichas aprovadas e fichas passadas por mês.</p>
                 <input className="input mt-3" placeholder="Meta do setor" />
               </div>
-              <div className="rounded-[22px] border border-dark-border/50 bg-white/60 p-4">
+              <div className="rounded-[22px] border border-dark-border/50 bg-dark-surface/60 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Setor de emissões</p>
                 <p className="mt-2 text-sm font-semibold text-dark-text">Objetivo de emissões feitas, com foco em prêmio líquido.</p>
                 <input className="input mt-3" placeholder="Meta do setor" />
               </div>
-              <div className="rounded-[22px] border border-dark-border/50 bg-white/60 p-4">
+              <div className="rounded-[22px] border border-dark-border/50 bg-dark-surface/60 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Renovação AUTO</p>
                 <p className="mt-2 text-sm font-semibold text-dark-text">Objetivo de lucro mensal baseado em prêmio líquido e comissão.</p>
                 <input className="input mt-3" placeholder="Meta de lucro" />
               </div>
-              <div className="rounded-[22px] border border-dark-border/50 bg-white/60 p-4">
+              <div className="rounded-[22px] border border-dark-border/50 bg-dark-surface/60 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Comercial</p>
                 <p className="mt-2 text-sm font-semibold text-dark-text">Definir objetivos por vendedor, por origem e por produto.</p>
                 <input className="input mt-3" placeholder="Meta comercial" />
@@ -1262,7 +1262,7 @@ export default function GestaoComercial() {
             ) : (
               <div className="space-y-3">
                 {history.map(item => (
-                  <div key={item.id} className="rounded-[18px] border border-dark-border/50 bg-white/60 p-4">
+                  <div key={item.id} className="rounded-[18px] border border-dark-border/50 bg-dark-surface/60 p-4">
                     <div className="flex items-center justify-between gap-3">
                       <p className="font-semibold text-dark-text">{sourceLabel(item.source)}</p>
                       <span className="text-xs text-dark-muted">{format(parseISO(item.createdAt), 'dd/MM HH:mm', { locale: ptBR })}</span>

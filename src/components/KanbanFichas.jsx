@@ -33,15 +33,13 @@ const COLUMNS = [
   { id: 'pendente',   label: 'Pendentes',     color: '#4c67b0' },
   { id: 'assumidas',  label: 'Assumidas',     color: '#000079' },
   { id: 'minhas',     label: 'Minhas Fichas', color: '#a2d6da' },
-  { id: 'em_analise', label: 'Em AnÃ¡lise',    color: '#4b6cc2' },
+  { id: 'em_analise', label: 'Em Análise',    color: '#4b6cc2' },
   { id: 'aprovado',   label: 'Aprovadas',     color: '#0f766e' },
   { id: 'recusado',   label: 'Recusadas',     color: '#8b1e4e' },
   { id: 'cancelado',  label: 'Canceladas',    color: '#6B7280' },
   { id: 'emitido',    label: 'Emitidas',      color: '#2247aa' },
   { id: 'expirada',   label: 'Expiradas',     color: '#6B7280' },
 ]
-
-const LOWER_CARD_COLUMNS = new Set(['em_analise', 'aprovado', 'recusado', 'cancelado', 'emitido'])
 
 const COL_TO_STATUS = {
   pendente: 'pendente', assumidas: 'em_cotacao', minhas: 'em_cotacao',
@@ -61,7 +59,7 @@ const PERIODOS = [
   { key: 'todos',  label: 'Todas' },
   { key: 'hoje',   label: 'Hoje' },
   { key: 'semana', label: 'Semana' },
-  { key: 'mes',    label: 'MÃªs' },
+  { key: 'mes',    label: 'Mês' },
   { key: 'custom', label: 'Personalizado' },
 ]
 
@@ -151,12 +149,12 @@ function nomePrincipal(ficha) {
       || rd.empresa
       || rd.nome_fantasia
       || rd.nome
-    ) || 'Â—'
+    ) || '—'
   }
-  return normalizeDisplayText(ficha.nome_interessado || rd.nome || rd.nome_interessado) || 'Â—'
+  return normalizeDisplayText(ficha.nome_interessado || rd.nome || rd.nome_interessado) || '—'
 }
 
-// -- FichaCard (visual puro, sem lÃ³gica de drag) -------------------------------
+// -- FichaCard (visual puro, sem lógica de drag) -------------------------------
 
 function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isDragOverlay, isNew, resolverNome, resolveImobiliariaInfo }) {
   const ProdIcon  = PRODUTO_ICON[ficha.produto] || LayoutGrid
@@ -204,9 +202,9 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
           {nomePrincipal(ficha)}
         </p>
 
-        {/* ImobiliÃ¡ria */}
+        {/* Imobiliária */}
         <ImobiliariaIdentity
-          nome={(resolverNome ? resolverNome(ficha.imobiliaria) : ficha.imobiliaria) || 'Â—'}
+          nome={(resolverNome ? resolverNome(ficha.imobiliaria) : ficha.imobiliaria) || '—'}
           imagemUrl={imobiliaria?.imagem_url}
           imagemPath={imobiliaria?.imagem_path}
           size="sm"
@@ -224,7 +222,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
           <FichaStatusBadge ficha={ficha} />
         </div>
 
-        {/* RodapÃ©: orÃ§amentista + aÃ§Ãµes */}
+        {/* Rodapé: orçamentista + ações */}
         <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-dark-border/40 mt-auto">
           {nome ? (
             <div className="flex items-center gap-1.5 min-w-0">
@@ -259,7 +257,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
           </div>
         </div>
 
-        {/* BotÃ£o retorno Â— visÃ­vel em todos exceto pendente */}
+        {/* Botão retorno — visível em todos exceto pendente */}
         {showRetorno && !isDragOverlay && (
           <button
             onPointerDown={e => e.stopPropagation()}
@@ -282,7 +280,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, onToggleRetorno, isD
 }
 
 // -- DraggableCard -------------------------------------------------------------
-// O drag fica no handle para manter o overlay estÃ¡vel durante o movimento
+// O drag fica no handle para manter o overlay estável durante o movimento
 
 function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, onToggleRetorno, isNew, resolverNome, resolveImobiliariaInfo }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ficha.id })
@@ -343,7 +341,7 @@ function DroppableColumn({
         >
           <button
             onClick={onToggleCollapse}
-            title={`${column.label} (${fichas.length}) Â— expandir`}
+            title={`${column.label} (${fichas.length}) — expandir`}
             className="flex flex-col items-center gap-1.5 hover:opacity-80 transition-opacity"
           >
             <div
@@ -431,14 +429,16 @@ function DroppableColumn({
         </div>
       </div>
 
-      {/* Body Â— zona de drop */}
+      {/* Body — zona de drop */}
       <div
         ref={setNodeRef}
-        className="kanban-col-body flex-1 p-2 space-y-2 overflow-y-auto"
+        className="kanban-col-body flex flex-1 flex-col overflow-y-auto"
         style={{
           border:          isOver ? `1.5px dashed ${column.color}70` : '1px solid rgb(var(--color-border))',
           borderTop:       'none',
           borderRadius:    '0 0 18px 18px',
+          padding:         '16px 12px 12px',
+          gap:             '10px',
           backgroundColor: isOver ? column.color + '0b' : 'rgb(var(--color-surface2) / 0.28)',
           boxShadow:       isOver ? `inset 0 0 0 1px ${column.color}20, 0 0 24px ${column.color}12` : '0 12px 30px rgba(15,23,42,0.05)',
           transition:      'border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease',
@@ -482,7 +482,7 @@ function ModalConfirmarRecusado({ onConfirmar, salvando }) {
         <p className="text-xs text-dark-muted">O retorno foi enviado ao cliente?</p>
         <div className="flex gap-3">
           {[{ v: true, l: 'Sim', cls: 'border-status-success text-status-success bg-status-success/20' },
-            { v: false, l: 'NÃ£o', cls: 'border-status-danger text-status-danger bg-status-danger/20' }].map(({ v, l, cls }) => (
+            { v: false, l: 'Não', cls: 'border-status-danger text-status-danger bg-status-danger/20' }].map(({ v, l, cls }) => (
             <button key={l} onClick={() => setRetorno(v)}
               className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
                 retorno === v ? cls : 'border-dark-border text-dark-muted hover:border-dark-text'
@@ -554,7 +554,7 @@ function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) 
   return (
     <div className="glass-panel rounded-2xl overflow-hidden animate-fade-in">
       <div className="px-6 py-4 border-b border-dark-border">
-        <p className="font-semibold text-dark-text">Confirmar AprovaÃ§Ã£o</p>
+        <p className="font-semibold text-dark-text">Confirmar Aprovação</p>
       </div>
       <div className="px-6 py-5 space-y-4">
         <div>
@@ -576,7 +576,7 @@ function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) 
           </div>
           <div>
             <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
-              NÂ° OrÃ§amento <span className="text-status-danger">*</span>
+              N° Orçamento <span className="text-status-danger">*</span>
             </label>
             <input
               value={numeroOrcamento} onChange={e => setNumeroOrcamento(e.target.value)}
@@ -590,7 +590,7 @@ function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) 
           </label>
           <div className="flex gap-3">
             {[{ v: true, l: 'Sim', cls: 'border-status-success text-status-success bg-status-success/20' },
-              { v: false, l: 'NÃ£o', cls: 'border-status-danger text-status-danger bg-status-danger/20' }].map(({ v, l, cls }) => (
+              { v: false, l: 'Não', cls: 'border-status-danger text-status-danger bg-status-danger/20' }].map(({ v, l, cls }) => (
               <button key={l} onClick={() => setRetornoEnviado(v)}
                 className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
                   retornoEnviado === v ? cls : 'border-dark-border text-dark-muted hover:border-dark-text'
@@ -606,7 +606,7 @@ function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) 
             onChange={e => setPassadoPelaImobiliaria(e.target.checked)}
             className="w-5 h-5 rounded accent-brand-accent"
           />
-          <span className="text-sm text-dark-text">Passado pela imobiliÃ¡ria?</span>
+          <span className="text-sm text-dark-text">Passado pela imobiliária?</span>
         </label>
       </div>
       <div className="flex justify-end gap-3 px-6 pb-5">
@@ -622,7 +622,7 @@ function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) 
           disabled={!valido || salvando}
           className="btn-primary text-sm"
         >
-          {salvando ? 'Salvando...' : 'AvanÃ§ar'}
+          {salvando ? 'Salvando...' : 'Avançar'}
         </button>
       </div>
     </div>
@@ -921,7 +921,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     const novoStatus = COL_TO_STATUS[targetCol]
     if (!novoStatus) return
 
-    // Drag para recusado ? pede confirmaÃ§Ã£o
+    // Drag para recusado ? pede confirmação
     if (targetCol === 'recusado') {
       setPendingRecusado({ fichaId, fichaOriginal: ficha })
       return
@@ -932,7 +932,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
       return
     }
 
-    // Drag para aprovado ? pede seguradora, parcela, orÃ§amento
+    // Drag para aprovado ? pede seguradora, parcela, orçamento
     if (targetCol === 'aprovado') {
       setPendingAprovado({ fichaId, fichaOriginal: ficha })
       return
@@ -1075,11 +1075,11 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
             Reorganizando colunas
           </span>
-          <span className="text-brand-accent/70">A ordem estÃ¡ sendo atualizada</span>
+          <span className="text-brand-accent/70">A ordem está sendo atualizada</span>
         </div>
       )}
 
-      {/* Filtro de perÃ­odo */}
+      {/* Filtro de período */}
       {!useExternal && (
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-dark-border/60 bg-dark-surface2/50 px-3 py-2 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
           <div className="flex items-center gap-0.5 bg-dark-surface/70 border border-dark-border rounded-full p-0.5 shadow-sm">
@@ -1101,7 +1101,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
             <div className="flex items-center gap-1.5 text-xs text-dark-muted rounded-full border border-dark-border bg-dark-surface/70 px-3 py-1.5">
               <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
               <DatePicker value={customFrom} onChange={v => setCustomFrom(v)} />
-              <span>Â—</span>
+              <span>—</span>
               <DatePicker value={customTo} onChange={v => setCustomTo(v)} />
             </div>
           )}
@@ -1119,7 +1119,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
       {useExternal && (
         <div className="flex items-center justify-between rounded-2xl border border-dark-border/60 bg-dark-surface2/50 px-3 py-2 text-xs text-dark-muted shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
           <span className="inline-flex items-center gap-1 rounded-full border border-dark-border bg-dark-surface/75 px-3 py-1 font-medium">
-            {fichas.length} ficha{fichas.length !== 1 ? 's' : ''} neste perÃ­odo
+            {fichas.length} ficha{fichas.length !== 1 ? 's' : ''} neste período
           </span>
           <button onClick={load} className="flex items-center gap-1 rounded-full border border-dark-border bg-dark-surface/70 px-3 py-1.5 hover:text-dark-text transition-colors">
             <RefreshCw className="w-3.5 h-3.5" /> Atualizar
@@ -1240,6 +1240,10 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     </div>
   )
 }
+
+
+
+
 
 
 

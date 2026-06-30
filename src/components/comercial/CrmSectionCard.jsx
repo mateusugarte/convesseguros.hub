@@ -14,7 +14,7 @@ export default function CrmSectionCard({
   return (
     <section
       className={cx(
-        'overflow-hidden rounded-[28px] border border-dark-border/60 bg-white/70 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur-sm',
+        'overflow-hidden rounded-[28px] border border-dark-border/60 bg-dark-surface/70 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur-sm',
         className
       )}
     >

@@ -58,7 +58,7 @@ function CampoEditavel({ label, value, onSave }) {
       <p className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider mb-1">{label}</p>
       <p
         onClick={() => { setDraft(value || ''); setEditing(true) }}
-        className="text-sm text-dark-text cursor-pointer group flex items-center gap-1.5 hover:text-brand-accent transition-colors"
+        className="text-sm text-dark-text cursor-pointer group flex items-center gap-1.5 hover:text-status-info transition-colors"
       >
         <span>{value || <span className="italic text-dark-muted/40">—</span>}</span>
         <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-40 flex-shrink-0" />
@@ -235,7 +235,7 @@ export default function ImobiliariaDetalhe() {
           <DataCard title="Imagem" description="Imagem usada nos cards e seletores da imobiliária.">
             <div className="flex items-center gap-4 flex-wrap">
               <div className="space-y-1">
-                <div className="w-24 h-24 rounded-2xl border border-dark-border bg-white/70 overflow-hidden flex items-center justify-center">
+                <div className="w-24 h-24 rounded-2xl border border-dark-border bg-dark-surface/70 overflow-hidden flex items-center justify-center">
                 {getEntityImageUrl(imob.imagem_path, imob.imagem_url) ? (
                   <img
                     src={getEntityImageUrl(imob.imagem_path, imob.imagem_url)}

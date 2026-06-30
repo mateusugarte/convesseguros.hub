@@ -211,7 +211,7 @@ export default function ApolicesLista() {
             <button
               key={opt.key}
               onClick={() => setFiltro(opt.key)}
-              className={`rounded-2xl px-3 py-2 text-xs font-medium transition-colors ${filtro === opt.key ? 'bg-brand-secondary text-white' : 'border border-dark-border text-dark-muted hover:text-dark-text'}`}
+              className={`rounded-2xl px-3 py-2 text-xs font-medium transition-colors ${filtro === opt.key ? 'bg-brand-primary text-white' : 'border border-dark-border text-dark-muted hover:text-dark-text'}`}
             >
               {opt.label}
             </button>
@@ -260,7 +260,7 @@ export default function ApolicesLista() {
         )}
 
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={buscar} className="inline-flex items-center gap-1.5 rounded-2xl bg-brand-secondary px-4 py-2 text-xs font-semibold text-white transition-colors hover:opacity-90">
+          <button onClick={buscar} className="inline-flex items-center gap-1.5 rounded-2xl bg-brand-primary px-4 py-2 text-xs font-semibold text-white transition-colors hover:opacity-90">
             <Filter className="h-3.5 w-3.5" /> Buscar
           </button>
           <button onClick={exportarCSV} className="inline-flex items-center gap-1.5 rounded-2xl border border-dark-border px-4 py-2 text-xs text-dark-muted transition-colors hover:border-brand-accent/50 hover:text-dark-text">

@@ -438,7 +438,7 @@ function RelatorioCard({ ficha, onOpen, onOpenPolicy, selected, onToggleSelect, 
               className="rounded-lg p-1 hover:bg-dark-surface2"
               aria-label="Selecionar card"
             >
-              {selected ? <CheckSquare className="h-4 w-4 text-brand-secondary" /> : <Square className="h-4 w-4 text-dark-muted" />}
+              {selected ? <CheckSquare className="h-4 w-4 text-brand-primary" /> : <Square className="h-4 w-4 text-dark-muted" />}
             </button>
             <span className="inline-flex rounded-full px-2 py-1 text-[10px] font-semibold" style={{ background: `${prodColor}20`, color: prodColor }}>
               {normalizeDisplayText(ficha.produto) || ficha.produto || 'Fiança'}
@@ -487,7 +487,7 @@ function RelatorioCard({ ficha, onOpen, onOpenPolicy, selected, onToggleSelect, 
             <button
               type="button"
               onClick={event => { event.stopPropagation(); onOpen(ficha.id) }}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-dark-border/60 bg-white/85 px-2.5 py-2 text-[10px] font-semibold text-dark-text transition-colors hover:border-brand-accent/45 hover:text-brand-accent"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-dark-border/60 bg-dark-surface/85 px-2.5 py-2 text-[10px] font-semibold text-dark-text transition-colors hover:border-brand-accent/45 hover:text-brand-accent"
             >
               <FileText className="h-3.5 w-3.5" /> Abrir ficha
             </button>
@@ -495,7 +495,7 @@ function RelatorioCard({ ficha, onOpen, onOpenPolicy, selected, onToggleSelect, 
               type="button"
               disabled={!ficha?._apolice?.id}
               onClick={event => { event.stopPropagation(); if (ficha?._apolice?.id) onOpenPolicy?.(ficha._apolice.id) }}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-secondary px-2.5 py-2 text-[10px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-primary px-2.5 py-2 text-[10px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ExternalLink className="h-3.5 w-3.5" /> Abrir apolice
             </button>
@@ -588,7 +588,7 @@ function KanbanColuna({
               type="button"
               onClick={event => { event.stopPropagation(); onConfirmCobranca() }}
               disabled={!canConfirmCobranca}
-              className="rounded-lg bg-brand-secondary px-2.5 py-1 text-[10px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
+              className="rounded-lg bg-brand-primary px-2.5 py-1 text-[10px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
               title="Registrar envio de cobran?a para as fichas selecionadas"
             >
               Marcar envio{pendingCobrancaCount > 0 ? ` (${pendingCobrancaCount})` : ''}
@@ -632,14 +632,14 @@ function KanbanColuna({
 function PeriodControl({ periodo, ano, mes, anos, onPeriod, onAno, onMes }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="flex items-center gap-1 rounded-2xl border border-dark-border/60 bg-white/70 p-1">
+      <div className="flex items-center gap-1 rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-1">
         {PERIOD_OPTIONS.map(opt => (
           <button
             key={opt.value}
             type="button"
             onClick={() => onPeriod(opt.value)}
             className={`rounded-xl px-3 py-1.5 text-xs font-medium transition-all ${
-              periodo === opt.value ? 'bg-brand-secondary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
+              periodo === opt.value ? 'bg-brand-primary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
             }`}
           >
             {opt.label}
@@ -664,7 +664,7 @@ function PeriodControl({ periodo, ano, mes, anos, onPeriod, onAno, onMes }) {
               type="button"
               onClick={() => onMes(index + 1)}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                mes === index + 1 ? 'bg-brand-secondary text-white shadow-sm' : 'text-dark-text hover:bg-dark-surface2'
+                mes === index + 1 ? 'bg-brand-primary text-white shadow-sm' : 'text-dark-text hover:bg-dark-surface2'
               }`}
             >
               {label}
@@ -888,7 +888,7 @@ function ModalConfirmarCobranca({ fichas, salvando, onCancelar, onConfirmar }) {
 
           <div className="space-y-2">
             {preview.map(ficha => (
-              <div key={ficha.id} className="rounded-2xl border border-dark-border/60 bg-white/70 px-3 py-2">
+              <div key={ficha.id} className="rounded-2xl border border-dark-border/60 bg-dark-surface/70 px-3 py-2">
                 <p className="text-sm font-semibold text-dark-text">{getNomeFicha(ficha)}</p>
                 <p className="text-[11px] text-dark-muted">{getCanonicalImobiliariaNome(ficha)}</p>
               </div>
@@ -1774,7 +1774,7 @@ export default function Relatorio() {
       <DataCard
         title="Métricas do período"
         subtitle="Leitura executiva do recorte selecionado."
-        className="border-brand-secondary/20 bg-[linear-gradient(135deg,rgba(0,0,121,0.06),rgba(255,255,255,0.98),rgba(34,71,170,0.08))] shadow-[0_20px_48px_rgba(15,23,42,0.08)]"
+        className="border-brand-secondary/20 shadow-[0_20px_48px_rgba(15,23,42,0.08)]"
       >
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <MetricCard label="Fichas aprovadas" value={summary.fichasAprovadas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
@@ -1799,7 +1799,7 @@ export default function Relatorio() {
             const approved = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && getColuna(item) === 'aprovada').length
             const pending = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && !isEmitida(item)).length
             return (
-              <div key={seg.id} className="rounded-3xl border border-dark-border/60 bg-white/60 p-4">
+              <div key={seg.id} className="rounded-3xl border border-dark-border/60 bg-dark-surface/60 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <SeguradoraBadge nome={seg.nome} logoUrl={seg.logoUrl} logoPath={seg.logoPath} size="md" />
                   <span className="badge badge-info">{approved} aprovadas</span>
@@ -1814,7 +1814,7 @@ export default function Relatorio() {
       <DataCard
         title="Imobiliárias"
         subtitle="Clique em uma imobiliária para abrir o relatório individual."
-        className="border-dark-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.98))] shadow-[0_18px_40px_rgba(15,23,42,0.08)]"
+        className="border-dark-border/70 shadow-[0_18px_40px_rgba(15,23,42,0.08)]"
         actions={
           <div className="relative min-w-[260px]">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-dark-muted" />
@@ -1849,7 +1849,7 @@ export default function Relatorio() {
                 ? 'group rounded-[28px] border border-orange-300 bg-[linear-gradient(180deg,rgba(255,247,237,0.98),rgba(254,215,170,0.35))] p-4 text-left transition-all hover:-translate-y-0.5 hover:border-orange-400 hover:shadow-[0_18px_36px_rgba(249,115,22,0.18)] shadow-[0_16px_34px_rgba(249,115,22,0.12)]'
                 : hasPending
                   ? 'group rounded-[28px] border border-brand-accent/30 bg-[linear-gradient(180deg,rgba(239,246,255,0.98),rgba(219,234,254,0.88))] p-4 text-left transition-all hover:-translate-y-0.5 hover:border-brand-accent/50 hover:shadow-[0_18px_36px_rgba(34,71,170,0.16)] shadow-[0_16px_34px_rgba(34,71,170,0.10)]'
-                  : 'group rounded-[28px] border border-dark-border/60 bg-white/80 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-brand-accent/40 hover:shadow-sm'
+                  : 'group rounded-[28px] border border-dark-border/60 bg-dark-surface/80 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-brand-accent/40 hover:shadow-sm'
             return (
               <div
                 key={imob.id}
@@ -1884,7 +1884,7 @@ export default function Relatorio() {
                     }}
                     className={cobrancaDone
                       ? 'inline-flex items-center gap-2 rounded-full border border-orange-300 bg-orange-100 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-orange-800'
-                      : 'inline-flex items-center gap-2 rounded-full border border-dark-border/70 bg-white/85 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted hover:border-brand-accent/35 hover:text-dark-text'}
+                      : 'inline-flex items-center gap-2 rounded-full border border-dark-border/70 bg-dark-surface/85 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted hover:border-brand-accent/35 hover:text-dark-text'}
                     aria-pressed={cobrancaDone}
                   >
                     <span className={`h-2.5 w-2.5 rounded-full ${cobrancaDone ? 'bg-orange-500' : 'bg-slate-300'}`} />
@@ -1907,22 +1907,22 @@ export default function Relatorio() {
                     </span>
                   )}
                   {!requiresSend && hasPending && (
-                    <span className="inline-flex rounded-full bg-white/85 px-2.5 py-1 text-[10px] font-semibold text-brand-accent shadow-sm">
+                    <span className="inline-flex rounded-full bg-dark-surface/85 px-2.5 py-1 text-[10px] font-semibold text-dark-text shadow-sm">
                       Pendências: {pendingCount}
                     </span>
                   )}
                 </div>
 
                 <div className="mt-4 grid grid-cols-3 gap-2 text-[11px]">
-                  <div className="rounded-2xl bg-white/70 px-3 py-2">
+                  <div className="rounded-2xl bg-dark-surface/70 px-3 py-2">
                     <p className="text-dark-muted">Aprovadas</p>
                     <p className="mt-1 text-sm font-semibold text-dark-text">{imobMetrics.aprovadas}</p>
                   </div>
-                  <div className="rounded-2xl bg-white/70 px-3 py-2">
+                  <div className="rounded-2xl bg-dark-surface/70 px-3 py-2">
                     <p className="text-dark-muted">Cobrança</p>
                     <p className="mt-1 text-sm font-semibold text-dark-text">{imobMetrics.cobranca}</p>
                   </div>
-                  <div className="rounded-2xl bg-white/70 px-3 py-2">
+                  <div className="rounded-2xl bg-dark-surface/70 px-3 py-2">
                     <p className="text-dark-muted">Emitidas</p>
                     <p className="mt-1 text-sm font-semibold text-dark-text">{imobMetrics.emitidas}</p>
                   </div>
@@ -1982,9 +1982,9 @@ export default function Relatorio() {
       <DataCard title="Ranking de eficiência" subtitle="Pontuação baseada em aprovação, conversão, recuperação e velocidade.">
         <div className="space-y-2">
           {eficienciaRows.map((row, index) => (
-            <div key={row.nome} className="flex items-center justify-between rounded-2xl border border-dark-border/50 bg-white/60 px-4 py-3">
+            <div key={row.nome} className="flex items-center justify-between rounded-2xl border border-dark-border/50 bg-dark-surface/60 px-4 py-3">
               <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-secondary/10 text-xs font-bold text-brand-secondary">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-secondary/10 text-xs font-bold text-brand-primary">
                   {index + 1}
                 </span>
                 <div>

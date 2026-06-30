@@ -55,7 +55,7 @@ function ApoliceEditor({ apolice, onSave, saving }) {
         type="button"
         onClick={() => onSave(draft)}
         disabled={saving}
-        className="inline-flex items-center justify-center gap-1.5 rounded-2xl bg-brand-secondary px-3 py-2 text-xs font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
+        className="inline-flex items-center justify-center gap-1.5 rounded-2xl bg-brand-primary px-3 py-2 text-xs font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
       >
         <Save className="h-3.5 w-3.5" />
         {saving ? 'Salvando...' : 'Salvar'}
@@ -71,7 +71,7 @@ function EmissionRow({ apolice, onSaveNumero, savingId, onOpen }) {
   const isSaving = savingId === apolice.id
 
   return (
-    <div className="rounded-3xl border border-dark-border/70 bg-white/80 p-4 shadow-sm">
+    <div className="rounded-3xl border border-dark-border/70 bg-dark-surface/80 p-4 shadow-sm">
       <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">

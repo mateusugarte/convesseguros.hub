@@ -4,7 +4,7 @@ function cx(...parts) {
 
 export default function CrmSegmentedControl({ options, value, onChange, className = '' }) {
   return (
-    <div className={cx('inline-flex flex-wrap rounded-2xl border border-dark-border/60 bg-white/70 p-1 shadow-sm', className)}>
+    <div className={cx('inline-flex flex-wrap rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-1 shadow-sm', className)}>
       {options.map(option => {
         const active = option.value === value
         return (

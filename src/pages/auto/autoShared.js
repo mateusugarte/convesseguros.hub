@@ -87,8 +87,8 @@ export function monthLabelFromKey(key) {
 
 export function toneClasses(tone) {
   const tones = {
-    accent: 'bg-brand-accent/10 text-brand-accent border-brand-accent/15',
-    secondary: 'bg-brand-secondary/10 text-brand-secondary border-brand-secondary/15',
+    accent: 'bg-brand-accent/10 text-status-info border-brand-accent/15',
+    secondary: 'bg-brand-secondary/10 text-status-info border-brand-secondary/15',
     success: 'bg-status-success/10 text-status-success border-status-success/15',
     warning: 'bg-status-warning/10 text-status-warning border-status-warning/15',
     danger: 'bg-status-danger/10 text-status-danger border-status-danger/15',
@@ -105,6 +105,6 @@ export function statusToneClass(tone) {
     case 'danger':
       return 'bg-status-danger/10 text-status-danger border-status-danger/15'
     default:
-      return 'bg-brand-secondary/10 text-brand-secondary border-brand-secondary/15'
+      return 'bg-brand-secondary/10 text-status-info border-brand-secondary/15'
   }
 }

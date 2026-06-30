@@ -310,7 +310,7 @@ function CardEmissao({ emissao, onDragStart, onClick }) {
           <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
             isRenovacao
               ? 'bg-status-success/10 text-status-success'
-              : 'bg-brand-secondary/10 text-brand-secondary'
+              : 'bg-brand-secondary/10 text-status-info'
           }`}>
             {isRenovacao ? 'Renovacao' : 'Novo'}
           </span>
@@ -348,8 +348,9 @@ function BoolRow({ label, value }) {
 
 // ─── Modal Detalhe ──────────────────────────────────────────────────────────
 
-function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice }) {
+function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, onEmitirApolice }) {
   const c = emissao.cotacoes_auto || {}
+  const temCotacao = Boolean(emissao.cotacoes_auto?.id || emissao.cotacao_id)
   const nome = nomeEmissao(emissao)
   const tipo = (c.tipo || emissao.tipo) === 'renovacao' ? 'Renovacao' : 'Novo'
   const seguradoras = Array.isArray(emissao.seguradoras_cotadas) ? emissao.seguradoras_cotadas : []
@@ -366,11 +367,11 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">Detalhe do cliente</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-info">Detalhe do cliente</span>
               <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                 (c.tipo || emissao.tipo) === 'renovacao'
                   ? 'bg-status-success/10 text-status-success'
-                  : 'bg-brand-secondary/10 text-brand-secondary'
+                  : 'bg-brand-secondary/10 text-status-info'
               }`}>{tipo}</span>
               {emissao.resultado && (
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
@@ -386,9 +387,16 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
               {(emissao.placa || c.placa) ? ` · Placa ${emissao.placa || c.placa}` : ''}
             </p>
           </div>
-          <button onClick={onClose} className="rounded-full p-2 hover:bg-dark-border/40 transition-colors shrink-0">
-            <X className="w-5 h-5 text-dark-muted" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {temCotacao && onAbrirCotacao && (
+              <button onClick={onAbrirCotacao} className="btn-secondary text-xs">
+                Ver cotacao completa
+              </button>
+            )}
+            <button onClick={onClose} className="rounded-full p-2 hover:bg-dark-border/40 transition-colors">
+              <X className="w-5 h-5 text-dark-muted" />
+            </button>
+          </div>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
@@ -466,7 +474,7 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
               <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradoras cotadas</p>
                 <div className="space-y-3">
                   {seguradoras.map((seg, idx) => (
-                    <div key={idx} className="rounded-2xl border border-dark-border/60 bg-white/60 p-3">
+                    <div key={idx} className="rounded-2xl border border-dark-border/60 bg-dark-surface/60 p-3">
                       <p className="font-semibold text-sm text-dark-text">{seg.nome || `Seguradora ${idx + 1}`}</p>
                       <div className="mt-2 grid gap-x-4 gap-y-1 grid-cols-2 text-xs text-dark-muted">
                         {seg.valor_total > 0 && <span>Valor total: {formatMoney(seg.valor_total)}</span>}
@@ -501,14 +509,14 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
 
           <aside className="space-y-4">
             <div className="rounded-3xl border border-brand-secondary/15 bg-brand-secondary/5 p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-secondary">Resumo da cotacao</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-status-info">Resumo da cotacao</p>
               <p className="mt-2 text-lg font-semibold text-dark-text">{etapaAtual}</p>
               <div className="mt-4 grid gap-3">
-                <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3">
+                <div className="rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Coluna atual</p>
                   <p className="mt-1 text-sm font-medium text-dark-text">{colunaAtual}</p>
                 </div>
-                <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-3">
+                <div className="rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Tipo</p>
                   <p className="mt-1 text-sm font-medium text-dark-text">{tipo}</p>
                 </div>
@@ -524,7 +532,7 @@ function ModalDetalhe({ emissao, onClose, onRegistrarResultado, onEmitirApolice 
                 <button
                   type="button"
                   onClick={() => onRegistrarResultado?.(emissao)}
-                  className="w-full rounded-2xl border border-brand-secondary/20 bg-white/75 px-4 py-3 text-left transition-colors hover:border-brand-secondary/40 hover:bg-white"
+                  className="w-full rounded-2xl border border-brand-secondary/20 bg-dark-surface/75 px-4 py-3 text-left transition-colors hover:border-brand-secondary/40 hover:bg-white"
                 >
                   <p className="text-sm font-semibold text-dark-text">Registrar resultado da cotacao</p>
                   <p className="mt-1 text-xs text-dark-muted">Seleciona aprovacao ou recusa e salva as seguradoras cotadas.</p>
@@ -569,7 +577,7 @@ function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
   return (
     <div className="rounded-3xl border border-brand-secondary/20 bg-brand-secondary/5 p-4">
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs font-semibold text-brand-secondary">Seguradora {idx + 1}</p>
+        <p className="text-xs font-semibold text-status-info">Seguradora {idx + 1}</p>
         {showRemove && (
           <button
             type="button"
@@ -597,7 +605,7 @@ function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
             inputMode="decimal"
             value={seg.valor_total}
             onChange={e => onChange('valor_total', e.target.value)}
-            className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+            className="w-full rounded-2xl border border-dark-border bg-dark-surface/80 px-3 py-2 text-sm text-dark-text outline-none"
             placeholder="0,00"
           />
         </div>
@@ -608,7 +616,7 @@ function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
             inputMode="decimal"
             value={seg.premio_liquido}
             onChange={e => onChange('premio_liquido', e.target.value)}
-            className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+            className="w-full rounded-2xl border border-dark-border bg-dark-surface/80 px-3 py-2 text-sm text-dark-text outline-none"
             placeholder="0,00"
           />
         </div>
@@ -619,7 +627,7 @@ function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
             inputMode="decimal"
             value={seg.pct_comissao}
             onChange={e => onChange('pct_comissao', e.target.value)}
-            className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+            className="w-full rounded-2xl border border-dark-border bg-dark-surface/80 px-3 py-2 text-sm text-dark-text outline-none"
             placeholder="0"
           />
         </div>
@@ -638,7 +646,7 @@ function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
           <input
             value={seg.parcelamentos}
             onChange={e => onChange('parcelamentos', e.target.value)}
-            className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+            className="w-full rounded-2xl border border-dark-border bg-dark-surface/80 px-3 py-2 text-sm text-dark-text outline-none"
             placeholder="3x, 6x, 10x sem juros"
           />
         </div>
@@ -647,7 +655,7 @@ function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
           <input
             value={seg.forma_pagamento}
             onChange={e => onChange('forma_pagamento', e.target.value)}
-            className="w-full rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+            className="w-full rounded-2xl border border-dark-border bg-dark-surface/80 px-3 py-2 text-sm text-dark-text outline-none"
             placeholder="Cartao, boleto, pix..."
           />
         </div>
@@ -704,7 +712,7 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
       <div className="relative z-10 glass-modal w-full max-w-2xl rounded-[32px] p-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">Resultado da cotacao</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-info">Resultado da cotacao</p>
             <h2 className="mt-2 text-xl font-semibold text-dark-text">{nome}</h2>
             <p className="mt-1 text-sm text-dark-muted">
               {c.modelo_veiculo || 'Veiculo nao informado'}
@@ -724,7 +732,7 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
             className={`flex-1 rounded-2xl border py-3 text-sm font-semibold transition-all ${
               resultado === 'aprovada'
                 ? 'border-status-success bg-status-success/10 text-status-success shadow-sm'
-                : 'border-dark-border bg-white/60 text-dark-muted hover:border-status-success/40'
+                : 'border-dark-border bg-dark-surface/60 text-dark-muted hover:border-status-success/40'
             }`}
           >
             Aprovada
@@ -735,7 +743,7 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
             className={`flex-1 rounded-2xl border py-3 text-sm font-semibold transition-all ${
               resultado === 'recusada'
                 ? 'border-red-300 bg-red-50 text-red-600 shadow-sm'
-                : 'border-dark-border bg-white/60 text-dark-muted hover:border-red-200'
+                : 'border-dark-border bg-dark-surface/60 text-dark-muted hover:border-red-200'
             }`}
           >
             Recusada
@@ -760,7 +768,7 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
             <button
               type="button"
               onClick={addSeg}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-brand-secondary/30 py-2.5 text-sm text-brand-secondary hover:border-brand-secondary/60 hover:bg-brand-secondary/5 transition-colors"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-brand-secondary/30 py-2.5 text-sm text-status-info hover:border-brand-secondary/60 hover:bg-brand-secondary/5 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               Adicionar outra seguradora
@@ -822,7 +830,7 @@ function ModalApolices({ onClose }) {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar por cliente, apolice ou seguradora"
-              className="w-full rounded-2xl border border-dark-border bg-white/80 py-2 pl-10 pr-3 text-sm text-dark-text outline-none"
+              className="w-full rounded-2xl border border-dark-border bg-dark-surface/80 py-2 pl-10 pr-3 text-sm text-dark-text outline-none"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -830,14 +838,14 @@ function ModalApolices({ onClose }) {
               type="date"
               value={inicio}
               onChange={e => setInicio(e.target.value)}
-              className="rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+              className="rounded-2xl border border-dark-border bg-dark-surface/80 px-3 py-2 text-sm text-dark-text outline-none"
             />
             <span className="text-xs text-dark-muted">ate</span>
             <input
               type="date"
               value={fim}
               onChange={e => setFim(e.target.value)}
-              className="rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+              className="rounded-2xl border border-dark-border bg-dark-surface/80 px-3 py-2 text-sm text-dark-text outline-none"
             />
             {(inicio || fim) && (
               <button
@@ -906,7 +914,7 @@ function CampoTexto({ label, campo, value, onChange, type = 'text', placeholder 
         placeholder={placeholder}
         disabled={disabled}
         onChange={e => onChange(campo, e.target.value)}
-        className={`w-full rounded-2xl border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none ${disabled ? 'border-dark-border/50 opacity-70 cursor-not-allowed' : 'border-dark-border'}`}
+        className={`w-full rounded-2xl border bg-dark-surface/80 px-3 py-2 text-sm text-dark-text outline-none ${disabled ? 'border-dark-border/50 opacity-70 cursor-not-allowed' : 'border-dark-border'}`}
       />
     </div>
   )
@@ -925,6 +933,7 @@ export default function AutoEmissoes() {
   const [dragOver, setDragOver] = useState(null)
   const [modalResultado, setModalResultado] = useState(null)
   const [modalEmissao, setModalEmissao] = useState(null)
+  const [detalhe, setDetalhe] = useState(null)
   const [manualOpen, setManualOpen] = useState(false)
   const [manualForm, setManualForm] = useState(FORM_MANUAL_VAZIO)
   const [form, setForm] = useState(FORM_EMISSAO_VAZIO)
@@ -1056,13 +1065,14 @@ export default function AutoEmissoes() {
   }
 
   function abrirDetalhe(item) {
+    if (!item) return
+    setDetalhe(item)
+  }
+
+  function abrirCotacaoCompleta(item) {
     const cotacaoId = item?.cotacoes_auto?.id || item?.cotacao_id
-    if (!cotacaoId) {
-      setModalResultado(null)
-      setModalEmissao(null)
-      setManualOpen(false)
-      return
-    }
+    if (!cotacaoId) return
+    setDetalhe(null)
     navigate(`/auto/cotacoes/${cotacaoId}`, {
       state: {
         from: '/auto/emissoes',
@@ -1229,7 +1239,7 @@ export default function AutoEmissoes() {
           <FilterBar>
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-xs font-medium text-dark-muted">Periodo das emissoes</span>
-              <div className="inline-flex flex-wrap rounded-2xl border border-dark-border/60 bg-white/70 p-1 shadow-sm">
+              <div className="inline-flex flex-wrap rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-1 shadow-sm">
                 {PERIOD_OPTIONS.map(option => {
                   const active = periodo === option.value
                   return (
@@ -1252,14 +1262,14 @@ export default function AutoEmissoes() {
                     type="date"
                     value={filtroInicio}
                     onChange={e => setFiltroInicio(e.target.value)}
-                    className="rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+                    className="rounded-2xl border border-dark-border bg-dark-surface/80 px-3 py-2 text-sm text-dark-text outline-none"
                   />
                   <span className="text-xs text-dark-muted">ate</span>
                   <input
                     type="date"
                     value={filtroFim}
                     onChange={e => setFiltroFim(e.target.value)}
-                    className="rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none"
+                    className="rounded-2xl border border-dark-border bg-dark-surface/80 px-3 py-2 text-sm text-dark-text outline-none"
                   />
                 </>
               )}
@@ -1329,7 +1339,7 @@ export default function AutoEmissoes() {
                 <div className="absolute -right-8 top-0 h-28 w-28 rounded-full bg-brand-secondary/10 blur-3xl" />
                 <div className="absolute -bottom-4 left-1/3 h-24 w-24 rounded-full bg-brand-accent/10 blur-3xl" />
                 <div className="relative z-[1] max-w-2xl">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-brand-secondary/15 bg-white/65 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-brand-secondary/15 bg-dark-surface/65 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-status-info">
                     <RefreshCw className="h-3.5 w-3.5" />
                     Mesa de emissao
                   </div>
@@ -1356,7 +1366,7 @@ export default function AutoEmissoes() {
                     accent: 'bg-brand-accent/15',
                   }
                   return (
-                    <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-white/75 p-4 shadow-sm">
+                    <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-dark-surface/75 p-4 shadow-sm">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{item.label}</p>
                       <p className="mt-2 text-2xl font-semibold text-dark-text">{item.value}</p>
                       <div className={`mt-3 h-1.5 rounded-full ${barClasses[item.tone]}`} />
@@ -1370,7 +1380,7 @@ export default function AutoEmissoes() {
           <FilterBar>
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-xs font-medium text-dark-muted">Atalhos da area</span>
-              <button onClick={() => navigate('/auto/gestao')} className="rounded-2xl border border-brand-secondary/30 bg-brand-secondary/10 px-3 py-2 text-xs font-semibold text-brand-secondary">
+              <button onClick={() => navigate('/auto/gestao')} className="rounded-2xl border border-brand-secondary/30 bg-brand-secondary/10 px-3 py-2 text-xs font-semibold text-status-info">
                 Abrir Gestao AUTO
               </button>
               <button onClick={() => setManualOpen(true)} className="rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted hover:border-brand-accent/40 hover:text-dark-text">
@@ -1416,7 +1426,7 @@ export default function AutoEmissoes() {
                           <button
                             type="button"
                             onClick={() => abrirDetalhe(item)}
-                            className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-3 py-1.5 text-xs font-semibold text-brand-secondary"
+                            className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-3 py-1.5 text-xs font-semibold text-status-info"
                           >
                             Abrir
                           </button>
@@ -1448,9 +1458,9 @@ export default function AutoEmissoes() {
           <div className="relative z-10 glass-modal w-full max-w-6xl overflow-hidden rounded-[32px]">
             <div className="grid gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
               <aside className="relative overflow-hidden bg-gradient-to-br from-brand-secondary/12 via-dark-surface2/70 to-brand-accent/10 p-6 md:p-7">
-                <div className="absolute right-0 top-0 h-28 w-28 rounded-full bg-white/40 blur-3xl" />
+                <div className="absolute right-0 top-0 h-28 w-28 rounded-full bg-dark-surface/40 blur-3xl" />
                 <div className="relative z-[1]">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/65 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-dark-surface/65 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-status-info">
                     <FileText className="h-3.5 w-3.5" />
                     Emissao selecionada
                   </div>
@@ -1458,17 +1468,17 @@ export default function AutoEmissoes() {
                   <p className="mt-2 text-sm leading-6 text-dark-muted">{modalEmissaoResumo?.cliente}</p>
 
                   <div className="mt-6 space-y-3">
-                    <div className="rounded-3xl border border-white/40 bg-white/70 p-4 shadow-sm">
+                    <div className="rounded-3xl border border-white/40 bg-dark-surface/70 p-4 shadow-sm">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Cliente</p>
                       <p className="mt-2 text-sm font-semibold text-dark-text">{modalEmissaoResumo?.cliente}</p>
                       <p className="mt-1 text-xs text-dark-muted">CPF {modalEmissaoResumo?.cpf}</p>
                     </div>
-                    <div className="rounded-3xl border border-white/40 bg-white/70 p-4 shadow-sm">
+                    <div className="rounded-3xl border border-white/40 bg-dark-surface/70 p-4 shadow-sm">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Veiculo</p>
                       <p className="mt-2 text-sm font-semibold text-dark-text">{modalEmissaoResumo?.veiculo}</p>
                       <p className="mt-1 text-xs text-dark-muted">{modalEmissaoResumo?.placa}</p>
                     </div>
-                    <div className="rounded-3xl border border-white/40 bg-white/70 p-4 shadow-sm">
+                    <div className="rounded-3xl border border-white/40 bg-dark-surface/70 p-4 shadow-sm">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Contexto</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         <span className="badge badge-info">{modalEmissaoResumo?.tipo}</span>
@@ -1487,7 +1497,7 @@ export default function AutoEmissoes() {
                 </div>
               </aside>
 
-              <div className="overflow-y-auto bg-white/70 p-6 md:p-7">
+              <div className="overflow-y-auto bg-dark-surface/70 p-6 md:p-7">
                 <div className="mb-5 flex items-start justify-between gap-4">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Dados da apolice</p>
@@ -1509,7 +1519,7 @@ export default function AutoEmissoes() {
                         <select
                           value={form.seguradora}
                           onChange={e => setField('seguradora', e.target.value)}
-                          className="w-full rounded-2xl border border-dark-border bg-white/90 px-3 py-2 text-sm text-dark-text outline-none"
+                          className="w-full rounded-2xl border border-dark-border bg-dark-surface/90 px-3 py-2 text-sm text-dark-text outline-none"
                         >
                           <option value="">Selecionar seguradora aprovada</option>
                           {seguradorasAprovadas.map(seg => (
@@ -1519,7 +1529,7 @@ export default function AutoEmissoes() {
                           ))}
                         </select>
                       ) : (
-                        <div className="rounded-2xl border border-dark-border bg-white/70 px-3 py-2 text-sm text-dark-muted">
+                        <div className="rounded-2xl border border-dark-border bg-dark-surface/70 px-3 py-2 text-sm text-dark-muted">
                           Nenhuma seguradora aprovada nesta ficha
                         </div>
                       )}
@@ -1542,7 +1552,7 @@ export default function AutoEmissoes() {
                         className={`rounded-full px-3 py-1.5 text-xs font-semibold border transition-colors ${
                           form.condutor_igual_segurado
                             ? 'border-status-success bg-status-success/10 text-status-success'
-                            : 'border-dark-border bg-white/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+                            : 'border-dark-border bg-dark-surface/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
                         }`}
                       >
                         Segurado é o condutor
@@ -1552,8 +1562,8 @@ export default function AutoEmissoes() {
                         onClick={() => setField('condutor_igual_segurado', false)}
                         className={`rounded-full px-3 py-1.5 text-xs font-semibold border transition-colors ${
                           !form.condutor_igual_segurado
-                            ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
-                            : 'border-dark-border bg-white/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+                            ? 'border-brand-accent bg-brand-accent/10 text-status-info'
+                            : 'border-dark-border bg-dark-surface/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
                         }`}
                       >
                         Preencher manualmente
@@ -1590,7 +1600,7 @@ export default function AutoEmissoes() {
                       <select
                         value={form.tipo_producao}
                         onChange={e => setField('tipo_producao', e.target.value)}
-                        className="w-full rounded-2xl border border-dark-border bg-white/90 px-3 py-2 text-sm text-dark-text outline-none"
+                        className="w-full rounded-2xl border border-dark-border bg-dark-surface/90 px-3 py-2 text-sm text-dark-text outline-none"
                       >
                         <option value="equipe">Equipe</option>
                         <option value="individual">Individual</option>
@@ -1641,17 +1651,17 @@ export default function AutoEmissoes() {
                         />
                       </div>
                       <div className="grid gap-3 md:grid-cols-2">
-                        <div className="rounded-2xl border border-status-success/20 bg-white/80 p-3">
+                        <div className="rounded-2xl border border-status-success/20 bg-dark-surface/80 p-3">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Premio liquido deste ano</p>
                           <p className="mt-2 text-sm font-semibold text-dark-text">{formatMoney(premioLiquido)}</p>
                         </div>
-                        <div className="rounded-2xl border border-status-success/20 bg-white/80 p-3">
+                        <div className="rounded-2xl border border-status-success/20 bg-dark-surface/80 p-3">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissao deste ano</p>
                           <p className="mt-2 text-sm font-semibold text-dark-text">{formatMoney(valorComissao)}</p>
                         </div>
                       </div>
-                      <div className="rounded-2xl border border-brand-secondary/20 bg-white/75 p-4 text-sm">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">Comparativo</p>
+                      <div className="rounded-2xl border border-brand-secondary/20 bg-dark-surface/75 p-4 text-sm">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-info">Comparativo</p>
                         <div className="mt-2 grid gap-3 md:grid-cols-2">
                           <div>
                             <p className="text-xs text-dark-muted">Diferenca de premio liquido</p>
@@ -1675,7 +1685,7 @@ export default function AutoEmissoes() {
                       <CampoTexto label="% Repasse" campo="pct_repasse" value={form.pct_repasse} onChange={setField} type="number" />
                       <CampoTexto label="Nome do repasse" campo="nome_repasse" value={form.nome_repasse} onChange={setField} />
                       {valorRepasse > 0 && (
-                        <div className="md:col-span-2 rounded-2xl border border-brand-secondary/20 bg-white/70 px-4 py-3 text-sm font-medium text-brand-secondary">
+                        <div className="md:col-span-2 rounded-2xl border border-brand-secondary/20 bg-dark-surface/70 px-4 py-3 text-sm font-medium text-status-info">
                           Repasse calculado: {formatMoney(valorRepasse)}
                         </div>
                       )}
@@ -1710,9 +1720,9 @@ export default function AutoEmissoes() {
           <div className="relative z-10 glass-modal w-full max-w-6xl overflow-hidden rounded-[32px]">
             <div className="grid gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
               <aside className="relative overflow-hidden bg-gradient-to-br from-brand-secondary/12 via-dark-surface2/70 to-brand-accent/10 p-6 md:p-7">
-                <div className="absolute right-0 top-0 h-28 w-28 rounded-full bg-white/40 blur-3xl" />
+                <div className="absolute right-0 top-0 h-28 w-28 rounded-full bg-dark-surface/40 blur-3xl" />
                 <div className="relative z-[1]">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/65 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-dark-surface/65 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-status-info">
                     <Plus className="h-3.5 w-3.5" />
                     Cadastro manual
                   </div>
@@ -1722,17 +1732,17 @@ export default function AutoEmissoes() {
                   </p>
 
                   <div className="mt-6 space-y-3">
-                    <div className="rounded-3xl border border-white/40 bg-white/70 p-4 shadow-sm">
+                    <div className="rounded-3xl border border-white/40 bg-dark-surface/70 p-4 shadow-sm">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Cliente</p>
                       <p className="mt-2 text-sm font-semibold text-dark-text">{manualForm.nome_cliente || 'Nome pendente'}</p>
                       <p className="mt-1 text-xs text-dark-muted">{manualForm.cpf_cliente || 'CPF pendente'}</p>
                     </div>
-                    <div className="rounded-3xl border border-white/40 bg-white/70 p-4 shadow-sm">
+                    <div className="rounded-3xl border border-white/40 bg-dark-surface/70 p-4 shadow-sm">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Apolice</p>
                       <p className="mt-2 text-sm font-semibold text-dark-text">{manualForm.seguradora || 'Seguradora pendente'}</p>
                       <p className="mt-1 text-xs text-dark-muted">{manualForm.numero_apolice || 'Numero da apolice pendente'}</p>
                     </div>
-                    <div className="rounded-3xl border border-white/40 bg-white/70 p-4 shadow-sm">
+                    <div className="rounded-3xl border border-white/40 bg-dark-surface/70 p-4 shadow-sm">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Financeiro</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         <span className="badge badge-info">{manualForm.eh_renovacao ? 'Renovacao' : 'Novo'}</span>
@@ -1752,7 +1762,7 @@ export default function AutoEmissoes() {
                 </div>
               </aside>
 
-              <div className="overflow-y-auto bg-white/70 p-6 md:p-7">
+              <div className="overflow-y-auto bg-dark-surface/70 p-6 md:p-7">
                 <div className="mb-5 flex items-start justify-between gap-4">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Dados da emissao</p>
@@ -1800,7 +1810,7 @@ export default function AutoEmissoes() {
                         className={`rounded-full px-3 py-1.5 text-xs font-semibold border transition-colors ${
                           manualForm.condutor_igual_segurado
                             ? 'border-status-success bg-status-success/10 text-status-success'
-                            : 'border-dark-border bg-white/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+                            : 'border-dark-border bg-dark-surface/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
                         }`}
                       >
                         Segurado é o condutor
@@ -1810,8 +1820,8 @@ export default function AutoEmissoes() {
                         onClick={() => setManualField('condutor_igual_segurado', false)}
                         className={`rounded-full px-3 py-1.5 text-xs font-semibold border transition-colors ${
                           !manualForm.condutor_igual_segurado
-                            ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
-                            : 'border-dark-border bg-white/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+                            ? 'border-brand-accent bg-brand-accent/10 text-status-info'
+                            : 'border-dark-border bg-dark-surface/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
                         }`}
                       >
                         Preencher manualmente
@@ -1877,11 +1887,11 @@ export default function AutoEmissoes() {
                         />
                       </div>
                       <div className="grid gap-3 md:grid-cols-2">
-                        <div className="rounded-2xl border border-status-success/20 bg-white/80 p-3">
+                        <div className="rounded-2xl border border-status-success/20 bg-dark-surface/80 p-3">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Premio liquido deste ano</p>
                           <p className="mt-2 text-sm font-semibold text-dark-text">{formatMoney(toNumber(manualForm.premio_liquido) || 0)}</p>
                         </div>
-                        <div className="rounded-2xl border border-status-success/20 bg-white/80 p-3">
+                        <div className="rounded-2xl border border-status-success/20 bg-dark-surface/80 p-3">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissao deste ano</p>
                           <p className="mt-2 text-sm font-semibold text-dark-text">{formatMoney((toNumber(manualForm.premio_liquido) || 0) * (toNumber(manualForm.pct_comissao) || 0))}</p>
                         </div>
@@ -1942,6 +1952,16 @@ export default function AutoEmissoes() {
       )}
 
       {showApolices && <ModalApolices onClose={() => setShowApolices(false)} />}
+
+      {detalhe && (
+        <ModalDetalhe
+          emissao={detalhe}
+          onClose={() => setDetalhe(null)}
+          onAbrirCotacao={() => abrirCotacaoCompleta(detalhe)}
+          onRegistrarResultado={(em) => { setDetalhe(null); setModalResultado(em) }}
+          onEmitirApolice={(em) => { setDetalhe(null); setModalEmissao(em) }}
+        />
+      )}
     </div>
   )
 }

@@ -104,7 +104,7 @@ function ImobiliariaSelector({ mapeadas }) {
                 <button
                   key={imob.id}
                   onClick={() => navegar(imob.id)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/55 transition-all text-left"
+                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-dark-surface/55 transition-all text-left"
                 >
                   {getEntityImageUrl(imob.imagem_path, imob.imagem_url) ? (
                     <div className="w-8 h-8 rounded-lg overflow-hidden border border-dark-border/30 bg-white flex items-center justify-center flex-shrink-0">
@@ -351,7 +351,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
                       onClick={() => setImobSelecionada(m.id)}
                       className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors ${
                         imobSelecionada === m.id
-                          ? 'bg-brand-accent/10 text-brand-accent'
+                          ? 'bg-brand-accent/10 text-status-info'
                           : 'text-dark-text hover:bg-dark-surface2/60'
                       }`}
                     >
@@ -366,7 +366,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
               {imobSelecionada && (
                 <p className="text-[11px] text-dark-muted mt-1.5">
                   As variações serão adicionadas a{' '}
-                  <span className="text-brand-accent font-semibold">"{nomeExistenteSelecionado}"</span>
+                  <span className="text-status-info font-semibold">"{nomeExistenteSelecionado}"</span>
                 </p>
               )}
             </div>
@@ -395,7 +395,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
                 </label>
                 <div className="flex items-center gap-4 flex-wrap">
                   <div className="space-y-1">
-                    <div className="w-20 h-20 rounded-2xl border border-dark-border bg-white/70 overflow-hidden flex items-center justify-center">
+                    <div className="w-20 h-20 rounded-2xl border border-dark-border bg-dark-surface/70 overflow-hidden flex items-center justify-center">
                     {imagemPreview ? (
                       <img
                         src={imagemPreview}
@@ -435,7 +435,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
             ) : (
               <div className="rounded-xl border border-dark-border divide-y divide-dark-border overflow-hidden mb-2">
                 {aliasesModal.map((v, index) => (
-                  <div key={`${v}-${index}`} className="flex items-center justify-between px-3 py-2 hover:bg-white/50 transition-colors">
+                  <div key={`${v}-${index}`} className="flex items-center justify-between px-3 py-2 hover:bg-dark-surface/50 transition-colors">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="font-mono text-xs text-dark-text truncate">{v}</span>
                       {contagemPorNome[v] !== undefined && (
@@ -475,7 +475,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
                 Total:{' '}
                 <span className="font-semibold text-dark-text">{totalFichas}</span>{' '}
                 ficha{totalFichas !== 1 ? 's' : ''} serão exibidas como{' '}
-                <span className="text-brand-accent">
+                <span className="text-status-info">
                   "{modo === 'existente' ? (nomeExistenteSelecionado || '...') : (nomeCanonoco || '...')}"
                 </span>
               </p>
@@ -532,7 +532,7 @@ function TabMapeadas({ mapeadas, confirmExcluir, setConfirmExcluir, onExcluir, o
               <div className="min-w-0 flex-1">
                 <button
                   onClick={() => navigate(`/imobiliarias/${imob.id}`)}
-                  className="font-bold text-dark-text hover:text-brand-accent transition-colors text-left flex items-center gap-1.5 group"
+                  className="font-bold text-dark-text hover:text-status-info transition-colors text-left flex items-center gap-1.5 group"
                 >
                   {imob.nome_canonico}
                   <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
@@ -982,7 +982,7 @@ export default function Imobiliarias() {
               onClick={() => { setTab(key); setSelecionados(new Set()) }}
               className={`px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
                 tab === key
-                  ? 'border-brand-accent text-brand-accent'
+                  ? 'border-brand-accent text-status-info'
                   : 'border-transparent text-dark-muted hover:text-dark-text'
               }`}
             >

@@ -578,7 +578,7 @@ export default function ApoliceDetalhe() {
             <button
               onClick={() => salvar()}
               disabled={salvando}
-              className="flex items-center gap-1.5 rounded-2xl bg-brand-secondary px-3 py-2 text-xs font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-2xl bg-brand-primary px-3 py-2 text-xs font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
             >
               <Save className="h-3.5 w-3.5" /> {salvando ? 'Salvando...' : 'Salvar'}
             </button>
@@ -754,7 +754,7 @@ export default function ApoliceDetalhe() {
               <p className="text-xs text-dark-muted">
                 Envie a apólice em PDF e preencha os dados usando a seguradora selecionada.
               </p>
-              <span className="rounded-full border border-dark-border bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-dark-muted">
+              <span className="rounded-full border border-dark-border bg-dark-surface/80 px-2.5 py-1 text-[10px] font-semibold text-dark-muted">
                 Seguradora: {getSeguradoraAutomacao() || 'não selecionada'}
               </span>
             </div>
@@ -768,15 +768,15 @@ export default function ApoliceDetalhe() {
               </div>
               {extracaoResumo && (
                 <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                  <div className="rounded-2xl border border-dark-border/60 bg-white/80 px-3 py-2">
+                  <div className="rounded-2xl border border-dark-border/60 bg-dark-surface/80 px-3 py-2">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Arquivo</p>
                     <p className="mt-1 truncate text-xs font-medium text-dark-text">{extracaoResumo.arquivo}</p>
                   </div>
-                  <div className="rounded-2xl border border-dark-border/60 bg-white/80 px-3 py-2">
+                  <div className="rounded-2xl border border-dark-border/60 bg-dark-surface/80 px-3 py-2">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Campos da apólice</p>
                     <p className="mt-1 text-xs font-semibold text-dark-text">{extracaoResumo.apolice} preenchidos</p>
                   </div>
-                  <div className="rounded-2xl border border-dark-border/60 bg-white/80 px-3 py-2">
+                  <div className="rounded-2xl border border-dark-border/60 bg-dark-surface/80 px-3 py-2">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Campos da ficha</p>
                     <p className="mt-1 text-xs font-semibold text-dark-text">{extracaoResumo.ficha} preenchidos</p>
                   </div>
@@ -808,7 +808,7 @@ export default function ApoliceDetalhe() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-2 rounded-2xl border border-dark-border bg-white/80 px-3 py-2 text-xs font-medium text-dark-text hover:border-brand-accent/40 transition-colors"
+                className="inline-flex items-center gap-2 rounded-2xl border border-dark-border bg-dark-surface/80 px-3 py-2 text-xs font-medium text-dark-text hover:border-brand-accent/40 transition-colors"
               >
                 <Upload className="h-3.5 w-3.5" />
                 {pdfFile ? pdfFile.name : 'Upload da apólice em PDF'}
@@ -863,7 +863,7 @@ export default function ApoliceDetalhe() {
             )}
 
             {extracaoExtras && (
-              <div className="rounded-3xl border border-dark-border/60 bg-white/80 p-4 space-y-2">
+              <div className="rounded-3xl border border-dark-border/60 bg-dark-surface/80 p-4 space-y-2">
                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">
                   Informações extraídas da apólice
                 </p>

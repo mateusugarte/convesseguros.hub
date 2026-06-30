@@ -228,7 +228,7 @@ export default function ApolicesDashboard() {
                   key={i}
                   onClick={() => setMes(i + 1)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                    mes === i + 1 ? 'bg-brand-secondary text-white shadow-sm' : 'text-dark-text hover:bg-dark-surface2'
+                    mes === i + 1 ? 'bg-brand-primary text-white shadow-sm' : 'text-dark-text hover:bg-dark-surface2'
                   }`}
                 >
                   {label}
@@ -347,7 +347,7 @@ export default function ApolicesDashboard() {
                   key={f.key}
                   onClick={() => setFiltroSeg(f.key)}
                   className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${
-                    filtroSeg === f.key ? 'bg-brand-secondary text-white' : 'text-dark-muted hover:text-dark-text'
+                    filtroSeg === f.key ? 'bg-brand-primary text-white' : 'text-dark-muted hover:text-dark-text'
                   }`}
                 >
                   {f.label}

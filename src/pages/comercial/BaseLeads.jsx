@@ -423,7 +423,7 @@ export default function BaseLeads() {
         title="Segmentação, busca e qualificação"
         description="A base agora funciona como uma mesa de triagem comercial: filtros persistentes, leitura de temperatura e acesso rápido ao detalhe do lead."
         aside={(
-          <div className="rounded-[24px] border border-dark-border/60 bg-white/70 px-4 py-3 text-sm shadow-sm">
+          <div className="rounded-[24px] border border-dark-border/60 bg-dark-surface/70 px-4 py-3 text-sm shadow-sm">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-dark-muted">Cobertura</p>
             <p className="mt-1 text-2xl font-black text-dark-text">{filtered.length}</p>
             <p className="mt-1 text-xs text-dark-muted">de {(state.leads || []).length} contatos visíveis</p>
@@ -449,12 +449,12 @@ export default function BaseLeads() {
             <button onClick={() => setShowFilter(o => !o)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm transition-colors
                 ${showFilter || hasFilters
-                  ? 'border-brand-accent text-brand-accent bg-brand-accent/10'
+                  ? 'border-status-info text-status-info bg-status-info/10'
                   : 'border-dark-border text-dark-muted hover:text-dark-text hover:border-dark-text/40'}`}>
               <SlidersHorizontal className="w-3.5 h-3.5" />
               Filtros
               {hasFilters && (
-                <span className="ml-0.5 w-4 h-4 rounded-full bg-brand-accent text-white text-[10px] flex items-center justify-center font-bold">
+                <span className="ml-0.5 w-4 h-4 rounded-full bg-status-info text-white text-[10px] flex items-center justify-center font-bold">
                   {activeChips.length}
                 </span>
               )}
@@ -481,7 +481,7 @@ export default function BaseLeads() {
           {activeChips.map((chip, i) => (
             <button key={i} onClick={() => removeChip(chip)}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium
-                bg-brand-accent/10 text-brand-accent border border-brand-accent/30 hover:bg-brand-accent/20 transition-colors">
+                bg-status-info/10 text-status-info border border-status-info/30 hover:bg-status-info/20 transition-colors">
               {chip.label} <X className="w-3 h-3" />
             </button>
           ))}
@@ -513,9 +513,9 @@ export default function BaseLeads() {
                 <th className="w-10 px-3 py-3">
                   <button onClick={toggleAll}
                     className={`w-4 h-4 rounded border flex items-center justify-center transition-colors
-                      ${allOnPageSelected ? 'bg-brand-accent border-brand-accent'
-                        : someSelected    ? 'bg-brand-accent/40 border-brand-accent'
-                        : 'border-dark-border hover:border-brand-accent/60'}`}>
+                      ${allOnPageSelected ? 'bg-status-info border-status-info'
+                        : someSelected    ? 'bg-status-info/40 border-status-info'
+                        : 'border-dark-border hover:border-status-info/60'}`}>
                     {(allOnPageSelected || someSelected) && <Check className="w-2.5 h-2.5 text-white" />}
                   </button>
                 </th>
@@ -562,11 +562,11 @@ export default function BaseLeads() {
                 return (
                   <tr key={lead.id}
                     className={`border-b border-dark-border/50 transition-colors cursor-pointer
-                      ${selected ? 'bg-brand-accent/5' : 'hover:bg-dark-surface2'}`}>
+                      ${selected ? 'bg-status-info/5' : 'hover:bg-dark-surface2'}`}>
                     <td className="px-3 py-3.5" onClick={e => { e.stopPropagation(); toggleOne(lead.id) }}>
                       <button
                         className={`w-4 h-4 rounded border flex items-center justify-center transition-colors
-                          ${selected ? 'bg-brand-accent border-brand-accent' : 'border-dark-border hover:border-brand-accent/60'}`}>
+                          ${selected ? 'bg-status-info border-status-info' : 'border-dark-border hover:border-status-info/60'}`}>
                         {selected && <Check className="w-2.5 h-2.5 text-white" />}
                       </button>
                     </td>
@@ -581,7 +581,7 @@ export default function BaseLeads() {
                           {lead.telefone && <p className="text-[11px] text-dark-muted font-mono">{lead.telefone}</p>}
                           <div className="mt-1 flex flex-wrap gap-1.5">
                             {Number(lead.listaGeradaCount || 0) > 0 && (
-                              <span className="rounded-full bg-brand-accent/10 px-2 py-0.5 text-[10px] font-semibold text-brand-accent">
+                              <span className="rounded-full bg-status-info/10 px-2 py-0.5 text-[10px] font-semibold text-status-info">
                                 Lista {lead.listaGeradaCount}x
                               </span>
                             )}
@@ -648,7 +648,7 @@ export default function BaseLeads() {
               {PAGE_SIZES.map(s => (
                 <button key={s} onClick={() => setSize(s)}
                   className={`px-2 py-0.5 rounded-lg transition-colors font-medium
-                    ${pageSize === s ? 'bg-brand-accent/15 text-brand-accent' : 'hover:bg-dark-surface2 text-dark-muted'}`}>
+                    ${pageSize === s ? 'bg-status-info/15 text-status-info' : 'hover:bg-dark-surface2 text-dark-muted'}`}>
                   {s}
                 </button>
               ))}
@@ -670,7 +670,7 @@ export default function BaseLeads() {
                 return (
                   <button key={p} onClick={() => setPage(p)}
                     className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors
-                      ${p === safePage ? 'bg-brand-accent text-white' : 'text-dark-muted hover:bg-dark-surface2'}`}>
+                      ${p === safePage ? 'bg-status-info text-white' : 'text-dark-muted hover:bg-dark-surface2'}`}>
                     {p + 1}
                   </button>
                 )

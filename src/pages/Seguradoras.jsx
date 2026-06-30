@@ -48,17 +48,17 @@ function ProductChooser({ value, onChange }) {
         {SEGURADORA_PRODUTOS.map(grupo => {
           const isFianca = grupo.value === 'fianca'
           return (
-            <div key={grupo.value} className="rounded-2xl border border-dark-border/70 bg-white/60 p-3">
+            <div key={grupo.value} className="rounded-2xl border border-dark-border/70 bg-dark-surface/60 p-3">
               <button
                 type="button"
                 onClick={isFianca ? toggleFianca : () => toggle(grupo.value)}
                 className={`w-full rounded-xl px-3 py-2 text-left text-sm font-semibold transition-all ${
                   isFianca
                     ? (grupo.subprodutos.every(sub => value.includes(sub.value))
-                      ? 'border border-brand-accent bg-brand-accent/10 text-brand-accent'
+                      ? 'border border-brand-accent bg-brand-accent/10 text-status-info'
                       : 'border border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text')
                     : value.includes(grupo.value)
-                      ? 'border border-brand-accent bg-brand-accent/10 text-brand-accent'
+                      ? 'border border-brand-accent bg-brand-accent/10 text-status-info'
                       : 'border border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
                 }`}
               >
@@ -76,7 +76,7 @@ function ProductChooser({ value, onChange }) {
                         onClick={() => toggle(sub.value)}
                         className={`rounded-xl border px-3 py-2 text-sm transition-all ${
                           active
-                            ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                            ? 'border-brand-accent bg-brand-accent/10 text-status-info'
                             : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
                         }`}
                       >
@@ -362,8 +362,8 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
                     onClick={() => setSegExistente(seg.id)}
                     className={`w-full flex items-center gap-2 px-3 py-2.5 text-left transition-colors ${
                       segExistente === seg.id
-                        ? 'bg-brand-accent/10 text-brand-accent'
-                        : 'text-dark-text hover:bg-white/55'
+                        ? 'bg-brand-accent/10 text-status-info'
+                        : 'text-dark-text hover:bg-dark-surface/55'
                     }`}
                   >
                     <SeguradoraBadge nome={seg.nome_canonico} logoUrl={seg.logo_url} logoPath={seg.logo_path} size="xs" showName={false} />
@@ -373,7 +373,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
               </div>
               {segExistente && (
                 <p className="text-[11px] text-dark-muted mt-1.5">
-                  Variacoes serao adicionadas a <span className="text-brand-accent font-semibold">"{nomeSelecionado}"</span>
+                  Variacoes serao adicionadas a <span className="text-status-info font-semibold">"{nomeSelecionado}"</span>
                 </p>
               )}
             </div>
@@ -398,7 +398,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
                 </label>
                 <div className="flex items-center gap-4 flex-wrap">
                   <div className="space-y-1">
-                    <div className="w-20 h-20 rounded-2xl border border-dark-border bg-white/70 overflow-hidden flex items-center justify-center">
+                    <div className="w-20 h-20 rounded-2xl border border-dark-border bg-dark-surface/70 overflow-hidden flex items-center justify-center">
                     {logoPreview ? (
                       <img
                         src={logoPreview}
@@ -438,7 +438,7 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
             ) : (
               <div className="rounded-xl border border-dark-border divide-y divide-dark-border overflow-hidden mb-2 max-h-44 overflow-y-auto">
                 {aliases.map(alias => (
-                  <div key={alias} className="flex items-center justify-between px-3 py-2 hover:bg-white/50 transition-colors">
+                  <div key={alias} className="flex items-center justify-between px-3 py-2 hover:bg-dark-surface/50 transition-colors">
                     <span className="font-mono text-xs text-dark-text truncate">{alias}</span>
                     <button
                       onClick={() => removerAlias(alias)}
@@ -529,7 +529,7 @@ function TabCadastradas({ seguradoras, onEditar, onExcluir, confirmExcluir, setC
                 <SeguradoraBadge nome={seg.nome_canonico} logoUrl={seg.logo_url} logoPath={seg.logo_path} size="md" />
                 <div className="flex flex-wrap gap-2">
                 {seg.produtos.map(produto => (
-                  <span key={produto} className="px-2 py-1 rounded-full text-[10px] font-semibold bg-brand-accent/10 text-brand-accent border border-brand-accent/20">
+                  <span key={produto} className="px-2 py-1 rounded-full text-[10px] font-semibold bg-brand-accent/10 text-status-info border border-brand-accent/20">
                       {SEGURADORA_PRODUTO_LABELS[produto] || PRODUTO_LABELS[produto] || produto}
                     </span>
                   ))}
@@ -632,7 +632,7 @@ function TabNaoMapeadas({ naoMapeadas, selecionados, setSelecionados, onAgrupar 
       </div>
 
       <div className="card overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-2.5 bg-white/55 border-b border-dark-border/60">
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-dark-surface/55 border-b border-dark-border/60">
           <input
             type="checkbox"
             checked={selecionados.size === filtradas.length && filtradas.length > 0}
@@ -648,7 +648,7 @@ function TabNaoMapeadas({ naoMapeadas, selecionados, setSelecionados, onAgrupar 
             <label
               key={item.nome}
               className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
-                selecionados.has(item.nome) ? 'bg-brand-accent/5' : 'hover:bg-white/50'
+                selecionados.has(item.nome) ? 'bg-brand-accent/5' : 'hover:bg-dark-surface/50'
               }`}
             >
               <input
@@ -794,7 +794,7 @@ export default function Seguradoras() {
               onClick={() => { setTab(key); setSelecionados(new Set()) }}
               className={`px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
                 tab === key
-                  ? 'border-brand-accent text-brand-accent'
+                  ? 'border-brand-accent text-status-info'
                   : 'border-transparent text-dark-muted hover:text-dark-text'
               }`}
             >

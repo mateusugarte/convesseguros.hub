@@ -44,7 +44,7 @@ function DetailField({ label, value, onSave, type = 'text', rows, placeholder, r
 
   if (readOnly) {
     return (
-      <div className="rounded-2xl border border-dark-border/60 bg-white/70 p-4">
+      <div className="rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{label}</p>
         <p className="mt-2 text-sm text-dark-text">{value || '—'}</p>
       </div>
@@ -52,7 +52,7 @@ function DetailField({ label, value, onSave, type = 'text', rows, placeholder, r
   }
 
   return (
-    <div className="group rounded-2xl border border-dark-border/60 bg-white/70 p-4">
+    <div className="group rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{label}</p>
       {editing ? (
         <div className="mt-2 flex items-start gap-2">
@@ -110,7 +110,7 @@ function DetailSelect({ label, value, onSave, options }) {
   const [editing, setEditing] = useState(false)
 
   return (
-    <div className="group rounded-2xl border border-dark-border/60 bg-white/70 p-4">
+    <div className="group rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{label}</p>
       {editing ? (
         <div className="mt-2 flex items-center gap-2">
@@ -170,7 +170,7 @@ function SummaryGrid({ cotacao }) {
         <div className="border-b border-dark-border/60 p-5 lg:border-b-0 lg:border-r">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Status</p>
-            <CalendarDays className="h-5 w-5 text-brand-accent/40" />
+            <CalendarDays className="h-5 w-5 text-status-info/40" />
           </div>
           <p className="text-2xl font-semibold text-dark-text">{COTACAO_STATUS[cotacao.status]?.label || cotacao.status || '—'}</p>
           <p className="mt-2 text-xs text-dark-muted">estado atual da cotacao</p>
@@ -178,7 +178,7 @@ function SummaryGrid({ cotacao }) {
         <div className="border-b border-dark-border/60 p-5 lg:border-b-0 lg:border-r">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Produto</p>
-            <ShieldCheck className="h-5 w-5 text-brand-accent/40" />
+            <ShieldCheck className="h-5 w-5 text-status-info/40" />
           </div>
           <p className="text-2xl font-semibold text-dark-text">Seguro Auto</p>
           <p className="mt-2 text-xs text-dark-muted">{cotacao.tipo === 'renovacao' ? 'renovacao' : 'novo negocio'}</p>
@@ -186,7 +186,7 @@ function SummaryGrid({ cotacao }) {
         <div className="border-b border-dark-border/60 p-5 lg:border-b-0 lg:border-r">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Segurado</p>
-            <UserRound className="h-5 w-5 text-brand-accent/40" />
+            <UserRound className="h-5 w-5 text-status-info/40" />
           </div>
           <p className="text-2xl font-semibold text-dark-text">{cotacao.nome_cliente || cotacao.cpf_cliente || 'Nao informado'}</p>
           <p className="mt-2 text-xs text-dark-muted">{cotacao.cpf_cliente || 'CPF pendente'}</p>
@@ -194,7 +194,7 @@ function SummaryGrid({ cotacao }) {
         <div className="p-5">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Recebida em</p>
-            <Car className="h-5 w-5 text-brand-accent/40" />
+            <Car className="h-5 w-5 text-status-info/40" />
           </div>
           <p className="text-2xl font-semibold text-dark-text">{formatDateTimeBR(cotacao.created_at) || '—'}</p>
           <p className="mt-2 text-xs text-dark-muted">entrada original</p>

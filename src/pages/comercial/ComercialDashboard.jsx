@@ -241,7 +241,7 @@ function TrendTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
 
   return (
-    <div className="rounded-2xl border border-dark-border/60 bg-white/95 px-3 py-2 shadow-xl">
+    <div className="rounded-2xl border border-dark-border/60 bg-dark-surface/95 px-3 py-2 shadow-xl">
       <p className="text-xs font-semibold text-dark-text">{label}</p>
       <div className="mt-2 space-y-1.5">
         {payload.map(item => (
@@ -336,7 +336,7 @@ export default function ComercialDashboard() {
         title={`Operação comercial de ${displayName}`}
         description="Uma leitura única da operação: aquisição, avanço do pipeline, atividades críticas e fechamento. O módulo comercial passa a operar como um CRM dedicado."
         aside={(
-          <div className="rounded-[24px] border border-dark-border/60 bg-white/70 px-4 py-3 text-sm shadow-sm">
+          <div className="rounded-[24px] border border-dark-border/60 bg-dark-surface/70 px-4 py-3 text-sm shadow-sm">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-dark-muted">Janela ativa</p>
             <p className="mt-1 font-semibold text-dark-text">{periodLabel.charAt(0).toUpperCase() + periodLabel.slice(1)}</p>
             <p className="mt-1 text-xs text-dark-muted">{leadGoals} dias úteis restantes no mês</p>
@@ -524,7 +524,7 @@ export default function ComercialDashboard() {
                       key={item.id}
                       type="button"
                       onClick={() => navigate('/comercial/vendas')}
-                      className="flex w-full items-center gap-3 rounded-[20px] border border-dark-border/50 bg-white/60 px-3 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
+                      className="flex w-full items-center gap-3 rounded-[20px] border border-dark-border/50 bg-dark-surface/60 px-3 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
                     >
                       <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-rose-500/10 text-sm font-black text-rose-600">
                         {index + 1}
@@ -550,7 +550,7 @@ export default function ComercialDashboard() {
             title="Atividades prioritárias"
             subtitle="Agenda, leads parados e pontos de atenção operacional."
             action={(
-              <button type="button" onClick={() => navigate('/comercial/calendario')} className="text-xs font-semibold text-brand-accent">
+              <button type="button" onClick={() => navigate('/comercial/calendario')} className="text-xs font-semibold text-status-info">
                 Abrir calendário
               </button>
             )}
@@ -569,7 +569,7 @@ export default function ComercialDashboard() {
                     key={`${item.kind}-${item.id}`}
                     type="button"
                     onClick={() => item.leadId ? navigate(`/comercial/leads/${item.leadId}`) : navigate('/comercial/calendario')}
-                    className="flex w-full items-start gap-3 rounded-[22px] border border-dark-border/50 bg-white/65 px-3 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
+                    className="flex w-full items-start gap-3 rounded-[22px] border border-dark-border/50 bg-dark-surface/65 px-3 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <span className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: item.accent }} />
                     <div className="min-w-0 flex-1">
@@ -593,14 +593,14 @@ export default function ComercialDashboard() {
                 <p className="mt-1 text-sm text-dark-muted">Distribuída em {filteredSales.length} vendas fechadas.</p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[22px] border border-dark-border/50 bg-white/55 p-4">
+                <div className="rounded-[22px] border border-dark-border/50 bg-dark-surface/55 p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-dark-muted">Alertas críticos</p>
                   <p className="mt-2 text-2xl font-black text-dark-text">
                     {visibleLeads.filter(lead => lead.ultimaAtividade && diffDias(lead.ultimaAtividade) >= 10 && lead.coluna !== 'recusou').length}
                   </p>
                   <p className="mt-1 text-xs text-dark-muted">Leads com mais de 10 dias sem contato.</p>
                 </div>
-                <div className="rounded-[22px] border border-dark-border/50 bg-white/55 p-4">
+                <div className="rounded-[22px] border border-dark-border/50 bg-dark-surface/55 p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-dark-muted">Próxima frente</p>
                   <p className="mt-2 text-xl font-black text-dark-text">
                     {pipelineOverview.find(stage => stage.total > 0)?.label || 'Pipeline vazio'}
@@ -616,10 +616,10 @@ export default function ComercialDashboard() {
               <div className="space-y-2">
                 {leadByOwner.length ? (
                   leadByOwner.map(item => (
-                    <div key={item.nome} className="rounded-[18px] border border-dark-border/50 bg-white/55 px-3 py-3">
+                    <div key={item.nome} className="rounded-[18px] border border-dark-border/50 bg-dark-surface/55 px-3 py-3">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-semibold text-dark-text">{item.nome}</p>
-                        <span className="rounded-full bg-brand-accent/10 px-2 py-1 text-[11px] font-semibold text-brand-accent">
+                        <span className="rounded-full bg-status-info/10 px-2 py-1 text-[11px] font-semibold text-status-info">
                           {item.total} leads
                         </span>
                       </div>
@@ -644,14 +644,14 @@ export default function ComercialDashboard() {
         title="Pipeline overview"
         subtitle="Leitura rápida do fluxo comercial atual por etapa, volume e inatividade."
         action={(
-          <button type="button" onClick={() => navigate('/comercial/pipeline')} className="inline-flex items-center gap-1 text-xs font-semibold text-brand-accent">
+          <button type="button" onClick={() => navigate('/comercial/pipeline')} className="inline-flex items-center gap-1 text-xs font-semibold text-status-info">
             Abrir pipeline <ArrowRight className="h-3.5 w-3.5" />
           </button>
         )}
       >
         <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {pipelineOverview.map(stage => (
-            <article key={stage.id} className="rounded-[24px] border border-dark-border/50 bg-white/55 p-4">
+            <article key={stage.id} className="rounded-[24px] border border-dark-border/50 bg-dark-surface/55 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span className="h-3 w-3 rounded-full" style={{ background: stage.color }} />

@@ -93,7 +93,7 @@ export default function AutoRenovacoes() {
           <div className="relative overflow-hidden bg-gradient-to-br from-brand-accent/10 via-transparent to-brand-secondary/8 p-6 md:p-8">
             <div className="absolute -right-6 top-0 h-28 w-28 rounded-full bg-brand-accent/10 blur-3xl" />
             <div className="relative z-[1] max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-accent">
+              <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-dark-surface/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-status-info">
                 <Clock className="h-3.5 w-3.5" />
                 Leitura da carteira
               </div>
@@ -119,7 +119,7 @@ export default function AutoRenovacoes() {
               { label: 'Nao cotadas', value: acompanharResumo.naoCotada, hint: 'sem cotacao iniciada', tone: 'danger' },
               { label: 'Renovadas', value: acompanharResumo.renovadas, hint: `de ${acompanharResumo.total} no total`, tone: 'accent' },
             ].map(item => (
-              <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-white/75 p-4 shadow-sm">
+              <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-dark-surface/75 p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{item.label}</p>
                   <span className={`h-2.5 w-2.5 rounded-full ${item.tone === 'success' ? 'bg-status-success' : item.tone === 'warning' ? 'bg-status-warning' : item.tone === 'danger' ? 'bg-status-danger' : 'bg-brand-accent'}`} />
@@ -140,7 +140,7 @@ export default function AutoRenovacoes() {
               onClick={() => setPeriodo(item.value)}
               className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-all ${
                 periodo === item.value
-                  ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                  ? 'border-brand-accent bg-brand-accent/10 text-status-info'
                   : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
               }`}
             >
@@ -193,7 +193,7 @@ export default function AutoRenovacoes() {
                     <select
                       value={item.status_cotacao || 'nao_cotada'}
                       onChange={e => atualizarStatus({ id: item.id, status_cotacao: e.target.value })}
-                      className="min-w-[220px] rounded-2xl border border-dark-border/70 bg-white/90 px-3 py-2 text-sm text-dark-text shadow-sm outline-none transition-colors focus:border-brand-accent/40"
+                      className="min-w-[220px] rounded-2xl border border-dark-border/70 bg-dark-surface/90 px-3 py-2 text-sm text-dark-text shadow-sm outline-none transition-colors focus:border-brand-accent/40"
                     >
                       <option value="nao_cotada">Nao cotada</option>
                       <option value="cotada_nao_enviada">Cotada - nao enviada</option>
@@ -236,7 +236,7 @@ export default function AutoRenovacoes() {
         </div>
 
         <div className="rounded-[28px] border border-brand-accent/20 bg-gradient-to-br from-brand-accent/10 to-white/70 p-4 shadow-sm">
-          <div className="flex items-center gap-2 text-brand-accent">
+          <div className="flex items-center gap-2 text-status-info">
             <CheckCircle2 className="w-4 h-4" />
             <p className="text-xs font-semibold uppercase tracking-[0.14em]">Renovadas</p>
           </div>
@@ -256,7 +256,7 @@ export default function AutoRenovacoes() {
                 onClick={() => setAcompanharFiltro(f.value)}
                 className={`rounded-2xl border px-3 py-1.5 text-xs font-medium transition-all ${
                   acompanharFiltro === f.value
-                    ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                    ? 'border-brand-accent bg-brand-accent/10 text-status-info'
                     : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
                 }`}
               >

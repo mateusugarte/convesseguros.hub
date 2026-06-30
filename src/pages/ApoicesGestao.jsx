@@ -158,7 +158,7 @@ function formatDocumentoTipo(documento) {
 
 const InfoPill = memo(function InfoPill({ label, value, mono = false }) {
   return (
-    <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2 py-1.5">
+    <div className="rounded-xl border border-dark-border/60 bg-dark-surface/80 px-2 py-1.5">
       <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">{label}</p>
       <p className={`mt-0.5 text-[10px] text-dark-text truncate${mono ? ' font-mono' : ''}`}>{value || '—'}</p>
     </div>
@@ -231,7 +231,7 @@ const KanbanCard = memo(function KanbanCard({ apolice, resolverNome, resolverImo
           </div>
         )}
         <div className="mb-2 grid grid-cols-2 gap-1.5">
-          <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2 py-1.5">
+          <div className="rounded-xl border border-dark-border/60 bg-dark-surface/80 px-2 py-1.5">
             <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Seguradora</p>
             <div className="mt-1 min-w-0">
               {apolice?.seguradora
@@ -239,7 +239,7 @@ const KanbanCard = memo(function KanbanCard({ apolice, resolverNome, resolverImo
                 : <p className="text-[10px] text-dark-muted">—</p>}
             </div>
           </div>
-          <div className="rounded-xl border border-dark-border/60 bg-white/80 px-2 py-1.5">
+          <div className="rounded-xl border border-dark-border/60 bg-dark-surface/80 px-2 py-1.5">
             <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Imobiliária</p>
             <div className="mt-1 flex items-center gap-1.5 min-w-0">
               {imobInfo?.imagem_url ? (
@@ -504,7 +504,7 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
     <section className="glass-panel rounded-3xl overflow-hidden animate-fade-in">
       <div className="flex items-center justify-between gap-4 px-7 py-5 border-b border-dark-border">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/20 bg-brand-accent/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-accent">
+          <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/20 bg-brand-accent/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-primary">
             <Plus className="w-3.5 h-3.5" />
             Area dedicada
           </div>
@@ -546,7 +546,7 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
             </div>
           </div>
 
-          <div className="rounded-3xl border border-dark-border bg-white/70 overflow-hidden">
+          <div className="rounded-3xl border border-dark-border bg-dark-surface/70 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border">
               <div>
                 <h3 className="text-lg font-semibold text-dark-text">Fichas aprovadas</h3>
@@ -602,7 +602,7 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
         </div>
 
         <aside className="border-t xl:border-t-0 xl:border-l border-dark-border bg-dark-surface2/20 px-7 py-6">
-          <div className="rounded-3xl border border-dark-border bg-white/80 p-5">
+          <div className="rounded-3xl border border-dark-border bg-dark-surface/80 p-5">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-dark-muted">Dados da emissão</h3>
@@ -636,7 +636,7 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
               </div>
               <div>
                 <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Ficha selecionada</label>
-                <div className="input min-h-[44px] bg-white/70 flex items-center text-sm">
+                <div className="input min-h-[44px] bg-dark-surface/70 flex items-center text-sm">
                   {fichaSelecionada ? resumoFicha(fichaSelecionada).nome : 'Nenhuma ficha selecionada'}
                 </div>
               </div>
@@ -1154,7 +1154,7 @@ export default function ApoicesGestao() {
               key={item}
               onClick={() => setFiltro(item)}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                filtro === item ? 'bg-brand-secondary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
+                filtro === item ? 'bg-brand-primary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
               }`}
             >
               {item === 'total' ? 'Todos' : item === 'hoje' ? 'Hoje' : item === 'semana' ? 'Semana' : 'Mês'}

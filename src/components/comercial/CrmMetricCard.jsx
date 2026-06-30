@@ -22,7 +22,7 @@ export default function CrmMetricCard({
   return (
     <article
       className={cx(
-        'relative overflow-hidden rounded-[24px] border border-dark-border/60 bg-white/80 p-4 shadow-[0_20px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm transition-transform duration-200 hover:-translate-y-0.5',
+        'relative overflow-hidden rounded-[24px] border border-dark-border/60 bg-dark-surface/80 p-4 shadow-[0_20px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm transition-transform duration-200 hover:-translate-y-0.5',
         className
       )}
     >

@@ -79,11 +79,11 @@ function MonthView({ date, events, selectedDay, onDaySelect, onEventClick, delet
           return (
             <div key={i} onClick={() => onDaySelect(day)}
               className={`min-h-[110px] p-2 border-r border-b border-dark-border/20 cursor-pointer transition-colors
-                ${!inMonth  ? 'opacity-25' : 'hover:bg-white/45'}
-                ${selected  ? 'bg-brand-accent/5 border-brand-accent/30' : ''}`}
+                ${!inMonth  ? 'opacity-25' : 'hover:bg-dark-surface/45'}
+                ${selected  ? 'bg-status-info/5 border-status-info/30' : ''}`}
               style={selected ? { boxShadow: 'inset 0 0 0 1.5px rgba(74,144,217,0.35)' } : {}}>
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mb-1 flex-shrink-0
-                ${todayDay ? 'bg-brand-accent text-white' : selected ? 'text-brand-accent' : 'text-dark-muted'}`}>
+                ${todayDay ? 'bg-status-info text-white' : selected ? 'text-status-info' : 'text-dark-muted'}`}>
                 {format(day, 'd')}
               </div>
               <div className="space-y-0.5">
@@ -93,7 +93,7 @@ function MonthView({ date, events, selectedDay, onDaySelect, onEventClick, delet
                 {evs.length > 3 && (
                   <button
                     onClick={ev => { ev.stopPropagation(); onDaySelect(day) }}
-                    className="text-[9px] text-brand-accent pl-1 hover:underline">
+                    className="text-[9px] text-status-info pl-1 hover:underline">
                     +{evs.length - 3} mais
                   </button>
                 )}
@@ -133,9 +133,9 @@ function WeekView({ date, events, onDaySelect, onSlotClick, onEventClick, deleti
           {days.map(d => (
             <button key={d.toString()} onClick={() => onDaySelect(d)}
               className={`px-2 py-2.5 text-center border-l border-dark-border/30 hover:bg-dark-surface2 transition-colors
-                ${isToday(d) ? 'bg-brand-accent/5' : ''}`}>
+                ${isToday(d) ? 'bg-status-info/5' : ''}`}>
               <p className="text-[10px] text-dark-muted capitalize">{format(d, 'EEE', { locale: ptBR })}</p>
-              <p className={`text-sm font-bold ${isToday(d) ? 'text-brand-accent' : 'text-dark-text'}`}>{format(d, 'd')}</p>
+              <p className={`text-sm font-bold ${isToday(d) ? 'text-status-info' : 'text-dark-text'}`}>{format(d, 'd')}</p>
             </button>
           ))}
         </div>
@@ -146,8 +146,8 @@ function WeekView({ date, events, onDaySelect, onSlotClick, onEventClick, deleti
               const evs = slotEvents(d, h)
               return (
                 <div key={d.toString()} onClick={() => onSlotClick(d, h)}
-                  className={`border-l border-dark-border/20 p-1 cursor-pointer hover:bg-white/45 transition-colors min-h-[44px]
-                    ${isToday(d) ? 'bg-brand-accent/[0.03]' : ''}`}>
+                  className={`border-l border-dark-border/20 p-1 cursor-pointer hover:bg-dark-surface/45 transition-colors min-h-[44px]
+                    ${isToday(d) ? 'bg-status-info/[0.03]' : ''}`}>
                   {evs.map(e => <EventPill key={e.id} evento={e} onClick={onEventClick} />)}
                 </div>
               )
@@ -184,7 +184,7 @@ function DayView({ date, events, onSlotClick, onEventClick, deletingIds }) {
               <button
                 type="button"
                 onClick={() => onSlotClick(date, hour)}
-                className="border-r border-dark-border/20 px-4 py-4 text-left text-xs font-semibold text-dark-muted transition-colors hover:bg-white/40"
+                className="border-r border-dark-border/20 px-4 py-4 text-left text-xs font-semibold text-dark-muted transition-colors hover:bg-dark-surface/40"
               >
                 {String(hour).padStart(2, '0')}:00
               </button>
@@ -199,7 +199,7 @@ function DayView({ date, events, onSlotClick, onEventClick, deletingIds }) {
                   <button
                     type="button"
                     onClick={() => onSlotClick(date, hour)}
-                    className="rounded-xl border border-dashed border-dark-border/60 px-3 py-2 text-xs text-dark-muted transition-colors hover:border-brand-accent/40 hover:text-brand-accent"
+                    className="rounded-xl border border-dashed border-dark-border/60 px-3 py-2 text-xs text-dark-muted transition-colors hover:border-status-info/40 hover:text-status-info"
                   >
                     Adicionar evento
                   </button>
@@ -228,7 +228,7 @@ function EventCard({ evento, lead, openMenuId, setOpenMenuId, onEdit, onDelete, 
   }, [open, setOpenMenuId])
 
   return (
-    <div className="flex gap-2.5 p-3 rounded-2xl border border-dark-border/60 bg-white/45 hover:bg-white/70 transition-all group shadow-sm">
+    <div className="flex gap-2.5 p-3 rounded-2xl border border-dark-border/60 bg-dark-surface/45 hover:bg-dark-surface/70 transition-all group shadow-sm">
       {/* Color bar */}
       <div className="w-0.5 rounded-full flex-shrink-0 self-stretch" style={{ background: cor }} />
 
@@ -267,7 +267,7 @@ function EventCard({ evento, lead, openMenuId, setOpenMenuId, onEdit, onDelete, 
           </span>
           {lead && (
             <button onClick={() => navigate(`/comercial/leads/${lead.id}`)}
-              className="text-brand-accent hover:underline truncate max-w-[120px]">
+              className="text-status-info hover:underline truncate max-w-[120px]">
               {lead.nome}
             </button>
           )}
@@ -306,7 +306,7 @@ function PainelDia({ selectedDay, events, leads, deletingIds, pendingUndo, onAdd
             <p className="font-bold text-dark-text capitalize">{dateTitle}</p>
             <p className="text-xs text-dark-muted capitalize">
               {weekdayName}
-              {todayMark && <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-brand-accent/15 text-brand-accent text-[9px] font-bold">Hoje</span>}
+              {todayMark && <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-status-info/15 text-status-info text-[9px] font-bold">Hoje</span>}
             </p>
           </div>
           <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-dark-surface2 text-dark-muted flex-shrink-0">
@@ -319,7 +319,7 @@ function PainelDia({ selectedDay, events, leads, deletingIds, pendingUndo, onAdd
       {pendingUndo && (
         <div className="flex items-center gap-2 px-3 py-2 bg-dark-surface2 border-b border-dark-border text-xs flex-shrink-0">
           <span className="text-dark-muted flex-1">Evento removido</span>
-          <button onClick={onUndoDelete} className="text-brand-accent font-semibold hover:underline">
+          <button onClick={onUndoDelete} className="text-status-info font-semibold hover:underline">
             Desfazer
           </button>
         </div>
@@ -424,8 +424,8 @@ function EventLeadSelect({ leads, value, onChange }) {
         onClick={() => setOpen(current => !current)}
         className={`w-full rounded-2xl border px-3 py-3 text-left transition-all ${
           open
-            ? 'border-brand-accent/50 bg-brand-accent/5 shadow-[0_0_0_3px_rgba(59,130,246,0.12)]'
-            : 'border-dark-border/70 bg-white/75 hover:border-brand-accent/35'
+            ? 'border-status-info/50 bg-status-info/5 shadow-[0_0_0_3px_rgba(59,130,246,0.12)]'
+            : 'border-dark-border/70 bg-dark-surface/75 hover:border-status-info/35'
         }`}
       >
         {selectedLead ? (
@@ -450,7 +450,7 @@ function EventLeadSelect({ leads, value, onChange }) {
       </button>
 
       {open && (
-        <div className="rounded-[20px] border border-dark-border/70 bg-white/90 p-2 shadow-[0_20px_50px_rgba(15,23,42,0.18)] backdrop-blur-md">
+        <div className="rounded-[20px] border border-dark-border/70 bg-dark-surface/90 p-2 shadow-[0_20px_50px_rgba(15,23,42,0.18)] backdrop-blur-md">
           <div className="relative mb-2">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-dark-muted" />
             <input
@@ -466,7 +466,7 @@ function EventLeadSelect({ leads, value, onChange }) {
               type="button"
               onClick={() => handleSelect('')}
               className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left transition-colors ${
-                !value ? 'bg-brand-accent/10 text-brand-accent' : 'hover:bg-dark-surface2/70'
+                !value ? 'bg-status-info/10 text-status-info' : 'hover:bg-dark-surface2/70'
               }`}
             >
               <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-dark-surface2 text-[10px] font-bold text-dark-muted">
@@ -487,7 +487,7 @@ function EventLeadSelect({ leads, value, onChange }) {
                   type="button"
                   onClick={() => handleSelect(lead.id)}
                   className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left transition-colors ${
-                    active ? 'bg-brand-accent/10 text-brand-accent' : 'hover:bg-dark-surface2/70'
+                    active ? 'bg-status-info/10 text-status-info' : 'hover:bg-dark-surface2/70'
                   }`}
                 >
                   <span
@@ -498,7 +498,7 @@ function EventLeadSelect({ leads, value, onChange }) {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{lead.nome}</p>
-                    <p className={`truncate text-xs ${active ? 'text-brand-accent/80' : 'text-dark-muted'}`}>
+                    <p className={`truncate text-xs ${active ? 'text-status-info/80' : 'text-dark-muted'}`}>
                       {lead.imobiliaria || 'Sem imobiliária'}
                     </p>
                   </div>
@@ -859,7 +859,7 @@ export default function Calendario() {
         title="Calendário de execução e follow-up"
         description="Visões diária, semanal e mensal para reuniões, follow-ups, compromissos e tarefas da operação comercial."
         aside={(
-          <div className="rounded-[24px] border border-dark-border/60 bg-white/70 px-4 py-3 text-sm shadow-sm">
+          <div className="rounded-[24px] border border-dark-border/60 bg-dark-surface/70 px-4 py-3 text-sm shadow-sm">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-dark-muted">Janela atual</p>
             <p className="mt-1 font-semibold capitalize text-dark-text">{title}</p>
             <p className="mt-1 text-xs text-dark-muted">{weekCount} evento(s) nesta semana móvel</p>

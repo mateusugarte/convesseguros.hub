@@ -125,7 +125,7 @@ function ModalEditLead({ lead, onClose, toast }) {
                 {['PF','PJ'].map(t => (
                   <button key={t} onClick={() => set('tipo', t)}
                     className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all
-                      ${form.tipo === t ? 'border-brand-accent bg-brand-accent/10 text-brand-accent' : 'border-dark-border text-dark-muted hover:border-dark-text/40'}`}>
+                      ${form.tipo === t ? 'border-status-info bg-status-info/10 text-status-info' : 'border-dark-border text-dark-muted hover:border-dark-text/40'}`}>
                     {t}
                   </button>
                 ))}
@@ -193,7 +193,7 @@ function PipelineFunnel({ lead, onMove }) {
                 className={`flex flex-col items-center gap-1 group flex-shrink-0 ${isCurrent ? 'cursor-default' : 'cursor-pointer'}`}>
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center transition-all
-                    ${isCurrent ? 'ring-2 ring-offset-2 ring-brand-accent' : 'group-hover:ring-1 group-hover:ring-brand-accent/40'}
+                    ${isCurrent ? 'ring-2 ring-offset-2 ring-status-info' : 'group-hover:ring-1 group-hover:ring-status-info/40'}
                     ${isCurrent ? 'animate-pulse' : ''}`}
                   style={{
                     background: isPast ? '#10B981' : isCurrent ? col.color : 'var(--glass-bg)',
@@ -289,7 +289,7 @@ function CardProximaAcao({ lead }) {
       ) : (
         <button onClick={() => setEditing(true)} className="w-full text-left">
           {lead.proximaAcao
-            ? <p className="text-sm text-brand-accent hover:underline">{lead.proximaAcao}</p>
+            ? <p className="text-sm text-status-info hover:underline">{lead.proximaAcao}</p>
             : <p className="text-sm text-dark-muted/60 italic flex items-center gap-1.5">
                 <Plus className="w-3.5 h-3.5" /> Agendar ação
               </p>}
@@ -316,7 +316,7 @@ function CardResumo({ lead, events }) {
         ))}
       </div>
       {lead.apoliceAtiva && (
-        <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-brand-accent/10 text-brand-accent text-xs font-semibold">
+        <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-status-info/10 text-status-info text-xs font-semibold">
           <Check className="w-3 h-3" /> Com apólice ativa
         </div>
       )}
@@ -337,7 +337,7 @@ function EventItem({ ev, onDelete }) {
     <div className="flex items-start gap-3 px-3 py-2.5 rounded-xl border border-dark-border bg-dark-surface group">
       <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
         style={{ background: 'var(--glass-bg-heavy)' }}>
-        <Icon className="w-3.5 h-3.5 text-brand-accent" />
+        <Icon className="w-3.5 h-3.5 text-status-info" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-dark-text">{ev.nome || ev.descricao}</p>
@@ -527,8 +527,8 @@ function TabTarefas({ lead, events, toast }) {
           return (
             <div key={ev.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all
               ${done ? 'border-dark-border/40 opacity-60' : 'border-dark-border bg-dark-surface'}`}>
-              <button onClick={() => toggleDone(ev)} className="flex-shrink-0 text-dark-muted hover:text-brand-accent transition-colors">
-                {done ? <CheckSquare className="w-4 h-4 text-brand-accent" /> : <Square className="w-4 h-4" />}
+              <button onClick={() => toggleDone(ev)} className="flex-shrink-0 text-dark-muted hover:text-status-info transition-colors">
+                {done ? <CheckSquare className="w-4 h-4 text-status-info" /> : <Square className="w-4 h-4" />}
               </button>
               <div className="flex-1 min-w-0">
                 <p className={`text-sm ${done ? 'line-through text-dark-muted' : 'text-dark-text'}`}>
@@ -644,7 +644,7 @@ function TabQualificacao({ lead, tags, toast }) {
           <label className={LBL}>Apólice Ativa</label>
           <button onClick={() => leadUpdate(lead.id, { apoliceAtiva: !lead.apoliceAtiva })}
             className={`px-3 py-2 rounded-xl border text-sm font-medium transition-all w-full
-              ${lead.apoliceAtiva ? 'border-brand-accent bg-brand-accent/10 text-brand-accent' : 'border-dark-border text-dark-muted hover:border-dark-text'}`}>
+              ${lead.apoliceAtiva ? 'border-status-info bg-status-info/10 text-status-info' : 'border-dark-border text-dark-muted hover:border-dark-text'}`}>
             {lead.apoliceAtiva ? 'Sim — com apólice' : 'Não — sem apólice'}
           </button>
         </div>
@@ -827,7 +827,7 @@ function TabJornada({ lead, journeys, events, toast }) {
 
   if (!lead.jornada_id) {
     return (
-      <div className="card space-y-4 border border-brand-accent/15 bg-white/80 p-4 shadow-sm">
+      <div className="card space-y-4 border border-status-info/15 bg-dark-surface/80 p-4 shadow-sm">
         <div className="space-y-1">
           <p className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Aplicar Jornada</p>
           <p className="text-sm text-dark-muted">Escolha uma jornada para acompanhar a evolução deste lead.</p>
@@ -1127,7 +1127,7 @@ export default function LeadDetalhe() {
         title={lead.nome}
         description={lead.resumo || 'Histórico, jornada, qualificação e próximos movimentos centralizados em uma visão comercial única.'}
         aside={(
-          <div className="rounded-[24px] border border-dark-border/60 bg-white/70 px-4 py-3 text-sm shadow-sm">
+          <div className="rounded-[24px] border border-dark-border/60 bg-dark-surface/70 px-4 py-3 text-sm shadow-sm">
             <CrmAvatarBadge name={lead.nome} subtitle={lead.imobiliaria || lead.origem || 'Lead comercial'} />
           </div>
         )}
@@ -1213,7 +1213,7 @@ export default function LeadDetalhe() {
                 <button key={tab.id} onClick={() => setTab(tab.id)}
                   className={`px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px
                     ${activeTab === tab.id
-                      ? 'border-brand-accent text-brand-accent'
+                      ? 'border-status-info text-status-info'
                       : 'border-transparent text-dark-muted hover:text-dark-text'}`}>
                   {tab.label}
                 </button>

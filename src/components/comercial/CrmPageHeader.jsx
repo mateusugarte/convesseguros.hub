@@ -22,7 +22,7 @@ export default function CrmPageHeader({
       <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
         <div className="max-w-3xl">
           {eyebrow && (
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-brand-accent">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-status-info">
               {eyebrow}
             </p>
           )}

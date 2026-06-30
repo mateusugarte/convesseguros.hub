@@ -1399,7 +1399,7 @@ function JourneyCard({ journey, leads, onEdit, onDuplicate, onToggle }) {
   const vinculados = leads.filter(l => l.jornada_id === journey.id).length
 
   return (
-    <div className="card flex flex-col overflow-hidden group hover:border-brand-accent/30 transition-colors">
+    <div className="card flex flex-col overflow-hidden group hover:border-status-info/30 transition-colors">
       {/* Accent strip */}
       <div className="h-0.5 w-full rounded-t-[inherit]" style={{ background: 'linear-gradient(90deg, #000079, #2B5BA8, rgba(195,240,242,0.60))' }} />
 
@@ -1444,7 +1444,7 @@ function JourneyCard({ journey, leads, onEdit, onDuplicate, onToggle }) {
       {/* Footer actions */}
       <div className="px-4 py-3 border-t border-dark-border flex items-center gap-1">
         <button onClick={() => onEdit(journey)}
-          className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-semibold text-dark-muted hover:text-brand-accent hover:bg-brand-accent/10 transition-colors">
+          className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-semibold text-dark-muted hover:text-status-info hover:bg-status-info/10 transition-colors">
           <Pencil className="w-3.5 h-3.5" /> Editar
         </button>
         <button onClick={() => onDuplicate(journey)}
@@ -1545,7 +1545,7 @@ function ModalJornada({ onClose, onSave }) {
               {['PF', 'PJ', 'Ambos'].map(t => (
                 <button key={t} onClick={() => set('tipoCliente', t)}
                   className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-all ${
-                    form.tipoCliente === t ? 'bg-brand-accent text-white border-brand-accent' : 'border-dark-border text-dark-muted hover:border-brand-accent/50'
+                    form.tipoCliente === t ? 'bg-status-info text-white border-status-info' : 'border-dark-border text-dark-muted hover:border-status-info/50'
                   }`}>
                   {t}
                 </button>
@@ -1705,8 +1705,8 @@ export default function Jornadas() {
       {tab === 'Jornadas' && (
         visibleJourneys.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-brand-accent/10 flex items-center justify-center mb-4">
-              <GitBranch className="w-8 h-8 text-brand-accent/40" />
+            <div className="w-16 h-16 rounded-2xl bg-status-info/10 flex items-center justify-center mb-4">
+              <GitBranch className="w-8 h-8 text-status-info/40" />
             </div>
             <p className="font-semibold text-dark-text mb-1">Nenhuma jornada criada</p>
             <p className="text-xs text-dark-muted mb-4">Crie fluxos automatizados para engajar seus leads</p>

@@ -337,7 +337,7 @@ export default function AutoCotacoes() {
             <div className="absolute -right-10 top-0 h-32 w-32 rounded-full bg-brand-accent/10 blur-3xl" />
             <div className="absolute -bottom-6 left-1/3 h-28 w-28 rounded-full bg-brand-secondary/10 blur-3xl" />
             <div className="relative z-[1] max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-accent">
+              <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-dark-surface/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-status-info">
                 <Sparkles className="h-3.5 w-3.5" />
                 Cotações em ordem cronológica
               </div>
@@ -357,7 +357,7 @@ export default function AutoCotacoes() {
 
           <div className="grid gap-3 bg-dark-surface2/45 p-6 md:p-8 sm:grid-cols-2 lg:grid-cols-1">
             {resumoLateral.map(item => (
-              <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-white/75 p-4 shadow-sm">
+              <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-dark-surface/75 p-4 shadow-sm">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{item.label}</p>
                 <p className="mt-2 text-sm font-semibold text-dark-text">{item.value}</p>
                 <p className="mt-2 text-xs text-dark-muted">{item.hint}</p>
@@ -374,7 +374,7 @@ export default function AutoCotacoes() {
             onClick={() => { setTab(item.value); setErro(null) }}
             className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-colors ${
               tab === item.value
-                ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                ? 'border-brand-accent bg-brand-accent/10 text-status-info'
                 : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
             }`}
           >
@@ -421,7 +421,7 @@ export default function AutoCotacoes() {
                         onClick={() => setFiltroPeriodo(item.value)}
                         className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                           filtroPeriodo === item.value
-                            ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                            ? 'border-brand-accent bg-brand-accent/10 text-status-info'
                             : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
                         }`}
                       >
@@ -438,7 +438,7 @@ export default function AutoCotacoes() {
                       onClick={() => setFiltroStatus(item.value)}
                       className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                         filtroStatus === item.value
-                          ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                          ? 'border-brand-accent bg-brand-accent/10 text-status-info'
                           : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
                       }`}
                     >
@@ -456,7 +456,7 @@ export default function AutoCotacoes() {
                       onClick={() => setFiltroTipo(item.value)}
                       className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                         filtroTipo === item.value
-                          ? 'border-brand-secondary bg-brand-secondary/10 text-brand-secondary'
+                          ? 'border-brand-secondary bg-brand-secondary/10 text-status-info'
                           : 'border-dark-border text-dark-muted hover:border-brand-secondary/40 hover:text-dark-text'
                       }`}
                     >

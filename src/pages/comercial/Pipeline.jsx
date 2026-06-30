@@ -61,7 +61,7 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
 
   return (
     <div
-      className={`kanban-card group ${ghost ? 'opacity-30' : ''} ${selected ? 'ring-2 ring-brand-accent/25' : ''}`}
+      className={`kanban-card group ${ghost ? 'opacity-30' : ''} ${selected ? 'ring-2 ring-status-info/25' : ''}`}
       style={{
         '--kanban-accent': col?.color || '#4A90D9',
         background: 'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(241,245,249,0.92))',
@@ -87,7 +87,7 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
           <div className="relative flex-shrink-0 cursor-pointer"
             onClick={e => { e.stopPropagation(); onSelect?.() }}>
             {selected ? (
-              <div className="w-7 h-7 rounded-full bg-brand-accent flex items-center justify-center">
+              <div className="w-7 h-7 rounded-full bg-status-info flex items-center justify-center">
                 <Check className="w-3.5 h-3.5 text-white" />
               </div>
             ) : (
@@ -116,8 +116,8 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
 
         {lead.nomeApolice && (
           <div className="flex items-center gap-1 mb-1.5">
-            <FileCheck className="w-3 h-3 text-brand-accent/60 flex-shrink-0" />
-            <span className="text-[10px] font-mono text-brand-accent/70 truncate">Orç: {lead.nomeApolice}</span>
+            <FileCheck className="w-3 h-3 text-status-info/60 flex-shrink-0" />
+            <span className="text-[10px] font-mono text-status-info/70 truncate">Orç: {lead.nomeApolice}</span>
           </div>
         )}
 
@@ -147,7 +147,7 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
 
         <div className="mb-1.5 flex flex-wrap gap-1.5">
           {Number(lead.listaGeradaCount || 0) > 0 && (
-            <span className="inline-flex items-center rounded-full border border-brand-accent/15 bg-brand-accent/10 px-2 py-0.5 text-[9px] font-semibold text-brand-accent">
+            <span className="inline-flex items-center rounded-full border border-status-info/15 bg-status-info/10 px-2 py-0.5 text-[9px] font-semibold text-status-info">
               Lista {lead.listaGeradaCount}x
             </span>
           )}
@@ -177,7 +177,7 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
         )}
 
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <div className="rounded-xl border border-slate-300/55 bg-white/80 px-2 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+          <div className="rounded-xl border border-slate-300/55 bg-dark-surface/80 px-2 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
             <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Última atividade</p>
             <div className={`mt-1 inline-flex items-center gap-1 text-[10px] font-semibold ${
               isUrgent ? 'text-status-error' : isWarn ? 'text-status-warning' : 'text-dark-text'
@@ -186,9 +186,9 @@ function LeadCard({ lead, col, tags = [], ghost = false, selected = false, onSel
               <span>{fmtIdleDays(dias)}</span>
             </div>
           </div>
-          <div className="rounded-xl border border-slate-300/55 bg-white/80 px-2 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+          <div className="rounded-xl border border-slate-300/55 bg-dark-surface/80 px-2 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
             <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Próxima ação</p>
-            <p className="mt-1 truncate text-[10px] font-semibold text-brand-accent">
+            <p className="mt-1 truncate text-[10px] font-semibold text-status-info">
               {lead.proximaAcao || 'Definir próximo passo'}
             </p>
           </div>
@@ -228,7 +228,7 @@ function DroppableLane({ colId, children }) {
   return (
     <div
       ref={setNodeRef}
-      className={`flex-1 flex flex-col min-h-0 overflow-hidden transition-colors duration-150 ${isOver ? 'bg-brand-accent/5' : ''}`}
+      className={`flex-1 flex flex-col min-h-0 overflow-hidden transition-colors duration-150 ${isOver ? 'bg-status-info/5' : ''}`}
     >
       {children}
     </div>
@@ -256,7 +256,7 @@ function SwimLane({ col, leads, tags, activeId, onCardClick, selectedIds, onSele
       <DroppableLane colId={col.id}>
         <div className="kanban-col-body flex flex-col gap-2 p-3 overflow-y-auto flex-1">
           {leads.length === 0 ? (
-            <div className="flex items-center justify-center h-20 rounded-2xl border-2 border-dashed border-dark-border/40 text-[11px] text-dark-muted bg-white/40">
+            <div className="flex items-center justify-center h-20 rounded-2xl border-2 border-dashed border-dark-border/40 text-[11px] text-dark-muted bg-dark-surface/40">
               Soltar aqui
             </div>
           ) : (
@@ -497,7 +497,7 @@ function ModalAddLead({ onClose, leads, tags, toast }) {
               ].map(opt => (
                 <button key={opt.id} onClick={() => setStep(opt.id)}
                   className="card p-5 flex flex-col items-center gap-3 hover:bg-dark-surface2 transition-colors cursor-pointer">
-                  <opt.icon className="w-8 h-8 text-brand-accent" />
+                  <opt.icon className="w-8 h-8 text-status-info" />
                   <div className="text-center">
                     <p className="font-bold text-dark-text text-sm">{opt.label}</p>
                     <p className="text-xs text-dark-muted mt-0.5">{opt.desc}</p>
@@ -799,7 +799,7 @@ export default function Pipeline() {
         title="Operação de avanço e fechamento"
         description="O pipeline agora funciona como uma mesa de controle comercial: volume por etapa, temperatura, inatividade e próximos movimentos na mesma superfície."
         aside={(
-          <div className="rounded-[24px] border border-dark-border/60 bg-white/70 px-4 py-3 text-sm shadow-sm">
+          <div className="rounded-[24px] border border-dark-border/60 bg-dark-surface/70 px-4 py-3 text-sm shadow-sm">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-dark-muted">Leads visíveis</p>
             <p className="mt-1 text-2xl font-black text-dark-text">{filtered.length}</p>
             <p className="mt-1 text-xs text-dark-muted">{activeLeads.length} ativos na operação</p>
@@ -842,7 +842,7 @@ export default function Pipeline() {
           <div className="min-w-0 border-b border-dark-border/50 xl:border-b-0 xl:border-r">
             <div className="flex items-center gap-2 overflow-x-auto px-5 py-4">
               {stageOverview.map(stage => (
-                <div key={stage.id} className="min-w-[148px] rounded-[20px] border border-dark-border/50 bg-white/60 px-3 py-3">
+                <div key={stage.id} className="min-w-[148px] rounded-[20px] border border-dark-border/50 bg-dark-surface/60 px-3 py-3">
                   <div className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full" style={{ background: stage.color }} />
                     <p className="truncate text-xs font-semibold text-dark-text">{stage.label}</p>
@@ -891,9 +891,9 @@ export default function Pipeline() {
 
           <aside className="space-y-4 px-5 py-5">
             {canManageCommercial(profile) && (
-              <div className="rounded-[24px] border border-brand-accent/20 bg-brand-accent/6 p-4">
+              <div className="rounded-[24px] border border-status-info/20 bg-status-info/6 p-4">
                 <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-brand-accent" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-status-info" />
                   <p className="text-sm font-semibold text-dark-text">Modo gestor</p>
                 </div>
                 <p className="mt-2 text-xs text-dark-muted">
@@ -902,9 +902,9 @@ export default function Pipeline() {
               </div>
             )}
 
-            <div className="rounded-[24px] border border-dark-border/50 bg-white/65 p-4">
+            <div className="rounded-[24px] border border-dark-border/50 bg-dark-surface/65 p-4">
               <div className="flex items-center gap-2">
-                <Layers3 className="h-4 w-4 text-brand-accent" />
+                <Layers3 className="h-4 w-4 text-status-info" />
                 <p className="text-sm font-semibold text-dark-text">Leitura rápida</p>
               </div>
               <div className="mt-4 space-y-3">
@@ -923,7 +923,7 @@ export default function Pipeline() {
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-dark-border/50 bg-white/65 p-4">
+            <div className="rounded-[24px] border border-dark-border/50 bg-dark-surface/65 p-4">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-status-warning" />
                 <p className="text-sm font-semibold text-dark-text">Pontos de atenção</p>
@@ -934,7 +934,7 @@ export default function Pipeline() {
                     key={lead.id}
                     type="button"
                     onClick={() => navigate(`/comercial/leads/${lead.id}`)}
-                    className="w-full rounded-[18px] border border-dark-border/40 bg-white/70 px-3 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm"
+                    className="w-full rounded-[18px] border border-dark-border/40 bg-dark-surface/70 px-3 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm"
                   >
                     <p className="truncate text-sm font-semibold text-dark-text">{lead.nome}</p>
                     <p className="mt-1 text-xs text-dark-muted">

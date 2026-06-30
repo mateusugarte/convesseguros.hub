@@ -115,7 +115,7 @@ export default function AutoDashboard() {
             <div className="absolute right-0 top-0 h-32 w-32 rounded-full bg-brand-accent/10 blur-3xl" />
             <div className="absolute bottom-0 left-1/3 h-24 w-24 rounded-full bg-brand-secondary/10 blur-3xl" />
             <div className="relative z-[1] max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-white/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-accent">
+              <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-dark-surface/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-status-info">
                 <BarChart3 className="h-3.5 w-3.5" />
                 Leitura executiva
               </div>
@@ -136,7 +136,7 @@ export default function AutoDashboard() {
 
           <div className="grid gap-3 bg-dark-surface2/45 p-6 md:p-8 sm:grid-cols-3 lg:grid-cols-1">
             {resumoOperacional.map(item => (
-              <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-white/70 p-4 shadow-sm">
+              <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-dark-surface/70 p-4 shadow-sm">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{item.label}</p>
                 <p className="mt-2 text-2xl font-semibold text-dark-text">{item.value}</p>
                 <p className="mt-2 text-sm leading-6 text-dark-muted">{item.hint}</p>
@@ -152,7 +152,7 @@ export default function AutoDashboard() {
       >
         <div className="grid gap-3 md:grid-cols-3">
           {resumoRenovacao.map(item => (
-            <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-white/75 p-4 shadow-sm">
+            <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-dark-surface/75 p-4 shadow-sm">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{item.label}</p>
               <p className="mt-2 text-2xl font-semibold text-dark-text">{item.value}</p>
               <p className="mt-2 text-sm leading-6 text-dark-muted">{item.hint}</p>
@@ -161,15 +161,15 @@ export default function AutoDashboard() {
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <div className="rounded-3xl border border-brand-secondary/15 bg-brand-secondary/5 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">Premio liquido este mes</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-info">Premio liquido este mes</p>
             <p className="mt-2 text-xl font-semibold text-dark-text">{formatMoney(metrics?.renovacoesPremioLiquidoMesAtual ?? 0)}</p>
           </div>
           <div className="rounded-3xl border border-brand-secondary/15 bg-brand-secondary/5 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">Premio liquido ano anterior</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-info">Premio liquido ano anterior</p>
             <p className="mt-2 text-xl font-semibold text-dark-text">{formatMoney(metrics?.renovacoesPremioLiquidoAnoAnterior ?? 0)}</p>
           </div>
           <div className="rounded-3xl border border-brand-secondary/15 bg-brand-secondary/5 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">Diferenca de premio liquido</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-info">Diferenca de premio liquido</p>
             <p className="mt-2 text-xl font-semibold text-dark-text">{formatMoney(metrics?.renovacoesPremioLiquidoDiferenca ?? 0)}</p>
           </div>
         </div>

@@ -18,7 +18,7 @@ export default function AutoSinistros() {
           <div className="relative overflow-hidden bg-gradient-to-br from-brand-accent/10 via-transparent to-brand-secondary/8 p-6 md:p-8">
             <div className="absolute -right-8 top-0 h-28 w-28 rounded-full bg-brand-accent/10 blur-3xl" />
             <div className="relative z-[1]">
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-accent">
+              <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-dark-surface/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-status-info">
                 <ShieldAlert className="h-3.5 w-3.5" />
                 Area em preparacao
               </div>
@@ -36,7 +36,7 @@ export default function AutoSinistros() {
                   { title: 'Acompanhamento', text: 'status, prazos e pendencias' },
                   { title: 'Fechamento', text: 'resultado e historico final' },
                 ].map(item => (
-                  <div key={item.title} className="rounded-3xl border border-white/50 bg-white/75 p-4 shadow-sm">
+                  <div key={item.title} className="rounded-3xl border border-white/50 bg-dark-surface/75 p-4 shadow-sm">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{item.title}</p>
                     <p className="mt-2 text-sm leading-6 text-dark-muted">{item.text}</p>
                   </div>

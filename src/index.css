@@ -1239,7 +1239,7 @@ html.dark .kanban-col-header {
   position: relative;
   z-index: 1;
   flex: 1 1 auto;
-  padding: 30px 12px 12px;
+  padding: 12px;
   gap: 10px;
   min-height: 0;
   overflow-y: auto;

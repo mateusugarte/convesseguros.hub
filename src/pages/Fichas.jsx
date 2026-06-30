@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import {
-  fetchFichas, fetchAnosDisponiveis, fetchMesesDisponiveis,
+  fetchFichas, fetchFichasParaExportacao, fetchAnosDisponiveis, fetchMesesDisponiveis,
   fetchContagemProdutos, fetchContagemAbertaOrcamentista, deletarFicha,
   fetchKPIsVisaoGeral, fetchDistribuicaoStatus, fetchFichasPorDia,
   fetchRankingFichasMensal, PRODUTO_LABELS, STATUS_LABELS, STATUS_EM_ABERTO, STATUS_PASSADOS,
 } from '../lib/fichas'
+import { getFichaOperationalState } from '../lib/fichaOperational'
 import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
 import { normalizeDisplayText } from '../lib/text'
 import { useImobiliaria } from '../hooks/useImobiliaria'
@@ -192,20 +193,65 @@ function OrcBadge({ nome, isMe }) {
   )
 }
 
-function exportCSV(fichas, filename, resolverNome) {
-  const headers = ['Data','Imobiliária','Nome','CPF','Produto','Status','Orçamentista','Seguradora']
-  const rows = fichas.map(f => [
-    format(parseISO(f.created_at), 'dd/MM/yyyy'),
-    (resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || f.imobiliaria || '',
-    f.nome_interessado || f.nome_empresa || '',
-    f.cpf || f.cnpj || '',
-    PRODUTO_LABELS[f.produto] || f.produto,
-    STATUS_LABELS[f.status]?.label || f.status,
-    f.profiles?.nome || '',
-    f.seguradora || '',
-  ])
-  const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n')
-  const blob = new Blob(['ï»¿' + csv], { type: 'text/csv;charset=utf-8;' })
+function formatCSVDate(value, pattern = 'dd/MM/yyyy HH:mm') {
+  if (!value) return ''
+  try {
+    const date = parseISO(value)
+    if (Number.isNaN(date.getTime())) return ''
+    return format(date, pattern)
+  } catch {
+    return ''
+  }
+}
+
+function exportCSV(fichas, filename, resolverNome, mode = 'resumo') {
+  const headers = mode === 'completo'
+    ? [
+        'Data criação', 'Data finalização', 'Imobiliária', 'Nome', 'CPF/CNPJ', 'Produto', 'Status',
+        'Status operacional', 'Orçamentista', 'Seguradora', 'Apólice', 'Data emissão', 'Cobrança enviada',
+        'Assumida', 'Assumida em', 'Valor aluguel', 'Observações', 'Dados brutos',
+      ]
+    : ['Data', 'Imobiliária', 'Nome', 'CPF', 'Produto', 'Status', 'Orçamentista', 'Seguradora']
+
+  const rows = fichas.map(f => {
+    if (mode === 'completo') {
+      const operacional = getFichaOperationalState(f)?.label || ''
+      return [
+        formatCSVDate(f.created_at),
+        formatCSVDate(f.finalizada_em),
+        (resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || f.imobiliaria || '',
+        f.nome_interessado || f.nome_empresa || '',
+        f.cpf || f.cnpj || '',
+        PRODUTO_LABELS[f.produto] || f.produto || '',
+        STATUS_LABELS[f.status]?.label || f.status || '',
+        operacional,
+        f.profiles?.nome || '',
+        f.seguradora || '',
+        f.numero_apolice || '',
+        formatCSVDate(f.data_emissao, 'dd/MM/yyyy'),
+        f.retorno_enviado ? 'Sim' : 'Não',
+        f.assumida ? 'Sim' : 'Não',
+        formatCSVDate(f.assumida_em),
+        f.valor_aluguel ?? '',
+        f.observacoes || '',
+        JSON.stringify(f.raw_data || {}),
+      ]
+    }
+
+    return [
+      formatCSVDate(f.created_at, 'dd/MM/yyyy'),
+      (resolverNome ? resolverNome(f.imobiliaria) : normalizeImobiliaria(f.imobiliaria)) || f.imobiliaria || '',
+      f.nome_interessado || f.nome_empresa || '',
+      f.cpf || f.cnpj || '',
+      PRODUTO_LABELS[f.produto] || f.produto,
+      STATUS_LABELS[f.status]?.label || f.status,
+      f.profiles?.nome || '',
+      f.seguradora || '',
+    ]
+  })
+
+  const csv = [headers, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(',')).join('\n')
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
   const url  = URL.createObjectURL(blob)
   const a    = Object.assign(document.createElement('a'), { href: url, download: filename })
   a.click(); URL.revokeObjectURL(url)
@@ -231,21 +277,21 @@ function Pagination({ page, total, pageSize, onPage }) {
       <div className="flex items-center gap-1">
         <button onClick={() => onPage(page - 1)} disabled={page === 0}
                 className="px-2.5 py-1 rounded-lg border border-dark-border hover:border-brand-accent/50 disabled:opacity-30 transition-colors">
-          ? Anterior
+          ‹ Anterior
         </button>
         {Array.from({ length: Math.min(5, pages) }, (_, i) => {
           const p = page < 3 ? i : page - 2 + i
           if (p >= pages) return null
           return (
             <button key={p} onClick={() => onPage(p)}
-                    className={`w-7 h-7 rounded-lg text-center transition-colors ${p === page ? 'bg-brand-secondary text-white' : 'hover:bg-dark-surface2'}`}>
+                    className={`w-7 h-7 rounded-lg text-center transition-colors ${p === page ? 'bg-brand-primary text-white' : 'hover:bg-dark-surface2'}`}>
               {p + 1}
             </button>
           )
         })}
         <button onClick={() => onPage(page + 1)} disabled={page >= pages - 1}
                 className="px-2.5 py-1 rounded-lg border border-dark-border hover:border-brand-accent/50 disabled:opacity-30 transition-colors">
-          Próximo ?
+          Próximo ›
         </button>
       </div>
     </div>
@@ -261,7 +307,7 @@ function ViewToggle({ view, onChange }) {
       ].map(({ key, label, Icon }) => (
         <button key={key} onClick={() => onChange(key)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  view === key ? 'bg-brand-secondary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
+                  view === key ? 'bg-brand-primary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
                 }`}>
           <Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
           {label}
@@ -661,7 +707,7 @@ function MesAnoSelector({ ano, anos, mes, mesesComFichas, onAnoChange, onMesChan
               title={!hasData ? 'Sem fichas neste mês' : MESES_FULL[i]}
               className={`relative px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                 isActive
-                  ? 'bg-brand-secondary text-white shadow-sm'
+                  ? 'bg-brand-primary text-white shadow-sm'
                   : hasData
                   ? 'text-dark-text hover:bg-dark-surface2'
                   : 'text-dark-muted/35 cursor-not-allowed'
@@ -689,7 +735,7 @@ function PeriodoSelector({ value, onChange }) {
           onClick={() => onChange(option.value)}
           className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
             value === option.value
-              ? 'bg-brand-secondary text-white shadow-sm'
+              ? 'bg-brand-primary text-white shadow-sm'
               : 'text-dark-muted hover:text-dark-text'
           }`}
         >
@@ -1033,6 +1079,27 @@ export default function Fichas() {
   function refresh() { loadFichas() }
   function onFichaSuccess() { setCriar(false); setEditar(null); setDetalhe(null); refresh() }
 
+  const isListaFinalizada = tab === 'passadas' || tab === 'passadas_por_mim' || tab === 'canceladas'
+
+  async function handleExportCSV() {
+    if (isListaFinalizada) {
+      const exportRows = await fetchFichasParaExportacao({
+        produto: produto === 'todos' ? undefined : produto,
+        ano, mes, dateFrom, dateTo,
+        tipo: tab,
+        search: debouncedSearch,
+        orcamentistaId: tab === 'passadas_por_mim' ? user?.id : undefined,
+        semSeguradora: isListaFinalizada ? semSeguradora : false,
+        sortOrder: sortOrderLista,
+      })
+      const sufixo = tab === 'canceladas' ? 'canceladas' : 'passadas'
+      exportCSV(exportRows, `conves-fichas-${produto}-${ano}-${mes}-${sufixo}.csv`, resolverNome, 'completo')
+      return
+    }
+
+    exportCSV(fichas, `conves-fichas-${produto}-${ano}-${mes}.csv`, resolverNome)
+  }
+
   async function onDelete(id) {
     await deletarFicha(id)
     setDetalhe(null)
@@ -1073,7 +1140,7 @@ export default function Fichas() {
 
   const selectorSlot = (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 rounded-2xl border border-dark-border/70 bg-white/70 px-3 py-2 shadow-sm">
+      <div className="flex items-center gap-2 rounded-2xl border border-dark-border/70 bg-dark-surface/70 px-3 py-2 shadow-sm">
         <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Período</span>
         <PeriodoSelector
           value={periodoFiltro}
@@ -1142,7 +1209,7 @@ export default function Fichas() {
                         onClick={() => { setSortOrderLista(option.value); setPage(0) }}
                         className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
                           sortOrderLista === option.value
-                            ? 'bg-brand-secondary text-white shadow-sm'
+                            ? 'bg-brand-primary text-white shadow-sm'
                             : 'text-dark-muted hover:text-dark-text'
                         }`}
                       >
@@ -1151,7 +1218,7 @@ export default function Fichas() {
                     ))}
                   </div>
                 </div>
-                {(tab === 'passadas' || tab === 'passadas_por_mim') && (
+                {isListaFinalizada && (
                   <button
                     onClick={() => { setSemSeguradora(s => !s); setPage(0) }}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl border text-xs font-medium transition-all ${
@@ -1165,7 +1232,7 @@ export default function Fichas() {
                   </button>
                 )}
                 <button
-                  onClick={() => exportCSV(fichas, `conves-fichas-${produto}-${ano}-${mes}.csv`, resolverNome)}
+                  onClick={handleExportCSV}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
                 >
                   <Download className="w-3.5 h-3.5" /> Exportar
@@ -1177,13 +1244,14 @@ export default function Fichas() {
               {[
                 ['abertas', 'Em Aberto', Clock],
                 ['passadas', 'Passadas', CheckCircle2],
+                ['canceladas', 'Canceladas', AlertCircle],
                 ['passadas_por_mim', 'Passadas por Mim', XCircle],
               ].map(([key, label, Icon]) => (
                 <button
                   key={key}
                   onClick={() => changeTab(key)}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                    tab === key ? 'bg-brand-secondary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
+                    tab === key ? 'bg-brand-primary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
@@ -1215,7 +1283,7 @@ export default function Fichas() {
                   <button
                     onClick={() => { setSearch(''); setDebouncedSearch(''); setPage(0) }}
                     className="text-dark-muted hover:text-dark-text transition-colors flex-shrink-0 text-xs"
-                  >â</button>
+                  >✕</button>
                 )}
               </div>
               {debouncedSearch && (
@@ -1240,7 +1308,7 @@ export default function Fichas() {
           )}
 
           <DataCard
-            title={tab === 'abertas' ? 'Fichas em aberto' : 'Fichas finalizadas'}
+            title={tab === 'abertas' ? 'Fichas em aberto' : tab === 'canceladas' ? 'Fichas canceladas' : 'Fichas finalizadas'}
             subtitle={debouncedSearch ? `Resultados para "${debouncedSearch}"` : `Total: ${total} ficha${total !== 1 ? 's' : ''}`}
             className="flex min-h-0 flex-1 flex-col"
             bodyClassName="p-0 flex min-h-0 flex-1 flex-col"
@@ -1261,7 +1329,7 @@ export default function Fichas() {
             ) : (
               <div className="flex min-h-0 flex-1 flex-col px-5 pb-4">
                 <div
-                  className="overflow-auto rounded-2xl border border-dark-border/60 bg-white/70"
+                  className="overflow-auto rounded-2xl border border-dark-border/60 bg-dark-surface/70"
                   style={{ maxHeight: 'calc(15 * 3.25rem + 4.5rem)' }}
                 >
                   <div className="overflow-x-auto">

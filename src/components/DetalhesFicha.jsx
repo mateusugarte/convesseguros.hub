@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { fetchFichaDetalhe, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { format, parseISO } from 'date-fns'
@@ -12,7 +12,7 @@ import { formatMoneyBR } from '../lib/apolices'
 import { formatDecimalBRInput } from '../lib/numberInput'
 import { normalizeDisplayText } from '../lib/text'
 
-function fmt(v) { if (v === null || v === undefined) return '—'; return String(v) }
+function fmt(v) { if (v === null || v === undefined) return 'â€”'; return String(v) }
 function fmtBRL(v) {
   return formatMoneyBR(v)
 }
@@ -21,8 +21,8 @@ function resolveFichaValor(ficha, field) {
   return ficha?.[field] ?? ficha?.raw_data?.[field] ?? null
 }
 function fmtDt(v) {
-  if (!v) return '—'
-  try { return format(parseISO(v), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) } catch { return v }
+  if (!v) return 'â€”'
+  try { return format(parseISO(v), "dd/MM/yyyy 'Ã s' HH:mm", { locale: ptBR }) } catch { return v }
 }
 
 function Field({ label, value, clamp = false }) {
@@ -105,11 +105,11 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
           </div>
 
           <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
-            {/* Link para página completa */}
+            {/* Link para pÃ¡gina completa */}
             <button
               onClick={() => { onClose(); navigate(`/fichas/${ficha.id}`) }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-brand-accent hover:border-brand-accent/50 transition-colors"
-              title="Abrir página completa"
+              title="Abrir pÃ¡gina completa"
             >
               <ExternalLink className="w-3.5 h-3.5" /> Abrir
             </button>
@@ -135,7 +135,7 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
                 </button>
                 <button onClick={() => setConfirm(false)}
                         className="px-2.5 py-1 rounded-lg border border-dark-border text-xs text-dark-muted hover:text-dark-text transition-colors">
-                  Não
+                  NÃ£o
                 </button>
               </div>
             )}
@@ -148,13 +148,13 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
         {/* Body */}
         <div className="flex-1 overflow-y-auto">
 
-          {/* Identificação */}
+          {/* IdentificaÃ§Ã£o */}
           <Section title={isPJ ? 'Empresa' : 'Interessado'}>
             {isPJ ? (
               <>
                 <Field label="Nome da Empresa" value={normalizeDisplayText(ficha.nome_empresa)} />
                 <Field label="CNPJ"            value={ficha.cnpj} />
-                <Field label="CPF dos Sócios"  value={ficha.cpf_socios} />
+                <Field label="CPF dos SÃ³cios"  value={ficha.cpf_socios} />
               </>
             ) : (
               <>
@@ -165,7 +165,7 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
             <Field label="E-mail"  value={ficha.email} />
           </Section>
 
-          <Section title="Dados do Imóvel">
+          <Section title="Dados do ImÃ³vel">
             <div className="col-span-2">
               <ImobiliariaIdentity
                 nome={resolverNome(ficha.imobiliaria) || ficha.imobiliaria}
@@ -175,13 +175,13 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
                 emphasis
               />
             </div>
-            <Field label="Imobiliária"  value={resolverNome(ficha.imobiliaria) || ficha.imobiliaria} />
+            <Field label="ImobiliÃ¡ria"  value={resolverNome(ficha.imobiliaria) || ficha.imobiliaria} />
             <Field label="Tipo"         value={ficha.tipo_imovel} />
             <Field label="CEP"          value={ficha.cep} />
             <Field label="Aluguel"      value={fmtBRL(resolveFichaValor(ficha, 'valor_aluguel'))} />
             <Field label="IPTU"         value={fmtBRL(resolveFichaValor(ficha, 'valor_iptu'))} />
-            <Field label="Condomínio"   value={fmtBRL(resolveFichaValor(ficha, 'valor_condominio'))} />
-            <Field label="Observações"  value={ficha.observacoes || '—'} clamp />
+            <Field label="CondomÃ­nio"   value={fmtBRL(resolveFichaValor(ficha, 'valor_condominio'))} />
+            <Field label="ObservaÃ§Ãµes"  value={ficha.observacoes || 'â€”'} clamp />
           </Section>
 
           {/* Campos extras para Comercial PF e PJ */}
@@ -190,15 +190,15 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
               <Field label="Atividade"         value={ficha.atividade} />
               <Field label="Total Rendimentos" value={fmtBRL(resolveFichaValor(ficha, 'total_rendimentos'))} />
               <Field label="Capital Social"    value={fmtBRL(resolveFichaValor(ficha, 'capital_social'))} />
-              <Field label="Motivo Locação"    value={ficha.motivo_locacao} />
-              <Field label="Vigência"          value={ficha.vigencia} />
-              {isPJ && <Field label="Opção Tributária" value={ficha.opcao_tributaria} />}
+              <Field label="Motivo LocaÃ§Ã£o"    value={ficha.motivo_locacao} />
+              <Field label="VigÃªncia"          value={ficha.vigencia} />
+              {isPJ && <Field label="OpÃ§Ã£o TributÃ¡ria" value={ficha.opcao_tributaria} />}
             </Section>
           )}
 
           <Section title="Controle Interno">
-            <Field label="Orç. (Forms)"    value={ficha.orcamentista_forms} />
-            <Field label="% Comissão"      value={ficha.pct_comissao != null ? `${formatDecimalBRInput(ficha.pct_comissao)}%` : null} />
+            <Field label="OrÃ§. (Forms)"    value={ficha.orcamentista_forms} />
+            <Field label="% ComissÃ£o"      value={ficha.pct_comissao != null ? `${formatDecimalBRInput(ficha.pct_comissao)}%` : null} />
             <Field label="% Desconto"      value={ficha.pct_desconto != null ? `${formatDecimalBRInput(ficha.pct_desconto)}%` : null} />
             <Field label="Parcelamento"    value={ficha.parcelamento} />
             <div className="col-span-2">
@@ -216,11 +216,12 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
             <Field label="Seguradora"      value={ficha.seguradora} />
             <Field label="Retorno enviado" value={ficha.retorno_enviado ? 'Sim' : null} />
             <Field
-              label="Passado pela imobiliária"
+              label="Passado pela imobiliÃ¡ria"
               value={Object.prototype.hasOwnProperty.call(ficha.raw_data || {}, 'passado_pela_imobiliaria')
-                ? (ficha.raw_data?.passado_pela_imobiliaria ? 'Sim' : 'Não')
+                ? (ficha.raw_data?.passado_pela_imobiliaria ? 'Sim' : 'NÃ£o')
                 : null}
             />
+            <Field label="Motivo cancelamento" value={ficha.raw_data?.motivo_cancelamento} clamp />
             <Field label="Finalizada em"   value={fmtDt(ficha.finalizada_em)} />
           </Section>
         </div>
@@ -233,4 +234,5 @@ export default function DetalhesFicha({ id, onClose, onEdit, onDelete }) {
     </div>
   )
 }
+
 

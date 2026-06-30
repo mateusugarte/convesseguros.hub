@@ -41,7 +41,7 @@ import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
 import FichaStatusBadge from '../components/FichaStatusBadge'
 import { normalizeDisplayText } from '../lib/text'
 import { getEntityImageUrl } from '../lib/entityMedia'
-import { getFichaOperationalState, isFichaPendingEmission } from '../lib/fichaOperational'
+import { getFichaOperationalState } from '../lib/fichaOperational'
 import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/kanbanDnd'
 import { BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
@@ -267,7 +267,7 @@ function summarizeRows(rows) {
     if (isInCobrança(ficha)) summary.cobranca += 1
     if (isRecovered(ficha)) summary.recuperadas += 1
     if (isEmitida(ficha)) summary.emitidas += 1
-    if (isFichaPendingEmission(ficha)) summary.aprovadasSemApolice += 1
+    if ((coluna === 'aprovada' || coluna === 'enviado_cobranca') && !isEmitida(ficha)) summary.aprovadasSemApolice += 1
 
     if (ficha._hasEmittedPolicy && getEffectiveDataEmissao(ficha) && ficha.created_at) {
       const start = new Date(ficha.created_at)
@@ -287,7 +287,8 @@ function summarizeRows(rows) {
     }
   })
 
-  summary.totalFichas = summary.aprovadas + summary.cobranca
+  summary.totalFichas = summary.aprovadas
+  summary.fichasAprovadas = summary.aprovadas
   summary.taxaEmissao = summary.aprovadas > 0 ? (summary.emitidas / summary.aprovadas) * 100 : 0
   summary.taxaRecuperacao = summary.cobranca > 0 ? (summary.recuperadas / summary.cobranca) * 100 : 0
   summary.mediaEmissao = summary.tempoEmissao.length
@@ -326,7 +327,7 @@ function groupByImobiliaria(rows, resolverNome) {
     current.total += 1
     if (coluna === 'aprovada') current.aprovadas += 1
     if (coluna === 'expirada') current.expiradas += 1
-    if (isFichaPendingEmission(ficha)) current.aprovadasSemApolice += 1
+    if ((coluna === 'aprovada' || coluna === 'enviado_cobranca') && !isEmitida(ficha)) current.aprovadasSemApolice += 1
     if (isEmitida(ficha)) current.emitidas += 1
     if (isRecovered(ficha)) current.recuperadas += 1
     if (isInCobrança(ficha)) current.cobranca += 1
@@ -1632,10 +1633,10 @@ export default function Relatorio() {
           actions={overviewActions}
           stats={
             <>
-              <MetricCard label="Total fichas" value={summary.aprovadas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
+              <MetricCard label="Fichas aprovadas" value={summary.aprovadas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
               <MetricCard label="Aprovadas" value={summary.aprovadas} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
-              <MetricCard label="Em cobranca" value={summary.cobranca} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
-              <MetricCard label="Emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
+              <MetricCard label="Em cobrança" value={summary.cobranca} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
+              <MetricCard label="Apólices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
               <MetricCard label="Expiradas" value={summary.expiradas} tone="accent" icon={<Square className="h-4 w-4" />} />
               <MetricCard label="Recuperadas" value={summary.recuperadas} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
             </>
@@ -1776,18 +1777,18 @@ export default function Relatorio() {
         className="border-brand-secondary/20 bg-[linear-gradient(135deg,rgba(0,0,121,0.06),rgba(255,255,255,0.98),rgba(34,71,170,0.08))] shadow-[0_20px_48px_rgba(15,23,42,0.08)]"
       >
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <MetricCard label="Total de fichas" value={summary.totalFichas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
+          <MetricCard label="Fichas aprovadas" value={summary.fichasAprovadas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
           <MetricCard label="Apólices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
-          <MetricCard label="Taxa geral de emissão" value={`${summary.taxaEmissao.toFixed(1)}%`} tone="accent" icon={<BarChart2 className="h-4 w-4" />} />
+          <MetricCard label="Taxa de emissão" value={`${summary.taxaEmissao.toFixed(1)}%`} tone="accent" icon={<BarChart2 className="h-4 w-4" />} />
           <MetricCard label="Em cobrança" value={summary.cobranca} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
-          <MetricCard label="Pendentes sem apolice" value={summary.aprovadasSemApolice} tone="warning" icon={<BellRing className="h-4 w-4" />} />
+          <MetricCard label="Pendentes sem apólice" value={summary.aprovadasSemApolice} tone="warning" icon={<BellRing className="h-4 w-4" />} />
           <MetricCard label="Recuperadas" value={summary.recuperadas} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
           <MetricCard label="Expiradas" value={summary.expiradas} tone="secondary" icon={<Square className="h-4 w-4" />} />
         </div>
       </DataCard>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <MetricCard label="Conversão geral" value={`${summary.taxaEmissao.toFixed(1)}%`} hint="Apólices emitidas ÷ fichas aprovadas" />
+        <MetricCard label="Taxa de emissão" value={`${summary.taxaEmissao.toFixed(1)}%`} hint="Apólices emitidas ÷ fichas aprovadas" />
         <MetricCard label="Tempo médio até emissão" value={summary.mediaEmissao != null ? `${summary.mediaEmissao.toFixed(1)} dias` : '—'} hint="Entre criação da ficha e emissão" />
         <MetricCard label="Tempo médio em cobrança" value={summary.mediaCobrança != null ? `${summary.mediaCobrança.toFixed(1)} dias` : '—'} hint="Entre cobrança e emissão/atual" />
       </div>
@@ -1796,7 +1797,7 @@ export default function Relatorio() {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {seguradoras.map(seg => {
             const approved = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && getColuna(item) === 'aprovada').length
-            const pending = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && isFichaPendingEmission(item)).length
+            const pending = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && !isEmitida(item)).length
             return (
               <div key={seg.id} className="rounded-3xl border border-dark-border/60 bg-white/60 p-4">
                 <div className="flex items-start justify-between gap-3">

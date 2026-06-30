@@ -511,7 +511,7 @@ export default function Layout() {
                   <p className="text-xs font-semibold text-dark-text truncate flex-1">{profile?.nome}</p>
                   <button
                     onClick={() => { setNotificationsOpen(o => !o); setUserMenuOpen(false) }}
-                    className="relative inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-dark-border/70 bg-white/70 text-dark-muted transition-colors hover:text-dark-text hover:border-brand-accent/50"
+                    className="relative inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-dark-border/70 bg-dark-surface/70 text-dark-muted transition-colors hover:text-dark-text hover:border-brand-accent/50"
                     aria-label="Notificações"
                     aria-expanded={notificationsOpen}
                   >
@@ -580,7 +580,7 @@ export default function Layout() {
             >
               {theme === 'dark'
                 ? <Sun className="w-4 h-4 text-brand-gold" />
-                : <Moon className="w-4 h-4 text-brand-accent" />
+                : <Moon className="w-4 h-4 text-status-info" />
               }
             </button>
             <div className="relative ml-1">

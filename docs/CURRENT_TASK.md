@@ -1,5 +1,19 @@
 # CURRENT TASK
 
+## Frente ativa (Claude) — Auditoria global UI/UX + encoding
+
+Auditoria/redesign premium modulo a modulo (plano em `~/.claude/plans/projeto-de-eventual-koala.md`).
+Modulos concluidos: Dashboard, Fichas, Relatorio, Apolices, Imob/Seg, Auto, Comercial,
+Financeiro, Config/Login, Shell.
+
+**Pass de encoding (2026-06-30):** mojibake corrigido nos arquivos de exibicao
+(`fichas.js` labels/mensagens/comentarios, `RelatorioMensal.jsx`, `ModalFicha.jsx`,
+`DetalhesFicha.jsx`) via reversao byte-a-byte (Latin-1 + CP1252). NAO tocados de proposito:
+`text.js` (normalizador de mojibake), `apoliceParser.js` (regex tolerante a mojibake do PDF)
+e `financeiroProducaoCalc.test.mjs` (texto correto). Build verde.
+
+---
+
 ## Responsavel Atual
 
 Codex

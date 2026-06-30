@@ -158,7 +158,7 @@ export function WorkspacesSelect({
             avatarSource(selected).type === 'icon' ? (
               <span className="ws-avatar-icon flex-shrink-0">{selected.icon}</span>
             ) : avatarSource(selected).type === 'image' ? (
-              <span className="ws-avatar flex-shrink-0 overflow-hidden bg-white/90 border border-dark-border/40">
+              <span className="ws-avatar flex-shrink-0 overflow-hidden bg-dark-surface/90 border border-dark-border/40">
                 <img
                   src={avatarSource(selected).value}
                   alt={selected.label}
@@ -360,7 +360,7 @@ function WorkspaceItem({ opt, isSelected, onSelect, color, initials, avatar }) {
       {avatar?.type === 'icon' ? (
         <span className="ws-avatar-icon-sm flex-shrink-0">{opt.icon}</span>
       ) : avatar?.type === 'image' ? (
-        <span className="ws-avatar-sm flex-shrink-0 overflow-hidden bg-white/90 border border-dark-border/40">
+        <span className="ws-avatar-sm flex-shrink-0 overflow-hidden bg-dark-surface/90 border border-dark-border/40">
           <img
             src={avatar.value}
             alt={opt.label}

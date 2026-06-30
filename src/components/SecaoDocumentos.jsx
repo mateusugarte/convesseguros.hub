@@ -76,7 +76,7 @@ export default function SecaoDocumentos({ fichaId, apoliceId, cpfCnpj }) {
     <div className="card p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Paperclip className="w-4 h-4 text-brand-accent" />
+          <Paperclip className="w-4 h-4 text-status-info" />
           <p className="text-sm font-semibold text-dark-text">Documentos</p>
           {docs.length > 0 && (
             <span className="text-[10px] font-mono text-dark-muted">({docs.length})</span>
@@ -116,7 +116,7 @@ export default function SecaoDocumentos({ fichaId, apoliceId, cpfCnpj }) {
                 </p>
               </div>
               <a href={d.signedUrl || '#'} target="_blank" rel="noreferrer"
-                className={`transition-colors p-1 ${d.signedUrl ? 'text-dark-muted hover:text-brand-accent' : 'text-dark-muted/30 pointer-events-none'}`}>
+                className={`transition-colors p-1 ${d.signedUrl ? 'text-dark-muted hover:text-status-info' : 'text-dark-muted/30 pointer-events-none'}`}>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
               <button onClick={() => handleDeletar(d)}

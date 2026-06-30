@@ -7,8 +7,8 @@ import SeguradoraSelect from './SeguradoraSelect'
 const STATUS_FINAIS = [
   { value: 'aprovado',     label: 'Aprovado',     color: 'text-status-success' },
   { value: 'recusado',     label: 'Recusado',     color: 'text-status-danger' },
-  { value: 'emitido',      label: 'Emitido',      color: 'text-brand-accent' },
-  { value: 'em_analise',   label: 'Em Análise',   color: 'text-brand-accent' },
+  { value: 'emitido',      label: 'Emitido',      color: 'text-status-info' },
+  { value: 'em_analise',   label: 'Em Análise',   color: 'text-status-info' },
   { value: 'cancelado',    label: 'Cancelado',    color: 'text-dark-muted' },
   { value: 'cpf_invalido', label: 'CPF Inválido', color: 'text-status-warning' },
   { value: 'expirada',     label: 'Expirada',     color: 'text-dark-muted' },
@@ -105,7 +105,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
             <label className="block text-xs font-medium text-dark-muted mb-1.5 uppercase tracking-wider">Seguradora</label>
             {seguradoraDefinida && status !== 'recusado' ? (
               <div className="rounded-2xl border border-brand-accent/20 bg-brand-accent/5 px-4 py-3">
-                <div className="flex items-center gap-2 text-brand-accent">
+                <div className="flex items-center gap-2 text-status-info">
                   <ShieldCheck className="w-4 h-4" />
                   <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">Seguradora já definida</span>
                 </div>

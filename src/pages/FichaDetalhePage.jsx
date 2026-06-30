@@ -106,7 +106,7 @@ function InlineField({ label, value, onSave, type = 'text', rows, formatter, inp
       ) : (
         <p
           onClick={() => { setDraft(formatDraft(value)); setEditing(true) }}
-          className="text-sm text-dark-text cursor-pointer group flex items-center gap-1.5 hover:text-brand-accent transition-colors"
+          className="text-sm text-dark-text cursor-pointer group flex items-center gap-1.5 hover:text-status-info transition-colors"
         >
           <span>{formatter ? (formatter(value) || <span className="text-dark-muted/40 italic">—</span>) : (value || <span className="text-dark-muted/40 italic">—</span>)}</span>
           <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-40 flex-shrink-0 transition-opacity" />
@@ -820,7 +820,7 @@ export default function FichaDetalhePage() {
             <div className="rounded-[28px] border border-brand-accent/20 bg-brand-accent/5 p-4 md:p-5">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-accent">Resumo do preenchimento</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-info">Resumo do preenchimento</p>
                   <p className="mt-1 text-sm text-dark-muted">
                     Ajuste a comissão por seguradora abaixo. O valor da ficha pode servir como padrão, mas cada card pode ser editado individualmente.
                   </p>
@@ -830,7 +830,7 @@ export default function FichaDetalhePage() {
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-                <div className="rounded-2xl border border-dark-border/70 bg-white/70 px-4 py-3">
+                <div className="rounded-2xl border border-dark-border/70 bg-dark-surface/70 px-4 py-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissão padrão da ficha</p>
                   <p className="mt-1 text-lg font-semibold text-dark-text">
                     {ficha.pct_comissao != null && ficha.pct_comissao !== ''
@@ -838,11 +838,11 @@ export default function FichaDetalhePage() {
                       : '—'}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-dark-border/70 bg-white/70 px-4 py-3">
+                <div className="rounded-2xl border border-dark-border/70 bg-dark-surface/70 px-4 py-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Parcelamento base</p>
                   <p className="mt-1 text-lg font-semibold text-dark-text">{ficha.parcelamento != null && ficha.parcelamento !== '' ? `${ficha.parcelamento}x` : '—'}</p>
                 </div>
-                <div className="rounded-2xl border border-dark-border/70 bg-white/70 px-4 py-3">
+                <div className="rounded-2xl border border-dark-border/70 bg-dark-surface/70 px-4 py-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Seguradoras exibidas</p>
                   <p className="mt-1 text-lg font-semibold text-dark-text">{cotacoesNormalizadas.length}</p>
                 </div>
@@ -866,13 +866,13 @@ export default function FichaDetalhePage() {
                 return (
                   <div
                     key={cotacao.seguradora}
-                    className={`rounded-[28px] border p-4 shadow-[0_18px_38px_rgba(15,23,42,0.08)] backdrop-blur-sm space-y-4 transition-all ${isEscolhida ? 'border-brand-accent/55 bg-brand-accent/7 ring-2 ring-brand-accent/12 shadow-[0_22px_46px_rgba(245,88,42,0.14)]' : 'border-dark-border bg-white/90'}`}
+                    className={`rounded-[28px] border p-4 shadow-[0_18px_38px_rgba(15,23,42,0.08)] backdrop-blur-sm space-y-4 transition-all ${isEscolhida ? 'border-brand-accent/55 bg-brand-accent/7 ring-2 ring-brand-accent/12 shadow-[0_22px_46px_rgba(245,88,42,0.14)]' : 'border-dark-border bg-dark-surface/90'}`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <SeguradoraBadge nome={cotacao.seguradora} size="xl" showName={false} />
                       <div className="flex flex-col items-end gap-1">
                         {isEscolhida && (
-                          <span className="text-[9px] uppercase tracking-[0.18em] rounded-full border border-brand-accent/30 bg-brand-accent/10 px-2.5 py-1 text-brand-accent font-semibold">
+                          <span className="text-[9px] uppercase tracking-[0.18em] rounded-full border border-brand-accent/30 bg-brand-accent/10 px-2.5 py-1 text-status-info font-semibold">
                             Escolhida
                           </span>
                         )}
@@ -882,7 +882,7 @@ export default function FichaDetalhePage() {
                         <button
                           type="button"
                           onClick={() => selecionarSeguradora(cotacao)}
-                          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${isEscolhida ? 'bg-brand-accent text-white shadow-sm' : 'border border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-brand-accent'}`}
+                          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${isEscolhida ? 'bg-brand-primary text-white shadow-sm' : 'border border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-status-info'}`}
                         >
                           {isEscolhida ? <CheckCircle2 className="w-3.5 h-3.5" /> : <CircleDot className="w-3.5 h-3.5" />}
                           {isEscolhida ? 'Selecionada' : 'Selecionar'}
@@ -992,7 +992,7 @@ export default function FichaDetalhePage() {
               <>
                 <button
                   onClick={handleGerarMensagemRetorno}
-                  className="inline-flex items-center gap-1.5 rounded-2xl bg-brand-secondary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:opacity-90"
+                  className="inline-flex items-center gap-1.5 rounded-2xl bg-brand-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:opacity-90"
                 >
                   <FileText className="w-3.5 h-3.5" />
                   Gerar mensagem de retorno
@@ -1000,7 +1000,7 @@ export default function FichaDetalhePage() {
                 <button
                   onClick={handleCopiarMensagemRetorno}
                   disabled={copiandoMensagem || !mensagemGerada}
-                  className="inline-flex items-center gap-1.5 rounded-2xl border border-brand-accent/30 px-3 py-1.5 text-xs font-medium text-brand-accent transition-colors hover:bg-brand-accent/10 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-2xl border border-brand-accent/30 px-3 py-1.5 text-xs font-medium text-status-info transition-colors hover:bg-brand-accent/10 disabled:opacity-50"
                 >
                   {copiandoMensagem ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
                   {copiandoMensagem ? 'Copiando...' : 'Copiar'}
@@ -1010,7 +1010,7 @@ export default function FichaDetalhePage() {
             bodyClassName="space-y-4"
           >
             <div className="rounded-2xl border border-brand-accent/20 bg-brand-accent/5 px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-accent">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-info">
                 {retornoSalvo?.texto ? 'Última mensagem salva' : 'Mensagem pronta para gerar'}
               </p>
               <p className="mt-1 text-xs text-dark-muted">
@@ -1038,7 +1038,7 @@ export default function FichaDetalhePage() {
             <div className="rounded-[28px] border border-dark-border/70 bg-dark-surface2/30 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-accent">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-info">
                     {mensagemExibida ? 'Mensagem gerada' : 'Aguardando geração'}
                   </p>
                   <p className="mt-1 text-xs text-dark-muted">
@@ -1063,7 +1063,7 @@ export default function FichaDetalhePage() {
             </div>
 
             {!!resumoCotacoesSalvas.length && (
-              <div className="rounded-[28px] border border-dark-border/70 bg-white/60 p-4">
+              <div className="rounded-[28px] border border-dark-border/70 bg-dark-surface/60 p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">
@@ -1096,7 +1096,7 @@ export default function FichaDetalhePage() {
                         className={`flex w-full items-center gap-4 rounded-2xl border px-4 py-3 text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 ${
                           isEscolhida
                             ? 'border-brand-accent/50 bg-brand-accent/8 shadow-[0_14px_32px_rgba(245,88,42,0.12)] ring-1 ring-brand-accent/15'
-                            : 'border-dark-border bg-dark-surface hover:border-brand-accent/35 hover:bg-white/80'
+                            : 'border-dark-border bg-dark-surface hover:border-brand-accent/35 hover:bg-dark-surface/80'
                         }`}
                       >
                         <div className="flex min-w-0 items-center gap-3">
@@ -1116,7 +1116,7 @@ export default function FichaDetalhePage() {
                                 {normalizeDisplayText(cotacao.seguradora).toUpperCase()}
                               </p>
                               {isEscolhida && (
-                                <span className="inline-flex items-center rounded-full bg-brand-accent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
+                                <span className="inline-flex items-center rounded-full bg-brand-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
                                   Escolhida
                                 </span>
                               )}

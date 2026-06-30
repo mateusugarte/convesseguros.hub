@@ -20,7 +20,7 @@ export default function Login() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="rounded-3xl border border-dark-border bg-white/80 px-6 py-5 text-sm text-dark-muted shadow-lg">
+        <div className="rounded-3xl border border-dark-border bg-dark-surface/80 px-6 py-5 text-sm text-dark-muted shadow-lg">
           Carregando autenticacao...
         </div>
       </div>
@@ -76,7 +76,7 @@ export default function Login() {
       <div className="grid w-full max-w-5xl gap-6 xl:grid-cols-[1.15fr_.85fr]">
         <section className="dashboard-hero flex flex-col justify-between p-8">
           <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/20 bg-brand-accent/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-accent">
+            <div className="inline-flex items-center gap-2 rounded-full border border-status-info/20 bg-status-info/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-status-info">
               <Sparkles className="h-3.5 w-3.5" />
               Conves Hub
             </div>
@@ -169,7 +169,7 @@ export default function Login() {
                 setMode(mode === 'login' ? 'register' : 'login')
                 setError('')
               }}
-              className="w-full rounded-2xl border border-dark-border px-4 py-3 text-sm font-medium text-dark-muted transition-colors hover:text-dark-text hover:border-brand-accent/40"
+              className="w-full rounded-2xl border border-dark-border px-4 py-3 text-sm font-medium text-dark-muted transition-colors hover:text-dark-text hover:border-status-info/40"
             >
               {mode === 'login' ? 'Quero me cadastrar' : 'Já tenho conta'}
             </button>

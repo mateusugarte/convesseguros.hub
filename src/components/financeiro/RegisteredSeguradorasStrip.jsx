@@ -15,7 +15,7 @@ export default function RegisteredSeguradorasStrip({ seguradoras = [], limit = 4
           logoUrl={seg.logoUrl}
           logoPath={seg.logoPath}
           size={size}
-          className="rounded-full border border-emerald-500/15 bg-white/70 px-2 py-1"
+          className="rounded-full border border-emerald-500/15 bg-dark-surface/70 px-2 py-1"
         />
       ))}
       {restante > 0 && (

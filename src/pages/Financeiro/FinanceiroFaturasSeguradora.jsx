@@ -123,7 +123,7 @@ export default function FinanceiroFaturasSeguradora() {
             <button
               key={label}
               onClick={() => setMes(i + 1)}
-              className={`rounded-xl px-2.5 py-1.5 text-xs font-medium transition-colors ${mes === i + 1 ? 'bg-brand-secondary text-white' : 'text-dark-muted hover:bg-dark-surface2 hover:text-dark-text'}`}
+              className={`rounded-xl px-2.5 py-1.5 text-xs font-medium transition-colors ${mes === i + 1 ? 'bg-emerald-600 text-white' : 'text-dark-muted hover:bg-dark-surface2 hover:text-dark-text'}`}
             >
               {label}
             </button>

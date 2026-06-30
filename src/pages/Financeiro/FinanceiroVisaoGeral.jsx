@@ -98,7 +98,7 @@ export default function FinanceiroVisaoGeral() {
   return (
     <div className="space-y-6">
       <section className="overflow-hidden rounded-[32px] border border-emerald-500/15 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_42%),linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.92))] px-6 py-6 shadow-[0_28px_72px_-44px_rgba(16,185,129,0.5)]">
-        <p className="mb-1 inline-flex rounded-full border border-emerald-500/15 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800/70">Financeiro · Produção</p>
+        <p className="mb-1 inline-flex rounded-full border border-emerald-500/15 bg-dark-surface/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">Financeiro · Produção</p>
         <h1 className="text-3xl font-bold text-dark-text">Visão geral do Seguro Fiança</h1>
         <p className="mt-2 max-w-2xl text-sm text-dark-muted">
           Leia produção, comissão, recebimento estimado e o ranking consolidado do mês com uma visualização mais clara das imobiliárias e seguradoras ativas.
@@ -167,7 +167,7 @@ export default function FinanceiroVisaoGeral() {
                 <button
                   key={item.imobiliaria}
                   onClick={() => navigate(`/financeiro/producao/${encodeURIComponent(item.imobiliaria)}`)}
-                  className="group relative w-full overflow-hidden rounded-[24px] border border-emerald-500/15 bg-white/92 px-4 py-4 text-left shadow-[0_18px_48px_-36px_rgba(16,185,129,0.45)] transition-all hover:-translate-y-0.5 hover:border-emerald-500/30"
+                  className="group relative w-full overflow-hidden rounded-[24px] border border-emerald-500/15 bg-dark-surface/92 px-4 py-4 text-left shadow-[0_18px_48px_-36px_rgba(16,185,129,0.45)] transition-all hover:-translate-y-0.5 hover:border-emerald-500/30"
                 >
                   <div className="absolute inset-y-0 left-0 bg-[linear-gradient(90deg,rgba(16,185,129,0.15),rgba(52,211,153,0.04))] transition-all" style={{ width: `${pct}%` }} />
                   <div className="relative flex items-start justify-between gap-3">

@@ -51,7 +51,7 @@ const CONFIG = {
   info: {
     Icon:   Info,
     bar:    'bg-brand-accent',
-    icon:   'text-brand-accent',
+    icon:   'text-status-info',
     border: 'border-brand-accent/35',
     ring:   'bg-brand-accent/12',
   },
@@ -66,7 +66,7 @@ const CONFIG = {
   auto: {
     Icon:   Car,
     bar:    'bg-brand-accent',
-    icon:   'text-brand-accent',
+    icon:   'text-status-info',
     border: 'border-brand-accent/35',
     ring:   'bg-brand-accent/12',
   },
@@ -100,7 +100,7 @@ function Toast({ type = 'info', title, message, action, duration, onRemove }) {
           </span>
         )}
         {type === 'auto' && (
-          <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-brand-accent bg-brand-accent/12 border border-brand-accent/25 rounded px-1.5 py-0.5 mb-1.5">
+          <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-status-info bg-brand-accent/12 border border-brand-accent/25 rounded px-1.5 py-0.5 mb-1.5">
             Novo Seguro Auto
           </span>
         )}

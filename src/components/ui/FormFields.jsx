@@ -118,7 +118,7 @@ export function Select({
                 className="w-full flex items-center justify-between px-3 py-2 text-sm text-dark-text hover:bg-dark-surface2 transition-colors text-left"
               >
                 {optionLabel}
-                {optionValue === value && <Check className="w-3.5 h-3.5 text-brand-accent" />}
+                {optionValue === value && <Check className="w-3.5 h-3.5 text-status-info" />}
               </button>
             )
           })}

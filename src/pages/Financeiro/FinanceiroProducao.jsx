@@ -185,7 +185,7 @@ export default function FinanceiroProducao() {
         </button>
         <button
           onClick={() => irParaApolices('emitidas')}
-          className="inline-flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-white/80 px-4 py-2.5 text-sm font-medium text-dark-text transition-colors hover:border-emerald-500/40"
+          className="inline-flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-dark-surface/80 px-4 py-2.5 text-sm font-medium text-dark-text transition-colors hover:border-emerald-500/40"
         >
           <FileText className="h-4 w-4" /> Apólices emitidas no período
         </button>
@@ -193,7 +193,7 @@ export default function FinanceiroProducao() {
 
       <DataCard title="Repasse da imobiliária" subtitle="Percentual sobre a comissão gerada, salvo para o mês" className="border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,253,244,0.88))]">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1 rounded-2xl border border-emerald-500/15 bg-white/90 px-3 py-2 shadow-sm">
+          <div className="flex items-center gap-1 rounded-2xl border border-emerald-500/15 bg-dark-surface/90 px-3 py-2 shadow-sm">
             <input
               value={pct}
               onChange={e => setPct(e.target.value)}

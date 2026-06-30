@@ -29,7 +29,7 @@ function QuickDateFilter({ value, onChange }) {
           key={o.key}
           onClick={() => onChange(o.key)}
           className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-            value === o.key ? 'bg-brand-secondary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
+            value === o.key ? 'bg-brand-primary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
           }`}
         >
           {o.label}
@@ -169,7 +169,7 @@ export default function MinhasFichas() {
             onClick={() => setTab('abertas')}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl border text-sm font-medium transition-all ${
               tab === 'abertas'
-                ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                ? 'border-brand-accent bg-brand-accent/10 text-status-info'
                 : 'border-dark-border text-dark-muted hover:text-dark-text hover:border-dark-muted'
             }`}
           >
@@ -181,7 +181,7 @@ export default function MinhasFichas() {
             onClick={() => setTab('passadas')}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl border text-sm font-medium transition-all ${
               tab === 'passadas'
-                ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                ? 'border-brand-accent bg-brand-accent/10 text-status-info'
                 : 'border-dark-border text-dark-muted hover:text-dark-text hover:border-dark-muted'
             }`}
           >

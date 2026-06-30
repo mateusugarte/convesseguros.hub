@@ -72,7 +72,7 @@ export default function GestaoEmissoes() {
             </Link>
             <Link
               to="/apolices/gestao"
-              className="inline-flex items-center gap-1.5 rounded-2xl bg-brand-secondary px-3 py-2 text-xs font-medium text-white transition-colors hover:opacity-90"
+              className="inline-flex items-center gap-1.5 rounded-2xl bg-brand-primary px-3 py-2 text-xs font-medium text-white transition-colors hover:opacity-90"
             >
               Abrir gestão
               <ArrowRight className="h-3.5 w-3.5" />
@@ -130,7 +130,7 @@ export default function GestaoEmissoes() {
               <img src={LOGO} alt="" className="h-56 w-56 object-contain opacity-[0.04]" />
             </div>
             <div className="relative z-10 space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/20 bg-brand-secondary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-accent">
+              <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/20 bg-brand-secondary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-status-info">
                 <Star className="h-3.5 w-3.5" />
                 Em desenvolvimento
               </div>
@@ -157,7 +157,7 @@ export default function GestaoEmissoes() {
                 key={pillar.title}
                 className="rounded-2xl border border-dark-border bg-dark-surface2/55 p-4"
               >
-                <div className="mb-3 flex items-center gap-2 text-brand-accent">
+                <div className="mb-3 flex items-center gap-2 text-status-info">
                   {pillar.title === 'Entrada' && <BadgeInfo className="h-4 w-4" />}
                   {pillar.title === 'Acompanhamento' && <Sparkles className="h-4 w-4" />}
                   {pillar.title === 'Resultado' && <BarChart3 className="h-4 w-4" />}
@@ -179,7 +179,7 @@ export default function GestaoEmissoes() {
               key={feature}
               className="flex items-start gap-3 rounded-2xl border border-dark-border/70 bg-dark-surface2/50 px-4 py-3"
             >
-              <div className="mt-0.5 rounded-xl border border-brand-accent/20 bg-brand-secondary/15 p-2 text-brand-accent">
+              <div className="mt-0.5 rounded-xl border border-brand-accent/20 bg-brand-secondary/15 p-2 text-status-info">
                 <Star className="h-3.5 w-3.5" />
               </div>
               <div>
@@ -205,7 +205,7 @@ export default function GestaoEmissoes() {
             key={step}
             className="flex items-start gap-4 rounded-2xl border border-dark-border bg-dark-surface2/55 px-4 py-3"
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand-secondary/15 text-sm font-semibold text-brand-accent">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand-secondary/15 text-sm font-semibold text-status-info">
               {index + 1}
             </div>
             <p className="text-sm leading-6 text-dark-muted">{step}</p>
@@ -228,7 +228,7 @@ export default function GestaoEmissoes() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-2">
-                    <div className="inline-flex rounded-xl border border-brand-accent/15 bg-brand-secondary/10 p-2 text-brand-accent">
+                    <div className="inline-flex rounded-xl border border-brand-accent/15 bg-brand-secondary/10 p-2 text-status-info">
                       <Icon className="h-4 w-4" />
                     </div>
                     <div>
@@ -236,7 +236,7 @@ export default function GestaoEmissoes() {
                       <p className="mt-1 text-sm leading-6 text-dark-muted">{shortcut.text}</p>
                     </div>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-dark-muted transition-transform group-hover:translate-x-0.5 group-hover:text-brand-accent" />
+                  <ArrowRight className="h-4 w-4 text-dark-muted transition-transform group-hover:translate-x-0.5 group-hover:text-status-info" />
                 </div>
               </Link>
             )

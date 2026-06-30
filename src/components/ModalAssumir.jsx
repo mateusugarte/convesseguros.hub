@@ -27,7 +27,7 @@ export default function ModalAssumir({ id, onClose, onSuccess }) {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="w-10 h-10 rounded-2xl bg-brand-secondary/20 flex items-center justify-center flex-shrink-0">
-            <UserCheck className="w-5 h-5 text-brand-accent" />
+            <UserCheck className="w-5 h-5 text-status-info" />
           </div>
           <div>
             <h2 className="font-bold text-dark-text">Assumir Ficha</h2>

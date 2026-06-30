@@ -42,7 +42,7 @@ export default function Financeiro() {
             end={tab.end}
             className={({ isActive }) =>
               `rounded-2xl px-4 py-2 text-xs font-semibold transition-colors ${
-                isActive ? 'bg-emerald-600 text-white shadow-sm' : 'text-dark-muted hover:bg-white/80 hover:text-emerald-700'
+                isActive ? 'bg-emerald-600 text-white shadow-sm' : 'text-dark-muted hover:bg-dark-surface/80 hover:text-emerald-700'
               }`
             }
           >

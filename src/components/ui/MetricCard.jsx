@@ -7,8 +7,8 @@ export function MetricCard({
   className = '',
 }) {
   const toneClasses = {
-    accent: 'text-brand-accent bg-brand-accent/10 border-brand-accent/15',
-    secondary: 'text-brand-secondary bg-brand-secondary/10 border-brand-secondary/15',
+    accent: 'text-status-info bg-brand-accent/10 border-brand-accent/15',
+    secondary: 'text-status-info bg-brand-secondary/10 border-brand-secondary/15',
     success: 'text-status-success bg-status-success/10 border-status-success/15',
     warning: 'text-status-warning bg-status-warning/10 border-status-warning/15',
   }

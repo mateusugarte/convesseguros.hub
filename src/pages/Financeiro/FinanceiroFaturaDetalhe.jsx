@@ -72,8 +72,8 @@ export default function FinanceiroFaturaDetalhe() {
           actions={(<ImobiliariaIdentity nome={imobiliaria} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="lg" />)}
           stats={(
             <>
-              <MetricCard label="Apólices" value={apolices.length} hint={formatMesAno(mesRef)} tone="success" icon={<FileText className="h-4 w-4" />} className="border border-emerald-500/15 bg-white/85" />
-              <MetricCard label="Valor da fatura" value={formatMoneyBR(valorFatura)} hint="soma das parcelas" tone="accent" icon={<Coins className="h-4 w-4" />} className="border border-emerald-500/15 bg-white/85" />
+              <MetricCard label="Apólices" value={apolices.length} hint={formatMesAno(mesRef)} tone="success" icon={<FileText className="h-4 w-4" />} className="border border-emerald-500/15 bg-dark-surface/85" />
+              <MetricCard label="Valor da fatura" value={formatMoneyBR(valorFatura)} hint="soma das parcelas" tone="accent" icon={<Coins className="h-4 w-4" />} className="border border-emerald-500/15 bg-dark-surface/85" />
             </>
           )}
         />

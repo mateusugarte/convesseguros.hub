@@ -305,7 +305,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
                 onClick={() => setModo('nova')}
                 className={`flex-1 py-2 transition-colors ${
                   modo === 'nova'
-                    ? 'bg-brand-accent text-white'
+                    ? 'bg-brand-primary text-white'
                     : 'text-dark-muted hover:text-dark-text'
                 }`}
               >
@@ -315,7 +315,7 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
                 onClick={() => setModo('existente')}
                 className={`flex-1 py-2 transition-colors ${
                   modo === 'existente'
-                    ? 'bg-brand-accent text-white'
+                    ? 'bg-brand-primary text-white'
                     : 'text-dark-muted hover:text-dark-text'
                 }`}
               >

@@ -39,7 +39,7 @@ export default function ImobiliariasGrid({ onSelect }) {
           value={busca}
           onChange={e => setBusca(e.target.value)}
           placeholder="Buscar imobiliária..."
-          className="w-full rounded-2xl border border-emerald-500/15 bg-white/80 py-3 pl-10 pr-4 text-sm text-dark-text shadow-sm outline-none transition-colors focus:border-emerald-500/40"
+          className="w-full rounded-2xl border border-emerald-500/15 bg-dark-surface/80 py-3 pl-10 pr-4 text-sm text-dark-text shadow-sm outline-none transition-colors focus:border-emerald-500/40"
         />
       </div>
       {loading ? (

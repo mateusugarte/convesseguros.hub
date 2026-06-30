@@ -367,10 +367,10 @@ export default function Configuracoes() {
       />
 
       {isAdmin && (
-        <div className="rounded-[28px] border border-brand-accent/20 bg-gradient-to-r from-brand-accent/10 via-white to-brand-secondary/10 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+        <div className="rounded-[28px] border border-status-info/20 bg-gradient-to-r from-status-info/10 via-white to-brand-secondary/10 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-accent/15 text-brand-accent">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-status-info/15 text-status-info">
                 <Users2 className="h-5 w-5" />
               </div>
               <div>
@@ -437,8 +437,8 @@ export default function Configuracoes() {
                           onClick={() => setAreasAtuacao(prev => toggleItem(prev, role.value))}
                           className={`rounded-2xl border px-3 py-2 text-left text-sm transition-all ${
                             active
-                              ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
-                              : 'border-dark-border hover:border-brand-accent/40 hover:bg-dark-surface2/40'
+                              ? 'border-status-info bg-status-info/10 text-status-info'
+                              : 'border-dark-border hover:border-status-info/40 hover:bg-dark-surface2/40'
                           }`}
                         >
                           <span className="flex items-center gap-2">
@@ -474,8 +474,8 @@ export default function Configuracoes() {
                           onClick={() => setComercialProdutos(prev => toggleItem(prev, product.id))}
                           className={`rounded-2xl border px-3 py-2 text-left text-sm transition-all ${
                             active
-                              ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
-                              : 'border-dark-border hover:border-brand-accent/40 hover:bg-dark-surface2/40'
+                              ? 'border-status-info bg-status-info/10 text-status-info'
+                              : 'border-dark-border hover:border-status-info/40 hover:bg-dark-surface2/40'
                           }`}
                         >
                           {product.label}
@@ -560,13 +560,13 @@ export default function Configuracoes() {
                     onClick={() => setTheme(option.key)}
                     className={`rounded-3xl border p-5 text-left transition-all ${
                       active
-                        ? 'border-brand-accent bg-brand-accent/10 shadow-sm'
-                        : 'border-dark-border hover:border-brand-accent/40 hover:bg-dark-surface2/40'
+                        ? 'border-status-info bg-status-info/10 shadow-sm'
+                        : 'border-dark-border hover:border-status-info/40 hover:bg-dark-surface2/40'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${active ? 'bg-brand-accent/15 text-brand-accent' : 'bg-dark-surface2 text-dark-muted'}`}>
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${active ? 'bg-status-info/15 text-status-info' : 'bg-dark-surface2 text-dark-muted'}`}>
                           <Icon className="h-5 w-5" />
                         </div>
                         <div>
@@ -591,7 +591,7 @@ export default function Configuracoes() {
             <div className="space-y-3 text-sm text-dark-muted">
               <div className="rounded-2xl border border-dark-border/70 p-4">
                 <div className="flex items-center gap-2 text-dark-text">
-                  <Layers3 className="h-4 w-4 text-brand-accent" />
+                  <Layers3 className="h-4 w-4 text-status-info" />
                   Shell operacional
                 </div>
                 <p className="mt-2 text-sm text-dark-muted">
@@ -600,7 +600,7 @@ export default function Configuracoes() {
               </div>
               <div className="rounded-2xl border border-dark-border/70 p-4">
                 <div className="flex items-center gap-2 text-dark-text">
-                  <MonitorCog className="h-4 w-4 text-brand-secondary" />
+                  <MonitorCog className="h-4 w-4 text-status-info" />
                   Preferencia salva
                 </div>
                 <p className="mt-2 text-sm text-dark-muted">
@@ -624,7 +624,7 @@ export default function Configuracoes() {
               title="Administracao de usuarios"
               subtitle="Criacao e consulta de contas com funcoes combinadas"
             >
-              <div className="mb-4 rounded-2xl border border-brand-accent/15 bg-brand-accent/5 p-4">
+              <div className="mb-4 rounded-2xl border border-status-info/15 bg-status-info/5 p-4">
                 <p className="text-sm font-medium text-dark-text">Voce esta usando um perfil com permissao administrativa.</p>
                 <p className="mt-1 text-sm text-dark-muted">
                   Aqui voce cria outros usuarios, atribui mais de uma funcao e identifica rapidamente quem tambem e admin.
@@ -687,8 +687,8 @@ export default function Configuracoes() {
                           onClick={() => setNewUser(prev => ({ ...prev, roles: toggleItem(prev.roles, role.value) }))}
                           className={`rounded-2xl border px-3 py-2 text-left text-sm transition-all ${
                             active
-                              ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
-                              : 'border-dark-border hover:border-brand-accent/40 hover:bg-dark-surface2/40'
+                              ? 'border-status-info bg-status-info/10 text-status-info'
+                              : 'border-dark-border hover:border-status-info/40 hover:bg-dark-surface2/40'
                           }`}
                         >
                           {role.label}
@@ -715,8 +715,8 @@ export default function Configuracoes() {
                           onClick={() => setNewUser(prev => ({ ...prev, comercial_produtos: toggleItem(prev.comercial_produtos, product.id) }))}
                           className={`rounded-2xl border px-3 py-2 text-left text-sm transition-all ${
                             active
-                              ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
-                              : 'border-dark-border hover:border-brand-accent/40 hover:bg-dark-surface2/40'
+                              ? 'border-status-info bg-status-info/10 text-status-info'
+                              : 'border-dark-border hover:border-status-info/40 hover:bg-dark-surface2/40'
                           }`}
                         >
                           {product.label}
@@ -757,7 +757,7 @@ export default function Configuracoes() {
               <div className="mt-6 border-t border-dark-border/60 pt-5">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <Users2 className="h-4 w-4 text-brand-accent" />
+                    <Users2 className="h-4 w-4 text-status-info" />
                     <p className="text-sm font-semibold text-dark-text">Usuarios ativos</p>
                   </div>
                   <span className="badge badge-blue">{profiles.length} perfis</span>
@@ -828,8 +828,8 @@ export default function Configuracoes() {
                                       }))}
                                       className={`rounded-2xl border px-3 py-2 text-left text-sm transition-all ${
                                         active
-                                          ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
-                                          : 'border-dark-border hover:border-brand-accent/40 hover:bg-dark-surface2/40'
+                                          ? 'border-status-info bg-status-info/10 text-status-info'
+                                          : 'border-dark-border hover:border-status-info/40 hover:bg-dark-surface2/40'
                                       }`}
                                     >
                                       {role.label}
@@ -854,8 +854,8 @@ export default function Configuracoes() {
                                       }))}
                                       className={`rounded-2xl border px-3 py-2 text-left text-sm transition-all ${
                                         active
-                                          ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
-                                          : 'border-dark-border hover:border-brand-accent/40 hover:bg-dark-surface2/40'
+                                          ? 'border-status-info bg-status-info/10 text-status-info'
+                                          : 'border-dark-border hover:border-status-info/40 hover:bg-dark-surface2/40'
                                       }`}
                                     >
                                       {product.label}

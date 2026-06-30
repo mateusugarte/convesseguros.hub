@@ -86,7 +86,7 @@ export default function EntityDocumentsSection({ tipoEntidade, entidadeId, title
     <div className="card p-5 space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <Paperclip className="w-4 h-4 text-brand-accent" />
+          <Paperclip className="w-4 h-4 text-status-info" />
           <p className="text-sm font-semibold text-dark-text">{title}</p>
           {docs.length > 0 && (
             <span className="text-[10px] font-mono text-dark-muted">({docs.length})</span>
@@ -126,7 +126,7 @@ export default function EntityDocumentsSection({ tipoEntidade, entidadeId, title
           {docs.map(doc => (
             <div key={doc.id} className="flex items-center gap-3 py-2 border-b border-dark-border/50 last:border-0">
               <div className="w-7 h-7 rounded-md bg-brand-secondary/20 flex items-center justify-center flex-shrink-0">
-                <Paperclip className="w-3.5 h-3.5 text-brand-accent" />
+                <Paperclip className="w-3.5 h-3.5 text-status-info" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-dark-text truncate">{doc.titulo}</p>
@@ -142,7 +142,7 @@ export default function EntityDocumentsSection({ tipoEntidade, entidadeId, title
                   href={doc.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-dark-muted hover:text-brand-accent transition-colors p-1"
+                  className="text-dark-muted hover:text-status-info transition-colors p-1"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>

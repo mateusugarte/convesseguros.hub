@@ -56,12 +56,12 @@ export default function ImobiliariaIdentity({
       className={`inline-flex items-center ${meta.wrapper} ${emphasis ? 'rounded-3xl border border-brand-accent/15 bg-brand-accent/5 px-3 py-2' : ''} ${className}`}
     >
       <div
-        className={`relative flex items-center justify-center overflow-hidden border border-dark-border/60 bg-white/80 text-dark-muted shadow-sm ${meta.logo}`}
+        className={`relative flex items-center justify-center overflow-hidden border border-dark-border/60 bg-dark-surface/80 text-dark-muted shadow-sm ${meta.logo}`}
       >
         {src ? (
           <img src={src} alt={label} className="h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand-secondary/10 to-brand-accent/10 text-brand-secondary">
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand-secondary/10 to-brand-accent/10 text-status-info">
             {nome && nome !== '—' && nome !== 'Imobiliária'
               ? initials(normalizeDisplayText(nome) || nome)
               : <Building2 className="h-4 w-4" />

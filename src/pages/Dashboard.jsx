@@ -162,7 +162,7 @@ function AlertCard({ alert, onNavigate }) {
       actionClass: 'text-status-danger hover:underline',
     },
     neutral: {
-      icon: <BellRing className="w-4 h-4 text-brand-secondary" />,
+      icon: <BellRing className="w-4 h-4 text-status-info" />,
       shell: 'border-dark-border/70 bg-dark-surface2/40',
       actionClass: 'text-status-info hover:underline',
     },
@@ -173,7 +173,7 @@ function AlertCard({ alert, onNavigate }) {
   return (
     <div className={`rounded-2xl border px-4 py-4 ${tone.shell}`}>
       <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-2xl border border-white/20 bg-white/50 flex items-center justify-center flex-shrink-0">
+        <div className="w-9 h-9 rounded-2xl border border-white/20 bg-dark-surface/50 flex items-center justify-center flex-shrink-0">
           {tone.icon}
         </div>
         <div className="min-w-0 flex-1">
@@ -750,7 +750,7 @@ export default function Dashboard() {
                 <p className="metric-label">Tempo médio</p>
                 <p className="stat-number text-dark-text mt-3">{metrics?.tempoMedio != null ? `${metrics.tempoMedio}h` : '—'}</p>
               </div>
-              <Clock3 className="w-5 h-5 text-brand-accent" />
+              <Clock3 className="w-5 h-5 text-status-info" />
             </div>
             <p className="metric-sub mt-2">Tempo médio entre assumir e finalizar fichas.</p>
           </div>

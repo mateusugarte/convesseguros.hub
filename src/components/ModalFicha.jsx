@@ -21,13 +21,13 @@ const ORCAMENTISTA_EXTRA_OPTIONS = [
 ]
 const COTACAO_STATUS_OPTIONS = [
   { value: '', label: 'Sem status' },
-  { value: 'em_analise', label: 'Em anÃ¡lise' },
+  { value: 'em_analise', label: 'Em análise' },
   { value: 'aprovado', label: 'Aprovado' },
   { value: 'recusado', label: 'Recusado' },
   { value: 'sem_cadastro', label: 'Sem cadastro' },
 ]
 
-// ââ Masks âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Masks ─────────────────────────────────────────────────────────────────────
 
 function maskCPF(v) {
   const d = v.replace(/\D/g, '').slice(0, 11)
@@ -84,22 +84,22 @@ function formatNumberField(value) {
   return formatDecimalBRInput(value)
 }
 
-// ââ Validation ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Validation ────────────────────────────────────────────────────────────────
 
 function validarFicha(form) {
   const isPJ = form.produto === 'pessoa_juridica'
   if (isPJ) {
-    if (!form.nome_empresa?.trim()) return 'Nome da empresa Ã© obrigatÃ³rio'
+    if (!form.nome_empresa?.trim()) return 'Nome da empresa é obrigatório'
     if (form.cnpj && !/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/.test(form.cnpj))
-      return 'CNPJ invÃ¡lido â formato: 00.000.000/0001-00'
+      return 'CNPJ inválido — formato: 00.000.000/0001-00'
   } else {
-    if (!form.nome_interessado?.trim()) return 'Nome do interessado Ã© obrigatÃ³rio'
+    if (!form.nome_interessado?.trim()) return 'Nome do interessado é obrigatório'
     if (form.cpf && !/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(form.cpf))
-      return 'CPF invÃ¡lido â formato esperado: 000.000.000-00'
+      return 'CPF inválido — formato esperado: 000.000.000-00'
   }
-  if (!form.produto) return 'Produto Ã© obrigatÃ³rio'
+  if (!form.produto) return 'Produto é obrigatório'
   if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-    return 'E-mail invÃ¡lido'
+    return 'E-mail inválido'
   const cotacoes = normalizarCotacoes(form.cotacoes)
   const aprovadas = cotacoes.filter(c => c.status === 'aprovado')
   for (const c of aprovadas) {
@@ -113,7 +113,7 @@ function validarFicha(form) {
   return null
 }
 
-// ââ Field wrappers ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Field wrappers ────────────────────────────────────────────────────────────
 
 function Field({ label, children, span2 = false, required = false }) {
   return (
@@ -135,7 +135,7 @@ function Sec({ title, children }) {
   )
 }
 
-// ââ Main ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function ModalFicha({ ficha, onClose, onSuccess }) {
   const { user } = useAuth()
@@ -249,7 +249,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
       valor_condominio:  form.valor_condominio === '' ? null : parseDecimalBR(form.valor_condominio),
       total_rendimentos: form.total_rendimentos === '' ? null : parseDecimalBR(form.total_rendimentos),
       capital_social:    form.capital_social === '' ? null : parseDecimalBR(form.capital_social),
-      // Limpar campo nÃ£o usado por produto
+      // Limpar campo não usado por produto
       cpf:  isPJ ? null : form.cpf || null,
       cnpj: isPJ ? form.cnpj || null : null,
       nome_interessado: isPJ ? null : form.nome_interessado || null,
@@ -291,17 +291,17 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="w-9 h-9 rounded-2xl bg-brand-secondary/20 flex items-center justify-center flex-shrink-0">
-            {isEdit ? <Save className="w-4 h-4 text-brand-accent" /> : <Plus className="w-4 h-4 text-brand-accent" />}
+            {isEdit ? <Save className="w-4 h-4 text-status-info" /> : <Plus className="w-4 h-4 text-status-info" />}
           </div>
           <h2 className="font-bold text-dark-text">
-            {isEdit ? `Editar â ${ficha.nome_empresa || ficha.nome_interessado || ''}` : 'Nova Ficha'}
+            {isEdit ? `Editar — ${ficha.nome_empresa || ficha.nome_interessado || ''}` : 'Nova Ficha'}
           </h2>
         </div>
 
         <form onSubmit={handleSubmit} className="modal-shell-body px-6 py-5 space-y-6">
 
-          {/* ââ IdentificaÃ§Ã£o ââ */}
-          <Sec title="IdentificaÃ§Ã£o">
+          {/* ── Identificação ── */}
+          <Sec title="Identificação">
             <Field label="Produto">
               <Select
                 value={form.produto}
@@ -309,7 +309,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                 options={PRODUTO_OPTIONS.map(p => ({ value: p, label: PRODUTO_LABELS[p] }))}
               />
             </Field>
-            <Field label="ImobiliÃ¡ria">
+            <Field label="Imobiliária">
               <ImobiliariaSelect
                 value={form.imobiliaria}
                 onChange={v => set('imobiliaria', v)}
@@ -321,7 +321,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
             {/* Nome: empresa para PJ, interessado para PF */}
             {isPJ ? (
               <Field label="Nome da Empresa" span2 required>
-                <input type="text" value={form.nome_empresa} onChange={e => set('nome_empresa', e.target.value)} className="input" placeholder="RazÃ£o social" />
+                <input type="text" value={form.nome_empresa} onChange={e => set('nome_empresa', e.target.value)} className="input" placeholder="Razão social" />
               </Field>
             ) : (
               <Field label="Nome do Interessado" span2 required>
@@ -329,7 +329,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
               </Field>
             )}
 
-            {/* CPF para PF, CNPJ + CPF SÃ³cios para PJ */}
+            {/* CPF para PF, CNPJ + CPF Sócios para PJ */}
             {isPJ ? (
               <>
                 <Field label="CNPJ">
@@ -341,7 +341,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                     className="input font-mono"
                   />
                 </Field>
-                <Field label="CPF dos SÃ³cios">
+                <Field label="CPF dos Sócios">
                   <input
                     type="text"
                     value={form.cpf_socios}
@@ -364,7 +364,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
             )}
           </Sec>
 
-          {/* ââ Contato ââ */}
+          {/* ── Contato ── */}
           <Sec title="Contato">
             <Field label="Celular">
               <input
@@ -380,9 +380,9 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
             </Field>
           </Sec>
 
-          {/* ââ ImÃ³vel ââ */}
-          <Sec title="Dados do ImÃ³vel">
-            <Field label="Tipo do ImÃ³vel">
+          {/* ── Imóvel ── */}
+          <Sec title="Dados do Imóvel">
+            <Field label="Tipo do Imóvel">
               <input type="text" value={form.tipo_imovel} onChange={e => set('tipo_imovel', e.target.value)} className="input" />
             </Field>
             <Field label="CEP">
@@ -394,30 +394,30 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
             <Field label="IPTU">
               <input type="text" inputMode="decimal" value={form.valor_iptu} onChange={e => set('valor_iptu', e.target.value)} className="input" placeholder="Ex: 200,00" />
             </Field>
-            <Field label="CondomÃ­nio">
+            <Field label="Condomínio">
               <input type="text" inputMode="decimal" value={form.valor_condominio} onChange={e => set('valor_condominio', e.target.value)} className="input" placeholder="Ex: 300,00" />
             </Field>
-            <Field label="OrÃ§amentista">
+            <Field label="Orçamentista">
               <Select
                 value={form.orcamentista_forms}
                 onChange={v => set('orcamentista_forms', v)}
-                placeholder="Selecionar orÃ§amentista..."
+                placeholder="Selecionar orçamentista..."
                 options={[
                   ...ORCAMENTISTA_EXTRA_OPTIONS,
                   ...profiles.map(p => ({ value: p.nome, label: p.nome })),
                 ]}
               />
             </Field>
-            <Field label="ObservaÃ§Ãµes" span2>
+            <Field label="Observações" span2>
               <textarea value={form.observacoes} onChange={e => set('observacoes', e.target.value)} rows={2} className="input resize-none" />
             </Field>
           </Sec>
 
-          {/* ââ Campos extras â Comercial PF e PJ ââ */}
+          {/* ── Campos extras — Comercial PF e PJ ── */}
           {isPlus && (
             <Sec title={isPJ ? 'Dados da Empresa' : 'Dados Complementares'}>
               <Field label="Atividade">
-                <input type="text" value={form.atividade} onChange={e => set('atividade', e.target.value)} className="input" placeholder="Atividade no imÃ³vel" />
+                <input type="text" value={form.atividade} onChange={e => set('atividade', e.target.value)} className="input" placeholder="Atividade no imóvel" />
               </Field>
               <Field label="Total de Rendimentos">
                 <input type="text" inputMode="decimal" value={form.total_rendimentos} onChange={e => set('total_rendimentos', e.target.value)} className="input" placeholder="Ex: 5.000,00" />
@@ -425,14 +425,14 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
               <Field label="Capital Social">
                 <input type="text" inputMode="decimal" value={form.capital_social} onChange={e => set('capital_social', e.target.value)} className="input" placeholder="Ex: 10.000,00" />
               </Field>
-              <Field label="Motivo da LocaÃ§Ã£o">
+              <Field label="Motivo da Locação">
                 <input type="text" value={form.motivo_locacao} onChange={e => set('motivo_locacao', e.target.value)} className="input" />
               </Field>
-              <Field label="VigÃªncia">
+              <Field label="Vigência">
                 <input type="text" value={form.vigencia} onChange={e => set('vigencia', e.target.value)} className="input" placeholder="Ex: 12 meses" />
               </Field>
               {isPJ && (
-                <Field label="OpÃ§Ã£o TributÃ¡ria">
+                <Field label="Opção Tributária">
                   <Select
                     value={form.opcao_tributaria}
                     onChange={v => set('opcao_tributaria', v)}
@@ -445,7 +445,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
           )}
 
           <Sec title="Financeiro da Ficha">
-              <Field label="% ComissÃ£o padrÃ£o">
+              <Field label="% Comissão padrão">
               <input
                 type="text"
                 inputMode="decimal"
@@ -455,7 +455,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                 placeholder="Ex: 10,00"
               />
               <p className="mt-1 text-[11px] text-dark-muted">
-                Serve como fallback para as seguradoras aprovadas. VocÃª pode ajustar cada uma abaixo.
+                Serve como fallback para as seguradoras aprovadas. Você pode ajustar cada uma abaixo.
               </p>
             </Field>
               <Field label="% Desconto">
@@ -482,7 +482,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
           </Sec>
 
           <div>
-            <p className="eyebrow text-dark-muted mb-3 pb-2 border-b border-dark-border/30">CotaÃ§Ã£o</p>
+            <p className="eyebrow text-dark-muted mb-3 pb-2 border-b border-dark-border/30">Cotação</p>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {form.cotacoes.map((cotacao, index) => (
                 <div
@@ -490,14 +490,14 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                   className={`rounded-[28px] border p-4 shadow-[0_18px_38px_rgba(15,23,42,0.08)] backdrop-blur-sm space-y-4 transition-all ${
                     cotacao.seguradora === seguradoraEscolhida
                       ? 'border-brand-accent/55 bg-brand-accent/7 ring-2 ring-brand-accent/12 shadow-[0_22px_46px_rgba(245,88,42,0.14)]'
-                      : 'border-dark-border bg-white/85'
+                      : 'border-dark-border bg-dark-surface/85'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <SeguradoraBadge nome={cotacao.seguradora} size="xl" showName={false} />
                     <div className="flex flex-col items-end gap-1">
                       {cotacao.seguradora === seguradoraEscolhida && (
-                        <span className="text-[9px] uppercase tracking-[0.18em] rounded-full border border-brand-accent/30 bg-brand-accent/10 px-2.5 py-1 text-brand-accent font-semibold">
+                        <span className="text-[9px] uppercase tracking-[0.18em] rounded-full border border-brand-accent/30 bg-brand-accent/10 px-2.5 py-1 text-status-info font-semibold">
                           Escolhida
                         </span>
                       )}
@@ -567,7 +567,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                       />
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="eyebrow text-dark-muted block mb-1.5">% ComissÃ£o da seguradora</label>
+                      <label className="eyebrow text-dark-muted block mb-1.5">% Comissão da seguradora</label>
                       <input
                         type="text"
                         inputMode="decimal"
@@ -579,7 +579,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                         placeholder="Ex: 10,00"
                       />
                       <p className="mt-1 text-[11px] text-dark-muted">
-                        Se ficar vazio, a comissÃ£o padrÃ£o da ficha serÃ¡ usada na validaÃ§Ã£o e na mensagem.
+                        Se ficar vazio, a comissão padrão da ficha será usada na validação e na mensagem.
                       </p>
                     </div>
                   </div>
@@ -588,7 +588,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
             </div>
           </div>
 
-          {/* ââ Controle Interno ââ */}
+          {/* ── Controle Interno ── */}
           <Sec title="Controle Interno">
             <Field label="Status">
               <Select
@@ -623,7 +623,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
             <button type="button" onClick={onClose} className="btn-secondary min-h-[44px] sm:min-h-0">Cancelar</button>
             <button type="submit" disabled={saving} className="btn-primary flex items-center gap-2 min-h-[44px] sm:min-h-0">
               {isEdit ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-              {saving ? 'Salvando...' : isEdit ? 'Salvar AlteraÃ§Ãµes' : 'Criar Ficha'}
+              {saving ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Criar Ficha'}
             </button>
           </div>
         </form>

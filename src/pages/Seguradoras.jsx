@@ -326,13 +326,13 @@ function ModalSeguradora({ modal, cadastradas, onClose, onSalvo, toast }) {
             <div className="flex rounded-lg border border-dark-border overflow-hidden text-sm font-medium">
               <button
                 onClick={() => setModo('nova')}
-                className={`flex-1 py-2 transition-colors ${modo === 'nova' ? 'bg-brand-accent text-white' : 'text-dark-muted hover:text-dark-text'}`}
+                className={`flex-1 py-2 transition-colors ${modo === 'nova' ? 'bg-brand-primary text-white' : 'text-dark-muted hover:text-dark-text'}`}
               >
                 Criar nova
               </button>
               <button
                 onClick={() => setModo('existente')}
-                className={`flex-1 py-2 transition-colors ${modo === 'existente' ? 'bg-brand-accent text-white' : 'text-dark-muted hover:text-dark-text'}`}
+                className={`flex-1 py-2 transition-colors ${modo === 'existente' ? 'bg-brand-primary text-white' : 'text-dark-muted hover:text-dark-text'}`}
               >
                 Incluir em existente
               </button>

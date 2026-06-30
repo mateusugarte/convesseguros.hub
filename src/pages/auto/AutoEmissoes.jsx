@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Car, CheckCircle2, FileText, RefreshCw, Search, X, Plus } from 'lucide-react'
+import { ArrowRight, Car, CheckCircle2, FileText, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, X, Plus } from 'lucide-react'
 import { format, startOfMonth, startOfWeek } from 'date-fns'
 import {
-  getEmissoesAuto, moverEmissaoColuna, emitirApoliceAuto,
-  salvarResultadoCotacao, getEmissaoColuna, getApolicesAuto, criarEmissaoManualAuto,
+  atualizarEmissaoAutoCompleta, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
+  emitirApoliceAuto, getApolicesAuto, getEmissaoColuna, getEmissoesAuto, moverEmissaoColuna,
+  salvarResultadoCotacao,
 } from '../../lib/auto'
 import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../components/ui'
 import SeguradoraSelect from '../../components/SeguradoraSelect'
@@ -94,6 +95,57 @@ const NOVA_SEGURADORA = {
   forma_pagamento: '',
 }
 
+const FORM_EDICAO_VAZIO = {
+  id: '',
+  cotacao_id: '',
+  apolice_id: '',
+  tipo: 'novo',
+  coluna: 'pendentes',
+  resultado: '',
+  nome_cliente: '',
+  cpf_cliente: '',
+  celular_cliente: '',
+  email_cliente: '',
+  estado_civil_cliente: '',
+  profissao_cliente: '',
+  origem_lead: '',
+  condutor_nome: '',
+  condutor_cpf: '',
+  condutor_igual_segurado: false,
+  estado_civil_condutor: '',
+  modelo_veiculo: '',
+  placa: '',
+  uso_veiculo: '',
+  cep_pernoite: '',
+  jovens_18_26: false,
+  veiculo_financiado: false,
+  possui_kit_gas: false,
+  possui_blindagem: false,
+  isento_imposto: false,
+  garagem_residencia: false,
+  garagem_trabalho: false,
+  garagem_estudo: false,
+  seguradora: '',
+  numero_apolice: '',
+  vigencia_inicio: '',
+  vigencia_fim: '',
+  premio_liquido: '',
+  pct_comissao: '',
+  forma_pagamento: '',
+  parcelamento: '',
+  tipo_producao: 'individual',
+  responsavel: '',
+  eh_renovacao: false,
+  tem_repasse: false,
+  pct_repasse: '',
+  nome_repasse: '',
+  renovacao_premio_liquido_ano_anterior: '',
+  renovacao_comissao_ano_anterior: '',
+  renovacao_premio_liquido_ano_atual: '',
+  renovacao_comissao_ano_atual: '',
+  seguradoras_cotadas: [{ ...NOVA_SEGURADORA }],
+}
+
 function toDateInput(value) {
   return format(value, 'yyyy-MM-dd')
 }
@@ -115,26 +167,26 @@ function getPeriodoRange(tipo) {
 
 function nomeEmissao(emissao) {
   const c = emissao.cotacoes_auto || {}
-  return emissao.nome_cliente || c.nome_cliente || c.nome_interessado || c.condutor_nome || emissao.condutor_nome || '—'
+  return emissao.nome_cliente || c.nome_cliente || c.nome_interessado || c.condutor_nome || emissao.condutor_nome || '-'
 }
 
 function cpfEmissao(emissao) {
   const c = emissao.cotacoes_auto || {}
-  return emissao.cpf_cliente || c.cpf_cliente || '—'
+  return emissao.cpf_cliente || c.cpf_cliente || '-'
 }
 
 function celularEmissao(emissao) {
   const c = emissao.cotacoes_auto || {}
-  return emissao.celular_cliente || c.celular_cliente || '—'
+  return emissao.celular_cliente || c.celular_cliente || '-'
 }
 
 function condutorEmissao(emissao) {
   const c = emissao.cotacoes_auto || {}
-  return emissao.condutor_nome || c.condutor_nome || '—'
+  return emissao.condutor_nome || c.condutor_nome || '-'
 }
 
 function seguradoraEmissao(emissao) {
-  return emissao.seguradora || emissao.cotacoes_auto?.seguradora_preferencial?.nome || emissao.cotacoes_auto?.seguradora_mais_barata?.nome || '—'
+  return emissao.seguradora || emissao.cotacoes_auto?.seguradora_preferencial?.nome || emissao.cotacoes_auto?.seguradora_mais_barata?.nome || '-'
 }
 
 function aprovadaNome(seg) {
@@ -234,38 +286,119 @@ function getFormEmissaoInicial(emissao) {
   }
 }
 
-// ─── Card ───────────────────────────────────────────────────────────────────
+function getApoliceVinculada(emissao) {
+  return Array.isArray(emissao?.apolices_auto) ? (emissao.apolices_auto[0] || null) : (emissao?.apolices_auto || null)
+}
+
+function getColunaMeta(colunaId) {
+  return COLUNAS.find(item => item.id === colunaId) || COLUNAS[0]
+}
+
+function normalizeSeguradorasCotadas(seguradoras) {
+  const lista = Array.isArray(seguradoras) ? seguradoras : []
+  const normalizadas = lista
+    .map(seg => ({
+      ...NOVA_SEGURADORA,
+      ...seg,
+      nome: seg?.nome || '',
+      valor_total: seg?.valor_total ?? '',
+      premio_liquido: seg?.premio_liquido ?? '',
+      pct_comissao: seg?.pct_comissao ?? '',
+      parcelamentos: seg?.parcelamentos || '',
+      forma_pagamento: seg?.forma_pagamento || '',
+    }))
+    .filter(seg => String(seg.nome || '').trim() !== '')
+  return normalizadas.length > 0 ? normalizadas : [{ ...NOVA_SEGURADORA }]
+}
+
+function getEditFormInicial(emissao) {
+  const c = emissao?.cotacoes_auto || {}
+  const apolice = getApoliceVinculada(emissao)
+  const aprovadas = getSeguradorasAprovadas(emissao)
+  const seguradoraBase = aprovadas[0] || c.seguradora_preferencial || c.seguradora_mais_barata || null
+  const nomeCliente = emissao?.nome_cliente || apolice?.nome_cliente || c.nome_cliente || c.nome_interessado || ''
+  const cpfCliente = emissao?.cpf_cliente || apolice?.cpf_cliente || c.cpf_cliente || ''
+  const condutorNome = emissao?.condutor_nome || apolice?.condutor_nome || c.condutor_nome || nomeCliente
+  const condutorCpf = emissao?.condutor_cpf || apolice?.condutor_cpf || c.condutor_cpf || cpfCliente
+  const premioLiquido = emissao?.premio_liquido ?? apolice?.premio_liquido ?? seguradoraBase?.premio_liquido ?? ''
+  const pctComissao = emissao?.pct_comissao ?? apolice?.pct_comissao ?? seguradoraBase?.pct_comissao ?? ''
+
+  return {
+    ...FORM_EDICAO_VAZIO,
+    id: emissao?.id || '',
+    cotacao_id: emissao?.cotacao_id || c.id || '',
+    apolice_id: apolice?.id || '',
+    tipo: (c.tipo || emissao?.tipo) === 'renovacao' ? 'renovacao' : 'novo',
+    coluna: getEmissaoColuna(emissao),
+    resultado: emissao?.resultado || '',
+    nome_cliente: nomeCliente,
+    cpf_cliente: cpfCliente,
+    celular_cliente: emissao?.celular_cliente || apolice?.celular_cliente || c.celular_cliente || '',
+    email_cliente: c.email_cliente || '',
+    estado_civil_cliente: c.estado_civil_cliente || '',
+    profissao_cliente: c.profissao_cliente || '',
+    origem_lead: c.origem_lead || '',
+    condutor_nome: condutorNome,
+    condutor_cpf: condutorCpf,
+    condutor_igual_segurado: isSeguradoCondutorData(nomeCliente, cpfCliente, condutorNome, condutorCpf),
+    estado_civil_condutor: c.estado_civil_condutor || '',
+    modelo_veiculo: emissao?.modelo_veiculo || apolice?.modelo_veiculo || c.modelo_veiculo || '',
+    placa: emissao?.placa || apolice?.placa || c.placa || '',
+    uso_veiculo: c.uso_veiculo || '',
+    cep_pernoite: c.cep_pernoite || '',
+    jovens_18_26: Boolean(c.jovens_18_26),
+    veiculo_financiado: Boolean(c.veiculo_financiado),
+    possui_kit_gas: Boolean(c.possui_kit_gas),
+    possui_blindagem: Boolean(c.possui_blindagem),
+    isento_imposto: Boolean(c.isento_imposto),
+    garagem_residencia: Boolean(c.garagem_residencia),
+    garagem_trabalho: Boolean(c.garagem_trabalho),
+    garagem_estudo: Boolean(c.garagem_estudo),
+    seguradora: emissao?.seguradora || apolice?.seguradora || seguradoraBase?.nome || '',
+    numero_apolice: emissao?.numero_apolice || apolice?.numero_apolice || c.numero_orcamento || '',
+    vigencia_inicio: emissao?.vigencia_inicio || apolice?.vigencia_inicio || c.vigencia_inicio || '',
+    vigencia_fim: emissao?.vigencia_fim || apolice?.vigencia_fim || c.vigencia_fim || '',
+    premio_liquido: toNumberOrEmpty(premioLiquido),
+    pct_comissao: toNumberOrEmpty(pctComissao),
+    forma_pagamento: emissao?.forma_pagamento || apolice?.forma_pagamento || seguradoraBase?.forma_pagamento || '',
+    parcelamento: emissao?.parcelamento || apolice?.parcelamento || seguradoraBase?.parcelamentos || '',
+    tipo_producao: apolice?.tipo_producao || 'individual',
+    responsavel: apolice?.responsavel || '',
+    eh_renovacao: Boolean(apolice?.eh_renovacao || emissao?.eh_renovacao || c.tipo === 'renovacao' || emissao?.tipo === 'renovacao'),
+    tem_repasse: Boolean(apolice?.tem_repasse || emissao?.tem_repasse || seguradoraBase?.nome_repasse || emissao?.nome_repasse),
+    pct_repasse: toNumberOrEmpty(apolice?.pct_repasse ?? emissao?.pct_repasse ?? seguradoraBase?.pct_repasse ?? ''),
+    nome_repasse: apolice?.nome_repasse || emissao?.nome_repasse || seguradoraBase?.nome_repasse || '',
+    renovacao_premio_liquido_ano_anterior: toNumberOrEmpty(apolice?.renovacao_premio_liquido_ano_anterior ?? emissao?.renovacao_premio_liquido_ano_anterior ?? ''),
+    renovacao_comissao_ano_anterior: toNumberOrEmpty(apolice?.renovacao_comissao_ano_anterior ?? emissao?.renovacao_comissao_ano_anterior ?? ''),
+    renovacao_premio_liquido_ano_atual: toNumberOrEmpty(apolice?.renovacao_premio_liquido_ano_atual ?? emissao?.renovacao_premio_liquido_ano_atual ?? premioLiquido),
+    renovacao_comissao_ano_atual: toNumberOrEmpty(apolice?.renovacao_comissao_ano_atual ?? emissao?.renovacao_comissao_ano_atual ?? ((toNumber(premioLiquido) || 0) * (toNumber(pctComissao) || 0))),
+    seguradoras_cotadas: normalizeSeguradorasCotadas(aprovadas),
+  }
+}
 
 function CardEmissao({ emissao, onDragStart, onClick }) {
   const coluna = getEmissaoColuna(emissao)
+  const colunaMeta = getColunaMeta(coluna)
   const tipo = emissao.cotacoes_auto?.tipo || emissao.tipo
   const isRenovacao = tipo === 'renovacao'
   const isRecusada = emissao.resultado === 'recusada'
   const isAprovada = emissao.resultado === 'aprovada'
-
-  let borderClass, bgClass, accentGradient, shadowClass
-  if (isRecusada) {
-    borderClass = 'border-red-200'
-    bgClass = 'bg-red-50'
-    accentGradient = 'from-red-400 to-red-500'
-    shadowClass = ''
-  } else if (isRenovacao) {
-    borderClass = 'border-status-success/20'
-    bgClass = 'bg-status-success/5'
-    accentGradient = 'from-status-success to-brand-secondary'
-    shadowClass = ''
-  } else {
-    borderClass = 'border-brand-secondary/25'
-    bgClass = 'bg-brand-secondary/5'
-    accentGradient = coluna === 'pendentes'
-      ? 'from-brand-accent to-brand-secondary'
-      : 'from-brand-secondary to-brand-accent'
-    shadowClass = coluna === 'pendentes' ? 'shadow-[0_8px_24px_rgba(202,138,4,0.08)]' : ''
-  }
-
   const nome = nomeEmissao(emissao)
   const veiculo = emissao.modelo_veiculo || emissao.cotacoes_auto?.modelo_veiculo || 'Modelo nao informado'
-  const placa = emissao.placa || emissao.cotacoes_auto?.placa
+  const placa = emissao.placa || emissao.cotacoes_auto?.placa || 'Sem placa'
+
+  let shellClass = 'border-brand-secondary/20 bg-white/90 shadow-[0_18px_40px_rgba(15,23,42,0.06)]'
+  let accentClass = 'from-brand-secondary to-brand-accent'
+  if (isRecusada) {
+    shellClass = 'border-red-200 bg-red-50/90 shadow-[0_18px_40px_rgba(239,68,68,0.08)]'
+    accentClass = 'from-red-400 to-red-500'
+  } else if (isRenovacao) {
+    shellClass = 'border-status-success/20 bg-status-success/5 shadow-[0_18px_40px_rgba(34,197,94,0.08)]'
+    accentClass = 'from-status-success to-brand-secondary'
+  } else if (coluna === 'pendentes') {
+    shellClass = 'border-status-warning/20 bg-status-warning/5 shadow-[0_18px_40px_rgba(245,158,11,0.08)]'
+    accentClass = 'from-brand-accent to-brand-secondary'
+  }
 
   return (
     <button
@@ -273,54 +406,65 @@ function CardEmissao({ emissao, onDragStart, onClick }) {
       draggable
       onDragStart={() => onDragStart(emissao)}
       onClick={() => onClick(emissao)}
-      title="Abrir detalhes da cotacao"
-      className={`group relative w-full cursor-pointer overflow-hidden rounded-[28px] border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 ${borderClass} ${bgClass} ${shadowClass}`}
+      title="Abrir detalhes da emissao"
+      className={['group relative flex min-h-[228px] w-full flex-col overflow-hidden rounded-[30px] border p-4 text-left transition-all hover:-translate-y-1 hover:shadow-[0_22px_48px_rgba(15,23,42,0.12)]', shellClass].join(' ')}
     >
-      <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${accentGradient} opacity-80`} />
+      <div className={['absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r', accentClass].join(' ')} />
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-dark-text">{nome}</p>
-          <p className="mt-1 truncate text-xs text-dark-muted">{veiculo}</p>
-          <p className="mt-2 text-[11px] text-dark-muted">
-            {placa ? `Placa ${placa}` : 'Sem placa'}
-          </p>
-          <p className="mt-2 text-[11px] text-dark-muted">
-            {cpfEmissao(emissao)} · {celularEmissao(emissao)}
-          </p>
-          <p className="mt-1 text-[11px] text-dark-muted">
-            Condutor: {condutorEmissao(emissao)} · Seguradora: {seguradoraEmissao(emissao)}
-          </p>
-        </div>
-        <div className="flex flex-col items-end gap-1 shrink-0">
-          {isRecusada && (
-            <span className="rounded-full bg-red-100 px-2 py-1 text-[10px] font-semibold text-red-600">Recusada</span>
-          )}
-          {isAprovada && (
-            <span className="rounded-full bg-status-success/10 px-2 py-1 text-[10px] font-semibold text-status-success">Aprovada</span>
-          )}
-          {!emissao.resultado && (
-            <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
-              coluna === 'pendentes'
-                ? 'bg-status-warning/10 text-status-warning'
-                : 'bg-dark-surface2/75 text-dark-muted'
-            }`}>
-              {coluna === 'pendentes' ? 'Pendente' : 'Em andamento'}
+        <div className="min-w-0 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-dark-surface px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">
+              {colunaMeta.label}
             </span>
-          )}
-          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
-            isRenovacao
-              ? 'bg-status-success/10 text-status-success'
-              : 'bg-brand-secondary/10 text-status-info'
-          }`}>
-            {isRenovacao ? 'Renovacao' : 'Novo'}
-          </span>
+            <span className={isRenovacao ? 'rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success' : 'rounded-full bg-brand-secondary/10 px-2.5 py-1 text-[10px] font-semibold text-status-info'}>
+              {isRenovacao ? 'Renovacao' : 'Novo'}
+            </span>
+          </div>
+          <div>
+            <p className="truncate text-base font-semibold text-dark-text">{nome}</p>
+            <p className="mt-1 truncate text-sm text-dark-muted">{veiculo}</p>
+          </div>
         </div>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          {isRecusada && <span className="rounded-full bg-red-100 px-2.5 py-1 text-[10px] font-semibold text-red-600">Recusada</span>}
+          {isAprovada && <span className="rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success">Aprovada</span>}
+          {!emissao.resultado && <span className="rounded-full bg-dark-surface px-2.5 py-1 text-[10px] font-semibold text-dark-muted">Em andamento</span>}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 rounded-[26px] border border-white/70 bg-dark-surface/70 p-3 text-xs text-dark-muted sm:grid-cols-2">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Placa</p>
+          <p className="mt-1 text-sm font-medium text-dark-text">{placa}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Seguradora</p>
+          <p className="mt-1 text-sm font-medium text-dark-text">{seguradoraEmissao(emissao)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">CPF</p>
+          <p className="mt-1 text-sm font-medium text-dark-text">{cpfEmissao(emissao)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Contato</p>
+          <p className="mt-1 text-sm font-medium text-dark-text">{celularEmissao(emissao)}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-[24px] border border-dashed border-dark-border/70 px-3 py-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Condutor</p>
+        <p className="mt-1 truncate text-sm text-dark-text">{condutorEmissao(emissao)}</p>
+      </div>
+
+      <div className="mt-auto flex items-center justify-between pt-4 text-xs text-dark-muted">
+        <span>{colunaMeta.hint}</span>
+        <span className="inline-flex items-center gap-1 font-semibold text-status-info">
+          Abrir <ArrowRight className="h-3.5 w-3.5" />
+        </span>
       </div>
     </button>
   )
 }
-
-// ─── InfoRow + BoolRow (usados nos detalhes) ────────────────────────────────
 
 function InfoRow({ label, value }) {
   if (value === null || value === undefined || value === '') return null
@@ -348,142 +492,87 @@ function BoolRow({ label, value }) {
 
 // ─── Modal Detalhe ──────────────────────────────────────────────────────────
 
-function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, onEmitirApolice }) {
+function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, onEmitirApolice, onEditar, onExcluir, isDeleting }) {
   const c = emissao.cotacoes_auto || {}
+  const apolice = getApoliceVinculada(emissao)
   const temCotacao = Boolean(emissao.cotacoes_auto?.id || emissao.cotacao_id)
   const nome = nomeEmissao(emissao)
   const tipo = (c.tipo || emissao.tipo) === 'renovacao' ? 'Renovacao' : 'Novo'
   const seguradoras = Array.isArray(emissao.seguradoras_cotadas) ? emissao.seguradoras_cotadas : []
-  const temFicha = Boolean(c.nome_cliente || c.cpf_cliente || c.modelo_veiculo || c.estado_civil_cliente || c.profissao_cliente || c.origem_lead)
-  const etapaAtual = emissao.resultado
-    ? (emissao.resultado === 'aprovada' ? 'Cotacao aprovada' : 'Cotacao recusada')
-    : 'Aguardando resultado'
-  const colunaAtual = getEmissaoColuna(emissao)
+  const etapaAtual = emissao.resultado ? (emissao.resultado === 'aprovada' ? 'Cotacao aprovada' : 'Cotacao recusada') : 'Aguardando resultado'
+  const colunaAtual = getColunaMeta(getEmissaoColuna(emissao)).label
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-8">
       <div className="modal-backdrop" onClick={onClose} />
-      <div className="relative z-10 glass-modal w-full max-w-6xl rounded-[32px] p-6">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-info">Detalhe do cliente</span>
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                (c.tipo || emissao.tipo) === 'renovacao'
-                  ? 'bg-status-success/10 text-status-success'
-                  : 'bg-brand-secondary/10 text-status-info'
-              }`}>{tipo}</span>
-              {emissao.resultado && (
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                  emissao.resultado === 'aprovada'
-                    ? 'bg-status-success/10 text-status-success'
-                    : 'bg-red-100 text-red-600'
-                }`}>{emissao.resultado === 'aprovada' ? 'Aprovada' : 'Recusada'}</span>
-              )}
-            </div>
-            <h2 className="mt-2 text-xl font-semibold text-dark-text">{nome}</h2>
-            <p className="mt-1 text-sm text-dark-muted">
-              {emissao.modelo_veiculo || c.modelo_veiculo || 'Veiculo nao informado'}
-              {(emissao.placa || c.placa) ? ` · Placa ${emissao.placa || c.placa}` : ''}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {temCotacao && onAbrirCotacao && (
-              <button onClick={onAbrirCotacao} className="btn-secondary text-xs">
-                Ver cotacao completa
+      <div className="relative z-10 w-full max-w-6xl overflow-hidden rounded-[34px] border border-white/60 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.16)]">
+        <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="bg-gradient-to-br from-brand-secondary/12 via-white to-brand-accent/10 p-6 md:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-dark-surface px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">{colunaAtual}</span>
+                  <span className={tipo === 'Renovacao' ? 'rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success' : 'rounded-full bg-brand-secondary/10 px-2.5 py-1 text-[10px] font-semibold text-status-info'}>{tipo}</span>
+                  {emissao.resultado && <span className={emissao.resultado === 'aprovada' ? 'rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success' : 'rounded-full bg-red-100 px-2.5 py-1 text-[10px] font-semibold text-red-600'}>{emissao.resultado === 'aprovada' ? 'Aprovada' : 'Recusada'}</span>}
+                </div>
+                <h2 className="mt-4 truncate text-2xl font-semibold text-dark-text">{nome}</h2>
+                <p className="mt-2 text-sm text-dark-muted">{emissao.modelo_veiculo || c.modelo_veiculo || 'Veiculo nao informado'}{(emissao.placa || c.placa) ? ` ? Placa ${emissao.placa || c.placa}` : ''}</p>
+              </div>
+              <button onClick={onClose} className="rounded-full p-2 text-dark-muted transition-colors hover:bg-dark-border/40">
+                <X className="h-5 w-5" />
               </button>
-            )}
-            <button onClick={onClose} className="rounded-full p-2 hover:bg-dark-border/40 transition-colors">
-              <X className="w-5 h-5 text-dark-muted" />
-            </button>
-          </div>
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
-          <div className="space-y-4">
-            {/* Cliente */}
-            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
-              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Dados do cliente</p>
-              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-                <InfoRow label="Nome" value={emissao.nome_cliente || c.nome_cliente} />
-                <InfoRow label="CPF" value={emissao.cpf_cliente || c.cpf_cliente} />
-                <InfoRow label="Celular" value={emissao.celular_cliente || c.celular_cliente} />
-                <InfoRow label="Email" value={c.email_cliente} />
-              </div>
             </div>
 
-            {/* Veiculo */}
-            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
-              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Veiculo</p>
-              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-                <InfoRow label="Modelo" value={emissao.modelo_veiculo || c.modelo_veiculo} />
-                <InfoRow label="Placa" value={emissao.placa || c.placa} />
-                <InfoRow label="Uso" value={c.uso_veiculo} />
-                <InfoRow label="CEP pernoite" value={c.cep_pernoite} />
-              </div>
-            </div>
-
-            {temFicha ? (
-              <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Dados complementares da ficha</p>
-                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-                  <InfoRow label="Estado civil" value={c.estado_civil_cliente} />
-                  <InfoRow label="Profissão" value={c.profissao_cliente} />
-                  <InfoRow label="Origem do lead" value={c.origem_lead} />
-                  <InfoRow label="Vigência início" value={c.vigencia_inicio} />
-                  <InfoRow label="Vigência fim" value={c.vigencia_fim} />
-                  <InfoRow label="Condutor" value={c.condutor_nome} />
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className="rounded-[28px] border border-white/70 bg-white/80 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Cliente</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <InfoRow label="Nome" value={emissao.nome_cliente || c.nome_cliente} />
+                  <InfoRow label="CPF" value={emissao.cpf_cliente || c.cpf_cliente} />
+                  <InfoRow label="Celular" value={emissao.celular_cliente || c.celular_cliente} />
+                  <InfoRow label="Email" value={c.email_cliente} />
                 </div>
               </div>
-            ) : (
-              <div className="rounded-3xl border border-dashed border-dark-border/70 bg-dark-surface2/30 p-4 text-sm text-dark-muted">
-                Apolice anexada manualmente
+              <div className="rounded-[28px] border border-white/70 bg-white/80 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Veiculo</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <InfoRow label="Modelo" value={emissao.modelo_veiculo || c.modelo_veiculo} />
+                  <InfoRow label="Placa" value={emissao.placa || c.placa} />
+                  <InfoRow label="Uso" value={c.uso_veiculo} />
+                  <InfoRow label="CEP pernoite" value={c.cep_pernoite} />
+                </div>
               </div>
-            )}
-
-            {/* Condutor */}
-            {(emissao.condutor_nome || c.condutor_nome || emissao.condutor_cpf || c.condutor_cpf) && (
-              <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Condutor principal</p>
-                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+              <div className="rounded-[28px] border border-white/70 bg-white/80 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Condutor</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <InfoRow label="Nome" value={emissao.condutor_nome || c.condutor_nome} />
                   <InfoRow label="CPF" value={emissao.condutor_cpf || c.condutor_cpf} />
                   <InfoRow label="Estado civil" value={c.estado_civil_condutor} />
                 </div>
               </div>
-            )}
-
-            {/* Caracteristicas */}
-            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
-              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Caracteristicas e riscos</p>
-              <div className="divide-y divide-dark-border/40">
-                <BoolRow label="Jovens de 18 a 26 anos" value={c.jovens_18_26} />
-                <BoolRow label="Veiculo financiado" value={c.veiculo_financiado} />
-                <BoolRow label="Kit gas" value={c.possui_kit_gas} />
-                <BoolRow label="Blindagem" value={c.possui_blindagem} />
-                <BoolRow label="Isento de imposto" value={c.isento_imposto} />
-                <BoolRow label="Garagem na residencia" value={c.garagem_residencia} />
-                <BoolRow label="Garagem no trabalho" value={c.garagem_trabalho} />
-                <BoolRow label="Garagem no estudo" value={c.garagem_estudo} />
+              <div className="rounded-[28px] border border-white/70 bg-white/80 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Apolice e financeiro</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <InfoRow label="Seguradora" value={emissao.seguradora || apolice?.seguradora || c.seguradora_preferencial?.nome || c.seguradora_mais_barata?.nome} />
+                  <InfoRow label="Numero da apolice" value={emissao.numero_apolice || apolice?.numero_apolice} />
+                  <InfoRow label="Vigencia inicio" value={emissao.vigencia_inicio || apolice?.vigencia_inicio || c.vigencia_inicio} />
+                  <InfoRow label="Vigencia fim" value={emissao.vigencia_fim || apolice?.vigencia_fim || c.vigencia_fim} />
+                  <InfoRow label="Premio liquido" value={emissao.premio_liquido || apolice?.premio_liquido ? formatMoney(emissao.premio_liquido || apolice?.premio_liquido) : null} />
+                  <InfoRow label="Comissao %" value={emissao.pct_comissao ?? apolice?.pct_comissao ?? null} />
+                </div>
               </div>
             </div>
 
-            {/* Seguradoras cotadas */}
             {seguradoras.length > 0 && (
-              <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
-              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradoras cotadas</p>
-                <div className="space-y-3">
+              <div className="mt-4 rounded-[28px] border border-white/70 bg-white/80 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradoras cotadas</p>
+                <div className="mt-3 space-y-3">
                   {seguradoras.map((seg, idx) => (
-                    <div key={idx} className="rounded-2xl border border-dark-border/60 bg-dark-surface/60 p-3">
-                      <p className="font-semibold text-sm text-dark-text">{seg.nome || `Seguradora ${idx + 1}`}</p>
-                      <div className="mt-2 grid gap-x-4 gap-y-1 grid-cols-2 text-xs text-dark-muted">
+                    <div key={idx} className="rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-3">
+                      <p className="text-sm font-semibold text-dark-text">{seg.nome || `Seguradora ${idx + 1}`}</p>
+                      <div className="mt-2 grid gap-2 text-xs text-dark-muted sm:grid-cols-2">
                         {seg.valor_total > 0 && <span>Valor total: {formatMoney(seg.valor_total)}</span>}
-                        {seg.premio_liquido > 0 && <span>Premio liq.: {formatMoney(seg.premio_liquido)}</span>}
-                        {seg.valor_comissao > 0 && (
-                          <span className="text-status-success font-medium">
-                            Comissao: {formatMoney(seg.valor_comissao)} ({seg.pct_comissao}%)
-                          </span>
-                        )}
+                        {seg.premio_liquido > 0 && <span>Premio liquido: {formatMoney(seg.premio_liquido)}</span>}
                         {seg.parcelamentos && <span>Parcelas: {seg.parcelamentos}</span>}
                         {seg.forma_pagamento && <span>Pagamento: {seg.forma_pagamento}</span>}
                       </div>
@@ -492,84 +581,110 @@ function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, 
                 </div>
               </div>
             )}
-
-            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
-              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Emissao manual</p>
-              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-                <InfoRow label="Seguradora" value={emissao.seguradora || c.seguradora_preferencial?.nome || c.seguradora_mais_barata?.nome} />
-                <InfoRow label="Numero da apolice" value={emissao.numero_apolice} />
-                <InfoRow label="Vigencia" value={emissao.vigencia_inicio || emissao.vigencia_fim ? `${emissao.vigencia_inicio || '—'} a ${emissao.vigencia_fim || '—'}` : null} />
-                <InfoRow label="Parcelamento" value={emissao.parcelamento ? `${emissao.parcelamento} vezes` : null} />
-                <InfoRow label="Premio liquido" value={emissao.premio_liquido ? formatMoney(emissao.premio_liquido) : null} />
-                <InfoRow label="% Comissao" value={emissao.pct_comissao ?? null} />
-                <InfoRow label="Repasse" value={emissao.tem_repasse ? 'Sim' : 'Nao'} />
-              </div>
-            </div>
           </div>
 
-          <aside className="space-y-4">
-            <div className="rounded-3xl border border-brand-secondary/15 bg-brand-secondary/5 p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-status-info">Resumo da cotacao</p>
+          <aside className="bg-dark-surface/75 p-6 md:p-7">
+            <div className="rounded-[30px] border border-dark-border/70 bg-white/90 p-5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Resumo operacional</p>
               <p className="mt-2 text-lg font-semibold text-dark-text">{etapaAtual}</p>
-              <div className="mt-4 grid gap-3">
-                <div className="rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Coluna atual</p>
-                  <p className="mt-1 text-sm font-medium text-dark-text">{colunaAtual}</p>
-                </div>
-                <div className="rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Tipo</p>
-                  <p className="mt-1 text-sm font-medium text-dark-text">{tipo}</p>
-                </div>
+              <div className="mt-4 space-y-3 text-sm text-dark-muted">
+                <div className="rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-3">Coluna atual: <span className="font-semibold text-dark-text">{colunaAtual}</span></div>
+                <div className="rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-3">Tipo: <span className="font-semibold text-dark-text">{tipo}</span></div>
+                <div className="rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-3">Responsavel: <span className="font-semibold text-dark-text">{apolice?.responsavel || 'Nao informado'}</span></div>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Proximos passos</p>
-              <p className="mt-2 text-sm text-dark-muted">
-                Use esta area para registrar o resultado da cotacao e seguir para a emissao.
-              </p>
+            <div className="mt-4 rounded-[30px] border border-dark-border/70 bg-white/90 p-5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Acoes</p>
               <div className="mt-4 space-y-3">
-                <button
-                  type="button"
-                  onClick={() => onRegistrarResultado?.(emissao)}
-                  className="w-full rounded-2xl border border-brand-secondary/20 bg-dark-surface/75 px-4 py-3 text-left transition-colors hover:border-brand-secondary/40 hover:bg-white"
-                >
-                  <p className="text-sm font-semibold text-dark-text">Registrar resultado da cotacao</p>
-                  <p className="mt-1 text-xs text-dark-muted">Seleciona aprovacao ou recusa e salva as seguradoras cotadas.</p>
+                <button type="button" onClick={() => onEditar?.(emissao)} className="flex w-full items-center justify-between rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-4 py-3 text-left text-sm font-semibold text-dark-text transition-colors hover:border-brand-secondary/40 hover:bg-brand-secondary/12">
+                  Editar qualquer informacao <PencilLine className="h-4 w-4 text-status-info" />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => onEmitirApolice?.(emissao)}
-                  className="w-full rounded-2xl border border-status-success/20 bg-status-success/5 px-4 py-3 text-left transition-colors hover:border-status-success/40 hover:bg-status-success/10"
-                >
+                <button type="button" onClick={() => onExcluir?.(emissao)} disabled={isDeleting} className="flex w-full items-center justify-between rounded-2xl border border-red-200 bg-red-50/80 px-4 py-3 text-left text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50">
+                  {isDeleting ? 'Excluindo...' : 'Excluir emissao'} <Trash2 className="h-4 w-4" />
+                </button>
+                {temCotacao && onAbrirCotacao && <button type="button" onClick={onAbrirCotacao} className="btn-secondary w-full text-xs">Ver cotacao completa</button>}
+                <button type="button" onClick={() => onRegistrarResultado?.(emissao)} className="w-full rounded-2xl border border-brand-secondary/20 bg-dark-surface/75 px-4 py-3 text-left transition-colors hover:border-brand-secondary/40 hover:bg-white">
+                  <p className="text-sm font-semibold text-dark-text">Registrar resultado da cotacao</p>
+                  <p className="mt-1 text-xs text-dark-muted">Aprovacao, recusa e seguradoras cotadas.</p>
+                </button>
+                <button type="button" onClick={() => onEmitirApolice?.(emissao)} className="w-full rounded-2xl border border-status-success/20 bg-status-success/5 px-4 py-3 text-left transition-colors hover:border-status-success/40 hover:bg-status-success/10">
                   <p className="text-sm font-semibold text-dark-text">Seguir para emissao</p>
-                  <p className="mt-1 text-xs text-dark-muted">Abre o formulario com cliente, veiculo e campos da apolice.</p>
+                  <p className="mt-1 text-xs text-dark-muted">Abre o formulario de emissao da apolice.</p>
                 </button>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Campos de pos-cotacao</p>
-              <ul className="mt-3 space-y-2 text-sm text-dark-muted">
-                <li>Resultado da cotacao</li>
-                <li>Seguradoras cotadas</li>
-                <li>Numero da apolice</li>
-                <li>Vigencia</li>
-                <li>Premio e comissao</li>
-              </ul>
+            <div className="mt-4 rounded-[30px] border border-status-success/20 bg-status-success/8 p-5">
+              <div className="flex items-start gap-3">
+                <ShieldCheck className="mt-0.5 h-5 w-5 text-status-success" />
+                <div>
+                  <p className="text-sm font-semibold text-dark-text">Edicao completa habilitada</p>
+                  <p className="mt-1 text-xs leading-5 text-dark-muted">O editor avancado permite alterar emissao, cotacao vinculada e apolice em um unico fluxo.</p>
+                </div>
+              </div>
             </div>
           </aside>
-        </div>
-
-        <div className="mt-5 flex justify-end">
-          <button onClick={onClose} className="btn-secondary">Fechar</button>
         </div>
       </div>
     </div>
   )
 }
 
-// ─── FormSeguradora ──────────────────────────────────────────────────────────
+function ModalEditarJson({ emissao, value, onChange, onClose, onSave, isSaving }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-8">
+      <div className="modal-backdrop" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-6xl overflow-hidden rounded-[34px] border border-white/60 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.16)]">
+        <div className="grid gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <aside className="bg-gradient-to-br from-brand-secondary/12 via-white to-brand-accent/10 p-6 md:p-7">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-status-info">
+              <PencilLine className="h-3.5 w-3.5" />
+              Editor avancado
+            </div>
+            <h2 className="mt-4 text-2xl font-semibold text-dark-text">Editar emissao</h2>
+            <p className="mt-2 text-sm leading-6 text-dark-muted">{nomeEmissao(emissao)}</p>
+            <div className="mt-6 space-y-3">
+              <div className="rounded-3xl border border-white/70 bg-white/80 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">O que voce pode editar</p>
+                <ul className="mt-3 space-y-2 text-sm text-dark-muted">
+                  <li>Dados da emissao</li>
+                  <li>Dados da cotacao vinculada</li>
+                  <li>Dados da apolice emitida</li>
+                  <li>Seguradoras cotadas e financeiro</li>
+                </ul>
+              </div>
+              <div className="rounded-3xl border border-status-success/20 bg-status-success/8 p-4 text-sm text-dark-muted">
+                Edite o JSON mantendo a estrutura. O salvamento atualiza os registros relacionados automaticamente.
+              </div>
+            </div>
+          </aside>
+          <div className="bg-dark-surface/75 p-6 md:p-7">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">JSON da emissao</p>
+                <h3 className="mt-2 text-xl font-semibold text-dark-text">Alterar e salvar</h3>
+              </div>
+              <button onClick={onClose} className="rounded-full p-2 transition-colors hover:bg-dark-border/40">
+                <X className="h-5 w-5 text-dark-muted" />
+              </button>
+            </div>
+            <textarea
+              value={value}
+              onChange={e => onChange(e.target.value)}
+              spellCheck={false}
+              className="min-h-[62vh] w-full rounded-[28px] border border-dark-border bg-white px-4 py-4 font-mono text-sm text-dark-text outline-none"
+            />
+            <div className="mt-5 flex gap-3 border-t border-dark-border/60 pt-5">
+              <button onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
+              <button onClick={onSave} disabled={isSaving} className="btn-primary flex-1 disabled:opacity-50">{isSaving ? 'Salvando...' : 'Salvar alteracoes'}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
   const valorComissao = (toNumber(seg.premio_liquido) || 0) * (toNumber(seg.pct_comissao) || 0) / 100
@@ -934,6 +1049,8 @@ export default function AutoEmissoes() {
   const [modalResultado, setModalResultado] = useState(null)
   const [modalEmissao, setModalEmissao] = useState(null)
   const [detalhe, setDetalhe] = useState(null)
+  const [editando, setEditando] = useState(null)
+  const [edicaoTexto, setEdicaoTexto] = useState('')
   const [manualOpen, setManualOpen] = useState(false)
   const [manualForm, setManualForm] = useState(FORM_MANUAL_VAZIO)
   const [form, setForm] = useState(FORM_EMISSAO_VAZIO)
@@ -988,6 +1105,43 @@ export default function AutoEmissoes() {
     },
     onError: error => {
       toast({ type: 'error', title: 'Erro ao salvar a emissão manual', message: error?.message || 'Verifique os dados informados.' })
+    },
+  })
+
+  const { mutate: salvarEdicao, isPending: isSavingEdicao } = useMutation({
+    mutationFn: payload => atualizarEmissaoAutoCompleta(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
+      qc.invalidateQueries({ queryKey: ['auto-apolices'] })
+      qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
+      qc.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] })
+      setEditando(null)
+      setEdicaoTexto('')
+      setDetalhe(null)
+      toast({ type: 'success', title: 'Emissao atualizada', message: 'As alteracoes foram salvas com sucesso.' })
+    },
+    onError: error => {
+      toast({ type: 'error', title: 'Erro ao salvar a emissao', message: error?.message || 'Revise o JSON informado.' })
+    },
+  })
+
+  const { mutate: excluirRegistro, isPending: isDeleting } = useMutation({
+    mutationFn: item => {
+      const cotacaoId = item?.cotacao_id || item?.cotacoes_auto?.id
+      return cotacaoId ? deletarCotacaoAuto(cotacaoId) : deletarEmissaoAuto(item.id)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
+      qc.invalidateQueries({ queryKey: ['auto-apolices'] })
+      qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
+      qc.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] })
+      setDetalhe(null)
+      setEditando(null)
+      setEdicaoTexto('')
+      toast({ type: 'success', title: 'Registro excluido', message: 'A emissao foi removida.' })
+    },
+    onError: error => {
+      toast({ type: 'error', title: 'Erro ao excluir', message: error?.message || 'Tente novamente.' })
     },
   })
 
@@ -1067,6 +1221,53 @@ export default function AutoEmissoes() {
   function abrirDetalhe(item) {
     if (!item) return
     setDetalhe(item)
+  }
+
+  function abrirEditor(item) {
+    if (!item) return
+    setDetalhe(null)
+    setEditando(item)
+    setEdicaoTexto(JSON.stringify(getEditFormInicial(item), null, 2))
+  }
+
+  function buildSeguradorasPayload(seguradoras) {
+    return normalizeSeguradorasCotadas(seguradoras)
+      .filter(seg => String(seg.nome || '').trim() !== '')
+      .map(seg => ({
+        nome: seg.nome,
+        valor_total: toNumber(seg.valor_total) || 0,
+        premio_liquido: toNumber(seg.premio_liquido) || 0,
+        pct_comissao: toNumber(seg.pct_comissao) || 0,
+        valor_comissao: (toNumber(seg.premio_liquido) || 0) * (toNumber(seg.pct_comissao) || 0) / 100,
+        parcelamentos: seg.parcelamentos || '',
+        forma_pagamento: seg.forma_pagamento || '',
+      }))
+  }
+
+  function handleSalvarEdicao() {
+    if (!editando) return
+    let parsed
+    try {
+      parsed = JSON.parse(edicaoTexto)
+    } catch (error) {
+      toast({ type: 'error', title: 'JSON invalido', message: 'Revise a sintaxe antes de salvar.' })
+      return
+    }
+
+    salvarEdicao({
+      ...parsed,
+      id: parsed.id || editando.id,
+      cotacao_id: parsed.cotacao_id || editando.cotacao_id || editando.cotacoes_auto?.id || null,
+      apolice_id: parsed.apolice_id || getApoliceVinculada(editando)?.id || null,
+      seguradoras_cotadas: buildSeguradorasPayload(parsed.seguradoras_cotadas),
+    })
+  }
+
+  function handleExcluir(item) {
+    if (!item) return
+    const confirmou = window.confirm('Excluir a emissao de ' + nomeEmissao(item) + '? Esta acao nao pode ser desfeita.')
+    if (!confirmou) return
+    excluirRegistro(item)
   }
 
   function abrirCotacaoCompleta(item) {
@@ -1423,13 +1624,29 @@ export default function AutoEmissoes() {
                           {item.vigencia_inicio ? formatDateBR(item.vigencia_inicio) : '—'} — {item.vigencia_fim ? formatDateBR(item.vigencia_fim) : '—'}
                         </td>
                         <td className="py-3">
-                          <button
-                            type="button"
-                            onClick={() => abrirDetalhe(item)}
-                            className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-3 py-1.5 text-xs font-semibold text-status-info"
-                          >
-                            Abrir
-                          </button>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => abrirDetalhe(item)}
+                              className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-3 py-1.5 text-xs font-semibold text-status-info"
+                            >
+                              Abrir
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => abrirEditor(item)}
+                              className="rounded-2xl border border-dark-border px-3 py-1.5 text-xs font-semibold text-dark-text"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleExcluir(item)}
+                              className="rounded-2xl border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600"
+                            >
+                              Excluir
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1952,6 +2169,16 @@ export default function AutoEmissoes() {
       )}
 
       {showApolices && <ModalApolices onClose={() => setShowApolices(false)} />}
+      {editando && (
+        <ModalEditarJson
+          emissao={editando}
+          value={edicaoTexto}
+          onChange={setEdicaoTexto}
+          onClose={() => { setEditando(null); setEdicaoTexto('') }}
+          onSave={handleSalvarEdicao}
+          isSaving={isSavingEdicao}
+        />
+      )}
 
       {detalhe && (
         <ModalDetalhe
@@ -1960,6 +2187,9 @@ export default function AutoEmissoes() {
           onAbrirCotacao={() => abrirCotacaoCompleta(detalhe)}
           onRegistrarResultado={(em) => { setDetalhe(null); setModalResultado(em) }}
           onEmitirApolice={(em) => { setDetalhe(null); setModalEmissao(em) }}
+          onEditar={abrirEditor}
+          onExcluir={handleExcluir}
+          isDeleting={isDeleting}
         />
       )}
     </div>

@@ -7,20 +7,20 @@ export { normalizeImobiliaria }
 
 export const STATUS_LABELS = {
   pendente:     { label: 'Pendente',     color: 'badge-info' },
-  em_cotacao:   { label: 'Em CotaÃ§Ã£o',   color: 'badge-warning' },
-  em_analise:   { label: 'Em AnÃ¡lise',   color: 'badge-blue' },
+  em_cotacao:   { label: 'Em Cotação',   color: 'badge-warning' },
+  em_analise:   { label: 'Em Análise',   color: 'badge-blue' },
   aprovado:     { label: 'Aprovado',     color: 'badge-success' },
   recusado:     { label: 'Recusado',     color: 'badge-danger' },
   emitido:      { label: 'Emitido',      color: 'badge-purple' },
   cancelado:    { label: 'Cancelado',    color: 'badge-muted' },
-  cpf_invalido: { label: 'CPF InvÃ¡lido', color: 'badge-warning' },
+  cpf_invalido: { label: 'CPF Inválido', color: 'badge-warning' },
   expirada:     { label: 'Expirada',     color: 'badge-muted' },
 }
 
 export const PRODUTO_LABELS = {
   residencial_pf:  'Residencial PF',
   comercial_pf:    'Comercial PF',
-  pessoa_juridica: 'Pessoa JurÃ­dica',
+  pessoa_juridica: 'Pessoa Jurídica',
 }
 
 export const SEGURADORAS = [
@@ -31,13 +31,13 @@ export const SEGURADORAS = [
   'Potencial',
 ]
 
-// "Em Aberto" = fichas que ainda precisam de atenÃ§Ã£o
+// "Em Aberto" = fichas que ainda precisam de atenção
 export const STATUS_EM_ABERTO = ['pendente', 'em_cotacao']
 
-// "Passadas" = fichas jÃ¡ finalizadas/encerradas
+// "Passadas" = fichas já finalizadas/encerradas
 export const STATUS_PASSADOS = ['em_analise', 'aprovado', 'recusado', 'emitido', 'cancelado', 'cpf_invalido', 'expirada']
 
-// â”€â”€ KPIs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── KPIs ─────────────────────────────────────────────────────────────────────
 
 export async function fetchKPIs(inicioFiltro, fimFiltro) {
   const hoje = new Date()
@@ -48,7 +48,7 @@ export async function fetchKPIs(inicioFiltro, fimFiltro) {
   })()
   const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
 
-  // Aplica filtro de perÃ­odo quando fornecido
+  // Aplica filtro de período quando fornecido
   const applyRange = (q) => {
     if (inicioFiltro) q = q.gte('created_at', inicioFiltro)
     if (fimFiltro)    q = q.lte('created_at', fimFiltro)
@@ -80,7 +80,7 @@ export async function fetchEmitidas(inicio, fim) {
   return data.filter(item => ['emitida', 'recuperados'].includes(getFichaOperationalState(item)?.id)).length
 }
 
-// â”€â”€ Batch helper â€” bypasses Supabase max_rows=1000 via pagination â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Batch helper — bypasses Supabase max_rows=1000 via pagination ─────────────
 
 async function fetchAllRows(queryFactory, pageSize = 1000) {
   let all = []
@@ -96,7 +96,7 @@ async function fetchAllRows(queryFactory, pageSize = 1000) {
   return all
 }
 
-// â”€â”€ Charts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Charts ────────────────────────────────────────────────────────────────────
 
 export async function fetchFichasPorDia(dias = 30) {
   const inicio = new Date()
@@ -273,7 +273,7 @@ export async function fetchAtividadeRecente(limite = 10) {
   return data || []
 }
 
-// â”€â”€ Product counts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Product counts ────────────────────────────────────────────────────────────
 
 export async function fetchContagemProdutos() {
   const produtos = ['residencial_pf', 'comercial_pf', 'pessoa_juridica']
@@ -297,7 +297,7 @@ export async function fetchContagemProdutos() {
   return result
 }
 
-// â”€â”€ User fichas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── User fichas ───────────────────────────────────────────────────────────────
 
 export async function fetchFichasDoOrcamentista(orcamentistaId) {
   const { data } = await supabase
@@ -315,7 +315,7 @@ export async function fetchContagemAbertaOrcamentista(orcamentistaId) {
   return count || 0
 }
 
-// â”€â”€ Main fichas query â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Main fichas query ─────────────────────────────────────────────────────────
 
 export async function fetchFichas({ produto, ano, mes, dateFrom, dateTo, tipo, search, imobiliaria, orcamentistaId, semSeguradora, page = 0, pageSize = 30, sortOrder = 'recentes' }) {
   let q = supabase
@@ -358,7 +358,7 @@ export async function fetchFichas({ produto, ano, mes, dateFrom, dateTo, tipo, s
   } else if (tipo === 'abertas') {
     q = q.in('status', STATUS_EM_ABERTO)
   } else if (tipo === 'passadas_por_mim' && orcamentistaId) {
-    // Inclui fichas onde o usuÃ¡rio assumiu OU finalizou
+    // Inclui fichas onde o usuário assumiu OU finalizou
     q = q.in('status', STATUS_PASSADOS)
          .or(`orcamentista_id.eq.${orcamentistaId},finalizado_por.eq.${orcamentistaId}`)
   }
@@ -526,7 +526,7 @@ export async function fetchKPIsVisaoGeral(inicioFiltro, fimFiltro) {
   const inicioMesAnterior = new Date(agora.getFullYear(), agora.getMonth() - 1, 1).toISOString()
   const fimMesAnterior = new Date(agora.getFullYear(), agora.getMonth(), 0, 23, 59, 59).toISOString()
 
-  // Aplica filtro de perÃ­odo nas queries quando fornecido
+  // Aplica filtro de período nas queries quando fornecido
   const applyRange = (q) => {
     if (inicioFiltro) q = q.gte('created_at', inicioFiltro)
     if (fimFiltro)    q = q.lte('created_at', fimFiltro)
@@ -550,7 +550,7 @@ export async function fetchKPIsVisaoGeral(inicioFiltro, fimFiltro) {
   return { totalMes, variacaoMes, hoje, semana, pendentes, emCotacao }
 }
 
-// â”€â”€ Lookup helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Lookup helpers ────────────────────────────────────────────────────────────
 
 export async function fetchImobiliariasDistintas() {
   const data = await fetchAllRows(() =>
@@ -560,7 +560,7 @@ export async function fetchImobiliariasDistintas() {
   return raw.map(n => normalizeImobiliaria(n) || n).filter(Boolean).sort()
 }
 
-// Retorna todos os registros {imobiliaria} para contagem na pÃ¡gina de ImobiliÃ¡rias
+// Retorna todos os registros {imobiliaria} para contagem na página de Imobiliárias
 export async function fetchNomesImobiliariasAll() {
   return fetchAllRows(() =>
     supabase.from('fichas').select('imobiliaria').not('imobiliaria', 'is', null)
@@ -572,9 +572,9 @@ export async function fetchProfiles() {
   return data || []
 }
 
-// â”€â”€ Auditoria â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Auditoria ─────────────────────────────────────────────────────────────────
 
-// Registra aÃ§Ã£o crÃ­tica no audit_log. Nunca bloqueia a operaÃ§Ã£o principal.
+// Registra ação crítica no audit_log. Nunca bloqueia a operação principal.
 async function registrarAudit(action, fichaId, dadosAntes, dadosDepois) {
   try {
     const { data: { user } } = await supabase.auth.getUser()
@@ -587,11 +587,11 @@ async function registrarAudit(action, fichaId, dadosAntes, dadosDepois) {
       dados_depois: dadosDepois ?? null,
     })
   } catch (_) {
-    // auditoria nunca bloqueia a operaÃ§Ã£o principal
+    // auditoria nunca bloqueia a operação principal
   }
 }
 
-// â”€â”€ Actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Actions ───────────────────────────────────────────────────────────────────
 
 export async function assumirFicha(id, orcamentistaId) {
   const payload = {
@@ -658,10 +658,10 @@ export async function moverFichaStatus(fichaId, novoStatus, { assumir = false, u
     update.orcamentista_id = null
     update.assumida_em = null
   }
-  // Detecta falha silenciosa de RLS (0 rows affected = sem permissÃ£o)
+  // Detecta falha silenciosa de RLS (0 rows affected = sem permissão)
   const { data, error } = await supabase.from('fichas').update(update).eq('id', fichaId).select('id')
   if (error) return error
-  if (!data || data.length === 0) return new Error('Sem permissÃ£o para mover esta ficha')
+  if (!data || data.length === 0) return new Error('Sem permissão para mover esta ficha')
   return null
 }
 
@@ -748,7 +748,7 @@ export async function editarFicha(id, dados, userId) {
   const { data, error } = await supabase.from('fichas').update(payload).eq('id', id).select('id')
   if (error) return error
   // RLS bloqueou silenciosamente (0 linhas afetadas sem erro)
-  if (!data || data.length === 0) return { message: 'Sem permissÃ£o para editar esta ficha.' }
+  if (!data || data.length === 0) return { message: 'Sem permissão para editar esta ficha.' }
   return null
 }
 
@@ -780,7 +780,7 @@ export async function salvarRetornoGeradoFicha(id, retornoGerado, userId) {
 
   const { data, error } = await supabase.from('fichas').update(payload).eq('id', id).select('id')
   if (error) return error
-  if (!data || data.length === 0) return { message: 'Sem permissÃ£o para editar esta ficha.' }
+  if (!data || data.length === 0) return { message: 'Sem permissão para editar esta ficha.' }
   return null
 }
 
@@ -799,7 +799,7 @@ export async function limparRetornoGeradoFicha(id, userId) {
 
   const { data, error } = await supabase.from('fichas').update({ raw_data: nextRaw }).eq('id', id).select('id')
   if (error) return error
-  if (!data || data.length === 0) return { message: 'Sem permissÃ£o para editar esta ficha.' }
+  if (!data || data.length === 0) return { message: 'Sem permissão para editar esta ficha.' }
   return null
 }
 
@@ -810,7 +810,7 @@ export async function deletarFicha(id) {
   return error
 }
 
-// â”€â”€ RelatÃ³rio por ImobiliÃ¡ria â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Relatório por Imobiliária ─────────────────────────────────────────────────
 
 const STATUS_RELATORIO = ['aprovado', 'emitido', 'cancelado', 'expirada']
 
@@ -844,7 +844,7 @@ export async function fetchImobiliariasRelatorio(ano, mes) {
 }
 
 export async function fetchFichasRelatorio(ano, mes, imobiliarias) {
-  // imobiliarias: string[] â€” aliases da imobiliÃ¡ria canÃ´nica; null/[] carrega todas
+  // imobiliarias: string[] — aliases da imobiliária canônica; null/[] carrega todas
   const inicio = new Date(ano, mes - 1, 1).toISOString()
   const fim    = new Date(ano, mes, 0, 23, 59, 59).toISOString()
   const lista  = Array.isArray(imobiliarias) && imobiliarias.length ? imobiliarias : null
@@ -860,7 +860,7 @@ export async function fetchFichasRelatorio(ano, mes, imobiliarias) {
   return data || []
 }
 
-// â”€â”€ RelatÃ³rio Mensal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Relatório Mensal ──────────────────────────────────────────────────────────
 
 export async function fetchRelatorioMensal({ ano, mes, produto }) {
   const inicio = new Date(ano, mes - 1, 1).toISOString()
@@ -936,7 +936,7 @@ export async function fetchRankingFichasMensal(inicioFiltro, fimFiltro) {
 
   data.forEach(item => {
     const id = item.orcamentista_id || 'sem-responsavel'
-    const name = item.profiles?.nome || 'Sem responsÃ¡vel'
+    const name = item.profiles?.nome || 'Sem responsável'
     const current = summary.get(id) || {
       id,
       name,

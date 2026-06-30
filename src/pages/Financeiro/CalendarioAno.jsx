@@ -15,7 +15,7 @@ export default function CalendarioAno({ cells, mesSelecionado, onSelectMes }) {
                 : 'border-dark-border/70 bg-dark-surface2/40 hover:border-dark-border'
             }`}
           >
-            <p className={`text-xs font-semibold ${ativo ? 'text-brand-accent' : 'text-dark-muted'}`}>{c.label}</p>
+            <p className={`text-xs font-semibold ${ativo ? 'text-emerald-600' : 'text-dark-muted'}`}>{c.label}</p>
             <p className="mt-1 text-sm font-semibold text-dark-text">{formatMoneyBR(c.producao)}</p>
             <p className="text-[11px] text-dark-muted">{c.qtd} apólice{c.qtd !== 1 ? 's' : ''}</p>
           </button>

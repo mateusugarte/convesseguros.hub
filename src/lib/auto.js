@@ -374,7 +374,7 @@ export async function getEmissoesAuto({ inicio, fim } = {}) {
 
   let q = supabase
     .from('emissoes_auto')
-    .select('*, cotacoes_auto(*)')
+    .select('*, cotacoes_auto(*), apolices_auto(*)')
     .order('created_at', { ascending: false })
 
   if (inicio) q = q.gte('created_at', `${inicio}T00:00:00`)
@@ -402,6 +402,163 @@ export async function salvarResultadoCotacao(id, { resultado, seguradoras_cotada
       seguradoras_cotadas: seguradoras_cotadas ?? [],
       updated_at: new Date().toISOString(),
     })
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function atualizarEmissaoAutoCompleta(payload) {
+  const clienteId = await resolverClienteAutoId(payload)
+  const premioLiquido = parseFloat(payload.premio_liquido) || 0
+  const pctComissao = parseFloat(payload.pct_comissao) || 0
+  const valorComissao = premioLiquido * pctComissao
+  const comparativoRenovacao = buildRenewalComparisonPayload(payload, premioLiquido, valorComissao)
+  const valorRepasse = payload.tem_repasse && payload.pct_repasse
+    ? valorComissao * parseFloat(payload.pct_repasse)
+    : null
+
+  const emissaoPayload = {
+    cliente_id: clienteId,
+    tipo: payload.tipo || 'novo',
+    coluna: payload.coluna === 'pendentes' ? null : (payload.coluna || null),
+    resultado: payload.resultado || null,
+    seguradoras_cotadas: Array.isArray(payload.seguradoras_cotadas) ? payload.seguradoras_cotadas : [],
+    nome_cliente: payload.nome_cliente || null,
+    cpf_cliente: payload.cpf_cliente || null,
+    celular_cliente: payload.celular_cliente || null,
+    condutor_nome: payload.condutor_nome || null,
+    condutor_cpf: payload.condutor_cpf || null,
+    modelo_veiculo: payload.modelo_veiculo || null,
+    placa: payload.placa || null,
+    seguradora: payload.seguradora || null,
+    numero_apolice: payload.numero_apolice || null,
+    vigencia_inicio: payload.vigencia_inicio || null,
+    vigencia_fim: payload.vigencia_fim || null,
+    premio_liquido: premioLiquido,
+    pct_comissao: pctComissao,
+    valor_comissao: valorComissao,
+    forma_pagamento: payload.forma_pagamento || null,
+    parcelamento: payload.parcelamento || null,
+    tem_repasse: !!payload.tem_repasse,
+    pct_repasse: payload.tem_repasse ? parseFloat(payload.pct_repasse) || null : null,
+    nome_repasse: payload.tem_repasse ? payload.nome_repasse || null : null,
+    valor_repasse: payload.tem_repasse ? valorRepasse : null,
+    ...comparativoRenovacao,
+    updated_at: new Date().toISOString(),
+  }
+
+  let { error: emissaoError } = await supabase
+    .from('emissoes_auto')
+    .update(emissaoPayload)
+    .eq('id', payload.id)
+  if (isMissingColumnError(emissaoError, 'emissoes_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
+    ;({ error: emissaoError } = await supabase
+      .from('emissoes_auto')
+      .update(omitKeys(emissaoPayload, AUTO_RENEWAL_COMPARE_FIELDS))
+      .eq('id', payload.id))
+  }
+  if (emissaoError) throw emissaoError
+
+  if (payload.cotacao_id) {
+    const primeiraSeguradora = Array.isArray(payload.seguradoras_cotadas) && payload.seguradoras_cotadas.length > 0
+      ? payload.seguradoras_cotadas[0]
+      : null
+
+    const cotacaoPayload = {
+      tipo: payload.eh_renovacao ? 'renovacao' : (payload.tipo || 'novo'),
+      nome_cliente: payload.nome_cliente || null,
+      cpf_cliente: payload.cpf_cliente || null,
+      celular_cliente: payload.celular_cliente || null,
+      email_cliente: payload.email_cliente || null,
+      estado_civil_cliente: payload.estado_civil_cliente || null,
+      profissao_cliente: payload.profissao_cliente || null,
+      origem_lead: payload.origem_lead || null,
+      condutor_nome: payload.condutor_nome || null,
+      condutor_cpf: payload.condutor_cpf || null,
+      estado_civil_condutor: payload.estado_civil_condutor || null,
+      cep_pernoite: payload.cep_pernoite || null,
+      uso_veiculo: payload.uso_veiculo || null,
+      garagem_residencia: !!payload.garagem_residencia,
+      garagem_trabalho: !!payload.garagem_trabalho,
+      garagem_estudo: !!payload.garagem_estudo,
+      jovens_18_26: !!payload.jovens_18_26,
+      modelo_veiculo: payload.modelo_veiculo || null,
+      placa: payload.placa || null,
+      veiculo_financiado: !!payload.veiculo_financiado,
+      possui_kit_gas: !!payload.possui_kit_gas,
+      possui_blindagem: !!payload.possui_blindagem,
+      isento_imposto: !!payload.isento_imposto,
+      vigencia_inicio: payload.vigencia_inicio || null,
+      vigencia_fim: payload.vigencia_fim || null,
+      seguradora_preferencial: primeiraSeguradora ? {
+        nome: primeiraSeguradora.nome || null,
+        valor_total: primeiraSeguradora.valor_total || null,
+        premio_liquido: primeiraSeguradora.premio_liquido || null,
+        pct_comissao: primeiraSeguradora.pct_comissao || null,
+        parcelamentos: primeiraSeguradora.parcelamentos || null,
+        forma_pagamento: primeiraSeguradora.forma_pagamento || null,
+      } : undefined,
+    }
+
+    const { error: cotacaoError } = await supabase
+      .from('cotacoes_auto')
+      .update(cotacaoPayload)
+      .eq('id', payload.cotacao_id)
+    if (cotacaoError) throw cotacaoError
+  }
+
+  if (payload.apolice_id) {
+    const apolicePayload = {
+      cliente_id: clienteId,
+      seguradora: payload.seguradora || null,
+      numero_apolice: payload.numero_apolice || null,
+      vigencia_inicio: payload.vigencia_inicio || null,
+      vigencia_fim: payload.vigencia_fim || null,
+      premio_liquido: premioLiquido,
+      pct_comissao: pctComissao,
+      valor_comissao: valorComissao,
+      forma_pagamento: payload.forma_pagamento || null,
+      parcelamento: payload.parcelamento || null,
+      tipo_producao: payload.tipo_producao || 'individual',
+      responsavel: payload.responsavel || null,
+      eh_renovacao: !!payload.eh_renovacao,
+      tem_repasse: !!payload.tem_repasse,
+      pct_repasse: payload.tem_repasse ? parseFloat(payload.pct_repasse) || null : null,
+      nome_repasse: payload.tem_repasse ? payload.nome_repasse || null : null,
+      valor_repasse: payload.tem_repasse ? valorRepasse : null,
+      nome_cliente: payload.nome_cliente || null,
+      cpf_cliente: payload.cpf_cliente || null,
+      celular_cliente: payload.celular_cliente || null,
+      condutor_nome: payload.condutor_nome || null,
+      condutor_cpf: payload.condutor_cpf || null,
+      modelo_veiculo: payload.modelo_veiculo || null,
+      placa: payload.placa || null,
+      ...comparativoRenovacao,
+    }
+
+    let { error: apoliceError } = await supabase
+      .from('apolices_auto')
+      .update(apolicePayload)
+      .eq('id', payload.apolice_id)
+    if (isMissingColumnError(apoliceError, 'apolices_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
+      ;({ error: apoliceError } = await supabase
+        .from('apolices_auto')
+        .update(omitKeys(apolicePayload, AUTO_RENEWAL_COMPARE_FIELDS))
+        .eq('id', payload.apolice_id))
+    }
+    if (apoliceError) throw apoliceError
+  }
+}
+
+export async function deletarEmissaoAuto(id) {
+  const { error: apolicesError } = await supabase
+    .from('apolices_auto')
+    .delete()
+    .eq('emissao_id', id)
+  if (apolicesError) throw apolicesError
+
+  const { error } = await supabase
+    .from('emissoes_auto')
+    .delete()
     .eq('id', id)
   if (error) throw error
 }

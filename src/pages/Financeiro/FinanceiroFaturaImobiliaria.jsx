@@ -217,7 +217,7 @@ export default function FinanceiroFaturaImobiliaria() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSegFiltro('')}
-              className={`rounded-xl px-3 py-1.5 text-xs font-medium transition-colors ${segFiltro === '' ? 'bg-emerald-600 text-white' : 'border border-emerald-500/15 bg-white/90 text-dark-muted hover:text-dark-text'}`}
+              className={`rounded-xl px-3 py-1.5 text-xs font-medium transition-colors ${segFiltro === '' ? 'bg-emerald-600 text-white' : 'border border-emerald-500/15 bg-dark-surface/90 text-dark-muted hover:text-dark-text'}`}
             >
               Todas
             </button>
@@ -225,7 +225,7 @@ export default function FinanceiroFaturaImobiliaria() {
               <button
                 key={g.seguradora}
                 onClick={() => setSegFiltro(prev => prev === g.seguradora ? '' : g.seguradora)}
-                className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-medium transition-colors ${segFiltro === g.seguradora ? 'bg-emerald-600 text-white' : 'border border-emerald-500/15 bg-white/90 text-dark-muted hover:text-dark-text'}`}
+                className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-medium transition-colors ${segFiltro === g.seguradora ? 'bg-emerald-600 text-white' : 'border border-emerald-500/15 bg-dark-surface/90 text-dark-muted hover:text-dark-text'}`}
               >
                 <SeguradoraBadge nome={g.seguradora} size="xs" />
               </button>
@@ -278,7 +278,7 @@ export default function FinanceiroFaturaImobiliaria() {
         </button>
         <button
           onClick={() => navigate(`/financeiro/faturas/${encodeURIComponent(selecionada)}/${proximoMesRef}`)}
-          className="inline-flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-white/85 px-4 py-2.5 text-sm font-medium text-dark-text transition-colors hover:border-emerald-500/40"
+          className="inline-flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-dark-surface/85 px-4 py-2.5 text-sm font-medium text-dark-text transition-colors hover:border-emerald-500/40"
         >
           <CalendarPlus className="h-4 w-4" /> Ver fatura de {proximoLabel}
         </button>
@@ -294,13 +294,13 @@ export default function FinanceiroFaturaImobiliaria() {
               onBlur={salvarValorReal}
               inputMode="decimal"
               placeholder="0,00"
-              className="h-9 w-32 rounded-lg border border-emerald-500/15 bg-white/90 px-2 text-right font-mono text-sm text-dark-text outline-none focus:border-emerald-500/40"
+              className="h-9 w-32 rounded-lg border border-emerald-500/15 bg-dark-surface/90 px-2 text-right font-mono text-sm text-dark-text outline-none focus:border-emerald-500/40"
             />
           </div>
           <button
             onClick={togglePago}
             disabled={saving}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-emerald-500/15 bg-white/90 px-3 text-sm font-medium text-dark-text transition-colors hover:border-emerald-500/40 disabled:opacity-50"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-emerald-500/15 bg-dark-surface/90 px-3 text-sm font-medium text-dark-text transition-colors hover:border-emerald-500/40 disabled:opacity-50"
           >
             {fatura.status === 'pago' ? (<><RotateCcw className="h-4 w-4" /> Reabrir fatura</>) : (<><Check className="h-4 w-4" /> Marcar como paga</>)}
           </button>
@@ -327,7 +327,7 @@ export default function FinanceiroFaturaImobiliaria() {
                 <button
                   key={g.seguradora}
                   onClick={() => setSegFiltro(prev => prev === g.seguradora ? '' : g.seguradora)}
-                  className={`rounded-2xl border px-4 py-3 text-left transition-colors ${ativa ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-emerald-500/15 bg-white/90 hover:border-emerald-500/30'}`}
+                  className={`rounded-2xl border px-4 py-3 text-left transition-colors ${ativa ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-emerald-500/15 bg-dark-surface/90 hover:border-emerald-500/30'}`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <SeguradoraBadge nome={g.seguradora} size="md" />

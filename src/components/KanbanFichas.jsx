@@ -522,7 +522,7 @@ function ModalConfirmarCancelado({ onConfirmar, onCancelar, salvando }) {
             onChange={e => setMotivo(e.target.value)}
             rows={4}
             placeholder="Descreva o motivo do cancelamento..."
-            className="w-full rounded-xl border border-dark-border bg-white/80 px-3 py-2 text-sm text-dark-text outline-none transition-colors focus:border-brand-accent/50"
+            className="w-full rounded-xl border border-dark-border bg-dark-surface/80 px-3 py-2 text-sm text-dark-text outline-none transition-colors focus:border-brand-accent/50"
           />
         </div>
       </div>
@@ -1070,12 +1070,12 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   return (
     <div className={`flex min-h-0 flex-1 flex-col gap-2.5 ${sortingFeedback ? 'kanban-sorting' : ''}`}>
       {sortingFeedback && (
-        <div className="flex items-center justify-between rounded-2xl border border-brand-accent/20 bg-brand-accent/5 px-4 py-2 text-xs text-brand-accent animate-fade-in">
+        <div className="flex items-center justify-between rounded-2xl border border-brand-accent/20 bg-brand-accent/5 px-4 py-2 text-xs text-status-info animate-fade-in">
           <span className="inline-flex items-center gap-2 font-medium">
             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
             Reorganizando colunas
           </span>
-          <span className="text-brand-accent/70">A ordem está sendo atualizada</span>
+          <span className="text-status-info/70">A ordem está sendo atualizada</span>
         </div>
       )}
 

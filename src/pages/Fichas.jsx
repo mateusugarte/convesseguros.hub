@@ -577,7 +577,7 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-semibold text-dark-text truncate">{item.name}</p>
                         {index === 0 && (
-                          <span className="inline-flex items-center rounded-full border border-brand-accent/20 bg-brand-accent/10 px-2 py-0.5 text-[10px] font-semibold text-brand-accent">
+                          <span className="inline-flex items-center rounded-full border border-brand-accent/20 bg-brand-accent/10 px-2 py-0.5 text-[10px] font-semibold text-status-info">
                             Líder do mês
                           </span>
                         )}
@@ -791,7 +791,7 @@ function TabelaAberta({ fichas, user, navigate, onDetalhe, onAssumir, onFinaliza
                 <div className="flex items-center justify-end gap-1">
                   {canAss && (
                     <button onClick={() => onAssumir(f.id)}
-                            className="text-xs px-2.5 py-1 rounded-lg bg-brand-secondary/20 text-brand-accent border border-brand-accent/20 hover:bg-brand-secondary/40 transition-colors font-medium">
+                            className="text-xs px-2.5 py-1 rounded-lg bg-brand-secondary/20 text-status-info border border-brand-accent/20 hover:bg-brand-secondary/40 transition-colors font-medium">
                       Assumir
                     </button>
                   )}
@@ -1265,7 +1265,7 @@ export default function Fichas() {
                 search ? 'border-brand-accent/50' : 'border-dark-border'
               }`}>
                 {search && search !== debouncedSearch ? (
-                  <svg className="w-4 h-4 animate-spin text-brand-accent flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 animate-spin text-status-info flex-shrink-0" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                   </svg>
@@ -1287,7 +1287,7 @@ export default function Fichas() {
                 )}
               </div>
               {debouncedSearch && (
-                <span className="text-[10px] text-brand-accent/70 pl-1">
+                <span className="text-[10px] text-status-info/70 pl-1">
                   Buscando em todos os períodos · {total} resultado{total !== 1 ? 's' : ''}
                 </span>
               )}

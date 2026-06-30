@@ -2,34 +2,44 @@ export function parseDecimalBR(value) {
   if (value === null || value === undefined || value === '') return null
   if (typeof value === 'number') return Number.isFinite(value) ? value : null
 
-  const raw = String(value).trim().replace(/\s+/g, '')
+  const raw = String(value).trim()
   if (!raw) return null
 
-  let normalized = raw
-  const hasComma = normalized.includes(',')
-  const hasDot = normalized.includes('.')
+  function parseCandidate(candidate) {
+    if (!candidate) return null
 
-  if (hasComma && hasDot) {
-    const lastComma = normalized.lastIndexOf(',')
-    const lastDot = normalized.lastIndexOf('.')
-    if (lastComma > lastDot) {
-      normalized = normalized.replace(/\./g, '').replace(',', '.')
-    } else {
-      normalized = normalized.replace(/,/g, '')
+    let normalized = candidate.replace(/\s+/g, '')
+    const hasComma = normalized.includes(',')
+    const hasDot = normalized.includes('.')
+
+    if (hasComma && hasDot) {
+      const lastComma = normalized.lastIndexOf(',')
+      const lastDot = normalized.lastIndexOf('.')
+      if (lastComma > lastDot) {
+        normalized = normalized.replace(/\./g, '').replace(',', '.')
+      } else {
+        normalized = normalized.replace(/,/g, '')
+      }
+    } else if (hasComma) {
+      normalized = normalized.replace(',', '.')
+    } else if (hasDot) {
+      const dotGroups = normalized.split('.')
+      const looksLikeThousands = dotGroups.length > 1 && dotGroups.slice(1).every(group => group.length === 3)
+      if (looksLikeThousands) {
+        normalized = normalized.replace(/\./g, '')
+      }
     }
-  } else if (hasComma) {
-    normalized = normalized.replace(',', '.')
-  } else if (hasDot) {
-    const dotGroups = normalized.split('.')
-    const looksLikeThousands = dotGroups.length > 1 && dotGroups.slice(1).every(group => group.length === 3)
-    if (looksLikeThousands) {
-      normalized = normalized.replace(/\./g, '')
-    }
+
+    if (!normalized) return null
+    const parsed = Number(normalized)
+    return Number.isFinite(parsed) ? parsed : null
   }
 
-  if (!normalized) return null
-  const parsed = Number(normalized)
-  return Number.isFinite(parsed) ? parsed : null
+  const direct = parseCandidate(raw)
+  if (direct !== null) return direct
+
+  const match = raw.match(/-?\d[\d.,]*/)
+  return match ? parseCandidate(match[0]) : null
 }
 
 export function formatDecimalBRInput(value) {

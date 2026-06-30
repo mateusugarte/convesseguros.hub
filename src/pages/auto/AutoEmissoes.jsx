@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowRight, Car, CheckCircle2, FileText, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, X, Plus } from 'lucide-react'
@@ -12,6 +12,7 @@ import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../c
 import SeguradoraSelect from '../../components/SeguradoraSelect'
 import { useToast } from '../../contexts/ToastContext'
 import { formatDateBR, formatMoney } from './autoShared'
+import { uploadDocumento } from '../../lib/documentos'
 import { toNumber } from '../../lib/apolices'
 
 const COLUNAS = [
@@ -19,7 +20,8 @@ const COLUNAS = [
   { id: 'cotacao_feita', label: 'Cotacao feita', hint: 'resultado registrado da cotacao', tone: 'secondary' },
   { id: 'negociando', label: 'Negociando', hint: 'em tratativa com cliente', tone: 'accent' },
   { id: 'aguardando_vistoria', label: 'Aguardando vistoria', hint: 'dependem de validacao', tone: 'warning' },
-  { id: 'emitida', label: 'Emitida', hint: 'prontas para apolice', tone: 'success' },
+  { id: 'proposta_transmitida', label: 'Proposta Transmitida', hint: 'proposta enviada para a seguradora', tone: 'success' },
+  { id: 'apolice_emitida', label: 'Apólice Emitida', hint: 'apólice finalizada com documento', tone: 'accent' },
 ]
 
 const PERIOD_OPTIONS = [
@@ -42,6 +44,7 @@ const FORM_EMISSAO_VAZIO = {
   numero_apolice: '',
   vigencia_inicio: '',
   vigencia_fim: '',
+  coluna: 'proposta_transmitida',
   premio_liquido: '',
   pct_comissao: '',
   forma_pagamento: '',
@@ -71,6 +74,7 @@ const FORM_MANUAL_VAZIO = {
   numero_apolice: '',
   vigencia_inicio: '',
   vigencia_fim: '',
+  coluna: 'proposta_transmitida',
   premio_liquido: '',
   pct_comissao: '',
   tem_repasse: false,
@@ -100,7 +104,6 @@ const FORM_EDICAO_VAZIO = {
   cotacao_id: '',
   apolice_id: '',
   tipo: 'novo',
-  coluna: 'pendentes',
   resultado: '',
   nome_cliente: '',
   cpf_cliente: '',
@@ -129,6 +132,7 @@ const FORM_EDICAO_VAZIO = {
   numero_apolice: '',
   vigencia_inicio: '',
   vigencia_fim: '',
+  coluna: 'proposta_transmitida',
   premio_liquido: '',
   pct_comissao: '',
   forma_pagamento: '',
@@ -677,7 +681,7 @@ function ModalEditarJson({ emissao, value, onChange, onClose, onSave, isSaving }
             />
             <div className="mt-5 flex gap-3 border-t border-dark-border/60 pt-5">
               <button onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
-              <button onClick={onSave} disabled={isSaving} className="btn-primary flex-1 disabled:opacity-50">{isSaving ? 'Salvando...' : 'Salvar alteracoes'}</button>
+              <button onClick={onSave} disabled={isSaving} className="btn-primary flex-1 disabled:opacity-50">{isSaving ? 'Salvando...' : 'Salvar alterações'}</button>
             </div>
           </div>
         </div>
@@ -1115,9 +1119,12 @@ export default function AutoEmissoes() {
       qc.invalidateQueries({ queryKey: ['auto-apolices'] })
       qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
       qc.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] })
-      setEditando(null)
-      setEdicaoTexto('')
       setDetalhe(null)
+      setManualOpen(false)
+      setManualMode('novo')
+      setManualForm(FORM_MANUAL_VAZIO)
+      setManualDocumento(null)
+      if (manualFileRef.current) manualFileRef.current.value = ''
       toast({ type: 'success', title: 'Emissao atualizada', message: 'As alteracoes foram salvas com sucesso.' })
     },
     onError: error => {
@@ -1226,8 +1233,10 @@ export default function AutoEmissoes() {
   function abrirEditor(item) {
     if (!item) return
     setDetalhe(null)
-    setEditando(item)
-    setEdicaoTexto(JSON.stringify(getEditFormInicial(item), null, 2))
+    setManualMode('editar')
+    setManualForm(getEditFormInicial(item))
+    setManualDocumento(null)
+    setManualOpen(true)
   }
 
   function buildSeguradorasPayload(seguradoras) {
@@ -1244,22 +1253,17 @@ export default function AutoEmissoes() {
       }))
   }
 
-  function handleSalvarEdicao() {
-    if (!editando) return
-    let parsed
-    try {
-      parsed = JSON.parse(edicaoTexto)
-    } catch (error) {
-      toast({ type: 'error', title: 'JSON invalido', message: 'Revise a sintaxe antes de salvar.' })
-      return
-    }
+  function handleSalvarEdicao(formData) {
+    if (!editando || !formData) return
 
     salvarEdicao({
-      ...parsed,
-      id: parsed.id || editando.id,
-      cotacao_id: parsed.cotacao_id || editando.cotacao_id || editando.cotacoes_auto?.id || null,
-      apolice_id: parsed.apolice_id || getApoliceVinculada(editando)?.id || null,
-      seguradoras_cotadas: buildSeguradorasPayload(parsed.seguradoras_cotadas),
+      ...formData,
+      id: formData.id || editando.id,
+      cotacao_id: formData.cotacao_id || editando.cotacao_id || editando.cotacoes_auto?.id || null,
+      apolice_id: formData.apolice_id || getApoliceVinculada(editando)?.id || null,
+      seguradoras_cotadas: buildSeguradorasPayload(formData.seguradoras_cotadas),
+      documento_apolice: formData.documento_apolice || null,
+      user_id: user?.id || null,
     })
   }
 
@@ -1333,8 +1337,11 @@ export default function AutoEmissoes() {
       pct_repasse: form.tem_repasse ? toNumber(form.pct_repasse) : null,
       nome_repasse: form.tem_repasse ? form.nome_repasse : null,
       valor_repasse: form.tem_repasse ? valorRepasse : null,
+      coluna: form.coluna || 'proposta_transmitida',
+      documento_apolice: emissaoDocumento,
+      user_id: user?.id || null,
     }).then(() => {
-      mover({ id: modalEmissao.id, coluna: 'emitida' })
+      mover({ id: modalEmissao.id, coluna: form.coluna || 'proposta_transmitida' })
     }).catch(() => {})
   }
 
@@ -1380,7 +1387,7 @@ export default function AutoEmissoes() {
     total: emissoes.length,
     pendentes: emissoes.filter(item => getEmissaoColuna(item) === 'pendentes').length,
     renovacoes: emissoes.filter(item => (item.cotacoes_auto?.tipo || item.tipo) === 'renovacao').length,
-    emitidas: emissoes.filter(item => getEmissaoColuna(item) === 'emitida').length,
+    emitidas: emissoes.filter(item => getEmissaoColuna(item) === 'apolice_emitida').length,
   }), [emissoes])
 
   const boardSummary = [
@@ -1417,8 +1424,8 @@ export default function AutoEmissoes() {
             >
               {isGestaoRoute ? 'Ir para Emissoes' : 'Gestao AUTO'}
             </button>
-            <button onClick={() => setManualOpen(true)} className="btn-primary">
-              Nova emissao manual
+            <button onClick={() => { setManualMode('novo'); setManualForm(FORM_MANUAL_VAZIO); setManualDocumento(null); setManualOpen(true) }} className="btn-primary">
+              Nova emissao
             </button>
             <button onClick={() => setShowApolices(true)} className="btn-secondary">
               Consultar apolices emitidas
@@ -1584,8 +1591,8 @@ export default function AutoEmissoes() {
               <button onClick={() => navigate('/auto/gestao')} className="rounded-2xl border border-brand-secondary/30 bg-brand-secondary/10 px-3 py-2 text-xs font-semibold text-status-info">
                 Abrir Gestao AUTO
               </button>
-              <button onClick={() => setManualOpen(true)} className="rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted hover:border-brand-accent/40 hover:text-dark-text">
-                Nova emissao manual
+              <button onClick={() => { setManualMode('novo'); setManualForm(FORM_MANUAL_VAZIO); setManualDocumento(null); setManualOpen(true) }} className="rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted hover:border-brand-accent/40 hover:text-dark-text">
+                Nova emissao
               </button>
               <button onClick={() => setShowApolices(true)} className="rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted hover:border-brand-accent/40 hover:text-dark-text">
                 Consultar apolices emitidas
@@ -1668,10 +1675,10 @@ export default function AutoEmissoes() {
         />
       )}
 
-      {/* Modal: emitir apolice (drag para emitida) */}
+      {/* Modal: emitir apolice (drag para proposta/apolice) */}
       {modalEmissao && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="modal-backdrop" onClick={() => { setModalEmissao(null); setForm(FORM_EMISSAO_VAZIO) }} />
+          <div className="modal-backdrop" onClick={() => { setModalEmissao(null); setForm(FORM_EMISSAO_VAZIO); setEmissaoDocumento(null); if (emissaoFileRef.current) emissaoFileRef.current.value = '' }} />
           <div className="relative z-10 glass-modal w-full max-w-6xl overflow-hidden rounded-[32px]">
             <div className="grid gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
               <aside className="relative overflow-hidden bg-gradient-to-br from-brand-secondary/12 via-dark-surface2/70 to-brand-accent/10 p-6 md:p-7">
@@ -1721,7 +1728,7 @@ export default function AutoEmissoes() {
                     <h3 className="mt-2 text-xl font-semibold text-dark-text">Preencher e confirmar emissao</h3>
                   </div>
                   <button
-                    onClick={() => { setModalEmissao(null); setForm(FORM_EMISSAO_VAZIO) }}
+                    onClick={() => { setModalEmissao(null); setForm(FORM_EMISSAO_VAZIO); setEmissaoDocumento(null); if (emissaoFileRef.current) emissaoFileRef.current.value = '' }}
                     className="rounded-full p-2 hover:bg-dark-border/40 transition-colors"
                   >
                     <X className="w-5 h-5 text-dark-muted" />
@@ -1729,6 +1736,54 @@ export default function AutoEmissoes() {
                 </div>
 
                 <div className="space-y-4">
+                  <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
+                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Etapa da transmissão</p>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => setForm(current => ({ ...current, coluna: 'proposta_transmitida' }))}
+                        className={
+                          'rounded-2xl border px-3 py-2 text-left text-xs font-semibold transition-colors ' +
+                          (form.coluna === 'proposta_transmitida'
+                            ? 'border-brand-accent bg-brand-accent/10 text-status-info'
+                            : 'border-dark-border bg-dark-surface/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text')
+                        }
+                      >
+                        Proposta transmitida
+                        <span className="mt-1 block text-[11px] font-normal text-dark-muted">Envio inicial, sem ap?lice finalizada.</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setForm(current => ({ ...current, coluna: 'apolice_emitida' }))}
+                        className={
+                          'rounded-2xl border px-3 py-2 text-left text-xs font-semibold transition-colors ' +
+                          (form.coluna === 'apolice_emitida'
+                            ? 'border-status-success bg-status-success/10 text-status-success'
+                            : 'border-dark-border bg-dark-surface/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text')
+                        }
+                      >
+                        Ap?lice emitida
+                        <span className="mt-1 block text-[11px] font-normal text-dark-muted">Permite anexar documento e número da apólice.</span>
+                      </button>
+                    </div>
+                    {form.coluna === 'apolice_emitida' && (
+                      <div className="mt-4 grid gap-4 md:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Anexar documento</label>
+                          <input
+                            ref={emissaoFileRef}
+                            type="file"
+                            accept="application/pdf,.pdf,.png,.jpg,.jpeg"
+                            onChange={e => setEmissaoDocumento(e.target.files?.[0] || null)}
+                            className="w-full rounded-2xl border border-dark-border bg-dark-surface/90 px-3 py-2 text-sm text-dark-text outline-none"
+                          />
+                        </div>
+                        <div className="rounded-2xl border border-status-success/20 bg-status-success/10 px-3 py-2 text-sm text-status-success">
+                          A apólice será criada junto com a transmissão final.
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora</label>
@@ -1912,17 +1967,17 @@ export default function AutoEmissoes() {
 
                 <div className="mt-6 flex gap-3 border-t border-dark-border/60 pt-5">
                   <button
-                    onClick={() => { setModalEmissao(null); setForm(FORM_EMISSAO_VAZIO) }}
+                    onClick={() => { setModalEmissao(null); setForm(FORM_EMISSAO_VAZIO); setEmissaoDocumento(null); if (emissaoFileRef.current) emissaoFileRef.current.value = '' }}
                     className="btn-secondary flex-1"
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={handleEmitir}
-                    disabled={isPending || !form.vigencia_fim || !form.seguradora || (seguradorasAprovadas.length === 0)}
+                    disabled={isPending || !form.seguradora || (form.coluna === 'apolice_emitida' && (!form.numero_apolice || !form.vigencia_inicio || !form.vigencia_fim || !emissaoDocumento))}
                     className="btn-primary flex-1 disabled:opacity-50"
                   >
-                    {isPending ? 'Emitindo...' : 'Confirmar emissao'}
+                    {isPending ? 'Salvando...' : (form.coluna === 'apolice_emitida' ? 'Confirmar apólice' : 'Salvar proposta')}
                   </button>
                 </div>
               </div>
@@ -1933,7 +1988,7 @@ export default function AutoEmissoes() {
 
       {manualOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="modal-backdrop" onClick={() => { setManualOpen(false); setManualForm(FORM_MANUAL_VAZIO) }} />
+          <div className="modal-backdrop" onClick={() => { setManualOpen(false); setManualMode('novo'); setManualForm(FORM_MANUAL_VAZIO); setManualDocumento(null); if (manualFileRef.current) manualFileRef.current.value = '' }} />
           <div className="relative z-10 glass-modal w-full max-w-6xl overflow-hidden rounded-[32px]">
             <div className="grid gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
               <aside className="relative overflow-hidden bg-gradient-to-br from-brand-secondary/12 via-dark-surface2/70 to-brand-accent/10 p-6 md:p-7">
@@ -1943,9 +1998,9 @@ export default function AutoEmissoes() {
                     <Plus className="h-3.5 w-3.5" />
                     Cadastro manual
                   </div>
-                  <h2 className="mt-4 text-2xl font-semibold text-dark-text">Nova emissao manual</h2>
+                  <h2 className="mt-4 text-2xl font-semibold text-dark-text">Nova emissao</h2>
                   <p className="mt-2 text-sm leading-6 text-dark-muted">
-                    Registre uma emissao sem cotacao previa. O sistema grava a emissao e a apolice com os dados informados.
+                    Registre uma emissao sem cotacao previa. O sistema grava a emissao ou a apolice conforme a etapa escolhida.
                   </p>
 
                   <div className="mt-6 space-y-3">
@@ -1986,7 +2041,7 @@ export default function AutoEmissoes() {
                     <h3 className="mt-2 text-xl font-semibold text-dark-text">Preencher e salvar manualmente</h3>
                   </div>
                   <button
-                    onClick={() => { setManualOpen(false); setManualForm(FORM_MANUAL_VAZIO) }}
+                    onClick={() => { setManualOpen(false); setManualMode('novo'); setManualForm(FORM_MANUAL_VAZIO); setManualDocumento(null); if (manualFileRef.current) manualFileRef.current.value = '' }}
                     className="rounded-full p-2 hover:bg-dark-border/40 transition-colors"
                   >
                     <X className="w-5 h-5 text-dark-muted" />
@@ -1994,6 +2049,54 @@ export default function AutoEmissoes() {
                 </div>
 
                 <div className="space-y-4">
+                  <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
+                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Etapa da transmissão</p>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => setManualForm(current => ({ ...current, coluna: 'proposta_transmitida' }))}
+                        className={
+                          'rounded-2xl border px-3 py-2 text-left text-xs font-semibold transition-colors ' +
+                          (manualForm.coluna === 'proposta_transmitida'
+                            ? 'border-brand-accent bg-brand-accent/10 text-status-info'
+                            : 'border-dark-border bg-dark-surface/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text')
+                        }
+                      >
+                        Proposta transmitida
+                        <span className="mt-1 block text-[11px] font-normal text-dark-muted">Envio inicial, sem ap?lice finalizada.</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setManualForm(current => ({ ...current, coluna: 'apolice_emitida' }))}
+                        className={
+                          'rounded-2xl border px-3 py-2 text-left text-xs font-semibold transition-colors ' +
+                          (manualForm.coluna === 'apolice_emitida'
+                            ? 'border-status-success bg-status-success/10 text-status-success'
+                            : 'border-dark-border bg-dark-surface/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text')
+                        }
+                      >
+                        Ap?lice emitida
+                        <span className="mt-1 block text-[11px] font-normal text-dark-muted">Permite anexar documento e número da apólice.</span>
+                      </button>
+                    </div>
+                    {manualForm.coluna === 'apolice_emitida' && (
+                      <div className="mt-4 grid gap-4 md:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Anexar documento</label>
+                          <input
+                            ref={manualFileRef}
+                            type="file"
+                            accept="application/pdf,.pdf,.png,.jpg,.jpeg"
+                            onChange={e => setManualDocumento(e.target.files?.[0] || null)}
+                            className="w-full rounded-2xl border border-dark-border bg-dark-surface/90 px-3 py-2 text-sm text-dark-text outline-none"
+                          />
+                        </div>
+                        <div className="rounded-2xl border border-status-success/20 bg-status-success/10 px-3 py-2 text-sm text-status-success">
+                          A ap?lice ser? criada junto com o cadastro.
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <CampoTexto label="Nome do segurado" campo="nome_cliente" value={manualForm.nome_cliente} onChange={setManualField} />
                     <CampoTexto label="CPF do segurado" campo="cpf_cliente" value={manualForm.cpf_cliente} onChange={setManualField} />
@@ -2136,7 +2239,7 @@ export default function AutoEmissoes() {
 
                   <div className="flex flex-wrap gap-3 border-t border-dark-border/60 pt-5">
                     <button
-                      onClick={() => { setManualOpen(false); setManualForm(FORM_MANUAL_VAZIO) }}
+                      onClick={() => { setManualOpen(false); setManualMode('novo'); setManualForm(FORM_MANUAL_VAZIO); setManualDocumento(null); if (manualFileRef.current) manualFileRef.current.value = '' }}
                       className="btn-secondary flex-1"
                     >
                       Cancelar
@@ -2148,17 +2251,15 @@ export default function AutoEmissoes() {
                         || !manualForm.cpf_cliente
                         || !manualForm.celular_cliente
                         || !manualForm.condutor_nome
-                        || !manualForm.numero_apolice
-                        || !manualForm.vigencia_inicio
-                        || !manualForm.vigencia_fim
                         || !manualForm.seguradora
                         || !manualForm.premio_liquido
                         || !manualForm.pct_comissao
+                        || (manualForm.coluna === 'apolice_emitida' && (!manualForm.numero_apolice || !manualForm.vigencia_inicio || !manualForm.vigencia_fim || !manualDocumento))
                         || (manualForm.tem_repasse && (!manualForm.pct_repasse || !manualForm.nome_repasse))
                       }
                       className="btn-primary flex-1 disabled:opacity-50"
                     >
-                      {isCreatingManual ? 'Salvando...' : 'Salvar emissao manual'}
+                      {isCreatingManual ? 'Salvando...' : (manualForm.coluna === 'apolice_emitida' ? 'Salvar apólice' : (manualMode === 'editar' ? 'Salvar alterações' : 'Salvar proposta'))}
                     </button>
                   </div>
                 </div>
@@ -2169,16 +2270,6 @@ export default function AutoEmissoes() {
       )}
 
       {showApolices && <ModalApolices onClose={() => setShowApolices(false)} />}
-      {editando && (
-        <ModalEditarJson
-          emissao={editando}
-          value={edicaoTexto}
-          onChange={setEdicaoTexto}
-          onClose={() => { setEditando(null); setEdicaoTexto('') }}
-          onSave={handleSalvarEdicao}
-          isSaving={isSavingEdicao}
-        />
-      )}
 
       {detalhe && (
         <ModalDetalhe

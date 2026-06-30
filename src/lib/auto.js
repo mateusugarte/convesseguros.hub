@@ -75,6 +75,49 @@ function isMissingColumnError(error, table, columns = []) {
   return columns.some(column => message.includes(`'${column}'`))
 }
 
+function buildApoliceAutoPayload(payload, clienteId, premioLiquido, pctComissao, valorComissao, comparativoRenovacao, valorRepasse) {
+  return {
+    emissao_id: payload.emissao_id || null,
+    cliente_id: clienteId,
+    seguradora: payload.seguradora || null,
+    numero_apolice: payload.numero_apolice || null,
+    vigencia_inicio: payload.vigencia_inicio || null,
+    vigencia_fim: payload.vigencia_fim || null,
+    premio_liquido: premioLiquido,
+    pct_comissao: pctComissao,
+    valor_comissao: valorComissao,
+    forma_pagamento: payload.forma_pagamento || null,
+    parcelamento: payload.parcelamento || null,
+    tipo_producao: payload.tipo_producao || 'individual',
+    responsavel: payload.responsavel || null,
+    eh_renovacao: !!payload.eh_renovacao,
+    tem_repasse: !!payload.tem_repasse,
+    pct_repasse: payload.tem_repasse ? parseFloat(payload.pct_repasse) || null : null,
+    nome_repasse: payload.tem_repasse ? payload.nome_repasse || null : null,
+    valor_repasse: payload.tem_repasse ? valorRepasse : null,
+    nome_cliente: payload.nome_cliente || null,
+    cpf_cliente: payload.cpf_cliente || null,
+    celular_cliente: payload.celular_cliente || null,
+    condutor_nome: payload.condutor_nome || null,
+    condutor_cpf: payload.condutor_cpf || null,
+    modelo_veiculo: payload.modelo_veiculo || null,
+    placa: payload.placa || null,
+    ...comparativoRenovacao,
+  }
+}
+
+async function uploadApoliceDocumento(payload, apoliceId) {
+  const file = payload.documento_apolice
+  if (!file || !apoliceId) return null
+
+  return uploadDocumento({
+    file,
+    apoliceId,
+    cpfCnpj: payload.cpf_cliente || payload.cpf || payload.cnpj || null,
+    userId: payload.user_id || payload.emitido_por || null,
+  })
+}
+
 function buildRenewalComparisonPayload(payload = {}, premioLiquidoAtual = 0, comissaoAtual = 0) {
   if (!payload.eh_renovacao) {
     return {
@@ -506,46 +549,50 @@ export async function atualizarEmissaoAutoCompleta(payload) {
     if (cotacaoError) throw cotacaoError
   }
 
-  if (payload.apolice_id) {
-    const apolicePayload = {
-      cliente_id: clienteId,
-      seguradora: payload.seguradora || null,
-      numero_apolice: payload.numero_apolice || null,
-      vigencia_inicio: payload.vigencia_inicio || null,
-      vigencia_fim: payload.vigencia_fim || null,
-      premio_liquido: premioLiquido,
-      pct_comissao: pctComissao,
-      valor_comissao: valorComissao,
-      forma_pagamento: payload.forma_pagamento || null,
-      parcelamento: payload.parcelamento || null,
-      tipo_producao: payload.tipo_producao || 'individual',
-      responsavel: payload.responsavel || null,
-      eh_renovacao: !!payload.eh_renovacao,
-      tem_repasse: !!payload.tem_repasse,
-      pct_repasse: payload.tem_repasse ? parseFloat(payload.pct_repasse) || null : null,
-      nome_repasse: payload.tem_repasse ? payload.nome_repasse || null : null,
-      valor_repasse: payload.tem_repasse ? valorRepasse : null,
-      nome_cliente: payload.nome_cliente || null,
-      cpf_cliente: payload.cpf_cliente || null,
-      celular_cliente: payload.celular_cliente || null,
-      condutor_nome: payload.condutor_nome || null,
-      condutor_cpf: payload.condutor_cpf || null,
-      modelo_veiculo: payload.modelo_veiculo || null,
-      placa: payload.placa || null,
-      ...comparativoRenovacao,
-    }
+  const salvarApolice = payload.coluna === 'apolice_emitida' || payload.criar_apolice || payload.apolice_id
+  if (salvarApolice) {
+    const apolicePayload = buildApoliceAutoPayload(payload, clienteId, premioLiquido, pctComissao, valorComissao, comparativoRenovacao, valorRepasse)
 
-    let { error: apoliceError } = await supabase
-      .from('apolices_auto')
-      .update(apolicePayload)
-      .eq('id', payload.apolice_id)
-    if (isMissingColumnError(apoliceError, 'apolices_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
+    let apoliceError = null
+    let apoliceData = null
+
+    if (payload.apolice_id) {
       ;({ error: apoliceError } = await supabase
         .from('apolices_auto')
-        .update(omitKeys(apolicePayload, AUTO_RENEWAL_COMPARE_FIELDS))
-        .eq('id', payload.apolice_id))
+        .update(apolicePayload)
+        .eq('id', payload.apolice_id)
+        .select()
+        .maybeSingle())
+    } else {
+      ;({ data: apoliceData, error: apoliceError } = await supabase
+        .from('apolices_auto')
+        .insert(apolicePayload)
+        .select()
+        .single())
+    }
+    if (isMissingColumnError(apoliceError, 'apolices_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
+      const payloadSemComparativo = omitKeys(apolicePayload, AUTO_RENEWAL_COMPARE_FIELDS)
+      if (payload.apolice_id) {
+        ;({ error: apoliceError } = await supabase
+          .from('apolices_auto')
+          .update(payloadSemComparativo)
+          .eq('id', payload.apolice_id)
+          .select()
+          .maybeSingle())
+      } else {
+        ;({ data: apoliceData, error: apoliceError } = await supabase
+          .from('apolices_auto')
+          .insert(payloadSemComparativo)
+          .select()
+          .single())
+      }
     }
     if (apoliceError) throw apoliceError
+    const apoliceId = payload.apolice_id || apoliceData?.id || null
+    if (apoliceId && payload.documento_apolice) {
+      const { error: docError } = await uploadApoliceDocumento(payload, apoliceId)
+      if (docError) throw docError
+    }
   }
 }
 
@@ -575,9 +622,10 @@ export async function emitirApoliceAuto(payload) {
     ? valorComissao * parseFloat(payload.pct_repasse)
     : null
 
+  const colunaDestino = payload.coluna || 'apolice_emitida'
   if (payload.emissao_id) {
     const emissaoUpdate = {
-      coluna: 'emitida',
+      coluna: colunaDestino,
       cliente_id: clienteId,
       nome_cliente: payload.nome_cliente || null,
       cpf_cliente: payload.cpf_cliente || null,
@@ -616,48 +664,33 @@ export async function emitirApoliceAuto(payload) {
     if (emissaoError) throw emissaoError
   }
 
-  const apolicePayload = {
-    emissao_id: payload.emissao_id || null,
-    cliente_id: clienteId,
-    seguradora: payload.seguradora || null,
-    numero_apolice: payload.numero_apolice || null,
-    vigencia_inicio: payload.vigencia_inicio || null,
-    vigencia_fim: payload.vigencia_fim || null,
-    premio_liquido: premioLiquido,
-    pct_comissao: pctComissao,
-    valor_comissao: valorComissao,
-    forma_pagamento: payload.forma_pagamento || null,
-    parcelamento: payload.parcelamento || null,
-    tipo_producao: payload.tipo_producao || 'individual',
-    responsavel: payload.responsavel || null,
-    eh_renovacao: !!payload.eh_renovacao,
-    tem_repasse: !!payload.tem_repasse,
-    pct_repasse: payload.tem_repasse ? parseFloat(payload.pct_repasse) || null : null,
-    nome_repasse: payload.tem_repasse ? payload.nome_repasse || null : null,
-    valor_repasse: payload.tem_repasse ? valorRepasse : null,
-    nome_cliente: payload.nome_cliente || null,
-    cpf_cliente: payload.cpf_cliente || null,
-    celular_cliente: payload.celular_cliente || null,
-    condutor_nome: payload.condutor_nome || null,
-    condutor_cpf: payload.condutor_cpf || null,
-    modelo_veiculo: payload.modelo_veiculo || null,
-    placa: payload.placa || null,
-    ...comparativoRenovacao,
-  }
+  if (colunaDestino !== 'apolice_emitida') return { emissao: { id: payload.emissao_id }, apolice: null }
 
-  let { data, error } = await supabase
+  const apolicePayload = buildApoliceAutoPayload(payload, clienteId, premioLiquido, pctComissao, valorComissao, comparativoRenovacao, valorRepasse)
+  const { data, error } = await supabase
     .from('apolices_auto')
     .insert(apolicePayload)
     .select()
     .single()
   if (isMissingColumnError(error, 'apolices_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
-    ;({ data, error } = await supabase
+    const payloadSemComparativo = omitKeys(apolicePayload, AUTO_RENEWAL_COMPARE_FIELDS)
+    const retry = await supabase
       .from('apolices_auto')
-      .insert(omitKeys(apolicePayload, AUTO_RENEWAL_COMPARE_FIELDS))
+      .insert(payloadSemComparativo)
       .select()
-      .single())
+      .single()
+    if (retry.error) throw retry.error
+    if (payload.documento_apolice) {
+      const { error: docError } = await uploadApoliceDocumento(payload, retry.data?.id)
+      if (docError) throw docError
+    }
+    return retry.data
   }
   if (error) throw error
+  if (payload.documento_apolice) {
+    const { error: docError } = await uploadApoliceDocumento(payload, data?.id)
+    if (docError) throw docError
+  }
   return data
 }
 
@@ -675,7 +708,7 @@ export async function criarEmissaoManualAuto(payload) {
     cotacao_id: null,
     cliente_id: clienteId,
     tipo: payload.tipo || 'novo',
-    coluna: 'emitida',
+    coluna: 'proposta_transmitida',
     nome_cliente: payload.nome_cliente || null,
     cpf_cliente: payload.cpf_cliente || null,
     celular_cliente: payload.celular_cliente || null,
@@ -980,7 +1013,7 @@ export async function getAutoEmissoesResumo() {
   return {
     total: emissoes.length,
     pendentes: emissoes.filter(item => getEmissaoColuna(item) === 'pendentes').length,
-    emitidas: emissoes.filter(item => getEmissaoColuna(item) === 'emitida').length,
+    emitidas: emissoes.filter(item => getEmissaoColuna(item) === 'apolice_emitida').length,
     porColuna: countBy(emissoes, item => getEmissaoColuna(item)),
     porTipo: countBy(emissoes, item => item.cotacoes_auto?.tipo || item.tipo || 'novo'),
   }

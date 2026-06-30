@@ -198,7 +198,7 @@ export default function ApolicesLista() {
         stats={(
           <>
             <MetricCard label="Total no filtro" value={total} hint="resultado aplicado" tone="accent" />
-            <MetricCard label="Emitidas" value={emitidas} hint="status emitida" tone="secondary" />
+            <MetricCard label="Propostas transmitidas" value={emitidas} hint="status proposta transmitida" tone="secondary" />
             <MetricCard label="Enviadas" value={enviadas} hint="status enviada" tone="success" />
             <MetricCard label="Valor total" value={fmtBRL(valorTotal)} hint="soma das parcelas" tone="warning" />
           </>

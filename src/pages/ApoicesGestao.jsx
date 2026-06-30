@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { memo } from 'react'
 import { startTransition } from 'react'
@@ -40,7 +40,7 @@ import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/ka
 const COLUNAS = [
   { id: 'recebida', label: 'Recebida', color: '#3B82F6' },
   { id: 'proposta_transmitida', label: 'Proposta Transmitida', color: '#F59E0B' },
-  { id: 'emitida', label: 'Apólice Emitida', color: '#8B5CF6' },
+  { id: 'emitida', label: 'Proposta Transmitida', color: '#8B5CF6' },
   { id: 'enviada', label: 'Apólice Enviada', color: '#059669' },
 ]
 

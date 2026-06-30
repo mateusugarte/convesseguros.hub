@@ -5,7 +5,7 @@ import { parseDecimalBR } from './numberInput'
 export const STATUS_EMISSAO_LABELS = {
   recebida:             { label: 'Recebida',             color: '#3B82F6' },
   proposta_transmitida: { label: 'Proposta Transmitida', color: '#F59E0B' },
-  emitida:              { label: 'Apólice Emitida',      color: '#8B5CF6' },
+  emitida:              { label: 'Proposta Transmitida', color: '#8B5CF6' },
   enviada:              { label: 'Apólice Enviada',      color: '#059669' },
 }
 

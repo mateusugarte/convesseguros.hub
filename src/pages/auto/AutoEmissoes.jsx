@@ -9,6 +9,7 @@ import {
   salvarResultadoCotacao,
 } from '../../lib/auto'
 import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../components/ui'
+import SeguradoraBadge from '../../components/SeguradoraBadge'
 import SeguradoraSelect from '../../components/SeguradoraSelect'
 import { useToast } from '../../contexts/ToastContext'
 import { formatDateBR, formatMoney } from './autoShared'
@@ -503,6 +504,7 @@ function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, 
   const nome = nomeEmissao(emissao)
   const tipo = (c.tipo || emissao.tipo) === 'renovacao' ? 'Renovacao' : 'Novo'
   const seguradoras = Array.isArray(emissao.seguradoras_cotadas) ? emissao.seguradoras_cotadas : []
+  const seguradoraAtual = emissao.seguradora || apolice?.seguradora || c.seguradora_preferencial?.nome || c.seguradora_mais_barata?.nome || ''
   const etapaAtual = emissao.resultado ? (emissao.resultado === 'aprovada' ? 'Cotacao aprovada' : 'Cotacao recusada') : 'Aguardando resultado'
   const colunaAtual = getColunaMeta(getEmissaoColuna(emissao)).label
 
@@ -1056,6 +1058,7 @@ export default function AutoEmissoes() {
   const [editando, setEditando] = useState(null)
   const [edicaoTexto, setEdicaoTexto] = useState('')
   const [manualOpen, setManualOpen] = useState(false)
+  const [manualStage, setManualStage] = useState('proposta_transmitida')
   const [manualForm, setManualForm] = useState(FORM_MANUAL_VAZIO)
   const [form, setForm] = useState(FORM_EMISSAO_VAZIO)
   const [showApolices, setShowApolices] = useState(false)
@@ -1216,7 +1219,8 @@ export default function AutoEmissoes() {
     if (!dragging) return
     if (colunaDestino === 'cotacao_feita') {
       setModalResultado(dragging)
-    } else if (colunaDestino === 'emitida') {
+    } else if (colunaDestino === 'proposta_transmitida' || colunaDestino === 'apolice_emitida') {
+      setManualStage(colunaDestino)
       setModalEmissao(dragging)
     } else {
       mover({ id: dragging.id, coluna: colunaDestino === 'pendentes' ? null : colunaDestino })
@@ -1233,10 +1237,13 @@ export default function AutoEmissoes() {
   function abrirEditor(item) {
     if (!item) return
     setDetalhe(null)
-    setManualMode('editar')
-    setManualForm(getEditFormInicial(item))
-    setManualDocumento(null)
-    setManualOpen(true)
+    setTimeout(() => {
+      setManualMode('editar')
+      setManualForm(getEditFormInicial(item))
+      setManualDocumento(null)
+      setManualStage('proposta_transmitida')
+      setManualOpen(true)
+    }, 0)
   }
 
   function buildSeguradorasPayload(seguradoras) {
@@ -1291,7 +1298,7 @@ export default function AutoEmissoes() {
       setForm(FORM_EMISSAO_VAZIO)
       return
     }
-    setForm(getFormEmissaoInicial(modalEmissao))
+    setForm({ ...getFormEmissaoInicial(modalEmissao), coluna: manualStage })
   }, [modalEmissao])
 
   const premioLiquido = toNumber(form.premio_liquido) || 0

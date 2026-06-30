@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowRight, Car, CheckCircle2, FileText, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, X, Plus } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Car, CheckCircle2, FileText, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, X, Plus } from 'lucide-react'
 import { format, startOfMonth, startOfWeek } from 'date-fns'
 import {
   atualizarEmissaoAutoCompleta, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
-  emitirApoliceAuto, getApolicesAuto, getEmissaoColuna, getEmissoesAuto, moverEmissaoColuna,
+  emitirApoliceAuto, getApolicesAuto, getEmissaoAuto, getEmissaoColuna, getEmissoesAuto, moverEmissaoColuna,
   salvarResultadoCotacao,
 } from '../../lib/auto'
 import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../components/ui'
@@ -497,7 +497,7 @@ function BoolRow({ label, value }) {
 
 // ─── Modal Detalhe ──────────────────────────────────────────────────────────
 
-function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, onEmitirApolice, onEditar, onExcluir, isDeleting }) {
+function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, onEmitirApolice, onEditar, onExcluir, isDeleting, page = false }) {
   const c = emissao.cotacoes_auto || {}
   const apolice = getApoliceVinculada(emissao)
   const temCotacao = Boolean(emissao.cotacoes_auto?.id || emissao.cotacao_id)
@@ -509,9 +509,9 @@ function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, 
   const colunaAtual = getColunaMeta(getEmissaoColuna(emissao)).label
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-8">
-      <div className="modal-backdrop" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-6xl overflow-hidden rounded-[34px] border border-white/60 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.16)]">
+    <div className={page ? 'w-full animate-fade-in py-2' : 'fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-8'}>
+      {!page && <div className="modal-backdrop" onClick={onClose} />}
+      <div className={'relative z-10 w-full overflow-hidden rounded-[34px] border border-white/60 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.16)] ' + (page ? '' : 'max-w-6xl')}>
         <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="bg-gradient-to-br from-brand-secondary/12 via-white to-brand-accent/10 p-6 md:p-7">
             <div className="flex items-start justify-between gap-4">
@@ -1047,6 +1047,7 @@ export default function AutoEmissoes() {
   const qc = useQueryClient()
   const navigate = useNavigate()
   const location = useLocation()
+  const { id: emissaoId } = useParams()
   const toast = useToast()
   const initialRange = useMemo(() => getPeriodoRange('semana'), [])
 
@@ -1069,6 +1070,12 @@ export default function AutoEmissoes() {
   const { data: emissoes = [] } = useQuery({
     queryKey: ['auto-emissoes', periodo, filtroInicio, filtroFim],
     queryFn: () => getEmissoesAuto({ inicio: filtroInicio || undefined, fim: filtroFim || undefined }),
+  })
+
+  const { data: emissaoDaRota, isLoading: isLoadingEmissao } = useQuery({
+    queryKey: ['auto-emissao', emissaoId],
+    queryFn: () => getEmissaoAuto(emissaoId),
+    enabled: Boolean(emissaoId),
   })
 
   const { mutate: mover } = useMutation({
@@ -1231,19 +1238,18 @@ export default function AutoEmissoes() {
 
   function abrirDetalhe(item) {
     if (!item) return
-    setDetalhe(item)
+    navigate('/auto/emissoes/' + item.id, { state: { emissao: item } })
   }
 
   function abrirEditor(item) {
     if (!item) return
     setDetalhe(null)
-    setTimeout(() => {
-      setManualMode('editar')
-      setManualForm(getEditFormInicial(item))
-      setManualDocumento(null)
-      setManualStage('proposta_transmitida')
-      setManualOpen(true)
-    }, 0)
+    setEditando(item)
+    setManualMode('editar')
+    setManualForm(getEditFormInicial(item))
+    setManualDocumento(null)
+    setManualStage(getEmissaoColuna(item))
+    setManualOpen(true)
   }
 
   function buildSeguradorasPayload(seguradoras) {
@@ -1353,6 +1359,10 @@ export default function AutoEmissoes() {
   }
 
   function handleCreateManual() {
+    if (manualMode === 'editar') {
+      handleSalvarEdicao(manualForm)
+      return
+    }
     criarManual({
       nome_cliente: manualForm.nome_cliente,
       cpf_cliente: manualForm.cpf_cliente,
@@ -1414,6 +1424,31 @@ export default function AutoEmissoes() {
   } : null
 
   const isGestaoRoute = location.pathname.startsWith('/auto/gestao')
+  const emissaoDetalhada = emissaoDaRota || location.state?.emissao || null
+
+  if (emissaoId && !manualOpen) {
+    if (isLoadingEmissao && !emissaoDetalhada) {
+      return <div className="flex min-h-[50vh] items-center justify-center text-sm text-dark-muted">Carregando emiss�o...</div>
+    }
+    if (!emissaoDetalhada) {
+      return (
+        <div className="space-y-4 p-4">
+          <button onClick={() => navigate('/auto/emissoes')} className="btn-secondary"><ArrowLeft className="h-4 w-4" /> Voltar</button>
+          <EmptyState title="Emiss�o n�o encontrada" description="O registro pode ter sido removido." />
+        </div>
+      )
+    }
+    return (
+      <div className="space-y-4 px-1 pb-8 animate-fade-in">
+        <button onClick={() => navigate('/auto/emissoes')} className="btn-secondary inline-flex items-center gap-2">
+          <ArrowLeft className="h-4 w-4" /> Voltar para emiss�es
+        </button>
+        <ModalDetalhe page emissao={emissaoDetalhada} onClose={() => navigate('/auto/emissoes')}
+          onAbrirCotacao={() => abrirCotacaoCompleta(emissaoDetalhada)} onRegistrarResultado={setModalResultado}
+          onEmitirApolice={setModalEmissao} onEditar={abrirEditor} onExcluir={handleExcluir} isDeleting={isDeleting} />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -2293,3 +2328,4 @@ export default function AutoEmissoes() {
     </div>
   )
 }
+

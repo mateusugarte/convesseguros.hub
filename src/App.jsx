@@ -115,6 +115,7 @@ function AppRoutes() {
           <Route path="auto/gestao"         element={<AutoEmissoes />} />
           <Route path="auto/renovacoes"     element={<AutoRenovacoes />} />
           <Route path="auto/emissoes"       element={<AutoEmissoes />} />
+          <Route path="auto/emissoes/:id"   element={<AutoEmissoes />} />
           <Route path="auto/clientes"       element={<AutoClientes />} />
           <Route path="auto/cotacoes"       element={<AutoCotacoes />} />
           <Route path="auto/cotacoes/consulta" element={<AutoCotacoesConsulta />} />
@@ -154,3 +155,4 @@ export default function App() {
     </QueryClientProvider>
   )
 }
+

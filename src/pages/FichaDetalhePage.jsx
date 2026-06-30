@@ -33,7 +33,12 @@ function fmtBRL(v) {
 }
 
 function resolveFichaValor(ficha, field) {
-  return ficha?.[field] ?? ficha?.raw_data?.[field] ?? null
+  const raw = ficha?.raw_data || {}
+  return ficha?.[field]
+    ?? raw?.[field]
+    ?? raw?.extras?.[field]
+    ?? raw?.campos?.[field]
+    ?? null
 }
 
 // ── InlineField — campo editável com click ────────────────────────────────────

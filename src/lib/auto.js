@@ -428,6 +428,17 @@ export async function getEmissoesAuto({ inicio, fim } = {}) {
   return data ?? []
 }
 
+export async function getEmissaoAuto(id) {
+  if (!id) return null
+  const { data, error } = await supabase
+    .from('emissoes_auto')
+    .select('*, cotacoes_auto(*), apolices_auto(*)')
+    .eq('id', id)
+    .single()
+  if (error) throw error
+  return data
+}
+
 export async function moverEmissaoColuna(id, coluna) {
   const { error } = await supabase
     .from('emissoes_auto')
@@ -1078,3 +1089,4 @@ export async function getAutoCotacoesMensais({ tipo, meses = 6 } = {}) {
     }),
   })
 }
+

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { fetchFichaDetalhe, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { format, parseISO } from 'date-fns'
@@ -18,7 +18,12 @@ function fmtBRL(v) {
 }
 
 function resolveFichaValor(ficha, field) {
-  return ficha?.[field] ?? ficha?.raw_data?.[field] ?? null
+  const raw = ficha?.raw_data || {}
+  return ficha?.[field]
+    ?? raw?.[field]
+    ?? raw?.extras?.[field]
+    ?? raw?.campos?.[field]
+    ?? null
 }
 function fmtDt(v) {
   if (!v) return '—'

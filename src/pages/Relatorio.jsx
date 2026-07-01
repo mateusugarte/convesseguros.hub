@@ -389,9 +389,15 @@ function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggl
         {selected ? <CheckSquare className="h-4 w-4 text-brand-primary" /> : <Square className="h-4 w-4 text-dark-muted" />}
       </button>
 
-      <Avatar name={ficha._orcamentistaNome || 'Sem orçamentista'} src={ficha._orcamentistaAvatar} size="sm" />
+      {ficha._orcamentistaNome && (
+        <span title={ficha._orcamentistaNome}>
+          <Avatar name={ficha._orcamentistaNome} src={ficha._orcamentistaAvatar} size="sm" />
+        </span>
+      )}
       {isEmissaoCard && (
-        <Avatar name={ficha._emissorNome || 'Sem emissor'} src={ficha._emissorAvatar} size="sm" />
+        <span title={ficha._emissorNome || 'Sem emissor'}>
+          <Avatar name={ficha._emissorNome || 'Sem emissor'} src={ficha._emissorAvatar} size="sm" />
+        </span>
       )}
 
       <button type="button" onClick={() => onOpen(ficha.id)} className="min-w-[200px] flex-1 text-left">
@@ -1329,7 +1335,12 @@ export default function Relatorio() {
       toast({ type: 'error', title: 'Erro ao atualizar cobrança', message: err.message })
       return
     }
-    toast({ type: 'success', title: nextValue ? 'Marcado como cobrança enviada' : 'Ficha retornou para Aprovadas' })
+    toast({
+      type: 'success',
+      title: colunaId === 'recuperados'
+        ? 'Histórico de cobrança atualizado'
+        : (nextValue ? 'Marcado como cobrança enviada' : 'Ficha retornou para Aprovadas'),
+    })
   }
 
   async function toggleImobiliariaRetornou(ficha, nextValue) {

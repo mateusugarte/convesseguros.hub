@@ -1,17 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  useDroppable,
-  useDraggable,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core'
-import {
   BarChart2,
-  ChevronLeft,
   CheckSquare,
   LayoutGrid,
   MoveRight,
@@ -51,7 +41,6 @@ import FichaStatusBadge from '../components/FichaStatusBadge'
 import { normalizeDisplayText } from '../lib/text'
 import { getEntityImageUrl } from '../lib/entityMedia'
 import { getFichaOperationalState } from '../lib/fichaOperational'
-import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/kanbanDnd'
 import { BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 const PERIOD_OPTIONS = [
@@ -72,7 +61,6 @@ const COLUNAS = [
 ]
 
 const REPORT_STATUSES = ['aprovado', 'emitido']
-const STORAGE_PREFIX = 'relatorio-fian-ca-scroll'
 const COBRANCA_TOGGLE_STORAGE = 'relatorio-cobranca-toggle'
 
 function pad2(value) {
@@ -383,231 +371,6 @@ function ChartCard({ title, subtitle, data, dataKey = 'value', xKey = 'name', co
         </ResponsiveContainer>
       </div>
     </DataCard>
-  )
-}
-
-function RelatorioCard({ ficha, onOpen, onOpenPolicy, selected, onToggleSelect, dragListeners, dragAttributes, selectionMode }) {
-  const nome = getNomeFicha(ficha)
-  const doc = getDocumento(ficha)
-  const op = getOperacionalStatus(ficha)
-  const cobrancaSentAt = getRecoveryStart(ficha)
-  const prodColor = ficha.produto === 'pessoa_juridica' ? '#4b6cc2' : ficha.produto === 'comercial_pf' ? '#0f766e' : '#000079'
-  const isEmissaoCard = isEmitida(ficha)
-  const cardVisual = op?.id === 'aprovada'
-    ? { background: 'linear-gradient(180deg, rgba(236,253,245,0.98), rgba(220,252,231,0.92))', border: '1px solid rgba(15,118,110,0.24)', shadow: '0 18px 36px rgba(15,118,110,0.12)' }
-    : op?.id === 'enviado_cobranca'
-      ? { background: 'linear-gradient(180deg, rgba(239,246,255,0.98), rgba(219,234,254,0.92))', border: '1px solid rgba(34,71,170,0.26)', shadow: '0 18px 36px rgba(34,71,170,0.12)' }
-      : isEmissaoCard
-        ? { background: 'linear-gradient(180deg, rgba(238,242,255,0.98), rgba(224,231,255,0.94))', border: '1px solid rgba(0,0,121,0.22)', shadow: '0 18px 36px rgba(0,0,121,0.12)' }
-        : op?.id === 'expirada'
-          ? { background: 'linear-gradient(180deg, rgba(248,250,252,0.98), rgba(226,232,240,0.94))', border: '1px solid rgba(100,116,139,0.24)', shadow: '0 18px 36px rgba(100,116,139,0.10)' }
-          : { background: 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96))', border: '1px solid rgba(148,163,184,0.20)', shadow: '0 16px 32px rgba(15,23,42,0.08)' }
-
-  return (
-    <div
-      {...(!selectionMode && dragListeners ? dragListeners : {})}
-      {...(!selectionMode && dragAttributes ? dragAttributes : {})}
-      className={`kanban-card relative ${selected ? 'ring-2 ring-brand-accent' : ''}`}
-      style={{ '--kanban-accent': prodColor, cursor: selectionMode ? 'pointer' : 'grab', background: cardVisual.background, border: cardVisual.border, boxShadow: cardVisual.shadow }}
-      onClick={() => (selectionMode ? onToggleSelect(ficha.id) : onOpen(ficha.id))}
-    >
-      <div className="kanban-card-body">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={event => { event.stopPropagation(); onToggleSelect(ficha.id) }}
-              className="rounded-lg p-1 hover:bg-dark-surface2"
-              aria-label="Selecionar card"
-            >
-              {selected ? <CheckSquare className="h-4 w-4 text-brand-primary" /> : <Square className="h-4 w-4 text-dark-muted" />}
-            </button>
-            <span className="inline-flex rounded-full px-2 py-1 text-[10px] font-semibold" style={{ background: `${prodColor}20`, color: prodColor }}>
-              {normalizeDisplayText(ficha.produto) || ficha.produto || 'Fiança'}
-            </span>
-          </div>
-          <span className="text-[10px] font-mono text-dark-muted">{formatDateBR(ficha.created_at)}</span>
-        </div>
-
-        <div className="space-y-1.5">
-          <p className="text-[12.5px] font-semibold leading-snug text-dark-text">{nome}</p>
-          <p className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">{getCanonicalImobiliariaNome(ficha) || 'Imobiliária não informada'}</p>
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          <FichaStatusBadge ficha={ficha} />
-          {doc && (
-            <span className="rounded-full border border-dark-border/60 bg-dark-surface2/70 px-2 py-1 text-[10px] font-mono text-dark-muted">
-              {doc}
-            </span>
-          )}
-          {getEffectiveNumeroApolice(ficha) && (
-            <span className="rounded-full px-2 py-1 text-[10px] font-mono" style={{ background: '#2247aa15', color: '#2247aa' }}>
-              Apólice: {getEffectiveNumeroApolice(ficha)}
-            </span>
-          )}
-        </div>
-
-        {op && (
-          <div className="mt-3 flex items-center gap-1.5 border-t border-dark-border/50 pt-2">
-            <div className="min-w-0">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Status operacional</p>
-              <span className={`badge ${op.color}`}>{op.label}</span>
-            </div>
-          </div>
-        )}
-
-        {op?.id === 'enviado_cobranca' && cobrancaSentAt && (
-          <div className="mt-2 rounded-2xl border border-brand-accent/15 bg-brand-accent/5 px-3 py-2">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-status-info">Cobran?a enviada</p>
-            <p className="mt-1 text-[11px] text-dark-text">{formatDateTimeBR(cobrancaSentAt) || formatDateBR(cobrancaSentAt)}</p>
-          </div>
-        )}
-
-        {isEmissaoCard && !selectionMode && (
-          <div className="mt-3 grid grid-cols-2 gap-2 border-t border-dark-border/50 pt-3">
-            <button
-              type="button"
-              onClick={event => { event.stopPropagation(); onOpen(ficha.id) }}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-dark-border/60 bg-dark-surface/85 px-2.5 py-2 text-[10px] font-semibold text-dark-text transition-colors hover:border-brand-accent/45 hover:text-status-info"
-            >
-              <FileText className="h-3.5 w-3.5" /> Abrir ficha
-            </button>
-            <button
-              type="button"
-              disabled={!ficha?._apolice?.id}
-              onClick={event => { event.stopPropagation(); if (ficha?._apolice?.id) onOpenPolicy?.(ficha._apolice.id) }}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-primary px-2.5 py-2 text-[10px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <ExternalLink className="h-3.5 w-3.5" /> Abrir apolice
-            </button>
-          </div>
-        )}
-
-        {ficha.observacoes && (
-          <p className="mt-2 line-clamp-2 text-[11px] text-dark-muted">{ficha.observacoes}</p>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function DraggableRelatorioCard({ ficha, onOpen, onOpenPolicy, selected, onToggleSelect, selectionMode }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ficha.id })
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={{
-        opacity: isDragging ? 0.2 : 1,
-        touchAction: 'none',
-        transition: isDragging ? 'none' : 'opacity 0.15s ease',
-      }}
-    >
-      <RelatorioCard
-        ficha={ficha}
-        onOpen={onOpen}
-        onOpenPolicy={onOpenPolicy}
-        selected={selected}
-        onToggleSelect={onToggleSelect}
-        dragListeners={listeners}
-        dragAttributes={attributes}
-        selectionMode={selectionMode}
-      />
-    </div>
-  )
-}
-
-function KanbanColuna({
-  coluna,
-  fichas,
-  onOpen,
-  onOpenPolicy,
-  selectedIds,
-  onToggleSelect,
-  onCopy,
-  onSelectAll,
-  onConfirmCobranca,
-  canConfirmCobranca,
-  pendingCobrancaCount,
-  selectionMode,
-  colIndex,
-}) {
-  const { isOver, setNodeRef } = useDroppable({ id: coluna.id })
-
-  return (
-    <div className="kanban-col animate-fade-in flex flex-col" style={{ animationDelay: `${colIndex * 40}ms`, animationFillMode: 'both' }}>
-      <div
-        className="kanban-col-header flex items-center justify-between flex-shrink-0"
-        style={{ background: `${coluna.color}18`, borderColor: `${coluna.color}50` }}
-      >
-        <div className="flex items-center gap-1.5">
-          <div className="h-1.5 w-1.5 rounded-full" style={{ background: coluna.color }} />
-          <span className="text-[11px] font-semibold" style={{ color: coluna.color }}>{coluna.label}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded" style={{ background: `${coluna.color}25`, color: coluna.color }}>
-            {fichas.length}
-          </span>
-          <button
-            type="button"
-            onClick={event => { event.stopPropagation(); onSelectAll(coluna.id) }}
-            className="rounded-lg border border-dark-border/60 px-2 py-1 text-[10px] font-medium text-dark-muted transition-colors hover:border-brand-accent/40 hover:text-dark-text"
-            title="Selecionar todos desta coluna"
-          >
-            Todos
-          </button>
-          <button
-            type="button"
-            onClick={event => { event.stopPropagation(); onCopy(coluna.id) }}
-            className="rounded-lg border border-dark-border/60 px-2 py-1 text-[10px] font-medium text-dark-muted transition-colors hover:border-brand-accent/40 hover:text-dark-text"
-            title="Copiar informações da coluna"
-          >
-            Copiar
-          </button>
-          {coluna.id === 'enviado_cobranca' && (
-            <button
-              type="button"
-              onClick={event => { event.stopPropagation(); onConfirmCobranca() }}
-              disabled={!canConfirmCobranca}
-              className="rounded-lg bg-brand-primary px-2.5 py-1 text-[10px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
-              title="Registrar envio de cobran?a para as fichas selecionadas"
-            >
-              Marcar envio{pendingCobrancaCount > 0 ? ` (${pendingCobrancaCount})` : ''}
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div
-        ref={setNodeRef}
-        className="kanban-col-body flex-1 space-y-1.5 overflow-y-auto p-1.5 transition-colors duration-150"
-        style={{
-          borderColor: isOver ? `${coluna.color}80` : 'rgb(var(--color-border))',
-          backgroundColor: isOver ? `${coluna.color}08` : 'rgb(var(--color-surface2) / 0.4)',
-          boxShadow: isOver ? `inset 0 0 0 2px ${coluna.color}40` : 'none',
-        }}
-      >
-        {fichas.length === 0 ? (
-          <div className="kanban-empty">
-            <Square className="kanban-empty-icon h-5 w-5" />
-            <span className="kanban-empty-text">Vazia</span>
-          </div>
-        ) : (
-          fichas.map(ficha => (
-            <DraggableRelatorioCard
-              key={ficha.id}
-              ficha={ficha}
-              onOpen={onOpen}
-              onOpenPolicy={onOpenPolicy}
-              selected={selectedIds.has(ficha.id)}
-              onToggleSelect={onToggleSelect}
-              selectionMode={selectionMode}
-            />
-          ))
-        )}
-      </div>
-    </div>
   )
 }
 
@@ -1132,7 +895,6 @@ export default function Relatorio() {
   const [search, setSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState([])
   const [moveTarget, setMoveTarget] = useState('')
-  const [activeId, setActiveId] = useState(null)
   const [pendingEmissao, setPendingEmissao] = useState(null)
   const [salvandoEmissao, setSalvandoEmissao] = useState(false)
   const [pendingCobranca, setPendingCobranca] = useState(null)
@@ -1144,12 +906,8 @@ export default function Relatorio() {
       return {}
     }
   })
-  const scrollRef = useRef(null)
-
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
   const isDetail = Boolean(imobiliariaId)
   const currentPath = `${location.pathname}${location.search}`
-  const scrollKey = `${STORAGE_PREFIX}-${currentPath}`
   const periodoScopeKey = getPeriodoScopeKey(periodo, ano, mes)
   const [rangeStart, rangeEnd] = getReportRange(periodo, ano, mes)
   const periodoLabel = getPeriodoLabel(periodo, ano, mes)
@@ -1319,19 +1077,6 @@ export default function Relatorio() {
   }, [ano, mes, periodo, rangeStart, rangeEnd, imobiliariaId, imobiliarias, getAliases, isDetail, toast])
 
   useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-
-    const stateScroll = Number(location.state?.scrollLeft || 0)
-    const saved = stateScroll || Number(sessionStorage.getItem(scrollKey) || 0)
-    if (saved > 0) {
-      requestAnimationFrame(() => {
-        el.scrollLeft = saved
-      })
-    }
-  }, [location.state, scrollKey, rows.length, loading])
-
-  useEffect(() => {
     if (typeof location.state?.scrollTop !== 'number') return
     requestAnimationFrame(() => {
       window.scrollTo({ top: location.state.scrollTop, behavior: 'auto' })
@@ -1341,16 +1086,6 @@ export default function Relatorio() {
   useEffect(() => {
     localStorage.setItem(COBRANCA_TOGGLE_STORAGE, JSON.stringify(cobrancaToggleMap))
   }, [cobrancaToggleMap])
-
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return undefined
-    const onScroll = () => {
-      sessionStorage.setItem(scrollKey, String(el.scrollLeft))
-    }
-    el.addEventListener('scroll', onScroll, { passive: true })
-    return () => el.removeEventListener('scroll', onScroll)
-  }, [scrollKey])
 
   const filteredImobiliarias = useMemo(() => {
     const term = normalizeKey(search)
@@ -1392,8 +1127,6 @@ export default function Relatorio() {
     [selectedRows],
   )
   const canConfirmCobranca = selectedRows.length > 0 && selectedRows.every(item => getColuna(item) === 'aprovada')
-  const selectionMode = selectedIds.length > 0
-  const activeFicha = activeId ? rowsWithHelpers.find(item => item.id === activeId) : null
 
   function updateQuery(next) {
     const params = new URLSearchParams(location.search)
@@ -1437,29 +1170,20 @@ export default function Relatorio() {
   }
 
   function openFicha(id) {
-    const scrollLeft = scrollRef.current?.scrollLeft || 0
     navigate(`/fichas/${id}`, {
       state: {
         backTo: currentPath,
-        backState: { scrollLeft, scrollTop: window.scrollY },
+        backState: { scrollTop: window.scrollY },
       },
     })
   }
 
   function openApolice(id) {
-    const scrollLeft = scrollRef.current?.scrollLeft || 0
     navigate(`/apolices/${id}`, {
       state: {
         backTo: currentPath,
-        backState: { scrollLeft, scrollTop: window.scrollY },
+        backState: { scrollTop: window.scrollY },
       },
-    })
-  }
-
-  function scrollKanban(direction) {
-    scrollRef.current?.scrollBy({
-      left: direction * 360,
-      behavior: 'smooth',
     })
   }
 
@@ -1635,50 +1359,6 @@ export default function Relatorio() {
     toast({ type: 'success', title: nextValue ? 'Imobiliária marcada como retornou' : 'Marcação de retorno removida' })
   }
 
-  async function handleDragEnd({ active, over }) {
-    setActiveId(null)
-    if (!over) return
-
-    const ficha = rowsWithHelpers.find(item => item.id === active.id)
-    if (!ficha) return
-    const targetCol = over.id
-    if (getColuna(ficha) === targetCol) return
-
-    if (targetCol === 'emitida') {
-      setPendingEmissao({ fichaId: ficha.id, ficha })
-      return
-    }
-
-    if (targetCol === 'recuperados') {
-      toast({ type: 'info', title: 'Recupera??o depende da emiss?o', message: 'A coluna RECUPERADOS ? preenchida quando a emiss?o ? registrada ap?s cobran?a.' })
-      return
-    }
-
-    if (targetCol === 'enviado_cobranca') {
-      toast({ type: 'info', title: 'Confirma??o obrigat?ria', message: 'Selecione as fichas aprovadas e use "Marcar envio" na coluna Enviado Cobran?a.' })
-      return
-    }
-
-    const patch = targetCol === 'aprovada' ? buildAprovadaPatch(ficha) : null
-
-    if (!patch) return
-
-    const previousRows = rows
-    setRows(prev => prev.map(item => (
-      item.id === ficha.id
-        ? { ...item, ...patch, raw_data: patch.raw_data }
-        : item
-    )))
-
-    const err = await editarFicha(ficha.id, patch, user?.id)
-    if (err) {
-      setRows(previousRows)
-      toast({ type: 'error', title: 'Erro ao mover ficha', message: err.message })
-    } else {
-      toast({ type: 'success', title: 'Ficha movida' })
-    }
-  }
-
   async function handleConfirmarEmissao(payload) {
     if (!pendingEmissao) return
     setSalvandoEmissao(true)
@@ -1838,7 +1518,7 @@ export default function Relatorio() {
         <PageHeader
           eyebrow="Relatórios operacionais"
           title={title}
-          description={`Kanban analítico da imobiliária em ${periodoLabel}.`}
+          description={`Painel analítico da imobiliária em ${periodoLabel}, organizado por blocos.`}
           actions={overviewActions}
           stats={
             <>
@@ -1880,76 +1560,26 @@ export default function Relatorio() {
           />
         </DataCard>
 
-        <DataCard
-          title="Kanban mensal"
-          subtitle="Arraste fichas entre colunas para atualizar o status. Para cobran?a, selecione as aprovadas e confirme o envio."
-          actions={
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => scrollKanban(-1)}
-                className="rounded-xl border border-dark-border/60 p-2 text-dark-muted transition-colors hover:border-brand-accent/40 hover:text-dark-text"
-                aria-label="Rolar kanban para a esquerda"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollKanban(1)}
-                className="rounded-xl border border-dark-border/60 p-2 text-dark-muted transition-colors hover:border-brand-accent/40 hover:text-dark-text"
-                aria-label="Rolar kanban para a direita"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          }
-        >
-          <DndContext
-            sensors={sensors}
-            collisionDetection={kanbanPointerCollision}
-            onDragStart={({ active }) => setActiveId(active.id)}
-            onDragEnd={handleDragEnd}
-            onDragCancel={() => setActiveId(null)}
-          >
-            <div ref={scrollRef} className="kanban-scroll overflow-x-auto pb-4">
-              <div className="flex min-w-max gap-3 px-1">
-                {COLUNAS.map((coluna, index) => (
-                  <KanbanColuna
-                    key={coluna.id}
-                    coluna={coluna}
-                    fichas={columnMap[coluna.id] || []}
-                    onOpen={openFicha}
-                    onOpenPolicy={openApolice}
-                    selectedIds={new Set(selectedIds)}
-                    onToggleSelect={toggleSelected}
-                    onCopy={copyColumn}
-                    onSelectAll={selectAllColumn}
-                    onConfirmCobranca={openConfirmarCobranca}
-                    canConfirmCobranca={canConfirmCobranca}
-                    pendingCobrancaCount={pendingCobrancaCount}
-                    selectionMode={selectionMode}
-                    colIndex={index}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
-              {activeFicha && (
-                <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none' }}>
-                  <RelatorioCard
-                    ficha={activeFicha}
-                    onOpen={() => {}}
-                    onOpenPolicy={() => {}}
-                    selected={false}
-                    onToggleSelect={() => {}}
-                    selectionMode={false}
-                  />
-                </div>
-              )}
-            </DragOverlay>
-          </DndContext>
-        </DataCard>
+        <div className="space-y-4">
+          {COLUNAS.map(coluna => (
+            <BlocoRelatorio
+              key={coluna.id}
+              coluna={coluna}
+              fichas={columnMap[coluna.id] || []}
+              onOpen={openFicha}
+              onOpenPolicy={openApolice}
+              selectedIds={new Set(selectedIds)}
+              onToggleSelect={toggleSelected}
+              onCopy={copyColumn}
+              onSelectAll={selectAllColumn}
+              onConfirmCobranca={openConfirmarCobranca}
+              canConfirmCobranca={canConfirmCobranca}
+              pendingCobrancaCount={pendingCobrancaCount}
+              onToggleCobranca={toggleCobrancaEnviadaLinha}
+              onToggleRetornou={toggleImobiliariaRetornou}
+            />
+          ))}
+        </div>
 
         {pendingEmissao && (
           <ModalEmitirApolice

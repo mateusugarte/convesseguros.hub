@@ -202,17 +202,45 @@ export default function Dashboard() {
   const [approvalSegLogos, setApprovalSegLogos] = useState({})
 
   const now = new Date()
-  const stored = (() => {
-    try { return JSON.parse(localStorage.getItem(LS_KEY)) } catch { return null }
-  })()
-
-  const [filterYear, setFilterYear] = useState(stored?.ano ?? now.getFullYear())
-  const [filterMonth, setFilterMonth] = useState(stored?.mes ?? now.getMonth() + 1)
+  const [filterYear, setFilterYear] = useState(now.getFullYear())
+  const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1)
   const [approvalPeriod, setApprovalPeriod] = useState('mes_atual')
 
   useEffect(() => {
-    localStorage.setItem(LS_KEY, JSON.stringify({ ano: filterYear, mes: filterMonth }))
-  }, [filterYear, filterMonth])
+    const syncToCurrentMonth = () => {
+      const current = new Date()
+      setFilterYear(current.getFullYear())
+      setFilterMonth(current.getMonth() + 1)
+    }
+
+    syncToCurrentMonth()
+
+    let timerId
+    const schedule = () => {
+      const current = new Date()
+      const next = new Date(current.getFullYear(), current.getMonth(), current.getDate() + 1, 0, 0, 5, 0)
+      timerId = window.setTimeout(() => {
+        syncToCurrentMonth()
+        schedule()
+      }, Math.max(next.getTime() - current.getTime(), 1000))
+    }
+
+    schedule()
+
+    const onFocus = syncToCurrentMonth
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') syncToCurrentMonth()
+    }
+
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      if (timerId) window.clearTimeout(timerId)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [])
 
   const rangeStart = new Date(filterYear, filterMonth - 1, 1).toISOString()
   const rangeEnd = new Date(filterYear, filterMonth, 0, 23, 59, 59).toISOString()

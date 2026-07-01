@@ -244,9 +244,9 @@ export default function RelatorioMensal({ onClose }) {
   const imobiliarias = Object.keys(porImobiliaria).sort()
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden animate-fade-in">
       <div className="modal-backdrop" onClick={onClose} />
-      <div className="glass-modal border border-dark-border w-full max-w-5xl my-4 relative z-10">
+      <div className="glass-modal border border-dark-border w-full max-w-5xl max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden my-4 relative z-10">
 
         {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
@@ -303,7 +303,7 @@ export default function RelatorioMensal({ onClose }) {
         </div>
 
         {/* Corpo */}
-        <div className="px-6 py-5">
+        <div className="flex-1 overflow-y-auto px-6 py-5">
           {loading ? (
             <div className="flex items-center justify-center h-48 gap-2 text-dark-muted text-sm">
               <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -330,4 +330,3 @@ export default function RelatorioMensal({ onClose }) {
     </div>
   )
 }
-

@@ -322,7 +322,7 @@ function DroppableColumn({
   sortOrder, onToggleSortOrder, sortingFeedback,
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: column.id })
-  const bodyTopPadding = LOWERED_CARD_COLUMNS.has(column.id) ? 30 : 16
+  const bodyTopPadding = LOWERED_CARD_COLUMNS.has(column.id) ? 38 : 16
 
   const animStyle = {
     animationDelay: `${colIndex * 28}ms`,
@@ -1243,6 +1243,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     </div>
   )
 }
+
 
 
 

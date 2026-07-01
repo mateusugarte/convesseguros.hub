@@ -26,6 +26,7 @@ const COLUNAS = [
 ]
 
 const PERIOD_OPTIONS = [
+  { value: 'todos', label: 'Todos' },
   { value: 'dia', label: 'Dia' },
   { value: 'semana', label: 'Semana' },
   { value: 'mes', label: 'Mes' },
@@ -157,6 +158,9 @@ function toDateInput(value) {
 
 function getPeriodoRange(tipo) {
   const now = new Date()
+  if (tipo === 'todos') {
+    return { inicio: '', fim: '' }
+  }
   if (tipo === 'dia') {
     const today = toDateInput(now)
     return { inicio: today, fim: today }
@@ -1049,7 +1053,9 @@ export default function AutoEmissoes() {
   const location = useLocation()
   const { id: emissaoId } = useParams()
   const toast = useToast()
-  const initialRange = useMemo(() => getPeriodoRange('semana'), [])
+  const isGestaoRoute = location.pathname.startsWith('/auto/gestao')
+  const periodoInicial = isGestaoRoute ? 'todos' : 'semana'
+  const initialRange = useMemo(() => getPeriodoRange(periodoInicial), [periodoInicial])
 
   const [dragging, setDragging] = useState(null)
   const [dragOver, setDragOver] = useState(null)
@@ -1063,7 +1069,7 @@ export default function AutoEmissoes() {
   const [manualForm, setManualForm] = useState(FORM_MANUAL_VAZIO)
   const [form, setForm] = useState(FORM_EMISSAO_VAZIO)
   const [showApolices, setShowApolices] = useState(false)
-  const [periodo, setPeriodo] = useState('semana')
+  const [periodo, setPeriodo] = useState(periodoInicial)
   const [filtroInicio, setFiltroInicio] = useState(initialRange.inicio)
   const [filtroFim, setFiltroFim] = useState(initialRange.fim)
 
@@ -1275,7 +1281,7 @@ export default function AutoEmissoes() {
       cotacao_id: formData.cotacao_id || editando.cotacao_id || editando.cotacoes_auto?.id || null,
       apolice_id: formData.apolice_id || getApoliceVinculada(editando)?.id || null,
       seguradoras_cotadas: buildSeguradorasPayload(formData.seguradoras_cotadas),
-      documento_apolice: formData.documento_apolice || null,
+      documento_apolice: manualDocumento || formData.documento_apolice || null,
       user_id: user?.id || null,
     })
   }
@@ -1414,6 +1420,9 @@ export default function AutoEmissoes() {
     { label: 'Emitidas', value: metricas.emitidas, tone: 'accent' },
   ]
 
+  const isManualSubmitting = manualMode === 'editar' ? isSavingEdicao : isCreatingManual
+  const precisaDocumentoApoliceManual = manualMode !== 'editar' && manualForm.coluna === 'apolice_emitida'
+
   const modalEmissaoResumo = modalEmissao ? {
     cliente: modalEmissao.cotacoes_auto?.nome_cliente || modalEmissao.cotacoes_auto?.cpf_cliente || '—',
     cpf: modalEmissao.cotacoes_auto?.cpf_cliente || '—',
@@ -1423,7 +1432,6 @@ export default function AutoEmissoes() {
     coluna: getEmissaoColuna(modalEmissao),
   } : null
 
-  const isGestaoRoute = location.pathname.startsWith('/auto/gestao')
   const emissaoDetalhada = emissaoDaRota || location.state?.emissao || null
 
   if (emissaoId && !manualOpen) {
@@ -2040,7 +2048,7 @@ export default function AutoEmissoes() {
                     <Plus className="h-3.5 w-3.5" />
                     Cadastro manual
                   </div>
-                  <h2 className="mt-4 text-2xl font-semibold text-dark-text">Nova emissao</h2>
+                  <h2 className="mt-4 text-2xl font-semibold text-dark-text">{manualMode === 'editar' ? 'Editar emissao' : 'Nova emissao'}</h2>
                   <p className="mt-2 text-sm leading-6 text-dark-muted">
                     Registre uma emissao sem cotacao previa. O sistema grava a emissao ou a apolice conforme a etapa escolhida.
                   </p>
@@ -2080,7 +2088,7 @@ export default function AutoEmissoes() {
                 <div className="mb-5 flex items-start justify-between gap-4">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Dados da emissao</p>
-                    <h3 className="mt-2 text-xl font-semibold text-dark-text">Preencher e salvar manualmente</h3>
+                    <h3 className="mt-2 text-xl font-semibold text-dark-text">{manualMode === 'editar' ? 'Editar e salvar alteracoes' : 'Preencher e salvar manualmente'}</h3>
                   </div>
                   <button
                     onClick={() => { setManualOpen(false); setManualMode('novo'); setManualForm(FORM_MANUAL_VAZIO); setManualDocumento(null); if (manualFileRef.current) manualFileRef.current.value = '' }}
@@ -2288,7 +2296,7 @@ export default function AutoEmissoes() {
                     </button>
                     <button
                       onClick={handleCreateManual}
-                      disabled={isCreatingManual
+                      disabled={isManualSubmitting
                         || !manualForm.nome_cliente
                         || !manualForm.cpf_cliente
                         || !manualForm.celular_cliente
@@ -2296,12 +2304,12 @@ export default function AutoEmissoes() {
                         || !manualForm.seguradora
                         || !manualForm.premio_liquido
                         || !manualForm.pct_comissao
-                        || (manualForm.coluna === 'apolice_emitida' && (!manualForm.numero_apolice || !manualForm.vigencia_inicio || !manualForm.vigencia_fim || !manualDocumento))
+                        || (manualForm.coluna === 'apolice_emitida' && (!manualForm.numero_apolice || !manualForm.vigencia_inicio || !manualForm.vigencia_fim || (precisaDocumentoApoliceManual && !manualDocumento)))
                         || (manualForm.tem_repasse && (!manualForm.pct_repasse || !manualForm.nome_repasse))
                       }
                       className="btn-primary flex-1 disabled:opacity-50"
                     >
-                      {isCreatingManual ? 'Salvando...' : (manualForm.coluna === 'apolice_emitida' ? 'Salvar apólice' : (manualMode === 'editar' ? 'Salvar alterações' : 'Salvar proposta'))}
+                      {isManualSubmitting ? 'Salvando...' : (manualMode === 'editar' ? 'Salvar alteracoes' : (manualForm.coluna === 'apolice_emitida' ? 'Salvar apolice' : 'Salvar proposta'))}
                     </button>
                   </div>
                 </div>

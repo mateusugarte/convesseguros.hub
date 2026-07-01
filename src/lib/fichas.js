@@ -1,9 +1,18 @@
-﻿import { supabase } from './supabase'
+import { supabase } from './supabase'
 import { normalizeImobiliaria } from './normalizeImobiliaria'
 import { normalizeDisplayText } from './text'
 import { getFichaDisplayStatus, getFichaOperationalState, isFichaApprovedOperational, mapFichasWithOperationalStatus, withFichaOperationalStatus } from './fichaOperational'
 
 export { normalizeImobiliaria }
+
+function normalizeSearchText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
 
 export const STATUS_LABELS = {
   pendente:     { label: 'Pendente',     color: 'badge-info' },
@@ -37,21 +46,50 @@ export const STATUS_EM_ABERTO = ['pendente', 'em_cotacao']
 // "Passadas" = fichas já finalizadas/encerradas
 export const STATUS_PASSADOS = ['em_analise', 'aprovado', 'recusado', 'emitido', 'cancelado', 'cpf_invalido', 'expirada']
 
+function pad2(value) {
+  return String(value).padStart(2, '0')
+}
+
+function toLocalYmd(date) {
+  const d = date instanceof Date ? date : new Date(date)
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+}
+
+function startOfLocalDayIso(date = new Date()) {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  return d.toISOString()
+}
+
+function startOfLocalWeekIso(date = new Date()) {
+  const d = new Date(date)
+  const day = d.getDay()
+  d.setDate(d.getDate() - day + (day === 0 ? -6 : 1))
+  d.setHours(0, 0, 0, 0)
+  return d.toISOString()
+}
+
+function startOfLocalMonthIso(date = new Date()) {
+  const d = new Date(date)
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString()
+}
+
+function endOfLocalMonthIso(date = new Date()) {
+  const d = new Date(date)
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).toISOString()
+}
 // ── KPIs ─────────────────────────────────────────────────────────────────────
 
 export async function fetchKPIs(inicioFiltro, fimFiltro) {
   const hoje = new Date()
-  const inicioHoje   = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).toISOString()
-  const inicioSemana = (() => {
-    const d = new Date(); const day = d.getDay()
-    d.setDate(d.getDate() - day + (day === 0 ? -6 : 1)); d.setHours(0,0,0,0); return d.toISOString()
-  })()
-  const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+  const inicioHoje = startOfLocalDayIso(hoje)
+  const inicioSemana = startOfLocalWeekIso(hoje)
+  const inicioMes = startOfLocalMonthIso(hoje)
 
   // Aplica filtro de período quando fornecido
   const applyRange = (q) => {
     if (inicioFiltro) q = q.gte('created_at', inicioFiltro)
-    if (fimFiltro)    q = q.lte('created_at', fimFiltro)
+    if (fimFiltro) q = q.lte('created_at', fimFiltro)
     return q
   }
 
@@ -68,13 +106,15 @@ export async function fetchKPIs(inicioFiltro, fimFiltro) {
 
 export async function fetchEmitidas(inicio, fim) {
   const now = new Date()
-  const defaultInicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  const inicioYmd = toLocalYmd(inicio || startOfLocalMonthIso(now))
+  const fimYmd = toLocalYmd(fim || endOfLocalMonthIso(now))
   const data = await fetchAllRows(() => {
     let q = supabase.from('fichas')
       .select('created_at, status, numero_apolice, data_emissao, retorno_enviado, raw_data')
       .in('status', ['emitido'])
-      .gte('created_at', inicio || defaultInicio)
-    if (fim) q = q.lte('created_at', fim)
+      .not('data_emissao', 'is', null)
+    if (inicioYmd) q = q.gte('data_emissao', inicioYmd)
+    if (fimYmd) q = q.lte('data_emissao', fimYmd)
     return q
   })
   return data.filter(item => ['emitida', 'recuperados'].includes(getFichaOperationalState(item)?.id)).length
@@ -101,6 +141,7 @@ async function fetchAllRows(queryFactory, pageSize = 1000) {
 export async function fetchFichasPorDia(dias = 30) {
   const inicio = new Date()
   inicio.setDate(inicio.getDate() - dias)
+  inicio.setHours(0, 0, 0, 0)
 
   const data = await fetchAllRows(() =>
     supabase.from('fichas').select('created_at, status')
@@ -109,7 +150,7 @@ export async function fetchFichasPorDia(dias = 30) {
 
   const contagem = {}
   data.forEach(f => {
-    const dia = f.created_at.slice(0, 10)
+    const dia = toLocalYmd(f.created_at)
     if (!contagem[dia]) contagem[dia] = { total: 0, aprovadas: 0, recusadas: 0 }
     contagem[dia].total++
     if (f.status === 'aprovado') contagem[dia].aprovadas++
@@ -118,8 +159,10 @@ export async function fetchFichasPorDia(dias = 30) {
 
   const resultado = []
   for (let i = dias; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i)
-    const key = d.toISOString().slice(0, 10)
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    d.setHours(0, 0, 0, 0)
+    const key = toLocalYmd(d)
     resultado.push({ dia: key, total: contagem[key]?.total || 0, aprovadas: contagem[key]?.aprovadas || 0, recusadas: contagem[key]?.recusadas || 0 })
   }
   return resultado
@@ -218,8 +261,8 @@ export async function fetchAprovacoesPorSeguradora(inicioFiltro, fimFiltro) {
 
 export async function fetchFichasPorProdutoMes() {
   const now = new Date()
-  const inicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-  const fim    = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString()
+  const inicio = startOfLocalMonthIso(now)
+  const fim = endOfLocalMonthIso(now)
   const data = await fetchAllRows(() =>
     supabase.from('fichas').select('produto, status, created_at, numero_apolice, data_emissao, retorno_enviado, raw_data').gte('created_at', inicio).lte('created_at', fim)
   )
@@ -302,11 +345,73 @@ export async function fetchContagemProdutos() {
 export async function fetchFichasDoOrcamentista(orcamentistaId) {
   const { data } = await supabase
     .from('fichas')
-    .select('id,created_at,produto,imobiliaria,nome_interessado,cpf,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,profiles!orcamentista_id(nome, avatar_url)')
+    .select('id,created_at,produto,imobiliaria,nome_interessado,nome_empresa,cpf,cnpj,status,assumida,orcamentista_id,assumida_em,seguradora,retorno_enviado,profiles!orcamentista_id(nome, avatar_url)')
     .eq('orcamentista_id', orcamentistaId)
     .eq('status', 'em_cotacao')
     .order('assumida_em', { ascending: false })
   return data || []
+}
+
+export async function fetchFichasPassadasDoOrcamentista(orcamentistaId, { ano, mes, dateFrom, dateTo, page = 0, pageSize = 500 } = {}) {
+  if (!orcamentistaId) return { data: [], count: 0 }
+
+  const selectFields = 'id,created_at,produto,imobiliaria,nome_interessado,nome_empresa,cpf,cnpj,status,assumida,orcamentista_id,finalizado_por,assumida_em,finalizada_em,seguradora,retorno_enviado,raw_data,profiles!orcamentista_id(nome, avatar_url)'
+
+  const applyPeriodo = (q) => {
+    if (dateFrom || dateTo) {
+      if (dateFrom) q = q.gte('created_at', dateFrom)
+      if (dateTo) q = q.lte('created_at', dateTo)
+      return q
+    }
+
+    if (ano && mes && mes !== -1) {
+      return q.gte('created_at', new Date(ano, mes - 1, 1).toISOString())
+        .lte('created_at', new Date(ano, mes, 0, 23, 59, 59).toISOString())
+    }
+
+    if (ano) {
+      return q.gte('created_at', new Date(ano, 0, 1).toISOString())
+        .lte('created_at', new Date(ano, 11, 31, 23, 59, 59).toISOString())
+    }
+
+    return q
+  }
+
+  const fetchByField = async (field) => {
+    let q = supabase
+      .from('fichas')
+      .select(selectFields)
+      .in('status', STATUS_PASSADOS)
+      .eq(field, orcamentistaId)
+      .order('created_at', { ascending: false })
+
+    q = applyPeriodo(q)
+    const { data, error } = await q
+    if (error) throw error
+    return data || []
+  }
+
+  const [porResponsavel, porFinalizador] = await Promise.all([
+    fetchByField('orcamentista_id'),
+    fetchByField('finalizado_por'),
+  ])
+
+  const merged = [...porResponsavel, ...porFinalizador]
+  const unique = []
+  const seen = new Set()
+  for (const row of merged) {
+    if (seen.has(row.id)) continue
+    seen.add(row.id)
+    unique.push(row)
+  }
+
+  unique.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
+  const from = page * pageSize
+  return {
+    data: unique.slice(from, from + pageSize),
+    count: unique.length,
+  }
 }
 
 export async function fetchContagemAbertaOrcamentista(orcamentistaId) {
@@ -451,6 +556,8 @@ export async function fetchFichasAprovadasEmissao({ search, imobiliarias } = {})
       raw.nome,
       raw.nome_interessado,
       raw.nome_empresa,
+      raw.nome_locatario,
+      raw.nome_completo,
       raw.razao_social,
       raw.empresa,
       raw.nome_fantasia,
@@ -517,19 +624,16 @@ export async function fetchFichasKanban({ produto, dateFrom, dateTo }) {
 
 export async function fetchKPIsVisaoGeral(inicioFiltro, fimFiltro) {
   const agora = new Date()
-  const inicioHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate()).toISOString()
-  const inicioSemana = (() => {
-    const d = new Date(); const day = d.getDay()
-    d.setDate(d.getDate() - day + (day === 0 ? -6 : 1)); d.setHours(0, 0, 0, 0); return d.toISOString()
-  })()
-  const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1).toISOString()
+  const inicioHoje = startOfLocalDayIso(agora)
+  const inicioSemana = startOfLocalWeekIso(agora)
+  const inicioMes = startOfLocalMonthIso(agora)
   const inicioMesAnterior = new Date(agora.getFullYear(), agora.getMonth() - 1, 1).toISOString()
-  const fimMesAnterior = new Date(agora.getFullYear(), agora.getMonth(), 0, 23, 59, 59).toISOString()
+  const fimMesAnterior = new Date(agora.getFullYear(), agora.getMonth(), 0, 23, 59, 59, 999).toISOString()
 
   // Aplica filtro de período nas queries quando fornecido
   const applyRange = (q) => {
     if (inicioFiltro) q = q.gte('created_at', inicioFiltro)
-    if (fimFiltro)    q = q.lte('created_at', fimFiltro)
+    if (fimFiltro) q = q.lte('created_at', fimFiltro)
     return q
   }
 
@@ -961,6 +1065,7 @@ export async function fetchRankingFichasMensal(inicioFiltro, fimFiltro) {
     return new Date(b.latestAt) - new Date(a.latestAt)
   })
 }
+
 
 
 

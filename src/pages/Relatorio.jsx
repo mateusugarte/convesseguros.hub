@@ -35,7 +35,7 @@ import { fetchSeguradorasPorProduto } from '../lib/seguradoras'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { useImobiliaria } from '../hooks/useImobiliaria'
-import { PageHeader, MetricCard, DataCard, Select } from '../components/ui'
+import { PageHeader, MetricCard, DataCard, Select, Avatar } from '../components/ui'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
 import FichaStatusBadge from '../components/FichaStatusBadge'
@@ -1029,7 +1029,7 @@ export default function Relatorio() {
         const createdRowsQuery = () => {
           let query = supabase
             .from('fichas')
-            .select('id, created_at, finalizada_em, nome_interessado, nome_empresa, cpf, cnpj, cep, imobiliaria, status, produto, retorno_enviado, seguradora, orcamentista_forms, observacoes, raw_data, numero_apolice, data_emissao, valor_aluguel, assumida')
+            .select('id, created_at, finalizada_em, nome_interessado, nome_empresa, cpf, cnpj, cep, imobiliaria, status, produto, retorno_enviado, seguradora, orcamentista_forms, observacoes, raw_data, numero_apolice, data_emissao, valor_aluguel, assumida, orcamentista_id, profiles!orcamentista_id(nome, avatar_url)')
             .in('status', REPORT_STATUSES)
             .order('created_at', { ascending: false })
 
@@ -1046,7 +1046,7 @@ export default function Relatorio() {
         const apolicesRangeRowsQuery = () => {
           let query = supabase
             .from('apolices')
-            .select('id, ficha_id, numero_apolice, data_emissao, status_emissao, seguradora, imobiliaria')
+            .select('id, ficha_id, numero_apolice, data_emissao, status_emissao, seguradora, imobiliaria, emitido_por, profiles!emitido_por(nome, avatar_url)')
             .in('status_emissao', ['emitida', 'enviada'])
 
           if (rangeStart && rangeEnd) {
@@ -1077,7 +1077,7 @@ export default function Relatorio() {
         const finalRows = await fetchAllRows(() => {
           let query = supabase
             .from('fichas')
-            .select('id, created_at, finalizada_em, nome_interessado, nome_empresa, cpf, cnpj, cep, imobiliaria, status, produto, retorno_enviado, seguradora, orcamentista_forms, observacoes, raw_data, numero_apolice, data_emissao, valor_aluguel, assumida')
+            .select('id, created_at, finalizada_em, nome_interessado, nome_empresa, cpf, cnpj, cep, imobiliaria, status, produto, retorno_enviado, seguradora, orcamentista_forms, observacoes, raw_data, numero_apolice, data_emissao, valor_aluguel, assumida, orcamentista_id, profiles!orcamentista_id(nome, avatar_url)')
             .in('id', allIds)
             .order('created_at', { ascending: false })
 
@@ -1097,7 +1097,7 @@ export default function Relatorio() {
           const apolicesData = await fetchAllRows(() => (
             supabase
               .from('apolices')
-              .select('id, ficha_id, numero_apolice, data_emissao, status_emissao, seguradora, imobiliaria')
+              .select('id, ficha_id, numero_apolice, data_emissao, status_emissao, seguradora, imobiliaria, emitido_por, profiles!emitido_por(nome, avatar_url)')
               .in('ficha_id', fichaIds)
               .in('status_emissao', ['emitida', 'enviada'])
           ))
@@ -1130,6 +1130,10 @@ export default function Relatorio() {
             _effectiveNumeroApolice: apolice?.numero_apolice || ficha.numero_apolice || null,
             _effectiveDataEmissao: apolice?.data_emissao || ficha.data_emissao || null,
             _effectiveSeguradora: apolice?.seguradora || ficha.seguradora || null,
+            _orcamentistaNome: ficha.profiles?.nome || null,
+            _orcamentistaAvatar: ficha.profiles?.avatar_url || null,
+            _emissorNome: apolice?.profiles?.nome || null,
+            _emissorAvatar: apolice?.profiles?.avatar_url || null,
           }
         }).filter(isEligibleReportRow))
       } catch (error) {

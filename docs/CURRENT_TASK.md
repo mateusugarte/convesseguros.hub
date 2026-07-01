@@ -12,6 +12,18 @@ Financeiro, Config/Login, Shell.
 `text.js` (normalizador de mojibake), `apoliceParser.js` (regex tolerante a mojibake do PDF)
 e `financeiroProducaoCalc.test.mjs` (texto correto). Build verde.
 
+**Relatorio por imobiliaria — kanban para blocos de lista (2026-07-01):** tela
+`/relatorio/:imobiliariaId` (`src/pages/Relatorio.jsx`) trocou o kanban
+drag-and-drop (`@dnd-kit`) pelos 5 blocos empilhados (Aprovadas, Emitidas,
+Enviado Cobranca, Recuperados, Expiradas), com toggles de cobranca
+enviada/imobiliaria retornou e fotos de orcamentista/emissor por linha.
+Logica pura extraida para `src/lib/relatorioCobranca.js` (testada,
+`npm test`). Spec e plano em `docs/superpowers/specs/2026-07-01-relatorio-blocos-lista-design.md`
+e `docs/superpowers/plans/2026-07-01-relatorio-blocos-lista.md`. Merge feito
+na main (commit `06f4fbd`), 37 testes passando, build verde. Smoke test
+manual no navegador NAO foi feito (sem `.env`/credenciais Supabase no
+ambiente) — recomenda-se conferir visualmente antes de considerar encerrado.
+
 ---
 
 ## Responsavel Atual

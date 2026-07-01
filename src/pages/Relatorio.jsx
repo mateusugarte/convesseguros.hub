@@ -31,6 +31,15 @@ import { ptBR } from 'date-fns/locale'
 import { supabase } from '../lib/supabase'
 import { editarFicha } from '../lib/fichas'
 import { registrarApoliceDaFicha, formatMoneyBR, toNumber } from '../lib/apolices'
+import {
+  buildAprovadaPatch,
+  buildCobrancaPatch,
+  buildImobiliariaRetornoPatch,
+  buildCobrancaHistoricoPatch,
+  isCobrancaEnviadaVisivel,
+  getCobrancaEnviadaDisplay,
+  getImobiliariaRetornouDisplay,
+} from '../lib/relatorioCobranca'
 import { fetchSeguradorasPorProduto } from '../lib/seguradoras'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -162,33 +171,6 @@ function getRecoveryStart(ficha) {
   return ficha?.raw_data?.retorno_enviado_em || ficha?.raw_data?.cobranca_started_at || null
 }
 
-function buildAprovadaPatch(ficha) {
-  return {
-    status: 'aprovado',
-    retorno_enviado: false,
-    raw_data: {
-      ...(ficha?.raw_data || {}),
-      recovered_after_cobranca: false,
-      recovered_after_cobranca_em: null,
-      retorno_enviado_em: null,
-      cobranca_started_at: null,
-    },
-  }
-}
-
-function buildCobrancaPatch(ficha, sentAt = new Date().toISOString()) {
-  return {
-    status: 'aprovado',
-    retorno_enviado: true,
-    raw_data: {
-      ...(ficha?.raw_data || {}),
-      recovered_after_cobranca: false,
-      recovered_after_cobranca_em: null,
-      retorno_enviado_em: sentAt,
-      cobranca_started_at: sentAt,
-    },
-  }
-}
 
 function isRecovered(ficha) {
   return Boolean(ficha?.raw_data?.recovered_after_cobranca)
@@ -1428,6 +1410,42 @@ export default function Relatorio() {
     setPendingCobranca(null)
     setSelectedIds([])
     setMoveTarget('')
+  }
+
+  async function toggleCobrancaEnviadaLinha(ficha, colunaId, nextValue) {
+    const patch = colunaId === 'recuperados'
+      ? buildCobrancaHistoricoPatch(ficha, nextValue)
+      : buildAprovadaPatch(ficha)
+
+    const previousRows = rows
+    setRows(prev => prev.map(item => (
+      item.id === ficha.id ? { ...item, ...patch, raw_data: patch.raw_data } : item
+    )))
+
+    const err = await editarFicha(ficha.id, patch, user?.id)
+    if (err) {
+      setRows(previousRows)
+      toast({ type: 'error', title: 'Erro ao atualizar cobrança', message: err.message })
+      return
+    }
+    toast({ type: 'success', title: nextValue ? 'Marcado como cobrança enviada' : 'Ficha retornou para Aprovadas' })
+  }
+
+  async function toggleImobiliariaRetornou(ficha, nextValue) {
+    const patch = buildImobiliariaRetornoPatch(ficha, nextValue)
+
+    const previousRows = rows
+    setRows(prev => prev.map(item => (
+      item.id === ficha.id ? { ...item, raw_data: patch.raw_data } : item
+    )))
+
+    const err = await editarFicha(ficha.id, patch, user?.id)
+    if (err) {
+      setRows(previousRows)
+      toast({ type: 'error', title: 'Erro ao atualizar retorno da imobiliária', message: err.message })
+      return
+    }
+    toast({ type: 'success', title: nextValue ? 'Imobiliária marcada como retornou' : 'Marcação de retorno removida' })
   }
 
   async function handleDragEnd({ active, over }) {

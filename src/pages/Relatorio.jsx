@@ -37,7 +37,6 @@ import { useImobiliaria } from '../hooks/useImobiliaria'
 import { PageHeader, MetricCard, DataCard, Select, Avatar } from '../components/ui'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
-import FichaStatusBadge from '../components/FichaStatusBadge'
 import { normalizeDisplayText } from '../lib/text'
 import { getEntityImageUrl } from '../lib/entityMedia'
 import { getFichaOperationalState } from '../lib/fichaOperational'
@@ -85,15 +84,6 @@ function formatDateBR(value) {
     return format(parseISO(String(value)), 'dd/MM/yyyy', { locale: ptBR })
   } catch {
     return String(value).slice(0, 10)
-  }
-}
-
-function formatDateTimeBR(value) {
-  if (!value) return null
-  try {
-    return format(parseISO(String(value)), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
-  } catch {
-    return String(value)
   }
 }
 

@@ -75,6 +75,32 @@ function firstMoneyMatch(text, patterns) {
   return null
 }
 
+function extractPortoRent(text, referenceValues = {}) {
+  const explicit = firstMoneyMatch(text, [
+    /\bAluguel\s+R\$\s*([\d.,]+)\s+\d+\s*x\b/i,
+    /\bAluguel\b(?:(?!\b(?:Pr\S*mio|Parcela|Pre\S*o|Tarif\S*rio|L\S*quido)\b).){0,120}?\bR\$\s*([\d.,]+)\b(?=\s+(?:\d+\s*x\b|Import\S*ncia|LMI|Limite))/i,
+  ])
+  if (explicit !== null) return explicit
+
+  const fallbackCandidates = [...text.matchAll(/\bAluguel\b(?:(?!\b(?:Pr\S*mio|Parcela|Pre\S*o|Tarif\S*rio|L\S*quido)\b).){0,140}?\bR\$\s*([\d.,]+)/gi)]
+    .map(match => parseMoneyBR(match[1]))
+    .filter(value => value != null)
+
+  if (fallbackCandidates.length === 0) return null
+
+  const piso = Math.max(
+    referenceValues.premio_total || 0,
+    referenceValues.premio_liquido || 0,
+    referenceValues.valor_parcela || 0,
+  )
+
+  if (piso <= 0) return fallbackCandidates[0]
+
+  const plausiveis = fallbackCandidates.filter(value => value > piso)
+  if (plausiveis.length === 0) return null
+  return Math.min(...plausiveis)
+}
+
 function parsePortoSeguro(text) {
   const r = {}
   const normalized = normalizeText(text)
@@ -108,12 +134,7 @@ function parsePortoSeguro(text) {
   const tipo = normalized.match(/TIPO DE LOCA(?:ÇÃO|CAO)\s+\d+\s*[-–]\s*(\w+)/i)
   if (tipo) r.tipo_imovel = tipo[1].trim()
 
-  const aluguelPorto = firstMoneyMatch(normalized, [
-    /Aluguel\s+R\$\s*([\d.,]+)\s+\d+x/i,
-    /Aluguel(?:\s+\S+){0,14}\s+R\$\s*([\d.,]+)/i,
-    /COBERTURAS[\s\S]{0,260}?Aluguel(?:\s+\S+){0,20}\s+R\$\s*([\d.,]+)/i,
-  ])
-  if (aluguelPorto !== null) r.valor_aluguel = aluguelPorto
+
 
   const premioSec = normalized.match(/Pr[êe]mio Tarif[áa]rio[\s\S]{1,300}?Pr[êe]mio L[íi]quido\s+R\$\s*([\d.,]+)/i)
   if (premioSec) r.premio_liquido = parseMoneyBR(premioSec[1])
@@ -128,6 +149,9 @@ function parsePortoSeguro(text) {
     || normalized.match(/Tipo de Pagamento\s+Fatura sem entrada\s*(\d+)X/i)
     || normalized.match(/(\d+)X\s*(?:sem juros)?/i)
   if (nparc) r.parcelamento = parseInt(nparc[1], 10)
+
+  const aluguelPorto = extractPortoRent(normalized, r)
+  if (aluguelPorto !== null) r.valor_aluguel = aluguelPorto
 
   const prop = normalized.match(/PROPOSTA N[º°]\s+([\w.-]+)/i)
   if (prop && /^[0-9./-]+$/.test(prop[1].trim())) r.numero_proposta = prop[1].trim()
@@ -543,8 +567,7 @@ function findParser(seguradora) {
   return null
 }
 
-export async function parseApolice(seguradora, file) {
-  const text = await extractPdfText(file)
+export function parseApoliceText(seguradora, text) {
   const parser = findParser(seguradora)
 
   if (!parser) {
@@ -578,4 +601,7 @@ export async function parseApolice(seguradora, file) {
   }
 }
 
-
+export async function parseApolice(seguradora, file) {
+  const text = await extractPdfText(file)
+  return parseApoliceText(seguradora, text)
+}

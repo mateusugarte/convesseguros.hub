@@ -16,8 +16,10 @@ import {
   Search,
   Upload,
   X,
+  AlertTriangle,
 } from 'lucide-react'
 import {
+  buscarApolicePorNumero,
   criarApolice,
   fetchApolicesKanban,
   formatMoneyBR,
@@ -680,7 +682,7 @@ function DadoCard({ label, value, mono = false, highlight = false, span2 = false
   )
 }
 
-function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
+function UploadDiretoWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, user }) {
   const [seguradora, setSeguradora] = useState('Porto Seguro')
   const [imobiliaria, setImobiliaria] = useState('')
   const [buscaImob, setBuscaImob] = useState('')
@@ -689,8 +691,40 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
   const [extraindo, setExtraindo] = useState(false)
   const [criando, setCriando] = useState(false)
   const [dadosExtraidos, setDadosExtraidos] = useState(null)
+  const [apoliceExistente, setApoliceExistente] = useState(null)
   const [erro, setErro] = useState('')
   const fileInputRef = useRef(null)
+
+  function avisarApoliceDuplicada(existente, numeroApolice) {
+    if (!existente?.id) return
+    toast({
+      type: 'warning',
+      title: 'Ap?lice j? cadastrada',
+      message: 'A ap?lice ' + (existente.numero_apolice || numeroApolice) + ' j? existe no sistema.',
+      action: onAbrirApolice ? { label: 'Abrir ap?lice', onClick: () => onAbrirApolice(existente.id) } : undefined,
+      duration: 10000,
+    })
+  }
+
+  async function verificarDuplicidade(numeroApolice, { silent = false } = {}) {
+    const numero = String(numeroApolice || '').trim()
+    if (!numero) {
+      setApoliceExistente(null)
+      return null
+    }
+
+    try {
+      const existente = await buscarApolicePorNumero(numero)
+      setApoliceExistente(existente)
+      if (existente && !silent) avisarApoliceDuplicada(existente, numero)
+      return existente
+    } catch (err) {
+      if (!silent) {
+        toast({ type: 'error', title: 'Erro ao verificar duplicidade', message: err?.message || 'N?o foi poss?vel verificar o n?mero da ap?lice.' })
+      }
+      return null
+    }
+  }
 
   const gruposFiltrados = useMemo(() => {
     const q = buscaImob.trim().toLowerCase()
@@ -702,12 +736,14 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
     setSeguradora(nome)
     setPdfFile(null)
     setDadosExtraidos(null)
+    setApoliceExistente(null)
     setErro('')
   }
 
   function handleArquivo(file) {
     setPdfFile(file)
     setDadosExtraidos(null)
+    setApoliceExistente(null)
     setErro('')
     if (file) {
       void handleExtrair(file)
@@ -724,6 +760,11 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
       const { campos, extras, semParser } = await parseApolice(seguradora, fileAtual)
       const parsed = { ...campos, ...extras }
       setDadosExtraidos(parsed)
+      if (parsed.numero_apolice) {
+        await verificarDuplicidade(parsed.numero_apolice)
+      } else {
+        setApoliceExistente(null)
+      }
       if (semParser || (!parsed.numero_apolice && !parsed.nome_locatario)) {
         setErro(`Não foi possível identificar dados da apólice ${seguradora}. Verifique se o PDF é da seguradora selecionada.`)
       }
@@ -740,6 +781,15 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
   async function criarUploadDireto() {
     if (!pdfFile || !dadosExtraidos || !imobiliaria || !celular.trim()) return
     setCriando(true)
+
+    const numeroApolice = String(dadosExtraidos.numero_apolice || '').trim()
+    const duplicada = apoliceExistente || await verificarDuplicidade(numeroApolice, { silent: true })
+    if (duplicada) {
+      setCriando(false)
+      avisarApoliceDuplicada(duplicada, numeroApolice)
+      return
+    }
+
     const documento = dadosExtraidos.documento_locatario || ''
     const { cpf, cnpj, isPessoaJuridica } = formatDocumentoTipo(documento)
     const produto = inferProdutoFianca({ documento, tipoImovel: dadosExtraidos.tipo_imovel })
@@ -799,7 +849,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
   }
 
   const imobSelecionada = grupos.find(g => g.nome_canonico === imobiliaria)
-  const podeCriar = pdfFile && dadosExtraidos && imobiliaria && celular.trim() && !extraindo && !criando
+  const podeCriar = pdfFile && dadosExtraidos && imobiliaria && celular.trim() && !extraindo && !criando && !apoliceExistente
 
   return (
     <div className="card p-0 overflow-hidden animate-fade-in min-h-0 max-h-[calc(100dvh-14rem)] overflow-y-auto">
@@ -973,6 +1023,29 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
                 <div className="mt-3 flex items-start gap-2 p-3 rounded-xl border border-status-danger/25 bg-status-danger/8">
                   <X className="w-3.5 h-3.5 text-status-danger mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-status-danger">{erro}</p>
+                </div>
+              )}
+
+              {apoliceExistente && (
+                <div className="mt-3 flex items-start gap-3 p-3 rounded-xl border border-status-warning/25 bg-status-warning/8">
+                  <AlertTriangle className="w-4 h-4 text-status-warning mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-dark-text">J? existe uma ap?lice com esse n?mero.</p>
+                    <p className="mt-1 text-xs text-dark-muted">
+                      {apoliceExistente.numero_apolice || dadosExtraidos?.numero_apolice || 'Sem n?mero'}
+                      {' ? '}
+                      {apoliceExistente.seguradora || 'Sem seguradora'}
+                      {' ? '}
+                      {apoliceExistente.imobiliaria || 'Sem imobili?ria'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => onAbrirApolice?.(apoliceExistente.id)}
+                      className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-status-warning hover:opacity-75 transition-opacity"
+                    >
+                      Abrir ap?lice existente
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1215,6 +1288,7 @@ export default function ApoicesGestao() {
         <UploadDiretoWorkspace
           onBack={() => setWorkspace('kanban')}
           onCriado={handleCriado}
+          onAbrirApolice={openApolice}
           toast={toast}
           grupos={grupos}
           user={user}

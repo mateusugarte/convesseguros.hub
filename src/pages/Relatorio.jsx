@@ -34,7 +34,7 @@ import { fetchSeguradorasPorProduto } from '../lib/seguradoras'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { useImobiliaria } from '../hooks/useImobiliaria'
-import { PageHeader, MetricCard, DataCard, Select, Avatar } from '../components/ui'
+import { PageHeader, MetricCard, DataCard, Select, Avatar, Modal } from '../components/ui'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
 import { normalizeDisplayText } from '../lib/text'
@@ -984,74 +984,83 @@ function ModalResumoRelatorio({ titulo, descricao, secaoEnvio, secaoRetorno, onF
 }
 
 function ModalFinalizarRelatorio({ periodoLabel, resumo, salvando, onCancelar, onConfirmar }) {
-  const temEnvioPendente = resumo.semCobranca.length > 0
-  const temRetornoPendente = resumo.semRetorno.length > 0
+  const semCobranca = Array.isArray(resumo?.semCobranca) ? resumo.semCobranca : []
+  const semRetorno = Array.isArray(resumo?.semRetorno) ? resumo.semRetorno : []
+  const temEnvioPendente = semCobranca.length > 0
+  const temRetornoPendente = semRetorno.length > 0
+  const footer = (
+    <div className="flex justify-end gap-2">
+      <button
+        type="button"
+        onClick={onCancelar}
+        disabled={salvando}
+        className="rounded-2xl border border-dark-border px-4 py-2 text-sm text-dark-muted transition-colors hover:text-dark-text disabled:opacity-50"
+      >
+        Cancelar
+      </button>
+      <button
+        type="button"
+        onClick={onConfirmar}
+        disabled={salvando}
+        className="rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+      >
+        {salvando ? 'Salvando...' : temEnvioPendente ? 'Finalizar mesmo assim' : 'Finalizar relatório'}
+      </button>
+    </div>
+  )
 
   return (
-    <div className="fixed inset-0 z-[530] flex items-center justify-center p-4 animate-fade-in">
-      <div className="modal-backdrop" onClick={!salvando ? onCancelar : undefined} />
-      <div className="relative glass-modal w-full max-w-2xl overflow-hidden border border-dark-border">
-        <div className="flex items-center justify-between gap-3 border-b border-dark-border px-6 py-4">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Finalização mensal</p>
-            <h3 className="mt-1 text-lg font-semibold text-dark-text">Finalizar relatório de {periodoLabel}</h3>
-          </div>
-          <button onClick={onCancelar} className="text-dark-muted hover:text-dark-text" disabled={salvando}>?</button>
+    <Modal
+      isOpen
+      onClose={!salvando ? onCancelar : () => {}}
+      title={`Finalizar relatório de ${periodoLabel}`}
+      subtitle="Finalização mensal"
+      maxWidth="lg"
+      footer={footer}
+    >
+      <div className="space-y-4">
+        <div className={`rounded-3xl border p-4 ${temEnvioPendente ? 'border-red-300 bg-red-50' : 'border-emerald-300 bg-emerald-50'}`}>
+          <p className={`text-sm font-semibold ${temEnvioPendente ? 'text-red-800' : 'text-emerald-800'}`}>
+            {temEnvioPendente
+              ? 'Ainda existem fichas aprovadas sem cobrança enviada. O relatório pode ser finalizado mesmo assim, mas isso fica registrado.'
+              : 'Todas as fichas aprovadas visíveis já estão marcadas como cobrança enviada.'}
+          </p>
+          <p className={`mt-2 text-sm ${temEnvioPendente ? 'text-red-700' : 'text-emerald-700'}`}>
+            {temEnvioPendente
+              ? 'Revise as imobiliárias listadas abaixo antes de confirmar.'
+              : 'Confirme para registrar o fechamento deste mês.'}
+          </p>
         </div>
 
-        <div className="space-y-4 px-6 py-5">
-          <div className={`rounded-3xl border p-4 ${temEnvioPendente ? 'border-red-300 bg-red-50' : 'border-emerald-300 bg-emerald-50'}`}>
-            <p className={`text-sm font-semibold ${temEnvioPendente ? 'text-red-800' : 'text-emerald-800'}`}>
-              {temEnvioPendente
-                ? 'Ainda existem fichas aprovadas sem cobrança enviada. O relatório pode ser finalizado mesmo assim, mas isso fica registrado.'
-                : 'Todas as fichas aprovadas visíveis já estão marcadas como cobrança enviada.'}
-            </p>
-            <p className={`mt-2 text-sm ${temEnvioPendente ? 'text-red-700' : 'text-emerald-700'}`}>
-              {temEnvioPendente
-                ? 'Revise as imobiliárias listadas abaixo antes de confirmar.'
-                : 'Confirme para registrar o fechamento deste mês.'}
-            </p>
-          </div>
-
-          {temEnvioPendente && (
-            <div className="rounded-3xl border border-red-300 bg-red-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">Imobiliárias com ficha sem cobrança enviada</p>
-              <div className="mt-3 space-y-2">
-                {resumo.semCobranca.map(item => (
-                  <div key={item.key} className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-sm text-red-900 shadow-sm">
-                    <span className="font-medium">{item.nome}</span>
-                    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-red-700">{item.semCobranca} ficha{item.semCobranca !== 1 ? 's' : ''}</span>
-                  </div>
-                ))}
-              </div>
+        {temEnvioPendente && (
+          <div className="rounded-3xl border border-red-300 bg-red-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">Imobiliárias com ficha sem cobrança enviada</p>
+            <div className="mt-3 space-y-2">
+              {semCobranca.map(item => (
+                <div key={item.key} className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-sm text-red-900 shadow-sm">
+                  <span className="font-medium">{item.nome}</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-red-700">{item.semCobranca} ficha{item.semCobranca !== 1 ? 's' : ''}</span>
+                </div>
+              ))}
             </div>
-          )}
-
-          {temRetornoPendente && (
-            <div className="rounded-3xl border border-orange-300 bg-orange-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-orange-800">Aguard. retorno</p>
-              <div className="mt-3 space-y-2">
-                {resumo.semRetorno.map(item => (
-                  <div key={item.key} className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-sm text-orange-950 shadow-sm">
-                    <span className="font-medium">{item.nome}</span>
-                    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-orange-700">{item.semRetorno} ficha{item.semRetorno !== 1 ? 's' : ''}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button onClick={onCancelar} disabled={salvando} className="rounded-2xl border border-dark-border px-4 py-2 text-sm text-dark-muted transition-colors hover:text-dark-text disabled:opacity-50">
-              Cancelar
-            </button>
-            <button onClick={onConfirmar} disabled={salvando} className="rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
-              {salvando ? 'Salvando...' : temEnvioPendente ? 'Finalizar mesmo assim' : 'Finalizar relatório'}
-            </button>
           </div>
-        </div>
+        )}
+
+        {temRetornoPendente && (
+          <div className="rounded-3xl border border-orange-300 bg-orange-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-orange-800">Aguard. retorno</p>
+            <div className="mt-3 space-y-2">
+              {semRetorno.map(item => (
+                <div key={item.key} className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-sm text-orange-950 shadow-sm">
+                  <span className="font-medium">{item.nome}</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-orange-700">{item.semRetorno} ficha{item.semRetorno !== 1 ? 's' : ''}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -2235,7 +2244,6 @@ export default function Relatorio() {
     </div>
   )
 }
-
 
 
 

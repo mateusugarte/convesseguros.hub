@@ -1,6 +1,7 @@
-import { supabase } from './supabase'
-import { normalizeDisplayText } from './text'
-import { parseDecimalBR } from './numberInput'
+import { supabase } from './supabase.js'
+import { normalizeDisplayText } from './text.js'
+import { parseDecimalBR } from './numberInput.js'
+import { normalizeNumeroApolice, pickApoliceDuplicadaByNumero } from './apolicesNumero.js'
 
 export const STATUS_EMISSAO_LABELS = {
   recebida:             { label: 'Recebida',             color: '#3B82F6' },
@@ -255,6 +256,40 @@ export async function fetchApoliceDetalhe(id) {
     .eq('id', id)
     .single()
   return data
+}
+
+export async function buscarApolicePorNumero(numeroApolice, { excludeId = null } = {}) {
+  const numeroOriginal = String(numeroApolice || '').trim()
+  const numeroNormalizado = normalizeNumeroApolice(numeroOriginal)
+  if (!numeroOriginal || !numeroNormalizado) return null
+
+  const select = 'id, numero_apolice, seguradora, imobiliaria, data_emissao, nome_interessado, status_emissao, created_at'
+  const exact = await supabase
+    .from('apolices')
+    .select(select)
+    .eq('numero_apolice', numeroOriginal)
+    .limit(5)
+
+  if (exact.error) throw exact.error
+
+  const exata = pickApoliceDuplicadaByNumero(exact.data || [], numeroOriginal, excludeId)
+  if (exata) return exata
+
+  const head = numeroNormalizado.slice(0, Math.min(6, numeroNormalizado.length))
+  const tail = numeroNormalizado.length > 8
+    ? numeroNormalizado.slice(-Math.min(6, numeroNormalizado.length - head.length))
+    : ''
+  const likePattern = tail ? '%' + head + '%' + tail + '%' : '%' + head + '%'
+
+  const fuzzy = await supabase
+    .from('apolices')
+    .select(select)
+    .ilike('numero_apolice', likePattern)
+    .limit(20)
+
+  if (fuzzy.error) throw fuzzy.error
+
+  return pickApoliceDuplicadaByNumero(fuzzy.data || [], numeroOriginal, excludeId)
 }
 
 export async function fetchFinanceiroComissoes({ inicio, fim, seguradora } = {}) {

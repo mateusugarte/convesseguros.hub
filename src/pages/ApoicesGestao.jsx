@@ -501,7 +501,7 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
   }
 
   return (
-    <section className="glass-panel rounded-3xl overflow-hidden animate-fade-in">
+    <section className="glass-panel rounded-3xl overflow-hidden animate-fade-in min-h-0 max-h-[calc(100dvh-14rem)] overflow-y-auto">
       <div className="flex items-center justify-between gap-4 px-7 py-5 border-b border-dark-border">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/20 bg-brand-accent/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-primary">
@@ -802,7 +802,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
   const podeCriar = pdfFile && dadosExtraidos && imobiliaria && celular.trim() && !extraindo && !criando
 
   return (
-    <div className="card p-0 overflow-hidden animate-fade-in">
+    <div className="card p-0 overflow-hidden animate-fade-in min-h-0 max-h-[calc(100dvh-14rem)] overflow-y-auto">
       <div className="flex items-center gap-3 px-6 py-4 border-b border-dark-border">
         <button onClick={onBack} className="btn-ghost p-1.5 rounded-xl">
           <ChevronLeft className="w-4 h-4" />
@@ -1289,6 +1289,7 @@ export default function ApoicesGestao() {
     </div>
   )
 }
+
 
 
 

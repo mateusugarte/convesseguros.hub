@@ -61,6 +61,7 @@ const COLUNAS = [
 
 const REPORT_STATUSES = ['aprovado', 'emitido']
 const COBRANCA_TOGGLE_STORAGE = 'relatorio-cobranca-toggle'
+const RELATORIO_FINALIZADO_STORAGE = 'relatorio-finalizado-v1'
 
 function pad2(value) {
   return String(value).padStart(2, '0')
@@ -869,6 +870,134 @@ function ReadOnly({ label, value }) {
   )
 }
 
+function ModalResumoRelatorio({ titulo, descricao, secaoEnvio, secaoRetorno, onFechar }) {
+  return (
+    <div className="fixed inset-0 z-[520] flex items-center justify-center p-4 animate-fade-in">
+      <div className="modal-backdrop" onClick={onFechar} />
+      <div className="relative glass-modal w-full max-w-2xl overflow-hidden border border-dark-border">
+        <div className="flex items-center justify-between gap-3 border-b border-dark-border px-6 py-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Resumo do relatório</p>
+            <h3 className="mt-1 text-lg font-semibold text-dark-text">{titulo}</h3>
+          </div>
+          <button onClick={onFechar} className="text-dark-muted hover:text-dark-text">?</button>
+        </div>
+
+        <div className="space-y-4 px-6 py-5">
+          <p className="text-sm text-dark-muted">{descricao}</p>
+
+          {secaoEnvio?.length > 0 && (
+            <div className="rounded-3xl border border-red-300 bg-red-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">Imobiliárias sem cobrança enviada</p>
+              <div className="mt-3 space-y-2">
+                {secaoEnvio.map(item => (
+                  <div key={item.key} className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-sm text-red-900 shadow-sm">
+                    <span className="font-medium">{item.nome}</span>
+                    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-red-700">{item.semCobranca} ficha{item.semCobranca !== 1 ? 's' : ''}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {secaoRetorno?.length > 0 && (
+            <div className="rounded-3xl border border-orange-300 bg-orange-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-orange-800">Imobiliárias sem retorno confirmado</p>
+              <div className="mt-3 space-y-2">
+                {secaoRetorno.map(item => (
+                  <div key={item.key} className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-sm text-orange-950 shadow-sm">
+                    <span className="font-medium">{item.nome}</span>
+                    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-orange-700">{item.semRetorno} ficha{item.semRetorno !== 1 ? 's' : ''}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end pt-2">
+            <button onClick={onFechar} className="rounded-2xl border border-dark-border px-4 py-2 text-sm text-dark-muted transition-colors hover:text-dark-text">
+              Fechar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ModalFinalizarRelatorio({ periodoLabel, resumo, salvando, onCancelar, onConfirmar }) {
+  const temEnvioPendente = resumo.semCobranca.length > 0
+  const temRetornoPendente = resumo.semRetorno.length > 0
+
+  return (
+    <div className="fixed inset-0 z-[530] flex items-center justify-center p-4 animate-fade-in">
+      <div className="modal-backdrop" onClick={!salvando ? onCancelar : undefined} />
+      <div className="relative glass-modal w-full max-w-2xl overflow-hidden border border-dark-border">
+        <div className="flex items-center justify-between gap-3 border-b border-dark-border px-6 py-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Finalização mensal</p>
+            <h3 className="mt-1 text-lg font-semibold text-dark-text">Finalizar relatório de {periodoLabel}</h3>
+          </div>
+          <button onClick={onCancelar} className="text-dark-muted hover:text-dark-text" disabled={salvando}>?</button>
+        </div>
+
+        <div className="space-y-4 px-6 py-5">
+          <div className={`rounded-3xl border p-4 ${temEnvioPendente ? 'border-red-300 bg-red-50' : 'border-emerald-300 bg-emerald-50'}`}>
+            <p className={`text-sm font-semibold ${temEnvioPendente ? 'text-red-800' : 'text-emerald-800'}`}>
+              {temEnvioPendente
+                ? 'Ainda existem fichas aprovadas sem cobrança enviada. O relatório pode ser finalizado mesmo assim, mas isso fica registrado.'
+                : 'Todas as fichas aprovadas visíveis já estão marcadas como cobrança enviada.'}
+            </p>
+            <p className={`mt-2 text-sm ${temEnvioPendente ? 'text-red-700' : 'text-emerald-700'}`}>
+              {temEnvioPendente
+                ? 'Revise as imobiliárias listadas abaixo antes de confirmar.'
+                : 'Confirme para registrar o fechamento deste mês.'}
+            </p>
+          </div>
+
+          {temEnvioPendente && (
+            <div className="rounded-3xl border border-red-300 bg-red-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">Imobiliárias com ficha sem cobrança enviada</p>
+              <div className="mt-3 space-y-2">
+                {resumo.semCobranca.map(item => (
+                  <div key={item.key} className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-sm text-red-900 shadow-sm">
+                    <span className="font-medium">{item.nome}</span>
+                    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-red-700">{item.semCobranca} ficha{item.semCobranca !== 1 ? 's' : ''}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {temRetornoPendente && (
+            <div className="rounded-3xl border border-orange-300 bg-orange-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-orange-800">Cobranças enviadas sem retorno</p>
+              <div className="mt-3 space-y-2">
+                {resumo.semRetorno.map(item => (
+                  <div key={item.key} className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-sm text-orange-950 shadow-sm">
+                    <span className="font-medium">{item.nome}</span>
+                    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-orange-700">{item.semRetorno} ficha{item.semRetorno !== 1 ? 's' : ''}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button onClick={onCancelar} disabled={salvando} className="rounded-2xl border border-dark-border px-4 py-2 text-sm text-dark-muted transition-colors hover:text-dark-text disabled:opacity-50">
+              Cancelar
+            </button>
+            <button onClick={onConfirmar} disabled={salvando} className="rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+              {salvando ? 'Salvando...' : temEnvioPendente ? 'Finalizar mesmo assim' : 'Finalizar relatório'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
 export default function Relatorio() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -895,6 +1024,9 @@ export default function Relatorio() {
   const [salvandoEmissao, setSalvandoEmissao] = useState(false)
   const [pendingCobranca, setPendingCobranca] = useState(null)
   const [salvandoCobranca, setSalvandoCobranca] = useState(false)
+  const [finalizacoesMap, setFinalizacoesMap] = useState(() => readJsonStorage(RELATORIO_FINALIZADO_STORAGE, {}))
+  const [pendingFinalizacao, setPendingFinalizacao] = useState(null)
+  const [alertaRelatorioDetalhe, setAlertaRelatorioDetalhe] = useState(null)
   const [cobrancaToggleMap, setCobrancaToggleMap] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem(COBRANCA_TOGGLE_STORAGE) || '{}')
@@ -907,6 +1039,17 @@ export default function Relatorio() {
   const periodoScopeKey = getPeriodoScopeKey(periodo, ano, mes)
   const [rangeStart, rangeEnd] = getReportRange(periodo, ano, mes)
   const periodoLabel = getPeriodoLabel(periodo, ano, mes)
+  const periodoAnterior = useMemo(() => {
+    if (periodo !== 'mes') return null
+    const ref = new Date(ano, mes - 1, 1)
+    ref.setMonth(ref.getMonth() - 1)
+    return {
+      ano: ref.getFullYear(),
+      mes: ref.getMonth() + 1,
+      label: getPeriodoLabel('mes', ref.getFullYear(), ref.getMonth() + 1),
+      scopeKey: getPeriodoScopeKey('mes', ref.getFullYear(), ref.getMonth() + 1),
+    }
+  }, [periodo, ano, mes])
 
   useEffect(() => {
     async function loadStatic() {
@@ -1083,6 +1226,10 @@ export default function Relatorio() {
     localStorage.setItem(COBRANCA_TOGGLE_STORAGE, JSON.stringify(cobrancaToggleMap))
   }, [cobrancaToggleMap])
 
+  useEffect(() => {
+    writeJsonStorage(RELATORIO_FINALIZADO_STORAGE, finalizacoesMap)
+  }, [finalizacoesMap])
+
   const filteredImobiliarias = useMemo(() => {
     const term = normalizeKey(search)
     const base = imobiliarias.filter(item => item?.nome_canonico)
@@ -1106,6 +1253,63 @@ export default function Relatorio() {
   const groupedByImobMap = useMemo(() => {
     return new Map(groupedByImob.map(item => [normalizeKey(item.nome), item]))
   }, [groupedByImob])
+  const resumoFechamento = useMemo(() => {
+    const map = new Map()
+
+    rowsWithHelpers.forEach(item => {
+      const coluna = getColuna(item)
+      const nomeImob = resolverImobiliariaInfo(item.imobiliaria)?.nome_canonico || resolverNome(item.imobiliaria) || item.imobiliaria || '—'
+      const key = normalizeKey(nomeImob)
+      const current = map.get(key) || {
+        key,
+        nome: nomeImob,
+        semCobranca: 0,
+        semRetorno: 0,
+      }
+
+      if (coluna === 'aprovada' && !isEmitida(item)) {
+        current.semCobranca += 1
+      }
+      if (coluna === 'enviado_cobranca' && !getImobiliariaRetornouDisplay(item)) {
+        current.semRetorno += 1
+      }
+
+      map.set(key, current)
+    })
+
+    return [...map.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+  }, [rowsWithHelpers, resolverNome, resolverImobiliariaInfo])
+
+  const resumoFinalizacao = useMemo(() => ({
+    semCobranca: resumoFechamento.filter(item => item.semCobranca > 0),
+    semRetorno: resumoFechamento.filter(item => item.semRetorno > 0),
+  }), [resumoFechamento])
+
+  const alertaTopo = useMemo(() => {
+    if (!periodoAnterior) return null
+
+    const finalizacaoAnterior = finalizacoesMap?.[periodoAnterior.scopeKey]
+    if (!finalizacaoAnterior) {
+      return {
+        tipo: 'danger',
+        titulo: 'Relatório do mês passado não foi finalizado',
+        descricao: `${periodoAnterior.label} ainda está em aberto.`,
+        periodoAnterior,
+      }
+    }
+
+    if ((finalizacaoAnterior.semRetorno || []).length > 0) {
+      return {
+        tipo: 'warning',
+        titulo: `As fichas de ${periodoAnterior.label} foram cobradas, mas nem todas tiveram retorno`,
+        descricao: 'Clique para ver as imobiliárias com cobrança pendente de retorno.',
+        periodoAnterior,
+        detalhe: finalizacaoAnterior,
+      }
+    }
+
+    return null
+  }, [periodoAnterior, finalizacoesMap])
 
   const columnMap = useMemo(() => {
     const map = Object.fromEntries(COLUNAS.map(col => [col.id, []]))
@@ -1360,6 +1564,32 @@ export default function Relatorio() {
     toast({ type: 'success', title: nextValue ? 'ImobiliÃ¡ria marcada como retornou' : 'MarcaÃ§Ã£o de retorno removida' })
   }
 
+  function openFinalizarRelatorio() {
+    if (periodo !== 'mes') {
+      toast({ type: 'info', title: 'Fechamento mensal disponível apenas para a visão de mês.' })
+      return
+    }
+
+    setPendingFinalizacao({
+      periodoLabel,
+      scopeKey: periodoScopeKey,
+      resumo: resumoFinalizacao,
+    })
+  }
+
+  function onClickAlertaTopo() {
+    if (!alertaTopo) return
+
+    if (alertaTopo.tipo === 'danger' && alertaTopo.periodoAnterior) {
+      updateQuery({ periodo: 'mes', ano: alertaTopo.periodoAnterior.ano, mes: alertaTopo.periodoAnterior.mes })
+      return
+    }
+
+    if (alertaTopo.detalhe) {
+      setAlertaRelatorioDetalhe(alertaTopo)
+    }
+  }
+
   async function handleConfirmarEmissao(payload) {
     if (!pendingEmissao) return
     setSalvandoEmissao(true)
@@ -1478,6 +1708,15 @@ export default function Relatorio() {
         onAno={onChangeAno}
         onMes={onChangeMes}
       />
+      {periodo === 'mes' && (
+        <button
+          type="button"
+          onClick={openFinalizarRelatorio}
+          className="inline-flex items-center gap-1.5 rounded-2xl border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition-colors hover:border-red-400 hover:bg-red-100"
+        >
+          <CheckSquare className="h-3.5 w-3.5" /> Finalizar relatório
+        </button>
+      )}
       {isDetail && (
         <button
           type="button"
@@ -1493,7 +1732,24 @@ export default function Relatorio() {
   if (loading) {
     return (
       <div className="space-y-5 animate-fade-in">
-        <PageHeader
+        {!loading && alertaTopo && (
+        <button
+          type="button"
+          onClick={onClickAlertaTopo}
+          className={`w-full rounded-[28px] border px-5 py-4 text-left shadow-sm transition-colors ${alertaTopo.tipo === 'warning' ? 'border-orange-300 bg-orange-50 text-orange-900 hover:bg-orange-100' : 'border-red-300 bg-red-50 text-red-900 hover:bg-red-100'}`}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold">{alertaTopo.titulo}</p>
+              <p className="mt-1 text-xs opacity-90">{alertaTopo.descricao}</p>
+            </div>
+            <span className="rounded-full border border-current/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]">
+              {alertaTopo.tipo === 'warning' ? 'Ver imobiliárias' : 'Abrir mês anterior'}
+            </span>
+          </div>
+        </button>
+      )}
+      <PageHeader
           eyebrow="RelatÃ³rios operacionais"
           title={isDetail ? 'RelatÃ³rio por ImobiliÃ¡ria' : 'RelatÃ³rios FianÃ§a'}
           description="Carregando dados do painel..."
@@ -1516,7 +1772,24 @@ export default function Relatorio() {
 
     return (
       <div className="space-y-5 animate-fade-in">
-        <PageHeader
+        {!loading && alertaTopo && (
+        <button
+          type="button"
+          onClick={onClickAlertaTopo}
+          className={`w-full rounded-[28px] border px-5 py-4 text-left shadow-sm transition-colors ${alertaTopo.tipo === 'warning' ? 'border-orange-300 bg-orange-50 text-orange-900 hover:bg-orange-100' : 'border-red-300 bg-red-50 text-red-900 hover:bg-red-100'}`}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold">{alertaTopo.titulo}</p>
+              <p className="mt-1 text-xs opacity-90">{alertaTopo.descricao}</p>
+            </div>
+            <span className="rounded-full border border-current/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]">
+              {alertaTopo.tipo === 'warning' ? 'Ver imobiliárias' : 'Abrir mês anterior'}
+            </span>
+          </div>
+        </button>
+      )}
+      <PageHeader
           eyebrow="RelatÃ³rios operacionais"
           title={title}
           description={`Painel analÃ­tico da imobiliÃ¡ria em ${periodoLabel}, organizado por blocos.`}
@@ -1598,12 +1871,66 @@ export default function Relatorio() {
             onConfirmar={handleConfirmarCobranca}
           />
         )}
+        {pendingFinalizacao && (
+          <ModalFinalizarRelatorio
+            periodoLabel={pendingFinalizacao.periodoLabel}
+            resumo={pendingFinalizacao.resumo}
+            salvando={false}
+            onCancelar={() => setPendingFinalizacao(null)}
+            onConfirmar={() => {
+              const now = new Date().toISOString()
+              setFinalizacoesMap(prev => ({
+                ...(prev || {}),
+                [pendingFinalizacao.scopeKey]: {
+                  finalizedAt: now,
+                  periodoLabel: pendingFinalizacao.periodoLabel,
+                  semCobranca: pendingFinalizacao.resumo.semCobranca,
+                  semRetorno: pendingFinalizacao.resumo.semRetorno,
+                },
+              }))
+              setPendingFinalizacao(null)
+              toast({
+                type: pendingFinalizacao.resumo.semCobranca.length > 0 ? 'warning' : 'success',
+                title: 'Relatório finalizado',
+                message: pendingFinalizacao.resumo.semRetorno.length > 0
+                  ? 'Há imobiliárias aguardando retorno para o próximo mês.'
+                  : 'Fechamento mensal registrado com sucesso.',
+              })
+            }}
+          />
+        )}
+        {alertaRelatorioDetalhe && (
+          <ModalResumoRelatorio
+            titulo={alertaRelatorioDetalhe.titulo}
+            descricao={alertaRelatorioDetalhe.descricao}
+            secaoEnvio={alertaRelatorioDetalhe.detalhe?.semCobranca || []}
+            secaoRetorno={alertaRelatorioDetalhe.detalhe?.semRetorno || []}
+            onFechar={() => setAlertaRelatorioDetalhe(null)}
+          />
+        )}
       </div>
     )
   }
 
   return (
     <div className="space-y-5 animate-fade-in">
+      {!loading && alertaTopo && (
+        <button
+          type="button"
+          onClick={onClickAlertaTopo}
+          className={`w-full rounded-[28px] border px-5 py-4 text-left shadow-sm transition-colors ${alertaTopo.tipo === 'warning' ? 'border-orange-300 bg-orange-50 text-orange-900 hover:bg-orange-100' : 'border-red-300 bg-red-50 text-red-900 hover:bg-red-100'}`}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold">{alertaTopo.titulo}</p>
+              <p className="mt-1 text-xs opacity-90">{alertaTopo.descricao}</p>
+            </div>
+            <span className="rounded-full border border-current/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]">
+              {alertaTopo.tipo === 'warning' ? 'Ver imobiliárias' : 'Abrir mês anterior'}
+            </span>
+          </div>
+        </button>
+      )}
       <PageHeader
         eyebrow="RelatÃ³rios operacionais"
         title="RelatÃ³rios FianÃ§a"
@@ -1848,9 +2175,58 @@ export default function Relatorio() {
           description={`NÃ£o hÃ¡ registros para ${periodoLabel}. Ajuste o perÃ­odo ou escolha outra imobiliÃ¡ria.`}
         />
       )}
-    </div>
+      {pendingFinalizacao && (
+        <ModalFinalizarRelatorio
+          periodoLabel={pendingFinalizacao.periodoLabel}
+          resumo={pendingFinalizacao.resumo}
+          salvando={false}
+          onCancelar={() => setPendingFinalizacao(null)}
+          onConfirmar={() => {
+            const now = new Date().toISOString()
+            setFinalizacoesMap(prev => ({
+              ...(prev || {}),
+              [pendingFinalizacao.scopeKey]: {
+                finalizedAt: now,
+                periodoLabel: pendingFinalizacao.periodoLabel,
+                semCobranca: pendingFinalizacao.resumo.semCobranca,
+                semRetorno: pendingFinalizacao.resumo.semRetorno,
+              },
+            }))
+            setPendingFinalizacao(null)
+            toast({
+              type: pendingFinalizacao.resumo.semCobranca.length > 0 ? 'warning' : 'success',
+              title: 'Relatório finalizado',
+              message: pendingFinalizacao.resumo.semRetorno.length > 0
+                ? 'Há imobiliárias aguardando retorno para o próximo mês.'
+                : 'Fechamento mensal registrado com sucesso.',
+            })
+          }}
+        />
+      )}
+      {alertaRelatorioDetalhe && (
+        <ModalResumoRelatorio
+          titulo={alertaRelatorioDetalhe.titulo}
+          descricao={alertaRelatorioDetalhe.descricao}
+          secaoEnvio={alertaRelatorioDetalhe.detalhe?.semCobranca || []}
+          secaoRetorno={alertaRelatorioDetalhe.detalhe?.semRetorno || []}
+          onFechar={() => setAlertaRelatorioDetalhe(null)}
+        />
+      )}    </div>
   )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

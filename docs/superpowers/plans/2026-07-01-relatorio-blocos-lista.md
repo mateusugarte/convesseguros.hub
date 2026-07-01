@@ -406,17 +406,15 @@ git commit -m "feat: adiciona handlers de toggle de cobrança enviada e retorno 
 ### Task 4: Componentes de lista `BlocoRelatorio` e `LinhaRelatorio`
 
 **Files:**
-- Modify: `src/pages/Relatorio.jsx` — remover `RelatorioCard`, `DraggableRelatorioCard`, `KanbanColuna`; adicionar `LinhaRelatorio` e `BlocoRelatorio` no lugar (mesma região do arquivo, por volta das linhas 407-630 do arquivo atual, entre `ChartCard` e `PeriodControl`).
+- Modify: `src/pages/Relatorio.jsx` — adicionar `LinhaRelatorio` e `BlocoRelatorio` logo depois dos componentes de card/coluna kanban existentes (`RelatorioCard`, `DraggableRelatorioCard`, `KanbanColuna`, por volta das linhas 407-630 do arquivo atual, entre `ChartCard` e `PeriodControl`).
+
+**IMPORTANTE — ordem de remoção:** `RelatorioCard`, `DraggableRelatorioCard` e `KanbanColuna` **NÃO são removidos nesta task**. Eles continuam sendo usados pelo JSX antigo do kanban até a Task 5, que troca esse JSX e só então remove esses três componentes junto. Se você apagar esses componentes agora, o build quebra (o JSX antigo ainda os referencia) — esta task só ADICIONA `LinhaRelatorio`/`BlocoRelatorio` ao lado dos componentes antigos, sem remover nada.
 
 **Interfaces:**
 - Consumes: `getNomeFicha`, `getDocumento`, `getOperacionalStatus`, `getCanonicalImobiliariaNome`, `getEffectiveNumeroApolice`, `isEmitida` (helpers já existentes no topo do arquivo); `isCobrancaEnviadaVisivel`, `getCobrancaEnviadaDisplay`, `getImobiliariaRetornouDisplay` (Task 1); `Avatar` (Task 2).
 - Produces (usado pela Task 5): `<BlocoRelatorio coluna fichas onOpen onOpenPolicy selectedIds onToggleSelect onCopy onSelectAll onConfirmCobranca canConfirmCobranca pendingCobrancaCount onToggleCobranca onToggleRetornou />`.
 
-- [ ] **Step 1: Remover os componentes de card/coluna kanban**
-
-Apagar as funções `RelatorioCard`, `DraggableRelatorioCard` e `KanbanColuna` inteiras (do `function RelatorioCard({ ficha, ... })` até o fechamento de `KanbanColuna`, por volta das linhas 407-630 do arquivo atual).
-
-- [ ] **Step 2: Adicionar `LinhaRelatorio` no lugar**
+- [ ] **Step 1: Adicionar `LinhaRelatorio` logo após o fechamento de `KanbanColuna`**
 
 ```jsx
 function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggleSelect, onToggleCobranca, onToggleRetornou }) {
@@ -628,7 +626,7 @@ git commit -m "feat: adiciona componentes de lista BlocoRelatorio e LinhaRelator
 ### Task 5: Trocar o kanban pela lista de blocos e remover `@dnd-kit` do arquivo
 
 **Files:**
-- Modify: `src/pages/Relatorio.jsx` — imports, estado (`activeId`, `sensors`, `scrollRef`, `STORAGE_PREFIX`, `scrollKey`), `handleDragEnd`, `scrollKanban`, `openFicha`/`openApolice`, e o JSX da branch `isDetail` (o `DataCard` "Kanban mensal").
+- Modify: `src/pages/Relatorio.jsx` — imports, estado (`activeId`, `sensors`, `scrollRef`, `STORAGE_PREFIX`, `scrollKey`), `handleDragEnd`, `scrollKanban`, `openFicha`/`openApolice`, o JSX da branch `isDetail` (o `DataCard` "Kanban mensal"), e remoção final de `RelatorioCard`/`DraggableRelatorioCard`/`KanbanColuna` (deixados intactos pela Task 4 de propósito — ver Step 6 abaixo).
 
 **Interfaces:**
 - Consumes: `BlocoRelatorio` (Task 4), `toggleCobrancaEnviadaLinha`/`toggleImobiliariaRetornou` (Task 3), `COLUNAS`, `columnMap`, `selectedIds`, `toggleSelected`, `copyColumn`, `selectAllColumn`, `openConfirmarCobranca`, `canConfirmCobranca`, `pendingCobrancaCount` (todos já existentes no componente).
@@ -846,7 +844,11 @@ por:
         </div>
 ```
 
-- [ ] **Step 6: Ajustar a descrição do `PageHeader` da view de detalhe**
+- [ ] **Step 6: Remover as funções antigas `RelatorioCard`, `DraggableRelatorioCard` e `KanbanColuna`**
+
+Agora que o JSX do Step 5 não usa mais nenhuma delas, apagar as três funções inteiras (de `function RelatorioCard({ ficha, ... })` até o fechamento de `KanbanColuna`, por volta das linhas 407-630 do arquivo — ficam logo antes de `LinhaRelatorio`/`BlocoRelatorio`, que a Task 4 adicionou ao lado delas). `LinhaRelatorio` e `BlocoRelatorio` (adicionados na Task 4) continuam no arquivo.
+
+- [ ] **Step 7: Ajustar a descrição do `PageHeader` da view de detalhe**
 
 Trocar (no mesmo `isDetail` return, no `PageHeader`):
 ```jsx
@@ -857,12 +859,12 @@ por:
 description={`Painel analítico da imobiliária em ${periodoLabel}, organizado por blocos.`}
 ```
 
-- [ ] **Step 7: Checar se `selectionMode` ainda é usado em algum lugar do arquivo**
+- [ ] **Step 8: Checar se `selectionMode` ainda é usado em algum lugar do arquivo**
 
 Run: `grep -n "selectionMode" "src/pages/Relatorio.jsx"`
 Expected: só a declaração `const selectionMode = selectedIds.length > 0` (linha ~1222) sobra sem uso — os componentes novos (`LinhaRelatorio`/`BlocoRelatorio`) não recebem mais essa prop porque a seleção agora é sempre por clique no checkbox (não tem mais o modo "arrastar vs. selecionar" do kanban). Remover a declaração de `selectionMode`.
 
-- [ ] **Step 8: Build e checagem manual do arquivo**
+- [ ] **Step 9: Build e checagem manual do arquivo**
 
 Run: `npm run build`
 Expected: build verde, sem símbolos não resolvidos (`DndContext`, `KanbanColuna`, `RelatorioCard`, `DraggableRelatorioCard`, `scrollRef`, `activeId`, `activeFicha`, `sensors`, `scrollKanban`, `handleDragEnd`, `STORAGE_PREFIX`, `scrollKey`, `selectionMode` não podem mais aparecer no arquivo).
@@ -870,7 +872,7 @@ Expected: build verde, sem símbolos não resolvidos (`DndContext`, `KanbanColun
 Run: `grep -n "DndContext\|KanbanColuna\|DraggableRelatorioCard\|RelatorioCard\|scrollRef\|activeFicha\|scrollKanban\|handleDragEnd" "src/pages/Relatorio.jsx"`
 Expected: nenhuma ocorrência.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
 git add src/pages/Relatorio.jsx

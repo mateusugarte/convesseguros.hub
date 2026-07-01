@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   BarChart2,
@@ -983,11 +983,18 @@ function ModalResumoRelatorio({ titulo, descricao, secaoEnvio, secaoRetorno, onF
   )
 }
 
-function ModalFinalizarRelatorio({ periodoLabel, resumo, salvando, onCancelar, onConfirmar }) {
+function ModalFinalizarRelatorio({ periodoLabel, resumo, salvando, onCancelar, onConfirmar, onAbrirImobiliaria }) {
   const semCobranca = Array.isArray(resumo?.semCobranca) ? resumo.semCobranca : []
   const semRetorno = Array.isArray(resumo?.semRetorno) ? resumo.semRetorno : []
   const temEnvioPendente = semCobranca.length > 0
   const temRetornoPendente = semRetorno.length > 0
+  const temPendencias = temEnvioPendente || temRetornoPendente
+  const totalSemCobranca = semCobranca.reduce((acc, item) => acc + (item.semCobranca || 0), 0)
+  const totalSemRetorno = semRetorno.reduce((acc, item) => acc + (item.semRetorno || 0), 0)
+  const totalImobiliarias = new Set([
+    ...semCobranca.map(item => item.key),
+    ...semRetorno.map(item => item.key),
+  ]).size
   const footer = (
     <div className="flex justify-end gap-2">
       <button
@@ -1004,58 +1011,130 @@ function ModalFinalizarRelatorio({ periodoLabel, resumo, salvando, onCancelar, o
         disabled={salvando}
         className="rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
       >
-        {salvando ? 'Salvando...' : temEnvioPendente ? 'Finalizar mesmo assim' : 'Finalizar relatório'}
+        {salvando ? 'Salvando...' : temPendencias ? 'Finalizar mesmo assim' : 'Finalizar relat?rio'}
       </button>
     </div>
   )
+
+  function renderPendenciaCard(item, colunaId, label, quantidade, tone) {
+    const toneClass = tone === 'danger'
+      ? 'border-red-200 bg-white/95 hover:border-red-300 hover:bg-red-50/70'
+      : 'border-orange-200 bg-white/95 hover:border-orange-300 hover:bg-orange-50/70'
+    const badgeClass = tone === 'danger'
+      ? 'bg-red-100 text-red-700'
+      : 'bg-orange-100 text-orange-700'
+
+    return (
+      <button
+        key={`${colunaId}:${item.key}`}
+        type="button"
+        onClick={() => onAbrirImobiliaria?.(item.nome, colunaId)}
+        className={`group w-full rounded-[22px] border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${toneClass}`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-dark-text">{item.nome}</p>
+            <p className="mt-1 text-xs text-dark-muted">
+              Abrir a se??o com as fichas deste m?s dessa imobili?ria.
+            </p>
+          </div>
+          <span className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${badgeClass}`}>
+            {quantidade} ficha{quantidade !== 1 ? 's' : ''}
+          </span>
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <span className="text-[11px] font-medium text-dark-muted">{label}</span>
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-primary">
+            Ver fichas <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </div>
+      </button>
+    )
+  }
 
   return (
     <Modal
       isOpen
       onClose={!salvando ? onCancelar : () => {}}
-      title={`Finalizar relatório de ${periodoLabel}`}
-      subtitle="Finalização mensal"
-      maxWidth="lg"
+      title={`Finalizar relat?rio de ${periodoLabel}`}
+      subtitle="Finaliza??o mensal"
+      maxWidth="xl"
       footer={footer}
     >
-      <div className="space-y-4">
-        <div className={`rounded-3xl border p-4 ${temEnvioPendente ? 'border-red-300 bg-red-50' : 'border-emerald-300 bg-emerald-50'}`}>
-          <p className={`text-sm font-semibold ${temEnvioPendente ? 'text-red-800' : 'text-emerald-800'}`}>
-            {temEnvioPendente
-              ? 'Ainda existem fichas aprovadas sem cobrança enviada. O relatório pode ser finalizado mesmo assim, mas isso fica registrado.'
-              : 'Todas as fichas aprovadas visíveis já estão marcadas como cobrança enviada.'}
+      <div className="space-y-5">
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-[24px] border border-dark-border/70 bg-dark-surface/70 p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Imobili?rias</p>
+            <p className="mt-2 text-2xl font-semibold text-dark-text">{totalImobiliarias}</p>
+            <p className="mt-1 text-xs text-dark-muted">Com alguma a??o pendente neste fechamento.</p>
+          </div>
+          <div className="rounded-[24px] border border-red-200 bg-red-50 p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-red-700">Sem cobran?a</p>
+            <p className="mt-2 text-2xl font-semibold text-red-800">{totalSemCobranca}</p>
+            <p className="mt-1 text-xs text-red-700">Fichas aprovadas que ainda n?o tiveram cobran?a enviada.</p>
+          </div>
+          <div className="rounded-[24px] border border-orange-200 bg-orange-50 p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-orange-700">Aguardando retorno</p>
+            <p className="mt-2 text-2xl font-semibold text-orange-800">{totalSemRetorno}</p>
+            <p className="mt-1 text-xs text-orange-700">Fichas em cobran?a aguardando retorno da imobili?ria.</p>
+          </div>
+        </div>
+
+        <div className={`rounded-[28px] border p-4 ${temPendencias ? 'border-red-200 bg-[linear-gradient(135deg,rgba(254,242,242,0.98),rgba(255,247,237,0.92))]' : 'border-emerald-300 bg-emerald-50'}`}>
+          <p className={`text-sm font-semibold ${temPendencias ? 'text-slate-900' : 'text-emerald-800'}`}>
+            {temPendencias
+              ? 'Antes de finalizar, revise as pend?ncias abaixo. O clique em uma imobili?ria leva direto ao bloco com as fichas desse m?s.'
+              : 'Nenhuma pend?ncia encontrada. O fechamento deste m?s est? pronto para ser confirmado.'}
           </p>
-          <p className={`mt-2 text-sm ${temEnvioPendente ? 'text-red-700' : 'text-emerald-700'}`}>
-            {temEnvioPendente
-              ? 'Revise as imobiliárias listadas abaixo antes de confirmar.'
-              : 'Confirme para registrar o fechamento deste mês.'}
+          <p className={`mt-2 text-sm ${temPendencias ? 'text-slate-600' : 'text-emerald-700'}`}>
+            {temPendencias
+              ? 'A lista fica dentro do modal e cada item j? abre o relat?rio individual na se??o correta.'
+              : 'Confirme para registrar o fechamento mensal.'}
           </p>
         </div>
 
-        {temEnvioPendente && (
-          <div className="rounded-3xl border border-red-300 bg-red-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">Imobiliárias com ficha sem cobrança enviada</p>
-            <div className="mt-3 space-y-2">
-              {semCobranca.map(item => (
-                <div key={item.key} className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-sm text-red-900 shadow-sm">
-                  <span className="font-medium">{item.nome}</span>
-                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-red-700">{item.semCobranca} ficha{item.semCobranca !== 1 ? 's' : ''}</span>
+        {temPendencias && (
+          <div className="grid gap-4 xl:grid-cols-2">
+            <div className="rounded-[28px] border border-red-200 bg-red-50/75 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">Sem cobran?a enviada</p>
+                  <p className="mt-1 text-sm text-red-800">Abra a coluna de aprovadas para agir nas fichas pendentes.</p>
                 </div>
-              ))}
+                <span className="rounded-full bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-red-700 shadow-sm">
+                  {semCobranca.length} imobili?ria{semCobranca.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              {temEnvioPendente ? (
+                <div className="mt-4 max-h-[42vh] space-y-3 overflow-y-auto pr-1">
+                  {semCobranca.map(item => renderPendenciaCard(item, 'aprovada', 'Ir para Aprovadas', item.semCobranca, 'danger'))}
+                </div>
+              ) : (
+                <div className="mt-4 rounded-[22px] border border-emerald-200 bg-white/90 px-4 py-5 text-sm text-emerald-800">
+                  Nenhuma imobili?ria com cobran?a pendente neste m?s.
+                </div>
+              )}
             </div>
-          </div>
-        )}
 
-        {temRetornoPendente && (
-          <div className="rounded-3xl border border-orange-300 bg-orange-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-orange-800">Aguard. retorno</p>
-            <div className="mt-3 space-y-2">
-              {semRetorno.map(item => (
-                <div key={item.key} className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-sm text-orange-950 shadow-sm">
-                  <span className="font-medium">{item.nome}</span>
-                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-orange-700">{item.semRetorno} ficha{item.semRetorno !== 1 ? 's' : ''}</span>
+            <div className="rounded-[28px] border border-orange-200 bg-orange-50/75 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-orange-800">Aguardando retorno</p>
+                  <p className="mt-1 text-sm text-orange-900">Abra a coluna de cobran?a para ver as fichas aguardando retorno.</p>
                 </div>
-              ))}
+                <span className="rounded-full bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-orange-700 shadow-sm">
+                  {semRetorno.length} imobili?ria{semRetorno.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              {temRetornoPendente ? (
+                <div className="mt-4 max-h-[42vh] space-y-3 overflow-y-auto pr-1">
+                  {semRetorno.map(item => renderPendenciaCard(item, 'enviado_cobranca', 'Ir para Cobran?a', item.semRetorno, 'warning'))}
+                </div>
+              ) : (
+                <div className="mt-4 rounded-[22px] border border-emerald-200 bg-white/90 px-4 py-5 text-sm text-emerald-800">
+                  Nenhuma imobili?ria aguardando retorno neste m?s.
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1063,7 +1142,6 @@ function ModalFinalizarRelatorio({ periodoLabel, resumo, salvando, onCancelar, o
     </Modal>
   )
 }
-
 
 export default function Relatorio() {
   const navigate = useNavigate()
@@ -1103,7 +1181,10 @@ export default function Relatorio() {
     }
   })
   const isDetail = Boolean(imobiliariaId)
+  const columnSectionRefs = useRef({})
+  const handledSectionFocusRef = useRef('')
   const currentPath = `${location.pathname}${location.search}`
+
   const periodoScopeKey = getPeriodoScopeKey(periodo, ano, mes)
   const [rangeStart, rangeEnd] = getReportRange(periodo, ano, mes)
   const periodoLabel = getPeriodoLabel(periodo, ano, mes)
@@ -1293,7 +1374,37 @@ export default function Relatorio() {
     })
   }, [location.state])
 
+  const [focusedSectionId, setFocusedSectionId] = useState('')
+
   useEffect(() => {
+    if (!isDetail || loading) return
+
+    const focusSectionId = location.state?.focusSectionId
+    if (!focusSectionId) return
+
+    const nextKey = `${location.pathname}|${location.search}|${focusSectionId}|${location.state?.focusNonce || '0'}`
+    if (handledSectionFocusRef.current === nextKey) return
+
+    const target = columnSectionRefs.current[focusSectionId]
+    if (!target) return
+
+    handledSectionFocusRef.current = nextKey
+    const frameId = requestAnimationFrame(() => {
+      setFocusedSectionId(focusSectionId)
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+    const timeoutId = setTimeout(() => {
+      setFocusedSectionId(current => (current === focusSectionId ? '' : current))
+    }, 2200)
+
+    return () => {
+      cancelAnimationFrame(frameId)
+      clearTimeout(timeoutId)
+    }
+  }, [isDetail, loading, location.pathname, location.search, location.state])
+
+  useEffect(() => {
+
     localStorage.setItem(COBRANCA_TOGGLE_STORAGE, JSON.stringify(cobrancaToggleMap))
   }, [cobrancaToggleMap])
 
@@ -1405,7 +1516,25 @@ export default function Relatorio() {
     navigate({ pathname: isDetail ? `/relatorio/${imobiliariaId}` : '/relatorio', search: params.toString() ? `?${params.toString()}` : '' }, { replace: true })
   }
 
+  function openImobiliariaReport(imobId, options = {}) {
+    const nextState = {}
+
+    if (!isDetail) {
+      nextState.scrollTopOverview = window.scrollY
+    }
+    if (options.focusSectionId) {
+      nextState.focusSectionId = options.focusSectionId
+      nextState.focusNonce = Date.now()
+    }
+
+    navigate(
+      { pathname: `/relatorio/${imobId}`, search: location.search },
+      { state: Object.keys(nextState).length ? nextState : undefined },
+    )
+  }
+
   function onChangePeriodo(next) {
+
     if (next === 'historico') {
       updateQuery({ periodo: next })
       return
@@ -1634,7 +1763,7 @@ export default function Relatorio() {
 
   function openFinalizarRelatorio() {
     if (periodo !== 'mes') {
-      toast({ type: 'info', title: 'Fechamento mensal disponível apenas para a visão de mês.' })
+      toast({ type: 'info', title: 'Fechamento mensal dispon?vel apenas para a vis?o de m?s.' })
       return
     }
 
@@ -1645,7 +1774,19 @@ export default function Relatorio() {
     })
   }
 
+  function openPendenciaImobiliaria(nomeImobiliaria, focusSectionId) {
+    const selectedImob = imobiliarias.find(item => normalizeKey(item.nome_canonico) === normalizeKey(nomeImobiliaria))
+    if (!selectedImob?.id) {
+      toast({ type: 'error', title: 'Imobili?ria n?o encontrada', message: 'N?o foi poss?vel abrir o relat?rio individual desta imobili?ria.' })
+      return
+    }
+
+    setPendingFinalizacao(null)
+    openImobiliariaReport(selectedImob.id, { focusSectionId })
+  }
+
   function onClickAlertaTopo() {
+
     if (!alertaTopo) return
 
     if (alertaTopo.tipo === 'danger' && alertaTopo.periodoAnterior) {
@@ -1788,7 +1929,15 @@ export default function Relatorio() {
       {isDetail && (
         <button
           type="button"
-          onClick={() => navigate({ pathname: '/relatorio', search: location.search }, { replace: false })}
+          onClick={() => navigate(
+            { pathname: '/relatorio', search: location.search },
+            {
+              replace: false,
+              state: typeof location.state?.scrollTopOverview === 'number'
+                ? { scrollTop: location.state.scrollTopOverview }
+                : undefined,
+            },
+          )}
           className="flex items-center gap-1.5 rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted transition-colors hover:border-brand-accent/50 hover:text-dark-text"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Visão geral
@@ -1805,6 +1954,7 @@ export default function Relatorio() {
           resumo={pendingFinalizacao.resumo}
           salvando={false}
           onCancelar={() => setPendingFinalizacao(null)}
+          onAbrirImobiliaria={openPendenciaImobiliaria}
           onConfirmar={() => {
             const now = new Date().toISOString()
             setFinalizacoesMap(prev => ({
@@ -1931,24 +2081,33 @@ export default function Relatorio() {
 
         <div className="space-y-4">
           {COLUNAS.map(coluna => (
-            <BlocoRelatorio
+            <div
               key={coluna.id}
-              coluna={coluna}
-              fichas={columnMap[coluna.id] || []}
-              onOpen={openFicha}
-              onOpenPolicy={openApolice}
-              selectedIds={new Set(selectedIds)}
-              onToggleSelect={toggleSelected}
-              onCopy={copyColumn}
-              onSelectAll={selectAllColumn}
-              onConfirmCobranca={openConfirmarCobranca}
-              canConfirmCobranca={canConfirmCobranca}
-              pendingCobrancaCount={pendingCobrancaCount}
-              onToggleCobranca={toggleCobrancaEnviadaLinha}
-              onToggleRetornou={toggleImobiliariaRetornou}
-            />
+              id={`relatorio-coluna-${coluna.id}`}
+              ref={element => {
+                if (element) columnSectionRefs.current[coluna.id] = element
+              }}
+              className={`scroll-mt-24 rounded-[30px] transition-all duration-500 ${focusedSectionId === coluna.id ? 'ring-2 ring-brand-primary/25 shadow-[0_0_0_10px_rgba(34,71,170,0.08)]' : ''}`}
+            >
+              <BlocoRelatorio
+                coluna={coluna}
+                fichas={columnMap[coluna.id] || []}
+                onOpen={openFicha}
+                onOpenPolicy={openApolice}
+                selectedIds={new Set(selectedIds)}
+                onToggleSelect={toggleSelected}
+                onCopy={copyColumn}
+                onSelectAll={selectAllColumn}
+                onConfirmCobranca={openConfirmarCobranca}
+                canConfirmCobranca={canConfirmCobranca}
+                pendingCobrancaCount={pendingCobrancaCount}
+                onToggleCobranca={toggleCobrancaEnviadaLinha}
+                onToggleRetornou={toggleImobiliariaRetornou}
+              />
+            </div>
           ))}
         </div>
+
 
         {pendingEmissao && (
           <ModalEmitirApolice
@@ -2086,11 +2245,11 @@ export default function Relatorio() {
                 key={imob.id}
                 role="button"
                 tabIndex={0}
-                onClick={() => navigate(`/relatorio/${imob.id}${location.search}`)}
+                onClick={() => openImobiliariaReport(imob.id)}
                 onKeyDown={event => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault()
-                    navigate(`/relatorio/${imob.id}${location.search}`)
+                    openImobiliariaReport(imob.id)
                   }
                 }}
                 className={cardClass}

@@ -611,6 +611,193 @@ function KanbanColuna({
   )
 }
 
+function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggleSelect, onToggleCobranca, onToggleRetornou }) {
+  const nome = getNomeFicha(ficha)
+  const doc = getDocumento(ficha)
+  const op = getOperacionalStatus(ficha)
+  const isEmissaoCard = isEmitida(ficha)
+  const prodColor = ficha.produto === 'pessoa_juridica' ? '#4b6cc2' : ficha.produto === 'comercial_pf' ? '#0f766e' : '#000079'
+  const showCobrancaToggle = isCobrancaEnviadaVisivel(coluna.id)
+  const showRetornouToggle = coluna.id === 'enviado_cobranca'
+  const cobrancaEnviada = showCobrancaToggle ? getCobrancaEnviadaDisplay(ficha, coluna.id) : false
+  const retornou = showRetornouToggle ? getImobiliariaRetornouDisplay(ficha) : false
+  const rowClass = coluna.id === 'aprovada'
+    ? 'border-red-300 bg-[linear-gradient(180deg,rgba(254,242,242,0.98),rgba(254,226,226,0.85))]'
+    : 'border-dark-border/60 bg-dark-surface/70'
+
+  return (
+    <div className={`flex flex-wrap items-center gap-3 rounded-2xl border px-4 py-3 transition-colors ${rowClass}`}>
+      <button
+        type="button"
+        onClick={() => onToggleSelect(ficha.id)}
+        className="rounded-lg p-1 hover:bg-dark-surface2"
+        aria-label="Selecionar linha"
+      >
+        {selected ? <CheckSquare className="h-4 w-4 text-brand-primary" /> : <Square className="h-4 w-4 text-dark-muted" />}
+      </button>
+
+      <Avatar name={ficha._orcamentistaNome || 'Sem orçamentista'} src={ficha._orcamentistaAvatar} size="sm" />
+      {isEmissaoCard && (
+        <Avatar name={ficha._emissorNome || 'Sem emissor'} src={ficha._emissorAvatar} size="sm" />
+      )}
+
+      <button type="button" onClick={() => onOpen(ficha.id)} className="min-w-[200px] flex-1 text-left">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: `${prodColor}20`, color: prodColor }}>
+            {normalizeDisplayText(ficha.produto) || ficha.produto || 'Fiança'}
+          </span>
+          <p className="text-sm font-semibold text-dark-text">{nome}</p>
+        </div>
+        <p className="mt-0.5 text-[11px] uppercase tracking-[0.1em] text-dark-muted">{getCanonicalImobiliariaNome(ficha)}</p>
+      </button>
+
+      <span className={`badge ${op?.color || 'badge-muted'}`}>{op?.label || '—'}</span>
+
+      {doc && (
+        <span className="rounded-full border border-dark-border/60 bg-dark-surface2/70 px-2 py-1 text-[10px] font-mono text-dark-muted">
+          {doc}
+        </span>
+      )}
+
+      {getEffectiveNumeroApolice(ficha) && (
+        <span className="rounded-full px-2 py-1 text-[10px] font-mono" style={{ background: '#2247aa15', color: '#2247aa' }}>
+          Apólice: {getEffectiveNumeroApolice(ficha)}
+        </span>
+      )}
+
+      {showCobrancaToggle && (
+        <button
+          type="button"
+          onClick={() => onToggleCobranca(ficha, coluna.id, !cobrancaEnviada)}
+          className={cobrancaEnviada
+            ? 'inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-emerald-800'
+            : 'inline-flex items-center gap-2 rounded-full border border-dark-border/70 bg-dark-surface/85 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-dark-muted hover:border-brand-accent/35 hover:text-dark-text'}
+          aria-pressed={cobrancaEnviada}
+        >
+          <span className={`h-2.5 w-2.5 rounded-full ${cobrancaEnviada ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+          Cobrança enviada
+        </button>
+      )}
+
+      {showRetornouToggle && (
+        <button
+          type="button"
+          onClick={() => onToggleRetornou(ficha, !retornou)}
+          className={retornou
+            ? 'inline-flex items-center gap-2 rounded-full border border-blue-300 bg-blue-100 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-blue-800'
+            : 'inline-flex items-center gap-2 rounded-full border border-dark-border/70 bg-dark-surface/85 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-dark-muted hover:border-brand-accent/35 hover:text-dark-text'}
+          aria-pressed={retornou}
+        >
+          <span className={`h-2.5 w-2.5 rounded-full ${retornou ? 'bg-blue-500' : 'bg-slate-300'}`} />
+          Imobiliária retornou
+        </button>
+      )}
+
+      {isEmissaoCard && (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onOpen(ficha.id)}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-dark-border/60 bg-dark-surface/85 px-2.5 py-2 text-[10px] font-semibold text-dark-text transition-colors hover:border-brand-accent/45 hover:text-status-info"
+          >
+            <FileText className="h-3.5 w-3.5" /> Abrir ficha
+          </button>
+          <button
+            type="button"
+            disabled={!ficha?._apolice?.id}
+            onClick={() => { if (ficha?._apolice?.id) onOpenPolicy(ficha._apolice.id) }}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-primary px-2.5 py-2 text-[10px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <ExternalLink className="h-3.5 w-3.5" /> Abrir apólice
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function BlocoRelatorio({
+  coluna,
+  fichas,
+  onOpen,
+  onOpenPolicy,
+  selectedIds,
+  onToggleSelect,
+  onCopy,
+  onSelectAll,
+  onConfirmCobranca,
+  canConfirmCobranca,
+  pendingCobrancaCount,
+  onToggleCobranca,
+  onToggleRetornou,
+}) {
+  return (
+    <DataCard
+      title={
+        <span className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full" style={{ background: coluna.color }} />
+          {coluna.label}
+        </span>
+      }
+      subtitle={`${fichas.length} ficha${fichas.length !== 1 ? 's' : ''}`}
+      actions={
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onSelectAll(coluna.id)}
+            className="rounded-lg border border-dark-border/60 px-2 py-1 text-[10px] font-medium text-dark-muted transition-colors hover:border-brand-accent/40 hover:text-dark-text"
+            title="Selecionar todos deste bloco"
+          >
+            Todos
+          </button>
+          <button
+            type="button"
+            onClick={() => onCopy(coluna.id)}
+            className="rounded-lg border border-dark-border/60 px-2 py-1 text-[10px] font-medium text-dark-muted transition-colors hover:border-brand-accent/40 hover:text-dark-text"
+            title="Copiar informações dos selecionados deste bloco"
+          >
+            Copiar
+          </button>
+          {coluna.id === 'enviado_cobranca' && (
+            <button
+              type="button"
+              onClick={onConfirmCobranca}
+              disabled={!canConfirmCobranca}
+              className="rounded-lg bg-brand-primary px-2.5 py-1 text-[10px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
+              title="Registrar envio de cobrança para as fichas selecionadas em Aprovadas"
+            >
+              Marcar envio{pendingCobrancaCount > 0 ? ` (${pendingCobrancaCount})` : ''}
+            </button>
+          )}
+        </div>
+      }
+    >
+      {fichas.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-2 py-10 text-dark-muted">
+          <Square className="h-5 w-5 opacity-30" />
+          <span className="text-xs">Vazia</span>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {fichas.map(ficha => (
+            <LinhaRelatorio
+              key={ficha.id}
+              ficha={ficha}
+              coluna={coluna}
+              onOpen={onOpen}
+              onOpenPolicy={onOpenPolicy}
+              selected={selectedIds.has(ficha.id)}
+              onToggleSelect={onToggleSelect}
+              onToggleCobranca={onToggleCobranca}
+              onToggleRetornou={onToggleRetornou}
+            />
+          ))}
+        </div>
+      )}
+    </DataCard>
+  )
+}
+
 function PeriodControl({ periodo, ano, mes, anos, onPeriod, onAno, onMes }) {
   return (
     <div className="flex flex-wrap items-center gap-2">

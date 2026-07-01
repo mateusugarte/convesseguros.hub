@@ -159,6 +159,19 @@ function isInCobranca(ficha) {
   return getColuna(ficha) === 'enviado_cobranca'
 }
 
+function isApprovedFicha(ficha) {
+  const coluna = getColuna(ficha)
+  return coluna === 'aprovada' || coluna === 'enviado_cobranca'
+}
+
+function isSemCobrancaEnviada(ficha) {
+  return getColuna(ficha) === 'aprovada'
+}
+
+function isAguardandoRetorno(ficha) {
+  return getColuna(ficha) === 'enviado_cobranca' && !getImobiliariaRetornouDisplay(ficha)
+}
+
 function isEmitida(ficha) {
   return Boolean(ficha?._hasEmittedPolicy)
 }
@@ -222,12 +235,15 @@ function writeJsonStorage(key, value) {
     localStorage.setItem(key, JSON.stringify(value))
   } catch {}
 }
-function summarizeRows(rows) {
+function summarizeRows(rows, emittedPolicies = []) {
   const summary = {
     total: rows.length,
     aprovadas: 0,
-    emitidas: 0,
-    cobranca: 0,
+    semCobrancaEnviada: 0,
+    aguardandoRetorno: 0,
+    emitidas: emittedPolicies.length,
+    emitidasComFicha: 0,
+    emitidasSemFichaVinculada: 0,
     recuperadas: 0,
     expiradas: 0,
     aprovadasSemApolice: 0,
@@ -235,14 +251,18 @@ function summarizeRows(rows) {
     tempoCobranca: [],
   }
 
+  emittedPolicies.forEach(apolice => {
+    if (apolice?.ficha_id) summary.emitidasComFicha += 1
+    else summary.emitidasSemFichaVinculada += 1
+  })
+
   rows.forEach(ficha => {
     const coluna = getColuna(ficha)
-    if (coluna === 'aprovada') summary.aprovadas += 1
+    if (isApprovedFicha(ficha)) summary.aprovadas += 1
+    if (isSemCobrancaEnviada(ficha)) summary.semCobrancaEnviada += 1
+    if (isAguardandoRetorno(ficha)) summary.aguardandoRetorno += 1
     if (coluna === 'expirada') summary.expiradas += 1
-    if (isInCobranca(ficha)) summary.cobranca += 1
     if (isRecovered(ficha)) summary.recuperadas += 1
-    if (isEmitida(ficha)) summary.emitidas += 1
-    if ((coluna === 'aprovada' || coluna === 'enviado_cobranca') && !isEmitida(ficha)) summary.aprovadasSemApolice += 1
 
     if (ficha._hasEmittedPolicy && getEffectiveDataEmissao(ficha) && ficha.created_at) {
       const start = new Date(ficha.created_at)
@@ -264,8 +284,10 @@ function summarizeRows(rows) {
 
   summary.totalFichas = summary.aprovadas
   summary.fichasAprovadas = summary.aprovadas
-  summary.taxaEmissao = summary.aprovadas > 0 ? (summary.emitidas / summary.aprovadas) * 100 : 0
-  summary.taxaRecuperacao = summary.cobranca > 0 ? (summary.recuperadas / summary.cobranca) * 100 : 0
+  summary.aprovadasSemApolice = summary.aprovadas
+  summary.totalCobradas = summary.aguardandoRetorno + summary.recuperadas
+  summary.taxaEmissao = summary.aprovadas > 0 ? (summary.emitidasComFicha / summary.aprovadas) * 100 : 0
+  summary.taxaRecuperacao = summary.totalCobradas > 0 ? (summary.recuperadas / summary.totalCobradas) * 100 : 0
   summary.mediaEmissao = summary.tempoEmissao.length
     ? summary.tempoEmissao.reduce((a, b) => a + b, 0) / summary.tempoEmissao.length
     : null
@@ -276,18 +298,27 @@ function summarizeRows(rows) {
   return summary
 }
 
-function groupByImobiliaria(rows, resolverNome) {
+function groupByImobiliaria(rows, resolverNome, emittedPolicies = []) {
   const map = new Map()
 
-  rows.forEach(ficha => {
-    const key = getCanonicalImobiliariaNome(ficha) || resolverNome(ficha.imobiliaria || 'â€”')
+  function getNomeGrupo(rawName) {
+    return resolverNome(rawName) || normalizeDisplayText(rawName) || '???'
+  }
+
+  function ensureGroup(rawName) {
+    const nome = getNomeGrupo(rawName)
+    const key = normalizeKey(nome)
     const current = map.get(key) || {
-      nome: key,
+      key,
+      nome,
       total: 0,
       aprovadas: 0,
+      semCobrancaEnviada: 0,
+      aguardandoRetorno: 0,
       emitidas: 0,
+      emitidasComFicha: 0,
+      emitidasSemFichaVinculada: 0,
       recuperadas: 0,
-      cobranca: 0,
       expiradas: 0,
       mediaEmissao: null,
       mediaCobranca: null,
@@ -297,15 +328,19 @@ function groupByImobiliaria(rows, resolverNome) {
       tempoEmissao: [],
       tempoCobranca: [],
     }
+    map.set(key, current)
+    return current
+  }
 
+  rows.forEach(ficha => {
+    const current = ensureGroup(getCanonicalImobiliariaNome(ficha) || ficha.imobiliaria)
     const coluna = getColuna(ficha)
     current.total += 1
-    if (coluna === 'aprovada') current.aprovadas += 1
+    if (isApprovedFicha(ficha)) current.aprovadas += 1
+    if (isSemCobrancaEnviada(ficha)) current.semCobrancaEnviada += 1
+    if (isAguardandoRetorno(ficha)) current.aguardandoRetorno += 1
     if (coluna === 'expirada') current.expiradas += 1
-    if ((coluna === 'aprovada' || coluna === 'enviado_cobranca') && !isEmitida(ficha)) current.aprovadasSemApolice += 1
-    if (isEmitida(ficha)) current.emitidas += 1
     if (isRecovered(ficha)) current.recuperadas += 1
-    if (isInCobranca(ficha)) current.cobranca += 1
 
     if (ficha._hasEmittedPolicy && getEffectiveDataEmissao(ficha) && ficha.created_at) {
       const days = (new Date(getEffectiveDataEmissao(ficha)) - new Date(ficha.created_at)) / (1000 * 60 * 60 * 24)
@@ -320,22 +355,31 @@ function groupByImobiliaria(rows, resolverNome) {
       const days = (end - new Date(cobrancaStart)) / (1000 * 60 * 60 * 24)
       if (Number.isFinite(days) && days >= 0) current.tempoCobranca.push(days)
     }
-
-    map.set(key, current)
   })
 
-  return [...map.values()].map(item => ({
-    ...item,
-    taxaConversao: item.aprovadas > 0 ? (item.emitidas / item.aprovadas) * 100 : 0,
-    taxaRecuperacao: item.cobranca > 0 ? (item.recuperadas / item.cobranca) * 100 : 0,
-    score:
-      ((item.aprovadas > 0 ? (item.aprovadas / Math.max(item.total, 1)) : 0) * 35) +
-      ((item.emitidas > 0 && item.aprovadas > 0 ? (item.emitidas / item.aprovadas) : 0) * 35) +
-      ((item.cobranca > 0 ? (item.recuperadas / item.cobranca) : 0) * 20) -
-      ((item.tempoEmissao.length ? item.tempoEmissao.reduce((a, b) => a + b, 0) / item.tempoEmissao.length : 0) * 2),
-    mediaEmissao: item.tempoEmissao.length ? item.tempoEmissao.reduce((a, b) => a + b, 0) / item.tempoEmissao.length : null,
-    mediaCobranca: item.tempoCobranca.length ? item.tempoCobranca.reduce((a, b) => a + b, 0) / item.tempoCobranca.length : null,
-  })).sort((a, b) => b.score - a.score)
+  emittedPolicies.forEach(apolice => {
+    const current = ensureGroup(apolice?.imobiliaria)
+    current.emitidas += 1
+    if (apolice?.ficha_id) current.emitidasComFicha += 1
+    else current.emitidasSemFichaVinculada += 1
+  })
+
+  return [...map.values()].map(item => {
+    const totalCobradas = item.aguardandoRetorno + item.recuperadas
+    return {
+      ...item,
+      aprovadasSemApolice: item.aprovadas,
+      taxaConversao: item.aprovadas > 0 ? (item.emitidasComFicha / item.aprovadas) * 100 : 0,
+      taxaRecuperacao: totalCobradas > 0 ? (item.recuperadas / totalCobradas) * 100 : 0,
+      score:
+        ((item.aprovadas > 0 ? (item.aprovadas / Math.max(item.total, 1)) : 0) * 35) +
+        ((item.emitidasComFicha > 0 && item.aprovadas > 0 ? (item.emitidasComFicha / item.aprovadas) : 0) * 35) +
+        ((totalCobradas > 0 ? (item.recuperadas / totalCobradas) : 0) * 20) -
+        ((item.tempoEmissao.length ? item.tempoEmissao.reduce((a, b) => a + b, 0) / item.tempoEmissao.length : 0) * 2),
+      mediaEmissao: item.tempoEmissao.length ? item.tempoEmissao.reduce((a, b) => a + b, 0) / item.tempoEmissao.length : null,
+      mediaCobranca: item.tempoCobranca.length ? item.tempoCobranca.reduce((a, b) => a + b, 0) / item.tempoCobranca.length : null,
+    }
+  }).sort((a, b) => b.score - a.score)
 }
 
 function extractSeguradoraMeta(seg) {
@@ -985,7 +1029,7 @@ function ModalFinalizarRelatorio({ periodoLabel, resumo, salvando, onCancelar, o
 
           {temRetornoPendente && (
             <div className="rounded-3xl border border-orange-300 bg-orange-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-orange-800">Cobranças enviadas sem retorno</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-orange-800">Aguard. retorno</p>
               <div className="mt-3 space-y-2">
                 {resumo.semRetorno.map(item => (
                   <div key={item.key} className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-sm text-orange-950 shadow-sm">
@@ -1030,6 +1074,7 @@ export default function Relatorio() {
   const [years, setYears] = useState([agora.getFullYear()])
   const [imobiliarias, setImobiliarias] = useState([])
   const [seguradoras, setSeguradoras] = useState([])
+  const [emittedPolicies, setEmittedPolicies] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState([])
@@ -1145,6 +1190,8 @@ export default function Relatorio() {
         ])
         if (!active) return
 
+        setEmittedPolicies(emittedRangeRows || [])
+
         const baseRows = createdRows || []
         const emittedIds = (emittedRangeRows || []).map(item => item.ficha_id).filter(Boolean)
         const allIds = [...new Set([...baseRows.map(item => item.id), ...emittedIds])]
@@ -1220,6 +1267,7 @@ export default function Relatorio() {
         if (!active) return
         toast({ type: 'error', title: 'Erro ao carregar relatorios', message: error.message })
         setRows([])
+        setEmittedPolicies([])
       } finally {
         if (active) setLoading(false)
       }
@@ -1262,12 +1310,9 @@ export default function Relatorio() {
     }))
   }, [rows, resolverNome, resolverImobiliariaInfo])
 
-  const summary = useMemo(() => summarizeRows(rowsWithHelpers), [rowsWithHelpers])
-  const groupedByImob = useMemo(() => groupByImobiliaria(rowsWithHelpers, resolverNome), [rowsWithHelpers, resolverNome])
-  const groupedByImobMap = useMemo(() => {
-    return new Map(groupedByImob.map(item => [normalizeKey(item.nome), item]))
-  }, [groupedByImob])
-  const resumoFechamento = useMemo(() => {
+  const summary = useMemo(() => summarizeRows(rowsWithHelpers, emittedPolicies), [rowsWithHelpers, emittedPolicies])
+  const groupedByImob = useMemo(() => groupByImobiliaria(rowsWithHelpers, resolverNome, emittedPolicies), [rowsWithHelpers, resolverNome, emittedPolicies])
+    const resumoFechamento = useMemo(() => {
     const map = new Map()
 
     rowsWithHelpers.forEach(item => {
@@ -1837,9 +1882,10 @@ export default function Relatorio() {
           stats={
             <>
               <MetricCard label="Fichas aprovadas" value={summary.fichasAprovadas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
-              <MetricCard label="Aprovadas" value={summary.aprovadas} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
-              <MetricCard label="Em cobrança" value={summary.cobranca} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
-              <MetricCard label="Apólices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
+              <MetricCard label="Sem cobran?a enviada" value={summary.semCobrancaEnviada} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
+              <MetricCard label="Aguardando retorno" value={summary.aguardandoRetorno} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
+              <MetricCard label="Ap?lices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
+              <MetricCard label="Emitidas sem ficha" value={summary.emitidasSemFichaVinculada} tone="warning" icon={<FileText className="h-4 w-4" />} />
               <MetricCard label="Expiradas" value={summary.expiradas} tone="accent" icon={<Square className="h-4 w-4" />} />
               <MetricCard label="Recuperadas" value={summary.recuperadas} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
             </>
@@ -1951,17 +1997,18 @@ export default function Relatorio() {
       >
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <MetricCard label="Fichas aprovadas" value={summary.fichasAprovadas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
-          <MetricCard label="Apólices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
-          <MetricCard label="Taxa de emissão" value={`${summary.taxaEmissao.toFixed(1)}%`} tone="accent" icon={<BarChart2 className="h-4 w-4" />} />
-          <MetricCard label="Em cobrança" value={summary.cobranca} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
-          <MetricCard label="Pendentes sem apólice" value={summary.aprovadasSemApolice} tone="warning" icon={<BellRing className="h-4 w-4" />} />
+          <MetricCard label="Ap?lices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
+          <MetricCard label="Taxa de emiss?o" value={`${summary.taxaEmissao.toFixed(1)}%`} tone="accent" icon={<BarChart2 className="h-4 w-4" />} />
+          <MetricCard label="Aguardando retorno" value={summary.aguardandoRetorno} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
+          <MetricCard label="Sem cobran?a enviada" value={summary.semCobrancaEnviada} tone="success" icon={<BellRing className="h-4 w-4" />} />
+          <MetricCard label="Emitidas sem ficha" value={summary.emitidasSemFichaVinculada} tone="warning" icon={<FileText className="h-4 w-4" />} />
           <MetricCard label="Recuperadas" value={summary.recuperadas} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
           <MetricCard label="Expiradas" value={summary.expiradas} tone="secondary" icon={<Square className="h-4 w-4" />} />
         </div>
       </DataCard>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <MetricCard label="Taxa de emissão" value={`${summary.taxaEmissao.toFixed(1)}%`} hint="Apólices emitidas ÷ fichas aprovadas" />
+        <MetricCard label="Taxa de emissão" value={`${summary.taxaEmissao.toFixed(1)}%`} hint="Ap?lices emitidas com ficha vinculada ? fichas aprovadas" />
         <MetricCard label="Tempo médio até emissão" value={summary.mediaEmissao != null ? `${summary.mediaEmissao.toFixed(1)} dias` : '—'} hint="Entre criação da ficha e emissão" />
         <MetricCard label="Tempo médio em cobrança" value={summary.mediaCobranca != null ? `${summary.mediaCobranca.toFixed(1)} dias` : '—'} hint="Entre cobrança e emissão/atual" />
       </div>
@@ -1969,15 +2016,15 @@ export default function Relatorio() {
       <DataCard title="Aprovações por seguradora" subtitle="Identifica onde existem aprovações pendentes de emissão.">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {seguradoras.map(seg => {
-            const approved = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && getColuna(item) === 'aprovada').length
-            const pending = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && !isEmitida(item)).length
+            const approved = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && isApprovedFicha(item)).length
+            const pending = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && isAguardandoRetorno(item)).length
             return (
               <div key={seg.id} className="rounded-3xl border border-dark-border/60 bg-dark-surface/60 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <SeguradoraBadge nome={seg.nome} logoUrl={seg.logoUrl} logoPath={seg.logoPath} size="md" />
                   <span className="badge badge-info">{approved} aprovadas</span>
                 </div>
-                <p className="mt-3 text-xs text-dark-muted">{pending} sem apólice emitida</p>
+                <p className="mt-3 text-xs text-dark-muted">{pending} aguardando retorno da imobili?ria</p>
               </div>
             )
           })}
@@ -2006,13 +2053,15 @@ export default function Relatorio() {
             const imobMetrics = groupedByImob.find(item => normalizeKey(item.nome) === normalizeKey(imob.nome_canonico)) || {
               aprovadas: 0,
               emitidas: 0,
-              cobranca: 0,
+              emitidasSemFichaVinculada: 0,
+              aguardandoRetorno: 0,
+              semCobrancaEnviada: 0,
               recuperadas: 0,
               expiradas: 0,
               aprovadasSemApolice: 0,
             }
-            const pendingCount = imobMetrics.aprovadasSemApolice || 0
-            const requiresSend = (imobMetrics.aprovadas + imobMetrics.recuperadas + imobMetrics.expiradas) > 0
+            const pendingCount = imobMetrics.aprovadas || 0
+            const requiresSend = (imobMetrics.semCobrancaEnviada || 0) > 0
             const toggleKey = `${periodoScopeKey}:${imob.id}`
             const cobrancaDone = Boolean(cobrancaToggleMap?.[toggleKey])
             const hasPending = pendingCount > 0
@@ -2093,7 +2142,7 @@ export default function Relatorio() {
                   </div>
                   <div className="rounded-2xl bg-dark-surface/70 px-3 py-2">
                     <p className="text-dark-muted">Cobrança</p>
-                    <p className="mt-1 text-sm font-semibold text-dark-text">{imobMetrics.cobranca}</p>
+                    <p className="mt-1 text-sm font-semibold text-dark-text">{imobMetrics.aguardandoRetorno}</p>
                   </div>
                   <div className="rounded-2xl bg-dark-surface/70 px-3 py-2">
                     <p className="text-dark-muted">Emitidas</p>
@@ -2105,7 +2154,7 @@ export default function Relatorio() {
                   <div className="flex flex-col gap-1">
                     <span className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">Prioridade operacional</span>
                     <span className={requiresSend ? 'text-xs font-semibold text-red-700' : cobrancaDone && hasPending ? 'text-xs font-semibold text-orange-700' : hasPending ? 'text-xs font-semibold text-status-info' : 'text-xs font-semibold text-emerald-700'}>
-                      {requiresSend ? 'Existem fichas fora de cobrança' : cobrancaDone && hasPending ? 'Todas as cobranças foram enviadas' : hasPending ? 'Fichas aguardando emissão' : 'Operação em dia'}
+                      {requiresSend ? 'Existem fichas sem cobran?a enviada' : cobrancaDone && hasPending ? 'Todas as cobranças foram enviadas' : hasPending ? 'Fichas aguardando retorno' : 'Operação em dia'}
                     </span>
                   </div>
                   <ChevronRight className="h-4 w-4 text-dark-muted transition-transform group-hover:translate-x-0.5" />

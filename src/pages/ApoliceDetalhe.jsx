@@ -451,6 +451,10 @@ export default function ApoliceDetalhe() {
         setFormaPagamento(campos.forma_pagamento)
         camposApolice += 1
       }
+      if (campos.status_emissao && statusEmissao !== 'enviada') {
+        setStatusEmissao(campos.status_emissao)
+        camposApolice += 1
+      }
 
       if (campos.nome_locatario) {
         setFichaNome(normalizeDisplayText(campos.nome_locatario) || campos.nome_locatario)
@@ -960,4 +964,5 @@ export default function ApoliceDetalhe() {
     </div>
   )
 }
+
 

@@ -63,6 +63,18 @@ export async function extractPdfText(file) {
   return fullText
 }
 
+function firstMoneyMatch(text, patterns) {
+  for (const pattern of patterns) {
+    const match = text.match(pattern)
+    if (!match) continue
+    for (let i = 1; i < match.length; i += 1) {
+      const parsed = parseMoneyBR(match[i])
+      if (parsed !== null) return parsed
+    }
+  }
+  return null
+}
+
 function parsePortoSeguro(text) {
   const r = {}
   const normalized = normalizeText(text)
@@ -96,8 +108,12 @@ function parsePortoSeguro(text) {
   const tipo = normalized.match(/TIPO DE LOCA(?:ÇÃO|CAO)\s+\d+\s*[-–]\s*(\w+)/i)
   if (tipo) r.tipo_imovel = tipo[1].trim()
 
-  const alug = normalized.match(/Aluguel\s+R\$\s*([\d.,]+)\s+\d+x/i)
-  if (alug) r.valor_aluguel = parseMoneyBR(alug[1])
+  const aluguelPorto = firstMoneyMatch(normalized, [
+    /Aluguel\s+R\$\s*([\d.,]+)\s+\d+x/i,
+    /Aluguel(?:\s+\S+){0,14}\s+R\$\s*([\d.,]+)/i,
+    /COBERTURAS[\s\S]{0,260}?Aluguel(?:\s+\S+){0,20}\s+R\$\s*([\d.,]+)/i,
+  ])
+  if (aluguelPorto !== null) r.valor_aluguel = aluguelPorto
 
   const premioSec = normalized.match(/Pr[êe]mio Tarif[áa]rio[\s\S]{1,300}?Pr[êe]mio L[íi]quido\s+R\$\s*([\d.,]+)/i)
   if (premioSec) r.premio_liquido = parseMoneyBR(premioSec[1])
@@ -147,6 +163,7 @@ function parsePortoSeguro(text) {
   if (celSegurado) r.proprietario_cel = celSegurado[1].trim()
 
   r.forma_pagamento = 'fatura_sem_entrada'
+  if (r.numero_apolice || r.numero_proposta) r.status_emissao = 'emitida'
   return r
 }
 
@@ -224,6 +241,7 @@ function parsePottencial(text) {
   }
 
   r.forma_pagamento = 'fatura_sem_entrada'
+  if (r.numero_apolice || r.numero_proposta) r.status_emissao = 'emitida'
   return r
 }
 
@@ -534,6 +552,9 @@ export async function parseApolice(seguradora, file) {
   }
 
   const raw = parser(text)
+  if (!raw.status_emissao && (raw.numero_apolice || raw.numero_proposta || raw.inicio_vigencia || raw.fim_vigencia)) {
+    raw.status_emissao = 'emitida'
+  }
   if (raw.nome_proprietario) raw.nome_proprietario = sanitizeProprietarioNome(raw.nome_proprietario)
 
   const { cep, tipo_imovel, valor_aluguel, forma_pagamento, ...camposForm } = raw
@@ -556,3 +577,5 @@ export async function parseApolice(seguradora, file) {
     _text: text,
   }
 }
+
+

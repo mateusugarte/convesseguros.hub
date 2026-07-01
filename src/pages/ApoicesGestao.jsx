@@ -752,7 +752,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
       numero_apolice: dadosExtraidos.numero_apolice || null,
       numero_proposta: dadosExtraidos.numero_proposta || null,
       seguradora,
-      status_emissao: 'emitida',
+      status_emissao: dadosExtraidos.status_emissao || 'emitida',
       data_emissao: new Date().toISOString().slice(0, 10),
       emitido_por: user?.id || null,
       proprietario_nome: sanitizeProprietarioNome(dadosExtraidos.nome_proprietario) || null,
@@ -771,7 +771,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, toast, grupos, user }) {
       celular: celular.trim() || null,
       tipo_imovel: dadosExtraidos.tipo_imovel || null,
       cep: dadosExtraidos.cep || null,
-      valor_aluguel: dadosExtraidos.valor_aluguel || null,
+      valor_aluguel: dadosExtraidos.valor_aluguel ?? null,
     }
 
     const { data, error } = await criarApolice(payload)
@@ -1289,6 +1289,7 @@ export default function ApoicesGestao() {
     </div>
   )
 }
+
 
 
 

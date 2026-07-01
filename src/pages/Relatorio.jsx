@@ -208,6 +208,20 @@ function getPeriodoScopeKey(periodo, ano, mes) {
   return `mes:${ano}:${mes}`
 }
 
+function readJsonStorage(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) : fallback
+  } catch {
+    return fallback
+  }
+}
+
+function writeJsonStorage(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {}
+}
 function summarizeRows(rows) {
   const summary = {
     total: rows.length,
@@ -1949,7 +1963,7 @@ export default function Relatorio() {
       <div className="grid gap-4 xl:grid-cols-3">
         <MetricCard label="Taxa de emissão" value={`${summary.taxaEmissao.toFixed(1)}%`} hint="Apólices emitidas ÷ fichas aprovadas" />
         <MetricCard label="Tempo médio até emissão" value={summary.mediaEmissao != null ? `${summary.mediaEmissao.toFixed(1)} dias` : '—'} hint="Entre criação da ficha e emissão" />
-        <MetricCard label="Tempo médio em cobrança" value={summary.mediaCobrança != null ? `${summary.mediaCobrança.toFixed(1)} dias` : '—'} hint="Entre cobrança e emissão/atual" />
+        <MetricCard label="Tempo médio em cobrança" value={summary.mediaCobranca != null ? `${summary.mediaCobranca.toFixed(1)} dias` : '—'} hint="Entre cobrança e emissão/atual" />
       </div>
 
       <DataCard title="Aprovações por seguradora" subtitle="Identifica onde existem aprovações pendentes de emissão.">
@@ -2172,5 +2186,8 @@ export default function Relatorio() {
     </div>
   )
 }
+
+
+
 
 

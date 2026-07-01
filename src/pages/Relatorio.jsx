@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   BarChart2,
@@ -43,18 +43,18 @@ import { getFichaOperationalState } from '../lib/fichaOperational'
 import { BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 const PERIOD_OPTIONS = [
-  { value: 'mes', label: 'Mês' },
+  { value: 'mes', label: 'Mes' },
   { value: 'ano', label: 'Ano' },
-  { value: 'historico', label: 'Histórico' },
+  { value: 'historico', label: 'Historico' },
 ]
 
 const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-const MESES_FULL = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+const MESES_FULL = ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 const COLUNAS = [
   { id: 'aprovada', label: 'Aprovadas', color: '#0f766e', copyStatus: 'Aprovada' },
   { id: 'emitida', label: 'Emitidas', color: '#000079', copyStatus: 'Emitida' },
-  { id: 'enviado_cobranca', label: 'Enviado Cobrança', color: '#2247aa', copyStatus: 'Enviado Cobrança' },
+  { id: 'enviado_cobranca', label: 'Enviado Cobranca', color: '#2247aa', copyStatus: 'Enviado Cobranca' },
   { id: 'recuperados', label: 'RECUPERADOS', color: '#4b6cc2', copyStatus: 'Recuperada' },
   { id: 'expirada', label: 'Expiradas', color: '#6B7280', copyStatus: 'Expirada' },
 ]
@@ -80,7 +80,7 @@ function getYearRange(ano) {
 }
 
 function formatDateBR(value) {
-  if (!value) return '—'
+  if (!value) return 'â€”'
   try {
     return format(parseISO(String(value)), 'dd/MM/yyyy', { locale: ptBR })
   } catch {
@@ -109,7 +109,7 @@ async function fetchAllRows(queryFactory, pageSize = 1000) {
 }
 
 function getPeriodoLabel(periodo, ano, mes) {
-  if (periodo === 'historico') return 'Histórico'
+  if (periodo === 'historico') return 'Historico'
   if (periodo === 'ano') return String(ano)
   return `${MESES_FULL[mes - 1]} ${ano}`
 }
@@ -131,11 +131,11 @@ function getColuna(ficha) {
 }
 
 function getNomeFicha(ficha) {
-  if (!ficha) return '—'
+  if (!ficha) return 'â€”'
   if (ficha.produto === 'pessoa_juridica') {
-    return normalizeDisplayText(ficha.nome_empresa || ficha.nome_interessado) || '—'
+    return normalizeDisplayText(ficha.nome_empresa || ficha.nome_interessado) || 'â€”'
   }
-  return normalizeDisplayText(ficha.nome_interessado) || '—'
+  return normalizeDisplayText(ficha.nome_interessado) || 'â€”'
 }
 
 function getDocumento(ficha) {
@@ -155,7 +155,7 @@ function isRecovered(ficha) {
   return Boolean(ficha?.raw_data?.recovered_after_cobranca)
 }
 
-function isInCobrança(ficha) {
+function isInCobranca(ficha) {
   return getColuna(ficha) === 'enviado_cobranca'
 }
 
@@ -176,7 +176,7 @@ function getEffectiveDataEmissao(ficha) {
 }
 
 function getCanonicalImobiliariaNome(ficha) {
-  return ficha?._imobiliariaNome || '—'
+  return ficha?._imobiliariaNome || 'â€”'
 }
 
 function isEligibleReportRow(ficha) {
@@ -190,7 +190,7 @@ function buildCopyLines(fichas, coluna) {
       const nome = getNomeFicha(f)
       const imob = getCanonicalImobiliariaNome(f)
       const data = formatDateBR(f.created_at)
-      const cep = f.cep || '—'
+      const cep = f.cep || 'â€”'
       return `${nome} - ${imob} - ${data} - Status (${status}) - ${cep}`
     })
     .join('\n')
@@ -218,14 +218,14 @@ function summarizeRows(rows) {
     expiradas: 0,
     aprovadasSemApolice: 0,
     tempoEmissao: [],
-    tempoCobrança: [],
+    tempoCobranca: [],
   }
 
   rows.forEach(ficha => {
     const coluna = getColuna(ficha)
     if (coluna === 'aprovada') summary.aprovadas += 1
     if (coluna === 'expirada') summary.expiradas += 1
-    if (isInCobrança(ficha)) summary.cobranca += 1
+    if (isInCobranca(ficha)) summary.cobranca += 1
     if (isRecovered(ficha)) summary.recuperadas += 1
     if (isEmitida(ficha)) summary.emitidas += 1
     if ((coluna === 'aprovada' || coluna === 'enviado_cobranca') && !isEmitida(ficha)) summary.aprovadasSemApolice += 1
@@ -237,14 +237,14 @@ function summarizeRows(rows) {
       if (Number.isFinite(days) && days >= 0) summary.tempoEmissao.push(days)
     }
 
-    const cobrançaStart = getRecoveryStart(ficha)
-    if (cobrançaStart) {
-      const start = new Date(cobrançaStart)
+    const cobrancaStart = getRecoveryStart(ficha)
+    if (cobrancaStart) {
+      const start = new Date(cobrancaStart)
       const end = ficha?.raw_data?.recovered_after_cobranca_em
         ? new Date(ficha.raw_data.recovered_after_cobranca_em)
         : new Date()
       const days = (end - start) / (1000 * 60 * 60 * 24)
-      if (Number.isFinite(days) && days >= 0) summary.tempoCobrança.push(days)
+      if (Number.isFinite(days) && days >= 0) summary.tempoCobranca.push(days)
     }
   })
 
@@ -255,8 +255,8 @@ function summarizeRows(rows) {
   summary.mediaEmissao = summary.tempoEmissao.length
     ? summary.tempoEmissao.reduce((a, b) => a + b, 0) / summary.tempoEmissao.length
     : null
-  summary.mediaCobrança = summary.tempoCobrança.length
-    ? summary.tempoCobrança.reduce((a, b) => a + b, 0) / summary.tempoCobrança.length
+  summary.mediaCobranca = summary.tempoCobranca.length
+    ? summary.tempoCobranca.reduce((a, b) => a + b, 0) / summary.tempoCobranca.length
     : null
 
   return summary
@@ -266,7 +266,7 @@ function groupByImobiliaria(rows, resolverNome) {
   const map = new Map()
 
   rows.forEach(ficha => {
-    const key = getCanonicalImobiliariaNome(ficha) || resolverNome(ficha.imobiliaria || '—')
+    const key = getCanonicalImobiliariaNome(ficha) || resolverNome(ficha.imobiliaria || 'â€”')
     const current = map.get(key) || {
       nome: key,
       total: 0,
@@ -276,12 +276,12 @@ function groupByImobiliaria(rows, resolverNome) {
       cobranca: 0,
       expiradas: 0,
       mediaEmissao: null,
-      mediaCobrança: null,
+      mediaCobranca: null,
       logoUrl: null,
       logoPath: null,
       aprovadasSemApolice: 0,
       tempoEmissao: [],
-      tempoCobrança: [],
+      tempoCobranca: [],
     }
 
     const coluna = getColuna(ficha)
@@ -291,20 +291,20 @@ function groupByImobiliaria(rows, resolverNome) {
     if ((coluna === 'aprovada' || coluna === 'enviado_cobranca') && !isEmitida(ficha)) current.aprovadasSemApolice += 1
     if (isEmitida(ficha)) current.emitidas += 1
     if (isRecovered(ficha)) current.recuperadas += 1
-    if (isInCobrança(ficha)) current.cobranca += 1
+    if (isInCobranca(ficha)) current.cobranca += 1
 
     if (ficha._hasEmittedPolicy && getEffectiveDataEmissao(ficha) && ficha.created_at) {
       const days = (new Date(getEffectiveDataEmissao(ficha)) - new Date(ficha.created_at)) / (1000 * 60 * 60 * 24)
       if (Number.isFinite(days) && days >= 0) current.tempoEmissao.push(days)
     }
 
-    const cobrançaStart = getRecoveryStart(ficha)
-    if (cobrançaStart) {
+    const cobrancaStart = getRecoveryStart(ficha)
+    if (cobrancaStart) {
       const end = ficha?.raw_data?.recovered_after_cobranca_em
         ? new Date(ficha.raw_data.recovered_after_cobranca_em)
         : new Date()
-      const days = (end - new Date(cobrançaStart)) / (1000 * 60 * 60 * 24)
-      if (Number.isFinite(days) && days >= 0) current.tempoCobrança.push(days)
+      const days = (end - new Date(cobrancaStart)) / (1000 * 60 * 60 * 24)
+      if (Number.isFinite(days) && days >= 0) current.tempoCobranca.push(days)
     }
 
     map.set(key, current)
@@ -320,7 +320,7 @@ function groupByImobiliaria(rows, resolverNome) {
       ((item.cobranca > 0 ? (item.recuperadas / item.cobranca) : 0) * 20) -
       ((item.tempoEmissao.length ? item.tempoEmissao.reduce((a, b) => a + b, 0) / item.tempoEmissao.length : 0) * 2),
     mediaEmissao: item.tempoEmissao.length ? item.tempoEmissao.reduce((a, b) => a + b, 0) / item.tempoEmissao.length : null,
-    mediaCobrança: item.tempoCobrança.length ? item.tempoCobrança.reduce((a, b) => a + b, 0) / item.tempoCobrança.length : null,
+    mediaCobranca: item.tempoCobranca.length ? item.tempoCobranca.reduce((a, b) => a + b, 0) / item.tempoCobranca.length : null,
   })).sort((a, b) => b.score - a.score)
 }
 
@@ -404,14 +404,14 @@ function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggl
       <button type="button" onClick={() => onOpen(ficha.id)} className="min-w-[200px] flex-1 text-left">
         <div className="flex items-center gap-2">
           <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: `${prodColor}20`, color: prodColor }}>
-            {normalizeDisplayText(ficha.produto) || ficha.produto || 'Fiança'}
+            {normalizeDisplayText(ficha.produto) || ficha.produto || 'Fianca'}
           </span>
           <p className="text-sm font-semibold text-dark-text">{nome}</p>
         </div>
         <p className="mt-0.5 text-[11px] uppercase tracking-[0.1em] text-dark-muted">{getCanonicalImobiliariaNome(ficha)}</p>
       </button>
 
-      <span className={`badge ${op?.color || 'badge-muted'}`}>{op?.label || '—'}</span>
+      <span className={`badge ${op?.color || 'badge-muted'}`}>{op?.label || 'â€”'}</span>
 
       {doc && (
         <span className="rounded-full border border-dark-border/60 bg-dark-surface2/70 px-2 py-1 text-[10px] font-mono text-dark-muted">
@@ -421,7 +421,7 @@ function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggl
 
       {getEffectiveNumeroApolice(ficha) && (
         <span className="rounded-full px-2 py-1 text-[10px] font-mono" style={{ background: '#2247aa15', color: '#2247aa' }}>
-          Apólice: {getEffectiveNumeroApolice(ficha)}
+          Apolice: {getEffectiveNumeroApolice(ficha)}
         </span>
       )}
 
@@ -435,7 +435,7 @@ function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggl
           aria-pressed={cobrancaEnviada}
         >
           <span className={`h-2.5 w-2.5 rounded-full ${cobrancaEnviada ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-          Cobrança enviada
+          Cobranca enviada
         </button>
       )}
 
@@ -449,7 +449,7 @@ function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggl
           aria-pressed={retornou}
         >
           <span className={`h-2.5 w-2.5 rounded-full ${retornou ? 'bg-blue-500' : 'bg-slate-300'}`} />
-          Imobiliária retornou
+          Imobiliaria retornou
         </button>
       )}
 
@@ -468,7 +468,7 @@ function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggl
             onClick={() => { if (ficha?._apolice?.id) onOpenPolicy(ficha._apolice.id) }}
             className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-primary px-2.5 py-2 text-[10px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <ExternalLink className="h-3.5 w-3.5" /> Abrir apólice
+            <ExternalLink className="h-3.5 w-3.5" /> Abrir apÃ³lice
           </button>
         </div>
       )}
@@ -514,7 +514,7 @@ function BlocoRelatorio({
             type="button"
             onClick={() => onCopy(coluna.id)}
             className="rounded-lg border border-dark-border/60 px-2 py-1 text-[10px] font-medium text-dark-muted transition-colors hover:border-brand-accent/40 hover:text-dark-text"
-            title="Copiar informações dos selecionados deste bloco"
+            title="Copiar informaÃ§Ãµes dos selecionados deste bloco"
           >
             Copiar
           </button>
@@ -524,7 +524,7 @@ function BlocoRelatorio({
               onClick={onConfirmCobranca}
               disabled={!canConfirmCobranca}
               className="rounded-lg bg-brand-primary px-2.5 py-1 text-[10px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
-              title="Registrar envio de cobrança para as fichas selecionadas em Aprovadas"
+              title="Registrar envio de cobranca para as fichas selecionadas em Aprovadas"
             >
               Marcar envio{pendingCobrancaCount > 0 ? ` (${pendingCobrancaCount})` : ''}
             </button>
@@ -610,7 +610,7 @@ function SelectedToolbar({ count, onClear, onSelectAll, onInvertSelection, onMov
     <DataCard className="border-brand-accent/15 bg-brand-accent/5" bodyClassName="py-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Seleção em massa</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Selecao em massa</p>
           <p className="mt-1 text-sm text-dark-text">{count} ficha{count !== 1 ? 's' : ''} selecionada{count !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -621,7 +621,7 @@ function SelectedToolbar({ count, onClear, onSelectAll, onInvertSelection, onMov
             Deselecionar todos
           </button>
           <button type="button" onClick={onInvertSelection} className="btn-secondary text-xs">
-            Inverter seleção
+            Inverter seleÃ§Ã£o
           </button>
           <button type="button" onClick={onBulkCopy} className="btn-secondary text-xs" disabled={count === 0}>
             Copiar selecionadas
@@ -698,31 +698,31 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
       <div className="relative glass-modal w-full max-w-2xl overflow-hidden border border-dark-border">
         <div className="flex items-center justify-between gap-3 border-b border-dark-border px-6 py-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Emissão pelo relatório</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Emissao pelo relatorio</p>
             <h3 className="mt-1 text-lg font-semibold text-dark-text">{normalizeDisplayText(ficha.nome_interessado || ficha.nome_empresa) || 'Ficha selecionada'}</h3>
           </div>
-          <button onClick={onCancelar} className="text-dark-muted hover:text-dark-text" disabled={salvando}>×</button>
+          <button onClick={onCancelar} className="text-dark-muted hover:text-dark-text" disabled={salvando}>Ã—</button>
         </div>
 
         <div className="space-y-4 px-6 py-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Nome do Proprietário" value={proprietarioNome} onChange={setProprietarioNome} required />
-            <Field label="Celular do Proprietário" value={proprietarioCel} onChange={setProprietarioCel} />
-            <Field label="Número da Apólice" value={numeroApolice} onChange={setNumeroApolice} required />
-            <Field label="Número da Proposta" value={numeroProposta} onChange={setNumeroProposta} />
+            <Field label="Nome do ProprietÃ¡rio" value={proprietarioNome} onChange={setProprietarioNome} required />
+            <Field label="Celular do ProprietÃ¡rio" value={proprietarioCel} onChange={setProprietarioCel} />
+            <Field label="Numero da Apolice" value={numeroApolice} onChange={setNumeroApolice} required />
+            <Field label="Numero da Proposta" value={numeroProposta} onChange={setNumeroProposta} />
             <div className="sm:col-span-2">
-              <Field label="Endereço do Imóvel" value={endereco} onChange={setEndereco} />
+              <Field label="Endereco do ImÃ³vel" value={endereco} onChange={setEndereco} />
             </div>
-            <Field type="date" label="Início da Vigência" value={inicioVigencia} onChange={setInicioVigencia} required />
-            <Field type="date" label="Fim da Vigência" value={fimVigencia} onChange={setFimVigencia} required />
-            <ReadOnly label="Tempo de Vigência" value={meses > 0 ? `${meses} meses` : '—'} />
+            <Field type="date" label="Inicio da Vigencia" value={inicioVigencia} onChange={setInicioVigencia} required />
+            <Field type="date" label="Fim da Vigencia" value={fimVigencia} onChange={setFimVigencia} required />
+            <ReadOnly label="Tempo de Vigencia" value={meses > 0 ? `${meses} meses` : 'â€”'} />
             <Field type="number" label="Parcelamento (vezes)" value={parcelamento} onChange={setParcelamento} required />
             <Field type="number" label="Valor da Parcela (R$)" value={valorParcela} onChange={setValorParcela} required />
-            <Field type="number" label="Prêmio Líquido (R$)" value={premioLiquido} onChange={setPremioLiquido} required />
-            <Field type="number" label="% Comissão" value={pctComissao} onChange={setPctComissao} required />
+            <Field type="number" label="Premio Liquido (R$)" value={premioLiquido} onChange={setPremioLiquido} required />
+            <Field type="number" label="% ComissÃ£o" value={pctComissao} onChange={setPctComissao} required />
             <Field type="number" label="% Desconto" value={pctDesconto} onChange={setPctDesconto} required />
-            <ReadOnly label="Prêmio total" value={premioTotal != null ? formatMoneyBR(premioTotal) : '—'} />
-            <ReadOnly label="Comissão calculada" value={valorComissao != null ? formatMoneyBR(valorComissao) : '—'} />
+            <ReadOnly label="Premio total" value={premioTotal != null ? formatMoneyBR(premioTotal) : 'â€”'} />
+            <ReadOnly label="ComissÃ£o calculada" value={valorComissao != null ? formatMoneyBR(valorComissao) : 'â€”'} />
             <div className="sm:col-span-2">
               <Select
                 value={formaPagamento}
@@ -731,7 +731,7 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
                   { value: '', label: 'Selecione...' },
                   { value: 'fatura_sem_entrada', label: 'Fatura sem entrada' },
                   { value: 'fatura_com_entrada', label: 'Fatura com entrada' },
-                  { value: 'cartao_credito', label: 'Cartão de crédito' },
+                  { value: 'cartao_credito', label: 'CartÃ£o de crÃ©dito' },
                 ]}
               />
             </div>
@@ -783,7 +783,7 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
             disabled={!obrigatoriosOK || salvando}
             className="btn-primary text-sm"
           >
-            {salvando ? 'Salvando...' : 'Confirmar Emissão'}
+            {salvando ? 'Salvando...' : 'Confirmar Emissao'}
           </button>
         </div>
       </div>
@@ -877,7 +877,7 @@ function ModalResumoRelatorio({ titulo, descricao, secaoEnvio, secaoRetorno, onF
       <div className="relative glass-modal w-full max-w-2xl overflow-hidden border border-dark-border">
         <div className="flex items-center justify-between gap-3 border-b border-dark-border px-6 py-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Resumo do relat�rio</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Resumo do relatório</p>
             <h3 className="mt-1 text-lg font-semibold text-dark-text">{titulo}</h3>
           </div>
           <button onClick={onFechar} className="text-dark-muted hover:text-dark-text">?</button>
@@ -888,7 +888,7 @@ function ModalResumoRelatorio({ titulo, descricao, secaoEnvio, secaoRetorno, onF
 
           {secaoEnvio?.length > 0 && (
             <div className="rounded-3xl border border-red-300 bg-red-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">Imobili�rias sem cobran�a enviada</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">Imobiliárias sem cobrança enviada</p>
               <div className="mt-3 space-y-2">
                 {secaoEnvio.map(item => (
                   <div key={item.key} className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-sm text-red-900 shadow-sm">
@@ -902,7 +902,7 @@ function ModalResumoRelatorio({ titulo, descricao, secaoEnvio, secaoRetorno, onF
 
           {secaoRetorno?.length > 0 && (
             <div className="rounded-3xl border border-orange-300 bg-orange-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-orange-800">Imobili�rias sem retorno confirmado</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-orange-800">Imobiliárias sem retorno confirmado</p>
               <div className="mt-3 space-y-2">
                 {secaoRetorno.map(item => (
                   <div key={item.key} className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-sm text-orange-950 shadow-sm">
@@ -935,8 +935,8 @@ function ModalFinalizarRelatorio({ periodoLabel, resumo, salvando, onCancelar, o
       <div className="relative glass-modal w-full max-w-2xl overflow-hidden border border-dark-border">
         <div className="flex items-center justify-between gap-3 border-b border-dark-border px-6 py-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Finaliza��o mensal</p>
-            <h3 className="mt-1 text-lg font-semibold text-dark-text">Finalizar relat�rio de {periodoLabel}</h3>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Finalização mensal</p>
+            <h3 className="mt-1 text-lg font-semibold text-dark-text">Finalizar relatório de {periodoLabel}</h3>
           </div>
           <button onClick={onCancelar} className="text-dark-muted hover:text-dark-text" disabled={salvando}>?</button>
         </div>
@@ -945,19 +945,19 @@ function ModalFinalizarRelatorio({ periodoLabel, resumo, salvando, onCancelar, o
           <div className={`rounded-3xl border p-4 ${temEnvioPendente ? 'border-red-300 bg-red-50' : 'border-emerald-300 bg-emerald-50'}`}>
             <p className={`text-sm font-semibold ${temEnvioPendente ? 'text-red-800' : 'text-emerald-800'}`}>
               {temEnvioPendente
-                ? 'Ainda existem fichas aprovadas sem cobran�a enviada. O relat�rio pode ser finalizado mesmo assim, mas isso fica registrado.'
-                : 'Todas as fichas aprovadas vis�veis j� est�o marcadas como cobran�a enviada.'}
+                ? 'Ainda existem fichas aprovadas sem cobrança enviada. O relatório pode ser finalizado mesmo assim, mas isso fica registrado.'
+                : 'Todas as fichas aprovadas visíveis já estão marcadas como cobrança enviada.'}
             </p>
             <p className={`mt-2 text-sm ${temEnvioPendente ? 'text-red-700' : 'text-emerald-700'}`}>
               {temEnvioPendente
-                ? 'Revise as imobili�rias listadas abaixo antes de confirmar.'
-                : 'Confirme para registrar o fechamento deste m�s.'}
+                ? 'Revise as imobiliárias listadas abaixo antes de confirmar.'
+                : 'Confirme para registrar o fechamento deste mês.'}
             </p>
           </div>
 
           {temEnvioPendente && (
             <div className="rounded-3xl border border-red-300 bg-red-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">Imobili�rias com ficha sem cobran�a enviada</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">Imobiliárias com ficha sem cobrança enviada</p>
               <div className="mt-3 space-y-2">
                 {resumo.semCobranca.map(item => (
                   <div key={item.key} className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-sm text-red-900 shadow-sm">
@@ -971,7 +971,7 @@ function ModalFinalizarRelatorio({ periodoLabel, resumo, salvando, onCancelar, o
 
           {temRetornoPendente && (
             <div className="rounded-3xl border border-orange-300 bg-orange-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-orange-800">Cobran�as enviadas sem retorno</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-orange-800">Cobranças enviadas sem retorno</p>
               <div className="mt-3 space-y-2">
                 {resumo.semRetorno.map(item => (
                   <div key={item.key} className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-sm text-orange-950 shadow-sm">
@@ -988,7 +988,7 @@ function ModalFinalizarRelatorio({ periodoLabel, resumo, salvando, onCancelar, o
               Cancelar
             </button>
             <button onClick={onConfirmar} disabled={salvando} className="rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
-              {salvando ? 'Salvando...' : temEnvioPendente ? 'Finalizar mesmo assim' : 'Finalizar relat�rio'}
+              {salvando ? 'Salvando...' : temEnvioPendente ? 'Finalizar mesmo assim' : 'Finalizar relatório'}
             </button>
           </div>
         </div>
@@ -1204,7 +1204,7 @@ export default function Relatorio() {
         }).filter(isEligibleReportRow))
       } catch (error) {
         if (!active) return
-        toast({ type: 'error', title: 'Erro ao carregar relatórios', message: error.message })
+        toast({ type: 'error', title: 'Erro ao carregar relatorios', message: error.message })
         setRows([])
       } finally {
         if (active) setLoading(false)
@@ -1244,7 +1244,7 @@ export default function Relatorio() {
       _oper: getOperacionalStatus(item),
       _key: resolverNome(item.imobiliaria),
       _logo: resolverImobiliariaInfo(item.imobiliaria),
-      _imobiliariaNome: resolverImobiliariaInfo(item.imobiliaria)?.nome_canonico || resolverNome(item.imobiliaria) || item.imobiliaria || '—',
+      _imobiliariaNome: resolverImobiliariaInfo(item.imobiliaria)?.nome_canonico || resolverNome(item.imobiliaria) || item.imobiliaria || 'â€”',
     }))
   }, [rows, resolverNome, resolverImobiliariaInfo])
 
@@ -1258,7 +1258,7 @@ export default function Relatorio() {
 
     rowsWithHelpers.forEach(item => {
       const coluna = getColuna(item)
-      const nomeImob = resolverImobiliariaInfo(item.imobiliaria)?.nome_canonico || resolverNome(item.imobiliaria) || item.imobiliaria || '�'
+      const nomeImob = resolverImobiliariaInfo(item.imobiliaria)?.nome_canonico || resolverNome(item.imobiliaria) || item.imobiliaria || '—'
       const key = normalizeKey(nomeImob)
       const current = map.get(key) || {
         key,
@@ -1292,8 +1292,8 @@ export default function Relatorio() {
     if (!finalizacaoAnterior) {
       return {
         tipo: 'danger',
-        titulo: 'Relat�rio do m�s passado n�o foi finalizado',
-        descricao: `${periodoAnterior.label} ainda est� em aberto.`,
+        titulo: 'Relatório do mês passado não foi finalizado',
+        descricao: `${periodoAnterior.label} ainda está em aberto.`,
         periodoAnterior,
       }
     }
@@ -1302,7 +1302,7 @@ export default function Relatorio() {
       return {
         tipo: 'warning',
         titulo: `As fichas de ${periodoAnterior.label} foram cobradas, mas nem todas tiveram retorno`,
-        descricao: 'Clique para ver as imobili�rias com cobran�a pendente de retorno.',
+        descricao: 'Clique para ver as imobiliárias com cobrança pendente de retorno.',
         periodoAnterior,
         detalhe: finalizacaoAnterior,
       }
@@ -1417,7 +1417,7 @@ export default function Relatorio() {
       return
     }
     await navigator.clipboard.writeText(text)
-    toast({ type: 'success', title: 'Informações copiadas' })
+    toast({ type: 'success', title: 'Informacoes copiadas' })
   }
 
   async function copySelected() {
@@ -1425,8 +1425,8 @@ export default function Relatorio() {
     const text = selectedIds.map(id => {
       const item = map.get(id)
       if (!item) return null
-      const status = item._oper?.label || '—'
-      return `${item._nome} - ${getCanonicalImobiliariaNome(item)} - ${formatDateBR(item.created_at)} - Status (${status}) - ${item.cep || '—'}`
+      const status = item._oper?.label || 'â€”'
+      return `${item._nome} - ${getCanonicalImobiliariaNome(item)} - ${formatDateBR(item.created_at)} - Status (${status}) - ${item.cep || 'â€”'}`
     }).filter(Boolean).join('\n')
 
     if (!text) {
@@ -1536,14 +1536,14 @@ export default function Relatorio() {
     const err = await editarFicha(ficha.id, patch, user?.id)
     if (err) {
       setRows(previousRows)
-      toast({ type: 'error', title: 'Erro ao atualizar cobrança', message: err.message })
+      toast({ type: 'error', title: 'Erro ao atualizar cobranca', message: err.message })
       return
     }
     toast({
       type: 'success',
       title: colunaId === 'recuperados'
-        ? 'Histórico de cobrança atualizado'
-        : (nextValue ? 'Marcado como cobrança enviada' : 'Ficha retornou para Aprovadas'),
+        ? 'Historico de cobranca atualizado'
+        : (nextValue ? 'Marcado como cobranca enviada' : 'Ficha retornou para Aprovadas'),
     })
   }
 
@@ -1558,15 +1558,15 @@ export default function Relatorio() {
     const err = await editarFicha(ficha.id, patch, user?.id)
     if (err) {
       setRows(previousRows)
-      toast({ type: 'error', title: 'Erro ao atualizar retorno da imobiliária', message: err.message })
+      toast({ type: 'error', title: 'Erro ao atualizar retorno da imobiliÃ¡ria', message: err.message })
       return
     }
-    toast({ type: 'success', title: nextValue ? 'Imobiliária marcada como retornou' : 'Marcação de retorno removida' })
+    toast({ type: 'success', title: nextValue ? 'Imobiliaria marcada como retornou' : 'Marcacao de retorno removida' })
   }
 
   function openFinalizarRelatorio() {
     if (periodo !== 'mes') {
-      toast({ type: 'info', title: 'Fechamento mensal dispon�vel apenas para a vis�o de m�s.' })
+      toast({ type: 'info', title: 'Fechamento mensal disponível apenas para a visão de mês.' })
       return
     }
 
@@ -1595,7 +1595,7 @@ export default function Relatorio() {
     setSalvandoEmissao(true)
 
     const recoveryStart = getRecoveryStart(pendingEmissao.ficha)
-    const wasInCobrança = Boolean(pendingEmissao.ficha?.retorno_enviado || recoveryStart)
+    const wasInCobranca = Boolean(pendingEmissao.ficha?.retorno_enviado || recoveryStart)
 
     const { error } = await registrarApoliceDaFicha({
       ficha: pendingEmissao.ficha,
@@ -1616,7 +1616,7 @@ export default function Relatorio() {
       emitidoPor: payload.emitidoPor,
     })
 
-    if (!error && wasInCobrança) {
+    if (!error && wasInCobranca) {
       await editarFicha(pendingEmissao.ficha.id, {
         retorno_enviado: false,
         raw_data: {
@@ -1629,12 +1629,12 @@ export default function Relatorio() {
 
     setSalvandoEmissao(false)
     if (error) {
-      toast({ type: 'error', title: 'Erro ao registrar emissão', message: error.message })
+      toast({ type: 'error', title: 'Erro ao registrar emissÃ£o', message: error.message })
       setPendingEmissao(null)
       return
     }
 
-    toast({ type: 'success', title: wasInCobrança ? 'Emissão recuperada registrada' : 'Emissão registrada' })
+    toast({ type: 'success', title: wasInCobranca ? 'Emissao recuperada registrada' : 'Emissao registrada' })
     setPendingEmissao(null)
     setRows(prev => prev.map(item => (
       item.id === pendingEmissao.ficha.id
@@ -1651,8 +1651,8 @@ export default function Relatorio() {
             _effectiveDataEmissao: new Date().toISOString().slice(0, 10),
             raw_data: {
               ...(item.raw_data || {}),
-              recovered_after_cobranca: wasInCobrança,
-              recovered_after_cobranca_em: wasInCobrança ? new Date().toISOString() : null,
+              recovered_after_cobranca: wasInCobranca,
+              recovered_after_cobranca_em: wasInCobranca ? new Date().toISOString() : null,
             },
           }
         : item
@@ -1714,7 +1714,7 @@ export default function Relatorio() {
           onClick={openFinalizarRelatorio}
           className="inline-flex items-center gap-1.5 rounded-2xl border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition-colors hover:border-red-400 hover:bg-red-100"
         >
-          <CheckSquare className="h-3.5 w-3.5" /> Finalizar relat�rio
+          <CheckSquare className="h-3.5 w-3.5" /> Finalizar relatório
         </button>
       )}
       {isDetail && (
@@ -1729,27 +1729,52 @@ export default function Relatorio() {
     </div>
   )
 
+  const sharedModals = (
+    <>
+      {pendingFinalizacao && (
+        <ModalFinalizarRelatorio
+          periodoLabel={pendingFinalizacao.periodoLabel}
+          resumo={pendingFinalizacao.resumo}
+          salvando={false}
+          onCancelar={() => setPendingFinalizacao(null)}
+          onConfirmar={() => {
+            const now = new Date().toISOString()
+            setFinalizacoesMap(prev => ({
+              ...(prev || {}),
+              [pendingFinalizacao.scopeKey]: {
+                finalizedAt: now,
+                periodoLabel: pendingFinalizacao.periodoLabel,
+                semCobranca: pendingFinalizacao.resumo.semCobranca,
+                semRetorno: pendingFinalizacao.resumo.semRetorno,
+              },
+            }))
+            setPendingFinalizacao(null)
+            toast({
+              type: pendingFinalizacao.resumo.semCobranca.length > 0 ? 'warning' : 'success',
+              title: 'Relatório finalizado',
+              message: pendingFinalizacao.resumo.semRetorno.length > 0
+                ? 'Há imobiliárias aguardando retorno para o próximo mês.'
+                : 'Fechamento mensal registrado com sucesso.',
+            })
+          }}
+        />
+      )}
+      {alertaRelatorioDetalhe && (
+        <ModalResumoRelatorio
+          titulo={alertaRelatorioDetalhe.titulo}
+          descricao={alertaRelatorioDetalhe.descricao}
+          secaoEnvio={alertaRelatorioDetalhe.detalhe?.semCobranca || []}
+          secaoRetorno={alertaRelatorioDetalhe.detalhe?.semRetorno || []}
+          onFechar={() => setAlertaRelatorioDetalhe(null)}
+        />
+      )}
+    </>
+  )
+
   if (loading) {
     return (
       <div className="space-y-5 animate-fade-in">
-        {!loading && alertaTopo && (
-        <button
-          type="button"
-          onClick={onClickAlertaTopo}
-          className={`w-full rounded-[28px] border px-5 py-4 text-left shadow-sm transition-colors ${alertaTopo.tipo === 'warning' ? 'border-orange-300 bg-orange-50 text-orange-900 hover:bg-orange-100' : 'border-red-300 bg-red-50 text-red-900 hover:bg-red-100'}`}
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold">{alertaTopo.titulo}</p>
-              <p className="mt-1 text-xs opacity-90">{alertaTopo.descricao}</p>
-            </div>
-            <span className="rounded-full border border-current/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]">
-              {alertaTopo.tipo === 'warning' ? 'Ver imobili�rias' : 'Abrir m�s anterior'}
-            </span>
-          </div>
-        </button>
-      )}
-      <PageHeader
+        <PageHeader
           eyebrow="Relatórios operacionais"
           title={isDetail ? 'Relatório por Imobiliária' : 'Relatórios Fiança'}
           description="Carregando dados do painel..."
@@ -1773,30 +1798,31 @@ export default function Relatorio() {
     return (
       <div className="space-y-5 animate-fade-in">
         {!loading && alertaTopo && (
-        <button
-          type="button"
-          onClick={onClickAlertaTopo}
-          className={`w-full rounded-[28px] border px-5 py-4 text-left shadow-sm transition-colors ${alertaTopo.tipo === 'warning' ? 'border-orange-300 bg-orange-50 text-orange-900 hover:bg-orange-100' : 'border-red-300 bg-red-50 text-red-900 hover:bg-red-100'}`}
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold">{alertaTopo.titulo}</p>
-              <p className="mt-1 text-xs opacity-90">{alertaTopo.descricao}</p>
+          <button
+            type="button"
+            onClick={onClickAlertaTopo}
+            className={`w-full rounded-[28px] border px-5 py-4 text-left shadow-sm transition-colors ${alertaTopo.tipo === 'warning' ? 'border-orange-300 bg-orange-50 text-orange-900 hover:bg-orange-100' : 'border-red-300 bg-red-50 text-red-900 hover:bg-red-100'}`}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold">{alertaTopo.titulo}</p>
+                <p className="mt-1 text-xs opacity-90">{alertaTopo.descricao}</p>
+              </div>
+              <span className="rounded-full border border-current/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]">
+                {alertaTopo.tipo === 'warning' ? 'Ver imobiliárias' : 'Abrir mês anterior'}
+              </span>
             </div>
-            <span className="rounded-full border border-current/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]">
-              {alertaTopo.tipo === 'warning' ? 'Ver imobili�rias' : 'Abrir m�s anterior'}
-            </span>
-          </div>
-        </button>
-      )}
-      <PageHeader
+          </button>
+        )}
+
+        <PageHeader
           eyebrow="Relatórios operacionais"
           title={title}
           description={`Painel analítico da imobiliária em ${periodoLabel}, organizado por blocos.`}
           actions={overviewActions}
           stats={
             <>
-              <MetricCard label="Fichas aprovadas" value={summary.aprovadas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
+              <MetricCard label="Fichas aprovadas" value={summary.fichasAprovadas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
               <MetricCard label="Aprovadas" value={summary.aprovadas} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
               <MetricCard label="Em cobrança" value={summary.cobranca} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
               <MetricCard label="Apólices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
@@ -1871,43 +1897,8 @@ export default function Relatorio() {
             onConfirmar={handleConfirmarCobranca}
           />
         )}
-        {pendingFinalizacao && (
-          <ModalFinalizarRelatorio
-            periodoLabel={pendingFinalizacao.periodoLabel}
-            resumo={pendingFinalizacao.resumo}
-            salvando={false}
-            onCancelar={() => setPendingFinalizacao(null)}
-            onConfirmar={() => {
-              const now = new Date().toISOString()
-              setFinalizacoesMap(prev => ({
-                ...(prev || {}),
-                [pendingFinalizacao.scopeKey]: {
-                  finalizedAt: now,
-                  periodoLabel: pendingFinalizacao.periodoLabel,
-                  semCobranca: pendingFinalizacao.resumo.semCobranca,
-                  semRetorno: pendingFinalizacao.resumo.semRetorno,
-                },
-              }))
-              setPendingFinalizacao(null)
-              toast({
-                type: pendingFinalizacao.resumo.semCobranca.length > 0 ? 'warning' : 'success',
-                title: 'Relat�rio finalizado',
-                message: pendingFinalizacao.resumo.semRetorno.length > 0
-                  ? 'H� imobili�rias aguardando retorno para o pr�ximo m�s.'
-                  : 'Fechamento mensal registrado com sucesso.',
-              })
-            }}
-          />
-        )}
-        {alertaRelatorioDetalhe && (
-          <ModalResumoRelatorio
-            titulo={alertaRelatorioDetalhe.titulo}
-            descricao={alertaRelatorioDetalhe.descricao}
-            secaoEnvio={alertaRelatorioDetalhe.detalhe?.semCobranca || []}
-            secaoRetorno={alertaRelatorioDetalhe.detalhe?.semRetorno || []}
-            onFechar={() => setAlertaRelatorioDetalhe(null)}
-          />
-        )}
+
+        {sharedModals}
       </div>
     )
   }
@@ -1926,11 +1917,12 @@ export default function Relatorio() {
               <p className="mt-1 text-xs opacity-90">{alertaTopo.descricao}</p>
             </div>
             <span className="rounded-full border border-current/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]">
-              {alertaTopo.tipo === 'warning' ? 'Ver imobili�rias' : 'Abrir m�s anterior'}
+              {alertaTopo.tipo === 'warning' ? 'Ver imobiliárias' : 'Abrir mês anterior'}
             </span>
           </div>
         </button>
       )}
+
       <PageHeader
         eyebrow="Relatórios operacionais"
         title="Relatórios Fiança"
@@ -2175,66 +2167,10 @@ export default function Relatorio() {
           description={`Não há registros para ${periodoLabel}. Ajuste o período ou escolha outra imobiliária.`}
         />
       )}
-      {pendingFinalizacao && (
-        <ModalFinalizarRelatorio
-          periodoLabel={pendingFinalizacao.periodoLabel}
-          resumo={pendingFinalizacao.resumo}
-          salvando={false}
-          onCancelar={() => setPendingFinalizacao(null)}
-          onConfirmar={() => {
-            const now = new Date().toISOString()
-            setFinalizacoesMap(prev => ({
-              ...(prev || {}),
-              [pendingFinalizacao.scopeKey]: {
-                finalizedAt: now,
-                periodoLabel: pendingFinalizacao.periodoLabel,
-                semCobranca: pendingFinalizacao.resumo.semCobranca,
-                semRetorno: pendingFinalizacao.resumo.semRetorno,
-              },
-            }))
-            setPendingFinalizacao(null)
-            toast({
-              type: pendingFinalizacao.resumo.semCobranca.length > 0 ? 'warning' : 'success',
-              title: 'Relat�rio finalizado',
-              message: pendingFinalizacao.resumo.semRetorno.length > 0
-                ? 'H� imobili�rias aguardando retorno para o pr�ximo m�s.'
-                : 'Fechamento mensal registrado com sucesso.',
-            })
-          }}
-        />
-      )}
-      {alertaRelatorioDetalhe && (
-        <ModalResumoRelatorio
-          titulo={alertaRelatorioDetalhe.titulo}
-          descricao={alertaRelatorioDetalhe.descricao}
-          secaoEnvio={alertaRelatorioDetalhe.detalhe?.semCobranca || []}
-          secaoRetorno={alertaRelatorioDetalhe.detalhe?.semRetorno || []}
-          onFechar={() => setAlertaRelatorioDetalhe(null)}
-        />
-      )}    </div>
+
+      {sharedModals}
+    </div>
   )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

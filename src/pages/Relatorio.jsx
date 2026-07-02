@@ -1292,17 +1292,11 @@ export default function Relatorio() {
         }
 
         const finalRows = await fetchAllRows(() => {
-          let query = supabase
+          return supabase
             .from('fichas')
             .select('id, created_at, finalizada_em, nome_interessado, nome_empresa, cpf, cnpj, cep, imobiliaria, status, produto, retorno_enviado, seguradora, orcamentista_forms, observacoes, raw_data, numero_apolice, data_emissao, valor_aluguel, assumida, orcamentista_id, profiles!orcamentista_id(nome, avatar_url)')
             .in('id', allIds)
             .order('created_at', { ascending: false })
-
-          if (imobiliariaAliases?.length) {
-            query = query.in('imobiliaria', imobiliariaAliases)
-          }
-
-          return query
         })
         if (!active) return
 
@@ -2403,6 +2397,7 @@ export default function Relatorio() {
     </div>
   )
 }
+
 
 
 

@@ -19,7 +19,7 @@ function QuickDateFilter({ value, onChange }) {
     { key: 'todos', label: 'Todos' },
     { key: 'hoje', label: 'Hoje' },
     { key: 'semana', label: 'Semana' },
-    { key: 'mes', label: 'MÃªs' },
+    { key: 'mes', label: 'Mês' },
   ]
 
   return (
@@ -127,10 +127,10 @@ export default function MinhasFichas() {
     .map((m, i) => ({ value: String(i + 1), label: m }))
 
   const stats = [
-    { label: 'Em cotaÃ§Ã£o', value: abertas.length, hint: 'Responsabilidade atual', tone: 'warning', icon: <Clock className="w-4 h-4" /> },
+    { label: 'Em cotação', value: abertas.length, hint: 'Responsabilidade atual', tone: 'warning', icon: <Clock className="w-4 h-4" /> },
     { label: 'Aprovadas', value: metricas.aprovadas, hint: 'Finalizadas com sucesso', tone: 'success', icon: <CheckCircle2 className="w-4 h-4" /> },
-    { label: 'Finalizadas', value: passadas.length, hint: 'HistÃ³rico do perÃ­odo', tone: 'accent', icon: <FileText className="w-4 h-4" /> },
-    { label: 'Taxa de aprovaÃ§Ã£o', value: `${metricas.taxaAprovacao}%`, hint: 'EficiÃªncia pessoal', tone: 'secondary', icon: <TrendingUp className="w-4 h-4" /> },
+    { label: 'Finalizadas', value: passadas.length, hint: 'Histórico do período', tone: 'accent', icon: <FileText className="w-4 h-4" /> },
+    { label: 'Taxa de aprovação', value: `${metricas.taxaAprovacao}%`, hint: 'Eficiência pessoal', tone: 'secondary', icon: <TrendingUp className="w-4 h-4" /> },
   ]
 
   return (
@@ -138,7 +138,7 @@ export default function MinhasFichas() {
       <PageHeader
         eyebrow="Fila pessoal"
         title="Minhas Fichas"
-        description="Mesa individual do orÃ§amentista com foco em cotaÃ§Ã£o ativa, finalizaÃ§Ã£o rÃ¡pida e histÃ³rico filtrado por perÃ­odo."
+        description="Mesa individual do orçamentista com foco em cotação ativa, finalização rápida e histÃ³rico filtrado por período."
         actions={(
           <>
             <Link to="/fichas" className="btn-secondary flex items-center gap-2 text-sm min-h-[44px]">
@@ -155,7 +155,7 @@ export default function MinhasFichas() {
       <FilterBar
         actions={(
           <div className="flex items-center gap-2">
-            <span className="text-xs text-dark-muted">PerÃ­odo</span>
+            <span className="text-xs text-dark-muted">Período</span>
             <Select
               value={String(filtroMes)}
               onChange={v => setFiltroMes(Number(v))}
@@ -181,7 +181,7 @@ export default function MinhasFichas() {
             }`}
           >
             <ListFilter className="w-4 h-4" />
-            Em CotaÃ§Ã£o
+            Em Cotação
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-black/5">{abertasRaw.length}</span>
           </button>
           <button
@@ -203,10 +203,10 @@ export default function MinhasFichas() {
       </FilterBar>
 
       <DataCard
-        title={tab === 'abertas' ? 'Carteira em cotaÃ§Ã£o' : 'HistÃ³rico finalizado'}
+        title={tab === 'abertas' ? 'Carteira em cotação' : 'Histórico finalizado'}
         subtitle={tab === 'abertas'
           ? `Mostrando ${abertas.length} ficha${abertas.length !== 1 ? 's' : ''} sob sua responsabilidade`
-          : `Mostrando ${passadas.length} ficha${passadas.length !== 1 ? 's' : ''} no perÃ­odo selecionado`}
+          : `Mostrando ${passadas.length} ficha${passadas.length !== 1 ? 's' : ''} no período selecionado`}
       >
         {isLoading ? (
           <TableSkeleton rows={6} cols={tab === 'abertas' ? 5 : 6} />
@@ -218,7 +218,7 @@ export default function MinhasFichas() {
                   {tab === 'abertas' ? (
                     <>
                       <th className="th hidden sm:table-cell">Data</th>
-                      <th className="th">ImobiliÃ¡ria</th>
+                      <th className="th">Imobiliária</th>
                       <th className="th">Nome</th>
                       <th className="th hidden sm:table-cell">Produto</th>
                       <th className="th">Tempo</th>
@@ -227,7 +227,7 @@ export default function MinhasFichas() {
                   ) : (
                     <>
                       <th className="th hidden sm:table-cell">Data</th>
-                      <th className="th">ImobiliÃ¡ria</th>
+                      <th className="th">Imobiliária</th>
                       <th className="th">Nome</th>
                       <th className="th hidden sm:table-cell">Produto</th>
                       <th className="th">Status</th>
@@ -241,10 +241,10 @@ export default function MinhasFichas() {
                   <tr>
                     <td colSpan={6} className="td py-0">
                       <EmptyState
-                        title={tab === 'abertas' ? 'Nenhuma ficha em cotaÃ§Ã£o' : 'Nenhuma ficha finalizada'}
+                        title={tab === 'abertas' ? 'Nenhuma ficha em cotação' : 'Nenhuma ficha finalizada'}
                         description={tab === 'abertas'
-                          ? 'Quando novas fichas entrarem na sua fila, elas aparecerÃ£o aqui.'
-                          : 'O histÃ³rico desse perÃ­odo ainda estÃ¡ vazio.'}
+                          ? 'Quando novas fichas entrarem na sua fila, elas aparecerão aqui.'
+                          : 'O histÃ³rico desse período ainda está vazio.'}
                         icon={<FileText className="w-6 h-6" />}
                         className="py-12"
                       />
@@ -258,8 +258,8 @@ export default function MinhasFichas() {
                       <td className="td text-dark-muted text-xs font-mono whitespace-nowrap hidden sm:table-cell">
                         {format(parseISO(f.created_at), 'dd/MM/yy', { locale: ptBR })}
                       </td>
-                      <td className="td font-medium text-dark-text max-w-[140px] truncate">{f.imobiliaria || 'â€”'}</td>
-                      <td className="td text-dark-text max-w-[140px] truncate">{nome || 'â€”'}</td>
+                      <td className="td font-medium text-dark-text max-w-[140px] truncate">{f.imobiliaria || '—'}</td>
+                      <td className="td text-dark-text max-w-[140px] truncate">{nome || '—'}</td>
                       <td className="td text-dark-muted text-xs hidden sm:table-cell">{PRODUTO_LABELS[f.produto]}</td>
                       {tab === 'abertas' ? (
                         <>
@@ -276,7 +276,7 @@ export default function MinhasFichas() {
                       ) : (
                         <>
                           <td className="td"><span className={`badge ${si.color}`}>{si.label}</span></td>
-                          <td className="td text-dark-muted text-xs hidden md:table-cell">{f.seguradora || 'â€”'}</td>
+                          <td className="td text-dark-muted text-xs hidden md:table-cell">{f.seguradora || '—'}</td>
                         </>
                       )}
                     </tr>
@@ -299,7 +299,7 @@ export default function MinhasFichas() {
           onDelete={async id => {
             await deletarFicha(id)
             setDetalhe(null)
-            toast({ type: 'success', title: 'Ficha excluÃ­da' })
+            toast({ type: 'success', title: 'Ficha excluída' })
             refresh()
           }}
         />
@@ -314,5 +314,6 @@ export default function MinhasFichas() {
     </div>
   )
 }
+
 
 

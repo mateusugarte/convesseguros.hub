@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { memo } from 'react'
 import { startTransition } from 'react'
@@ -43,7 +43,7 @@ const COLUNAS = [
   { id: 'recebida', label: 'Recebida', color: '#3B82F6' },
   { id: 'proposta_transmitida', label: 'Proposta Transmitida', color: '#F59E0B' },
   { id: 'emitida', label: 'Proposta Transmitida', color: '#8B5CF6' },
-  { id: 'enviada', label: 'Apólice Enviada', color: '#059669' },
+  { id: 'enviada', label: 'ApÃ³lice Enviada', color: '#059669' },
 ]
 
 const PRODUTO_ICON = { residencial_pf: Home, comercial_pf: Briefcase, pessoa_juridica: Building }
@@ -102,7 +102,7 @@ function produtoApolice(apolice) {
 }
 
 function documentoApolice(apolice) {
-  return apolice?.fichas?.cnpj || apolice?.fichas?.cpf || apolice?.cnpj || apolice?.cpf || '—'
+  return apolice?.fichas?.cnpj || apolice?.fichas?.cpf || apolice?.cnpj || apolice?.cpf || 'â€”'
 }
 
 function isApoliceSemFicha(apolice) {
@@ -133,7 +133,7 @@ function resumoFicha(ficha) {
 
   return {
     nome,
-    imobiliaria: normalizeDisplayText(ficha?.imobiliaria || raw?.imobiliaria) || 'Imobiliária não informada',
+    imobiliaria: normalizeDisplayText(ficha?.imobiliaria || raw?.imobiliaria) || 'Imobiliária nÃ£o informada',
     avatarUrl: ficha?.profiles?.avatar_url || raw?.avatar_url || '',
     emissorNome: ficha?.profiles?.nome || '',
     numeroOrcamento: String(raw?.numero_orcamento || '').trim(),
@@ -162,7 +162,7 @@ const InfoPill = memo(function InfoPill({ label, value, mono = false }) {
   return (
     <div className="rounded-xl border border-dark-border/60 bg-dark-surface/80 px-2 py-1.5">
       <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">{label}</p>
-      <p className={`mt-0.5 text-[10px] text-dark-text truncate${mono ? ' font-mono' : ''}`}>{value || '—'}</p>
+      <p className={`mt-0.5 text-[10px] text-dark-text truncate${mono ? ' font-mono' : ''}`}>{value || 'â€”'}</p>
     </div>
   )
 })
@@ -176,11 +176,11 @@ const KanbanCard = memo(function KanbanCard({ apolice, resolverNome, resolverImo
   const statusLabel = STATUS_EMISSAO_LABELS[apolice?.status_emissao]?.label || apolice?.status_emissao || 'Recebida'
   const documento = documentoApolice(apolice)
   const semFicha = isApoliceSemFicha(apolice)
-  const celular = apolice?.fichas?.celular || apolice?.celular || '—'
-  const tipoImovel = normalizeDisplayText(apolice?.fichas?.tipo_imovel || apolice?.tipo_imovel) || '—'
-  const vigencia = [apolice?.inicio_vigencia, apolice?.fim_vigencia].filter(Boolean).join(' até ') || '—'
-  const parcela = apolice?.valor_parcela ? formatMoneyBR(apolice.valor_parcela) : '—'
-  const parcelamento = apolice?.parcelamento ? `${apolice.parcelamento}x` : '—'
+  const celular = apolice?.fichas?.celular || apolice?.celular || 'â€”'
+  const tipoImovel = normalizeDisplayText(apolice?.fichas?.tipo_imovel || apolice?.tipo_imovel) || 'â€”'
+  const vigencia = [apolice?.inicio_vigencia, apolice?.fim_vigencia].filter(Boolean).join(' atÃ© ') || 'â€”'
+  const parcela = apolice?.valor_parcela ? formatMoneyBR(apolice.valor_parcela) : 'â€”'
+  const parcelamento = apolice?.parcelamento ? `${apolice.parcelamento}x` : 'â€”'
   const nomeImob = resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || '')
   const imobInfo = resolverImobiliariaInfo ? resolverImobiliariaInfo(apolice?.imobiliaria) : null
 
@@ -197,7 +197,7 @@ const KanbanCard = memo(function KanbanCard({ apolice, resolverNome, resolverImo
           className="kanban-grip"
           onClick={event => event.stopPropagation()}
           tabIndex={-1}
-          aria-label="Arrastar apólice"
+          aria-label="Arrastar apÃ³lice"
         >
           <GripVertical className="w-3.5 h-3.5" />
         </button>
@@ -238,7 +238,7 @@ const KanbanCard = memo(function KanbanCard({ apolice, resolverNome, resolverImo
             <div className="mt-1 min-w-0">
               {apolice?.seguradora
                 ? <SeguradoraBadge nome={apolice.seguradora} size="xs" showName className="max-w-full" />
-                : <p className="text-[10px] text-dark-muted">—</p>}
+                : <p className="text-[10px] text-dark-muted">â€”</p>}
             </div>
           </div>
           <div className="rounded-xl border border-dark-border/60 bg-dark-surface/80 px-2 py-1.5">
@@ -250,7 +250,7 @@ const KanbanCard = memo(function KanbanCard({ apolice, resolverNome, resolverImo
                 <Avatar name={nomeImob} size="sm" />
               )}
               <p className="text-[10px] text-dark-text truncate leading-none font-medium">
-                {nomeImob || '—'}
+                {nomeImob || 'â€”'}
               </p>
             </div>
           </div>
@@ -267,14 +267,14 @@ const KanbanCard = memo(function KanbanCard({ apolice, resolverNome, resolverImo
             <div className="mt-2 grid grid-cols-2 gap-1.5">
               <InfoPill label="Documento" value={documento} mono />
               <InfoPill label="Celular" value={celular} />
-              <InfoPill label="Imóvel" value={tipoImovel} />
+              <InfoPill label="ImÃ³vel" value={tipoImovel} />
               <InfoPill label="Parcelas" value={parcelamento} />
             </div>
 
             <div className="mt-1.5 rounded-xl border border-dark-border/60 bg-dark-surface2/25 px-2 py-1.5">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">Vigência</p>
+                  <p className="text-[8px] uppercase tracking-[0.14em] text-dark-muted">VigÃªncia</p>
                   <p className="mt-0.5 text-[10px] text-dark-text truncate">{vigencia}</p>
                 </div>
                 <div className="text-right">
@@ -308,7 +308,7 @@ const KanbanCard = memo(function KanbanCard({ apolice, resolverNome, resolverImo
               }}
               className="text-[9px] text-dark-muted hover:text-dark-text transition-colors px-1.5 py-0.5 rounded-md hover:bg-dark-surface2"
             >
-              {expandido ? '▲' : '▼ Detalhes'}
+              {expandido ? 'â–²' : 'â–¼ Detalhes'}
             </button>
           )}
         </div>
@@ -316,11 +316,11 @@ const KanbanCard = memo(function KanbanCard({ apolice, resolverNome, resolverImo
         {expandido && !isDragOverlay && (
           <div className="space-y-0.5 pt-1.5 mt-1.5 border-t border-dark-border/40 animate-fade-in">
             <p className="text-[9px] text-dark-muted truncate">
-              Imobiliária: {resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || '—')}
+              Imobiliária: {resolverNome ? resolverNome(apolice?.imobiliaria) : (apolice?.imobiliaria || 'â€”')}
             </p>
             {(apolice?.fichas?.cep || apolice?.cep) && <p className="text-[9px] text-dark-muted font-mono">CEP: {apolice?.fichas?.cep || apolice?.cep}</p>}
             {apolice?.seguradora && <p className="text-[9px] text-dark-muted">Seguradora: {apolice.seguradora}</p>}
-            {apolice?.email_proprietario && <p className="text-[9px] text-dark-muted break-all">Email proprietário: {apolice.email_proprietario}</p>}
+            {apolice?.email_proprietario && <p className="text-[9px] text-dark-muted break-all">Email proprietÃ¡rio: {apolice.email_proprietario}</p>}
             {apolice?.valor_parcela && <p className="text-[9px] text-dark-muted">Parcela: {parcela}</p>}
           </div>
         )}
@@ -493,11 +493,11 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
     setCriando(false)
 
     if (error) {
-      toast({ type: 'error', title: 'Erro ao criar solicitação', message: error.message })
+      toast({ type: 'error', title: 'Erro ao criar solicitaÃ§Ã£o', message: error.message })
       return
     }
 
-    toast({ type: 'success', title: 'Solicitação criada' })
+    toast({ type: 'success', title: 'SolicitaÃ§Ã£o criada' })
     onCriado?.()
     onBack?.()
   }
@@ -510,11 +510,11 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
             <Plus className="w-3.5 h-3.5" />
             Area dedicada
           </div>
-          <h2 className="mt-3 text-xl font-bold text-dark-text">Iniciar Emissão</h2>
-          <p className="text-sm text-dark-muted mt-0.5">Selecione uma ficha aprovada para criar a solicitação.</p>
+          <h2 className="mt-3 text-xl font-bold text-dark-text">Iniciar EmissÃ£o</h2>
+          <p className="text-sm text-dark-muted mt-0.5">Selecione uma ficha aprovada para criar a solicitaÃ§Ã£o.</p>
         </div>
         <button onClick={onBack} className="btn-secondary text-sm">
-          Voltar para gestão
+          Voltar para gestÃ£o
         </button>
       </div>
 
@@ -527,8 +527,8 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
                 <ImobiliariaSelect
                   value={imobFiltro}
                   onChange={setImobFiltro}
-                  placeholder="Todas as imobiliárias"
-                  allLabel="Todas as imobiliárias"
+                  placeholder="Todas as imobiliÃ¡rias"
+                  allLabel="Todas as imobiliÃ¡rias"
                   className="text-sm"
                 />
               </div>
@@ -540,7 +540,7 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
                   <input
                     value={busca}
                     onChange={event => setBusca(event.target.value)}
-                    placeholder="Nome do cliente ou imobiliária"
+                    placeholder="Nome do cliente ou imobiliÃ¡ria"
                     className="input pl-10"
                   />
                 </div>
@@ -552,7 +552,7 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
             <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border">
               <div>
                 <h3 className="text-lg font-semibold text-dark-text">Fichas aprovadas</h3>
-                <p className="text-sm text-dark-muted">Mostrando nome completo, foto e imobiliária.</p>
+                <p className="text-sm text-dark-muted">Mostrando nome completo, foto e imobiliÃ¡ria.</p>
               </div>
               <span className="text-sm text-dark-muted">{fichas.length} fichas</span>
             </div>
@@ -590,7 +590,7 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
                               <p className="mt-2 text-[11px] text-dark-muted truncate">Orcamentista: {resumo.emissorNome}</p>
                             )}
                             <p className="mt-2 text-[11px] font-mono text-dark-muted">
-                              Nº orçamento: {resumo.numeroOrcamento || 'Não informado'}
+                              NÂº orÃ§amento: {resumo.numeroOrcamento || 'NÃ£o informado'}
                             </p>
                           </div>
                         </div>
@@ -607,9 +607,9 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
           <div className="rounded-3xl border border-dark-border bg-dark-surface/80 p-5">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-dark-muted">Dados da emissão</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-dark-muted">Dados da emissÃ£o</h3>
                 <p className="text-sm text-dark-muted mt-1">
-                  Ao selecionar a ficha, o número do orçamento é preenchido automaticamente quando existir.
+                  Ao selecionar a ficha, o nÃºmero do orÃ§amento Ã© preenchido automaticamente quando existir.
                 </p>
               </div>
               {fichaSelecionada && (
@@ -621,14 +621,14 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
                     setNumeroOrcamento('')
                   }}
                 >
-                  Limpar seleção
+                  Limpar seleÃ§Ã£o
                 </button>
               )}
             </div>
 
             <div className="mt-4 space-y-4">
               <div>
-                <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">Nº do orçamento</label>
+                <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">NÂº do orÃ§amento</label>
                 <input
                   value={numeroOrcamento}
                   onChange={event => setNumeroOrcamento(event.target.value)}
@@ -651,7 +651,7 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
                   <div className="rounded-2xl border border-dark-border/60 bg-dark-surface2/20 p-4">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Resumo</p>
                     <p className="mt-2 text-sm text-dark-text">Cliente: {resumoFicha(fichaSelecionada).nome}</p>
-                    <p className="mt-1 text-xs text-dark-muted">Orçamento: {numeroOrcamento || 'Não informado'}</p>
+                    <p className="mt-1 text-xs text-dark-muted">OrÃ§amento: {numeroOrcamento || 'NÃ£o informado'}</p>
                   </div>
                 </>
               )}
@@ -660,7 +660,7 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
             <div className="mt-6 flex flex-col gap-3">
               <button onClick={onBack} className="btn-secondary text-sm">Cancelar</button>
               <button onClick={criarSolicitacao} disabled={!fichaSelecionada || criando} className="btn-primary text-sm">
-                {criando ? 'Criando...' : 'Criar Solicitação'}
+                {criando ? 'Criando...' : 'Criar SolicitaÃ§Ã£o'}
               </button>
             </div>
           </div>
@@ -676,7 +676,7 @@ function DadoCard({ label, value, mono = false, highlight = false, span2 = false
       <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-dark-muted mb-1">{label}</p>
       <p className={`text-xs truncate ${mono ? 'font-mono' : 'font-medium'} ${highlight ? 'font-bold' : ''}`}
          style={highlight ? { color: '#000079' } : undefined}>
-        {value || '—'}
+        {value || 'â€”'}
       </p>
     </div>
   )
@@ -699,9 +699,9 @@ function UploadDiretoWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos
     if (!existente?.id) return
     toast({
       type: 'warning',
-      title: 'Ap?lice j? cadastrada',
-      message: 'A ap?lice ' + (existente.numero_apolice || numeroApolice) + ' j? existe no sistema.',
-      action: onAbrirApolice ? { label: 'Abrir ap?lice', onClick: () => onAbrirApolice(existente.id) } : undefined,
+      title: 'Apólice já cadastrada',
+      message: 'A apólice ' + (existente.numero_apolice || numeroApolice) + ' já existe no sistema.',
+      action: onAbrirApolice ? { label: 'Abrir apólice', onClick: () => onAbrirApolice(existente.id) } : undefined,
       duration: 10000,
     })
   }
@@ -720,7 +720,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos
       return existente
     } catch (err) {
       if (!silent) {
-        toast({ type: 'error', title: 'Erro ao verificar duplicidade', message: err?.message || 'N?o foi poss?vel verificar o n?mero da ap?lice.' })
+        toast({ type: 'error', title: 'Erro ao verificar duplicidade', message: err?.message || 'Não foi possível verificar o número da apólice.' })
       }
       return null
     }
@@ -766,7 +766,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos
         setApoliceExistente(null)
       }
       if (semParser || (!parsed.numero_apolice && !parsed.nome_locatario)) {
-        setErro(`Não foi possível identificar dados da apólice ${seguradora}. Verifique se o PDF é da seguradora selecionada.`)
+        setErro(`Não foi possível identificar dados da apólice ${seguradora}. Verifique se o PDF Ã© da seguradora selecionada.`)
       }
       if ((parsed.celular_locatario || parsed.proprietario_cel) && !celular.trim()) {
         setCelular(parsed.celular_locatario || parsed.proprietario_cel)
@@ -866,7 +866,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos
       <div className="p-6">
         <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6">
 
-          {/* ── Coluna esquerda ─────────────────────────────────── */}
+          {/* â”€â”€ Coluna esquerda â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <div className="space-y-5">
 
             {/* Seguradora */}
@@ -958,7 +958,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos
             </div>
           </div>
 
-          {/* ── Coluna direita ──────────────────────────────────── */}
+          {/* â”€â”€ Coluna direita â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <div className="space-y-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-dark-muted mb-3">PDF da Apólice</p>
@@ -1030,20 +1030,20 @@ function UploadDiretoWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos
                 <div className="mt-3 flex items-start gap-3 p-3 rounded-xl border border-status-warning/25 bg-status-warning/8">
                   <AlertTriangle className="w-4 h-4 text-status-warning mt-0.5 flex-shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-dark-text">J? existe uma ap?lice com esse n?mero.</p>
+                    <p className="text-xs font-semibold text-dark-text">Já existe uma apólice com esse número.</p>
                     <p className="mt-1 text-xs text-dark-muted">
-                      {apoliceExistente.numero_apolice || dadosExtraidos?.numero_apolice || 'Sem n?mero'}
+                      {apoliceExistente.numero_apolice || dadosExtraidos?.numero_apolice || 'Sem número'}
                       {' ? '}
                       {apoliceExistente.seguradora || 'Sem seguradora'}
                       {' ? '}
-                      {apoliceExistente.imobiliaria || 'Sem imobili?ria'}
+                      {apoliceExistente.imobiliaria || 'Sem imobiliária'}
                     </p>
                     <button
                       type="button"
                       onClick={() => onAbrirApolice?.(apoliceExistente.id)}
                       className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-status-warning hover:opacity-75 transition-opacity"
                     >
-                      Abrir ap?lice existente
+                      Abrir apólice existente
                     </button>
                   </div>
                 </div>
@@ -1059,11 +1059,11 @@ function UploadDiretoWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos
                   <DadoCard label="Documento" value={dadosExtraidos.documento_locatario} mono />
                   <DadoCard label="Nº Apólice" value={dadosExtraidos.numero_apolice} mono />
                   <DadoCard label="Proposta" value={dadosExtraidos.numero_proposta} mono />
-                  <DadoCard label="Vigência" value={[dadosExtraidos.inicio_vigencia, dadosExtraidos.fim_vigencia].filter(Boolean).join(' → ') || null} />
+                  <DadoCard label="VigÃªncia" value={[dadosExtraidos.inicio_vigencia, dadosExtraidos.fim_vigencia].filter(Boolean).join(' â†’ ') || null} />
                   <DadoCard label="Parcela" value={dadosExtraidos.valor_parcela ? formatMoneyBR(dadosExtraidos.valor_parcela) : null} highlight />
-                  <DadoCard label="Prêmio Líquido" value={dadosExtraidos.premio_liquido ? formatMoneyBR(dadosExtraidos.premio_liquido) : null} />
+                  <DadoCard label="PrÃªmio LÃ­quido" value={dadosExtraidos.premio_liquido ? formatMoneyBR(dadosExtraidos.premio_liquido) : null} />
                   <DadoCard label="Parcelamento" value={dadosExtraidos.parcelamento ? `${dadosExtraidos.parcelamento}x` : null} />
-                  <DadoCard label="Imóvel" value={dadosExtraidos.endereco_linha || dadosExtraidos.endereco} span2 />
+                  <DadoCard label="ImÃ³vel" value={dadosExtraidos.endereco_linha || dadosExtraidos.endereco} span2 />
                 </div>
               </div>
             )}
@@ -1077,7 +1077,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos
             disabled={!podeCriar}
             className="btn-primary text-sm"
           >
-            {criando ? 'Criando...' : 'Criar Apólice'}
+            {criando ? 'Criando...' : 'Criar ApÃ³lice'}
           </button>
         </div>
       </div>
@@ -1121,7 +1121,7 @@ export default function ApoicesGestao() {
       startTransition(() => {
         setApolices([])
       })
-      toast({ type: 'error', title: 'Erro ao carregar apólices' })
+      toast({ type: 'error', title: 'Erro ao carregar apÃ³lices' })
     } finally {
       setLoading(false)
     }
@@ -1192,7 +1192,7 @@ export default function ApoicesGestao() {
 
     const error = await moverStatusApolice(id, novoStatus)
     if (error) {
-      toast({ type: 'error', title: 'Erro ao mover apólice' })
+      toast({ type: 'error', title: 'Erro ao mover apÃ³lice' })
       load()
     }
   }
@@ -1215,8 +1215,8 @@ export default function ApoicesGestao() {
     <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-4 animate-fade-in">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="title-page text-dark-text">Gestão de Apólices</h1>
-          <p className="text-xs text-dark-muted mt-0.5">Arraste as apólices entre as colunas para atualizar o status</p>
+          <h1 className="title-page text-dark-text">GestÃ£o de ApÃ³lices</h1>
+          <p className="text-xs text-dark-muted mt-0.5">Arraste as apÃ³lices entre as colunas para atualizar o status</p>
         </div>
       </div>
 
@@ -1230,7 +1230,7 @@ export default function ApoicesGestao() {
                 filtro === item ? 'bg-brand-primary text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
               }`}
             >
-              {item === 'total' ? 'Todos' : item === 'hoje' ? 'Hoje' : item === 'semana' ? 'Semana' : 'Mês'}
+              {item === 'total' ? 'Todos' : item === 'hoje' ? 'Hoje' : item === 'semana' ? 'Semana' : 'MÃªs'}
             </button>
           ))}
         </div>
@@ -1242,7 +1242,7 @@ export default function ApoicesGestao() {
             className="select text-sm py-1.5"
             style={{ minWidth: '220px' }}
           >
-            <option value="">Todas as imobiliárias</option>
+            <option value="">Todas as imobiliÃ¡rias</option>
             {grupos.map(grupo => (
               <option key={grupo.id} value={grupo.nome_canonico}>{grupo.nome_canonico}</option>
             ))}
@@ -1261,7 +1261,7 @@ export default function ApoicesGestao() {
             className={`flex items-center gap-2 text-sm ${workspace === 'iniciar' ? 'btn-secondary' : 'btn-primary'}`}
           >
             <Plus className="w-4 h-4" />
-            {workspace === 'iniciar' ? 'Fechar emissão' : 'Iniciar Emissão'}
+            {workspace === 'iniciar' ? 'Fechar emissÃ£o' : 'Iniciar EmissÃ£o'}
           </button>
           <button
             onClick={() => setWorkspace(prev => (prev === 'upload' ? 'kanban' : 'upload'))}
@@ -1363,6 +1363,7 @@ export default function ApoicesGestao() {
     </div>
   )
 }
+
 
 
 

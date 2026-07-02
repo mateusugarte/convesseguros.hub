@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -23,7 +23,7 @@ const LOGO = 'https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/
 
 const NAV_GROUPS = [
   {
-    label: 'Fiança',
+    label: 'FianÃ§a',
     items: [
       { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
       {
@@ -34,18 +34,18 @@ const NAV_GROUPS = [
           { to: '/fichas', label: 'Geral', end: true },
           { to: '/fichas/residencial', label: 'Residencial' },
           { to: '/fichas/comercial-pf', label: 'Comercial PF' },
-          { to: '/fichas/pessoa-juridica', label: 'Pessoa Jurídica' },
+          { to: '/fichas/pessoa-juridica', label: 'Pessoa JurÃ­dica' },
         ],
       },
       { to: '/minhas-fichas', icon: User, label: 'Minhas Fichas' },
-      { to: '/relatorio', icon: BarChart2, label: 'Relatorios' },
+      { to: '/relatorio', icon: BarChart2, label: 'Relatórios' },
       {
         to: '/apolices',
         icon: FileCheck,
         label: 'Apolices',
         subitems: [
           { to: '/apolices', label: 'Dashboard', end: true },
-          { to: '/apolices/gestao', label: 'Gestao' },
+          { to: '/apolices/gestao', label: 'Gestão' },
           { to: '/apolices/lista', label: 'Pesquisa' },
         ],
       },
@@ -54,7 +54,7 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: 'Gestao',
+    label: 'Gestão',
     items: [
       { to: '/seguradoras', icon: Shield, label: 'Seguradoras' },
     ],
@@ -69,7 +69,7 @@ const NAV_GROUPS = [
         subitems: [
           { to: '/auto',                 label: 'Dashboard', end: true },
           { to: '/auto/renovacoes',      label: 'Renovacoes' },
-          { to: '/auto/emissoes',        label: 'Emissoes' },
+          { to: '/auto/emissoes',        label: 'Emissões' },
           { to: '/auto/gestao',          label: 'Gestao AUTO' },
           { to: '/auto/cotacoes',        label: 'Cotacoes' },
           { to: '/auto/clientes',        label: 'Clientes' },
@@ -91,12 +91,12 @@ const NAV_GROUPS = [
           { to: '/comercial/pipeline', label: 'Pipeline' },
           { to: '/comercial/leads', label: 'Base de Leads' },
           { to: '/comercial/vendas', label: 'Vendas' },
-          { to: '/comercial/calendario', label: 'Calendario' },
+          { to: '/comercial/calendario', label: 'Calendário' },
           { to: '/comercial/jornadas', label: 'Jornadas' },
         ],
       },
       { to: '/renovacoes', icon: RefreshCw, label: 'Renovacoes', soon: true },
-      { to: '/calendario', icon: Calendar, label: 'Calendario', soon: true },
+      { to: '/calendario', icon: Calendar, label: 'Calendário', soon: true },
       { to: '/materiais', icon: FolderOpen, label: 'Materiais', soon: true },
     ],
   },
@@ -138,10 +138,10 @@ export default function Layout() {
   const isJornadasRoute = location.pathname.startsWith('/comercial/jornadas')
   const shellClassName = isCommercialRoute ? 'crm-shell' : 'ops-shell'
   const workspaceLabel = isCommercialRoute ? 'CRM comercial' : 'Core ops'
-  const workspaceTitle = isCommercialRoute ? 'Painel comercial em operacao.' : 'Central operacional premium.'
+  const workspaceTitle = isCommercialRoute ? 'Painel comercial em operação.' : 'Central operacional premium.'
   const workspaceLead = isCommercialRoute
     ? 'Leads, vendas e jornadas no mesmo workspace.'
-    : 'Fichas, apolices e operacao em uma unica mesa de controle.'
+    : 'Fichas, apólices e operação em uma única mesa de controle.'
 
   const profileAreas = Array.isArray(profile?.areas_atuacao) ? profile.areas_atuacao : []
   const hasArea = area => profileAreas.includes(area)
@@ -217,13 +217,13 @@ export default function Layout() {
           created_at: p.new.created_at,
           type: 'ficha',
           title: prodLabel || 'Nova ficha',
-          message: `${p.new.imobiliaria || ''} · ${p.new.nome_interessado || 'Sem nome'}`,
+          message: `${p.new.imobiliaria || ''} Â· ${p.new.nome_interessado || 'Sem nome'}`,
           href: `/fichas/${p.new.id}`,
         })
         toast({
           type: 'ficha',
           title: prodLabel || 'Nova ficha',
-          message: `${p.new.imobiliaria || ''} · ${p.new.nome_interessado || 'Sem nome'}`,
+          message: `${p.new.imobiliaria || ''} Â· ${p.new.nome_interessado || 'Sem nome'}`,
           action: { label: 'Ver ficha', onClick: () => navigate(`/fichas/${p.new.id}`) },
           duration: 10000,
         })
@@ -238,14 +238,14 @@ export default function Layout() {
           created_at: p.new.created_at,
           type: 'auto',
           title: 'Novo seguro auto',
-          message: `${cliente}${p.new.modelo_veiculo ? ` · ${p.new.modelo_veiculo}` : ''}`,
+          message: `${cliente}${p.new.modelo_veiculo ? ` Â· ${p.new.modelo_veiculo}` : ''}`,
           href: `/auto/cotacoes/${p.new.id}`,
         })
         toast({
           type: 'auto',
           title: 'Novo seguro auto',
-          message: `${cliente}${p.new.modelo_veiculo ? ` · ${p.new.modelo_veiculo}` : ''}`,
-          action: { label: 'Abrir cotação', onClick: () => navigate(`/auto/cotacoes/${p.new.id}`) },
+          message: `${cliente}${p.new.modelo_veiculo ? ` Â· ${p.new.modelo_veiculo}` : ''}`,
+          action: { label: 'Abrir cotaÃ§Ã£o', onClick: () => navigate(`/auto/cotacoes/${p.new.id}`) },
           duration: 10000,
         })
       })
@@ -394,7 +394,7 @@ export default function Layout() {
                 <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'rgb(var(--brand-primary-rgb))' }} />
                 <span className="truncate">{workspaceLead}</span>
                 <span className="ml-auto shrink-0 rounded-full border border-dark-border/70 px-2 py-0.5 text-[10px] font-semibold text-dark-muted">
-                  {abertasCount} em cotação
+                  {abertasCount} em cotaÃ§Ã£o
                 </span>
               </div>
             </div>
@@ -512,7 +512,7 @@ export default function Layout() {
                   <button
                     onClick={() => { setNotificationsOpen(o => !o); setUserMenuOpen(false) }}
                     className="relative inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-dark-border/70 bg-dark-surface/70 text-dark-muted transition-colors hover:text-dark-text hover:border-brand-accent/50"
-                    aria-label="Notificações"
+                    aria-label="NotificaÃ§Ãµes"
                     aria-expanded={notificationsOpen}
                   >
                     <Bell className="h-4 w-4" />
@@ -659,3 +659,4 @@ export default function Layout() {
     </div>
   )
 }
+

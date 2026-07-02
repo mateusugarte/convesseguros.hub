@@ -43,18 +43,18 @@ import { getFichaOperationalState } from '../lib/fichaOperational'
 import { BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 const PERIOD_OPTIONS = [
-  { value: 'mes', label: 'Mes' },
+  { value: 'mes', label: 'Mês' },
   { value: 'ano', label: 'Ano' },
-  { value: 'historico', label: 'Historico' },
+  { value: 'historico', label: 'Histórico' },
 ]
 
 const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-const MESES_FULL = ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+const MESES_FULL = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 const COLUNAS = [
   { id: 'aprovada', label: 'Aprovadas', color: '#0f766e', copyStatus: 'Aprovada' },
   { id: 'emitida', label: 'Emitidas', color: '#000079', copyStatus: 'Emitida' },
-  { id: 'enviado_cobranca', label: 'Enviado Cobranca', color: '#2247aa', copyStatus: 'Enviado Cobranca' },
+  { id: 'enviado_cobranca', label: 'Enviado Cobrança', color: '#2247aa', copyStatus: 'Enviado Cobrança' },
   { id: 'recuperados', label: 'RECUPERADOS', color: '#4b6cc2', copyStatus: 'Recuperada' },
   { id: 'expirada', label: 'Expiradas', color: '#6B7280', copyStatus: 'Expirada' },
 ]
@@ -80,7 +80,7 @@ function getYearRange(ano) {
 }
 
 function formatDateBR(value) {
-  if (!value) return 'â€”'
+  if (!value) return '—'
   try {
     return format(parseISO(String(value)), 'dd/MM/yyyy', { locale: ptBR })
   } catch {
@@ -109,7 +109,7 @@ async function fetchAllRows(queryFactory, pageSize = 1000) {
 }
 
 function getPeriodoLabel(periodo, ano, mes) {
-  if (periodo === 'historico') return 'Historico'
+  if (periodo === 'historico') return 'Histórico'
   if (periodo === 'ano') return String(ano)
   return `${MESES_FULL[mes - 1]} ${ano}`
 }
@@ -131,11 +131,11 @@ function getColuna(ficha) {
 }
 
 function getNomeFicha(ficha) {
-  if (!ficha) return 'â€”'
+  if (!ficha) return '—'
   if (ficha.produto === 'pessoa_juridica') {
-    return normalizeDisplayText(ficha.nome_empresa || ficha.nome_interessado) || 'â€”'
+    return normalizeDisplayText(ficha.nome_empresa || ficha.nome_interessado) || '—'
   }
-  return normalizeDisplayText(ficha.nome_interessado) || 'â€”'
+  return normalizeDisplayText(ficha.nome_interessado) || '—'
 }
 
 function getDocumento(ficha) {
@@ -189,7 +189,7 @@ function getEffectiveDataEmissao(ficha) {
 }
 
 function getCanonicalImobiliariaNome(ficha) {
-  return ficha?._imobiliariaNome || 'â€”'
+  return ficha?._imobiliariaNome || '—'
 }
 
 function isEligibleReportRow(ficha) {
@@ -203,7 +203,7 @@ function buildCopyLines(fichas, coluna) {
       const nome = getNomeFicha(f)
       const imob = getCanonicalImobiliariaNome(f)
       const data = formatDateBR(f.created_at)
-      const cep = f.cep || 'â€”'
+      const cep = f.cep || '—'
       return `${nome} - ${imob} - ${data} - Status (${status}) - ${cep}`
     })
     .join('\n')
@@ -469,7 +469,7 @@ function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggl
         <p className="mt-0.5 text-[11px] uppercase tracking-[0.1em] text-dark-muted">{getCanonicalImobiliariaNome(ficha)}</p>
       </button>
 
-      <span className={`badge ${op?.color || 'badge-muted'}`}>{op?.label || 'â€”'}</span>
+      <span className={`badge ${op?.color || 'badge-muted'}`}>{op?.label || '—'}</span>
 
       {doc && (
         <span className="rounded-full border border-dark-border/60 bg-dark-surface2/70 px-2 py-1 text-[10px] font-mono text-dark-muted">
@@ -526,7 +526,7 @@ function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggl
             onClick={() => { if (ficha?._apolice?.id) onOpenPolicy(ficha._apolice.id) }}
             className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-primary px-2.5 py-2 text-[10px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <ExternalLink className="h-3.5 w-3.5" /> Abrir apÃ³lice
+            <ExternalLink className="h-3.5 w-3.5" /> Abrir apólice
           </button>
         </div>
       )}
@@ -572,7 +572,7 @@ function BlocoRelatorio({
             type="button"
             onClick={() => onCopy(coluna.id)}
             className="rounded-lg border border-dark-border/60 px-2 py-1 text-[10px] font-medium text-dark-muted transition-colors hover:border-brand-accent/40 hover:text-dark-text"
-            title="Copiar informaÃ§Ãµes dos selecionados deste bloco"
+            title="Copiar informações dos selecionados deste bloco"
           >
             Copiar
           </button>
@@ -679,7 +679,7 @@ function SelectedToolbar({ count, onClear, onSelectAll, onInvertSelection, onMov
             Deselecionar todos
           </button>
           <button type="button" onClick={onInvertSelection} className="btn-secondary text-xs">
-            Inverter seleÃ§Ã£o
+            Inverter seleção
           </button>
           <button type="button" onClick={onBulkCopy} className="btn-secondary text-xs" disabled={count === 0}>
             Copiar selecionadas
@@ -756,31 +756,31 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
       <div className="relative glass-modal w-full max-w-2xl overflow-hidden border border-dark-border">
         <div className="flex items-center justify-between gap-3 border-b border-dark-border px-6 py-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Emissao pelo relatorio</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Emissão pelo relatório</p>
             <h3 className="mt-1 text-lg font-semibold text-dark-text">{normalizeDisplayText(ficha.nome_interessado || ficha.nome_empresa) || 'Ficha selecionada'}</h3>
           </div>
-          <button onClick={onCancelar} className="text-dark-muted hover:text-dark-text" disabled={salvando}>Ã—</button>
+          <button onClick={onCancelar} className="text-dark-muted hover:text-dark-text" disabled={salvando}>×</button>
         </div>
 
         <div className="space-y-4 px-6 py-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Nome do ProprietÃ¡rio" value={proprietarioNome} onChange={setProprietarioNome} required />
-            <Field label="Celular do ProprietÃ¡rio" value={proprietarioCel} onChange={setProprietarioCel} />
+            <Field label="Nome do Proprietário" value={proprietarioNome} onChange={setProprietarioNome} required />
+            <Field label="Celular do Proprietário" value={proprietarioCel} onChange={setProprietarioCel} />
             <Field label="Numero da Apolice" value={numeroApolice} onChange={setNumeroApolice} required />
             <Field label="Numero da Proposta" value={numeroProposta} onChange={setNumeroProposta} />
             <div className="sm:col-span-2">
-              <Field label="Endereco do ImÃ³vel" value={endereco} onChange={setEndereco} />
+              <Field label="Endereco do Imóvel" value={endereco} onChange={setEndereco} />
             </div>
             <Field type="date" label="Inicio da Vigencia" value={inicioVigencia} onChange={setInicioVigencia} required />
             <Field type="date" label="Fim da Vigencia" value={fimVigencia} onChange={setFimVigencia} required />
-            <ReadOnly label="Tempo de Vigencia" value={meses > 0 ? `${meses} meses` : 'â€”'} />
+            <ReadOnly label="Tempo de Vigência" value={meses > 0 ? `${meses} meses` : '—'} />
             <Field type="number" label="Parcelamento (vezes)" value={parcelamento} onChange={setParcelamento} required />
             <Field type="number" label="Valor da Parcela (R$)" value={valorParcela} onChange={setValorParcela} required />
             <Field type="number" label="Premio Liquido (R$)" value={premioLiquido} onChange={setPremioLiquido} required />
-            <Field type="number" label="% ComissÃ£o" value={pctComissao} onChange={setPctComissao} required />
+            <Field type="number" label="% Comissão" value={pctComissao} onChange={setPctComissao} required />
             <Field type="number" label="% Desconto" value={pctDesconto} onChange={setPctDesconto} required />
-            <ReadOnly label="Premio total" value={premioTotal != null ? formatMoneyBR(premioTotal) : 'â€”'} />
-            <ReadOnly label="ComissÃ£o calculada" value={valorComissao != null ? formatMoneyBR(valorComissao) : 'â€”'} />
+            <ReadOnly label="Premio total" value={premioTotal != null ? formatMoneyBR(premioTotal) : '—'} />
+            <ReadOnly label="Comissão calculada" value={valorComissao != null ? formatMoneyBR(valorComissao) : '—'} />
             <div className="sm:col-span-2">
               <Select
                 value={formaPagamento}
@@ -789,7 +789,7 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
                   { value: '', label: 'Selecione...' },
                   { value: 'fatura_sem_entrada', label: 'Fatura sem entrada' },
                   { value: 'fatura_com_entrada', label: 'Fatura com entrada' },
-                  { value: 'cartao_credito', label: 'CartÃ£o de crÃ©dito' },
+                  { value: 'cartao_credito', label: 'Cartão de crédito' },
                 ]}
               />
             </div>
@@ -841,7 +841,7 @@ function ModalEmitirApolice({ ficha, salvando, onCancelar, onConfirmar }) {
             disabled={!obrigatoriosOK || salvando}
             className="btn-primary text-sm"
           >
-            {salvando ? 'Salvando...' : 'Confirmar Emissao'}
+            {salvando ? 'Salvando...' : 'Confirmar Emissão'}
           </button>
         </div>
       </div>
@@ -858,18 +858,18 @@ function ModalConfirmarCobranca({ fichas, salvando, onCancelar, onConfirmar }) {
       <div className="relative glass-modal w-full max-w-xl overflow-hidden border border-dark-border">
         <div className="flex items-center justify-between gap-3 border-b border-dark-border px-6 py-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Confirmar cobran?a</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Confirmar cobrança</p>
             <h3 className="mt-1 text-lg font-semibold text-dark-text">
               Registrar envio para {fichas.length} ficha{fichas.length !== 1 ? 's' : ''}
             </h3>
           </div>
-          <button onClick={onCancelar} className="text-dark-muted hover:text-dark-text" disabled={salvando}>?</button>
+          <button onClick={onCancelar} className="text-dark-muted hover:text-dark-text" disabled={salvando}>×</button>
         </div>
 
         <div className="space-y-4 px-6 py-5">
           <div className="rounded-3xl border border-brand-accent/15 bg-brand-accent/5 p-4">
             <p className="text-sm text-dark-text">
-              Ao confirmar, as fichas selecionadas ser?o registradas como <strong>cobran?a enviada</strong> e a data do envio ser? salva automaticamente.
+              Ao confirmar, as fichas selecionadas serão registradas como <strong>cobrança enviada</strong> e a data do envio será salva automaticamente.
             </p>
           </div>
 
@@ -938,7 +938,7 @@ function ModalResumoRelatorio({ titulo, descricao, secaoEnvio, secaoRetorno, onF
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Resumo do relatório</p>
             <h3 className="mt-1 text-lg font-semibold text-dark-text">{titulo}</h3>
           </div>
-          <button onClick={onFechar} className="text-dark-muted hover:text-dark-text">?</button>
+          <button onClick={onFechar} className="text-dark-muted hover:text-dark-text">×</button>
         </div>
 
         <div className="space-y-4 px-6 py-5">
@@ -1011,7 +1011,7 @@ function ModalFinalizarRelatorio({ periodoLabel, resumo, salvando, onCancelar, o
         disabled={salvando}
         className="rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
       >
-        {salvando ? 'Salvando...' : temPendencias ? 'Finalizar mesmo assim' : 'Finalizar relat?rio'}
+        {salvando ? 'Salvando...' : temPendencias ? 'Finalizar mesmo assim' : 'Finalizar relatório'}
       </button>
     </div>
   )
@@ -1035,7 +1035,7 @@ function ModalFinalizarRelatorio({ periodoLabel, resumo, salvando, onCancelar, o
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-dark-text">{item.nome}</p>
             <p className="mt-1 text-xs text-dark-muted">
-              Abrir a se??o com as fichas deste m?s dessa imobili?ria.
+              Abrir a seção com as fichas deste mês dessa imobiliária.
             </p>
           </div>
           <span className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${badgeClass}`}>
@@ -1056,39 +1056,39 @@ function ModalFinalizarRelatorio({ periodoLabel, resumo, salvando, onCancelar, o
     <Modal
       isOpen
       onClose={!salvando ? onCancelar : () => {}}
-      title={`Finalizar relat?rio de ${periodoLabel}`}
-      subtitle="Finaliza??o mensal"
+      title={`Finalizar relatório de ${periodoLabel}`}
+      subtitle="Finalização mensal"
       maxWidth="xl"
       footer={footer}
     >
       <div className="space-y-5">
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-[24px] border border-dark-border/70 bg-dark-surface/70 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Imobili?rias</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Imobiliárias</p>
             <p className="mt-2 text-2xl font-semibold text-dark-text">{totalImobiliarias}</p>
-            <p className="mt-1 text-xs text-dark-muted">Com alguma a??o pendente neste fechamento.</p>
+            <p className="mt-1 text-xs text-dark-muted">Com alguma ação pendente neste fechamento.</p>
           </div>
           <div className="rounded-[24px] border border-red-200 bg-red-50 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-red-700">Sem cobran?a</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-red-700">Sem cobrança</p>
             <p className="mt-2 text-2xl font-semibold text-red-800">{totalSemCobranca}</p>
-            <p className="mt-1 text-xs text-red-700">Fichas aprovadas que ainda n?o tiveram cobran?a enviada.</p>
+            <p className="mt-1 text-xs text-red-700">Fichas aprovadas que ainda não tiveram cobrança enviada.</p>
           </div>
           <div className="rounded-[24px] border border-orange-200 bg-orange-50 p-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-orange-700">Aguardando retorno</p>
             <p className="mt-2 text-2xl font-semibold text-orange-800">{totalSemRetorno}</p>
-            <p className="mt-1 text-xs text-orange-700">Fichas em cobran?a aguardando retorno da imobili?ria.</p>
+            <p className="mt-1 text-xs text-orange-700">Fichas em cobrança aguardando retorno da imobiliária.</p>
           </div>
         </div>
 
         <div className={`rounded-[28px] border p-4 ${temPendencias ? 'border-red-200 bg-[linear-gradient(135deg,rgba(254,242,242,0.98),rgba(255,247,237,0.92))]' : 'border-emerald-300 bg-emerald-50'}`}>
           <p className={`text-sm font-semibold ${temPendencias ? 'text-slate-900' : 'text-emerald-800'}`}>
             {temPendencias
-              ? 'Antes de finalizar, revise as pend?ncias abaixo. O clique em uma imobili?ria leva direto ao bloco com as fichas desse m?s.'
-              : 'Nenhuma pend?ncia encontrada. O fechamento deste m?s est? pronto para ser confirmado.'}
+              ? 'Antes de finalizar, revise as pendências abaixo. O clique em uma imobiliária leva direto ao bloco com as fichas desse mês.'
+              : 'Nenhuma pendência encontrada. O fechamento deste mês está pronto para ser confirmado.'}
           </p>
           <p className={`mt-2 text-sm ${temPendencias ? 'text-slate-600' : 'text-emerald-700'}`}>
             {temPendencias
-              ? 'A lista fica dentro do modal e cada item j? abre o relat?rio individual na se??o correta.'
+              ? 'A lista fica dentro do modal e cada item já abre o relatório individual na seção correta.'
               : 'Confirme para registrar o fechamento mensal.'}
           </p>
         </div>
@@ -1098,11 +1098,11 @@ function ModalFinalizarRelatorio({ periodoLabel, resumo, salvando, onCancelar, o
             <div className="rounded-[28px] border border-red-200 bg-red-50/75 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">Sem cobran?a enviada</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">Sem cobrança enviada</p>
                   <p className="mt-1 text-sm text-red-800">Abra a coluna de aprovadas para agir nas fichas pendentes.</p>
                 </div>
                 <span className="rounded-full bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-red-700 shadow-sm">
-                  {semCobranca.length} imobili?ria{semCobranca.length !== 1 ? 's' : ''}
+                  {semCobranca.length} imobiliária{semCobranca.length !== 1 ? 's' : ''}
                 </span>
               </div>
               {temEnvioPendente ? (
@@ -1111,7 +1111,7 @@ function ModalFinalizarRelatorio({ periodoLabel, resumo, salvando, onCancelar, o
                 </div>
               ) : (
                 <div className="mt-4 rounded-[22px] border border-emerald-200 bg-white/90 px-4 py-5 text-sm text-emerald-800">
-                  Nenhuma imobili?ria com cobran?a pendente neste m?s.
+                  Nenhuma imobiliária com cobrança pendente neste mês.
                 </div>
               )}
             </div>
@@ -1120,19 +1120,19 @@ function ModalFinalizarRelatorio({ periodoLabel, resumo, salvando, onCancelar, o
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-orange-800">Aguardando retorno</p>
-                  <p className="mt-1 text-sm text-orange-900">Abra a coluna de cobran?a para ver as fichas aguardando retorno.</p>
+                  <p className="mt-1 text-sm text-orange-900">Abra a coluna de cobrança para ver as fichas aguardando retorno.</p>
                 </div>
                 <span className="rounded-full bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-orange-700 shadow-sm">
-                  {semRetorno.length} imobili?ria{semRetorno.length !== 1 ? 's' : ''}
+                  {semRetorno.length} imobiliária{semRetorno.length !== 1 ? 's' : ''}
                 </span>
               </div>
               {temRetornoPendente ? (
                 <div className="mt-4 max-h-[42vh] space-y-3 overflow-y-auto pr-1">
-                  {semRetorno.map(item => renderPendenciaCard(item, 'enviado_cobranca', 'Ir para Cobran?a', item.semRetorno, 'warning'))}
+                  {semRetorno.map(item => renderPendenciaCard(item, 'enviado_cobranca', 'Ir para Cobrança', item.semRetorno, 'warning'))}
                 </div>
               ) : (
                 <div className="mt-4 rounded-[22px] border border-emerald-200 bg-white/90 px-4 py-5 text-sm text-emerald-800">
-                  Nenhuma imobili?ria aguardando retorno neste m?s.
+                  Nenhuma imobiliária aguardando retorno neste mês.
                 </div>
               )}
             </div>
@@ -1426,7 +1426,7 @@ export default function Relatorio() {
       _oper: getOperacionalStatus(item),
       _key: resolverNome(item.imobiliaria),
       _logo: resolverImobiliariaInfo(item.imobiliaria),
-      _imobiliariaNome: resolverImobiliariaInfo(item.imobiliaria)?.nome_canonico || resolverNome(item.imobiliaria) || item.imobiliaria || 'â€”',
+      _imobiliariaNome: resolverImobiliariaInfo(item.imobiliaria)?.nome_canonico || resolverNome(item.imobiliaria) || item.imobiliaria || '—',
     }))
   }, [rows, resolverNome, resolverImobiliariaInfo])
 
@@ -1622,8 +1622,8 @@ export default function Relatorio() {
     const text = selectedIds.map(id => {
       const item = map.get(id)
       if (!item) return null
-      const status = item._oper?.label || 'â€”'
-      return `${item._nome} - ${getCanonicalImobiliariaNome(item)} - ${formatDateBR(item.created_at)} - Status (${status}) - ${item.cep || 'â€”'}`
+      const status = item._oper?.label || '—'
+      return `${item._nome} - ${getCanonicalImobiliariaNome(item)} - ${formatDateBR(item.created_at)} - Status (${status}) - ${item.cep || '—'}`
     }).filter(Boolean).join('\n')
 
     if (!text) {
@@ -1640,7 +1640,7 @@ export default function Relatorio() {
     if (moveTarget !== 'aprovada') return
 
     if (selectedRows.some(item => getColuna(item) !== 'enviado_cobranca')) {
-      toast({ type: 'info', title: 'Selecione apenas fichas da coluna Enviado Cobran?a', message: 'O retorno em massa para Aprovadas s? pode ser feito com fichas que j? estavam em cobran?a.' })
+      toast({ type: 'info', title: 'Selecione apenas fichas da coluna Enviado Cobrança', message: 'O retorno em massa para Aprovadas só pode ser feito com fichas que já estavam em cobrança.' })
       return
     }
 
@@ -1658,7 +1658,7 @@ export default function Relatorio() {
     const failed = results.find(result => result)
     if (failed) {
       setRows(previousRows)
-      toast({ type: 'error', title: 'Erro ao mover fichas', message: failed.message || 'N?o foi poss?vel concluir a opera??o.' })
+      toast({ type: 'error', title: 'Erro ao mover fichas', message: failed.message || 'Não foi possível concluir a operação.' })
       setSelectedIds([])
       setMoveTarget('')
       return
@@ -1671,12 +1671,12 @@ export default function Relatorio() {
 
   function openConfirmarCobranca() {
     if (selectedRows.length === 0) {
-      toast({ type: 'info', title: 'Selecione pelo menos uma ficha', message: 'Use a sele??o do card ou o bot?o Todos da coluna Aprovadas.' })
+      toast({ type: 'info', title: 'Selecione pelo menos uma ficha', message: 'Use a seleção do card ou o botão Todos da coluna Aprovadas.' })
       return
     }
 
     if (!canConfirmCobranca) {
-      toast({ type: 'info', title: 'Selecione apenas fichas aprovadas', message: 'Para enviar cobran?a, escolha cards da coluna Aprovadas e confirme o envio.' })
+      toast({ type: 'info', title: 'Selecione apenas fichas aprovadas', message: 'Para enviar cobrança, escolha cards da coluna Aprovadas e confirme o envio.' })
       return
     }
 
@@ -1710,11 +1710,11 @@ export default function Relatorio() {
     setSalvandoCobranca(false)
     if (failed) {
       setRows(previousRows)
-      toast({ type: 'error', title: 'Erro ao registrar cobran?a', message: failed.message || 'N?o foi poss?vel salvar o envio de cobran?a.' })
+      toast({ type: 'error', title: 'Erro ao registrar cobrança', message: failed.message || 'Não foi possível salvar o envio de cobrança.' })
       return
     }
 
-    toast({ type: 'success', title: `${pendingCobranca.fichas.length} cobran?a${pendingCobranca.fichas.length !== 1 ? 's' : ''} registrada${pendingCobranca.fichas.length !== 1 ? 's' : ''}` })
+    toast({ type: 'success', title: `${pendingCobranca.fichas.length} cobrança${pendingCobranca.fichas.length !== 1 ? 's' : ''} registrada${pendingCobranca.fichas.length !== 1 ? 's' : ''}` })
     setPendingCobranca(null)
     setSelectedIds([])
     setMoveTarget('')
@@ -1739,8 +1739,8 @@ export default function Relatorio() {
     toast({
       type: 'success',
       title: colunaId === 'recuperados'
-        ? 'Historico de cobranca atualizado'
-        : (nextValue ? 'Marcado como cobranca enviada' : 'Ficha retornou para Aprovadas'),
+        ? 'Histórico de cobrança atualizado'
+        : (nextValue ? 'Marcado como cobrança enviada' : 'Ficha retornou para Aprovadas'),
     })
   }
 
@@ -1755,15 +1755,15 @@ export default function Relatorio() {
     const err = await editarFicha(ficha.id, patch, user?.id)
     if (err) {
       setRows(previousRows)
-      toast({ type: 'error', title: 'Erro ao atualizar retorno da imobiliÃ¡ria', message: err.message })
+      toast({ type: 'error', title: 'Erro ao atualizar retorno da imobiliária', message: err.message })
       return
     }
-    toast({ type: 'success', title: nextValue ? 'Imobiliaria marcada como retornou' : 'Marcacao de retorno removida' })
+    toast({ type: 'success', title: nextValue ? 'Imobiliária marcada como retornou' : 'Marcação de retorno removida' })
   }
 
   function openFinalizarRelatorio() {
     if (periodo !== 'mes') {
-      toast({ type: 'info', title: 'Fechamento mensal dispon?vel apenas para a vis?o de m?s.' })
+      toast({ type: 'info', title: 'Fechamento mensal disponível apenas para a visão de mês.' })
       return
     }
 
@@ -1777,7 +1777,7 @@ export default function Relatorio() {
   function openPendenciaImobiliaria(nomeImobiliaria, focusSectionId) {
     const selectedImob = imobiliarias.find(item => normalizeKey(item.nome_canonico) === normalizeKey(nomeImobiliaria))
     if (!selectedImob?.id) {
-      toast({ type: 'error', title: 'Imobili?ria n?o encontrada', message: 'N?o foi poss?vel abrir o relat?rio individual desta imobili?ria.' })
+      toast({ type: 'error', title: 'Imobiliária não encontrada', message: 'Não foi possível abrir o relatório individual desta imobiliária.' })
       return
     }
 
@@ -1838,12 +1838,12 @@ export default function Relatorio() {
 
     setSalvandoEmissao(false)
     if (error) {
-      toast({ type: 'error', title: 'Erro ao registrar emissÃ£o', message: error.message })
+      toast({ type: 'error', title: 'Erro ao registrar emissão', message: error.message })
       setPendingEmissao(null)
       return
     }
 
-    toast({ type: 'success', title: wasInCobranca ? 'Emissao recuperada registrada' : 'Emissao registrada' })
+    toast({ type: 'success', title: wasInCobranca ? 'Emissão recuperada registrada' : 'Emissão registrada' })
     setPendingEmissao(null)
     setRows(prev => prev.map(item => (
       item.id === pendingEmissao.ficha.id
@@ -2041,9 +2041,9 @@ export default function Relatorio() {
           stats={
             <>
               <MetricCard label="Fichas aprovadas" value={summary.fichasAprovadas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
-              <MetricCard label="Sem cobran?a enviada" value={summary.semCobrancaEnviada} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
+              <MetricCard label="Sem cobrança enviada" value={summary.semCobrancaEnviada} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
               <MetricCard label="Aguardando retorno" value={summary.aguardandoRetorno} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
-              <MetricCard label="Ap?lices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
+              <MetricCard label="Apólices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
               <MetricCard label="Emitidas sem ficha" value={summary.emitidasSemFichaVinculada} tone="warning" icon={<FileText className="h-4 w-4" />} />
               <MetricCard label="Expiradas" value={summary.expiradas} tone="accent" icon={<Square className="h-4 w-4" />} />
               <MetricCard label="Recuperadas" value={summary.recuperadas} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
@@ -2165,10 +2165,10 @@ export default function Relatorio() {
       >
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <MetricCard label="Fichas aprovadas" value={summary.fichasAprovadas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
-          <MetricCard label="Ap?lices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
-          <MetricCard label="Taxa de emiss?o" value={`${summary.taxaEmissao.toFixed(1)}%`} tone="accent" icon={<BarChart2 className="h-4 w-4" />} />
+          <MetricCard label="Apólices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
+          <MetricCard label="Taxa de emissão" value={`${summary.taxaEmissao.toFixed(1)}%`} tone="accent" icon={<BarChart2 className="h-4 w-4" />} />
           <MetricCard label="Aguardando retorno" value={summary.aguardandoRetorno} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
-          <MetricCard label="Sem cobran?a enviada" value={summary.semCobrancaEnviada} tone="success" icon={<BellRing className="h-4 w-4" />} />
+          <MetricCard label="Sem cobrança enviada" value={summary.semCobrancaEnviada} tone="success" icon={<BellRing className="h-4 w-4" />} />
           <MetricCard label="Emitidas sem ficha" value={summary.emitidasSemFichaVinculada} tone="warning" icon={<FileText className="h-4 w-4" />} />
           <MetricCard label="Recuperadas" value={summary.recuperadas} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
           <MetricCard label="Expiradas" value={summary.expiradas} tone="secondary" icon={<Square className="h-4 w-4" />} />
@@ -2176,7 +2176,7 @@ export default function Relatorio() {
       </DataCard>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <MetricCard label="Taxa de emissão" value={`${summary.taxaEmissao.toFixed(1)}%`} hint="Ap?lices emitidas com ficha vinculada ? fichas aprovadas" />
+        <MetricCard label="Taxa de emissão" value={`${summary.taxaEmissao.toFixed(1)}%`} hint="Apólices emitidas com ficha vinculada sobre fichas aprovadas" />
         <MetricCard label="Tempo médio até emissão" value={summary.mediaEmissao != null ? `${summary.mediaEmissao.toFixed(1)} dias` : '—'} hint="Entre criação da ficha e emissão" />
         <MetricCard label="Tempo médio em cobrança" value={summary.mediaCobranca != null ? `${summary.mediaCobranca.toFixed(1)} dias` : '—'} hint="Entre cobrança e emissão/atual" />
       </div>
@@ -2192,7 +2192,7 @@ export default function Relatorio() {
                   <SeguradoraBadge nome={seg.nome} logoUrl={seg.logoUrl} logoPath={seg.logoPath} size="md" />
                   <span className="badge badge-info">{approved} aprovadas</span>
                 </div>
-                <p className="mt-3 text-xs text-dark-muted">{pending} aguardando retorno da imobili?ria</p>
+                <p className="mt-3 text-xs text-dark-muted">{pending} aguardando retorno da imobiliária</p>
               </div>
             )
           })}
@@ -2322,7 +2322,7 @@ export default function Relatorio() {
                   <div className="flex flex-col gap-1">
                     <span className="text-[10px] uppercase tracking-[0.14em] text-dark-muted">Prioridade operacional</span>
                     <span className={requiresSend ? 'text-xs font-semibold text-red-700' : cobrancaDone && hasPending ? 'text-xs font-semibold text-orange-700' : hasPending ? 'text-xs font-semibold text-status-info' : 'text-xs font-semibold text-emerald-700'}>
-                      {requiresSend ? 'Existem fichas sem cobran?a enviada' : cobrancaDone && hasPending ? 'Todas as cobranças foram enviadas' : hasPending ? 'Fichas aguardando retorno' : 'Operação em dia'}
+                      {requiresSend ? 'Existem fichas sem cobrança enviada' : cobrancaDone && hasPending ? 'Todas as cobranças foram enviadas' : hasPending ? 'Fichas aguardando retorno' : 'Operação em dia'}
                     </span>
                   </div>
                   <ChevronRight className="h-4 w-4 text-dark-muted transition-transform group-hover:translate-x-0.5" />
@@ -2403,6 +2403,9 @@ export default function Relatorio() {
     </div>
   )
 }
+
+
+
 
 
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { fetchDocumentos, uploadDocumento, deletarDocumento } from '../lib/documentos'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -130,3 +130,4 @@ export default function SecaoDocumentos({ fichaId, apoliceId, cpfCnpj }) {
     </div>
   )
 }
+

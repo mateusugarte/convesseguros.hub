@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { finalizarFichaComRawData } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { CheckCircle2, ArrowLeft, ShieldCheck } from 'lucide-react'
@@ -162,4 +162,5 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
     </div>
   )
 }
+
 

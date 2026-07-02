@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { fetchRelatorioMensal, PRODUTO_LABELS } from '../lib/fichas'
 import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
 import { normalizeDisplayText } from '../lib/text'
@@ -6,7 +6,7 @@ import { useImobiliaria } from '../hooks/useImobiliaria'
 import { AVATAR_COLORS, BRAND, PRODUTO_COLORS, STATUS_CHART_COLORS } from '../design-system/tokens'
 import { ChevronLeft, ChevronRight, Download, X, FileText, CheckCircle2, XCircle, MinusCircle, AlertTriangle, Clock } from 'lucide-react'
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// Helpers
 
 function maskCpf(cpf) {
   if (!cpf) return '—'
@@ -44,7 +44,7 @@ const PRODUTOS_FILTRO = [
   { key: 'pessoa_juridica',label: 'PJ' },
 ]
 
-// ── Badge de produto ──────────────────────────────────────────────────────────
+// Badge de produto
 
 const PRODUTO_COLOR = {
   residencial_pf:  { bg: PRODUTO_COLORS.residencial_pf.bg,  color: PRODUTO_COLORS.residencial_pf.color },
@@ -62,7 +62,7 @@ function ProdutoBadge({ produto }) {
   )
 }
 
-// ── Indicadores booleanos ────────────────────────────────────────────────────
+// Indicadores booleanos
 
 function Sim() { return <span className="inline-flex items-center gap-1 text-status-success font-medium"><CheckCircle2 className="w-3.5 h-3.5" /> Sim</span> }
 function Nao() { return <span className="inline-flex items-center gap-1 text-status-danger font-medium"><XCircle className="w-3.5 h-3.5" /> Não</span> }
@@ -78,7 +78,7 @@ function ResultadoFinal({ status }) {
   return <Dash />
 }
 
-// ── Exportação CSV ────────────────────────────────────────────────────────────
+// Exportação CSV
 
 function exportarCSV(fichas, mes, ano, resolverNome) {
   const headers = ['Imobiliária','Nome','Doc','Produto','Status','Enviada','Resultado','Desistiu','Orçamentista','Data']
@@ -100,7 +100,7 @@ function exportarCSV(fichas, mes, ano, resolverNome) {
   const csv = [headers, ...rows]
     .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
     .join('\n')
-  const blob = new Blob(['ï»¿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
   const url  = URL.createObjectURL(blob)
   const a    = Object.assign(document.createElement('a'), {
     href: url,
@@ -110,7 +110,7 @@ function exportarCSV(fichas, mes, ano, resolverNome) {
   URL.revokeObjectURL(url)
 }
 
-// ── Totalizador por imobiliária ───────────────────────────────────────────────
+// Totalizador por imobiliária
 
 function TotalizadorImob({ fichas }) {
   const enviadas   = fichas.filter(f => f.retorno_enviado).length
@@ -127,7 +127,7 @@ function TotalizadorImob({ fichas }) {
   )
 }
 
-// ── Tabela por imobiliária ────────────────────────────────────────────────────
+// Tabela por imobiliária
 
 function TabelaImob({ nome, fichas }) {
   return (
@@ -169,7 +169,7 @@ function TabelaImob({ nome, fichas }) {
   )
 }
 
-// ── Rodapé geral ─────────────────────────────────────────────────────────────
+// Rodapé geral
 
 function Rodape({ fichas }) {
   const total    = fichas.length
@@ -204,7 +204,7 @@ function Rodape({ fichas }) {
   )
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// Main
 
 export default function RelatorioMensal({ onClose }) {
   const agora = new Date()
@@ -330,3 +330,4 @@ export default function RelatorioMensal({ onClose }) {
     </div>
   )
 }
+

@@ -1,23 +1,23 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+﻿import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronsUpDown, Check, Search, X } from 'lucide-react'
 import { getEntityImageUrl } from '../../lib/entityMedia'
 
 /**
- * WorkspacesSelect — dropdown premium com avatar circle + label.
+ * WorkspacesSelect - dropdown premium com avatar circle + label.
  * Inspirado no sshahaider/workspaces, adaptado para o design glass do sistema.
  *
  * Props:
- *   value        — valor selecionado (string)
- *   onChange     — (string) => void
- *   options      — [{ value, label, sublabel?, color?, initials?, icon? }]
- *   placeholder  — texto quando nenhum selecionado
- *   label        — título do cabeçalho do dropdown
- *   disabled     — boolean
- *   className    — classes adicionais no wrapper
- *   clearable    — permite limpar seleção
- *   searchable   — força busca (auto-ativa se > 8 opções)
- *   emptyText    — texto quando sem opções
+ *   value        - valor selecionado (string)
+ *   onChange     - (string) => void
+ *   options      - [{ value, label, sublabel?, color?, initials?, icon? }]
+ *   placeholder  - texto quando nenhum selecionado
+ *   label        - título do cabeçalho do dropdown
+ *   disabled     - boolean
+ *   className    - classes adicionais no wrapper
+ *   clearable    - permite limpar seleção
+ *   searchable   - força busca (auto-ativa se > 8 opções)
+ *   emptyText    - texto quando sem opções
  */
 export function WorkspacesSelect({
   value,
@@ -100,7 +100,7 @@ export function WorkspacesSelect({
 
   function select(val) { onChange(val); setOpen(false) }
 
-  // Avatar: prioridade → color prop → hash da string
+  // Avatar: prioridade â†’ color prop â†’ hash da string
   function avatarColor(opt) {
     if (opt?.color) return opt.color
     const palette = ['#4A90D9','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#2B5BA8','#EF4444']
@@ -406,3 +406,4 @@ function WorkspaceItem({ opt, isSelected, onSelect, color, initials, avatar }) {
     </button>
   )
 }
+

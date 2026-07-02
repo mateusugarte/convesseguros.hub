@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, Car, CheckCircle2, FileText, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, X, Plus } from 'lucide-react'
@@ -22,7 +22,7 @@ const COLUNAS = [
   { id: 'negociando', label: 'Negociando', hint: 'em tratativa com cliente', tone: 'accent' },
   { id: 'aguardando_vistoria', label: 'Aguardando vistoria', hint: 'dependem de validacao', tone: 'warning' },
   { id: 'proposta_transmitida', label: 'Proposta Transmitida', hint: 'proposta enviada para a seguradora', tone: 'success' },
-  { id: 'apolice_emitida', label: 'Apólice Emitida', hint: 'apólice finalizada com documento', tone: 'accent' },
+  { id: 'apolice_emitida', label: 'ApÃ³lice Emitida', hint: 'apÃ³lice finalizada com documento', tone: 'accent' },
 ]
 
 const PERIOD_OPTIONS = [
@@ -499,7 +499,7 @@ function BoolRow({ label, value }) {
   )
 }
 
-// ─── Modal Detalhe ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Modal Detalhe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, onEmitirApolice, onEditar, onExcluir, isDeleting, page = false }) {
   const c = emissao.cotacoes_auto || {}
@@ -687,7 +687,7 @@ function ModalEditarJson({ emissao, value, onChange, onClose, onSave, isSaving }
             />
             <div className="mt-5 flex gap-3 border-t border-dark-border/60 pt-5">
               <button onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
-              <button onClick={onSave} disabled={isSaving} className="btn-primary flex-1 disabled:opacity-50">{isSaving ? 'Salvando...' : 'Salvar alterações'}</button>
+              <button onClick={onSave} disabled={isSaving} className="btn-primary flex-1 disabled:opacity-50">{isSaving ? 'Salvando...' : 'Salvar alteraÃ§Ãµes'}</button>
             </div>
           </div>
         </div>
@@ -763,7 +763,7 @@ function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
               ? 'border-status-success/30 bg-status-success/10 text-status-success'
               : 'border-dark-border/40 bg-dark-surface2/40 text-dark-muted'
           }`}>
-            {valorComissao > 0 ? formatMoney(valorComissao) : '—'}
+            {valorComissao > 0 ? formatMoney(valorComissao) : 'â€”'}
           </div>
         </div>
         <div>
@@ -789,7 +789,7 @@ function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
   )
 }
 
-// ─── Modal Resultado da Cotacao ──────────────────────────────────────────────
+// â”€â”€â”€ Modal Resultado da Cotacao â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ModalResultado({ emissao, onClose, onSave, isSaving }) {
   const [resultado, setResultado] = useState('aprovada')
@@ -841,7 +841,7 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
             <h2 className="mt-2 text-xl font-semibold text-dark-text">{nome}</h2>
             <p className="mt-1 text-sm text-dark-muted">
               {c.modelo_veiculo || 'Veiculo nao informado'}
-              {c.placa ? ` · ${c.placa}` : ''}
+              {c.placa ? ` Â· ${c.placa}` : ''}
             </p>
           </div>
           <button onClick={onClose} className="rounded-full p-2 hover:bg-dark-border/40 transition-colors shrink-0">
@@ -922,7 +922,7 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
   )
 }
 
-// ─── Modal Apolices Emitidas ─────────────────────────────────────────────────
+// â”€â”€â”€ Modal Apolices Emitidas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ModalApolices({ onClose }) {
   const [search, setSearch] = useState('')
@@ -1007,11 +1007,11 @@ function ModalApolices({ onClose }) {
               <tbody className="divide-y divide-dark-border/40">
                 {apolices.map(item => (
                   <tr key={item.id} className="transition-colors hover:bg-brand-accent/5">
-                    <td className="py-3 pr-4 font-medium text-dark-text">{item.nome_cliente || item.cpf_cliente || '—'}</td>
-                    <td className="py-3 pr-4 text-dark-muted">{item.numero_apolice || '—'}</td>
-                    <td className="py-3 pr-4 text-dark-muted">{item.seguradora || '—'}</td>
+                    <td className="py-3 pr-4 font-medium text-dark-text">{item.nome_cliente || item.cpf_cliente || 'â€”'}</td>
+                    <td className="py-3 pr-4 text-dark-muted">{item.numero_apolice || 'â€”'}</td>
+                    <td className="py-3 pr-4 text-dark-muted">{item.seguradora || 'â€”'}</td>
                     <td className="py-3 pr-4 text-dark-muted">
-                      {item.vigencia_inicio ? formatDateBR(item.vigencia_inicio) : '—'} — {item.vigencia_fim ? formatDateBR(item.vigencia_fim) : '—'}
+                      {item.vigencia_inicio ? formatDateBR(item.vigencia_inicio) : 'â€”'} â€” {item.vigencia_fim ? formatDateBR(item.vigencia_fim) : 'â€”'}
                     </td>
                     <td className="py-3 pr-4 text-dark-muted">{formatMoney(item.premio_liquido)}</td>
                     <td className="py-3 font-medium text-status-success">{formatMoney(item.valor_comissao)}</td>
@@ -1026,7 +1026,7 @@ function ModalApolices({ onClose }) {
   )
 }
 
-// ─── CampoTexto (formulario de emissao) ─────────────────────────────────────
+// â”€â”€â”€ CampoTexto (formulario de emissao) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function CampoTexto({ label, campo, value, onChange, type = 'text', placeholder = '', disabled = false, inputMode }) {
   return (
@@ -1045,7 +1045,7 @@ function CampoTexto({ label, campo, value, onChange, type = 'text', placeholder 
   )
 }
 
-// ─── Pagina principal ────────────────────────────────────────────────────────
+// â”€â”€â”€ Pagina principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function AutoEmissoes() {
   const qc = useQueryClient()
@@ -1113,7 +1113,7 @@ export default function AutoEmissoes() {
       setForm(FORM_EMISSAO_VAZIO)
     },
     onError: error => {
-      toast({ type: 'error', title: 'Erro ao salvar a emissão', message: error?.message || 'Verifique os dados informados.' })
+      toast({ type: 'error', title: 'Erro ao salvar a emissÃ£o', message: error?.message || 'Verifique os dados informados.' })
     },
   })
 
@@ -1127,7 +1127,7 @@ export default function AutoEmissoes() {
       setManualForm(FORM_MANUAL_VAZIO)
     },
     onError: error => {
-      toast({ type: 'error', title: 'Erro ao salvar a emissão manual', message: error?.message || 'Verifique os dados informados.' })
+      toast({ type: 'error', title: 'Erro ao salvar a emissÃ£o manual', message: error?.message || 'Verifique os dados informados.' })
     },
   })
 
@@ -1427,8 +1427,8 @@ export default function AutoEmissoes() {
   const precisaDocumentoApoliceManual = manualMode !== 'editar' && manualForm.coluna === 'apolice_emitida'
 
   const modalEmissaoResumo = modalEmissao ? {
-    cliente: modalEmissao.cotacoes_auto?.nome_cliente || modalEmissao.cotacoes_auto?.cpf_cliente || '—',
-    cpf: modalEmissao.cotacoes_auto?.cpf_cliente || '—',
+    cliente: modalEmissao.cotacoes_auto?.nome_cliente || modalEmissao.cotacoes_auto?.cpf_cliente || 'â€”',
+    cpf: modalEmissao.cotacoes_auto?.cpf_cliente || 'â€”',
     veiculo: modalEmissao.cotacoes_auto?.modelo_veiculo || 'Modelo nao informado',
     placa: modalEmissao.cotacoes_auto?.placa || 'Sem placa',
     tipo: (modalEmissao.cotacoes_auto?.tipo || modalEmissao.tipo) === 'renovacao' ? 'Renovacao' : 'Novo',
@@ -1439,20 +1439,20 @@ export default function AutoEmissoes() {
 
   if (emissaoId && !manualOpen) {
     if (isLoadingEmissao && !emissaoDetalhada) {
-      return <div className="flex min-h-[50vh] items-center justify-center text-sm text-dark-muted">Carregando emiss�o...</div>
+      return <div className="flex min-h-[50vh] items-center justify-center text-sm text-dark-muted">Carregando emissão...</div>
     }
     if (!emissaoDetalhada) {
       return (
         <div className="space-y-4 p-4">
           <button onClick={() => navigate('/auto/emissoes')} className="btn-secondary"><ArrowLeft className="h-4 w-4" /> Voltar</button>
-          <EmptyState title="Emiss�o n�o encontrada" description="O registro pode ter sido removido." />
+          <EmptyState title="Emissão não encontrada" description="O registro pode ter sido removido." />
         </div>
       )
     }
     return (
       <div className="space-y-4 px-1 pb-8 animate-fade-in">
         <button onClick={() => navigate('/auto/emissoes')} className="btn-secondary inline-flex items-center gap-2">
-          <ArrowLeft className="h-4 w-4" /> Voltar para emiss�es
+          <ArrowLeft className="h-4 w-4" /> Voltar para emissões
         </button>
         <ModalDetalhe page emissao={emissaoDetalhada} onClose={() => navigate('/auto/emissoes')}
           onAbrirCotacao={() => abrirCotacaoCompleta(emissaoDetalhada)} onRegistrarResultado={setModalResultado}
@@ -1679,9 +1679,9 @@ export default function AutoEmissoes() {
                         <td className="py-3 pr-4 font-medium text-dark-text">{nomeEmissao(item)}</td>
                         <td className="py-3 pr-4 text-dark-muted">{seguradoraEmissao(item)}</td>
                         <td className="py-3 pr-4 text-dark-muted">{getEmissaoColuna(item)}</td>
-                        <td className="py-3 pr-4 text-dark-muted">{item.numero_apolice || '—'}</td>
+                        <td className="py-3 pr-4 text-dark-muted">{item.numero_apolice || 'â€”'}</td>
                         <td className="py-3 pr-4 text-dark-muted">
-                          {item.vigencia_inicio ? formatDateBR(item.vigencia_inicio) : '—'} — {item.vigencia_fim ? formatDateBR(item.vigencia_fim) : '—'}
+                          {item.vigencia_inicio ? formatDateBR(item.vigencia_inicio) : 'â€”'} â€” {item.vigencia_fim ? formatDateBR(item.vigencia_fim) : 'â€”'}
                         </td>
                         <td className="py-3">
                           <div className="flex flex-wrap gap-2">
@@ -1790,7 +1790,7 @@ export default function AutoEmissoes() {
 
                 <div className="space-y-4">
                   <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
-                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Etapa da transmissão</p>
+                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Etapa da transmissÃ£o</p>
                     <div className="grid gap-2 md:grid-cols-2">
                       <button
                         type="button"
@@ -1803,7 +1803,7 @@ export default function AutoEmissoes() {
                         }
                       >
                         Proposta transmitida
-                        <span className="mt-1 block text-[11px] font-normal text-dark-muted">Envio inicial, sem ap?lice finalizada.</span>
+                        <span className="mt-1 block text-[11px] font-normal text-dark-muted">Envio inicial, sem apólice finalizada.</span>
                       </button>
                       <button
                         type="button"
@@ -1815,7 +1815,7 @@ export default function AutoEmissoes() {
                             : 'border-dark-border bg-dark-surface/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text')
                         }
                       >
-                        Ap?lice emitida
+                        Apólice emitida
                         <span className="mt-1 block text-[11px] font-normal text-dark-muted">Permite anexar documento e número da apólice.</span>
                       </button>
                     </div>
@@ -2103,7 +2103,7 @@ export default function AutoEmissoes() {
 
                 <div className="space-y-4">
                   <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
-                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Etapa da transmissão</p>
+                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Etapa da transmissÃ£o</p>
                     <div className="grid gap-2 md:grid-cols-2">
                       <button
                         type="button"
@@ -2116,7 +2116,7 @@ export default function AutoEmissoes() {
                         }
                       >
                         Proposta transmitida
-                        <span className="mt-1 block text-[11px] font-normal text-dark-muted">Envio inicial, sem ap?lice finalizada.</span>
+                        <span className="mt-1 block text-[11px] font-normal text-dark-muted">Envio inicial, sem apólice finalizada.</span>
                       </button>
                       <button
                         type="button"
@@ -2128,7 +2128,7 @@ export default function AutoEmissoes() {
                             : 'border-dark-border bg-dark-surface/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text')
                         }
                       >
-                        Ap?lice emitida
+                        Apólice emitida
                         <span className="mt-1 block text-[11px] font-normal text-dark-muted">Permite anexar documento e número da apólice.</span>
                       </button>
                     </div>
@@ -2145,7 +2145,7 @@ export default function AutoEmissoes() {
                           />
                         </div>
                         <div className="rounded-2xl border border-status-success/20 bg-status-success/10 px-3 py-2 text-sm text-status-success">
-                          A ap?lice ser? criada junto com o cadastro.
+                          A apólice será criada junto com o cadastro.
                         </div>
                       </div>
                     )}
@@ -2339,4 +2339,5 @@ export default function AutoEmissoes() {
     </div>
   )
 }
+
 

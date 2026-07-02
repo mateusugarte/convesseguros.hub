@@ -218,7 +218,7 @@ export default function ApolicesLista() {
           ))}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
           <div className="space-y-2">
             <label className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Imobiliária</label>
             <ImobiliariaSelect value={imobFiltro} onChange={setImobFiltro} />
@@ -240,7 +240,7 @@ export default function ApolicesLista() {
                 onChange={e => setBusca(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && buscar()}
                 className="w-full bg-transparent text-sm text-dark-text outline-none placeholder:text-dark-muted"
-                placeholder="Nome, apólice, CPF/CNPJ..."
+                placeholder="Nome do locatário/empresa, apólice, CPF/CNPJ..."
               />
             </div>
           </div>
@@ -283,8 +283,8 @@ export default function ApolicesLista() {
             Nenhuma apólice encontrada
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="table-table text-sm">
+          <div className="overflow-x-auto rounded-[24px]">
+            <table className="table-table min-w-[1180px] text-sm">
               <thead className="table-thead border-b border-dark-border">
                 <tr>
                   {['Data Emissão', 'Imobiliária', 'Locatário', 'Apólice', 'Seguradora', 'Status', 'Parcela', 'Emissor', ''].map(h => (
@@ -296,8 +296,8 @@ export default function ApolicesLista() {
                 {apolices.map(a => (
                   <tr key={a.id} className="table-row" onClick={() => navigate(`/apolices/${a.id}`)}>
                     <td className="td text-xs font-mono whitespace-nowrap text-dark-muted">{fmtData(a.data_emissao)}</td>
-                    <td className="td max-w-[140px] truncate font-medium text-dark-text">{resolverNome(a.imobiliaria) || '—'}</td>
-                    <td className="td max-w-[220px] text-dark-text">
+                    <td className="td min-w-[180px] max-w-[240px] truncate font-medium text-dark-text">{resolverNome(a.imobiliaria) || '—'}</td>
+                    <td className="td min-w-[240px] max-w-[360px] text-dark-text">
                       <div className="min-w-0">
                         <p className="truncate">{nomeFicha(a)}</p>
                         {isApoliceSemFicha(a) && (

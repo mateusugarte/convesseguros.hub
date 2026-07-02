@@ -1713,6 +1713,66 @@ html.dark .skeleton-surface {
   }
 }
 
+.apolices-gestao-page .kanban-viewport {
+  min-height: clamp(30rem, calc(100dvh - 18rem), 46rem);
+}
+
+.apolices-gestao-page .kanban-col {
+  scroll-snap-align: start;
+}
+
+.apolices-gestao-page .kanban-col-header {
+  min-height: 52px;
+  padding: 12px 12px 10px;
+}
+
+.apolices-gestao-page .kanban-col-body {
+  padding: 10px;
+  gap: 8px;
+}
+
+.apolices-gestao-page .kanban-card {
+  min-height: auto;
+  padding: 8px 8px 8px 6px;
+}
+
+.relatorio-page .relatorio-metrics-grid > *,
+.relatorio-page .relatorio-imob-grid > * {
+  min-height: 100%;
+}
+
+@media (max-width: 1600px) {
+  .apolices-gestao-page {
+    --kanban-col-w: clamp(16.5rem, 20vw, 18.5rem);
+  }
+}
+
+@media (max-width: 1400px) {
+  .apolices-gestao-page {
+    --kanban-col-w: clamp(15.75rem, 24vw, 17.5rem);
+  }
+}
+
+@media (max-width: 1100px) {
+  .apolices-gestao-page {
+    --kanban-col-w: clamp(15rem, 29vw, 16.5rem);
+  }
+
+  .apolices-gestao-page .kanban-viewport {
+    min-height: clamp(28rem, calc(100dvh - 16rem), 38rem);
+  }
+}
+
+@media (max-width: 768px) {
+  .apolices-gestao-page {
+    --kanban-col-w: min(84vw, 19rem);
+  }
+
+  .apolices-gestao-page .kanban-card {
+    padding: 8px 7px 8px 6px;
+  }
+}
+
 /* Premium operational foundation */
 .btn-primary {
   background: linear-gradient(

@@ -34,11 +34,32 @@ na main (commit `06f4fbd`), 37 testes passando, build verde. Smoke test
 manual no navegador NAO foi feito (sem `.env`/credenciais Supabase no
 ambiente) — recomenda-se conferir visualmente antes de considerar encerrado.
 
+**Revisao de entrega do Codex — Kanban/Apolices/Relatorio/Fichas (2026-07-02, Claude):**
+Codex entregou refactor que separa `retorno_enviado` (retorno ao cliente) de
+`cobranca_started_at`/`imobiliaria_retornou` (rastreio de cobranca) — logica
+correta, 44/44 testes verdes, build verde. Revisao encontrou e corrigiu:
+(1) `KanbanFichas.jsx` — a edicao do Codex converteu 27 bytes de mojibake ja
+existentes (recuperaveis via CP1252/Latin-1) em caracteres U+FFFD irreversiveis;
+recuperado o texto correto via arqueologia de git + reversao byte-a-byte, sem
+tocar na logica que o Codex mudou; (2) typos literais introduzidos pelo Codex:
+"N?o" em `FichaDetalhePage.jsx` e "Inverter sele??o" em `Relatorio.jsx` (texto
+visivel ao usuario), mais 6 descricoes de teste em `relatorioCobranca.test.mjs`;
+(3) BOM (UTF-8 byte-order-mark) introduzido pelo editor do Codex em 6 arquivos
+(`apolices.js`, `ApolicesLista.jsx`, `KanbanBoard.jsx`, `ModalFinalizar.jsx`,
+`ApoicesGestao.jsx`, `Relatorio.jsx`) — removido; (4) badge "Retorno enviado" em
+`FichaDetalhePage.jsx` usava cores emerald fora do padrao do modulo — trocado
+para tokens `status-success`. Build e testes conferidos verdes apos as correcoes.
+
+**Risco nao resolvido (aguardando decisao):** `scripts/reset_junho_enviado_cobranca.mjs`
+(novo, nao rastreado) usa `SUPABASE_SERVICE_ROLE_KEY` direto de `.env.local` fora
+do n8n — viola a regra "service_role somente no n8n" deste CLAUDE.md. Nao foi
+alterado nem executado; aguardando aprovacao/plano do usuario.
+
 ---
 
 ## Responsavel Atual
 
-Codex
+Codex (entrega revisada por Claude — ver acima)
 
 ## Pagina
 

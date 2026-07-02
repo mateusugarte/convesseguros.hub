@@ -741,7 +741,9 @@ export async function finalizarFicha(id, { status, seguradora, retorno_enviado, 
   if (rawDataUpdate.error) return rawDataUpdate.error
 
   const { error } = await supabase.from('fichas').update({
-    status, seguradora, retorno_enviado,
+    status,
+    seguradora,
+    retorno_enviado,
     finalizada_em: new Date().toISOString(),
     finalizado_por: userId || null,
     ...rawDataUpdate,
@@ -828,25 +830,20 @@ export async function finalizarFichaComRawData(id, { status, seguradora, retorno
   return error
 }
 
-export async function marcarRetornoEnviado(id) {
-  const { error } = await supabase.from('fichas').update({ retorno_enviado: true }).eq('id', id)
-  return error
-}
-
 export async function criarFicha(dados) {
   const { data, error } = await supabase.from('fichas').insert(dados).select().single()
   return { data, error }
 }
 
-export async function editarFicha(id, dados, userId) {
-  let payload = { ...dados }
+export async function editarFicha(id, dados, userId, options = {}) {
+  let payload = dados
   if (userId) {
     const { data: cur } = await supabase.from('fichas').select('raw_data').eq('id', id).single()
     const raw = cur?.raw_data || {}
     const hist = Array.isArray(raw._edit_history) ? raw._edit_history : []
     hist.push({ editado_em: new Date().toISOString(), editado_por: userId })
-    payload.raw_data = dados?.raw_data
-      ? { ...raw, ...dados.raw_data, _edit_history: hist }
+    payload.raw_data = payload?.raw_data
+      ? { ...raw, ...payload.raw_data, _edit_history: hist }
       : { ...raw, _edit_history: hist }
   }
   const { data, error } = await supabase.from('fichas').update(payload).eq('id', id).select('id')

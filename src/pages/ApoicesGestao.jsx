@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { memo } from 'react'
 import { startTransition } from 'react'
@@ -1093,7 +1093,7 @@ export default function ApoicesGestao() {
 
   const [apolices, setApolices] = useState([])
   const [loading, setLoading] = useState(true)
-  const [filtro, setFiltro] = useState('total')
+  const [filtro, setFiltro] = useState('hoje')
   const [imobFiltro, setImobFiltro] = useState('')
   const [workspace, setWorkspace] = useState('kanban')
   const [activeCard, setActiveCard] = useState(null)
@@ -1212,7 +1212,7 @@ export default function ApoicesGestao() {
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-4 animate-fade-in">
+    <div className="apolices-gestao-page flex h-full min-h-0 w-full flex-1 flex-col gap-4 animate-fade-in" style={{ '--kanban-col-w': 'clamp(17rem, 18vw, 20rem)' }}>
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="title-page text-dark-text">Gestão de Apólices</h1>
@@ -1303,7 +1303,7 @@ export default function ApoicesGestao() {
             <>
               <div className="absolute left-0 top-0 bottom-4 w-16 z-10 pointer-events-none" style={{ background: 'linear-gradient(to right, rgb(var(--color-bg)), transparent)' }} />
               <button
-                onClick={() => scrollRef.current?.scrollBy({ left: -280, behavior: 'smooth' })}
+                onClick={() => scrollRef.current?.scrollBy({ left: -360, behavior: 'smooth' })}
                 className="absolute left-0.5 top-[60px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-md flex items-center justify-center text-dark-muted hover:text-dark-text transition-all"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -1315,7 +1315,7 @@ export default function ApoicesGestao() {
             <>
               <div className="absolute right-0 top-0 bottom-4 w-16 z-10 pointer-events-none" style={{ background: 'linear-gradient(to left, rgb(var(--color-bg)), transparent)' }} />
               <button
-                onClick={() => scrollRef.current?.scrollBy({ left: 280, behavior: 'smooth' })}
+                onClick={() => scrollRef.current?.scrollBy({ left: 360, behavior: 'smooth' })}
                 className="absolute right-0.5 top-[60px] z-20 w-7 h-7 rounded-full bg-dark-surface border border-dark-border shadow-md flex items-center justify-center text-dark-muted hover:text-dark-text transition-all"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -1336,7 +1336,7 @@ export default function ApoicesGestao() {
                 setActiveCard(null)
               }}
             >
-              <div className="flex min-h-full items-stretch gap-3 min-w-max px-1">
+              <div className="flex min-h-full items-stretch gap-4 min-w-max px-1 pb-2">
                 {COLUNAS.map(col => (
                   <DroppableColumn
                     key={col.id}

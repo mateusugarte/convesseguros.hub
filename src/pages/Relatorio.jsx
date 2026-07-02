@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   BarChart2,
@@ -62,6 +62,7 @@ const COLUNAS = [
 const REPORT_STATUSES = ['aprovado', 'emitido']
 const COBRANCA_TOGGLE_STORAGE = 'relatorio-cobranca-toggle'
 const RELATORIO_FINALIZADO_STORAGE = 'relatorio-finalizado-v1'
+const MANUAL_REPORT_MOVE_OPTIONS = COLUNAS.filter(col => ['aprovada', 'enviado_cobranca'].includes(col.id))
 
 function pad2(value) {
   return String(value).padStart(2, '0')
@@ -147,7 +148,7 @@ function getDocumento(ficha) {
 }
 
 function getRecoveryStart(ficha) {
-  return ficha?.raw_data?.retorno_enviado_em || ficha?.raw_data?.cobranca_started_at || null
+  return ficha?.raw_data?.cobranca_started_at || null
 }
 
 
@@ -405,7 +406,7 @@ function matchesSeguradora(ficha, seguradoraMeta) {
 function ChartCard({ title, subtitle, data, dataKey = 'value', xKey = 'name', color = '#000079', formatter = v => v }) {
   return (
     <DataCard title={title} subtitle={subtitle} className="h-full">
-      <div className="h-72">
+      <div className="h-[clamp(16rem,32vw,20rem)]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical" margin={{ top: 8, right: 18, left: 12, bottom: 8 }}>
             <CartesianGrid stroke="rgba(148,163,184,0.18)" strokeDasharray="3 3" />
@@ -438,7 +439,7 @@ function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggl
     : 'border-dark-border/60 bg-dark-surface/70'
 
   return (
-    <div className={`flex flex-wrap items-center gap-3 rounded-2xl border px-4 py-3 transition-colors ${rowClass}`}>
+    <div className={`flex flex-wrap items-start gap-3 rounded-2xl border px-4 py-3 transition-colors lg:items-center ${rowClass}`}>
       <button
         type="button"
         onClick={() => onToggleSelect(ficha.id)}
@@ -459,7 +460,7 @@ function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggl
         </span>
       )}
 
-      <button type="button" onClick={() => onOpen(ficha.id)} className="min-w-[200px] flex-1 text-left">
+      <button type="button" onClick={() => onOpen(ficha.id)} className="min-w-0 flex-[1_1_20rem] text-left">
         <div className="flex items-center gap-2">
           <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: `${prodColor}20`, color: prodColor }}>
             {normalizeDisplayText(ficha.produto) || ficha.produto || 'Fianca'}
@@ -663,7 +664,20 @@ function PeriodControl({ periodo, ano, mes, anos, onPeriod, onAno, onMes }) {
   )
 }
 
-function SelectedToolbar({ count, onClear, onSelectAll, onInvertSelection, onMove, onBulkCopy, options, target, setTarget }) {
+function SelectedToolbar({
+  count,
+  onClear,
+  onSelectAll,
+  onInvertSelection,
+  onMove,
+  onBulkCopy,
+  onConfirmCobranca,
+  canConfirmCobranca,
+  pendingCobrancaCount,
+  options,
+  target,
+  setTarget,
+}) {
   return (
     <DataCard className="border-brand-accent/15 bg-brand-accent/5" bodyClassName="py-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -683,6 +697,14 @@ function SelectedToolbar({ count, onClear, onSelectAll, onInvertSelection, onMov
           </button>
           <button type="button" onClick={onBulkCopy} className="btn-secondary text-xs" disabled={count === 0}>
             Copiar selecionadas
+          </button>
+          <button
+            type="button"
+            onClick={onConfirmCobranca}
+            className="btn-primary text-xs"
+            disabled={!canConfirmCobranca}
+          >
+            Marcar envio{pendingCobrancaCount > 0 ? ' (' + pendingCobrancaCount + ')' : ''}
           </button>
           <Select
             value={target}
@@ -1631,6 +1653,10 @@ export default function Relatorio() {
 
   async function moveSelected() {
     if (!moveTarget || selectedIds.length === 0) return
+    if (moveTarget === 'enviado_cobranca') {
+      openConfirmarCobranca()
+      return
+    }
     if (moveTarget !== 'aprovada') return
 
     if (selectedRows.some(item => getColuna(item) !== 'enviado_cobranca')) {
@@ -1798,7 +1824,7 @@ export default function Relatorio() {
     setSalvandoEmissao(true)
 
     const recoveryStart = getRecoveryStart(pendingEmissao.ficha)
-    const wasInCobranca = Boolean(pendingEmissao.ficha?.retorno_enviado || recoveryStart)
+    const wasInCobranca = Boolean(recoveryStart)
 
     const { error } = await registrarApoliceDaFicha({
       ficha: pendingEmissao.ficha,
@@ -1821,7 +1847,6 @@ export default function Relatorio() {
 
     if (!error && wasInCobranca) {
       await editarFicha(pendingEmissao.ficha.id, {
-        retorno_enviado: false,
         raw_data: {
           ...(pendingEmissao.ficha.raw_data || {}),
           recovered_after_cobranca: true,
@@ -1844,7 +1869,6 @@ export default function Relatorio() {
         ? {
             ...item,
             status: 'emitido',
-            retorno_enviado: false,
             numero_apolice: payload.numeroApolice,
             seguradora: payload.seguradora,
             data_emissao: new Date().toISOString().slice(0, 10),
@@ -1985,7 +2009,7 @@ export default function Relatorio() {
 
   if (loading) {
     return (
-      <div className="space-y-5 animate-fade-in">
+      <div className="relatorio-page space-y-5 animate-fade-in">
         <PageHeader
           eyebrow="Relatórios operacionais"
           title={isDetail ? 'Relatório por Imobiliária' : 'Relatórios Fiança'}
@@ -2008,7 +2032,7 @@ export default function Relatorio() {
     const logoMeta = currentImob ? getEntityImageUrl(currentImob.imagem_path, currentImob.imagem_url) : null
 
     return (
-      <div className="space-y-5 animate-fade-in">
+      <div className="relatorio-page space-y-5 animate-fade-in">
         {!loading && alertaTopo && (
           <button
             type="button"
@@ -2052,7 +2076,10 @@ export default function Relatorio() {
           onInvertSelection={invertSelection}
           onMove={moveSelected}
           onBulkCopy={copySelected}
-          options={COLUNAS.filter(col => col.id === 'aprovada')}
+          onConfirmCobranca={openConfirmarCobranca}
+          canConfirmCobranca={canConfirmCobranca}
+          pendingCobrancaCount={pendingCobrancaCount}
+          options={MANUAL_REPORT_MOVE_OPTIONS}
           target={moveTarget}
           setTarget={setMoveTarget}
         />
@@ -2126,7 +2153,7 @@ export default function Relatorio() {
   }
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="relatorio-page space-y-5 animate-fade-in">
       {!loading && alertaTopo && (
         <button
           type="button"
@@ -2157,7 +2184,7 @@ export default function Relatorio() {
         subtitle="Leitura executiva do recorte selecionado."
         className="border-brand-secondary/20 shadow-[0_20px_48px_rgba(15,23,42,0.08)]"
       >
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <div className="relatorio-metrics-grid grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4">
           <MetricCard label="Fichas aprovadas" value={summary.fichasAprovadas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
           <MetricCard label="Apólices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
           <MetricCard label="Taxa de emissão" value={`${summary.taxaEmissao.toFixed(1)}%`} tone="accent" icon={<BarChart2 className="h-4 w-4" />} />
@@ -2169,19 +2196,19 @@ export default function Relatorio() {
         </div>
       </DataCard>
 
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <MetricCard label="Taxa de emissão" value={`${summary.taxaEmissao.toFixed(1)}%`} hint="Apólices emitidas com ficha vinculada sobre fichas aprovadas" />
         <MetricCard label="Tempo médio até emissão" value={summary.mediaEmissao != null ? `${summary.mediaEmissao.toFixed(1)} dias` : '—'} hint="Entre criação da ficha e emissão" />
         <MetricCard label="Tempo médio em cobrança" value={summary.mediaCobranca != null ? `${summary.mediaCobranca.toFixed(1)} dias` : '—'} hint="Entre cobrança e emissão/atual" />
       </div>
 
       <DataCard title="Aprovações por seguradora" subtitle="Identifica onde existem aprovações pendentes de emissão.">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3 items-stretch">
           {seguradoras.map(seg => {
             const approved = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && isApprovedFicha(item)).length
             const pending = rowsWithHelpers.filter(item => matchesSeguradora(item, seg) && isAguardandoRetorno(item)).length
             return (
-              <div key={seg.id} className="rounded-3xl border border-dark-border/60 bg-dark-surface/60 p-4">
+              <div key={seg.id} className="h-full rounded-3xl border border-dark-border/60 bg-dark-surface/60 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <SeguradoraBadge nome={seg.nome} logoUrl={seg.logoUrl} logoPath={seg.logoPath} size="md" />
                   <span className="badge badge-info">{approved} aprovadas</span>
@@ -2209,7 +2236,7 @@ export default function Relatorio() {
           </div>
         }
       >
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="relatorio-imob-grid grid gap-3 sm:grid-cols-2 2xl:grid-cols-3 items-stretch">
           {filteredImobiliarias.map(imob => {
             const meta = resolverImobiliariaInfo(imob.nome_canonico) || imob
             const imobMetrics = groupedByImob.find(item => normalizeKey(item.nome) === normalizeKey(imob.nome_canonico)) || {
@@ -2297,7 +2324,7 @@ export default function Relatorio() {
                   )}
                 </div>
 
-                <div className="mt-4 grid grid-cols-3 gap-2 text-[11px]">
+                <div className="mt-4 grid grid-cols-1 gap-2 text-[11px] sm:grid-cols-3">
                   <div className="rounded-2xl bg-dark-surface/70 px-3 py-2">
                     <p className="text-dark-muted">Aprovadas</p>
                     <p className="mt-1 text-sm font-semibold text-dark-text">{imobMetrics.aprovadas}</p>

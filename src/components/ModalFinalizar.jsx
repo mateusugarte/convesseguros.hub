@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { finalizarFichaComRawData } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { CheckCircle2, ArrowLeft, ShieldCheck } from 'lucide-react'
@@ -19,7 +19,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
   const [status,    setStatus]    = useState(defaultStatus || '')
   const seguradoraDefinida = ficha?.seguradora || ficha?.raw_data?.retorno_gerado?.seguradora_escolhida || ''
   const [seguradora,setSeguradora]= useState(seguradoraDefinida)
-  const [retorno,   setRetorno]   = useState(ficha?.retorno_enviado ?? false)
+  const [retornoEnviado, setRetornoEnviado] = useState(Boolean(ficha?.retorno_enviado))
   const [passadoPelaImobiliaria, setPassadoPelaImobiliaria] = useState(Boolean(ficha?.raw_data?.passado_pela_imobiliaria))
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState('')
@@ -27,6 +27,10 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
   useEffect(() => {
     setSeguradora(seguradoraDefinida)
   }, [seguradoraDefinida])
+
+  useEffect(() => {
+    setRetornoEnviado(Boolean(ficha?.retorno_enviado))
+  }, [ficha?.retorno_enviado])
 
   useEffect(() => {
     setPassadoPelaImobiliaria(Boolean(ficha?.raw_data?.passado_pela_imobiliaria))
@@ -44,7 +48,7 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
     const err = await finalizarFichaComRawData(ficha.id, {
       status,
       seguradora: precisaSeguradora ? (seguradoraDefinida || seguradora).trim() || null : null,
-      retorno_enviado: retorno,
+      retorno_enviado: retornoEnviado,
       userId: user?.id,
       rawDataPatch: status === 'aprovado'
         ? { passado_pela_imobiliaria: passadoPelaImobiliaria }
@@ -122,6 +126,16 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
           )}
           </div>
 
+          <label className="flex items-center gap-3 p-3 rounded-xl border border-dark-border bg-dark-surface2 cursor-pointer hover:border-brand-accent/40 transition-colors">
+            <input
+              type="checkbox"
+              checked={retornoEnviado}
+              onChange={e => setRetornoEnviado(e.target.checked)}
+              className="w-5 h-5 rounded accent-brand-accent"
+            />
+            <span className="text-sm text-dark-text">Retorno enviado?</span>
+          </label>
+
           {status === 'aprovado' && (
             <label className="flex items-center gap-3 p-3 rounded-xl border border-dark-border bg-dark-surface2 cursor-pointer hover:border-brand-accent/40 transition-colors">
               <input
@@ -133,17 +147,6 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
               <span className="text-sm text-dark-text">Passado pela imobiliária?</span>
             </label>
           )}
-
-          {/* Retorno */}
-          <label className="flex items-center gap-3 p-3 rounded-xl border border-dark-border bg-dark-surface2 cursor-pointer hover:border-brand-accent/40 transition-colors">
-            <input
-              type="checkbox"
-              checked={retorno}
-              onChange={e => setRetorno(e.target.checked)}
-              className="w-5 h-5 rounded accent-brand-accent"
-            />
-            <span className="text-sm text-dark-text">Retorno enviado ao cliente</span>
-          </label>
 
           {error && (
             <p className="text-sm text-status-danger bg-status-danger/10 border border-status-danger/20 rounded-lg px-3 py-2">

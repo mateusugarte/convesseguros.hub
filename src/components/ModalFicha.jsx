@@ -169,8 +169,8 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
     cotacoes:           normalizarCotacoes(ficha?.raw_data?.cotacoes),
     status:             ficha?.status             ?? 'pendente',
     seguradora:         ficha?.seguradora         ?? '',
+    retorno_enviado:    ficha?.retorno_enviado    ?? false,
     orcamentista_forms: ficha?.orcamentista_forms ?? '',
-    retorno_enviado:    ficha?.retorno_enviado     ?? false,
   })
 
   const [saving,   setSaving] = useState(false)
@@ -207,8 +207,8 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
       cotacoes:           normalizarCotacoes(ficha?.raw_data?.cotacoes),
       status:             ficha?.status             ?? 'pendente',
       seguradora:         ficha?.seguradora         ?? '',
+      retorno_enviado:    ficha?.retorno_enviado    ?? false,
       orcamentista_forms: ficha?.orcamentista_forms ?? '',
-      retorno_enviado:    ficha?.retorno_enviado     ?? false,
     })
     setError(null)
   }, [ficha?.id])
@@ -258,6 +258,7 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
       pct_comissao:     form.pct_comissao === '' ? null : parseDecimalBR(form.pct_comissao),
       pct_desconto:     form.pct_desconto === '' ? null : parseDecimalBR(form.pct_desconto),
       parcelamento:     form.parcelamento === '' ? null : Number(form.parcelamento),
+      retorno_enviado:  Boolean(form.retorno_enviado),
       raw_data: {
         ...(ficha?.raw_data || {}),
         cotacoes: cotacoes.map(c => ({
@@ -604,13 +605,17 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
                 produto={form.produto}
               />
             </Field>
-            <div className="col-span-2">
-              <label className="flex items-center gap-3 p-3 rounded-xl border border-dark-border bg-dark-surface2 cursor-pointer hover:border-brand-accent/40 transition-colors">
-                <input type="checkbox" checked={form.retorno_enviado} onChange={e => set('retorno_enviado', e.target.checked)}
-                       className="w-4 h-4 rounded accent-brand-accent" />
-                <span className="text-sm text-dark-text">Retorno enviado ao cliente</span>
+            <Field label="Retorno enviado">
+              <label className="flex items-center gap-3 rounded-xl border border-dark-border bg-dark-surface px-3 py-2.5 cursor-pointer hover:border-brand-accent/40 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.retorno_enviado)}
+                  onChange={e => set('retorno_enviado', e.target.checked)}
+                  className="w-4 h-4 rounded accent-brand-accent"
+                />
+                <span className="text-sm text-dark-text">Marcar retorno enviado</span>
               </label>
-            </div>
+            </Field>
           </Sec>
 
           {error && (

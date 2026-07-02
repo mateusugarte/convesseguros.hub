@@ -1,13 +1,13 @@
 export function buildAprovadaPatch(ficha) {
   return {
     status: 'aprovado',
-    retorno_enviado: false,
     raw_data: {
       ...(ficha?.raw_data || {}),
       recovered_after_cobranca: false,
       recovered_after_cobranca_em: null,
-      retorno_enviado_em: null,
       cobranca_started_at: null,
+      imobiliaria_retornou: false,
+      imobiliaria_retornou_em: null,
     },
   }
 }
@@ -15,13 +15,26 @@ export function buildAprovadaPatch(ficha) {
 export function buildCobrancaPatch(ficha, sentAt = new Date().toISOString()) {
   return {
     status: 'aprovado',
-    retorno_enviado: true,
     raw_data: {
       ...(ficha?.raw_data || {}),
       recovered_after_cobranca: false,
       recovered_after_cobranca_em: null,
-      retorno_enviado_em: sentAt,
       cobranca_started_at: sentAt,
+      imobiliaria_retornou: false,
+      imobiliaria_retornou_em: null,
+    },
+  }
+}
+
+export function buildCobrancaResetPatch(ficha) {
+  return {
+    raw_data: {
+      ...(ficha?.raw_data || {}),
+      recovered_after_cobranca: false,
+      recovered_after_cobranca_em: null,
+      cobranca_started_at: null,
+      imobiliaria_retornou: false,
+      imobiliaria_retornou_em: null,
     },
   }
 }
@@ -41,7 +54,6 @@ export function buildCobrancaHistoricoPatch(ficha, enviada, at = new Date().toIS
     raw_data: {
       ...(ficha?.raw_data || {}),
       cobranca_started_at: enviada ? at : null,
-      retorno_enviado_em: enviada ? at : null,
     },
   }
 }
@@ -51,10 +63,8 @@ export function isCobrancaEnviadaVisivel(colunaId) {
 }
 
 export function getCobrancaEnviadaDisplay(ficha, colunaId) {
-  if (colunaId === 'recuperados') {
-    return Boolean(ficha?.raw_data?.cobranca_started_at || ficha?.raw_data?.retorno_enviado_em)
-  }
-  return Boolean(ficha?.retorno_enviado)
+  if (colunaId === 'recuperados') return Boolean(ficha?.raw_data?.cobranca_started_at)
+  return Boolean(ficha?.raw_data?.cobranca_started_at)
 }
 
 export function getImobiliariaRetornouDisplay(ficha) {

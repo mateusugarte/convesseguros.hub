@@ -222,32 +222,100 @@ export async function fetchApolicesKanban({ dateFrom, dateTo, imobiliarias } = {
 
 // ── Lista ─────────────────────────────────────────────────────────────────────
 
-export async function fetchApolicesLista({ dateFrom, dateTo, imobiliarias, seguradora, statusEmissao, busca, page = 0, pageSize = 50 } = {}) {
+export async function fetchApolicesLista({
+  dateFrom,
+  dateTo,
+  imobiliarias,
+  seguradora,
+  statusEmissao,
+  busca,
+  page = 0,
+  pageSize = 50,
+  offset,
+  limit,
+} = {}) {
+  const resolvedOffset = Number.isFinite(offset) ? Math.max(0, Number(offset)) : Math.max(0, page * pageSize)
+  const resolvedLimit = Number.isFinite(limit) ? Math.max(1, Number(limit)) : Math.max(1, pageSize)
+  const searchTerm = String(busca || '').trim()
+  const escapedSearch = searchTerm.replace(/[%_,]/g, ' ').trim()
+
+  const selectClause = `
+    id, data_emissao, imobiliaria, numero_apolice,
+    seguradora, status_emissao, valor_parcela, parcelamento, premio_liquido,
+    premio_total, valor_producao, valor_comissao, pct_comissao, pct_desconto, created_at,
+    nome_interessado, emitido_por, ficha_id, email_proprietario,
+    fichas!ficha_id(nome_interessado, nome_empresa, cpf, cnpj),
+    profiles!emitido_por(nome, avatar_url)
+  `
+
   let q = supabase
     .from('apolices')
-    .select(`
-      id, data_emissao, imobiliaria, numero_apolice,
-      seguradora, status_emissao, valor_parcela, parcelamento, premio_liquido,
-      premio_total, valor_producao, valor_comissao, pct_comissao, pct_desconto, created_at,
-      nome_interessado, emitido_por, ficha_id, email_proprietario,
-      fichas!ficha_id(nome_interessado, nome_empresa, cpf, cnpj),
-      profiles!emitido_por(nome, avatar_url)
-    `, { count: 'exact' })
+    .select(selectClause, { count: 'exact' })
     .order('data_emissao', { ascending: false, nullsLast: true })
-    .range(page * pageSize, (page + 1) * pageSize - 1)
+    .range(resolvedOffset, resolvedOffset + resolvedLimit - 1)
 
   if (dateFrom) q = q.gte('data_emissao', dateFrom)
-  if (dateTo)   q = q.lte('data_emissao', dateTo)
+  if (dateTo) q = q.lte('data_emissao', dateTo)
   if (imobiliarias?.length) q = q.in('imobiliaria', imobiliarias)
-  if (seguradora)   q = q.eq('seguradora', seguradora)
+  if (seguradora) q = q.eq('seguradora', seguradora)
   if (statusEmissao) q = q.eq('status_emissao', statusEmissao)
-  if (busca?.trim()) q = q.or(`numero_apolice.ilike.%${busca.trim()}%,nome_interessado.ilike.%${busca.trim()}%`)
+  if (escapedSearch) {
+    q = q.or([
+      `numero_apolice.ilike.%${escapedSearch}%`,
+      `nome_interessado.ilike.%${escapedSearch}%`,
+      `email_proprietario.ilike.%${escapedSearch}%`,
+      `fichas.nome_interessado.ilike.%${escapedSearch}%`,
+      `fichas.nome_empresa.ilike.%${escapedSearch}%`,
+      `fichas.cpf.ilike.%${escapedSearch}%`,
+      `fichas.cnpj.ilike.%${escapedSearch}%`,
+    ].join(','))
+  }
 
-  const { data, count } = await q
-  return { data: data || [], count: count || 0 }
+  const { data, count, error } = await q
+  if (!error) return { data: data || [], count: count || 0 }
+  if (!escapedSearch) throw error
+
+  let fallbackQuery = supabase
+    .from('apolices')
+    .select(selectClause)
+    .order('data_emissao', { ascending: false, nullsLast: true })
+
+  if (dateFrom) fallbackQuery = fallbackQuery.gte('data_emissao', dateFrom)
+  if (dateTo) fallbackQuery = fallbackQuery.lte('data_emissao', dateTo)
+  if (imobiliarias?.length) fallbackQuery = fallbackQuery.in('imobiliaria', imobiliarias)
+  if (seguradora) fallbackQuery = fallbackQuery.eq('seguradora', seguradora)
+  if (statusEmissao) fallbackQuery = fallbackQuery.eq('status_emissao', statusEmissao)
+
+  const allRows = await fetchAllRows(() => fallbackQuery)
+  const digitsTerm = onlyDigits(escapedSearch)
+  const normalizedTerm = normalizeSearchText(escapedSearch)
+  const filtered = allRows.filter(item => {
+    const ficha = item?.fichas || {}
+    const haystack = [
+      item?.numero_apolice,
+      item?.nome_interessado,
+      item?.email_proprietario,
+      ficha?.nome_interessado,
+      ficha?.nome_empresa,
+    ]
+      .map(normalizeSearchText)
+      .join(' ')
+
+    if (normalizedTerm && haystack.includes(normalizedTerm)) return true
+    if (!digitsTerm) return false
+
+    return [
+      onlyDigits(item?.numero_apolice),
+      onlyDigits(ficha?.cpf),
+      onlyDigits(ficha?.cnpj),
+    ].some(value => value && value.includes(digitsTerm))
+  })
+
+  return {
+    data: filtered.slice(resolvedOffset, resolvedOffset + resolvedLimit),
+    count: filtered.length,
+  }
 }
-
-// ── Detalhe ───────────────────────────────────────────────────────────────────
 
 export async function fetchApoliceDetalhe(id) {
   const { data } = await supabase

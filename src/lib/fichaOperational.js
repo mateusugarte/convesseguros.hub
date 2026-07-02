@@ -39,6 +39,7 @@ export function getFichaDisplayStatus(ficha = {}, options = {}) {
 export function getFichaOperationalState(ficha = {}, options = {}) {
   const raw = ficha?.raw_data || {}
   const hasPolicy = hasFichaEmittedPolicy(ficha)
+  const operationalStatus = getFichaDisplayStatus(ficha, options)
 
   if (isFichaExpiredOperational(ficha, options)) {
     return { id: 'expirada', label: 'Expirada', className: 'badge-muted' }
@@ -46,13 +47,13 @@ export function getFichaOperationalState(ficha = {}, options = {}) {
   if (hasPolicy && raw.recovered_after_cobranca) {
     return { id: 'recuperados', label: 'Recuperada', className: 'badge-purple' }
   }
-  if (ficha?.retorno_enviado && !hasPolicy) {
+  if (raw.cobranca_started_at && !hasPolicy && operationalStatus === 'aprovado') {
     return { id: 'enviado_cobranca', label: 'Enviado Cobranca', className: 'badge-blue' }
   }
   if (hasPolicy) {
     return { id: 'emitida', label: 'Emitida', className: 'badge-purple' }
   }
-  if (getFichaDisplayStatus(ficha, options) === 'aprovado') {
+  if (operationalStatus === 'aprovado') {
     return { id: 'aprovada', label: 'Aprovada', className: 'badge-success' }
   }
   if (ficha?.status === 'cancelado') {

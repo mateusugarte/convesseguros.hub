@@ -801,17 +801,17 @@ export default function FichaDetalhePage() {
               )}
             </div>
             <ReadField label="Assumida em" value={fmtDt(ficha.assumida_em)} />
-            <div className="col-span-2">
-              <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wider mb-2">Retorno enviado</p>
-              <label className="flex items-center gap-3 cursor-pointer group w-fit">
-                <div
-                  onClick={() => updateField('retorno_enviado', !ficha.retorno_enviado)}
-                  className={`w-9 h-5 rounded-full transition-colors ${ficha.retorno_enviado ? 'bg-status-success' : 'bg-dark-border'}`}
-                >
-                  <div className={`w-3.5 h-3.5 bg-white rounded-full mt-0.75 transition-transform ${ficha.retorno_enviado ? 'translate-x-4' : 'translate-x-0.5'} m-[3px]`} />
-                </div>
-                <span className="text-sm text-dark-text">{ficha.retorno_enviado ? 'Sim' : 'Não'}</span>
-              </label>
+            <div>
+              <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wider mb-1">Retorno enviado</p>
+              <button
+                type="button"
+                onClick={() => updateField('retorno_enviado', !ficha.retorno_enviado)}
+                className={ficha.retorno_enviado
+                  ? 'inline-flex items-center rounded-full border border-status-success/25 bg-status-success/10 px-3 py-1.5 text-[11px] font-semibold text-status-success'
+                  : 'inline-flex items-center rounded-full border border-dark-border bg-dark-surface px-3 py-1.5 text-[11px] font-semibold text-dark-muted hover:border-brand-accent/35 hover:text-dark-text'}
+              >
+                {ficha.retorno_enviado ? 'Sim' : 'Não'}
+              </button>
             </div>
             <ReadField
               label="Passado pela imobiliária"

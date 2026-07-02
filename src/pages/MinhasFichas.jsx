@@ -138,7 +138,7 @@ export default function MinhasFichas() {
       <PageHeader
         eyebrow="Fila pessoal"
         title="Minhas Fichas"
-        description="Mesa individual do orçamentista com foco em cotação ativa, finalização rápida e histÃ³rico filtrado por período."
+        description="Mesa individual do orçamentista com foco em cotação ativa, finalização rápida e histórico filtrado por período."
         actions={(
           <>
             <Link to="/fichas" className="btn-secondary flex items-center gap-2 text-sm min-h-[44px]">
@@ -244,7 +244,7 @@ export default function MinhasFichas() {
                         title={tab === 'abertas' ? 'Nenhuma ficha em cotação' : 'Nenhuma ficha finalizada'}
                         description={tab === 'abertas'
                           ? 'Quando novas fichas entrarem na sua fila, elas aparecerão aqui.'
-                          : 'O histÃ³rico desse período ainda está vazio.'}
+                          : 'O histórico desse período ainda está vazio.'}
                         icon={<FileText className="w-6 h-6" />}
                         className="py-12"
                       />

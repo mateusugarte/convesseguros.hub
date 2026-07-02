@@ -12,6 +12,16 @@ Financeiro, Config/Login, Shell.
 `text.js` (normalizador de mojibake), `apoliceParser.js` (regex tolerante a mojibake do PDF)
 e `financeiroProducaoCalc.test.mjs` (texto correto). Build verde.
 
+**Pass de encoding #2 (2026-07-02, Claude):** varredura completa de `src/` e `scripts/`
+por mojibake residual. Corrigido em `src/components/Layout.jsx`, `src/pages/auto/AutoEmissoes.jsx`,
+`src/pages/ApoicesGestao.jsx`, `src/pages/MinhasFichas.jsx` e `src/lib/financeiroFaturasCalc.test.mjs`
+(labels de UI, mensagens de toast, comentarios de secao `───`, separadores ` · `/` — `/` → `),
+incluindo 3 ocorrencias de caractere de substituicao U+FFFD (perda de dado, nao reversivel -
+corrigidas por inferencia de contexto em nomes de teste). Escopo combinado com o usuario: apenas
+codigo de aplicacao, sem tocar documentacao (ConvesSystemBrain, docs/, .md da raiz). Mantidos
+intocados de proposito (mesma razao do pass #1): `text.js`, `apoliceParser.js`,
+`financeiroProducaoCalc.test.mjs`. `npm run build` e `npm test` (42/42) verdes apos a correcao.
+
 **Relatorio por imobiliaria — kanban para blocos de lista (2026-07-01):** tela
 `/relatorio/:imobiliariaId` (`src/pages/Relatorio.jsx`) trocou o kanban
 drag-and-drop (`@dnd-kit`) pelos 5 blocos empilhados (Aprovadas, Emitidas,

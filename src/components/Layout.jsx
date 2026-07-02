@@ -23,7 +23,7 @@ const LOGO = 'https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/
 
 const NAV_GROUPS = [
   {
-    label: 'FianÃ§a',
+    label: 'Fiança',
     items: [
       { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
       {
@@ -34,7 +34,7 @@ const NAV_GROUPS = [
           { to: '/fichas', label: 'Geral', end: true },
           { to: '/fichas/residencial', label: 'Residencial' },
           { to: '/fichas/comercial-pf', label: 'Comercial PF' },
-          { to: '/fichas/pessoa-juridica', label: 'Pessoa JurÃ­dica' },
+          { to: '/fichas/pessoa-juridica', label: 'Pessoa Jurídica' },
         ],
       },
       { to: '/minhas-fichas', icon: User, label: 'Minhas Fichas' },
@@ -217,13 +217,13 @@ export default function Layout() {
           created_at: p.new.created_at,
           type: 'ficha',
           title: prodLabel || 'Nova ficha',
-          message: `${p.new.imobiliaria || ''} Â· ${p.new.nome_interessado || 'Sem nome'}`,
+          message: `${p.new.imobiliaria || ''} · ${p.new.nome_interessado || 'Sem nome'}`,
           href: `/fichas/${p.new.id}`,
         })
         toast({
           type: 'ficha',
           title: prodLabel || 'Nova ficha',
-          message: `${p.new.imobiliaria || ''} Â· ${p.new.nome_interessado || 'Sem nome'}`,
+          message: `${p.new.imobiliaria || ''} · ${p.new.nome_interessado || 'Sem nome'}`,
           action: { label: 'Ver ficha', onClick: () => navigate(`/fichas/${p.new.id}`) },
           duration: 10000,
         })
@@ -238,14 +238,14 @@ export default function Layout() {
           created_at: p.new.created_at,
           type: 'auto',
           title: 'Novo seguro auto',
-          message: `${cliente}${p.new.modelo_veiculo ? ` Â· ${p.new.modelo_veiculo}` : ''}`,
+          message: `${cliente}${p.new.modelo_veiculo ? ` · ${p.new.modelo_veiculo}` : ''}`,
           href: `/auto/cotacoes/${p.new.id}`,
         })
         toast({
           type: 'auto',
           title: 'Novo seguro auto',
-          message: `${cliente}${p.new.modelo_veiculo ? ` Â· ${p.new.modelo_veiculo}` : ''}`,
-          action: { label: 'Abrir cotaÃ§Ã£o', onClick: () => navigate(`/auto/cotacoes/${p.new.id}`) },
+          message: `${cliente}${p.new.modelo_veiculo ? ` · ${p.new.modelo_veiculo}` : ''}`,
+          action: { label: 'Abrir cotação', onClick: () => navigate(`/auto/cotacoes/${p.new.id}`) },
           duration: 10000,
         })
       })
@@ -394,7 +394,7 @@ export default function Layout() {
                 <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'rgb(var(--brand-primary-rgb))' }} />
                 <span className="truncate">{workspaceLead}</span>
                 <span className="ml-auto shrink-0 rounded-full border border-dark-border/70 px-2 py-0.5 text-[10px] font-semibold text-dark-muted">
-                  {abertasCount} em cotaÃ§Ã£o
+                  {abertasCount} em cotação
                 </span>
               </div>
             </div>
@@ -512,7 +512,7 @@ export default function Layout() {
                   <button
                     onClick={() => { setNotificationsOpen(o => !o); setUserMenuOpen(false) }}
                     className="relative inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-dark-border/70 bg-dark-surface/70 text-dark-muted transition-colors hover:text-dark-text hover:border-brand-accent/50"
-                    aria-label="NotificaÃ§Ãµes"
+                    aria-label="Notificações"
                     aria-expanded={notificationsOpen}
                   >
                     <Bell className="h-4 w-4" />

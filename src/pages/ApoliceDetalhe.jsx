@@ -355,6 +355,16 @@ export default function ApoliceDetalhe() {
     await salvar('emitida')
   }
 
+  async function promoverFichaParaEmitido() {
+    const fichaId = apolice?.fichas?.id
+    if (!fichaId) return
+    const error = await editarFicha(fichaId, { status: 'emitido' }, user?.id)
+    if (error) {
+      throw new Error(error.message || 'Falha ao atualizar o status da ficha.')
+    }
+    setFichaStatus('emitido')
+  }
+
   async function handleDelete() {
     setDeleting(true)
     const err = await excluirApolice(id)
@@ -378,6 +388,7 @@ export default function ApoliceDetalhe() {
       toast({ type: 'error', title: 'Erro ao anexar documento', message: error.message })
       return
     }
+    await promoverFichaParaEmitido()
     setDocsRefreshKey(k => k + 1)
     toast({ type: 'success', title: 'PDF anexado em Documentos' })
   }
@@ -964,5 +975,6 @@ export default function ApoliceDetalhe() {
     </div>
   )
 }
+
 
 

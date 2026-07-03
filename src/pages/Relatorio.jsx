@@ -875,42 +875,16 @@ function ModalConfirmarCobranca({ fichas, salvando, onCancelar, onConfirmar }) {
   const preview = fichas.slice(0, 5)
 
   return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 animate-fade-in">
-      <div className="modal-backdrop" onClick={!salvando ? onCancelar : undefined} />
-      <div className="relative glass-modal w-full max-w-xl overflow-hidden border border-dark-border">
-        <div className="flex items-center justify-between gap-3 border-b border-dark-border px-6 py-4">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Confirmar cobrança</p>
-            <h3 className="mt-1 text-lg font-semibold text-dark-text">
-              Registrar envio para {fichas.length} ficha{fichas.length !== 1 ? 's' : ''}
-            </h3>
-          </div>
-          <button onClick={onCancelar} className="text-dark-muted hover:text-dark-text" disabled={salvando}>×</button>
-        </div>
-
-        <div className="space-y-4 px-6 py-5">
-          <div className="rounded-3xl border border-brand-accent/15 bg-brand-accent/5 p-4">
-            <p className="text-sm text-dark-text">
-              Ao confirmar, as fichas selecionadas serão registradas como <strong>cobrança enviada</strong> e a data do envio será salva automaticamente.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            {preview.map(ficha => (
-              <div key={ficha.id} className="rounded-2xl border border-dark-border/60 bg-dark-surface/70 px-3 py-2">
-                <p className="text-sm font-semibold text-dark-text">{getNomeFicha(ficha)}</p>
-                <p className="text-[11px] text-dark-muted">{getCanonicalImobiliariaNome(ficha)}</p>
-              </div>
-            ))}
-            {fichas.length > preview.length && (
-              <p className="text-xs text-dark-muted">
-                + {fichas.length - preview.length} ficha{fichas.length - preview.length !== 1 ? 's' : ''} adicional{fichas.length - preview.length !== 1 ? 'is' : ''}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-2 border-t border-dark-border px-6 py-4">
+    <Modal
+      isOpen
+      onClose={() => {
+        if (!salvando) onCancelar()
+      }}
+      title={`Registrar envio para ${fichas.length} ficha${fichas.length !== 1 ? 's' : ''}`}
+      subtitle="Confirmar cobran?a"
+      maxWidth="xl"
+      footer={(
+        <div className="flex items-center justify-end gap-2">
           <button type="button" onClick={onCancelar} className="btn-secondary" disabled={salvando}>
             Cancelar
           </button>
@@ -918,8 +892,30 @@ function ModalConfirmarCobranca({ fichas, salvando, onCancelar, onConfirmar }) {
             {salvando ? 'Salvando...' : 'Confirmar envio'}
           </button>
         </div>
+      )}
+    >
+      <div className="space-y-4">
+        <div className="rounded-3xl border border-brand-accent/15 bg-brand-accent/5 p-4">
+          <p className="text-sm text-dark-text">
+            Ao confirmar, as fichas selecionadas ser?o registradas como <strong>cobran?a enviada</strong> e a data do envio ser? salva automaticamente.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          {preview.map(ficha => (
+            <div key={ficha.id} className="rounded-2xl border border-dark-border/60 bg-dark-surface/70 px-3 py-2">
+              <p className="text-sm font-semibold text-dark-text">{getNomeFicha(ficha)}</p>
+              <p className="text-[11px] text-dark-muted">{getCanonicalImobiliariaNome(ficha)}</p>
+            </div>
+          ))}
+          {fichas.length > preview.length && (
+            <p className="text-xs text-dark-muted">
+              + {fichas.length - preview.length} ficha{fichas.length - preview.length !== 1 ? 's' : ''} adicional{fichas.length - preview.length !== 1 ? 'is' : ''}
+            </p>
+          )}
+        </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 

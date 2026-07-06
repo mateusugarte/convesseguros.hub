@@ -24,7 +24,10 @@ AS $$
   SET status = 'expirada'
   WHERE f.status = 'aprovado'
     AND f.numero_apolice IS NULL
+    AND f.data_emissao IS NULL
     AND COALESCE(f.finalizada_em, f.created_at) <= NOW() - (
+      -- <= (nao <): no dia exato do prazo a ficha ja conta como expirada,
+      -- espelhando o floor(dias) >= limite do calculo em fichaOperational.js
       CASE
         WHEN f.seguradora ILIKE '%porto%' THEN 45
         ELSE 30

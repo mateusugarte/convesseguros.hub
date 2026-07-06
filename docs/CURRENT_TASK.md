@@ -77,11 +77,11 @@ regra acima hoje so existe calculada ao vivo em JS; para persisti-la no banco
 DEFINER`) e agenda um job diario (`cron.schedule`, 06:00 UTC) reproduzindo o
 mesmo criterio (Porto 45 dias / demais 30 dias, `finalizada_em` com fallback
 `created_at`, apenas `status = 'aprovado'` sem `numero_apolice`). Mesmo
-tratamento ja dado a migracao 48: arquivo criado apenas para revisao, **nao
-executado** em nenhum banco — aguardando aprovacao explicita do usuario para
-rodar no SQL Editor do Supabase antes de qualquer execucao (regra de
-"Seguranca" do CLAUDE.md: banco/RLS/dados pessoais param para plano +
-aprovacao).
+tratamento da migracao 48 (nao executada em banco) — ambas criadas apenas para
+revisao. Migracao 49, diferente de 48, foi commitada ao git sob decisao
+explicita do usuario, mas permanece aguardando aprovacao antes de execucao no
+SQL Editor do Supabase (regra de "Seguranca" do CLAUDE.md: banco/RLS/dados
+pessoais param para plano + aprovacao).
 
 **Revisao de entrega do Codex — Auto (perfil de cliente/apolice) + ImobiliariaDetalhe
 (2026-07-06, Claude):** Codex entregou (nao commitado ainda): paginas novas

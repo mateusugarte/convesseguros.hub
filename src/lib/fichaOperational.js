@@ -1,7 +1,24 @@
-﻿export const FICHA_EXPIRATION_DAYS = 45
+﻿import { normalizeDisplayText } from './text.js'
+
+export const FICHA_EXPIRATION_DAYS = 45
 
 const EXPIRABLE_BASE_STATUSES = new Set(['pendente', 'em_cotacao', 'em_analise', 'aprovado', 'emitido', 'expirada'])
 const TERMINAL_NON_EXPIRABLE_STATUSES = new Set(['recusado', 'cancelado', 'cpf_invalido'])
+
+export function normalizeSeguradoraBucket(seguradora) {
+  const raw = normalizeDisplayText(seguradora) || ''
+  if (!raw) return 'Não informado'
+
+  const text = raw.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+
+  if (text.includes('porto')) return 'Porto'
+  if (text.includes('tokio')) return 'Tokio'
+  if (text.includes('too')) return 'Too'
+  if (text.includes('pottencial') || text.includes('potencial')) return 'Pottencial'
+  if (text.includes('junto')) return 'Junto'
+
+  return 'Não informado'
+}
 
 export function hasFichaEmittedPolicy(ficha = {}) {
   return Boolean(

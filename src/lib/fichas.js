@@ -1,7 +1,6 @@
 import { supabase } from './supabase'
 import { normalizeImobiliaria } from './normalizeImobiliaria'
-import { normalizeDisplayText } from './text'
-import { getFichaDisplayStatus, getFichaOperationalState, isFichaApprovedOperational, mapFichasWithOperationalStatus, withFichaOperationalStatus } from './fichaOperational'
+import { getFichaDisplayStatus, getFichaOperationalState, isFichaApprovedOperational, mapFichasWithOperationalStatus, withFichaOperationalStatus, normalizeSeguradoraBucket } from './fichaOperational'
 
 export { normalizeImobiliaria }
 
@@ -216,21 +215,6 @@ const APROVACAO_SEGURADORAS = [
   'Não informado',
 ]
 
-function normalizeSeguradoraAprovacao(seguradora) {
-  const raw = normalizeDisplayText(seguradora) || ''
-  if (!raw) return 'Não informado'
-
-  const text = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-
-  if (text.includes('porto')) return 'Porto'
-  if (text.includes('tokio')) return 'Tokio'
-  if (text.includes('too')) return 'Too'
-  if (text.includes('pottencial') || text.includes('potencial')) return 'Pottencial'
-  if (text.includes('junto')) return 'Junto'
-
-  return 'Não informado'
-}
-
 export async function fetchAprovacoesPorSeguradora(inicioFiltro, fimFiltro) {
   const data = await fetchAllRows(() => {
     let q = supabase
@@ -247,7 +231,7 @@ export async function fetchAprovacoesPorSeguradora(inicioFiltro, fimFiltro) {
   let total = 0
 
   data.forEach(item => {
-    const bucket = normalizeSeguradoraAprovacao(item.seguradora)
+    const bucket = normalizeSeguradoraBucket(item.seguradora)
     contagem[bucket] = (contagem[bucket] || 0) + 1
     total += 1
   })

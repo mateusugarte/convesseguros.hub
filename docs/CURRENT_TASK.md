@@ -55,6 +55,34 @@ para tokens `status-success`. Build e testes conferidos verdes apos as correcoes
 do n8n — viola a regra "service_role somente no n8n" deste CLAUDE.md. Nao foi
 alterado nem executado; aguardando aprovacao/plano do usuario.
 
+**Expiracao automatica de fichas aprovadas por seguradora (2026-07-06, Claude):**
+regra de negocio alterada para fichas com `status = 'aprovado'` sem apolice
+emitida: o prazo de expiracao deixa de ser fixo (45 dias desde `created_at`) e
+passa a ser por seguradora — Porto 45 dias, demais (Tokio/Too/Pottencial/Junto/Nao
+informado) 30 dias — contado de `finalizada_em` com fallback para `created_at`.
+Calculo unificado em `getFichaExpirationThresholdDays`/`isFichaExpiredOperational`
+(`src/lib/fichaOperational.js`); `normalizeSeguradoraBucket` centralizado nesse
+arquivo e reaproveitado por `src/lib/fichas.js` (que deixou de redefinir a
+propria versao, eliminando duplicacao). Cobertura de teste em
+`src/lib/fichaOperational.test.mjs` (limiares Porto 44/45 e demais 29/30,
+fallback de ancora, ficha com apolice emitida nunca expira, nao regressao do
+prazo antigo para outros status), script novo registrado em `package.json`.
+`npm test` verde.
+
+**Risco nao resolvido (aguardando decisao) — migracao 49 nao executada:** a
+regra acima hoje so existe calculada ao vivo em JS; para persisti-la no banco
+(expirar fichas mesmo sem ninguem abrir a tela) foi criado
+`supabase/49_fichas_expiracao_por_seguradora.sql`, que habilita a extensao
+`pg_cron`, cria a funcao `public.expirar_fichas_aprovadas()` (`SECURITY
+DEFINER`) e agenda um job diario (`cron.schedule`, 06:00 UTC) reproduzindo o
+mesmo criterio (Porto 45 dias / demais 30 dias, `finalizada_em` com fallback
+`created_at`, apenas `status = 'aprovado'` sem `numero_apolice`). Mesmo
+tratamento ja dado a migracao 48: arquivo criado apenas para revisao, **nao
+executado** em nenhum banco — aguardando aprovacao explicita do usuario para
+rodar no SQL Editor do Supabase antes de qualquer execucao (regra de
+"Seguranca" do CLAUDE.md: banco/RLS/dados pessoais param para plano +
+aprovacao).
+
 **Revisao de entrega do Codex — Auto (perfil de cliente/apolice) + ImobiliariaDetalhe
 (2026-07-06, Claude):** Codex entregou (nao commitado ainda): paginas novas
 `AutoApoliceDetalhe.jsx` e `AutoClienteDetalhe.jsx` com rotas `/auto/apolices/:id`

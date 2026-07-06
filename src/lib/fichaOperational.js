@@ -31,11 +31,25 @@ export function hasFichaEmittedPolicy(ficha = {}) {
   )
 }
 
+const FICHA_EXPIRATION_DAYS_BY_SEGURADORA = {
+  Porto: 45,
+}
+const DEFAULT_APROVADA_EXPIRATION_DAYS = 30
+
+function getDaysSince(dateValue, now) {
+  if (!dateValue) return null
+  const date = new Date(dateValue)
+  if (Number.isNaN(date.getTime())) return null
+  return Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+function getFichaExpirationThresholdDays(seguradora) {
+  const bucket = normalizeSeguradoraBucket(seguradora)
+  return FICHA_EXPIRATION_DAYS_BY_SEGURADORA[bucket] ?? DEFAULT_APROVADA_EXPIRATION_DAYS
+}
+
 export function getFichaAgeDays(ficha = {}, now = new Date()) {
-  if (!ficha?.created_at) return null
-  const createdAt = new Date(ficha.created_at)
-  if (Number.isNaN(createdAt.getTime())) return null
-  return Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24))
+  return getDaysSince(ficha?.created_at, now)
 }
 
 export function isFichaExpiredOperational(ficha = {}, options = {}) {
@@ -44,7 +58,16 @@ export function isFichaExpiredOperational(ficha = {}, options = {}) {
   if (!EXPIRABLE_BASE_STATUSES.has(status)) return false
   if (hasFichaEmittedPolicy(ficha)) return false
 
-  const ageDays = getFichaAgeDays(ficha, options.now)
+  const now = options.now || new Date()
+
+  if (status === 'aprovado') {
+    const anchor = ficha?.finalizada_em || ficha?.created_at
+    const ageDays = getDaysSince(anchor, now)
+    const thresholdDays = getFichaExpirationThresholdDays(ficha?.seguradora)
+    return ageDays != null && ageDays >= thresholdDays
+  }
+
+  const ageDays = getFichaAgeDays(ficha, now)
   return ageDays != null && ageDays >= FICHA_EXPIRATION_DAYS
 }
 

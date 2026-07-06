@@ -456,7 +456,7 @@ function CardEmissao({ emissao, onDragStart, onClick }) {
 
       <div className="mt-4 grid gap-3 rounded-[26px] border border-white/70 bg-white/70 p-3 text-xs text-dark-muted sm:grid-cols-2">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Vigencia</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Vigência</p>
           <p className="mt-1 text-sm font-medium text-dark-text">{emissao.vigencia_inicio ? formatDateBR(emissao.vigencia_inicio) : '—'} até {vigenciaFim ? formatDateBR(vigenciaFim) : '—'}</p>
         </div>
         <div>
@@ -464,11 +464,11 @@ function CardEmissao({ emissao, onDragStart, onClick }) {
           <p className="mt-1 text-sm font-medium text-dark-text">{condutorEmissao(emissao)}</p>
         </div>
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Premio liquido</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Prêmio líquido</p>
           <p className="mt-1 text-sm font-medium text-dark-text">{formatMoney(premio)}</p>
         </div>
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Comissao</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Comissão</p>
           <p className="mt-1 text-sm font-medium text-dark-text">{formatMoney(comissao)}</p>
         </div>
       </div>

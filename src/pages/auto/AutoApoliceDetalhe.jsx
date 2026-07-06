@@ -4,13 +4,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Clock3, CreditCard, FileText, Save, ShieldCheck } from 'lucide-react'
 import SeguradoraBadge from '../../components/SeguradoraBadge'
 import { DataCard, EmptyState, MetricCard, PageHeader } from '../../components/ui'
-import { atualizarApoliceAuto, atualizarEmissaoAutoCompleta, getApoliceAutoDetalhe } from '../../lib/auto'
+import { atualizarApoliceAutoSemEmissao, atualizarEmissaoAutoCompleta, getApoliceAutoDetalhe } from '../../lib/auto'
 import { formatDateBR, formatDateTimeBR, formatMoney } from './autoShared'
 
 function buildForm(apolice) {
   const emissao = apolice?.emissoes_auto || {}
   const cotacao = emissao?.cotacoes_auto || {}
   return {
+    tipo: emissao.tipo || cotacao.tipo || '',
+    seguradoras_cotadas: Array.isArray(emissao.seguradoras_cotadas) ? emissao.seguradoras_cotadas : [],
     nome_cliente: apolice?.nome_cliente || emissao.nome_cliente || cotacao.nome_cliente || '',
     cpf_cliente: apolice?.cpf_cliente || emissao.cpf_cliente || cotacao.cpf_cliente || '',
     celular_cliente: apolice?.celular_cliente || emissao.celular_cliente || cotacao.celular_cliente || '',
@@ -89,7 +91,7 @@ export default function AutoApoliceDetalhe() {
           criar_apolice: true,
         })
       }
-      return atualizarApoliceAuto(apolice.id, form)
+      return atualizarApoliceAutoSemEmissao(apolice.id, form)
     },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['auto-apolice-detalhe', id] })

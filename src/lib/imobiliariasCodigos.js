@@ -1,8 +1,18 @@
 import { supabase } from './supabase'
 
 function hasMissingColumn(error, columnName) {
-  const message = String(error?.message || '').toLowerCase()
-  return message.includes(`'${String(columnName).toLowerCase()}'`) || message.includes(`"${String(columnName).toLowerCase()}"`) || message.includes(String(columnName).toLowerCase())
+  if (!error) return false
+  // 42703 = coluna nao existe (Postgres); PGRST204 = coluna fora do schema
+  // cache do PostgREST (comum em insert/upsert logo apos alterar a tabela).
+  const code = String(error.code || '')
+  if (code === '42703' || code === 'PGRST204') return true
+
+  const message = String(error.message || '').toLowerCase()
+  const col = String(columnName).toLowerCase()
+  return (
+    (message.includes('column') && message.includes(col) && message.includes('does not exist')) ||
+    (message.includes('could not find') && message.includes(col) && message.includes('column'))
+  )
 }
 
 export async function fetchCodigos(imobiliariaId) {
@@ -21,15 +31,6 @@ export async function fetchCodigos(imobiliariaId) {
     return (retry.data || []).map(item => ({ ...item, observacoes: '' }))
   }
 
-  return data || []
-}
-
-export async function fetchSeguradoras() {
-  const { data } = await supabase
-    .from('seguradoras')
-    .select('id, nome_canonico')
-    .eq('ativa', true)
-    .order('nome_canonico')
   return data || []
 }
 
@@ -65,10 +66,5 @@ export async function upsertCodigo(imobiliariaId, seguradoraId, payload) {
     ))
   }
 
-  return error
-}
-
-export async function deletarCodigo(id) {
-  const { error } = await supabase.from('imobiliaria_codigos').delete().eq('id', id)
   return error
 }

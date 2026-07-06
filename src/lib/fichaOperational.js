@@ -1,4 +1,4 @@
-﻿import { normalizeDisplayText } from './text.js'
+import { normalizeDisplayText } from './text.js'
 
 export const FICHA_EXPIRATION_DAYS = 45
 
@@ -58,6 +58,8 @@ export function isFichaExpiredOperational(ficha = {}, options = {}) {
   if (!EXPIRABLE_BASE_STATUSES.has(status)) return false
   if (hasFichaEmittedPolicy(ficha)) return false
 
+  if (ficha?.raw_data?.manually_expired) return true
+
   const now = options.now || new Date()
 
   if (status === 'aprovado') {
@@ -81,9 +83,6 @@ export function getFichaOperationalState(ficha = {}, options = {}) {
   const hasPolicy = hasFichaEmittedPolicy(ficha)
   const operationalStatus = getFichaDisplayStatus(ficha, options)
 
-  if (isFichaExpiredOperational(ficha, options)) {
-    return { id: 'expirada', label: 'Expirada', className: 'badge-muted' }
-  }
   if (hasPolicy && raw.recovered_after_cobranca) {
     return { id: 'recuperados', label: 'Recuperada', className: 'badge-purple' }
   }

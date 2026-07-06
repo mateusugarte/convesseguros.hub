@@ -118,6 +118,109 @@ executado**; aguardando aprovação do usuário para rodar no Supabase SQL Edito
 A tabela `imobiliaria_seguradoras` usada pelo toggle de cadastro já existe
 (`supabase/09_apolices_kanban.sql`), então essa parte não tem risco de schema.
 
+**Revisão de entrega do Codex — commit `258b570` (Relatorio/cobranca + Auto +
+ImobiliariaDetalhe), 2026-07-06/07, Claude:** revisão completa (encoding + lógica
++ performance + UX) do maior lote entregue pelo Codex até aqui. Achados e
+correções, por área:
+
+*Bugs críticos de perda/sumiço de dado (corrigidos):*
+1. `buildRelatorioMovePatch('expirada')` gravava `status: 'expirada'` direto na
+   ficha; como `REPORT_STATUSES = ['aprovado', 'emitido']` (`Relatorio.jsx`) não
+   inclui `'expirada'`, a ficha sumia do relatório em qualquer refetch (troca de
+   período, reload) — perda de dado visível ao usuário, sem erro no console.
+   Corrigido: o move para "Expirada" agora só grava um marcador em
+   `raw_data.manually_expired` (mesmo padrão dos outros patches deste arquivo,
+   nunca escrevia em `status` real); `status` da ficha nunca muda. Isso também
+   destravou o "voltar para Aprovada", que antes recaía sempre em Expirada por
+   causa do `status` já corrompido; agora só bloqueia a restauração quando a
+   ficha é *genuinamente* vencida (45+ dias reais), com toast explicando o
+   motivo. `fichaOperational.js`: removido um branch de `expirada` que havia
+   ficado duplicado/redundante nesse mesmo commit do Codex.
+2. `AutoApoliceDetalhe.jsx`: `buildForm` não carregava `tipo` nem
+   `seguradoras_cotadas` da emissão; ao salvar qualquer edição de uma emissão
+   manual (sem cotação vinculada), `tipo` era resetado para `'novo'` e
+   `seguradoras_cotadas` era zerado — perda de dado real, não só de exibição.
+   Corrigido preservando os dois campos no form.
+3. `AutoApoliceDetalhe.jsx`/`auto.js`: salvar uma apólice **sem** emissão
+   vinculada chamava `atualizarApoliceAuto(id, form)` com o form inteiro, que
+   inclui `email_cliente`/`origem_lead` — colunas que só existem em
+   `cotacoes_auto`, não em `apolices_auto`; toda tentativa de salvar por esse
+   caminho falhava com erro de coluna inexistente do Postgrest, e também não
+   recalculava `valor_comissao`. Criada `atualizarApoliceAutoSemEmissao` em
+   `auto.js`, reaproveitando o payload builder já existente (`buildApoliceAutoPayload`),
+   restrito às colunas reais de `apolices_auto` e recalculando a comissão.
+4. `auto.js`: filtro "Vencidas" (`getRenovacoesAuto({periodo:'passadas'})`) usava
+   `parseMonthRef(mes)`, que sempre resolve para o dia 1 do mês — como
+   `AutoRenovacoes.jsx` sempre manda um mês (nunca vazio), o corte virava
+   "antes do dia 1 do mês selecionado" em vez de "antes de hoje"; renovações
+   vencidas depois do dia 1 do mês corrente sumiam da aba Vencidas. Revertido
+   para usar a data real de hoje, como era antes deste commit do Codex.
+5. `getClienteAutoDetalhe` (auto.js): para clientes agrupados só por nome (sem
+   `cliente_id`/CPF em nenhum registro — grupo criado por `clientKey` em
+   `AutoClientes.jsx`), o código caía em `.eq('id', ref)` com `ref` sendo uma
+   string de nome contra uma coluna `uuid`, e como os erros dessas queries
+   *eram* checados, a função lançava e a página sempre mostrava "Cliente não
+   encontrado" para um cliente que existia. Corrigido: só usa `id` como filtro
+   quando `ref` é um UUID válido; para o caso "só nome", usa `nome_cliente` nas
+   tabelas que têm essa coluna (`apolices_auto`, `emissoes_auto`,
+   `cotacoes_auto`) e não bate em `renovacoes_auto` (que só tem `cliente_id`,
+   sem nome) com um filtro que sempre falharia. Também parou de engolir erros
+   nas 4 queries de resolução do cliente (antes só desestruturava `{ data }`).
+
+*Encoding:* removido BOM (UTF-8 byte-order-mark) introduzido pelo editor do
+Codex em `fichaOperational.js`, `relatorioCobranca.js`,
+`relatorioCobranca.test.mjs` e `Relatorio.jsx`. Revertido mojibake extenso (210
+ocorrências, ~109 linhas) em `Relatorio.jsx` e 5 descrições de teste em
+`relatorioCobranca.test.mjs`, via script determinístico de reversão
+UTF-8-como-CP1252 (mesma técnica dos passes anteriores) — sem nenhum caractere
+U+FFFD (perda de dado irreversível) encontrado desta vez. Corrigidos também 2
+typos literais de "?" (ASCII puro, não mojibake) na modal de confirmação de
+cobrança em `Relatorio.jsx`, e acentos faltando em texto novo de UI:
+`auto.js:1094` (`Renovação`, `apólice` x2) e `AutoEmissoes.jsx` (`Vigência`,
+`Prêmio líquido`, `Comissão` nos cards de emissão recente).
+
+*Performance:* `Relatorio.jsx` deixou de buscar as mesmas fichas duas vezes
+(query final agora só busca os ids "extras" que não vieram no primeiro fetch);
+removida a dependência de `imobiliarias` no efeito de fetch principal (causava
+um segundo fetch completo assim que a lista de imobiliárias carregava — agora
+lida via `ref`); removido `retorno_enviado` do SELECT (não é mais lido desde o
+refactor que separou esse campo de `cobranca_started_at`). `auto.js`:
+`getApoliceAutoDetalhe`/`getClienteAutoDetalhe` trocaram `select('*', embed(*))`
+por listas de colunas explícitas (regra do projeto); removida variável
+duplicada em `getDashboardAutoMetrics`. Item "trocar `todasRenovacoes` por
+`count`" do plano original **não foi aplicado**: essa lista alimenta também a
+seção "Acompanhar" (lista completa + contadores por status), não só as 2
+métricas de vencimento — trocar por `count` quebraria aquela seção.
+
+*UX/limpeza:* gating do botão "Mover" (dropdown de mover ficha) agora respeita
+`canConfirmCobranca` quando o destino é "Enviado Cobrança", igual ao botão
+dedicado; guard de colunas "movíveis" em `moveSelected` passou a derivar de
+`MANUAL_REPORT_MOVE_OPTIONS` em vez de manter uma segunda lista hardcoded à
+parte. `ImobiliariaDetalhe.jsx`: `carregarCadastros` ganhou try/catch + toast de
+erro + estado de loading próprio (antes um erro de rede/RLS travava a seção
+silenciosamente, e o "nenhuma seguradora encontrada" sempre piscava antes dos
+dados chegarem); placeholder de campo vazio revertido de `-` para `—`
+(consistência visual, tinha sido trocado neste commit do Codex).
+`imobiliariasCodigos.js`: `hasMissingColumn` apertado para checar
+código de erro (`42703`/`PGRST204`) e padrões específicos de mensagem, em vez
+de casar qualquer erro que mencione a palavra "observacoes". Removidas
+`buildCobrancaResetPatch` (relatorioCobranca.js), `fetchSeguradoras` e
+`deletarCodigo` (imobiliariasCodigos.js) — exportadas mas nunca chamadas.
+`CONTEXT.md` de `ImobiliariaDetalhe` atualizado para refletir os componentes e
+queries atuais.
+
+`npm test` (54/54) e `npm run build` verdes após todas as correções.
+`npm run check:page-contexts` continua com as mesmas pendências pré-existentes
+já conhecidas (todo `src/pages/auto/*`, incluindo as 2 páginas novas deste
+commit, e `GestaoComercial.jsx` nunca tiveram `CONTEXT.md`) — não é regressão
+desta revisão, só não foi resolvido agora (criar `CONTEXT.md` para o módulo Auto
+inteiro é um esforço à parte). Smoke test manual no navegador **não foi feito**
+(sem `.env`/credenciais Supabase neste ambiente) — recomenda-se validar antes de
+considerar encerrado, em especial: mover ficha para Expirada e trocar de
+período; salvar emissão manual e apólice sem emissão vinculada no Auto; aba
+Vencidas em Renovações Auto; abrir `/auto/clientes/:id` de um cliente sem
+CPF/cliente_id.
+
 ---
 
 ## Responsavel Atual

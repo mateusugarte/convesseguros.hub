@@ -1,4 +1,4 @@
-﻿export function buildAprovadaPatch(ficha) {
+export function buildAprovadaPatch(ficha) {
   return {
     status: 'aprovado',
     raw_data: {
@@ -8,6 +8,8 @@
       cobranca_started_at: null,
       imobiliaria_retornou: false,
       imobiliaria_retornou_em: null,
+      manually_expired: false,
+      manually_expired_em: null,
     },
   }
 }
@@ -20,19 +22,6 @@ export function buildCobrancaPatch(ficha, sentAt = new Date().toISOString()) {
       recovered_after_cobranca: false,
       recovered_after_cobranca_em: null,
       cobranca_started_at: sentAt,
-      imobiliaria_retornou: false,
-      imobiliaria_retornou_em: null,
-    },
-  }
-}
-
-export function buildCobrancaResetPatch(ficha) {
-  return {
-    raw_data: {
-      ...(ficha?.raw_data || {}),
-      recovered_after_cobranca: false,
-      recovered_after_cobranca_em: null,
-      cobranca_started_at: null,
       imobiliaria_retornou: false,
       imobiliaria_retornou_em: null,
     },
@@ -62,8 +51,11 @@ export function buildRelatorioMovePatch(ficha, colunaId, at = new Date().toISOSt
   if (colunaId === 'aprovada') return buildAprovadaPatch(ficha)
   if (colunaId === 'enviado_cobranca') return buildCobrancaPatch(ficha, at)
   if (colunaId === 'expirada') {
+    // Marca a expiracao em raw_data (nao no status real da ficha): o status
+    // permanece 'aprovado'/'emitido' para que a ficha continue sendo buscada
+    // pelas queries do relatorio (REPORT_STATUSES). "Expirada" aqui e apenas
+    // um estado de exibicao, igual ao calculo por idade ja existente.
     return {
-      status: 'expirada',
       raw_data: {
         ...(ficha?.raw_data || {}),
         recovered_after_cobranca: false,
@@ -71,13 +63,13 @@ export function buildRelatorioMovePatch(ficha, colunaId, at = new Date().toISOSt
         cobranca_started_at: null,
         imobiliaria_retornou: false,
         imobiliaria_retornou_em: null,
+        manually_expired: true,
+        manually_expired_em: at,
       },
     }
   }
 
-  return {
-    status: colunaId,
-  }
+  return null
 }
 
 export function isCobrancaEnviadaVisivel(colunaId) {

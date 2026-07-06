@@ -62,7 +62,7 @@ function CampoEditavel({ label, value, onSave }) {
         onClick={() => { setDraft(value || ''); setEditing(true) }}
         className="group flex cursor-pointer items-center gap-1.5 text-sm text-dark-text transition-colors hover:text-status-info"
       >
-        <span>{value || <span className="italic text-dark-muted/40">-</span>}</span>
+        <span>{value || <span className="italic text-dark-muted/40">—</span>}</span>
         <Pencil className="h-3 w-3 flex-shrink-0 opacity-0 group-hover:opacity-40" />
       </p>
     </div>
@@ -175,6 +175,7 @@ export default function ImobiliariaDetalhe() {
   const [codigos, setCodigos] = useState([])
   const [seguradorasFianca, setSeguradorasFianca] = useState([])
   const [seguradorasAtivas, setSeguradorasAtivas] = useState(new Set())
+  const [carregandoCadastros, setCarregandoCadastros] = useState(true)
   const [drafts, setDrafts] = useState({})
   const [salvandoCards, setSalvandoCards] = useState(new Set())
   const [alternandoCards, setAlternandoCards] = useState(new Set())
@@ -193,17 +194,25 @@ export default function ImobiliariaDetalhe() {
   const carregarCadastros = useCallback(async () => {
     if (!id) return
 
-    const [codigosData, seguradorasData, vinculosResp] = await Promise.all([
-      fetchCodigos(id),
-      fetchSeguradorasPorProduto('fianca'),
-      supabase.from('imobiliaria_seguradoras').select('seguradora_id').eq('imobiliaria_id', id),
-    ])
+    setCarregandoCadastros(true)
+    try {
+      const [codigosData, seguradorasData, vinculosResp] = await Promise.all([
+        fetchCodigos(id),
+        fetchSeguradorasPorProduto('fianca'),
+        supabase.from('imobiliaria_seguradoras').select('seguradora_id').eq('imobiliaria_id', id),
+      ])
+      if (vinculosResp.error) throw vinculosResp.error
 
-    setCodigos(codigosData || [])
-    setSeguradorasFianca(seguradorasData || [])
-    setSeguradorasAtivas(new Set((vinculosResp.data || []).map(item => item.seguradora_id)))
-    setDrafts(buildDraftMap(seguradorasData || [], codigosData || []))
-  }, [id])
+      setCodigos(codigosData || [])
+      setSeguradorasFianca(seguradorasData || [])
+      setSeguradorasAtivas(new Set((vinculosResp.data || []).map(item => item.seguradora_id)))
+      setDrafts(buildDraftMap(seguradorasData || [], codigosData || []))
+    } catch (error) {
+      toast({ type: 'error', title: 'Erro ao carregar cadastros de seguradoras', message: error.message })
+    } finally {
+      setCarregandoCadastros(false)
+    }
+  }, [id, toast])
 
   useEffect(() => {
     carregar()
@@ -492,7 +501,9 @@ export default function ImobiliariaDetalhe() {
               <ImobiliariaIdentity nome={imob.nome_canonico} imagemUrl={imob.imagem_url} imagemPath={imob.imagem_path} size="lg" className="shrink-0" />
             </div>
 
-            {seguradorasFianca.length === 0 ? (
+            {carregandoCadastros ? (
+              <p className="rounded-2xl border border-dashed border-dark-border px-4 py-8 text-center text-sm text-dark-muted">Carregando cadastros...</p>
+            ) : seguradorasFianca.length === 0 ? (
               <p className="rounded-2xl border border-dashed border-dark-border px-4 py-8 text-center text-sm text-dark-muted">Nenhuma seguradora de fiança ativa foi encontrada.</p>
             ) : (
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -587,7 +598,9 @@ export default function ImobiliariaDetalhe() {
                 <span className="text-lg font-bold text-emerald-700">{seguradorasAtivas.size}</span>
               </div>
 
-              {seguradorasFianca.filter(seg => seguradorasAtivas.has(seg.id)).length === 0 ? (
+              {carregandoCadastros ? (
+                <p className="rounded-2xl border border-dashed border-dark-border px-3 py-6 text-center text-xs text-dark-muted">Carregando...</p>
+              ) : seguradorasFianca.filter(seg => seguradorasAtivas.has(seg.id)).length === 0 ? (
                 <p className="rounded-2xl border border-dashed border-dark-border px-3 py-6 text-center text-xs text-dark-muted">Nenhuma seguradora de fiança marcada ainda.</p>
               ) : (
                 <div className="space-y-2">

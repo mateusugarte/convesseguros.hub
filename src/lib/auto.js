@@ -75,6 +75,14 @@ const AUTO_RENEWAL_COMPARE_FIELDS = [
   'renovacao_diferenca_comissao',
 ]
 
+const APOLICE_AUTO_COLUMNS = 'id, emissao_id, cliente_id, seguradora, numero_apolice, vigencia_inicio, vigencia_fim, premio_liquido, pct_comissao, valor_comissao, forma_pagamento, parcelamento, tipo_producao, responsavel, eh_renovacao, tem_repasse, pct_repasse, nome_repasse, valor_repasse, nome_cliente, cpf_cliente, celular_cliente, condutor_nome, condutor_cpf, modelo_veiculo, placa, renovacao_premio_liquido_ano_anterior, renovacao_comissao_ano_anterior, renovacao_premio_liquido_ano_atual, renovacao_comissao_ano_atual, renovacao_diferenca_premio_liquido, renovacao_diferenca_comissao, created_at, updated_at'
+
+const EMISSAO_AUTO_COLUMNS = 'id, cotacao_id, cliente_id, tipo, coluna, nome_cliente, cpf_cliente, celular_cliente, condutor_nome, condutor_cpf, modelo_veiculo, placa, seguradora, numero_apolice, vigencia_inicio, vigencia_fim, premio_liquido, pct_comissao, valor_comissao, forma_pagamento, parcelamento, tem_repasse, pct_repasse, nome_repasse, valor_repasse, resultado, seguradoras_cotadas, renovacao_premio_liquido_ano_anterior, renovacao_comissao_ano_anterior, renovacao_premio_liquido_ano_atual, renovacao_comissao_ano_atual, renovacao_diferenca_premio_liquido, renovacao_diferenca_comissao, created_at, updated_at'
+
+const COTACAO_AUTO_COLUMNS = 'id, cliente_id, tipo, origem_lead, nome_cliente, cpf_cliente, celular_cliente, email_cliente, estado_civil_cliente, profissao_cliente, condutor_nome, condutor_cpf, estado_civil_condutor, cep_pernoite, uso_veiculo, garagem_residencia, garagem_trabalho, garagem_estudo, jovens_18_26, modelo_veiculo, placa, veiculo_financiado, possui_kit_gas, possui_blindagem, isento_imposto, seguradora_preferencial, seguradora_mais_barata, vigencia_inicio, vigencia_fim, status, created_at, updated_at'
+
+const RENOVACAO_AUTO_COLUMNS = 'id, apolice_id, cliente_id, seguradora, vigencia_fim, status_cotacao, status_renovacao, created_at'
+
 function pickDefined(source, fields) {
   return fields.reduce((acc, field) => {
     if (source[field] !== undefined) acc[field] = source[field]
@@ -464,12 +472,12 @@ export async function getApoliceAutoDetalhe(id) {
   const [{ data: apolice, error }, { data: renovacoes, error: renovacoesError }] = await Promise.all([
     supabase
       .from('apolices_auto')
-      .select('*, emissoes_auto(*, cotacoes_auto(*))')
+      .select(`${APOLICE_AUTO_COLUMNS}, emissoes_auto(${EMISSAO_AUTO_COLUMNS}, cotacoes_auto(${COTACAO_AUTO_COLUMNS}))`)
       .eq('id', id)
       .single(),
     supabase
       .from('renovacoes_auto')
-      .select('*')
+      .select(RENOVACAO_AUTO_COLUMNS)
       .eq('apolice_id', id)
       .order('vigencia_fim', { ascending: true }),
   ])
@@ -863,8 +871,7 @@ export async function getRenovacoesAuto({ periodo, mes } = {}) {
     const { inicio, fim } = getRangeFromMonthRef(mes, 0)
     q = q.gte('vigencia_fim', inicio).lte('vigencia_fim', fim)
   } else if (periodo === 'passadas') {
-    const base = parseMonthRef(mes) || new Date()
-    const hoje = new Date(base.getFullYear(), base.getMonth(), base.getDate()).toISOString().split('T')[0]
+    const hoje = new Date().toISOString().split('T')[0]
     q = q.lt('vigencia_fim', hoje)
   }
 
@@ -974,42 +981,84 @@ export async function atualizarApoliceAuto(id, changes) {
   return data
 }
 
+// Usado quando a apolice nao tem emissao vinculada (emissoes_auto ausente):
+// monta um payload restrito as colunas reais de apolices_auto e recalcula
+// valor_comissao/valor_repasse/comparativo de renovacao a partir do form
+// editado, em vez de gravar o form inteiro (que tem campos como
+// email_cliente/origem_lead que so existem em cotacoes_auto).
+export async function atualizarApoliceAutoSemEmissao(id, form) {
+  const premioLiquido = parseFloat(form.premio_liquido) || 0
+  const pctComissao = parseFloat(form.pct_comissao) || 0
+  const valorComissao = premioLiquido * pctComissao
+  const comparativoRenovacao = buildRenewalComparisonPayload(form, premioLiquido, valorComissao)
+  const valorRepasse = form.tem_repasse && form.pct_repasse
+    ? valorComissao * parseFloat(form.pct_repasse)
+    : null
+
+  const payload = buildApoliceAutoPayload(form, undefined, premioLiquido, pctComissao, valorComissao, comparativoRenovacao, valorRepasse)
+  delete payload.cliente_id
+  delete payload.emissao_id
+
+  let { data, error } = await supabase
+    .from('apolices_auto')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .maybeSingle()
+  if (isMissingColumnError(error, 'apolices_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
+    ;({ data, error } = await supabase
+      .from('apolices_auto')
+      .update(omitKeys(payload, AUTO_RENEWAL_COMPARE_FIELDS))
+      .eq('id', id)
+      .select()
+      .maybeSingle())
+  }
+  if (error) throw error
+  return data
+}
+
 export async function getClienteAutoDetalhe(ref) {
   if (!ref) return null
 
+  const refIsUuid = isUuid(ref)
   const cpfRef = normalizeCpf(ref)
   let cliente = null
 
-  const { data: clienteById } = await supabase
-    .from('clientes_auto')
-    .select('*')
-    .eq('id', ref)
-    .maybeSingle()
-
-  cliente = clienteById ?? null
+  if (refIsUuid) {
+    const { data: clienteById, error: clienteByIdError } = await supabase
+      .from('clientes_auto')
+      .select('*')
+      .eq('id', ref)
+      .maybeSingle()
+    if (clienteByIdError) throw clienteByIdError
+    cliente = clienteById ?? null
+  }
 
   if (!cliente && cpfRef) {
-    const { data: clienteByCpf } = await supabase
+    const { data: clienteByCpf, error: clienteByCpfError } = await supabase
       .from('clientes_auto')
       .select('*')
       .eq('cpf', cpfRef)
       .maybeSingle()
+    if (clienteByCpfError) throw clienteByCpfError
     cliente = clienteByCpf ?? null
   }
 
-  if (!cliente) {
-    const { data: apoliceRef } = await supabase
+  if (!cliente && refIsUuid) {
+    const { data: apoliceRef, error: apoliceRefError } = await supabase
       .from('apolices_auto')
       .select('id, cliente_id, nome_cliente, cpf_cliente, celular_cliente')
       .eq('id', ref)
       .maybeSingle()
+    if (apoliceRefError) throw apoliceRefError
 
     if (apoliceRef?.cliente_id) {
-      const { data: clienteByApolice } = await supabase
+      const { data: clienteByApolice, error: clienteByApoliceError } = await supabase
         .from('clientes_auto')
         .select('*')
         .eq('id', apoliceRef.cliente_id)
         .maybeSingle()
+      if (clienteByApoliceError) throw clienteByApoliceError
       cliente = clienteByApolice ?? {
         id: apoliceRef.cliente_id,
         nome_completo: apoliceRef.nome_cliente || null,
@@ -1028,39 +1077,60 @@ export async function getClienteAutoDetalhe(ref) {
 
   const clientId = cliente?.id || null
   const cpf = normalizeCpf(cliente?.cpf || cpfRef)
+  // Clientes agrupados so por nome (sem cliente_id/CPF em nenhum registro) chegam
+  // aqui com "ref" sendo o proprio nome_cliente (ver clientKey em AutoClientes.jsx).
+  // Nesse caso nao ha id/CPF valido para filtrar: usar nome_cliente como escopo
+  // nas tabelas que tem essa coluna, e nao bater em renovacoes_auto (que so tem
+  // cliente_id, sem nome) com um filtro que sempre falharia.
+  const nomeRef = !clientId && !cpf && !refIsUuid ? ref : null
 
   const apolicesQuery = supabase
     .from('apolices_auto')
-    .select('*, emissoes_auto(*, cotacoes_auto(*))')
+    .select(`${APOLICE_AUTO_COLUMNS}, emissoes_auto(${EMISSAO_AUTO_COLUMNS}, cotacoes_auto(${COTACAO_AUTO_COLUMNS}))`)
     .order('vigencia_inicio', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
 
   const emissoesQuery = supabase
     .from('emissoes_auto')
-    .select('*, cotacoes_auto(*), apolices_auto(*)')
+    .select(`${EMISSAO_AUTO_COLUMNS}, cotacoes_auto(${COTACAO_AUTO_COLUMNS}), apolices_auto(${APOLICE_AUTO_COLUMNS})`)
     .order('created_at', { ascending: false })
 
   const cotacoesQuery = supabase
     .from('cotacoes_auto')
-    .select('*')
+    .select(COTACAO_AUTO_COLUMNS)
     .order('created_at', { ascending: false })
 
   const renovacoesQuery = supabase
     .from('renovacoes_auto')
-    .select('*, apolices_auto(id, numero_apolice, seguradora, vigencia_inicio, vigencia_fim), clientes_auto(nome_completo, telefone, celular, email)')
+    .select(`${RENOVACAO_AUTO_COLUMNS}, apolices_auto(id, numero_apolice, seguradora, vigencia_inicio, vigencia_fim), clientes_auto(nome_completo, telefone, celular, email)`)
     .order('vigencia_fim', { ascending: true })
 
-  const scopedApolices = clientId ? apolicesQuery.eq('cliente_id', clientId) : (cpf ? apolicesQuery.eq('cpf_cliente', cpf) : apolicesQuery.eq('id', ref))
-  const scopedEmissoes = clientId ? emissoesQuery.eq('cliente_id', clientId) : (cpf ? emissoesQuery.eq('cpf_cliente', cpf) : emissoesQuery.eq('id', ref))
-  const scopedCotacoes = clientId ? cotacoesQuery.eq('cliente_id', clientId) : (cpf ? cotacoesQuery.eq('cpf_cliente', cpf) : cotacoesQuery.eq('id', ref))
-  const scopedRenovacoes = clientId ? renovacoesQuery.eq('cliente_id', clientId) : (cpf ? renovacoesQuery.eq('cpf_cliente', cpf) : renovacoesQuery.eq('id', ref))
+  function scopeByRef(query, { allowNome = false } = {}) {
+    if (clientId) return query.eq('cliente_id', clientId)
+    if (cpf) return query.eq('cpf_cliente', cpf)
+    if (refIsUuid) return query.eq('id', ref)
+    if (allowNome && nomeRef) return query.eq('nome_cliente', nomeRef)
+    return null
+  }
+
+  const scopedApolices = scopeByRef(apolicesQuery, { allowNome: true })
+  const scopedEmissoes = scopeByRef(emissoesQuery, { allowNome: true })
+  const scopedCotacoes = scopeByRef(cotacoesQuery, { allowNome: true })
+  // renovacoes_auto nao tem coluna nome_cliente (so cliente_id) - sem escopo
+  // valido, nao ha como filtrar sem sempre falhar; retorna vazio.
+  const scopedRenovacoes = scopeByRef(renovacoesQuery)
 
   const [
     { data: apolices, error: apolicesError },
     { data: emissoes, error: emissoesError },
     { data: cotacoes, error: cotacoesError },
     { data: renovacoes, error: renovacoesError },
-  ] = await Promise.all([scopedApolices, scopedEmissoes, scopedCotacoes, scopedRenovacoes])
+  ] = await Promise.all([
+    scopedApolices ?? Promise.resolve({ data: [], error: null }),
+    scopedEmissoes ?? Promise.resolve({ data: [], error: null }),
+    scopedCotacoes ?? Promise.resolve({ data: [], error: null }),
+    scopedRenovacoes ?? Promise.resolve({ data: [], error: null }),
+  ])
 
   if (apolicesError) throw apolicesError
   if (emissoesError) throw emissoesError
@@ -1091,7 +1161,7 @@ export async function getClienteAutoDetalhe(ref) {
     emissoes: emissoesLista,
     cotacoes: cotacoesLista,
     renovacoes: renovacoesLista,
-    statusAtual: emRenovacao ? 'Renovacao em andamento' : (apoliceAtiva ? 'Cliente com apolice ativa' : 'Sem apolice ativa no momento'),
+    statusAtual: emRenovacao ? 'Renovação em andamento' : (apoliceAtiva ? 'Cliente com apólice ativa' : 'Sem apólice ativa no momento'),
     destaque: {
       apoliceAtiva,
       latestApolice,
@@ -1113,7 +1183,6 @@ export async function getClienteAutoDetalhe(ref) {
 export async function getDashboardAutoMetrics({ mes } = {}) {
   const referencia = parseMonthRef(mes) || new Date()
   const { inicio, fim } = inicioFimMes(0, referencia)
-  const mesAtualRenovacoes = inicioFimMes(0, referencia)
   const proximoMes = inicioFimMes(1, referencia)
   const anoAnteriorInicio = new Date(referencia.getFullYear() - 1, referencia.getMonth(), 1).toISOString().split('T')[0]
   const anoAnteriorFim = new Date(referencia.getFullYear() - 1, referencia.getMonth() + 1, 0).toISOString().split('T')[0]
@@ -1122,7 +1191,7 @@ export async function getDashboardAutoMetrics({ mes } = {}) {
     supabase.from('apolices_auto').select('id, eh_renovacao').gte('created_at', inicio).lte('created_at', fim),
     supabase.from('cotacoes_auto').select('id').gte('created_at', inicio).lte('created_at', fim),
     supabase.from('renovacoes_auto').select('id').eq('status_renovacao', 'renovada').gte('created_at', inicio).lte('created_at', fim),
-    supabase.from('renovacoes_auto').select('id').gte('vigencia_fim', mesAtualRenovacoes.inicio).lte('vigencia_fim', mesAtualRenovacoes.fim),
+    supabase.from('renovacoes_auto').select('id').gte('vigencia_fim', inicio).lte('vigencia_fim', fim),
     supabase.from('renovacoes_auto').select('id').gte('vigencia_fim', proximoMes.inicio).lte('vigencia_fim', proximoMes.fim),
     supabase.from('apolices_auto').select('*').gte('created_at', inicio).lte('created_at', fim),
     supabase.from('cotacoes_auto').select('id').eq('status', 'convertida').gte('created_at', inicio).lte('created_at', fim),

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, Car, CheckCircle2, FileText, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, X, Plus } from 'lucide-react'
@@ -393,8 +393,14 @@ function CardEmissao({ emissao, onDragStart, onClick }) {
   const isRecusada = emissao.resultado === 'recusada'
   const isAprovada = emissao.resultado === 'aprovada'
   const nome = nomeEmissao(emissao)
-  const veiculo = emissao.modelo_veiculo || emissao.cotacoes_auto?.modelo_veiculo || 'Modelo nao informado'
-  const placa = emissao.placa || emissao.cotacoes_auto?.placa || 'Sem placa'
+  const apolice = getApoliceVinculada(emissao)
+  const veiculo = emissao.modelo_veiculo || apolice?.modelo_veiculo || emissao.cotacoes_auto?.modelo_veiculo || 'Modelo nao informado'
+  const placa = emissao.placa || apolice?.placa || emissao.cotacoes_auto?.placa || 'Sem placa'
+  const seguradora = apolice?.seguradora || seguradoraEmissao(emissao)
+  const vigenciaFim = apolice?.vigencia_fim || emissao.vigencia_fim || emissao.cotacoes_auto?.vigencia_fim || ''
+  const premio = apolice?.premio_liquido ?? emissao.premio_liquido ?? 0
+  const comissao = apolice?.valor_comissao ?? emissao.valor_comissao ?? 0
+  const prazo = vigenciaFim ? Math.ceil((new Date(`${vigenciaFim}T12:00:00`) - new Date()) / (1000 * 60 * 60 * 24)) : null
 
   let shellClass = 'border-brand-secondary/20 bg-white/90 shadow-[0_18px_40px_rgba(15,23,42,0.06)]'
   let accentClass = 'from-brand-secondary to-brand-accent'
@@ -416,18 +422,15 @@ function CardEmissao({ emissao, onDragStart, onClick }) {
       onDragStart={() => onDragStart(emissao)}
       onClick={() => onClick(emissao)}
       title="Abrir detalhes da emissao"
-      className={['group relative flex min-h-[228px] w-full flex-col overflow-hidden rounded-[30px] border p-4 text-left transition-all hover:-translate-y-1 hover:shadow-[0_22px_48px_rgba(15,23,42,0.12)]', shellClass].join(' ')}
+      className={['group relative flex min-h-[290px] w-full flex-col overflow-hidden rounded-[30px] border p-4 text-left transition-all hover:-translate-y-1 hover:shadow-[0_22px_48px_rgba(15,23,42,0.12)]', shellClass].join(' ')}
     >
       <div className={['absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r', accentClass].join(' ')} />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-dark-surface px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">
-              {colunaMeta.label}
-            </span>
-            <span className={isRenovacao ? 'rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success' : 'rounded-full bg-brand-secondary/10 px-2.5 py-1 text-[10px] font-semibold text-status-info'}>
-              {isRenovacao ? 'Renovacao' : 'Novo'}
-            </span>
+            <span className="rounded-full bg-dark-surface px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">{colunaMeta.label}</span>
+            <span className={isRenovacao ? 'rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success' : 'rounded-full bg-brand-secondary/10 px-2.5 py-1 text-[10px] font-semibold text-status-info'}>{isRenovacao ? 'Renovacao' : 'Novo'}</span>
+            {typeof prazo === 'number' && <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${prazo < 0 ? 'bg-red-100 text-red-600' : prazo <= 15 ? 'bg-status-warning/10 text-status-warning' : 'bg-dark-surface text-dark-muted'}`}>{prazo < 0 ? `${Math.abs(prazo)} dia(s) vencida` : `${prazo} dia(s) para vencer`}</span>}
           </div>
           <div>
             <p className="truncate text-base font-semibold text-dark-text">{nome}</p>
@@ -441,35 +444,38 @@ function CardEmissao({ emissao, onDragStart, onClick }) {
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 rounded-[26px] border border-white/70 bg-dark-surface/70 p-3 text-xs text-dark-muted sm:grid-cols-2">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Placa</p>
-          <p className="mt-1 text-sm font-medium text-dark-text">{placa}</p>
-        </div>
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Seguradora</p>
-          <p className="mt-1 text-sm font-medium text-dark-text">{seguradoraEmissao(emissao)}</p>
-        </div>
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">CPF</p>
-          <p className="mt-1 text-sm font-medium text-dark-text">{cpfEmissao(emissao)}</p>
-        </div>
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Contato</p>
-          <p className="mt-1 text-sm font-medium text-dark-text">{celularEmissao(emissao)}</p>
+      <div className="mt-4 rounded-[26px] border border-white/70 bg-dark-surface/70 p-3">
+        <div className="flex items-center gap-3">
+          <SeguradoraBadge nome={seguradora} size="lg" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-dark-text">{seguradora}</p>
+            <p className="truncate text-xs text-dark-muted">Placa {placa} · CPF {cpfEmissao(emissao)}</p>
+          </div>
         </div>
       </div>
 
-      <div className="mt-4 rounded-[24px] border border-dashed border-dark-border/70 px-3 py-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Condutor</p>
-        <p className="mt-1 truncate text-sm text-dark-text">{condutorEmissao(emissao)}</p>
+      <div className="mt-4 grid gap-3 rounded-[26px] border border-white/70 bg-white/70 p-3 text-xs text-dark-muted sm:grid-cols-2">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Vigencia</p>
+          <p className="mt-1 text-sm font-medium text-dark-text">{emissao.vigencia_inicio ? formatDateBR(emissao.vigencia_inicio) : '—'} até {vigenciaFim ? formatDateBR(vigenciaFim) : '—'}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Condutor</p>
+          <p className="mt-1 text-sm font-medium text-dark-text">{condutorEmissao(emissao)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Premio liquido</p>
+          <p className="mt-1 text-sm font-medium text-dark-text">{formatMoney(premio)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Comissao</p>
+          <p className="mt-1 text-sm font-medium text-dark-text">{formatMoney(comissao)}</p>
+        </div>
       </div>
 
       <div className="mt-auto flex items-center justify-between pt-4 text-xs text-dark-muted">
         <span>{colunaMeta.hint}</span>
-        <span className="inline-flex items-center gap-1 font-semibold text-status-info">
-          Abrir <ArrowRight className="h-3.5 w-3.5" />
-        </span>
+        <span className="inline-flex items-center gap-1 font-semibold text-status-info">Abrir <ArrowRight className="h-3.5 w-3.5" /></span>
       </div>
     </button>
   )
@@ -924,7 +930,7 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
 
 // ─── Modal Apolices Emitidas ───────────────────────────────────────────
 
-function ModalApolices({ onClose }) {
+function ModalApolices({ onClose, onOpenApolice }) {
   const [search, setSearch] = useState('')
   const [inicio, setInicio] = useState('')
   const [fim, setFim] = useState('')
@@ -1006,7 +1012,7 @@ function ModalApolices({ onClose }) {
               </thead>
               <tbody className="divide-y divide-dark-border/40">
                 {apolices.map(item => (
-                  <tr key={item.id} className="transition-colors hover:bg-brand-accent/5">
+                  <tr key={item.id} onClick={() => onOpenApolice(item.id)} className="cursor-pointer transition-colors hover:bg-brand-accent/5">
                     <td className="py-3 pr-4 font-medium text-dark-text">{item.nome_cliente || item.cpf_cliente || '—'}</td>
                     <td className="py-3 pr-4 text-dark-muted">{item.numero_apolice || '—'}</td>
                     <td className="py-3 pr-4 text-dark-muted">{item.seguradora || '—'}</td>
@@ -1675,7 +1681,7 @@ export default function AutoEmissoes() {
                   </thead>
                   <tbody className="divide-y divide-dark-border/40">
                     {emissoes.slice(0, 10).map(item => (
-                      <tr key={item.id} className="transition-colors hover:bg-brand-accent/5">
+                      <tr key={item.id} onClick={() => abrirDetalhe(item)} className="cursor-pointer transition-colors hover:bg-brand-accent/5">
                         <td className="py-3 pr-4 font-medium text-dark-text">{nomeEmissao(item)}</td>
                         <td className="py-3 pr-4 text-dark-muted">{seguradoraEmissao(item)}</td>
                         <td className="py-3 pr-4 text-dark-muted">{getEmissaoColuna(item)}</td>
@@ -1684,7 +1690,7 @@ export default function AutoEmissoes() {
                           {item.vigencia_inicio ? formatDateBR(item.vigencia_inicio) : '—'} — {item.vigencia_fim ? formatDateBR(item.vigencia_fim) : '—'}
                         </td>
                         <td className="py-3">
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-2" onClick={e => e.stopPropagation()}>
                             <button
                               type="button"
                               onClick={() => abrirDetalhe(item)}
@@ -2322,7 +2328,7 @@ export default function AutoEmissoes() {
         </div>
       )}
 
-      {showApolices && <ModalApolices onClose={() => setShowApolices(false)} />}
+      {showApolices && <ModalApolices onClose={() => setShowApolices(false)} onOpenApolice={apoliceId => { setShowApolices(false); navigate(`/auto/apolices/${apoliceId}`) }} />}
 
       {detalhe && (
         <ModalDetalhe
@@ -2339,5 +2345,6 @@ export default function AutoEmissoes() {
     </div>
   )
 }
+
 
 

@@ -1,4 +1,4 @@
-export const FICHA_EXPIRATION_DAYS = 45
+﻿export const FICHA_EXPIRATION_DAYS = 45
 
 const EXPIRABLE_BASE_STATUSES = new Set(['pendente', 'em_cotacao', 'em_analise', 'aprovado', 'emitido', 'expirada'])
 const TERMINAL_NON_EXPIRABLE_STATUSES = new Set(['recusado', 'cancelado', 'cpf_invalido'])
@@ -53,6 +53,9 @@ export function getFichaOperationalState(ficha = {}, options = {}) {
   if (hasPolicy) {
     return { id: 'emitida', label: 'Emitida', className: 'badge-purple' }
   }
+  if (operationalStatus === 'expirada') {
+    return { id: 'expirada', label: 'Expirada', className: 'badge-muted' }
+  }
   if (operationalStatus === 'aprovado') {
     return { id: 'aprovada', label: 'Aprovada', className: 'badge-success' }
   }
@@ -87,3 +90,4 @@ export function withFichaOperationalStatus(ficha = {}, options = {}) {
 export function mapFichasWithOperationalStatus(rows = [], options = {}) {
   return rows.map(row => withFichaOperationalStatus(row, options))
 }
+

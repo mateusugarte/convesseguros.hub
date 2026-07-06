@@ -55,6 +55,41 @@ para tokens `status-success`. Build e testes conferidos verdes apos as correcoes
 do n8n — viola a regra "service_role somente no n8n" deste CLAUDE.md. Nao foi
 alterado nem executado; aguardando aprovacao/plano do usuario.
 
+**Revisao de entrega do Codex — Auto (perfil de cliente/apolice) + ImobiliariaDetalhe
+(2026-07-06, Claude):** Codex entregou (nao commitado ainda): paginas novas
+`AutoApoliceDetalhe.jsx` e `AutoClienteDetalhe.jsx` com rotas `/auto/apolices/:id`
+e `/auto/clientes/:id`; filtro de mes no `AutoDashboard`/`AutoRenovacoes`
+(`getDashboardAutoMetrics`, `getRenovacoesAuto`, `getGraficoEmissoesMensais`,
+`getGraficoCotacoesStatus` agora aceitam `mes`); e em `ImobiliariaDetalhe.jsx` uma
+troca da lista simples de codigos por seguradora por cards de cadastro (ativar
+seguradora de fianca + codigo + observacoes, tabela `imobiliaria_seguradoras`).
+Revisao encontrou e corrigiu: (1) bug de crash — `AutoEmissoes.jsx` (tabela
+"Ultimas emissoes") chamava `onOpenApolice(item.id)` num `<tr onClick>`, mas essa
+funcao so existe como prop dentro do componente `ModalApolices`; qualquer clique
+na linha lancava `ReferenceError` (build/testes nao pegam, so em runtime) —
+trocado para `abrirDetalhe(item)` (mesmo handler do botao "Abrir" da propria
+linha) com `stopPropagation` nos botoes de acao; (2) regressao de acentuacao —
+`ImobiliariaDetalhe.jsx` teve dezenas de strings visiveis ao usuario gravadas sem
+acento pelo editor do Codex ("Variacao", "Imobiliaria", "Observacoes", "fianca",
+etc.), inconsistente com o resto do arquivo (e com os outros arquivos do mesmo
+lote, que ganharam acentos corretos) e com os passes de encoding anteriores;
+acentos restaurados em todo texto de UI (labels, titulos, toasts, placeholders),
+sem tocar nas chaves/colunas `codigo`/`observacoes` (essas continuam sem acento,
+pois espelham o nome real da coluna no Supabase). Build (`npm run build`) e
+testes (`npm test`, 44/44) verdes apos as correcoes.
+
+**Risco nao resolvido (aguardando decisao) — migracao pendente:** a nova UI de
+"Cadastros em seguradoras de fianca" em `ImobiliariaDetalhe.jsx` grava
+`observacoes` em `imobiliaria_codigos`, mas essa coluna nao existe em nenhuma
+migracao rastreada (`supabase/11_imob_codigos.sql` só tem `codigo`). O código em
+`src/lib/imobiliariasCodigos.js` já tem fallback silencioso para coluna ausente,
+então não quebra, mas as observações digitadas pelo usuário nunca são salvas até
+a coluna existir. Criado `supabase/48_imobiliaria_codigos_observacoes.sql`
+(`ALTER TABLE ... ADD COLUMN IF NOT EXISTS observacoes TEXT`) para revisão — **não
+executado**; aguardando aprovação do usuário para rodar no Supabase SQL Editor.
+A tabela `imobiliaria_seguradoras` usada pelo toggle de cadastro já existe
+(`supabase/09_apolices_kanban.sql`), então essa parte não tem risco de schema.
+
 ---
 
 ## Responsavel Atual

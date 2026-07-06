@@ -1,13 +1,32 @@
 import { supabase } from './supabase'
 
-function inicioFimMes(offset = 0) {
-  const hoje = new Date()
-  const ano = hoje.getFullYear()
-  const mes = hoje.getMonth() + offset
+function parseMonthRef(monthRef) {
+  if (typeof monthRef !== 'string') return null
+  const match = monthRef.match(/^(\d{4})-(\d{2})$/)
+  if (!match) return null
+  const [, year, month] = match
+  const date = new Date(Number(year), Number(month) - 1, 1)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function toMonthRef(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+function inicioFimMes(offset = 0, baseDate = new Date()) {
+  const base = baseDate instanceof Date ? baseDate : new Date(baseDate)
+  const ano = base.getFullYear()
+  const mes = base.getMonth() + offset
   return {
     inicio: new Date(ano, mes, 1).toISOString().split('T')[0],
     fim: new Date(ano, mes + 1, 0).toISOString().split('T')[0],
   }
+}
+
+function getRangeFromMonthRef(monthRef, offset = 0) {
+  return inicioFimMes(offset, parseMonthRef(monthRef) || new Date())
 }
 
 function monthKey(value) {
@@ -214,11 +233,11 @@ export function getEmissaoColuna(item) {
   return trimmed
 }
 
-function toMonthSeries(items, { meses = 6, getDate, getValue } = {}) {
+function toMonthSeries(items, { meses = 6, getDate, getValue, endMonth } = {}) {
+  const base = parseMonthRef(endMonth) || new Date()
   const resultado = []
   for (let i = meses - 1; i >= 0; i--) {
-    const referencia = new Date()
-    referencia.setMonth(referencia.getMonth() - i)
+    const referencia = new Date(base.getFullYear(), base.getMonth() - i, 1)
     const key = `${referencia.getFullYear()}-${String(referencia.getMonth() + 1).padStart(2, '0')}`
     const subset = items.filter(item => monthKey(getDate(item)) === key)
     resultado.push({
@@ -437,6 +456,31 @@ export async function getEmissaoAuto(id) {
     .single()
   if (error) throw error
   return data
+}
+
+export async function getApoliceAutoDetalhe(id) {
+  if (!id) return null
+
+  const [{ data: apolice, error }, { data: renovacoes, error: renovacoesError }] = await Promise.all([
+    supabase
+      .from('apolices_auto')
+      .select('*, emissoes_auto(*, cotacoes_auto(*))')
+      .eq('id', id)
+      .single(),
+    supabase
+      .from('renovacoes_auto')
+      .select('*')
+      .eq('apolice_id', id)
+      .order('vigencia_fim', { ascending: true }),
+  ])
+
+  if (error) throw error
+  if (renovacoesError) throw renovacoesError
+
+  return {
+    ...apolice,
+    renovacoes_auto: renovacoes ?? [],
+  }
 }
 
 export async function moverEmissaoColuna(id, coluna) {
@@ -806,20 +850,21 @@ export async function criarEmissaoManualAuto(payload) {
 }
 
 // Renovacoes
-export async function getRenovacoesAuto({ periodo } = {}) {
+export async function getRenovacoesAuto({ periodo, mes } = {}) {
   let q = supabase
     .from('renovacoes_auto')
-    .select('*, clientes_auto(nome_completo, telefone, celular, email), apolices_auto(numero_apolice, seguradora)')
+    .select('*, clientes_auto(nome_completo, telefone, celular, email), apolices_auto(id, emissao_id, numero_apolice, seguradora, vigencia_inicio, vigencia_fim, premio_liquido, valor_comissao, forma_pagamento, parcelamento, nome_cliente, modelo_veiculo, placa, created_at)')
     .order('vigencia_fim', { ascending: true })
 
   if (periodo === 'proximo_mes') {
-    const { inicio, fim } = inicioFimMes(1)
+    const { inicio, fim } = getRangeFromMonthRef(mes, 1)
     q = q.gte('vigencia_fim', inicio).lte('vigencia_fim', fim)
   } else if (periodo === 'mes_atual') {
-    const { inicio, fim } = inicioFimMes(0)
+    const { inicio, fim } = getRangeFromMonthRef(mes, 0)
     q = q.gte('vigencia_fim', inicio).lte('vigencia_fim', fim)
   } else if (periodo === 'passadas') {
-    const hoje = new Date().toISOString().split('T')[0]
+    const base = parseMonthRef(mes) || new Date()
+    const hoje = new Date(base.getFullYear(), base.getMonth(), base.getDate()).toISOString().split('T')[0]
     q = q.lt('vigencia_fim', hoje)
   }
 
@@ -929,18 +974,155 @@ export async function atualizarApoliceAuto(id, changes) {
   return data
 }
 
-// Dashboard
-export async function getDashboardAutoMetrics() {
-  const { inicio, fim } = inicioFimMes(0)
-  const proximoMes = inicioFimMes(1)
-  const hoje = new Date()
-  const anoAnteriorInicio = new Date(hoje.getFullYear() - 1, hoje.getMonth(), 1).toISOString().split('T')[0]
-  const anoAnteriorFim = new Date(hoje.getFullYear() - 1, hoje.getMonth() + 1, 0).toISOString().split('T')[0]
+export async function getClienteAutoDetalhe(ref) {
+  if (!ref) return null
 
-  const [emissoes, cotacoesMes, renovadasMes, vencendoProximoMes, apolicesMes, cotacoesConvertidas, renovacoesPendentes, renovacoesAnoAnterior] = await Promise.all([
+  const cpfRef = normalizeCpf(ref)
+  let cliente = null
+
+  const { data: clienteById } = await supabase
+    .from('clientes_auto')
+    .select('*')
+    .eq('id', ref)
+    .maybeSingle()
+
+  cliente = clienteById ?? null
+
+  if (!cliente && cpfRef) {
+    const { data: clienteByCpf } = await supabase
+      .from('clientes_auto')
+      .select('*')
+      .eq('cpf', cpfRef)
+      .maybeSingle()
+    cliente = clienteByCpf ?? null
+  }
+
+  if (!cliente) {
+    const { data: apoliceRef } = await supabase
+      .from('apolices_auto')
+      .select('id, cliente_id, nome_cliente, cpf_cliente, celular_cliente')
+      .eq('id', ref)
+      .maybeSingle()
+
+    if (apoliceRef?.cliente_id) {
+      const { data: clienteByApolice } = await supabase
+        .from('clientes_auto')
+        .select('*')
+        .eq('id', apoliceRef.cliente_id)
+        .maybeSingle()
+      cliente = clienteByApolice ?? {
+        id: apoliceRef.cliente_id,
+        nome_completo: apoliceRef.nome_cliente || null,
+        cpf: normalizeCpf(apoliceRef.cpf_cliente || ''),
+        celular: apoliceRef.celular_cliente || null,
+      }
+    } else if (apoliceRef) {
+      cliente = {
+        id: null,
+        nome_completo: apoliceRef.nome_cliente || null,
+        cpf: normalizeCpf(apoliceRef.cpf_cliente || ''),
+        celular: apoliceRef.celular_cliente || null,
+      }
+    }
+  }
+
+  const clientId = cliente?.id || null
+  const cpf = normalizeCpf(cliente?.cpf || cpfRef)
+
+  const apolicesQuery = supabase
+    .from('apolices_auto')
+    .select('*, emissoes_auto(*, cotacoes_auto(*))')
+    .order('vigencia_inicio', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
+
+  const emissoesQuery = supabase
+    .from('emissoes_auto')
+    .select('*, cotacoes_auto(*), apolices_auto(*)')
+    .order('created_at', { ascending: false })
+
+  const cotacoesQuery = supabase
+    .from('cotacoes_auto')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  const renovacoesQuery = supabase
+    .from('renovacoes_auto')
+    .select('*, apolices_auto(id, numero_apolice, seguradora, vigencia_inicio, vigencia_fim), clientes_auto(nome_completo, telefone, celular, email)')
+    .order('vigencia_fim', { ascending: true })
+
+  const scopedApolices = clientId ? apolicesQuery.eq('cliente_id', clientId) : (cpf ? apolicesQuery.eq('cpf_cliente', cpf) : apolicesQuery.eq('id', ref))
+  const scopedEmissoes = clientId ? emissoesQuery.eq('cliente_id', clientId) : (cpf ? emissoesQuery.eq('cpf_cliente', cpf) : emissoesQuery.eq('id', ref))
+  const scopedCotacoes = clientId ? cotacoesQuery.eq('cliente_id', clientId) : (cpf ? cotacoesQuery.eq('cpf_cliente', cpf) : cotacoesQuery.eq('id', ref))
+  const scopedRenovacoes = clientId ? renovacoesQuery.eq('cliente_id', clientId) : (cpf ? renovacoesQuery.eq('cpf_cliente', cpf) : renovacoesQuery.eq('id', ref))
+
+  const [
+    { data: apolices, error: apolicesError },
+    { data: emissoes, error: emissoesError },
+    { data: cotacoes, error: cotacoesError },
+    { data: renovacoes, error: renovacoesError },
+  ] = await Promise.all([scopedApolices, scopedEmissoes, scopedCotacoes, scopedRenovacoes])
+
+  if (apolicesError) throw apolicesError
+  if (emissoesError) throw emissoesError
+  if (cotacoesError) throw cotacoesError
+  if (renovacoesError) throw renovacoesError
+
+  const apolicesLista = apolices ?? []
+  const emissoesLista = emissoes ?? []
+  const cotacoesLista = cotacoes ?? []
+  const renovacoesLista = renovacoes ?? []
+  const latestApolice = apolicesLista[0] || null
+  const latestEmissao = emissoesLista[0] || null
+  const hoje = new Date().toISOString().split('T')[0]
+  const apoliceAtiva = apolicesLista.find(item => item.vigencia_inicio && item.vigencia_fim && item.vigencia_inicio <= hoje && item.vigencia_fim >= hoje) || null
+  const emRenovacao = renovacoesLista.find(item => item.status_renovacao !== 'renovada') || null
+
+  const perfil = cliente || {
+    id: clientId,
+    nome_completo: latestApolice?.nome_cliente || latestEmissao?.nome_cliente || cotacoesLista[0]?.nome_cliente || 'Cliente sem nome',
+    cpf,
+    celular: latestApolice?.celular_cliente || latestEmissao?.celular_cliente || cotacoesLista[0]?.celular_cliente || null,
+    email: cotacoesLista[0]?.email_cliente || null,
+  }
+
+  return {
+    cliente: perfil,
+    apolices: apolicesLista,
+    emissoes: emissoesLista,
+    cotacoes: cotacoesLista,
+    renovacoes: renovacoesLista,
+    statusAtual: emRenovacao ? 'Renovacao em andamento' : (apoliceAtiva ? 'Cliente com apolice ativa' : 'Sem apolice ativa no momento'),
+    destaque: {
+      apoliceAtiva,
+      latestApolice,
+      latestEmissao,
+      emRenovacao,
+    },
+    metricas: {
+      apolicesEmitidas: apolicesLista.length,
+      renovacoes: renovacoesLista.length,
+      cotacoes: cotacoesLista.length,
+      emissoes: emissoesLista.length,
+      comissaoTotal: apolicesLista.reduce((total, item) => total + (Number(item.valor_comissao) || 0), 0),
+      premioTotal: apolicesLista.reduce((total, item) => total + (Number(item.premio_liquido) || 0), 0),
+    },
+  }
+}
+
+// Dashboard
+export async function getDashboardAutoMetrics({ mes } = {}) {
+  const referencia = parseMonthRef(mes) || new Date()
+  const { inicio, fim } = inicioFimMes(0, referencia)
+  const mesAtualRenovacoes = inicioFimMes(0, referencia)
+  const proximoMes = inicioFimMes(1, referencia)
+  const anoAnteriorInicio = new Date(referencia.getFullYear() - 1, referencia.getMonth(), 1).toISOString().split('T')[0]
+  const anoAnteriorFim = new Date(referencia.getFullYear() - 1, referencia.getMonth() + 1, 0).toISOString().split('T')[0]
+
+  const [emissoes, cotacoesMes, renovadasMes, vencendoNoMes, vencendoProximoMes, apolicesMes, cotacoesConvertidas, renovacoesPendentes, renovacoesAnoAnterior] = await Promise.all([
     supabase.from('apolices_auto').select('id, eh_renovacao').gte('created_at', inicio).lte('created_at', fim),
     supabase.from('cotacoes_auto').select('id').gte('created_at', inicio).lte('created_at', fim),
     supabase.from('renovacoes_auto').select('id').eq('status_renovacao', 'renovada').gte('created_at', inicio).lte('created_at', fim),
+    supabase.from('renovacoes_auto').select('id').gte('vigencia_fim', mesAtualRenovacoes.inicio).lte('vigencia_fim', mesAtualRenovacoes.fim),
     supabase.from('renovacoes_auto').select('id').gte('vigencia_fim', proximoMes.inicio).lte('vigencia_fim', proximoMes.fim),
     supabase.from('apolices_auto').select('*').gte('created_at', inicio).lte('created_at', fim),
     supabase.from('cotacoes_auto').select('id').eq('status', 'convertida').gte('created_at', inicio).lte('created_at', fim),
@@ -964,6 +1146,7 @@ export async function getDashboardAutoMetrics() {
     renovacoesNoMes: emissoes.data?.filter(item => item.eh_renovacao).length ?? 0,
     cotacoesNoMes: totalCotacoesMes,
     renovacoesConcluidas: renovadasMes.data?.length ?? 0,
+    vencendoNoMes: vencendoNoMes.data?.length ?? 0,
     vencendoProximoMes: vencendoProximoMes.data?.length ?? 0,
     comissaoTotal,
     renovacoesComissaoMesAtual,
@@ -977,7 +1160,7 @@ export async function getDashboardAutoMetrics() {
   }
 }
 
-export async function getGraficoEmissoesMensais(meses = 6) {
+export async function getGraficoEmissoesMensais(meses = 6, mes) {
   const apolices = await supabase
     .from('apolices_auto')
     .select('id, eh_renovacao, created_at')
@@ -985,6 +1168,7 @@ export async function getGraficoEmissoesMensais(meses = 6) {
   const lista = apolices.data ?? []
   return toMonthSeries(lista, {
     meses,
+    endMonth: mes || toMonthRef(),
     getDate: item => item.created_at,
     getValue: subset => ({
       novos: subset.filter(item => !item.eh_renovacao).length,
@@ -1064,10 +1248,11 @@ export async function getAutoCotacoesResumo({ tipo, inicio, fim } = {}) {
   }
 }
 
-export async function getGraficoCotacoesStatus(meses = 6) {
+export async function getGraficoCotacoesStatus(meses = 6, mes) {
   const cotacoes = await getCotacoesAuto({})
   return toMonthSeries(cotacoes, {
     meses,
+    endMonth: mes || toMonthRef(),
     getDate: item => item.created_at,
     getValue: subset => ({
       abertas: subset.filter(item => item.status === 'pendente' || item.status === 'aberta').length,

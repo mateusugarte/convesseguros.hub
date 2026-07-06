@@ -1,4 +1,4 @@
-import test from 'node:test'
+﻿import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   buildAprovadaPatch,
@@ -6,13 +6,14 @@ import {
   buildCobrancaResetPatch,
   buildImobiliariaRetornoPatch,
   buildCobrancaHistoricoPatch,
+  buildRelatorioMovePatch,
   isCobrancaEnviadaVisivel,
   getCobrancaEnviadaDisplay,
   getImobiliariaRetornouDisplay,
 } from './relatorioCobranca.js'
 import { getFichaOperationalState } from './fichaOperational.js'
 
-test('buildAprovadaPatch limpa marcas de cobrança e recuperação', () => {
+test('buildAprovadaPatch limpa marcas de cobranÃ§a e recuperaÃ§Ã£o', () => {
   const ficha = { raw_data: { cobranca_started_at: '2026-01-01', recovered_after_cobranca: true, imobiliaria_retornou: true, foo: 'bar' } }
   const patch = buildAprovadaPatch(ficha)
   assert.equal(patch.status, 'aprovado')
@@ -36,7 +37,7 @@ test('buildCobrancaPatch marca envio com o timestamp informado sem mexer em reto
   assert.equal(patch.raw_data.foo, 'bar')
 })
 
-test('buildCobrancaResetPatch limpa cobrança sem alterar o status original nem retorno_enviado', () => {
+test('buildCobrancaResetPatch limpa cobranÃ§a sem alterar o status original nem retorno_enviado', () => {
   const ficha = { status: 'emitido', raw_data: { cobranca_started_at: '2026-06-15', imobiliaria_retornou: true } }
   const patch = buildCobrancaResetPatch(ficha)
   assert.equal(patch.status, undefined)
@@ -57,7 +58,7 @@ test('buildImobiliariaRetornoPatch grava e limpa o retorno', () => {
   assert.equal(desligado.raw_data.imobiliaria_retornou_em, null)
 })
 
-test('buildCobrancaHistoricoPatch só mexe no histórico de cobrança', () => {
+test('buildCobrancaHistoricoPatch sÃ³ mexe no histÃ³rico de cobranÃ§a', () => {
   const ficha = { raw_data: {} }
   const patch = buildCobrancaHistoricoPatch(ficha, true, '2026-07-01T09:00:00.000Z')
   assert.equal(patch.status, undefined)
@@ -68,7 +69,15 @@ test('buildCobrancaHistoricoPatch só mexe no histórico de cobrança', () => {
   assert.equal(off.raw_data.cobranca_started_at, null)
 })
 
-test('isCobrancaEnviadaVisivel só é true para enviado_cobranca e recuperados', () => {
+test('buildRelatorioMovePatch permite mover para expirada sem acionar cobrança', () => {
+  const ficha = { raw_data: { cobranca_started_at: '2026-01-01', recovered_after_cobranca: true, imobiliaria_retornou: true } }
+  const patch = buildRelatorioMovePatch(ficha, 'expirada')
+  assert.equal(patch.status, 'expirada')
+  assert.equal(patch.raw_data.cobranca_started_at, null)
+  assert.equal(patch.raw_data.recovered_after_cobranca, false)
+  assert.equal(patch.raw_data.imobiliaria_retornou, false)
+})
+test('isCobrancaEnviadaVisivel sÃ³ Ã© true para enviado_cobranca e recuperados', () => {
   assert.equal(isCobrancaEnviadaVisivel('enviado_cobranca'), true)
   assert.equal(isCobrancaEnviadaVisivel('recuperados'), true)
   assert.equal(isCobrancaEnviadaVisivel('aprovada'), false)
@@ -76,7 +85,7 @@ test('isCobrancaEnviadaVisivel só é true para enviado_cobranca e recuperados',
   assert.equal(isCobrancaEnviadaVisivel('expirada'), false)
 })
 
-test('getCobrancaEnviadaDisplay usa apenas o histórico de cobrança', () => {
+test('getCobrancaEnviadaDisplay usa apenas o histÃ³rico de cobranÃ§a', () => {
   const emCobranca = { raw_data: { cobranca_started_at: '2026-01-01' } }
   assert.equal(getCobrancaEnviadaDisplay(emCobranca, 'enviado_cobranca'), true)
 
@@ -95,6 +104,7 @@ test('getImobiliariaRetornouDisplay reflete raw_data.imobiliaria_retornou', () =
 
 test('getFichaOperationalState só projeta Enviado Cobrança para fichas aprovadas sem apólice e com cobrança iniciada', () => {
   assert.equal(getFichaOperationalState({ status: 'aprovado', raw_data: { cobranca_started_at: '2026-07-01' } })?.id, 'enviado_cobranca')
+  assert.equal(getFichaOperationalState({ status: 'expirada' })?.id, 'expirada')
   assert.equal(getFichaOperationalState({ status: 'recusado', raw_data: { cobranca_started_at: '2026-07-01' } })?.id, 'recusada')
   assert.equal(getFichaOperationalState({ status: 'cancelado', raw_data: { cobranca_started_at: '2026-07-01' } })?.id, 'desistiu')
 })

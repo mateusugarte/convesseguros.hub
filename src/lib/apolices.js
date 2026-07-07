@@ -326,6 +326,21 @@ export async function fetchApoliceDetalhe(id) {
   return data
 }
 
+
+export async function buscarApolicePorFichaId(fichaId) {
+  if (!fichaId) return null
+
+  const { data, error } = await supabase
+    .from('apolices')
+    .select('id, ficha_id, numero_apolice, seguradora, imobiliaria, data_emissao, nome_interessado, status_emissao, created_at')
+    .eq('ficha_id', fichaId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) throw error
+  return data || null
+}
 export async function buscarApolicePorNumero(numeroApolice, { excludeId = null } = {}) {
   const numeroOriginal = String(numeroApolice || '').trim()
   const numeroNormalizado = normalizeNumeroApolice(numeroOriginal)
@@ -600,3 +615,4 @@ export async function moverStatusApolice(id, novoStatus, dadosExtras = {}) {
   const { error } = await supabase.from('apolices').update(update).eq('id', id)
   return error
 }
+

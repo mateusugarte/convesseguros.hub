@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import {
   buscarApolicePorNumero,
+  buscarApolicePorFichaId,
   criarApolice,
   fetchApolicesKanban,
   formatMoneyBR,
@@ -431,7 +432,7 @@ const DroppableColumn = memo(function DroppableColumn({ col, apolices, resolverN
   )
 })
 
-function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, user }) {
+function IniciarEmissaoWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, getAliases, user }) {
   const [imobFiltro, setImobFiltro] = useState('')
   const [busca, setBusca] = useState('')
   const [fichas, setFichas] = useState([])
@@ -476,6 +477,18 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, toast, grupos, getAliases, 
     if (!fichaSelecionada) return
     setCriando(true)
     const resumo = resumoFicha(fichaSelecionada)
+    const existente = await buscarApolicePorFichaId(fichaSelecionada.id)
+    if (existente) {
+      setCriando(false)
+      toast({
+        type: 'warning',
+        title: 'Lead já possui apólice',
+        message: 'A ficha selecionada já possui uma apólice' + (existente.numero_apolice ? ' (' + existente.numero_apolice + ')' : '') + (existente.seguradora ? ' na ' + existente.seguradora : '') + '.',
+        action: onAbrirApolice && existente.id ? { label: 'Abrir apólice', onClick: () => onAbrirApolice(existente.id) } : undefined,
+        duration: 10000,
+      })
+      return
+    }
     const payload = {
       ficha_id: fichaSelecionada.id,
       imobiliaria: fichaSelecionada.imobiliaria || null,
@@ -1277,6 +1290,7 @@ export default function ApoicesGestao() {
         <IniciarEmissaoWorkspace
           onBack={() => setWorkspace('kanban')}
           onCriado={handleCriado}
+          onAbrirApolice={openApolice}
           toast={toast}
           grupos={grupos}
           getAliases={getAliases}
@@ -1363,6 +1377,8 @@ export default function ApoicesGestao() {
     </div>
   )
 }
+
+
 
 
 

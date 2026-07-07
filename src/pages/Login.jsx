@@ -89,7 +89,7 @@ export default function Login() {
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             <div className="dashboard-hero-chip rounded-2xl p-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Mesa</p>
-              <p className="mt-1 text-sm font-semibold text-dark-text">Fichas e apolices</p>
+              <p className="mt-1 text-sm font-semibold text-dark-text">Fichas e apólices</p>
             </div>
             <div className="dashboard-hero-chip rounded-2xl p-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comercial</p>

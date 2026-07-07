@@ -223,6 +223,42 @@ CPF/cliente_id.
 
 ---
 
+**Data de emissão editável + extração automática por seguradora (2026-07-07,
+Claude):** `apoliceParser.js` passou a extrair `data_emissao` do PDF de cada
+seguradora: Porto ("Data de Emissão: DD/MM/AAAA"), Pottencial ("Apólice
+transmitida eletronicamente dia: DD/MM/AAAA"), Too ("Data da Emissão:
+DD/MM/AAAA") e Tokio (`parseTokioMarineV3`, padrão tolerante a mojibake igual
+aos demais campos desse parser — texto exato não confirmado com um PDF real,
+recomenda-se validar na primeira emissão Tokio pós-deploy). Como esse campo já
+não era destructurado em `extras`, ele passa a fluir automaticamente para
+`campos.data_emissao` sem mudança em `parseApoliceText`.
+
+`ApoliceDetalhe.jsx`: novo campo editável "Data de Emissão" (Dados da Apólice,
+ao lado de Número da Apólice/Proposta); carregado do banco no `load()`,
+preenchido automaticamente pelo upload de PDF (`handlePreencherInfo`) e usado
+no `salvar()` no lugar do antigo comportamento fixo ("hoje" toda vez que o
+status vira emitida/enviada, perdendo qualquer data real). `ApoicesGestao.jsx`
+(fluxo "Upload direto" do Kanban): `data_emissao` na criação da apólice agora
+usa `dadosExtraidos.data_emissao` (extraído do PDF) com fallback para hoje
+quando o parser não encontrar a data.
+
+**Risco de negócio a validar:** `data_emissao` alimenta cálculo de produção e
+faturas por mês em Financeiro (`financeiroProducaoCalc.js`,
+`financeiroFaturasCalc.js`). Até agora era sempre "data do upload/mudança de
+status"; a partir de agora pode ser a data real de emissão impressa no PDF, que
+pode cair em mês diferente do upload — isso pode mover uma apólice de mês na
+produção/fatura em relação ao comportamento anterior. Comportamento pedido
+explicitamente pelo usuário; sinalizar caso gere divergência inesperada em
+Financeiro.
+
+**Correção de encoding não relacionada, feita de passagem:** `ApolicesLista.jsx`
+tinha 42 ocorrências de U+FFFD (perda de dado irreversível, uncommitted) mais
+setas (`←`/`→`) trocadas por `?` literal — corrupção introduzida no editor após
+o último commit, achada porque o arquivo precisava ser tocado por este mesmo
+trabalho. Texto recuperado comparando com `git show HEAD` (sem alterar as
+adições novas do mesmo diff: coluna `% Comissão`/`fmtPct`, `pct_comissao`).
+`npm test` (54/54) e `npm run build` verdes após todas as mudanças.
+
 ## Responsavel Atual
 
 Codex (entrega revisada por Claude — ver acima)

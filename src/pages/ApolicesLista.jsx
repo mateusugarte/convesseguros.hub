@@ -39,6 +39,13 @@ function fmtBRL(v) {
   return `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
 }
 
+function fmtPct(v) {
+  if (v === null || v === undefined || v === '') return '—'
+  const n = Number(v)
+  if (!Number.isFinite(n)) return '—'
+  return `${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
+}
+
 function fmtData(v) {
   if (!v) return '—'
   try { return format(parseISO(String(v).slice(0, 10) + 'T12:00:00'), 'dd/MM/yy', { locale: ptBR }) } catch { return v }
@@ -157,11 +164,12 @@ export default function ApolicesLista() {
       a.seguradora || '',
       STATUS_EMISSAO_LABELS[a.status_emissao]?.label || a.status_emissao || '',
       a.valor_parcela ? fmtBRL(a.valor_parcela) : '',
+      a.pct_comissao != null ? fmtPct(a.pct_comissao) : '',
       a.profiles?.nome || '',
     ])
 
     const csv = [
-      ['Data Emissão', 'Imobiliária', 'Locatário', 'Apólice', 'Seguradora', 'Status', 'Parcela', 'Emissor'],
+      ['Data Emissão', 'Imobiliária', 'Locatário', 'Apólice', 'Seguradora', 'Status', 'Parcela', '% Comissão', 'Emissor'],
       ...rows,
     ].map(r => r.map(v => `"${String(v).replaceAll('"', '""')}"`).join(';')).join('\n')
 
@@ -284,10 +292,10 @@ export default function ApolicesLista() {
           </div>
         ) : (
           <div className="overflow-x-auto rounded-[24px]">
-            <table className="table-table min-w-[1180px] text-sm">
+            <table className="table-table min-w-[1280px] text-sm">
               <thead className="table-thead border-b border-dark-border">
                 <tr>
-                  {['Data Emissão', 'Imobiliária', 'Locatário', 'Apólice', 'Seguradora', 'Status', 'Parcela', 'Emissor', ''].map(h => (
+                  {['Data Emissão', 'Imobiliária', 'Locatário', 'Apólice', 'Seguradora', 'Status', 'Parcela', '% Comissão', 'Emissor', ''].map(h => (
                     <th key={h} className="th whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -311,6 +319,7 @@ export default function ApolicesLista() {
                     <td className="td text-xs text-dark-muted">{a.seguradora || '—'}</td>
                     <td className="td"><StatusBadge status={a.status_emissao} /></td>
                     <td className="td font-mono text-xs">{a.valor_parcela ? fmtBRL(a.valor_parcela) : '—'}</td>
+                    <td className="td text-xs text-dark-muted">{fmtPct(a.pct_comissao)}</td>
                     <td className="td text-xs text-dark-muted">{a.profiles?.nome?.split(' ')[0] || '—'}</td>
                     <td className="td" onClick={e => e.stopPropagation()}>
                       <button onClick={() => navigate(`/apolices/${a.id}`)} className="rounded-lg border border-dark-border px-2 py-1 text-xs text-dark-muted transition-colors hover:border-brand-accent/50 hover:text-dark-text">

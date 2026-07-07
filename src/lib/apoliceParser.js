@@ -156,6 +156,9 @@ function parsePortoSeguro(text) {
   const prop = normalized.match(/PROPOSTA N[º°]\s+([\w.-]+)/i)
   if (prop && /^[0-9./-]+$/.test(prop[1].trim())) r.numero_proposta = prop[1].trim()
 
+  const emissao = normalized.match(/Data de Emiss[ãa]o\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i)
+  if (emissao) r.data_emissao = parseDateBR(emissao[1])
+
   const locatario = normalized.match(
     /PRIMEIRO\s+LOCAT[ÁA]RIO\s+CPF\/CNPJ\s+([\d./-]+)\s+NOME\/RAZ(?:ÃO|AO)\s+SOCIAL\s+(.+?)(?=\s+NOME SOCIAL|\s+PROFISS(?:ÃO|AO)|\s+ESTIPULANTE)/i
   )
@@ -200,6 +203,9 @@ function parsePottencial(text) {
 
   const prop = normalized.match(/N[º°]\s*DA\s*PROPOSTA\s+(\d+)/i)
   if (prop) r.numero_proposta = prop[1].trim()
+
+  const emissao = normalized.match(/Ap[óo]lice transmitida eletronicamente dia:?\s*(\d{2}\/\d{2}\/\d{4})/i)
+  if (emissao) r.data_emissao = parseDateBR(emissao[1])
 
   const vig = normalized.match(/Das 0h do dia (\d{2}\/\d{2}\/\d{4})\s+[àa]s 0h do dia (\d{2}\/\d{2}\/\d{4})/i)
   if (vig) {
@@ -396,6 +402,9 @@ function parseTokioMarineV3(text) {
   const ap = normalized.match(/Ap\S*lice:\s*(\d+)/i)
   if (ap) r.numero_apolice = ap[1].trim()
 
+  const emissao = normalized.match(/Data de Emiss\S*o\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i)
+  if (emissao) r.data_emissao = parseDateBR(emissao[1])
+
   const vig = normalized.match(/Vig\S*ncia:\s*a partir das 24 horas do dia (\d{2}\/\d{2}\/\d{4}) at\S* [\S]*s 24 horas do dia (\d{2}\/\d{2}\/\d{4})/i)
   if (vig) {
     r.inicio_vigencia = parseDateBR(vig[1])
@@ -467,6 +476,9 @@ function parseTooSeguros(text) {
 
   const prop = normalized.match(/PROPOSTA N[º°]\s+([\d]+)/i)
   if (prop) r.numero_proposta = prop[1].trim()
+
+  const emissao = normalized.match(/Data da Emiss[ãa]o\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i)
+  if (emissao) r.data_emissao = parseDateBR(emissao[1])
 
   const vigI = normalized.match(/IN[IÍ]CIO DE VIG[ÊE]NCIA DAS 24H\s+(\d{2}\/\d{2}\/\d{4})/i)
   const vigF = normalized.match(/T[ÉE]RMINO DE VIG[ÊE]NCIA DAS 24H\s+(\d{2}\/\d{2}\/\d{4})/i)

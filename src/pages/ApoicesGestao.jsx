@@ -341,7 +341,7 @@ const DraggableCard = memo(function DraggableCard({ apolice, resolverNome, resol
       style={{
         opacity: isDragging ? 0.25 : 1,
         transition: isDragging ? 'none' : 'opacity 0.2s ease',
-        willChange: 'transform',
+        willChange: isDragging ? 'transform' : 'auto',
         contentVisibility: 'auto',
         containIntrinsicSize: '220px',
       }}
@@ -803,7 +803,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos
       numero_proposta: dadosExtraidos.numero_proposta || null,
       seguradora,
       status_emissao: dadosExtraidos.status_emissao || 'emitida',
-      data_emissao: new Date().toISOString().slice(0, 10),
+      data_emissao: dadosExtraidos.data_emissao || new Date().toISOString().slice(0, 10),
       emitido_por: user?.id || null,
       proprietario_nome: sanitizeProprietarioNome(dadosExtraidos.nome_proprietario) || null,
       endereco: dadosExtraidos.endereco || null,
@@ -1212,7 +1212,7 @@ export default function ApoicesGestao() {
   }
 
   return (
-    <div className="apolices-gestao-page flex h-full min-h-0 w-full flex-1 flex-col gap-4 animate-fade-in" style={{ '--kanban-col-w': 'clamp(17rem, 18vw, 20rem)' }}>
+    <div className="apolices-gestao-page flex h-full min-h-0 w-full flex-1 flex-col gap-4 animate-fade-in">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="title-page text-dark-text">Gestão de Apólices</h1>
@@ -1336,7 +1336,7 @@ export default function ApoicesGestao() {
                 setActiveCard(null)
               }}
             >
-              <div className="flex min-h-full items-stretch gap-4 min-w-max px-1 pb-2">
+              <div className="kanban-columns-row flex min-h-full items-stretch gap-4 min-w-max px-1 pb-2">
                 {COLUNAS.map(col => (
                   <DroppableColumn
                     key={col.id}

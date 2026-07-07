@@ -1773,6 +1773,24 @@ html.dark .skeleton-surface {
   }
 }
 
+/* Acima de 1100px: colunas preenchem a largura disponível igualmente (sem
+   scroll horizontal nem necessidade de zoom manual). Abaixo disso, mantém
+   largura fixa + scroll com snap (fallback já existente para telas estreitas). */
+@media (min-width: 1101px) {
+  .apolices-gestao-page .kanban-columns-row {
+    min-width: 0;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .apolices-gestao-page .kanban-col {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    max-width: 20rem;
+  }
+}
+
 /* Premium operational foundation */
 .btn-primary {
   background: linear-gradient(

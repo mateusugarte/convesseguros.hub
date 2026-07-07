@@ -157,6 +157,7 @@ export default function ApoliceDetalhe() {
 
   const [numeroApolice, setNumeroApolice] = useState('')
   const [numeroProposta, setNumeroProposta] = useState('')
+  const [dataEmissao, setDataEmissao] = useState('')
   const [seguradora, setSeguradora] = useState('')
   const [statusEmissao, setStatusEmissao] = useState('')
   const [proprietarioNome, setProprietarioNome] = useState('')
@@ -202,6 +203,7 @@ export default function ApoliceDetalhe() {
         setApolice(data)
         setNumeroApolice(data.numero_apolice || '')
         setNumeroProposta(data.numero_proposta || '')
+        setDataEmissao(data.data_emissao ? String(data.data_emissao).slice(0, 10) : '')
         setSeguradora(data.seguradora || '')
         setStatusEmissao(data.status_emissao || '')
         setProprietarioNome(sanitizeProprietarioNome(data.proprietario_nome || ''))
@@ -264,7 +266,7 @@ export default function ApoliceDetalhe() {
     const premioTotal = calculatePremioTotal(parcelaNum, parcelasNum)
     const valorComissao = calculateValorComissao(premioLiquidoNum, pctComissao)
     const statusFinal = statusOverrideFinal || statusEmissao
-    const dataEmissao = ['emitida', 'enviada'].includes(statusFinal) ? (apolice?.data_emissao || new Date().toISOString().slice(0, 10)) : null
+    const dataEmissaoFinal = dataEmissao || (['emitida', 'enviada'].includes(statusFinal) ? new Date().toISOString().slice(0, 10) : null)
     const numeroApoliceFinal = numeroApolice.trim() || apolice?.numero_apolice || null
     const fichaBase = apolice?.fichas || null
     const fichaId = fichaBase?.id
@@ -319,7 +321,7 @@ export default function ApoliceDetalhe() {
       premio_total: premioTotal,
       valor_producao: premioTotal,
       valor_comissao: valorComissao,
-      data_emissao: dataEmissao,
+      data_emissao: dataEmissaoFinal,
       email_proprietario: proprietarioEmail.trim() || null,
     }
 
@@ -428,6 +430,10 @@ export default function ApoliceDetalhe() {
       }
       if (campos.numero_apolice) {
         setNumeroApolice(campos.numero_apolice)
+        camposApolice += 1
+      }
+      if (campos.data_emissao) {
+        setDataEmissao(campos.data_emissao)
         camposApolice += 1
       }
       if (isLikelyPolicyNumber(campos.numero_proposta)) {
@@ -752,6 +758,7 @@ export default function ApoliceDetalhe() {
           <DataCard title="Dados da Apólice" bodyClassName="space-y-4">
             <EditField label="Número da Apólice" value={numeroApolice} onChange={setNumeroApolice} placeholder="000000000" required />
             <EditField label="Número da Proposta" value={numeroProposta} onChange={setNumeroProposta} placeholder="Opcional" />
+            <EditField label="Data de Emissão" type="date" value={dataEmissao} onChange={setDataEmissao} />
             <div>
               <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Seguradora<span className="ml-0.5 text-status-danger">*</span></label>
               <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={apolice.produto || ficha?.produto} required />

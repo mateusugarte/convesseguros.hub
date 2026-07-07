@@ -26,3 +26,5 @@ skills/
 
 # n8n workflows — contêm service_role key do Supabase
 n8n/
+
+ConvesSystemBrain/

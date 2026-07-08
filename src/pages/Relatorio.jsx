@@ -53,7 +53,6 @@ const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set
 const MESES_FULL = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 const COLUNAS = [
-  { id: 'em_analise', label: 'Em Análise', color: '#0891B2', copyStatus: 'Em Análise' },
   { id: 'aprovada', label: 'Aprovadas', color: '#0f766e', copyStatus: 'Aprovada' },
   { id: 'emitida', label: 'Emitidas', color: '#000079', copyStatus: 'Emitida' },
   { id: 'enviado_cobranca', label: 'Enviado Cobrança', color: '#2247aa', copyStatus: 'Enviado Cobrança' },
@@ -64,16 +63,16 @@ const COLUNAS = [
 
 // Por decisão explícita de negócio, o relatório mostra apenas os status que têm
 // um bloco em COLUNAS acima. "recusado" fica de fora por regra de negócio;
-// "pendente"/"em_cotacao"/"cpf_invalido" foram removidos por não terem mais
-// bloco correspondente (evita ficha "contada" nos totais mas invisível em
-// todos os blocos).
-const INCLUDED_REPORT_STATUSES = ['aprovado', 'emitido', 'cancelado', 'em_analise', 'expirada']
+// "pendente"/"em_cotacao"/"cpf_invalido"/"em_analise" foram removidos por não
+// terem mais bloco correspondente (evita ficha "contada" nos totais mas
+// invisível em todos os blocos).
+const INCLUDED_REPORT_STATUSES = ['aprovado', 'emitido', 'cancelado', 'expirada']
 
 // "Data de aprovação" (finalizada_em, com fallback para created_at) é o âncora
 // de período para fichas aprovadas/emitidas — inclui enviado_cobranca e
 // recuperados, que são só variações de status='aprovado'/'emitido' com
-// marcadores extra em raw_data. As demais (em_analise, cancelado, expirada)
-// continuam ancoradas em created_at.
+// marcadores extra em raw_data. As demais (cancelado, expirada) continuam
+// ancoradas em created_at.
 function getFichaPeriodAnchorDate(ficha) {
   const status = String(ficha?.status || '').toLowerCase()
   if (status === 'aprovado' || status === 'emitido') {

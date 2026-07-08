@@ -40,7 +40,7 @@ import SeguradoraBadge from '../components/SeguradoraBadge'
 import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
 import { normalizeDisplayText } from '../lib/text'
 import { getEntityImageUrl } from '../lib/entityMedia'
-import { getFichaOperationalState, isFichaExpiredOperational } from '../lib/fichaOperational'
+import { getFichaOperationalState, isFichaExpiredOperational, getReportEffectiveNow } from '../lib/fichaOperational'
 import { BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 const PERIOD_OPTIONS = [
@@ -123,13 +123,18 @@ function getReportRange(periodo, ano, mes) {
   return getMonthRange(ano, mes)
 }
 
-function getOperacionalStatus(ficha) {
-  const meta = getFichaOperationalState(ficha)
+function getOperacionalStatus(ficha, now) {
+  // Uma vez decorada em rowsWithHelpers, a ficha já carrega o status calculado
+  // com o "now" correto (ancorado no período do relatório) — reusar em vez de
+  // recalcular com a data real evita que blocos/contadores divirjam do que a
+  // ficha mostra em outros lugares da mesma tela.
+  if (ficha && Object.prototype.hasOwnProperty.call(ficha, '_oper')) return ficha._oper
+  const meta = getFichaOperationalState(ficha, { now })
   return meta ? { id: meta.id, label: meta.label, color: meta.className } : null
 }
 
-function getColuna(ficha) {
-  const op = getOperacionalStatus(ficha)
+function getColuna(ficha, now) {
+  const op = getOperacionalStatus(ficha, now)
   return op?.id || null
 }
 
@@ -1215,6 +1220,10 @@ export default function Relatorio() {
   const periodoScopeKey = getPeriodoScopeKey(periodo, ano, mes)
   const [rangeStart, rangeEnd] = getReportRange(periodo, ano, mes)
   const periodoLabel = getPeriodoLabel(periodo, ano, mes)
+  // Períodos fechados (mês/ano passados) calculam status operacional (aprovada/expirada)
+  // como se estivessem sendo vistos no fim daquele período, não na data real de hoje —
+  // senão fichas aprovadas somem do relatório de um mês antigo conforme o tempo passa.
+  const effectiveNow = useMemo(() => getReportEffectiveNow(rangeEnd), [rangeEnd])
   const periodoAnterior = useMemo(() => {
     if (periodo !== 'mes') return null
     const ref = new Date(ano, mes - 1, 1)
@@ -1452,12 +1461,12 @@ export default function Relatorio() {
     return rows.map(item => ({
       ...item,
       _nome: getNomeFicha(item),
-      _oper: getOperacionalStatus(item),
+      _oper: getOperacionalStatus(item, effectiveNow),
       _key: resolverNome(item.imobiliaria),
       _logo: resolverImobiliariaInfo(item.imobiliaria),
       _imobiliariaNome: resolverImobiliariaInfo(item.imobiliaria)?.nome_canonico || resolverNome(item.imobiliaria) || item.imobiliaria || '—',
     }))
-  }, [rows, resolverNome, resolverImobiliariaInfo])
+  }, [rows, resolverNome, resolverImobiliariaInfo, effectiveNow])
 
   const summary = useMemo(() => summarizeRows(rowsWithHelpers, emittedPolicies), [rowsWithHelpers, emittedPolicies])
   const groupedByImob = useMemo(() => groupByImobiliaria(rowsWithHelpers, resolverNome, emittedPolicies), [rowsWithHelpers, resolverNome, emittedPolicies])

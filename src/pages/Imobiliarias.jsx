@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { fetchNomesImobiliariasAll } from '../lib/fichas'
 import { useToast } from '../contexts/ToastContext'
 import { getEntityImageUrl, replaceEntityImage } from '../lib/entityMedia'
+import { buildImobiliariasMappingState, sanitizeImobiliariaAliasList } from '../lib/imobiliariasMapeamento'
 import {
   Building2, Plus, Pencil, Trash2, X, Check,
   ChevronRight, AlertCircle, Search, ChevronDown, ArrowLeft, Upload,
@@ -191,12 +192,13 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
     setSalvando(true)
     try {
       let imobId
-      const aliasesNormalizados = aliasesModal.map(v => v.trim()).filter(Boolean)
+      const nomeCanonicoLimpo = nomeCanonoco.trim()
+      const aliasesNormalizados = sanitizeImobiliariaAliasList(aliasesModal, nomeCanonicoLimpo)
 
       if (ehEditar && imobAtual) {
         // Atualizar nome canônico
         const { error } = await supabase.from('imobiliarias')
-          .update({ nome_canonico: nomeCanonoco.trim() })
+          .update({ nome_canonico: nomeCanonicoLimpo })
           .eq('id', imobAtual.id)
         if (error) throw error
         imobId = imobAtual.id
@@ -223,18 +225,18 @@ function ModalAgrupar({ modal, contagemPorNome, mapeadas, onClose, onSalvo, toas
 
       } else {
         // Criar nova imobiliária
-        if (!nomeCanonoco.trim()) {
+        if (!nomeCanonicoLimpo) {
           toast({ type: 'error', title: 'Informe o nome da imobiliária' })
           return
         }
         const { data: existe } = await supabase.from('imobiliarias')
-          .select('id').eq('nome_canonico', nomeCanonoco.trim()).maybeSingle()
+          .select('id').eq('nome_canonico', nomeCanonicoLimpo).maybeSingle()
 
         if (existe) {
           imobId = existe.id
         } else {
           const { data: novo, error } = await supabase.from('imobiliarias')
-            .insert({ nome_canonico: nomeCanonoco.trim() })
+            .insert({ nome_canonico: nomeCanonicoLimpo })
             .select('id').single()
           if (error) throw error
           imobId = novo.id
@@ -833,22 +835,10 @@ export default function Imobiliarias() {
       .select('id, nome_canonico, ativa, imagem_url, imagem_path, imobiliaria_aliases(alias)')
       .order('nome_canonico')
 
-    // 3. Conjunto de aliases mapeados (string exata)
-    const aliasesMapeados = new Set()
-    imobiData?.forEach(imob => {
-      imob.imobiliaria_aliases?.forEach(a => aliasesMapeados.add(a.alias))
+    const { mapeadasList, naoMapeadasList } = buildImobiliariasMappingState({
+      contagemPorNome: contagem,
+      imobiData: imobiData || [],
     })
-
-    const mapeadasList = (imobiData || []).map(imob => {
-      const aliases = imob.imobiliaria_aliases?.map(a => a.alias) || []
-      const totalFichas = aliases.reduce((s, alias) => s + (contagem[alias] || 0), 0)
-      return { ...imob, aliases, totalFichas }
-    })
-
-    const naoMapeadasList = Object.entries(contagem)
-      .filter(([nome]) => !aliasesMapeados.has(nome))
-      .map(([nome, totalFichas]) => ({ nome, totalFichas }))
-      .sort((a, b) => b.totalFichas - a.totalFichas)
 
     // 4. Vinculations map
     const vinc = {}
@@ -1034,4 +1024,7 @@ export default function Imobiliarias() {
     </div>
   )
 }
+
+
+
 

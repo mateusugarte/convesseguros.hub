@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizeSeguradoraBucket, isFichaExpiredOperational } from './fichaOperational.js'
+import { normalizeSeguradoraBucket, isFichaExpiredOperational, getReportEffectiveNow } from './fichaOperational.js'
 
 test('normalizeSeguradoraBucket reconhece Porto, Tokio, Too, Pottencial e Junto', () => {
   assert.equal(normalizeSeguradoraBucket('Porto Seguro'), 'Porto')
@@ -58,4 +58,37 @@ test('status diferente de aprovado mantém a regra antiga de 45 dias desde creat
 
   const pendenteDia45 = { status: 'pendente', seguradora: 'Pottencial', created_at: '2026-05-22T00:00:00.000Z' }
   assert.equal(isFichaExpiredOperational(pendenteDia45, { now }), true)
+})
+
+test('getReportEffectiveNow ancora no fim do período do relatório quando ele já passou', () => {
+  const realNow = new Date('2026-07-08T12:00:00.000Z')
+  const rangeEndJunho = '2026-06-30'
+  const effective = getReportEffectiveNow(rangeEndJunho, realNow)
+  assert.equal(effective.getTime(), new Date('2026-06-30T23:59:59').getTime())
+})
+
+test('getReportEffectiveNow usa a data real quando o período ainda não terminou (mês corrente)', () => {
+  const realNow = new Date('2026-07-08T12:00:00.000Z')
+  const rangeEndJulho = '2026-07-31'
+  const effective = getReportEffectiveNow(rangeEndJulho, realNow)
+  assert.equal(effective.toISOString(), realNow.toISOString())
+})
+
+test('getReportEffectiveNow usa a data real quando não há período (histórico)', () => {
+  const realNow = new Date('2026-07-08T12:00:00.000Z')
+  const effective = getReportEffectiveNow(null, realNow)
+  assert.equal(effective.toISOString(), realNow.toISOString())
+})
+
+test('regressão: ficha aprovada em junho não expira ao visualizar o relatório de junho em julho', () => {
+  // Reproduz o bug relatado: ficha aprovada 05/06, sem seguradora (limiar padrão 30 dias),
+  // vista no relatório de junho já em julho (>30 dias reais depois) não deve expirar,
+  // pois o relatório de um mês fechado deve refletir o estado "congelado" daquele mês.
+  const realNow = new Date('2026-07-08T12:00:00.000Z')
+  const effectiveNow = getReportEffectiveNow('2026-06-30', realNow)
+  const ficha = { status: 'aprovado', seguradora: '', finalizada_em: '2026-06-05T00:00:00.000Z' }
+
+  assert.equal(isFichaExpiredOperational(ficha, { now: effectiveNow }), false)
+  // Sanity check: com a data real (bug antigo), a mesma ficha já teria expirado.
+  assert.equal(isFichaExpiredOperational(ficha, { now: realNow }), true)
 })

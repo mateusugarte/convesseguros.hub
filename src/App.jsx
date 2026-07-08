@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+﻿import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
@@ -25,7 +25,7 @@ const GestaoEmissoes   = lazy(() => import('./pages/GestaoEmissoes'))
 const MinhasFichas     = lazy(() => import('./pages/MinhasFichas'))
 const Relatorio        = lazy(() => import('./pages/Relatorio'))
 const Imobiliarias       = lazy(() => import('./pages/Imobiliarias'))
-const ImobiliariaDetalhe = lazy(() => import('./pages/ImobiliariaDetalhe'))
+const ImobiliariaDetalhe = lazy(() => import('./pages/ImobiliariaDetalheFixed'))
 const ApolicesDashboard  = lazy(() => import('./pages/ApolicesDashboard'))
 const ApoicesGestao      = lazy(() => import('./pages/ApoicesGestao'))
 const ApolicesLista      = lazy(() => import('./pages/ApolicesLista'))
@@ -41,7 +41,7 @@ const FinanceiroFaturas       = lazy(() => import('./pages/Financeiro/Financeiro
 const FinanceiroFaturaImobiliaria = lazy(() => import('./pages/Financeiro/FinanceiroFaturaImobiliaria'))
 const FinanceiroFaturaDetalhe = lazy(() => import('./pages/Financeiro/FinanceiroFaturaDetalhe'))
 
-// Área Auto
+// Ãrea Auto
 const AutoDashboard  = lazy(() => import('./pages/auto/AutoDashboard'))
 const AutoRenovacoes = lazy(() => import('./pages/auto/AutoRenovacoes'))
 const AutoEmissoes   = lazy(() => import('./pages/auto/AutoEmissoes'))
@@ -53,7 +53,7 @@ const AutoCotacoesConsulta = lazy(() => import('./pages/auto/AutoCotacoesConsult
 const AutoCotacaoDetalhe = lazy(() => import('./pages/auto/AutoCotacaoDetalhe'))
 const AutoSinistros  = lazy(() => import('./pages/auto/AutoSinistros'))
 
-// Área Comercial
+// Ãrea Comercial
 const ComercialDashboard = lazy(() => import('./pages/comercial/ComercialDashboard'))
 const GestaoComercial    = lazy(() => import('./pages/comercial/GestaoComercial'))
 const Pipeline           = lazy(() => import('./pages/comercial/Pipeline'))
@@ -112,7 +112,7 @@ function AppRoutes() {
           <Route path="apolices/gestao" element={<ApoicesGestao />} />
           <Route path="apolices/lista" element={<ApolicesLista />} />
           <Route path="apolices/:id" element={<ApoliceDetalhe />} />
-          {/* Área Auto */}
+          {/* Ãrea Auto */}
           <Route path="auto"                element={<AutoDashboard />} />
           <Route path="auto/gestao"         element={<AutoEmissoes />} />
           <Route path="auto/renovacoes"     element={<AutoRenovacoes />} />
@@ -125,7 +125,7 @@ function AppRoutes() {
           <Route path="auto/cotacoes/consulta" element={<AutoCotacoesConsulta />} />
           <Route path="auto/cotacoes/:id" element={<AutoCotacaoDetalhe />} />
           <Route path="auto/sinistros"      element={<AutoSinistros />} />
-          {/* Área Comercial */}
+          {/* Ãrea Comercial */}
           <Route path="comercial"            element={<ComercialDashboard />} />
           <Route path="comercial/gestao"     element={<GestaoComercial />} />
           <Route path="comercial/pipeline"   element={<Pipeline />} />
@@ -159,4 +159,5 @@ export default function App() {
     </QueryClientProvider>
   )
 }
+
 

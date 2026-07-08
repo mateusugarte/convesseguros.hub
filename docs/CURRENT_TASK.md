@@ -1,5 +1,43 @@
 # CURRENT TASK
 
+**Bugfix — fichas aprovadas somem do relatório de meses passados (2026-07-08,
+Claude):** usuário reportou que 2 fichas (imobiliárias A e D, junho) apareciam
+no "Relatório Mensal de Fichas" (dentro de Fichas) mas não em `/relatorio`.
+Causa raiz: `isFichaExpiredOperational` (`src/lib/fichaOperational.js`) sempre
+calculava a idade da ficha contra a data real de **hoje**, nunca contra o
+período do relatório sendo visualizado. Resultado: uma ficha `aprovado` sem
+seguradora definida (limiar padrão de 30 dias) aprovada em junho, vista em
+julho (>30 dias reais depois), era reclassificada "ao vivo" para `expirada` e
+sumia do bloco "Aprovadas"/contador "Fichas aprovadas" — mesmo revisando o
+mesmo mês repetidas vezes. Confirmado meses depois via checagem manual do
+usuário (ficha aparecia em "Expiradas", não em "Aprovadas").
+
+Corrigido com `getReportEffectiveNow(rangeEndYmd, realNow)` (novo, exportado
+em `fichaOperational.js`, testado em `fichaOperational.test.mjs`): para
+períodos já encerrados (mês/ano passados), a idade é calculada até o fim
+daquele período, não até hoje; para o período corrente ou histórico, segue
+usando a data real normalmente. `src/pages/Relatorio.jsx` passa esse
+`effectiveNow` para `getOperacionalStatus`/`getColuna` uma única vez (em
+`rowsWithHelpers`, via novo campo `_oper` cacheado por linha — todas as outras
+~15 chamadas a `getColuna`/`isApprovedFicha`/etc. no arquivo reusam esse valor
+sem precisar de mudança). Escopo contido em `Relatorio.jsx`; nenhuma outra tela
+que usa `fichaOperational.js` (Kanban de Fichas, detalhe de ficha) foi
+alterada — essas continuam com o comportamento "ao vivo" correto.
+
+`node --test src/lib/fichaOperational.test.mjs` (11/11) verde. `npm test`
+completo e `npm run build` **não puderam ser validados**: no momento desta
+correção, `package.json` e `src/pages/Dashboard.jsx` apareceram modificados
+sem intervenção deste agente (provável edição concorrente do Codex, mesmo
+padrão de BOM já documentado neste arquivo em passes anteriores), quebrando o
+build (`Unexpected token '﻿'` no `package.json`) e o `npm test` (import
+sem extensão em `imobiliariasMapeamento.js`, arquivo novo não rastreado) por
+motivos não relacionados a esta mudança. Verificado isoladamente com
+`esbuild` que `Relatorio.jsx` e `fichaOperational.js` têm sintaxe válida.
+**Recomenda-se rodar `npm test`/`npm run build` novamente depois que o
+trabalho concorrente for commitado/resolvido, e validar manualmente**: abrir
+`/relatorio/:id` de uma imobiliária com ficha aprovada antiga em um mês
+passado e confirmar que ela aparece em "Aprovadas" (não "Expiradas").
+
 ## Frente ativa (Claude) — Auditoria global UI/UX + encoding
 
 Auditoria/redesign premium modulo a modulo (plano em `~/.claude/plans/projeto-de-eventual-koala.md`).

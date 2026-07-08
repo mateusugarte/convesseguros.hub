@@ -300,6 +300,45 @@ export async function fetchAtividadeRecente(limite = 10) {
   return data || []
 }
 
+export async function fetchFichasDashboardResumo(inicioFiltro, fimFiltro) {
+  return fetchAllRows(() => {
+    let q = supabase
+      .from('fichas')
+      .select('id, created_at, produto, imobiliaria, nome_interessado, nome_empresa, status')
+      .not('imobiliaria', 'is', null)
+      .order('created_at', { ascending: false })
+
+    if (inicioFiltro) q = q.gte('created_at', inicioFiltro)
+    if (fimFiltro) q = q.lte('created_at', fimFiltro)
+    return q
+  })
+}
+
+export async function fetchFichasDashboardImobiliaria({ imobiliarias, dateFrom, dateTo, search } = {}) {
+  const aliases = Array.isArray(imobiliarias) ? imobiliarias.filter(Boolean) : []
+
+  return fetchAllRows(() => {
+    let q = supabase
+      .from('fichas')
+      .select('id, created_at, produto, imobiliaria, nome_interessado, nome_empresa, status, seguradora')
+      .order('created_at', { ascending: false })
+
+    if (aliases.length) q = q.in('imobiliaria', aliases)
+    if (dateFrom) q = q.gte('created_at', new Date(`${dateFrom}T00:00:00`).toISOString())
+    if (dateTo) q = q.lte('created_at', new Date(`${dateTo}T23:59:59`).toISOString())
+
+    const term = search?.trim()
+    if (term) {
+      q = q.or(
+        `nome_interessado.ilike.%${term}%,` +
+        `nome_empresa.ilike.%${term}%`
+      )
+    }
+
+    return q
+  })
+}
+
 // ── Product counts ────────────────────────────────────────────────────────────
 
 export async function fetchContagemProdutos() {

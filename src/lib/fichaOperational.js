@@ -52,6 +52,18 @@ export function getFichaAgeDays(ficha = {}, now = new Date()) {
   return getDaysSince(ficha?.created_at, now)
 }
 
+// Relatórios de um período fechado (ex.: mês passado) devem refletir o estado
+// "congelado" daquele período: a expiração operacional não deve avançar só
+// porque o usuário está revisitando o relatório em uma data posterior.
+// Períodos ainda em curso (ou sem período, ex.: histórico) seguem usando a
+// data real de hoje normalmente.
+export function getReportEffectiveNow(rangeEndYmd, realNow = new Date()) {
+  if (!rangeEndYmd) return realNow
+  const periodEnd = new Date(`${rangeEndYmd}T23:59:59`)
+  if (Number.isNaN(periodEnd.getTime())) return realNow
+  return periodEnd.getTime() < realNow.getTime() ? periodEnd : realNow
+}
+
 export function isFichaExpiredOperational(ficha = {}, options = {}) {
   const status = String(ficha?.status || '').toLowerCase()
   if (!status || TERMINAL_NON_EXPIRABLE_STATUSES.has(status)) return false

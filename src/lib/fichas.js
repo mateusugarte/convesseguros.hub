@@ -12,6 +12,8 @@ function normalizeSearchText(value) {
     .trim()
 }
 
+export { normalizeSearchText }
+
 
 export const STATUS_LABELS = {
   pendente:     { label: 'Pendente',     color: 'badge-info' },
@@ -586,6 +588,53 @@ export async function fetchFichasAprovadasEmissao({ search, imobiliarias } = {})
       raw.nome_fantasia,
       raw.imobiliaria,
       raw.numero_orcamento,
+    ]
+      .filter(Boolean)
+      .map(normalizeSearchText)
+      .join(' ')
+    return haystack.includes(term)
+  })
+}
+
+// ── Vínculo de ficha no upload em lote de apólices ───────────────────────────
+
+export async function buscarFichasParaVinculoApolice({ imobiliarias } = {}) {
+  const data = await fetchAllRows(() => {
+    let q = supabase
+      .from('fichas')
+      .select(`
+        id, created_at, imobiliaria,
+        nome_interessado, nome_empresa, cpf, cnpj,
+        status, raw_data,
+        profiles!orcamentista_id(nome, avatar_url)
+      `)
+      .neq('status', 'recusado')
+      .order('created_at', { ascending: false })
+
+    if (Array.isArray(imobiliarias) && imobiliarias.length) {
+      q = q.in('imobiliaria', imobiliarias)
+    }
+    return q
+  })
+  return data || []
+}
+
+export function matchFichasPorNome(fichas, nome) {
+  const term = normalizeSearchText(nome || '')
+  if (!term) return []
+  return (fichas || []).filter(f => {
+    const raw = f.raw_data || {}
+    const haystack = [
+      f.nome_interessado,
+      f.nome_empresa,
+      raw.nome,
+      raw.nome_interessado,
+      raw.nome_empresa,
+      raw.nome_locatario,
+      raw.nome_completo,
+      raw.razao_social,
+      raw.empresa,
+      raw.nome_fantasia,
     ]
       .filter(Boolean)
       .map(normalizeSearchText)

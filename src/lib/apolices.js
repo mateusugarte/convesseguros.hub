@@ -606,6 +606,27 @@ export async function registrarApoliceDaFicha({
   return { apolice, error: null }
 }
 
+// Vincula uma apólice já criada (ex: upload em lote) a uma ficha existente,
+// atualizando a ficha do mesmo jeito que registrarApoliceDaFicha faz — sem
+// passar pelo caminho de upsert de apólice por ficha_id (a apólice já existe).
+export async function vincularApoliceAFicha(fichaId, apolicePayload = {}) {
+  if (!fichaId) return { error: new Error('Ficha inválida') }
+
+  const fichaUpdate = {
+    status: 'emitido',
+    numero_apolice: apolicePayload.numero_apolice?.trim?.() || apolicePayload.numero_apolice || null,
+    seguradora: apolicePayload.seguradora?.trim?.() || apolicePayload.seguradora || null,
+    data_emissao: apolicePayload.data_emissao || new Date().toISOString().slice(0, 10),
+  }
+
+  if (apolicePayload.inicio_vigencia !== undefined) fichaUpdate.inicio_vigencia = apolicePayload.inicio_vigencia || null
+  if (apolicePayload.fim_vigencia !== undefined) fichaUpdate.fim_vigencia = apolicePayload.fim_vigencia || null
+  if (apolicePayload.valor_parcela !== undefined) fichaUpdate.valor_parcela = apolicePayload.valor_parcela ?? null
+
+  const { error } = await supabase.from('fichas').update(fichaUpdate).eq('id', fichaId)
+  return { error }
+}
+
 export async function moverStatusApolice(id, novoStatus, dadosExtras = {}) {
   const update = { status_emissao: novoStatus, ...dadosExtras }
   // Registra data de transmissão ao mover para "Apólice Enviada"

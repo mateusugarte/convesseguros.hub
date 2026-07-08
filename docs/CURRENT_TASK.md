@@ -1,5 +1,68 @@
 # CURRENT TASK
 
+**Habilitar Tokio Marine no Upload Direto e no Upload em Lote (2026-07-08, Claude):**
+`SEGURADORAS_UPLOAD_DIRETO` (`ApoicesGestao.jsx`) ganhou `'Tokio Marine'` — o parser
+`parseTokioMarineV3` já existia em `apoliceParser.js` e já está mapeado em `PARSERS`
+(`tokio`/`tokio marine`), só não era oferecido nos seletores de seguradora dos dois
+workspaces de upload. Grid de seguradora trocado de `grid-cols-3` para `grid-cols-2` (2x2)
+nos dois workspaces para acomodar o 4º botão sem ficar desalinhado. `SeguradoraBadge`
+resolve logo/iniciais dinamicamente por nome, então não precisou de mudança própria.
+`npm run build` verde.
+
+**Risco já sinalizado antes (continua valendo):** o parser da Tokio nunca foi validado
+contra um PDF real (só desenvolvido por inferência de padrão) — recomenda-se conferir os
+campos extraídos (`numero_apolice`, vigência, nome do locatário/proprietário, prêmio,
+parcela) na primeira apólice Tokio real subida por qualquer um dos dois fluxos, e ajustar
+os regexes de `parseTokioMarineV3` se algo vier vazio/errado.
+
+---
+
+**Upload em Lote de Apólices (até 10 PDFs) com vínculo automático de ficha (2026-07-08,
+Claude):** novo workspace `upload_lote` em `ApoicesGestao.jsx` (além de
+`kanban`/`iniciar`/`upload` já existentes), componentes `UploadLoteWorkspace` +
+`LinhaApoliceLote`. Fluxo: usuário escolhe seguradora + imobiliária uma vez (travadas
+assim que o primeiro PDF é adicionado), sobe até 10 PDFs de uma vez (`input type="file"
+multiple`, corta em 10 com toast se passar do limite), o sistema extrai os dados de cada
+um sequencialmente via `parseApolice` (já existente, sem mudança), casa cada apólice por
+nome com fichas de qualquer status exceto `recusado` da imobiliária selecionada (nova
+`buscarFichasParaVinculoApolice` + `matchFichasPorNome` em `src/lib/fichas.js` — busca
+única por imobiliária, reaproveitada para todos os PDFs do lote, sem 1 query por arquivo),
+destaca apólices já cadastradas pelo mesmo número (`buscarApolicePorNumero`, já existente)
+e bloqueia a seleção daquele item até o usuário confirmar "é uma apólice diferente" no
+modal "Verificar dados" (reaproveita `Modal`/`DadoCard` já existentes), permite comissão
+(%) opcional por linha com `valor_comissao` calculado automaticamente
+(`calculateValorComissao`, já existente) e cria só as selecionadas: `criarApolice` +
+`uploadDocumento` (mesmo padrão do Upload Direto) e, quando há ficha vinculada,
+`vincularApoliceAFicha` (nova em `src/lib/apolices.js`, extrai o mesmo update de ficha que
+`registrarApoliceDaFicha` já fazia — status → `emitido`, numero_apolice, seguradora,
+vigência, valor_parcela — sem alterar `registrarApoliceDaFicha`, que continua servindo só
+o fluxo "Iniciar Emissão"). Itens com erro de criação ganham botão "Tentar novamente" e
+continuam na lista; itens criados com sucesso saem da lista e disparam um `load()` do
+kanban ao final.
+
+Nenhuma mudança de schema, RLS ou autenticação — só lógica de app (2 funções novas de
+leitura/escrita) e UI nova. `CONTEXT.md` de `ApoicesGestao` atualizado para documentar os
+3 workspaces (estava desatualizado, não mencionava nem "Upload Direto"). `npm run build`,
+`npm test` (64/64) e `npm run check:page-contexts` (mesmas pendências pré-existentes de
+`src/pages/auto/*`/`GestaoComercial.jsx`, não é regressão) verdes.
+
+**Smoke test pendente (sem `.env`/Supabase neste ambiente):** abrir "Upload em Lote" em
+`/apolices`, escolher seguradora + imobiliária com fichas conhecidas, subir 2-3 PDFs reais
+(incluindo 1 cliente com ficha não-recusada existente e 1 número de apólice já
+cadastrado), conferir que a ficha candidata aparece certa, que o destaque de duplicidade
+bloqueia a seleção até confirmar em "Verificar dados", que preencher comissão calcula
+`valor_comissao`, e que "Registrar selecionadas" cria só as marcadas, vincula a ficha
+escolhida (conferir que ela muda de status para `emitido`) e anexa o PDF de cada uma.
+
+**Risco a sinalizar:** casamento de ficha por nome é só string-match normalizado (sem
+acento/case) — nomes muito diferentes de grafia entre a ficha e o PDF não vão aparecer
+como candidato automático; o usuário sempre pode ver "Nenhuma ficha correspondente
+encontrada" e seguir sem vínculo, nada é vinculado sem revisão possível. Também nada
+impede selecionar a mesma ficha candidata em duas linhas do mesmo lote (ex: PDF
+duplicado) — não é bloqueado, fica por conta da revisão do usuário antes de registrar.
+
+---
+
 **Revisão de entrega do Codex — commits `12de783`/`91ae20b` (Dashboard/Relatorio/
 ImobiliariaDetalhe), 2026-07-08, Claude:** revisão de performance/responsividade
 + encoding + lógica pedida pelo usuário ("deixe mais veloz, responsivo e suave").

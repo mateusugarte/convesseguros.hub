@@ -11,23 +11,36 @@ alternativos, alternados pelo state `workspace`:
 - **`upload`** (`UploadDiretoWorkspace`) — sobe 1 PDF por vez, seguradora escolhida
   manualmente (parser não detecta sozinho), extrai dados via `parseApolice` e cria a
   apólice já como `status_emissao: 'emitida'`, sem ficha vinculada.
-- **`upload_lote`** (`UploadLoteWorkspace`) — sobe até 10 PDFs de uma vez (mesma
-  seguradora + imobiliária para o lote inteiro). Extrai os dados de cada PDF, casa cada
-  apólice com fichas da imobiliária por nome (qualquer status exceto `recusado`,
-  `matchFichasPorNome`/`buscarFichasParaVinculoApolice` em `lib/fichas.js`), destaca
-  apólices já cadastradas pelo mesmo número (`buscarApolicePorNumero`, exige confirmação
-  explícita do usuário — "Verificar dados" — antes de liberar a seleção daquele item),
-  permite escolher a ficha correta por linha e preencher comissão (%) opcional por linha
-  (`pct_comissao`/`valor_comissao` via `calculateValorComissao`). Ao registrar as
-  selecionadas: cria a apólice (`criarApolice` + `uploadDocumento`, mesmo padrão do Upload
-  Direto) e, se houver ficha vinculada, atualiza essa ficha (`vincularApoliceAFicha`:
-  status → `emitido`, numero_apolice, seguradora, vigência, valor_parcela).
+- **`upload_lote`** (`UploadLoteWorkspace`) — seguradora é única para o lote inteiro
+  (travada assim que o 1º PDF é adicionado), mas a **imobiliária é selecionada por linha**
+  (cada apólice do lote pode ser de uma imobiliária diferente). Sobe até 10 PDFs de uma
+  vez; ao selecionar a imobiliária de uma linha (`ImobiliariaSelect`, mostra o logo da
+  imobiliária), o sistema busca fichas dessa imobiliária (qualquer status exceto
+  `recusado`) que batam pelo nome do locatário extraído
+  (`matchFichasPorNome`/`buscarFichasParaVinculoApolice` em `lib/fichas.js` — todas as
+  fichas do sistema são carregadas 1x ao abrir o workspace, sem filtro de imobiliária, e
+  filtradas em memória por linha); se houver 2+ fichas candidatas, aparecem como opções
+  para o usuário escolher qual é. Cards de duplicidade têm 2 níveis, cada um com botão para
+  abrir a apólice existente **em nova aba** (preserva o lote em andamento — nada é perdido
+  ao voltar):
+  - **Vermelho** — mesmo número de apólice já existe no sistema
+    (`buscarApolicePorNumero`); bloqueia a seleção da linha até o usuário confirmar "É uma
+    apólice diferente" no modal "Verificar dados".
+  - **Laranja** — a ficha vinculada à linha já tem uma apólice registrada, mas com número
+    diferente do PDF atual (`buscarApolicePorFichaId` + comparação via
+    `normalizeNumeroApolice`); não bloqueia a seleção, só avisa.
+  Permite preencher comissão (%) opcional por linha (`pct_comissao`/`valor_comissao` via
+  `calculateValorComissao`). Ao registrar as selecionadas: cria a apólice (`criarApolice` +
+  `uploadDocumento`, mesmo padrão do Upload Direto, usando a imobiliária daquela linha) e,
+  se houver ficha vinculada, atualiza essa ficha (`vincularApoliceAFicha`: status →
+  `emitido`, numero_apolice, seguradora, vigência, valor_parcela).
 
 ## Componentes usados
 - `SeguradoraBadge` — badge de seguradora no card e nos seletores de seguradora
-- `ImobiliariaSelect` — filtro por imobiliária no kanban e no workspace "Iniciar Emissão"
-- `Avatar`, `Modal` (`components/ui`) — seletor de imobiliária e modal "Verificar dados"
-  do Upload em Lote
+- `ImobiliariaSelect` — seletor de imobiliária com logo: filtro do kanban, workspace
+  "Iniciar Emissão" e cada linha do "Upload em Lote"
+- `Avatar`, `Modal` (`components/ui`) — seletor de imobiliária do Upload Direto e modal
+  "Verificar dados" do Upload em Lote
 - `KanbanSkeleton` — loading state
 - @dnd-kit: DndContext, DragOverlay — drag entre colunas do kanban
 
@@ -35,9 +48,11 @@ alternativos, alternados pelo state `workspace`:
 - `lib/apolices.js` — `fetchApolicesKanban`, `criarApolice`, `moverStatusApolice`,
   `buscarApolicePorNumero`, `buscarApolicePorFichaId`, `vincularApoliceAFicha`,
   `calculateValorComissao`
+- `lib/apolicesNumero.js` — `normalizeNumeroApolice` (compara números de apólice
+  ignorando formatação, usado no card laranja do Upload em Lote)
 - `lib/fichas.js` — `fetchFichasAprovadasEmissao` (Iniciar Emissão, só `aprovado`/`emitido`),
-  `buscarFichasParaVinculoApolice` + `matchFichasPorNome` (Upload em Lote, qualquer status
-  exceto `recusado`)
+  `buscarFichasParaVinculoApolice` (sem filtro de imobiliária no Upload em Lote — busca
+  tudo 1x, qualquer status exceto `recusado`) + `matchFichasPorNome`
 - `lib/apoliceParser.js` — `parseApolice(seguradora, file)`, usado no Upload Direto e no
   Upload em Lote
 - `lib/documentos.js` — `uploadDocumento`

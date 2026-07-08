@@ -35,6 +35,7 @@ import {
   vincularApoliceAFicha,
   STATUS_EMISSAO_LABELS,
 } from '../lib/apolices'
+import { normalizeNumeroApolice } from '../lib/apolicesNumero'
 import { buscarFichasParaVinculoApolice, fetchFichasAprovadasEmissao, matchFichasPorNome } from '../lib/fichas'
 import { sanitizeProprietarioNome } from '../lib/text'
 import { uploadDocumento } from '../lib/documentos'
@@ -1117,14 +1118,22 @@ function novoItemLote(file) {
     erro: '',
     duplicidadeNumero: null,
     confirmadoDiferente: false,
+    imobiliariaSelecionada: '',
+    carregandoFichasRow: false,
     fichasCandidatas: [],
     fichaSelecionadaId: null,
+    apoliceDivergente: null,
     pctComissao: '',
     selecionado: false,
   }
 }
 
-function montarPayloadApoliceLote(item, { seguradora, imobiliaria, user }) {
+function abrirApoliceEmNovaAba(id) {
+  if (!id) return
+  window.open(`/apolices/${id}`, '_blank', 'noopener,noreferrer')
+}
+
+function montarPayloadApoliceLote(item, { seguradora, user }) {
   const dados = item.dadosExtraidos || {}
   const documento = dados.documento_locatario || ''
   const { cpf, cnpj, isPessoaJuridica } = formatDocumentoTipo(documento)
@@ -1136,7 +1145,7 @@ function montarPayloadApoliceLote(item, { seguradora, imobiliaria, user }) {
 
   return {
     ficha_id: item.fichaSelecionadaId || null,
-    imobiliaria,
+    imobiliaria: item.imobiliariaSelecionada || null,
     produto,
     nome_interessado: isPessoaJuridica ? null : (dados.nome_locatario || null),
     nome_empresa: isPessoaJuridica ? (dados.nome_locatario || null) : null,
@@ -1168,43 +1177,28 @@ function montarPayloadApoliceLote(item, { seguradora, imobiliaria, user }) {
   }
 }
 
-function UploadLoteWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, getAliases, user }) {
+function UploadLoteWorkspace({ onBack, onCriado, toast, getAliases, user }) {
   const [seguradora, setSeguradora] = useState('Porto Seguro')
-  const [imobiliaria, setImobiliaria] = useState('')
-  const [buscaImob, setBuscaImob] = useState('')
-  const [fichasDaImobiliaria, setFichasDaImobiliaria] = useState([])
-  const [carregandoFichas, setCarregandoFichas] = useState(false)
   const [itens, setItens] = useState([])
+  const [todasFichas, setTodasFichas] = useState([])
+  const [carregandoFichas, setCarregandoFichas] = useState(true)
   const [registrando, setRegistrando] = useState(false)
   const [modalItemId, setModalItemId] = useState(null)
   const fileInputRef = useRef(null)
 
   const loteIniciado = itens.length > 0
-  const imobSelecionada = grupos.find(g => g.nome_canonico === imobiliaria)
-
-  const gruposFiltrados = useMemo(() => {
-    const q = buscaImob.trim().toLowerCase()
-    if (!q) return grupos
-    return grupos.filter(g => g.nome_canonico.toLowerCase().includes(q))
-  }, [grupos, buscaImob])
 
   useEffect(() => {
     let cancelado = false
     async function carregar() {
-      if (!imobiliaria) {
-        setFichasDaImobiliaria([])
-        return
-      }
       setCarregandoFichas(true)
       try {
-        const aliases = await getAliases(imobiliaria)
-        const imobiliarias = aliases.length ? aliases : [imobiliaria]
-        const data = await buscarFichasParaVinculoApolice({ imobiliarias })
-        if (!cancelado) setFichasDaImobiliaria(data)
+        const data = await buscarFichasParaVinculoApolice({})
+        if (!cancelado) setTodasFichas(data)
       } catch {
         if (!cancelado) {
-          setFichasDaImobiliaria([])
-          toast({ type: 'error', title: 'Erro ao carregar fichas da imobiliária' })
+          setTodasFichas([])
+          toast({ type: 'error', title: 'Erro ao carregar fichas' })
         }
       } finally {
         if (!cancelado) setCarregandoFichas(false)
@@ -1212,7 +1206,20 @@ function UploadLoteWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, 
     }
     carregar()
     return () => { cancelado = true }
-  }, [imobiliaria, getAliases, toast])
+  }, [toast])
+
+  async function checarApoliceDaFicha(itemId, fichaId) {
+    if (!fichaId) return
+    const existente = await buscarApolicePorFichaId(fichaId).catch(() => null)
+    if (!existente) return
+    setItens(prev => prev.map(i => {
+      if (i.id !== itemId || i.fichaSelecionadaId !== fichaId) return i
+      const numeroNovo = normalizeNumeroApolice(i.dadosExtraidos?.numero_apolice)
+      const numeroExistente = normalizeNumeroApolice(existente.numero_apolice)
+      const divergente = numeroExistente && numeroNovo && numeroExistente !== numeroNovo
+      return { ...i, apoliceDivergente: divergente ? existente : null }
+    }))
+  }
 
   async function processarItens(alvos) {
     for (const item of alvos) {
@@ -1227,8 +1234,6 @@ function UploadLoteWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, 
           duplicidadeNumero = await buscarApolicePorNumero(dados.numero_apolice).catch(() => null)
         }
 
-        const candidatas = dados.nome_locatario ? matchFichasPorNome(fichasDaImobiliaria, dados.nome_locatario) : []
-
         const erro = semParser || (!dados.numero_apolice && !dados.nome_locatario)
           ? `Não foi possível identificar dados da apólice ${seguradora}. Verifique se o PDF é da seguradora selecionada.`
           : ''
@@ -1240,9 +1245,7 @@ function UploadLoteWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, 
           erro,
           duplicidadeNumero,
           confirmadoDiferente: false,
-          fichasCandidatas: candidatas,
-          fichaSelecionadaId: candidatas.length === 1 ? candidatas[0].id : null,
-          selecionado: !erro && !duplicidadeNumero,
+          selecionado: false,
         } : i)))
       } catch (err) {
         setItens(prev => prev.map(i => (i.id === item.id ? {
@@ -1282,8 +1285,40 @@ function UploadLoteWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, 
     setItens(prev => prev.map(i => (i.id === id ? { ...i, selecionado: !i.selecionado } : i)))
   }
 
+  async function handleImobiliariaRow(itemId, nomeImobiliaria) {
+    const itemAtual = itens.find(i => i.id === itemId)
+    setItens(prev => prev.map(i => (i.id === itemId ? {
+      ...i,
+      imobiliariaSelecionada: nomeImobiliaria,
+      fichasCandidatas: [],
+      fichaSelecionadaId: null,
+      apoliceDivergente: null,
+      carregandoFichasRow: Boolean(nomeImobiliaria),
+      selecionado: false,
+    } : i)))
+
+    if (!nomeImobiliaria) return
+
+    const aliases = await getAliases(nomeImobiliaria).catch(() => [nomeImobiliaria])
+    const nomeLocatario = itemAtual?.dadosExtraidos?.nome_locatario
+    const doGrupo = todasFichas.filter(f => aliases.includes(f.imobiliaria))
+    const candidatas = nomeLocatario ? matchFichasPorNome(doGrupo, nomeLocatario) : []
+    const fichaAuto = candidatas.length === 1 ? candidatas[0] : null
+
+    setItens(prev => prev.map(i => (i.id === itemId ? {
+      ...i,
+      carregandoFichasRow: false,
+      fichasCandidatas: candidatas,
+      fichaSelecionadaId: fichaAuto?.id || null,
+      selecionado: i.status === 'ok' && !i.duplicidadeNumero,
+    } : i)))
+
+    if (fichaAuto) void checarApoliceDaFicha(itemId, fichaAuto.id)
+  }
+
   function definirFicha(id, fichaId) {
-    setItens(prev => prev.map(i => (i.id === id ? { ...i, fichaSelecionadaId: fichaId || null } : i)))
+    setItens(prev => prev.map(i => (i.id === id ? { ...i, fichaSelecionadaId: fichaId || null, apoliceDivergente: null } : i)))
+    if (fichaId) void checarApoliceDaFicha(id, fichaId)
   }
 
   function definirComissao(id, value) {
@@ -1291,7 +1326,11 @@ function UploadLoteWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, 
   }
 
   function confirmarDiferente(id) {
-    setItens(prev => prev.map(i => (i.id === id ? { ...i, confirmadoDiferente: true, selecionado: true } : i)))
+    setItens(prev => prev.map(i => (i.id === id ? {
+      ...i,
+      confirmadoDiferente: true,
+      selecionado: Boolean(i.imobiliariaSelecionada),
+    } : i)))
     setModalItemId(null)
   }
 
@@ -1303,17 +1342,13 @@ function UploadLoteWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, 
     }
   }
 
-  const podeRegistrar = !registrando && itens.some(i => i.selecionado && i.status === 'ok')
-  const totalSelecionadas = itens.filter(i => i.selecionado && i.status === 'ok').length
+  const podeRegistrar = !registrando && itens.some(i => i.selecionado && i.status === 'ok' && i.imobiliariaSelecionada)
+  const totalSelecionadas = itens.filter(i => i.selecionado && i.status === 'ok' && i.imobiliariaSelecionada).length
 
   async function registrarSelecionadas() {
-    if (!imobiliaria) {
-      toast({ type: 'warning', title: 'Selecione a imobiliária do lote' })
-      return
-    }
     setRegistrando(true)
 
-    const alvos = itens.filter(i => i.selecionado && i.status === 'ok')
+    const alvos = itens.filter(i => i.selecionado && i.status === 'ok' && i.imobiliariaSelecionada)
     let sucesso = 0
     let falhas = 0
 
@@ -1335,7 +1370,7 @@ function UploadLoteWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, 
         continue
       }
 
-      const payload = montarPayloadApoliceLote(item, { seguradora, imobiliaria, user })
+      const payload = montarPayloadApoliceLote(item, { seguradora, user })
       const { data, error } = await criarApolice(payload)
       if (error) {
         falhas += 1
@@ -1387,12 +1422,12 @@ function UploadLoteWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, 
         </button>
         <div>
           <h2 className="text-base font-bold text-dark-text">Upload em Lote de Apólices</h2>
-          <p className="text-xs text-dark-muted">Suba até {MAX_ARQUIVOS_LOTE} PDFs da mesma seguradora e imobiliária de uma vez.</p>
+          <p className="text-xs text-dark-muted">Escolha a seguradora, anexe até {MAX_ARQUIVOS_LOTE} PDFs e selecione a imobiliária de cada apólice na própria linha.</p>
         </div>
       </div>
 
       <div className="p-6 space-y-5">
-        <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
           <div className="space-y-5">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-dark-muted mb-3">Seguradora</p>
@@ -1422,65 +1457,6 @@ function UploadLoteWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, 
             </div>
 
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-dark-muted mb-2">Imobiliária</p>
-              {imobSelecionada && (
-                <div className="flex items-center gap-2.5 mb-2 px-3 py-2 rounded-xl border-2 border-brand-primary" style={{ background: 'rgb(var(--brand-primary-rgb) / 0.06)' }}>
-                  <Avatar name={imobSelecionada.nome_canonico} src={imobSelecionada.imagem_url || ''} size="sm" />
-                  <span className="text-xs font-semibold text-brand-primary truncate">{imobSelecionada.nome_canonico}</span>
-                  {!loteIniciado && (
-                    <button onClick={() => setImobiliaria('')} className="ml-auto text-dark-muted hover:text-dark-text">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              )}
-              {!loteIniciado && (
-                <>
-                  <div className="relative mb-2">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-dark-muted pointer-events-none" />
-                    <input
-                      value={buscaImob}
-                      onChange={e => setBuscaImob(e.target.value)}
-                      placeholder="Buscar imobiliária..."
-                      className="input text-xs pl-8 py-1.5"
-                    />
-                  </div>
-                  <div className="max-h-44 overflow-y-auto space-y-0.5">
-                    {gruposFiltrados.map(grupo => {
-                      const sel = imobiliaria === grupo.nome_canonico
-                      return (
-                        <button
-                          key={grupo.id}
-                          type="button"
-                          onClick={() => setImobiliaria(grupo.nome_canonico)}
-                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all text-left ${
-                            sel
-                              ? 'border-brand-primary/40 bg-brand-primary/5'
-                              : 'border-transparent hover:border-dark-border hover:bg-dark-surface2/40'
-                          }`}
-                        >
-                          <Avatar name={grupo.nome_canonico} src={grupo.imagem_url || ''} size="sm" />
-                          <span className={`text-xs font-medium truncate flex-1 ${sel ? 'text-brand-primary' : 'text-dark-text'}`}>
-                            {grupo.nome_canonico}
-                          </span>
-                          {sel && <span className="text-[10px] font-bold text-brand-primary">✓</span>}
-                        </button>
-                      )
-                    })}
-                    {gruposFiltrados.length === 0 && (
-                      <p className="text-xs text-dark-muted py-3 text-center">Nenhuma imobiliária encontrada</p>
-                    )}
-                  </div>
-                </>
-              )}
-              {carregandoFichas && (
-                <p className="mt-2 text-[11px] text-dark-muted flex items-center gap-1.5">
-                  <RefreshCw className="w-3 h-3 animate-spin" /> Carregando fichas da imobiliária...
-                </p>
-              )}
-            </div>
-
-            <div>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1495,7 +1471,7 @@ function UploadLoteWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, 
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={!imobiliaria || carregandoFichas || itens.length >= MAX_ARQUIVOS_LOTE}
+                disabled={itens.length >= MAX_ARQUIVOS_LOTE}
                 className="w-full flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-dashed border-dark-border hover:border-dark-border/80 hover:bg-dark-surface2/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="w-11 h-11 rounded-xl bg-dark-surface2 flex items-center justify-center">
@@ -1505,11 +1481,14 @@ function UploadLoteWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, 
                   <p className="text-sm font-semibold text-dark-text">
                     {itens.length === 0 ? 'Selecionar PDFs' : `Adicionar mais PDFs (${itens.length}/${MAX_ARQUIVOS_LOTE})`}
                   </p>
-                  <p className="text-xs text-dark-muted mt-0.5">
-                    {imobiliaria ? `Até ${MAX_ARQUIVOS_LOTE} arquivos da ${seguradora}` : 'Selecione a imobiliária primeiro'}
-                  </p>
+                  <p className="text-xs text-dark-muted mt-0.5">Até {MAX_ARQUIVOS_LOTE} arquivos da {seguradora}</p>
                 </div>
               </button>
+              {carregandoFichas && (
+                <p className="mt-2 text-[11px] text-dark-muted flex items-center gap-1.5">
+                  <RefreshCw className="w-3 h-3 animate-spin" /> Carregando fichas do sistema...
+                </p>
+              )}
             </div>
           </div>
 
@@ -1532,9 +1511,11 @@ function UploadLoteWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, 
                     onToggle={() => toggleSelecionado(item.id)}
                     onRemover={() => removerItem(item.id)}
                     onVerificar={() => setModalItemId(item.id)}
+                    onDefinirImobiliaria={nome => handleImobiliariaRow(item.id, nome)}
                     onDefinirFicha={fichaId => definirFicha(item.id, fichaId)}
                     onDefinirComissao={value => definirComissao(item.id, value)}
                     onTentarNovamente={() => tentarNovamente(item)}
+                    onVerApoliceDivergente={() => abrirApoliceEmNovaAba(item.apoliceDivergente?.id)}
                   />
                 ))}
               </div>
@@ -1568,10 +1549,10 @@ function UploadLoteWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, 
           </div>
 
           {itemModal.duplicidadeNumero && (
-            <div className="mt-4 flex items-start gap-3 p-3 rounded-xl border border-status-warning/25 bg-status-warning/8">
-              <AlertTriangle className="w-4 h-4 text-status-warning mt-0.5 flex-shrink-0" />
+            <div className="mt-4 flex items-start gap-3 p-3 rounded-xl border border-status-danger/25 bg-status-danger/8">
+              <AlertTriangle className="w-4 h-4 text-status-danger mt-0.5 flex-shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-dark-text">Já existe uma apólice com esse número.</p>
+                <p className="text-xs font-semibold text-dark-text">Já existe uma apólice com esse número no sistema.</p>
                 <p className="mt-1 text-xs text-dark-muted">
                   {itemModal.duplicidadeNumero.numero_apolice || 'Sem número'}
                   {' · '}{itemModal.duplicidadeNumero.seguradora || 'Sem seguradora'}
@@ -1580,8 +1561,8 @@ function UploadLoteWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, 
                 <div className="mt-2 flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => onAbrirApolice?.(itemModal.duplicidadeNumero.id)}
-                    className="text-xs font-semibold text-status-warning hover:opacity-75 transition-opacity"
+                    onClick={() => abrirApoliceEmNovaAba(itemModal.duplicidadeNumero.id)}
+                    className="text-xs font-semibold text-status-danger hover:opacity-75 transition-opacity"
                   >
                     Abrir apólice existente
                   </button>
@@ -1598,29 +1579,63 @@ function UploadLoteWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos, 
               </div>
             </div>
           )}
+
+          {itemModal.apoliceDivergente && (
+            <div className="mt-4 flex items-start gap-3 p-3 rounded-xl border border-status-warning/25 bg-status-warning/8">
+              <AlertTriangle className="w-4 h-4 text-status-warning mt-0.5 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-dark-text">Essa ficha já tem uma apólice com número diferente.</p>
+                <p className="mt-1 text-xs text-dark-muted">
+                  {itemModal.apoliceDivergente.numero_apolice || 'Sem número'}
+                  {' · '}{itemModal.apoliceDivergente.seguradora || 'Sem seguradora'}
+                  {' · '}{itemModal.apoliceDivergente.imobiliaria || 'Sem imobiliária'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => abrirApoliceEmNovaAba(itemModal.apoliceDivergente.id)}
+                  className="mt-2 text-xs font-semibold text-status-warning hover:opacity-75 transition-opacity"
+                >
+                  Abrir apólice vinculada à ficha
+                </button>
+              </div>
+            </div>
+          )}
         </Modal>
       )}
     </div>
   )
 }
 
-function LinhaApoliceLote({ item, onToggle, onRemover, onVerificar, onDefinirFicha, onDefinirComissao, onTentarNovamente }) {
+function LinhaApoliceLote({
+  item,
+  onToggle,
+  onRemover,
+  onVerificar,
+  onDefinirImobiliaria,
+  onDefinirFicha,
+  onDefinirComissao,
+  onTentarNovamente,
+  onVerApoliceDivergente,
+}) {
   const dados = item.dadosExtraidos || {}
   const bloqueadoPorDuplicidade = Boolean(item.duplicidadeNumero) && !item.confirmadoDiferente
   const emProcesso = item.status === 'extraindo' || item.status === 'criando'
   const comErro = item.status === 'erro' || item.status === 'erro_criacao'
+  const temDuplicidade = Boolean(item.duplicidadeNumero) && !item.confirmadoDiferente
+  const temDivergencia = !temDuplicidade && Boolean(item.apoliceDivergente)
 
   return (
     <div className={`rounded-2xl border p-3.5 transition-all ${
       comErro ? 'border-status-danger/30 bg-status-danger/5'
-        : item.duplicidadeNumero && !item.confirmadoDiferente ? 'border-status-warning/30 bg-status-warning/5'
+        : temDuplicidade ? 'border-status-danger/40 bg-status-danger/8'
+        : temDivergencia ? 'border-status-warning/30 bg-status-warning/5'
         : 'border-dark-border bg-dark-surface2/20'
     }`}>
       <div className="flex items-start gap-3">
         <button
           type="button"
           onClick={onToggle}
-          disabled={bloqueadoPorDuplicidade || item.status !== 'ok'}
+          disabled={bloqueadoPorDuplicidade || item.status !== 'ok' || !item.imobiliariaSelecionada}
           className="mt-0.5 disabled:opacity-40"
         >
           {item.selecionado ? (
@@ -1675,17 +1690,44 @@ function LinhaApoliceLote({ item, onToggle, onRemover, onVerificar, onDefinirFic
             </div>
           )}
 
-          {item.duplicidadeNumero && !item.confirmadoDiferente && !item.erro && (
+          {temDuplicidade && !item.erro && (
+            <div className="mt-2 flex items-center gap-2 text-xs text-status-danger">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              Apólice já cadastrada no sistema — confirme em "Verificar dados" para liberar a seleção.
+            </div>
+          )}
+
+          {temDivergencia && (
             <div className="mt-2 flex items-center gap-2 text-xs text-status-warning">
               <AlertTriangle className="w-3.5 h-3.5" />
-              Apólice já cadastrada — confirme em "Verificar dados" para liberar a seleção.
+              A ficha vinculada já tem apólice com número diferente.
+              <button type="button" onClick={onVerApoliceDivergente} className="font-semibold underline hover:opacity-75 transition-opacity flex-shrink-0">
+                Verificar apólice existente
+              </button>
             </div>
           )}
 
           {item.status === 'ok' && (
+            <div className="mt-2">
+              <ImobiliariaSelect
+                value={item.imobiliariaSelecionada}
+                onChange={onDefinirImobiliaria}
+                placeholder="Selecionar imobiliária"
+                showAll={false}
+                required
+                className="text-xs max-w-xs"
+              />
+            </div>
+          )}
+
+          {item.status === 'ok' && item.imobiliariaSelecionada && (
             <div className="mt-2 flex items-center gap-2">
               <Link2 className="w-3.5 h-3.5 text-dark-muted flex-shrink-0" />
-              {item.fichasCandidatas.length > 0 ? (
+              {item.carregandoFichasRow ? (
+                <span className="text-xs text-dark-muted flex items-center gap-1.5">
+                  <RefreshCw className="w-3 h-3 animate-spin" /> Buscando fichas...
+                </span>
+              ) : item.fichasCandidatas.length > 0 ? (
                 <select
                   value={item.fichaSelecionadaId || ''}
                   onChange={e => onDefinirFicha(e.target.value || null)}
@@ -1937,9 +1979,7 @@ export default function ApoicesGestao() {
         <UploadLoteWorkspace
           onBack={() => setWorkspace('kanban')}
           onCriado={handleCriado}
-          onAbrirApolice={openApolice}
           toast={toast}
-          grupos={grupos}
           getAliases={getAliases}
           user={user}
         />

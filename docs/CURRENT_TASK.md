@@ -1,5 +1,52 @@
 # CURRENT TASK
 
+**Upload em Lote — imobiliária por linha + duplicidade em 2 níveis (vermelho/laranja)
+(2026-07-08, Claude):** redesenho do workspace `upload_lote` a pedido do usuário, mudando
+uma decisão anterior (imobiliária deixa de ser única para o lote todo).
+
+1. **Imobiliária por linha, não mais global**: removida a seleção de imobiliária do lote
+   inteiro (sidebar); cada linha (`LinhaApoliceLote`) agora tem seu próprio
+   `ImobiliariaSelect` (componente já existente, reaproveitado — mostra o logo da
+   imobiliária no próprio seletor via `WorkspacesSelect`). Como o casamento de ficha por
+   nome dependia da imobiliária escolhida, `buscarFichasParaVinculoApolice` passou a ser
+   chamada 1x (sem filtro de imobiliária) ao abrir o workspace, carregando todas as fichas
+   não-recusadas do sistema; por linha, ao escolher a imobiliária, resolve os aliases
+   (`getAliases`) e filtra essas fichas em memória (`todasFichas.filter(f =>
+   aliases.includes(f.imobiliaria))`) antes de casar por nome (`matchFichasPorNome`) — evita
+   1 query por PDF.
+2. **Duplicidade em 2 níveis**: antes só existia 1 aviso (laranja) para número de apólice
+   já cadastrado. Agora:
+   - **Vermelho** (`duplicidadeNumero`, `buscarApolicePorNumero`) — mesmo número já existe
+     no sistema; continua bloqueando a seleção da linha até confirmar "É uma apólice
+     diferente" no modal "Verificar dados".
+   - **Laranja** (`apoliceDivergente`, nova lógica) — a ficha vinculada à linha (auto ou
+     manualmente) já tem uma apólice associada (`buscarApolicePorFichaId`, já existente),
+     mas com número diferente do PDF atual (comparação via `normalizeNumeroApolice`, nova
+     importação de `lib/apolicesNumero.js`); não bloqueia a seleção, só avisa com um botão
+     "Verificar apólice existente" (inline na linha e também replicado no modal).
+3. **"Ver apólice existente" abre em nova aba** (`window.open`, não `navigate`) nos dois
+   níveis — a pedido explícito do usuário ("se ele voltar, ele volta para a mesma parte de
+   onde estava antes"). Como o lote em andamento nunca é desmontado (a aba do Upload em
+   Lote continua aberta), não há nada pra "restaurar": o usuário só fecha a aba nova e
+   continua exatamente de onde estava. Não usei `sessionStorage`/persistência de estado
+   porque os `File` dos PDFs não são serializáveis e a rota do kanban desmontaria o
+   workspace de qualquer forma — abrir em nova aba é a solução mais simples e robusta pro
+   requisito.
+
+`SEGURADORAS_UPLOAD_DIRETO`, `criarApolice`, `uploadDocumento`, `vincularApoliceAFicha`,
+`calculateValorComissao`, `Modal`/`DadoCard` reaproveitados sem mudança. `npm run build`,
+`npm test` (64/64) e `npm run check:page-contexts` (mesmas pendências pré-existentes)
+verdes. `CONTEXT.md` de `ApoicesGestao` atualizado.
+
+**Smoke test pendente (sem `.env`/Supabase neste ambiente):** subir 2+ PDFs, escolher uma
+imobiliária diferente em cada linha e conferir que o logo aparece e que as fichas
+candidatas mudam por linha; testar o card vermelho (subir um PDF com número já cadastrado)
+e o laranja (vincular uma ficha que já tem apólice com outro número); clicar "Abrir
+apólice existente"/"Verificar apólice existente" e confirmar que abre em nova aba sem
+alterar o estado do lote na aba original.
+
+---
+
 **Habilitar Tokio Marine no Upload Direto e no Upload em Lote (2026-07-08, Claude):**
 `SEGURADORAS_UPLOAD_DIRETO` (`ApoicesGestao.jsx`) ganhou `'Tokio Marine'` — o parser
 `parseTokioMarineV3` já existia em `apoliceParser.js` e já está mapeado em `PARSERS`

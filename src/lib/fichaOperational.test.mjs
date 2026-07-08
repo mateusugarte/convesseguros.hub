@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizeSeguradoraBucket, isFichaExpiredOperational, getReportEffectiveNow } from './fichaOperational.js'
+import { normalizeSeguradoraBucket, isFichaExpiredOperational, getReportEffectiveNow, getFichaOperationalState } from './fichaOperational.js'
 
 test('normalizeSeguradoraBucket reconhece Porto, Tokio, Too, Pottencial e Junto', () => {
   assert.equal(normalizeSeguradoraBucket('Porto Seguro'), 'Porto')
@@ -78,6 +78,37 @@ test('getReportEffectiveNow usa a data real quando não há período (histórico
   const realNow = new Date('2026-07-08T12:00:00.000Z')
   const effective = getReportEffectiveNow(null, realNow)
   assert.equal(effective.toISOString(), realNow.toISOString())
+})
+
+test('getFichaOperationalState resolve um bucket não-nulo para todo status exceto recusado', () => {
+  const now = new Date('2026-07-08T12:00:00.000Z')
+  const criadoRecente = { created_at: '2026-07-01T00:00:00.000Z' }
+  const statusComBucket = {
+    pendente: 'pendente',
+    em_cotacao: 'em_cotacao',
+    em_analise: 'em_analise',
+    aprovado: 'aprovada',
+    emitido: 'emitida',
+    cancelado: 'desistiu',
+    cpf_invalido: 'cpf_invalido',
+    expirada: 'expirada',
+  }
+  for (const [status, esperado] of Object.entries(statusComBucket)) {
+    const ficha = { ...criadoRecente, status }
+    const meta = getFichaOperationalState(ficha, { now })
+    assert.equal(meta?.id, esperado, `status=${status} deveria resolver para "${esperado}", veio ${meta?.id}`)
+  }
+})
+
+test('getFichaOperationalState: recusado ainda resolve para "recusada" (a tela de relatório é quem decide excluir)', () => {
+  const meta = getFichaOperationalState({ status: 'recusado', created_at: '2026-07-01T00:00:00.000Z' })
+  assert.equal(meta?.id, 'recusada')
+})
+
+test('ficha "emitido" sem apólice vinculada ainda (lag de digitação) cai em "emitida", não em bucket nulo', () => {
+  const ficha = { status: 'emitido', created_at: '2026-07-01T00:00:00.000Z' }
+  const meta = getFichaOperationalState(ficha, { now: new Date('2026-07-08T00:00:00.000Z') })
+  assert.equal(meta?.id, 'emitida')
 })
 
 test('regressão: ficha aprovada em junho não expira ao visualizar o relatório de junho em julho', () => {

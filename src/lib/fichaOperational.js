@@ -110,6 +110,23 @@ export function getFichaOperationalState(ficha = {}, options = {}) {
   if (operationalStatus === 'aprovado') {
     return { id: 'aprovada', label: 'Aprovada', className: 'badge-success' }
   }
+  // Ficha marcada 'emitido' no cadastro mas sem apólice vinculada ainda (lag de
+  // digitação): mantém no bucket de emitidas em vez de cair em "sem bucket".
+  if (operationalStatus === 'emitido') {
+    return { id: 'emitida', label: 'Emitida', className: 'badge-purple' }
+  }
+  if (operationalStatus === 'pendente') {
+    return { id: 'pendente', label: 'Pendente', className: 'badge-warning' }
+  }
+  if (operationalStatus === 'em_cotacao') {
+    return { id: 'em_cotacao', label: 'Em Cotação', className: 'badge-info' }
+  }
+  if (operationalStatus === 'em_analise') {
+    return { id: 'em_analise', label: 'Em Análise', className: 'badge-info' }
+  }
+  if (ficha?.status === 'cpf_invalido') {
+    return { id: 'cpf_invalido', label: 'CPF Inválido', className: 'badge-danger' }
+  }
   if (ficha?.status === 'cancelado') {
     return { id: 'desistiu', label: 'Desistiu', className: 'badge-muted' }
   }

@@ -211,7 +211,7 @@ export default function Dashboard() {
   const { user } = useAuth()
   const { theme } = useTheme()
   const navigate = useNavigate()
-  const { resolverNome, resolverImobiliariaInfo, getAliases, loading: loadingImobiliarias } = useImobiliaria()
+  const { resolverNome, resolverImobiliariaInfo, getAliases, grupos, loading: loadingImobiliarias } = useImobiliaria()
   const now = new Date()
   const initialDateFrom = toInputDateValue(new Date(now.getFullYear(), now.getMonth(), 1))
   const initialDateTo = toInputDateValue(new Date(now.getFullYear(), now.getMonth() + 1, 0))
@@ -374,30 +374,30 @@ export default function Dashboard() {
   const groupedDashboardImobiliarias = useMemo(() => {
     const map = new Map()
 
+    grupos.forEach(grupo => {
+      const nome = grupo?.nome_canonico || 'Sem imobili?ria'
+      map.set(nome, { nome, total: 0, emAberto: 0, aprovadas: 0, emitidas: 0, ativa: grupo?.ativa !== false, imagemUrl: grupo?.imagem_url || null, imagemPath: grupo?.imagem_path || null })
+    })
+
     fichasResumo.forEach(item => {
       const nome = resolverNome(item.imobiliaria) || item.imobiliaria || 'Sem imobili?ria'
       const meta = resolverImobiliariaInfo(item.imobiliaria)
-      const current = map.get(nome) || {
-        nome,
-        total: 0,
-        emAberto: 0,
-        aprovadas: 0,
-        emitidas: 0,
-        imagemUrl: meta?.imagem_url || null,
-        imagemPath: meta?.imagem_path || null,
-      }
-
+      const current = map.get(nome) || { nome, total: 0, emAberto: 0, aprovadas: 0, emitidas: 0, ativa: meta?.ativa ?? null, imagemUrl: meta?.imagem_url || null, imagemPath: meta?.imagem_path || null }
       current.total += 1
       if (STATUS_EM_ABERTO.includes(item.status)) current.emAberto += 1
       if (item.status === 'aprovado') current.aprovadas += 1
       if (item.status === 'emitido') current.emitidas += 1
       if (!current.imagemUrl && meta?.imagem_url) current.imagemUrl = meta.imagem_url
       if (!current.imagemPath && meta?.imagem_path) current.imagemPath = meta.imagem_path
+      if (current.ativa == null && meta?.ativa != null) current.ativa = meta.ativa
       map.set(nome, current)
     })
 
-    return [...map.values()].sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome))
-  }, [fichasResumo, resolverImobiliariaInfo, resolverNome])
+    return [...map.values()].sort((a, b) => {
+      if ((b.total || 0) !== (a.total || 0)) return b.total - a.total
+      return a.nome.localeCompare(b.nome)
+    })
+  }, [fichasResumo, grupos, resolverImobiliariaInfo, resolverNome])
 
   useEffect(() => {
     if (!groupedDashboardImobiliarias.length) {
@@ -715,14 +715,25 @@ export default function Dashboard() {
           )}
         </DataCard>
 
-        <DataCard className="xl:col-span-12" title="Fichas por imobiliária" subtitle="Mapa operacional parecido com relatórios. Clique no card para listar as fichas da imobiliária e abrir a ficha individual." actions={<div className="ops-kicker">{periodLabel}</div>}>
+        <DataCard
+          className="xl:col-span-12 overflow-hidden border-brand-accent/15 shadow-[0_24px_60px_rgba(15,23,42,0.10)]"
+          title="Fichas por imobili?ria"
+          subtitle="Cat?logo completo das imobili?rias cadastradas com acesso direto ?s fichas por per?odo e por nome."
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="ops-kicker">{groupedDashboardImobiliarias.length} cadastradas</span>
+              <span className="rounded-full border border-brand-accent/15 bg-brand-accent/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">{periodLabel}</span>
+            </div>
+          }
+        >
           {groupedDashboardImobiliarias.length === 0 ? (
-            <EmptyState title="Sem fichas por imobiliária" description="Não há fichas com imobiliária preenchida no período selecionado." icon={<Crown className="w-6 h-6" />} />
+            <EmptyState title="Sem imobili?rias cadastradas" description="Nenhuma imobili?ria ativa foi encontrada no cat?logo." icon={<Crown className="w-6 h-6" />} />
           ) : (
-            <div className="grid gap-6 xl:grid-cols-[1.15fr,0.85fr]">
-              <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3 items-start">
+            <div className="grid gap-6 xl:grid-cols-[1.2fr,0.8fr]">
+              <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
                 {groupedDashboardImobiliarias.map(item => {
                   const active = item.nome === selectedImobiliaria
+                  const hasMovement = item.total > 0
                   return (
                     <button
                       key={item.nome}
@@ -733,120 +744,75 @@ export default function Dashboard() {
                         setDetailDateFrom(String(filterYear) + '-' + pad2(filterMonth) + '-01')
                         setDetailDateTo(toInputDateValue(new Date(filterYear, filterMonth, 0)))
                       }}
-                      className={`rounded-[28px] border p-4 text-left transition-all ${active ? 'border-brand-accent/45 bg-[linear-gradient(180deg,rgba(239,246,255,0.98),rgba(219,234,254,0.88))] shadow-[0_18px_36px_rgba(34,71,170,0.14)]' : 'border-dark-border/60 bg-dark-surface/80 hover:-translate-y-0.5 hover:border-brand-accent/30 hover:shadow-sm'}`}
+                      className={`group relative overflow-hidden rounded-[30px] border p-4 text-left transition-all ${active ? 'border-brand-accent/50 bg-[radial-gradient(circle_at_top_right,rgba(74,144,217,0.20),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.96),rgba(236,244,255,0.94))] shadow-[0_22px_44px_rgba(34,71,170,0.16)] dark:bg-[radial-gradient(circle_at_top_right,rgba(74,144,217,0.22),transparent_34%),linear-gradient(180deg,rgba(10,18,40,0.96),rgba(16,28,56,0.94))]' : 'border-dark-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(248,250,252,0.84))] hover:-translate-y-0.5 hover:border-brand-accent/30 hover:shadow-[0_18px_36px_rgba(15,23,42,0.08)] dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.88),rgba(15,23,42,0.78))]'}`}
                     >
+                      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-accent/70 via-brand-secondary/60 to-status-success/55" />
                       <div className="flex items-start justify-between gap-3">
-                        <ImobiliariaIdentity
-                          nome={item.nome}
-                          imagemUrl={item.imagemUrl}
-                          imagemPath={item.imagemPath}
-                          size="md"
-                        />
-                        {item.emAberto > 0 && (
-                          <span className="rounded-full bg-status-warning/12 px-2.5 py-1 text-[10px] font-semibold text-status-warning">
-                            {item.emAberto} em aberto
+                        <ImobiliariaIdentity nome={item.nome} imagemUrl={item.imagemUrl} imagemPath={item.imagemPath} size="md" />
+                        <div className="flex flex-col items-end gap-2">
+                          <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${hasMovement ? 'bg-status-info/12 text-status-info' : 'bg-dark-surface2/70 text-dark-muted'}`}>
+                            {hasMovement ? 'com movimento' : 'sem movimento'}
                           </span>
-                        )}
+                          {item.emAberto > 0 && <span className="rounded-full bg-status-warning/12 px-2.5 py-1 text-[10px] font-semibold text-status-warning">{item.emAberto} em aberto</span>}
+                        </div>
                       </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-2 text-[11px]">
-                        <div className="rounded-2xl bg-dark-surface/70 px-3 py-2">
-                          <p className="text-dark-muted">Total</p>
-                          <p className="mt-1 text-sm font-semibold text-dark-text">{item.total}</p>
-                        </div>
-                        <div className="rounded-2xl bg-dark-surface/70 px-3 py-2">
-                          <p className="text-dark-muted">Aprovadas</p>
-                          <p className="mt-1 text-sm font-semibold text-dark-text">{item.aprovadas}</p>
-                        </div>
-                        <div className="rounded-2xl bg-dark-surface/70 px-3 py-2">
-                          <p className="text-dark-muted">Emitidas</p>
-                          <p className="mt-1 text-sm font-semibold text-dark-text">{item.emitidas}</p>
-                        </div>
-                        <div className="rounded-2xl bg-dark-surface/70 px-3 py-2">
-                          <p className="text-dark-muted">Em aberto</p>
-                          <p className="mt-1 text-sm font-semibold text-dark-text">{item.emAberto}</p>
-                        </div>
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <div className="rounded-2xl border border-white/30 bg-white/55 px-3 py-2 dark:border-white/5 dark:bg-white/5"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Total</p><p className="mt-1 text-lg font-semibold text-dark-text">{item.total}</p></div>
+                        <div className="rounded-2xl border border-white/30 bg-white/55 px-3 py-2 dark:border-white/5 dark:bg-white/5"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Em aberto</p><p className="mt-1 text-lg font-semibold text-dark-text">{item.emAberto}</p></div>
+                        <div className="rounded-2xl border border-white/30 bg-white/55 px-3 py-2 dark:border-white/5 dark:bg-white/5"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Aprovadas</p><p className="mt-1 text-sm font-semibold text-dark-text">{item.aprovadas}</p></div>
+                        <div className="rounded-2xl border border-white/30 bg-white/55 px-3 py-2 dark:border-white/5 dark:bg-white/5"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Emitidas</p><p className="mt-1 text-sm font-semibold text-dark-text">{item.emitidas}</p></div>
+                      </div>
+                      <div className="mt-4 flex items-center justify-between gap-3">
+                        <p className="text-xs text-dark-muted">{hasMovement ? 'Clique para abrir as fichas filtradas desta imobili?ria.' : 'Cat?logo ativo sem fichas no per?odo selecionado.'}</p>
+                        <ArrowRight className={`h-4 w-4 transition-transform ${active ? 'translate-x-0.5 text-brand-primary' : 'text-dark-muted group-hover:translate-x-0.5'}`} />
                       </div>
                     </button>
                   )
                 })}
               </div>
-
-              <div className="rounded-[28px] border border-dark-border/60 bg-dark-surface/70 p-4 shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
+              <div className="relative overflow-hidden rounded-[32px] border border-dark-border/60 bg-[radial-gradient(circle_at_top_right,rgba(74,144,217,0.14),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.94),rgba(248,250,252,0.92))] p-5 shadow-[0_20px_48px_rgba(15,23,42,0.08)] dark:bg-[radial-gradient(circle_at_top_right,rgba(74,144,217,0.16),transparent_28%),linear-gradient(180deg,rgba(10,18,40,0.94),rgba(15,23,42,0.92))]">
+                <div className="absolute right-0 top-0 h-28 w-28 rounded-full bg-brand-accent/10 blur-3xl" />
                 {selectedImobiliariaCard ? (
                   <>
-                    <div className="flex flex-col gap-4 border-b border-dark-border/60 pb-4">
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="relative z-[1] flex flex-col gap-4 border-b border-dark-border/60 pb-5">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div>
-                          <ImobiliariaIdentity
-                            nome={selectedImobiliariaCard.nome}
-                            imagemUrl={selectedImobiliariaCard.imagemUrl}
-                            imagemPath={selectedImobiliariaCard.imagemPath}
-                            size="lg"
-                          />
-                          <p className="mt-2 text-xs text-dark-muted">{detailRows.length} ficha{detailRows.length === 1 ? '' : 's'} no filtro atual.</p>
+                          <ImobiliariaIdentity nome={selectedImobiliariaCard.nome} imagemUrl={selectedImobiliariaCard.imagemUrl} imagemPath={selectedImobiliariaCard.imagemPath} size="lg" />
+                          <p className="mt-3 max-w-md text-sm leading-relaxed text-dark-muted">Filtre por data ou por nome e abra a ficha direto daqui, sem sair da vis?o consolidada do dashboard.</p>
                         </div>
-                        <Button variant="secondary" onClick={() => navigate('/fichas')} iconRight={<ArrowRight className="h-4 w-4" />}>
-                          Ver área de fichas
-                        </Button>
+                        <Button variant="secondary" onClick={() => navigate('/fichas')} iconRight={<ArrowRight className="h-4 w-4" />}>Ver ?rea de fichas</Button>
                       </div>
-
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="rounded-2xl border border-white/30 bg-white/55 px-3 py-2 dark:border-white/5 dark:bg-white/5"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Total</p><p className="mt-1 text-base font-semibold text-dark-text">{selectedImobiliariaCard.total}</p></div>
+                        <div className="rounded-2xl border border-white/30 bg-white/55 px-3 py-2 dark:border-white/5 dark:bg-white/5"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Abertas</p><p className="mt-1 text-base font-semibold text-dark-text">{selectedImobiliariaCard.emAberto}</p></div>
+                        <div className="rounded-2xl border border-white/30 bg-white/55 px-3 py-2 dark:border-white/5 dark:bg-white/5"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Emitidas</p><p className="mt-1 text-base font-semibold text-dark-text">{selectedImobiliariaCard.emitidas}</p></div>
+                      </div>
                       <div className="grid gap-3 md:grid-cols-2">
-                        <label className="text-xs text-dark-muted">
-                          <span className="mb-1 block font-medium">Data inicial</span>
-                          <input type="date" value={detailDateFrom} onChange={event => setDetailDateFrom(event.target.value)} className="input w-full" />
-                        </label>
-                        <label className="text-xs text-dark-muted">
-                          <span className="mb-1 block font-medium">Data final</span>
-                          <input type="date" value={detailDateTo} onChange={event => setDetailDateTo(event.target.value)} className="input w-full" />
-                        </label>
+                        <label className="text-xs text-dark-muted"><span className="mb-1 block font-medium">Data inicial</span><input type="date" value={detailDateFrom} onChange={event => setDetailDateFrom(event.target.value)} className="input w-full border-white/40 bg-white/65 dark:border-white/10 dark:bg-white/5" /></label>
+                        <label className="text-xs text-dark-muted"><span className="mb-1 block font-medium">Data final</span><input type="date" value={detailDateTo} onChange={event => setDetailDateTo(event.target.value)} className="input w-full border-white/40 bg-white/65 dark:border-white/10 dark:bg-white/5" /></label>
                       </div>
-
-                      <div className="relative">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-muted" />
-                        <input
-                          value={detailSearch}
-                          onChange={event => setDetailSearch(event.target.value)}
-                          placeholder="Pesquisar pelo nome da ficha..."
-                          className="input w-full pl-10"
-                        />
-                      </div>
+                      <div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-muted" /><input value={detailSearch} onChange={event => setDetailSearch(event.target.value)} placeholder="Pesquisar pelo nome da ficha..." className="input w-full border-white/40 bg-white/65 pl-10 dark:border-white/10 dark:bg-white/5" /></div>
                     </div>
-
-                    <div className="mt-4 space-y-2">
+                    <div className="relative z-[1] mt-5 space-y-2">
                       {detailQuery.isLoading ? (
-                        <div className="rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-4 py-6 text-sm text-dark-muted">
-                          Carregando fichas da imobiliária...
-                        </div>
+                        <div className="rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-4 py-6 text-sm text-dark-muted">Carregando fichas da imobili?ria...</div>
                       ) : detailRows.length === 0 ? (
-                        <EmptyState title="Nenhuma ficha encontrada" description="Ajuste o período ou a pesquisa por nome para localizar outras fichas desta imobiliária." icon={<Activity className="w-6 h-6" />} />
+                        <EmptyState title="Nenhuma ficha encontrada" description="Ajuste o per?odo ou a pesquisa por nome para localizar outras fichas desta imobili?ria." icon={<Activity className="w-6 h-6" />} />
                       ) : (
                         detailRows.map(item => {
                           const statusMeta = STATUS_LABELS[item.status] ?? { label: item.status }
                           const nomeFicha = getFichaPrimaryName(item)
                           return (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => navigate(`/fichas/${item.id}`)}
-                              className="w-full rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-brand-accent/30 hover:shadow-sm"
-                            >
+                            <button key={item.id} type="button" onClick={() => navigate(`/fichas/${item.id}`)} className="w-full rounded-[24px] border border-dark-border/60 bg-white/55 px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-brand-accent/30 hover:shadow-sm dark:bg-white/5">
                               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <p className="truncate text-sm font-semibold text-dark-text">{nomeFicha}</p>
-                                    <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold" style={{ background: `${STATUS_CHART_COLORS[item.status] || chartTheme.gold}18`, color: STATUS_CHART_COLORS[item.status] || chartTheme.gold }}>
-                                      {statusMeta.label}
-                                    </span>
+                                    <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold" style={{ background: `${STATUS_CHART_COLORS[item.status] || chartTheme.gold}18`, color: STATUS_CHART_COLORS[item.status] || chartTheme.gold }}>{statusMeta.label}</span>
                                   </div>
-                                  <p className="mt-1 truncate text-xs text-dark-muted">
-                                    {PRODUTO_LABELS[item.produto] || item.produto} · {item.seguradora || 'Seguradora pendente'}
-                                  </p>
+                                  <p className="mt-1 truncate text-xs text-dark-muted">{PRODUTO_LABELS[item.produto] || item.produto} ? {item.seguradora || 'Seguradora pendente'}</p>
                                 </div>
-                                <div className="text-left lg:text-right">
-                                  <p className="text-xs font-semibold text-dark-text">{format(parseISO(item.created_at), 'dd/MM/yyyy', { locale: ptBR })}</p>
-                                  <p className="mt-1 text-[11px] text-dark-muted">Abrir ficha</p>
-                                </div>
+                                <div className="text-left lg:text-right"><p className="text-xs font-semibold text-dark-text">{format(parseISO(item.created_at), 'dd/MM/yyyy', { locale: ptBR })}</p><p className="mt-1 text-[11px] text-dark-muted">Abrir ficha</p></div>
                               </div>
                             </button>
                           )
@@ -855,13 +821,12 @@ export default function Dashboard() {
                     </div>
                   </>
                 ) : (
-                  <EmptyState title="Selecione uma imobiliária" description="Escolha um card para listar as fichas vinculadas." icon={<Crown className="w-6 h-6" />} />
+                  <EmptyState title="Selecione uma imobili?ria" description="Escolha um card para listar as fichas vinculadas." icon={<Crown className="w-6 h-6" />} />
                 )}
               </div>
             </div>
           )}
         </DataCard>
-
         <DataCard className="xl:col-span-7" title="Atividade recente" subtitle="�altimas movimentações registradas no fluxo operacional." actions={(
           <button type="button" onClick={() => navigate('/fichas')} className="inline-flex items-center gap-1 text-[11px] font-semibold text-status-info hover:underline">
             Ver todas <ExternalLink className="w-3 h-3" />

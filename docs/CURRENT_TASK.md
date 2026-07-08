@@ -1,6 +1,61 @@
 # CURRENT TASK
 
-**Bugfix — fichas aprovadas somem do relatório de meses passados (2026-07-08,
+**Bugfix #2 — relatório (`/relatorio`) só buscava fichas `aprovado`/`emitido`
+(2026-07-08, Claude):** após o bugfix #1 (abaixo) o usuário reportou que ainda
+faltavam fichas e pediu garantia explícita: **todo status deve aparecer no
+relatório, exceto `recusado`**. Causa raiz adicional (independente do bugfix
+#1): a query de `/relatorio` (`src/pages/Relatorio.jsx`) usava
+`REPORT_STATUSES = ['aprovado', 'emitido']` como *allowlist* — qualquer ficha
+`pendente`, `em_cotacao`, `em_analise`, `cancelado`, `cpf_invalido` (ou
+`expirada` já no cadastro) nunca era buscada no banco, ficasse ela expirada ou
+não. Mesmo se buscada, `getFichaOperationalState`
+(`src/lib/fichaOperational.js`) retornava `null` para `pendente`/`em_cotacao`/
+`em_analise`/`emitido`-sem-apólice-ainda, e `COLUNAS` (blocos da tela) não
+tinha bucket para `desistiu`/`cpf_invalido`/`recusada` — então mesmo uma ficha
+buscada podia ser descartada silenciosamente por `isEligibleReportRow`
+(`Boolean(getColuna(ficha))`) ou cair fora de `columnMap` na hora de renderizar.
+
+Corrigido em duas frentes:
+1. `fichaOperational.js`: `getFichaOperationalState` ganhou branches para
+   `pendente`, `em_cotacao`, `em_analise`, `cpf_invalido` e para `emitido` sem
+   apólice vinculada ainda — agora só retorna `null` se o `status` da ficha for
+   um valor fora do domínio conhecido (nunca mais para os 8 status válidos que
+   não são `recusado`). Testado (`getFichaOperationalState resolve um bucket
+   não-nulo para todo status exceto recusado`, `fichaOperational.test.mjs`).
+2. `Relatorio.jsx`: troca de `.in('status', REPORT_STATUSES)` por
+   `.neq('status', EXCLUDED_REPORT_STATUS)` (`EXCLUDED_REPORT_STATUS =
+   'recusado'`) nas duas queries de fichas; `COLUNAS` ganhou 5 blocos novos
+   (`Pendentes`, `Em Cotação`, `Em Análise`, `Desistências`, `CPF Inválido`),
+   totalizando 10 blocos na tela de detalhe por imobiliária. Nada nos outros
+   componentes (`BlocoRelatorio`/`LinhaRelatorio`/toggles de cobrança) assume
+   uma lista fechada de 5 colunas — todos os `coluna.id === 'x'` têm fallback
+   seguro, então os novos blocos renderizam sem mudança adicional.
+
+**Importante — o que essa garantia cobre e o que não cobre:** agora toda ficha
+com `status != 'recusado'` que esteja dentro do intervalo de datas
+(`created_at`) e (na tela de detalhe) cujo campo `imobiliaria` bata com um dos
+aliases resolvidos da imobiliária SEMPRE aparece em algum dos 10 blocos. Isso
+NÃO cobre: fichas cujo `imobiliaria` no banco não corresponda a nenhum alias
+cadastrado da imobiliária (mismatch de nome/alias — não investigado nesta
+rodada, diferente do bug de status); nem mudanças de RLS/permissão de leitura.
+
+`node --test src/lib/fichaOperational.test.mjs` (14/14) e `npm test` completo
+(64/64) verdes; `npm run build` verde. `package.json`/`Dashboard.jsx` que
+apareciam corrompidos (BOM) durante o bugfix #1 foram resolvidos por edição
+concorrente externa a este agente antes desta rodada — build e testes
+completos puderam rodar normalmente desta vez.
+
+**Smoke test pendente (recomendado antes de considerar encerrado):** abrir
+`/relatorio/:id` de uma imobiliária com fichas em `pendente`/`em_cotacao`/
+`em_analise`/`cancelado`/`cpf_invalido` no período e confirmar que aparecem
+nos novos blocos; confirmar que uma ficha `recusado` continua não aparecendo
+(comportamento esperado); se o ambiente testado for a URL de produção (não
+`localhost`), confirmar que houve deploy do commit mais recente antes de
+validar — mudança em código só reflete em produção depois do build/deploy.
+
+---
+
+**Bugfix #1 — fichas aprovadas somem do relatório de meses passados (2026-07-08,
 Claude):** usuário reportou que 2 fichas (imobiliárias A e D, junho) apareciam
 no "Relatório Mensal de Fichas" (dentro de Fichas) mas não em `/relatorio`.
 Causa raiz: `isFichaExpiredOperational` (`src/lib/fichaOperational.js`) sempre

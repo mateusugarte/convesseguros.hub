@@ -53,14 +53,24 @@ const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set
 const MESES_FULL = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 const COLUNAS = [
+  { id: 'pendente', label: 'Pendentes', color: '#B45309', copyStatus: 'Pendente' },
+  { id: 'em_cotacao', label: 'Em Cotação', color: '#7C3AED', copyStatus: 'Em Cotação' },
+  { id: 'em_analise', label: 'Em Análise', color: '#0891B2', copyStatus: 'Em Análise' },
   { id: 'aprovada', label: 'Aprovadas', color: '#0f766e', copyStatus: 'Aprovada' },
   { id: 'emitida', label: 'Emitidas', color: '#000079', copyStatus: 'Emitida' },
   { id: 'enviado_cobranca', label: 'Enviado Cobrança', color: '#2247aa', copyStatus: 'Enviado Cobrança' },
   { id: 'recuperados', label: 'RECUPERADOS', color: '#4b6cc2', copyStatus: 'Recuperada' },
   { id: 'expirada', label: 'Expiradas', color: '#6B7280', copyStatus: 'Expirada' },
+  { id: 'desistiu', label: 'Desistências', color: '#9CA3AF', copyStatus: 'Desistiu' },
+  { id: 'cpf_invalido', label: 'CPF Inválido', color: '#DC2626', copyStatus: 'CPF Inválido' },
 ]
 
-const REPORT_STATUSES = ['aprovado', 'emitido']
+// Único status excluído do relatório por decisão explícita de negócio: "recusado".
+// Todo o resto (pendente, em_cotacao, em_analise, aprovado, emitido, cancelado,
+// cpf_invalido, expirada) precisa aparecer sempre — ver COLUNAS acima, que tem um
+// bucket para cada um desses status (getFichaOperationalState nunca retorna null
+// para eles, então isEligibleReportRow nunca os descarta).
+const EXCLUDED_REPORT_STATUS = 'recusado'
 const FICHA_REPORT_COLUMNS = 'id, created_at, finalizada_em, nome_interessado, nome_empresa, cpf, cnpj, cep, imobiliaria, status, produto, seguradora, orcamentista_forms, observacoes, raw_data, numero_apolice, data_emissao, valor_aluguel, assumida, orcamentista_id, profiles!orcamentista_id(nome, avatar_url)'
 const COBRANCA_TOGGLE_STORAGE = 'relatorio-cobranca-toggle'
 const RELATORIO_FINALIZADO_STORAGE = 'relatorio-finalizado-v1'
@@ -1240,7 +1250,7 @@ export default function Relatorio() {
     async function loadStatic() {
       try {
         const [yearsRows, imobRows, segRows] = await Promise.all([
-          fetchAllRows(() => supabase.from('fichas').select('created_at').in('status', REPORT_STATUSES)),
+          fetchAllRows(() => supabase.from('fichas').select('created_at').neq('status', EXCLUDED_REPORT_STATUS)),
           supabase.from('imobiliarias').select('id, nome_canonico, imagem_url, imagem_path, ativa').order('nome_canonico'),
           fetchSeguradorasPorProduto('fianca'),
         ])
@@ -1281,7 +1291,7 @@ export default function Relatorio() {
           let query = supabase
             .from('fichas')
             .select(FICHA_REPORT_COLUMNS)
-            .in('status', REPORT_STATUSES)
+            .neq('status', EXCLUDED_REPORT_STATUS)
             .order('created_at', { ascending: false })
 
           if (rangeStart && rangeEnd) {

@@ -53,8 +53,6 @@ const MESES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set
 const MESES_FULL = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 const COLUNAS = [
-  { id: 'pendente', label: 'Pendentes', color: '#B45309', copyStatus: 'Pendente' },
-  { id: 'em_cotacao', label: 'Em Cotação', color: '#7C3AED', copyStatus: 'Em Cotação' },
   { id: 'em_analise', label: 'Em Análise', color: '#0891B2', copyStatus: 'Em Análise' },
   { id: 'aprovada', label: 'Aprovadas', color: '#0f766e', copyStatus: 'Aprovada' },
   { id: 'emitida', label: 'Emitidas', color: '#000079', copyStatus: 'Emitida' },
@@ -62,15 +60,38 @@ const COLUNAS = [
   { id: 'recuperados', label: 'RECUPERADOS', color: '#4b6cc2', copyStatus: 'Recuperada' },
   { id: 'expirada', label: 'Expiradas', color: '#6B7280', copyStatus: 'Expirada' },
   { id: 'desistiu', label: 'Desistências', color: '#9CA3AF', copyStatus: 'Desistiu' },
-  { id: 'cpf_invalido', label: 'CPF Inválido', color: '#DC2626', copyStatus: 'CPF Inválido' },
 ]
 
-// Único status excluído do relatório por decisão explícita de negócio: "recusado".
-// Todo o resto (pendente, em_cotacao, em_analise, aprovado, emitido, cancelado,
-// cpf_invalido, expirada) precisa aparecer sempre — ver COLUNAS acima, que tem um
-// bucket para cada um desses status (getFichaOperationalState nunca retorna null
-// para eles, então isEligibleReportRow nunca os descarta).
-const EXCLUDED_REPORT_STATUS = 'recusado'
+// Por decisão explícita de negócio, o relatório mostra apenas os status que têm
+// um bloco em COLUNAS acima. "recusado" fica de fora por regra de negócio;
+// "pendente"/"em_cotacao"/"cpf_invalido" foram removidos por não terem mais
+// bloco correspondente (evita ficha "contada" nos totais mas invisível em
+// todos os blocos).
+const INCLUDED_REPORT_STATUSES = ['aprovado', 'emitido', 'cancelado', 'em_analise', 'expirada']
+
+// "Data de aprovação" (finalizada_em, com fallback para created_at) é o âncora
+// de período para fichas aprovadas/emitidas — inclui enviado_cobranca e
+// recuperados, que são só variações de status='aprovado'/'emitido' com
+// marcadores extra em raw_data. As demais (em_analise, cancelado, expirada)
+// continuam ancoradas em created_at.
+function getFichaPeriodAnchorDate(ficha) {
+  const status = String(ficha?.status || '').toLowerCase()
+  if (status === 'aprovado' || status === 'emitido') {
+    return ficha?.finalizada_em || ficha?.created_at || null
+  }
+  return ficha?.created_at || null
+}
+
+function isFichaWithinReportPeriod(ficha, rangeStart, rangeEnd) {
+  if (!rangeStart || !rangeEnd) return true // histórico: sem recorte de período
+  const anchor = getFichaPeriodAnchorDate(ficha)
+  if (!anchor) return false
+  const anchorDate = new Date(anchor)
+  if (Number.isNaN(anchorDate.getTime())) return false
+  const start = new Date(`${rangeStart}T00:00:00`)
+  const end = new Date(`${rangeEnd}T23:59:59.999`)
+  return anchorDate >= start && anchorDate <= end
+}
 const FICHA_REPORT_COLUMNS = 'id, created_at, finalizada_em, nome_interessado, nome_empresa, cpf, cnpj, cep, imobiliaria, status, produto, seguradora, orcamentista_forms, observacoes, raw_data, numero_apolice, data_emissao, valor_aluguel, assumida, orcamentista_id, profiles!orcamentista_id(nome, avatar_url)'
 const COBRANCA_TOGGLE_STORAGE = 'relatorio-cobranca-toggle'
 const RELATORIO_FINALIZADO_STORAGE = 'relatorio-finalizado-v1'
@@ -1250,12 +1271,12 @@ export default function Relatorio() {
     async function loadStatic() {
       try {
         const [yearsRows, imobRows, segRows] = await Promise.all([
-          fetchAllRows(() => supabase.from('fichas').select('created_at').neq('status', EXCLUDED_REPORT_STATUS)),
+          fetchAllRows(() => supabase.from('fichas').select('created_at, finalizada_em, status').in('status', INCLUDED_REPORT_STATUSES)),
           supabase.from('imobiliarias').select('id, nome_canonico, imagem_url, imagem_path, ativa').order('nome_canonico'),
           fetchSeguradorasPorProduto('fianca'),
         ])
 
-        setYears([...new Set(yearsRows.map(row => new Date(row.created_at).getFullYear()))].sort((a, b) => b - a))
+        setYears([...new Set(yearsRows.map(row => new Date(getFichaPeriodAnchorDate(row)).getFullYear()))].sort((a, b) => b - a))
         setImobiliarias(imobRows.data || [])
         setSeguradoras((segRows || []).map(extractSeguradoraMeta))
       } catch (error) {
@@ -1291,11 +1312,19 @@ export default function Relatorio() {
           let query = supabase
             .from('fichas')
             .select(FICHA_REPORT_COLUMNS)
-            .neq('status', EXCLUDED_REPORT_STATUS)
+            .in('status', INCLUDED_REPORT_STATUSES)
             .order('created_at', { ascending: false })
 
           if (rangeStart && rangeEnd) {
-            query = query.gte('created_at', rangeStart).lte('created_at', rangeEnd)
+            // Fichas aprovadas/emitidas entram pela data de aprovação (finalizada_em),
+            // não pela data de criação — a ficha pode ter sido criada num mês e só
+            // aprovada/emitida no seguinte. Busca pelo OR das duas datas (superset) e
+            // o filtro exato por status fica a cargo de isFichaWithinReportPeriod, já
+            // que qual campo vale como âncora depende do status de cada ficha.
+            const end = `${rangeEnd}T23:59:59.999`
+            query = query.or(
+              `and(created_at.gte.${rangeStart},created_at.lte.${end}),and(finalizada_em.gte.${rangeStart},finalizada_em.lte.${end})`
+            )
           }
           if (imobiliariaAliases?.length) {
             query = query.in('imobiliaria', imobiliariaAliases)
@@ -1328,7 +1357,10 @@ export default function Relatorio() {
 
         setEmittedPolicies(emittedRangeRows || [])
 
-        const baseRows = createdRows || []
+        // A query buscou um superset (OR de created_at/finalizada_em); aqui aplica-se
+        // o corte exato por período, usando a data de aprovação como âncora para
+        // aprovado/emitido e created_at para os demais status.
+        const baseRows = (createdRows || []).filter(item => isFichaWithinReportPeriod(item, rangeStart, rangeEnd))
         const baseIds = new Set(baseRows.map(item => item.id))
         const emittedIds = (emittedRangeRows || []).map(item => item.ficha_id).filter(Boolean)
         const extraIds = [...new Set(emittedIds.filter(id => !baseIds.has(id)))]

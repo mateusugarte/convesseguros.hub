@@ -1,29 +1,56 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Building2, Check, Pencil, Plus, Save, ShieldCheck, Upload, X } from 'lucide-react'
+
 import { supabase } from '../lib/supabase'
 import { useToast } from '../contexts/ToastContext'
-import { ArrowLeft, Pencil, X, Check, Plus, Upload, Building2, ShieldCheck, Save } from 'lucide-react'
 import { PageHeader, MetricCard, DataCard } from '../components/ui'
 import { fetchCodigos, upsertCodigo } from '../lib/imobiliariasCodigos'
 import { fetchSeguradorasPorProduto } from '../lib/seguradoras'
 import { getEntityImageUrl, replaceEntityImage } from '../lib/entityMedia'
 import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
 import SeguradoraBadge from '../components/SeguradoraBadge'
+import {
+  fetchImobiliariaById,
+  formatImobiliariaFieldLabel,
+  IMOBILIARIA_COMMERCIAL_FIELDS,
+  IMOBILIARIA_CONTACT_FIELDS,
+  isMissingImobiliariaColumnError,
+} from '../lib/imobiliariasSchema'
 
-function CampoEditavel({ label, value, onSave }) {
+function EditableField({ label, value, onSave, disabled = false, disabledMessage = 'Campo indisponível no banco' }) {
   const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(value || '')
+  const [draft, setDraft] = useState(value ?? '')
   const [saving, setSaving] = useState(false)
 
+  useEffect(() => {
+    if (!editing) setDraft(value ?? '')
+  }, [editing, value])
+
   async function save() {
-    if (draft === (value || '')) {
+    const normalized = String(draft ?? '').trim()
+    if (normalized === String(value ?? '')) {
       setEditing(false)
       return
     }
     setSaving(true)
-    await onSave(draft.trim())
+    await onSave(normalized)
     setSaving(false)
     setEditing(false)
+  }
+
+  if (disabled) {
+    return (
+      <div>
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-dark-muted">{label}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-dark-text">{value !== null && value !== undefined && value !== '' ? value : '—'}</span>
+          <span className="rounded-full border border-status-warning/30 bg-status-warning/10 px-2 py-0.5 text-[10px] font-semibold text-status-warning">
+            {disabledMessage}
+          </span>
+        </div>
+      </div>
+    )
   }
 
   if (editing) {
@@ -38,16 +65,16 @@ function CampoEditavel({ label, value, onSave }) {
               if (e.key === 'Enter') save()
               if (e.key === 'Escape') {
                 setEditing(false)
-                setDraft(value || '')
+                setDraft(value ?? '')
               }
             }}
             autoFocus
             className="input flex-1 py-1.5 text-sm"
           />
-          <button onClick={save} disabled={saving} className="rounded-lg bg-status-success/20 p-1.5 text-status-success hover:bg-status-success/30">
+          <button type="button" onClick={save} disabled={saving} className="rounded-lg bg-status-success/20 p-1.5 text-status-success hover:bg-status-success/30">
             <Check className="h-3.5 w-3.5" />
           </button>
-          <button onClick={() => { setEditing(false); setDraft(value || '') }} className="rounded-lg border border-dark-border p-1.5 text-dark-muted hover:text-dark-text">
+          <button type="button" onClick={() => { setEditing(false); setDraft(value ?? '') }} className="rounded-lg border border-dark-border p-1.5 text-dark-muted hover:text-dark-text">
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -58,25 +85,10 @@ function CampoEditavel({ label, value, onSave }) {
   return (
     <div>
       <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-dark-muted">{label}</p>
-      <p
-        onClick={() => { setDraft(value || ''); setEditing(true) }}
-        className="group flex cursor-pointer items-center gap-1.5 text-sm text-dark-text transition-colors hover:text-status-info"
-      >
-        <span>{value || <span className="italic text-dark-muted/40">—</span>}</span>
+      <p onClick={() => { setDraft(value ?? ''); setEditing(true) }} className="group flex cursor-pointer items-center gap-1.5 text-sm text-dark-text transition-colors hover:text-status-info">
+        <span>{value !== null && value !== undefined && value !== '' ? value : <span className="italic text-dark-muted/40">—</span>}</span>
         <Pencil className="h-3 w-3 flex-shrink-0 opacity-0 group-hover:opacity-40" />
       </p>
-    </div>
-  )
-}
-
-function CampoEmBreve({ label }) {
-  return (
-    <div className="relative opacity-50">
-      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-dark-muted">{label}</p>
-      <div className="h-9 rounded-lg border border-dark-border bg-dark-surface2" />
-      <span className="absolute right-0 top-0 rounded-full border border-brand-gold/25 bg-brand-gold/15 px-2 py-0.5 text-[9px] font-bold text-brand-gold">
-        Em breve
-      </span>
     </div>
   )
 }
@@ -126,31 +138,15 @@ function SeguradoraCadastroCard({ seguradora, ativa, draft, saving, toggling, on
       <div className={`mt-4 space-y-3 transition-opacity ${ativa ? 'opacity-100' : 'pointer-events-none opacity-45'}`}>
         <div>
           <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Código da imobiliária</label>
-          <input
-            value={draft.codigo}
-            onChange={e => onChange('codigo', e.target.value)}
-            placeholder="Ex: 15392"
-            className="input text-sm"
-          />
+          <input value={draft.codigo} onChange={e => onChange('codigo', e.target.value)} placeholder="Ex: 15392" className="input text-sm" />
         </div>
         <div>
           <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Observações</label>
-          <textarea
-            value={draft.observacoes}
-            onChange={e => onChange('observacoes', e.target.value)}
-            rows={3}
-            placeholder="Detalhes do cadastro, contato, restrições ou observações comerciais."
-            className="input min-h-[88px] resize-y text-sm"
-          />
+          <textarea value={draft.observacoes} onChange={e => onChange('observacoes', e.target.value)} rows={3} placeholder="Detalhes do cadastro, contato, restrições ou observações comerciais." className="input min-h-[88px] resize-y text-sm" />
         </div>
         <div className="flex items-center justify-between gap-3">
           <p className="text-[11px] text-dark-muted">Os dados ficam vinculados a esta seguradora para a imobiliária.</p>
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={!ativa || saving}
-            className="btn-primary inline-flex items-center gap-2 px-3 py-2 text-sm disabled:opacity-50"
-          >
+          <button type="button" onClick={onSave} disabled={!ativa || saving} className="btn-primary inline-flex items-center gap-2 px-3 py-2 text-sm disabled:opacity-50">
             <Save className="h-4 w-4" />
             {saving ? 'Salvando...' : 'Salvar'}
           </button>
@@ -167,10 +163,12 @@ export default function ImobiliariaDetalhe() {
 
   const [imob, setImob] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [novoAlias, setNovoAlias] = useState('')
   const [addingAlias, setAddingAlias] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imageLoadError, setImageLoadError] = useState(false)
+  const [missingFields, setMissingFields] = useState(new Set())
 
   const [codigos, setCodigos] = useState([])
   const [seguradorasFianca, setSeguradorasFianca] = useState([])
@@ -182,12 +180,17 @@ export default function ImobiliariaDetalhe() {
 
   const carregar = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase
-      .from('imobiliarias')
-      .select('id, nome_canonico, ativa, created_at, imagem_url, imagem_path, recebe_comissao, pct_comissao, objetivo_comercial, observacoes_comerciais, imobiliaria_aliases(id, alias)')
-      .eq('id', id)
-      .single()
-    setImob(data)
+    setLoadError('')
+    const { data, error, missingFields: missing } = await fetchImobiliariaById(id)
+    setMissingFields(missing)
+
+    if (error) {
+      setImob(null)
+      setLoadError(error.message || 'Falha ao carregar a imobiliária.')
+    } else {
+      setImob(data)
+    }
+
     setLoading(false)
   }, [id])
 
@@ -214,31 +217,47 @@ export default function ImobiliariaDetalhe() {
     }
   }, [id, toast])
 
-  useEffect(() => {
-    carregar()
-  }, [carregar])
-
-  useEffect(() => {
-    carregarCadastros()
-  }, [carregarCadastros])
+  useEffect(() => { carregar() }, [carregar])
+  useEffect(() => { carregarCadastros() }, [carregarCadastros])
 
   const codigoMap = useMemo(() => new Map(codigos.map(item => [item.seguradora_id, item])), [codigos])
+  const missingContactFields = IMOBILIARIA_CONTACT_FIELDS.filter(field => missingFields.has(field))
+  const missingCommercialFields = IMOBILIARIA_COMMERCIAL_FIELDS.filter(field => missingFields.has(field))
 
   async function updateField(field, value) {
+    if (missingFields.has(field)) {
+      toast({
+        type: 'error',
+        title: 'Campo indisponível',
+        message: `${formatImobiliariaFieldLabel(field)} ainda não existe no banco. Aplique a migration da tabela imobiliarias.`,
+      })
+      return
+    }
+
     const { error } = await supabase.from('imobiliarias').update({ [field]: value }).eq('id', id)
     if (error) {
-      toast({ type: 'error', title: 'Erro ao salvar' })
-    } else {
-      setImob(prev => ({ ...prev, [field]: value }))
-      toast({ type: 'success', title: 'Salvo' })
+      if (isMissingImobiliariaColumnError(error, field)) {
+        setMissingFields(prev => new Set([...prev, field]))
+        toast({
+          type: 'error',
+          title: 'Migration pendente',
+          message: `${formatImobiliariaFieldLabel(field)} ainda não existe no banco. Rode a migration correspondente no Supabase.`,
+        })
+        return
+      }
+      toast({ type: 'error', title: 'Erro ao salvar', message: error.message })
+      return
     }
+
+    setImob(prev => ({ ...prev, [field]: value }))
+    toast({ type: 'success', title: 'Salvo' })
   }
 
   async function adicionarAlias() {
-    const t = novoAlias.trim()
-    if (!t) return
+    const alias = novoAlias.trim()
+    if (!alias) return
     setAddingAlias(true)
-    const { error } = await supabase.from('imobiliaria_aliases').insert({ imobiliaria_id: id, alias: t })
+    const { error } = await supabase.from('imobiliaria_aliases').insert({ imobiliaria_id: id, alias })
     if (error) {
       toast({ type: 'error', title: 'Erro ao adicionar variação', message: error.message })
     } else {
@@ -250,7 +269,11 @@ export default function ImobiliariaDetalhe() {
   }
 
   async function excluirAlias(aliasId) {
-    await supabase.from('imobiliaria_aliases').delete().eq('id', aliasId)
+    const { error } = await supabase.from('imobiliaria_aliases').delete().eq('id', aliasId)
+    if (error) {
+      toast({ type: 'error', title: 'Erro ao remover variação', message: error.message })
+      return
+    }
     toast({ type: 'success', title: 'Variação removida' })
     carregar()
   }
@@ -274,11 +297,7 @@ export default function ImobiliariaDetalhe() {
       return
     }
 
-    const { error } = await supabase
-      .from('imobiliarias')
-      .update({ imagem_url: uploaded.url, imagem_path: uploaded.path })
-      .eq('id', id)
-
+    const { error } = await supabase.from('imobiliarias').update({ imagem_url: uploaded.url, imagem_path: uploaded.path }).eq('id', id)
     setUploadingImage(false)
 
     if (error) {
@@ -296,15 +315,9 @@ export default function ImobiliariaDetalhe() {
 
     let error
     if (ativa) {
-      ;({ error } = await supabase
-        .from('imobiliaria_seguradoras')
-        .delete()
-        .eq('imobiliaria_id', id)
-        .eq('seguradora_id', seguradoraId))
+      ;({ error } = await supabase.from('imobiliaria_seguradoras').delete().eq('imobiliaria_id', id).eq('seguradora_id', seguradoraId))
     } else {
-      ;({ error } = await supabase
-        .from('imobiliaria_seguradoras')
-        .insert({ imobiliaria_id: id, seguradora_id: seguradoraId }))
+      ;({ error } = await supabase.from('imobiliaria_seguradoras').insert({ imobiliaria_id: id, seguradora_id: seguradoraId }))
     }
 
     if (error) {
@@ -381,6 +394,19 @@ export default function ImobiliariaDetalhe() {
     )
   }
 
+  if (loadError) {
+    return (
+      <div className="py-20 text-center">
+        <p className="text-dark-muted">Erro ao carregar a imobiliária</p>
+        <p className="mx-auto mt-2 max-w-xl text-sm text-dark-muted/80">{loadError}</p>
+        <div className="mt-4 flex items-center justify-center gap-3">
+          <button onClick={carregar} className="btn-secondary">Tentar novamente</button>
+          <button onClick={() => navigate('/imobiliarias')} className="btn-secondary">Voltar</button>
+        </div>
+      </div>
+    )
+  }
+
   if (!imob) {
     return (
       <div className="py-20 text-center">
@@ -398,12 +424,9 @@ export default function ImobiliariaDetalhe() {
       <PageHeader
         eyebrow="Cadastro operacional"
         title={imob.nome_canonico}
-        description="Detalhe da imobiliária com edição inline, variações de nome e cadastro visual por seguradora de fiança."
+        description="Detalhe da imobiliária com edição inline, dados cadastrais e cadastro visual por seguradora de fiança."
         actions={
-          <button
-            onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/imobiliarias'))}
-            className="btn-secondary flex items-center gap-2"
-          >
+          <button onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/imobiliarias'))} className="btn-secondary flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
             Voltar
           </button>
@@ -423,13 +446,7 @@ export default function ImobiliariaDetalhe() {
               <div className="space-y-1">
                 <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-dark-border bg-dark-surface/70">
                   {getEntityImageUrl(imob.imagem_path, imob.imagem_url) ? (
-                    <img
-                      src={getEntityImageUrl(imob.imagem_path, imob.imagem_url)}
-                      alt={imob.nome_canonico}
-                      className="h-full w-full object-cover"
-                      onError={() => setImageLoadError(true)}
-                      onLoad={() => setImageLoadError(false)}
-                    />
+                    <img src={getEntityImageUrl(imob.imagem_path, imob.imagem_url)} alt={imob.nome_canonico} className="h-full w-full object-cover" onError={() => setImageLoadError(true)} onLoad={() => setImageLoadError(false)} />
                   ) : (
                     <Building2 className="h-10 w-10 text-dark-muted/40" />
                   )}
@@ -446,14 +463,11 @@ export default function ImobiliariaDetalhe() {
 
           <DataCard title="Dados do sistema" description="Campos principais e status da imobiliária.">
             <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
-              <CampoEditavel label="Nome no sistema" value={imob.nome_canonico} onSave={v => updateField('nome_canonico', v)} />
+              <EditableField label="Nome no sistema" value={imob.nome_canonico} onSave={v => updateField('nome_canonico', v)} />
               <div>
                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Status</p>
                 <label className="flex w-fit items-center gap-3">
-                  <div
-                    onClick={() => updateField('ativa', !imob.ativa)}
-                    className={`h-5 w-9 rounded-full transition-colors ${imob.ativa ? 'bg-status-success' : 'bg-dark-border'}`}
-                  >
+                  <div onClick={() => updateField('ativa', !imob.ativa)} className={`h-5 w-9 rounded-full transition-colors ${imob.ativa ? 'bg-status-success' : 'bg-dark-border'}`}>
                     <div className={`m-[3px] h-3.5 w-3.5 rounded-full bg-white transition-transform ${imob.ativa ? 'translate-x-4' : 'translate-x-0'}`} />
                   </div>
                   <span className="text-sm text-dark-text">{imob.ativa ? 'Ativa' : 'Inativa'}</span>
@@ -462,31 +476,39 @@ export default function ImobiliariaDetalhe() {
             </div>
           </DataCard>
 
+          <DataCard title="Dados cadastrais" description="Informações principais da imobiliária para operação, contato e conferência.">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+              <EditableField label="Responsável" value={imob.responsavel} onSave={v => updateField('responsavel', v)} disabled={missingFields.has('responsavel')} />
+              <EditableField label="Telefone" value={imob.telefone} onSave={v => updateField('telefone', v)} disabled={missingFields.has('telefone')} />
+              <EditableField label="E-mail" value={imob.email} onSave={v => updateField('email', v)} disabled={missingFields.has('email')} />
+              <EditableField label="CNPJ" value={imob.cnpj} onSave={v => updateField('cnpj', v)} disabled={missingFields.has('cnpj')} />
+              <EditableField label="CRECI" value={imob.creci} onSave={v => updateField('creci', v)} disabled={missingFields.has('creci')} />
+              <div className="sm:col-span-2">
+                <EditableField label="Endereço" value={imob.endereco} onSave={v => updateField('endereco', v)} disabled={missingFields.has('endereco')} />
+              </div>
+            </div>
+            {missingContactFields.length > 0 && (
+              <p className="mt-4 text-xs text-status-warning">
+                Campos dependentes de migration pendente: {missingContactFields.map(formatImobiliariaFieldLabel).join(', ')}.
+              </p>
+            )}
+          </DataCard>
+
           <DataCard title="Variações de nome" description="Aliases usados para consolidar registros e buscas.">
             <div className="mb-4 space-y-2">
               {aliases.length === 0 && <p className="text-xs italic text-dark-muted/50">Nenhuma variação cadastrada</p>}
               {aliases.map(a => (
                 <div key={a.id} className="flex items-center justify-between gap-3 border-b border-dark-border/50 py-1.5 last:border-0">
                   <span className="text-sm text-dark-text">{a.alias}</span>
-                  <button onClick={() => excluirAlias(a.id)} className="text-status-danger/60 transition-colors hover:text-status-danger">
+                  <button type="button" onClick={() => excluirAlias(a.id)} className="text-status-danger/60 transition-colors hover:text-status-danger">
                     <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
               ))}
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <input
-                value={novoAlias}
-                onChange={e => setNovoAlias(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && adicionarAlias()}
-                placeholder="Adicionar nova variação..."
-                className="input flex-1 text-sm"
-              />
-              <button
-                onClick={adicionarAlias}
-                disabled={!novoAlias.trim() || addingAlias}
-                className="btn-secondary gap-1 px-3 py-1.5 text-xs disabled:opacity-40"
-              >
+              <input value={novoAlias} onChange={e => setNovoAlias(e.target.value)} onKeyDown={e => e.key === 'Enter' && adicionarAlias()} placeholder="Adicionar nova variação..." className="input flex-1 text-sm" />
+              <button type="button" onClick={adicionarAlias} disabled={!novoAlias.trim() || addingAlias} className="btn-secondary gap-1 px-3 py-1.5 text-xs disabled:opacity-40">
                 <Plus className="h-3.5 w-3.5" /> Adicionar
               </button>
             </div>
@@ -529,44 +551,26 @@ export default function ImobiliariaDetalhe() {
             )}
           </DataCard>
 
-          <DataCard title="Dados de parceria" description="Bloco reservado para evolução futura da operação.">
-            <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
-              <CampoEmBreve label="Responsável" />
-              <CampoEmBreve label="Telefone" />
-              <CampoEmBreve label="E-mail" />
-              <CampoEmBreve label="Status da parceria" />
-              <CampoEmBreve label="Volume mensal" />
-              <CampoEmBreve label="Data de início" />
-              <div className="sm:col-span-2">
-                <CampoEmBreve label="Endereço" />
-              </div>
-            </div>
-          </DataCard>
-
           <DataCard title="Parceria comercial" description="Controle de comissão, objetivo e observações da imobiliária.">
             <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
               <div>
                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Recebe comissão</p>
                 <label className="flex w-fit items-center gap-3">
-                  <div
-                    onClick={() => updateField('recebe_comissao', !imob.recebe_comissao)}
-                    className={`h-5 w-9 rounded-full transition-colors ${imob.recebe_comissao ? 'bg-status-success' : 'bg-dark-border'}`}
-                  >
+                  <div onClick={() => updateField('recebe_comissao', !imob.recebe_comissao)} className={`h-5 w-9 rounded-full transition-colors ${imob.recebe_comissao ? 'bg-status-success' : 'bg-dark-border'}`}>
                     <div className={`m-[3px] h-3.5 w-3.5 rounded-full bg-white transition-transform ${imob.recebe_comissao ? 'translate-x-4' : 'translate-x-0'}`} />
                   </div>
                   <span className="text-sm text-dark-text">{imob.recebe_comissao ? 'Sim' : 'Não'}</span>
                 </label>
               </div>
-
-              <CampoEditavel
-                label="% Comissão"
-                value={imob.pct_comissao != null ? `${imob.pct_comissao}` : ''}
-                onSave={v => updateField('pct_comissao', v ? Number(v) : null)}
-              />
-
-              <CampoEditavel label="Objetivo comercial" value={imob.objetivo_comercial} onSave={v => updateField('objetivo_comercial', v)} />
-              <CampoEditavel label="Observações comerciais" value={imob.observacoes_comerciais} onSave={v => updateField('observacoes_comerciais', v)} />
+              <EditableField label="% Comissão" value={imob.pct_comissao != null ? `${imob.pct_comissao}` : ''} onSave={v => updateField('pct_comissao', v ? Number(v) : null)} disabled={missingFields.has('pct_comissao')} />
+              <EditableField label="Objetivo comercial" value={imob.objetivo_comercial} onSave={v => updateField('objetivo_comercial', v)} disabled={missingFields.has('objetivo_comercial')} />
+              <EditableField label="Observações comerciais" value={imob.observacoes_comerciais} onSave={v => updateField('observacoes_comerciais', v)} disabled={missingFields.has('observacoes_comerciais')} />
             </div>
+            {missingCommercialFields.length > 0 && (
+              <p className="mt-4 text-xs text-status-warning">
+                Campos comerciais pendentes no banco: {missingCommercialFields.map(formatImobiliariaFieldLabel).join(', ')}.
+              </p>
+            )}
           </DataCard>
         </div>
 
@@ -608,13 +612,7 @@ export default function ImobiliariaDetalhe() {
                     const cadastro = codigoMap.get(seg.id)
                     return (
                       <div key={seg.id} className="rounded-2xl border border-dark-border/70 bg-dark-surface/30 px-3 py-3">
-                        <SeguradoraBadge
-                          nome={seg.nome_canonico}
-                          logoUrl={seg.logo_url}
-                          logoPath={seg.logo_path}
-                          size="sm"
-                          resolveMeta={false}
-                        />
+                        <SeguradoraBadge nome={seg.nome_canonico} logoUrl={seg.logo_url} logoPath={seg.logo_path} size="sm" resolveMeta={false} />
                         <p className="mt-2 text-[11px] text-dark-muted">Código: <span className="font-mono text-dark-text">{cadastro?.codigo || '-'}</span></p>
                       </div>
                     )

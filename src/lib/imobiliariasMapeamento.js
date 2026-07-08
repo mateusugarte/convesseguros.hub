@@ -1,4 +1,4 @@
-﻿import { normalizeDisplayText } from './text.js'
+import { normalizeDisplayText } from './text.js'
 
 export function normalizeImobiliariaKey(value) {
   const text = normalizeDisplayText(String(value || ''))

@@ -1,4 +1,4 @@
-﻿import { supabase } from './supabase'
+import { supabase } from './supabase'
 
 export const IMOBILIARIA_CONTACT_FIELDS = [
   'email',
@@ -94,9 +94,16 @@ export function extractMissingImobiliariaColumn(error) {
   return null
 }
 
+// Cache em memória (dura a sessão da aba) das colunas opcionais ainda não
+// migradas no banco. Sem isso, toda visita a ImobiliariaDetalhe refaz a
+// descoberta coluna-a-coluna (1 round-trip sequencial por coluna ausente)
+// antes de conseguir carregar a página.
+let _knownMissingFields = null
+
 export async function fetchImobiliariaById(id) {
-  const remainingFields = [...IMOBILIARIA_OPTIONAL_FIELDS]
-  const missingFields = []
+  const knownMissing = _knownMissingFields || []
+  const remainingFields = IMOBILIARIA_OPTIONAL_FIELDS.filter(field => !knownMissing.includes(field))
+  const missingFields = [...knownMissing]
 
   while (true) {
     const { data, error } = await supabase
@@ -112,6 +119,8 @@ export async function fetchImobiliariaById(id) {
             ...data,
           }
         : null
+
+      _knownMissingFields = missingFields
 
       return {
         data: withDefaults,

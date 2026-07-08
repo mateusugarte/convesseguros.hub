@@ -1,5 +1,130 @@
 # CURRENT TASK
 
+**Revisão de entrega do Codex — commits `12de783`/`91ae20b` (Dashboard/Relatorio/
+ImobiliariaDetalhe), 2026-07-08, Claude:** revisão de performance/responsividade
++ encoding + lógica pedida pelo usuário ("deixe mais veloz, responsivo e suave").
+
+*Encoding (BOM/mojibake introduzidos pelo editor do Codex, mesmo padrão já
+documentado neste arquivo):* BOM removido de `App.jsx`, `imobiliariasSchema.js`,
+`imobiliariasMapeamento.js`, `Imobiliarias.jsx` e do arquivo renomeado
+`ImobiliariaDetalhe.jsx` (ver abaixo). Mojibake revertido em `App.jsx`
+("Ãrea Auto"/"Ãrea Comercial" → "Área Auto"/"Área Comercial", dupla-codificação
+UTF-8) e em `Dashboard.jsx` (perda real de acentuação — "imobili?ria" → "imobiliária",
+"per?odo" → "período", "Cat?logo" → "Catálogo" — mais um byte de controle
+invisível (0x1D) colado a caracteres de replacement (U+FFFD) que substituíam o
+travessão "—" de 11 placeholders de métrica, e "Últimos 3/6 meses" corrompido
+para "?altimos"). Todas as correções via inferência de contexto (palavras comuns,
+inequívocas) + validadas depois com `npm test`/`npm run build`.
+
+*Dead code:* `ImobiliariaDetalheFixed.jsx` (630 linhas, entregue pelo Codex como
+arquivo novo em vez de editar `ImobiliariaDetalhe.jsx` no lugar) tinha substituído
+silenciosamente o arquivo antigo no roteamento (`App.jsx` importava só o novo),
+deixando `ImobiliariaDetalhe.jsx` original órfão (0 imports). Consolidado:
+`ImobiliariaDetalhe.jsx` antigo removido, `ImobiliariaDetalheFixed.jsx` renomeado
+para `ImobiliariaDetalhe.jsx` (função renomeada de volta para `ImobiliariaDetalhe`),
+`App.jsx` e `CONTEXT.md` da página atualizados.
+
+*Performance/responsividade (o pedido explícito do usuário):*
+1. `imobiliariasSchema.js`: `fetchImobiliariaById` descobre colunas opcionais
+   ausentes no banco tentando a query e removendo uma coluna por vez a cada erro
+   — sequencial, sem cache. Como os 4 campos comerciais (`recebe_comissao`,
+   `pct_comissao`, `objetivo_comercial`, `observacoes_comerciais`) não têm
+   nenhuma migration criada ainda, toda visita a `/imobiliarias/:id` disparava
+   até ~4-10 round-trips sequenciais ao Supabase só para descobrir isso de novo,
+   antes de conseguir carregar a página — a causa mais provável de lentidão
+   percebida nessa tela. Corrigido com cache em memória (mesmo padrão já usado
+   em `useImobiliaria.js`): a descoberta roda uma vez por sessão da aba, visitas
+   seguintes pulam direto para a query já sem os campos sabidamente ausentes.
+2. `Dashboard.jsx`: a busca por nome de ficha no painel de detalhe da
+   imobiliária (`detailSearch`) disparava uma query ao Supabase a cada tecla
+   digitada, sem debounce — te clado rápido gerava uma rajada de requests e
+   travava a digitação. Corrigido com debounce de 400ms (mesmo padrão já usado
+   em `Fichas.jsx`): o campo de busca continua respondendo à digitação
+   instantaneamente (estado local), só a query é adiada.
+
+*Regressão de lógica de negócio revertida (edição concorrente do Codex durante
+esta revisão):* enquanto esta revisão estava em andamento, `Relatorio.jsx` foi
+alterado no disco (fora deste agente) trocando `EXCLUDED_REPORT_STATUS =
+'recusado'` por uma allowlist `INCLUDED_REPORT_STATUSES` que reintroduzia
+exatamente o bug do "Bugfix #2" corrigido hoje mais cedo (fichas `pendente`,
+`em_cotacao`, `cpf_invalido` voltariam a sumir do relatório). A ideia nova desse
+commit concorrente — usar `finalizada_em` como âncora de período para fichas
+aprovadas/emitidas em vez de `created_at` (`getFichaPeriodAnchorDate`,
+`isFichaWithinReportPeriod`) — foi mantida por ser uma melhoria legítima e
+independente; só a redução da lista de status visível foi revertida de volta
+para a exclusão única de `recusado`, com os 10 blocos de `COLUNAS` restaurados.
+Usuário confirmou explicitamente para integrar (não descartar) a mudança
+concorrente.
+
+`npm test` (64/64), `npm run build` e `npm run check:page-contexts` (mesmas
+pendências pré-existentes de `src/pages/auto/*` e `GestaoComercial.jsx`, não é
+regressão) verdes após todas as correções. Smoke test manual no navegador
+**não foi feito** (sem `.env`/credenciais Supabase neste ambiente) — recomenda-se
+validar antes de considerar encerrado: abrir `/imobiliarias/:id` e conferir que
+carrega rápido mesmo com os campos comerciais ausentes; digitar no campo de
+busca do card "Fichas por imobiliária" no Dashboard e conferir que não trava;
+abrir `/relatorio/:id` de um mês passado e conferir que fichas `pendente`/
+`em_cotacao`/`cpf_invalido` (se houver no período) ainda aparecem nos blocos
+correspondentes.
+
+---
+
+**AVISO — edição concorrente detectada (2026-07-08):** durante o bugfix #3
+abaixo, um `git commit` externo a este agente aconteceu no meio da tarefa
+(`91ae20b`) e reverteu uma edição já aplicada em `src/pages/Relatorio.jsx`
+(remoção das colunas pendente/em_cotacao/cpf_invalido) de volta pro estado
+antigo, sem eu ter feito `git checkout`/`reset`. Reaplicada e confirmada.
+Também foi observado `App.jsx` quebrado (import de `ImobiliariaDetalheFixed.jsx`,
+arquivo deletado no working tree sem remover o import) — não relacionado a
+este trabalho, não corrigido aqui (fora de escopo, provável refactor em
+andamento por outro processo/pessoa no mesmo repo). Se houver outra sessão de
+IA ou pessoa editando este repo ao mesmo tempo, recomenda-se coordenar para
+evitar perda de trabalho.
+
+**Bugfix #3 — fichas sem seguradora ainda não apareciam; ajuste de escopo do
+relatório a pedido do usuário (2026-07-08, Claude):** usuário confirmou que as
+2 fichas (bugfix #1/#2) estavam sem `seguradora` preenchida e mesmo assim não
+apareciam, e pediu duas mudanças explícitas:
+1. Fichas aprovadas/emitidas devem entrar no relatório pela **data de
+   aprovação** (`finalizada_em`, fallback `created_at`), não pela data de
+   criação da ficha — uma ficha pode ter sido criada num mês e só aprovada no
+   seguinte, e o relatório do mês de aprovação é o que importa. Implementado em
+   `getFichaPeriodAnchorDate`/`isFichaWithinReportPeriod` (`Relatorio.jsx`): a
+   query busca um superset via `.or()` (created_at OU finalizada_em no
+   período) e o corte exato por período é feito em JS usando o campo correto
+   por status. Só afeta `aprovado`/`emitido` (inclui `enviado_cobranca`/
+   `recuperados`, que são variações desses dois); os demais status continuam
+   ancorados em `created_at`, sem mudança.
+2. Remover as colunas/blocos "Pendentes", "Em Cotação" e "CPF Inválido" da
+   tela — mantidas apenas: Em Análise, Aprovadas, Emitidas, Enviado Cobrança,
+   Recuperados, Expiradas, Desistências (7 blocos). A query agora usa
+   `INCLUDED_REPORT_STATUSES = ['aprovado', 'emitido', 'cancelado',
+   'em_analise', 'expirada']` (allowlist) em vez do `.neq('recusado')` do
+   bugfix #2 — evita buscar fichas `pendente`/`em_cotacao`/`cpf_invalido` que
+   não têm mais bloco pra aparecer (ficariam "contadas mas invisíveis").
+   `getFichaOperationalState` (`fichaOperational.js`) mantém os branches
+   `pendente`/`em_cotacao`/`cpf_invalido` intactos — ainda usados por
+   `FichaStatusBadge.jsx` fora do relatório.
+
+`npm run build` **não pôde ser validado nesta rodada** — quebrado por causa
+externa (ver aviso de edição concorrente acima), não relacionada a
+`Relatorio.jsx`. Sintaxe de `Relatorio.jsx` verificada isoladamente com
+esbuild. `npm test` 64/64 verde (sem relação direta com esta mudança, que é
+só em `Relatorio.jsx`, arquivo sem suíte de testes própria — a lógica pura
+nova, `getFichaPeriodAnchorDate`/`isFichaWithinReportPeriod`, não foi
+extraída para `src/lib/` nesta rodada por causa da instabilidade de edição
+concorrente; considerar extrair depois, seguindo o padrão de
+`getReportEffectiveNow`).
+
+**Smoke test pendente:** confirmar no `npm run build` (depois que o `App.jsx`
+for corrigido por quem estiver mexendo nele) que compila; abrir
+`/relatorio/:id` da imobiliária com as 2 fichas sem seguradora e confirmar que
+aparecem no mês de aprovação (não no mês de criação, se forem diferentes);
+confirmar que os 3 blocos removidos (Pendentes/Em Cotação/CPF Inválido) não
+aparecem mais.
+
+---
+
 **Bugfix #2 — relatório (`/relatorio`) só buscava fichas `aprovado`/`emitido`
 (2026-07-08, Claude):** após o bugfix #1 (abaixo) o usuário reportou que ainda
 faltavam fichas e pediu garantia explícita: **todo status deve aparecer no

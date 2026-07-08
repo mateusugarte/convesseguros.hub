@@ -34,8 +34,8 @@ const LS_KEY = 'dashboard-periodo'
 const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 const APPROVAL_PERIODS = [
   { key: 'mes_atual', label: 'Mês atual' },
-  { key: 'ultimos_3', label: '�altimos 3 meses' },
-  { key: 'ultimos_6', label: '�altimos 6 meses' },
+  { key: 'ultimos_3', label: 'Últimos 3 meses' },
+  { key: 'ultimos_6', label: 'Últimos 6 meses' },
   { key: 'ano_atual', label: 'Ano atual' },
 ]
 
@@ -221,6 +221,13 @@ export default function Dashboard() {
   const [detailDateFrom, setDetailDateFrom] = useState(initialDateFrom)
   const [detailDateTo, setDetailDateTo] = useState(initialDateTo)
   const [detailSearch, setDetailSearch] = useState('')
+  const [debouncedDetailSearch, setDebouncedDetailSearch] = useState('')
+
+  // Debounce: dispara query 400ms após o usuário parar de digitar
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedDetailSearch(detailSearch), 400)
+    return () => clearTimeout(t)
+  }, [detailSearch])
   const [filterYear, setFilterYear] = useState(now.getFullYear())
   const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1)
   const [approvalPeriod, setApprovalPeriod] = useState('mes_atual')
@@ -305,7 +312,7 @@ export default function Dashboard() {
   })
 
   const detailQuery = useQuery({
-    queryKey: ['dashboard-fichas-imobiliaria', selectedImobiliaria, detailDateFrom, detailDateTo, detailSearch],
+    queryKey: ['dashboard-fichas-imobiliaria', selectedImobiliaria, detailDateFrom, detailDateTo, debouncedDetailSearch],
     enabled: Boolean(selectedImobiliaria) && !loadingImobiliarias,
     queryFn: async () => {
       const aliases = await getAliases(selectedImobiliaria)
@@ -313,7 +320,7 @@ export default function Dashboard() {
         imobiliarias: aliases?.length ? aliases : [selectedImobiliaria],
         dateFrom: detailDateFrom,
         dateTo: detailDateTo,
-        search: detailSearch,
+        search: debouncedDetailSearch,
       })
     },
   })
@@ -375,12 +382,12 @@ export default function Dashboard() {
     const map = new Map()
 
     grupos.forEach(grupo => {
-      const nome = grupo?.nome_canonico || 'Sem imobili?ria'
+      const nome = grupo?.nome_canonico || 'Sem imobiliária'
       map.set(nome, { nome, total: 0, emAberto: 0, aprovadas: 0, emitidas: 0, ativa: grupo?.ativa !== false, imagemUrl: grupo?.imagem_url || null, imagemPath: grupo?.imagem_path || null })
     })
 
     fichasResumo.forEach(item => {
-      const nome = resolverNome(item.imobiliaria) || item.imobiliaria || 'Sem imobili?ria'
+      const nome = resolverNome(item.imobiliaria) || item.imobiliaria || 'Sem imobiliária'
       const meta = resolverImobiliariaInfo(item.imobiliaria)
       const current = map.get(nome) || { nome, total: 0, emAberto: 0, aprovadas: 0, emitidas: 0, ativa: meta?.ativa ?? null, imagemUrl: meta?.imagem_url || null, imagemPath: meta?.imagem_path || null }
       current.total += 1
@@ -482,9 +489,9 @@ export default function Dashboard() {
               </Button>
             </div>
             <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
-              <MetricCard label="Hoje" value={kpis?.hoje ?? '�'} hint="entrada do dia" icon={<Zap className="w-5 h-5" />} />
-              <MetricCard label="Semana" value={kpis?.semana ?? '�'} hint="janela recente" tone="secondary" icon={<TrendingUp className="w-5 h-5" />} />
-              <MetricCard label="Mês" value={kpis?.mes ?? '�'} hint="volume mensal" tone="warning" icon={<BarChart3 className="w-5 h-5" />} />
+              <MetricCard label="Hoje" value={kpis?.hoje ?? '—'} hint="entrada do dia" icon={<Zap className="w-5 h-5" />} />
+              <MetricCard label="Semana" value={kpis?.semana ?? '—'} hint="janela recente" tone="secondary" icon={<TrendingUp className="w-5 h-5" />} />
+              <MetricCard label="Mês" value={kpis?.mes ?? '—'} hint="volume mensal" tone="warning" icon={<BarChart3 className="w-5 h-5" />} />
               <MetricCard label="Emitidas" value={emitted} hint="status emitido" tone="success" icon={<CheckCircle2 className="w-5 h-5" />} />
             </div>
           </div>
@@ -559,22 +566,22 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
               <p className="metric-label">Sem resposta</p>
-              <p className="stat-number text-dark-text mt-3">{metrics?.semResposta ?? '�'}</p>
+              <p className="stat-number text-dark-text mt-3">{metrics?.semResposta ?? '—'}</p>
               <p className="metric-sub mt-2">acima de 48h.</p>
             </div>
             <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
               <p className="metric-label">Tempo médio</p>
-              <p className="stat-number text-dark-text mt-3">{metrics?.tempoMedio != null ? `${metrics.tempoMedio}h` : '�'}</p>
+              <p className="stat-number text-dark-text mt-3">{metrics?.tempoMedio != null ? `${metrics.tempoMedio}h` : '—'}</p>
               <p className="metric-sub mt-2">entre assumir e finalizar.</p>
             </div>
             <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
               <p className="metric-label">Aprovação</p>
-              <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaAprovacao}%` : '�'}</p>
+              <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaAprovacao}%` : '—'}</p>
               <p className="metric-sub mt-2">conversão das finalizadas.</p>
             </div>
             <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
               <p className="metric-label">Recusa</p>
-              <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaRecusa}%` : '�'}</p>
+              <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaRecusa}%` : '—'}</p>
               <p className="metric-sub mt-2">qualidade da entrada.</p>
             </div>
           </div>
@@ -717,8 +724,8 @@ export default function Dashboard() {
 
         <DataCard
           className="xl:col-span-12 overflow-hidden border-brand-accent/15 shadow-[0_24px_60px_rgba(15,23,42,0.10)]"
-          title="Fichas por imobili?ria"
-          subtitle="Cat?logo completo das imobili?rias cadastradas com acesso direto ?s fichas por per?odo e por nome."
+          title="Fichas por imobiliária"
+          subtitle="Catálogo completo das imobiliárias cadastradas com acesso direto às fichas por período e por nome."
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <span className="ops-kicker">{groupedDashboardImobiliarias.length} cadastradas</span>
@@ -727,7 +734,7 @@ export default function Dashboard() {
           }
         >
           {groupedDashboardImobiliarias.length === 0 ? (
-            <EmptyState title="Sem imobili?rias cadastradas" description="Nenhuma imobili?ria ativa foi encontrada no cat?logo." icon={<Crown className="w-6 h-6" />} />
+            <EmptyState title="Sem imobiliárias cadastradas" description="Nenhuma imobiliária ativa foi encontrada no catálogo." icon={<Crown className="w-6 h-6" />} />
           ) : (
             <div className="grid gap-6 xl:grid-cols-[1.2fr,0.8fr]">
               <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
@@ -763,7 +770,7 @@ export default function Dashboard() {
                         <div className="rounded-2xl border border-white/30 bg-white/55 px-3 py-2 dark:border-white/5 dark:bg-white/5"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Emitidas</p><p className="mt-1 text-sm font-semibold text-dark-text">{item.emitidas}</p></div>
                       </div>
                       <div className="mt-4 flex items-center justify-between gap-3">
-                        <p className="text-xs text-dark-muted">{hasMovement ? 'Clique para abrir as fichas filtradas desta imobili?ria.' : 'Cat?logo ativo sem fichas no per?odo selecionado.'}</p>
+                        <p className="text-xs text-dark-muted">{hasMovement ? 'Clique para abrir as fichas filtradas desta imobiliária.' : 'Catálogo ativo sem fichas no período selecionado.'}</p>
                         <ArrowRight className={`h-4 w-4 transition-transform ${active ? 'translate-x-0.5 text-brand-primary' : 'text-dark-muted group-hover:translate-x-0.5'}`} />
                       </div>
                     </button>
@@ -795,9 +802,9 @@ export default function Dashboard() {
                     </div>
                     <div className="relative z-[1] mt-5 space-y-2">
                       {detailQuery.isLoading ? (
-                        <div className="rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-4 py-6 text-sm text-dark-muted">Carregando fichas da imobili?ria...</div>
+                        <div className="rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-4 py-6 text-sm text-dark-muted">Carregando fichas da imobiliária...</div>
                       ) : detailRows.length === 0 ? (
-                        <EmptyState title="Nenhuma ficha encontrada" description="Ajuste o per?odo ou a pesquisa por nome para localizar outras fichas desta imobili?ria." icon={<Activity className="w-6 h-6" />} />
+                        <EmptyState title="Nenhuma ficha encontrada" description="Ajuste o período ou a pesquisa por nome para localizar outras fichas desta imobiliária." icon={<Activity className="w-6 h-6" />} />
                       ) : (
                         detailRows.map(item => {
                           const statusMeta = STATUS_LABELS[item.status] ?? { label: item.status }
@@ -821,13 +828,13 @@ export default function Dashboard() {
                     </div>
                   </>
                 ) : (
-                  <EmptyState title="Selecione uma imobili?ria" description="Escolha um card para listar as fichas vinculadas." icon={<Crown className="w-6 h-6" />} />
+                  <EmptyState title="Selecione uma imobiliária" description="Escolha um card para listar as fichas vinculadas." icon={<Crown className="w-6 h-6" />} />
                 )}
               </div>
             </div>
           )}
         </DataCard>
-        <DataCard className="xl:col-span-7" title="Atividade recente" subtitle="�altimas movimentações registradas no fluxo operacional." actions={(
+        <DataCard className="xl:col-span-7" title="Atividade recente" subtitle="Últimas movimentações registradas no fluxo operacional." actions={(
           <button type="button" onClick={() => navigate('/fichas')} className="inline-flex items-center gap-1 text-[11px] font-semibold text-status-info hover:underline">
             Ver todas <ExternalLink className="w-3 h-3" />
           </button>
@@ -953,7 +960,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="metric-label">Taxa de aprovação</p>
-                <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaAprovacao}%` : '�'}</p>
+                <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaAprovacao}%` : '—'}</p>
               </div>
               <Target className="w-5 h-5 text-status-success" />
             </div>
@@ -963,7 +970,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="metric-label">Taxa de recusa</p>
-                <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaRecusa}%` : '�'}</p>
+                <p className="stat-number text-dark-text mt-3">{metrics ? `${metrics.taxaRecusa}%` : '—'}</p>
               </div>
               <CircleAlert className="w-5 h-5 text-status-danger" />
             </div>
@@ -973,7 +980,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="metric-label">Tempo médio</p>
-                <p className="stat-number text-dark-text mt-3">{metrics?.tempoMedio != null ? `${metrics.tempoMedio}h` : '�'}</p>
+                <p className="stat-number text-dark-text mt-3">{metrics?.tempoMedio != null ? `${metrics.tempoMedio}h` : '—'}</p>
               </div>
               <Clock3 className="w-5 h-5 text-status-info" />
             </div>
@@ -983,7 +990,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="metric-label">Sem resposta</p>
-                <p className="stat-number text-dark-text mt-3">{metrics?.semResposta ?? '�'}</p>
+                <p className="stat-number text-dark-text mt-3">{metrics?.semResposta ?? '—'}</p>
               </div>
               <ArrowRight className="w-5 h-5 text-status-warning" />
             </div>

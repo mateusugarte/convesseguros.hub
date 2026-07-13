@@ -316,7 +316,6 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, isNew
 function DroppableColumn({
   column, fichas, userId, onDetalhe, onAssumir, onFinalizar,
   collapsed, onToggleCollapse, newIds, colIndex, resolverNome, resolveImobiliariaInfo,
-  sortOrder, onToggleSortOrder, sortingFeedback,
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: column.id })
   const bodyTopPadding = LOWERED_CARD_COLUMNS.has(column.id) ? 38 : 16
@@ -391,9 +390,6 @@ function DroppableColumn({
                 {column.label}
               </span>
             </div>
-            <p className="mt-1 text-[10px] text-dark-muted">
-              {sortOrder === 'recentes' ? 'Mais novas primeiro' : 'Mais antigas primeiro'}
-            </p>
           </div>
           <span
             className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0"
@@ -402,21 +398,7 @@ function DroppableColumn({
             {fichas.length}
           </span>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={onToggleSortOrder}
-            title={`Ordem atual: ${sortOrder === 'recentes' ? 'mais recentes' : 'mais antigas'}`}
-            aria-label={`Alternar ordem entre mais recentes e mais antigas. Atualmente: ${sortOrder === 'recentes' ? 'mais recentes' : 'mais antigas'}`}
-            className={`kanban-col-sort kanban-sort-toggle flex items-center gap-2 px-2 py-1 rounded-full border text-[10px] font-semibold ${sortingFeedback ? 'ring-2 ring-brand-accent/15 shadow-[0_10px_22px_rgba(245,88,42,0.08)]' : ''}`}
-            style={{ color: column.color }}
-          >
-            <span className="kanban-sort-label">Ordem</span>
-            <span className="kanban-sort-track">
-              <span className={`kanban-sort-option ${sortOrder === 'recentes' ? 'is-active' : ''}`}>Recentes</span>
-              <span className={`kanban-sort-option ${sortOrder === 'antigas' ? 'is-active' : ''}`}>Antigas</span>
-              <span className={`kanban-sort-thumb ${sortOrder === 'antigas' ? 'is-alt' : ''}`} aria-hidden="true" />
-            </span>
-          </button>
+        <div className="flex items-center justify-end">
           <button
             onClick={onToggleCollapse}
             title="Colapsar coluna"
@@ -1024,6 +1006,19 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
             <span className="inline-flex items-center gap-1 rounded-full border border-dark-border bg-dark-surface/75 px-3 py-1 font-medium">
               {fichas.length} ficha{fichas.length !== 1 ? 's' : ''}
             </span>
+            <button
+              onClick={handleToggleSortOrderFast}
+              title={`Ordem atual: ${sortOrder === 'recentes' ? 'mais recentes' : 'mais antigas'}`}
+              aria-label={`Alternar ordem de todas as colunas. Atualmente: ${sortOrder === 'recentes' ? 'mais recentes' : 'mais antigas'}`}
+              className={`kanban-col-sort kanban-sort-toggle flex items-center gap-2 px-2 py-1 rounded-full border text-[10px] font-semibold ${sortingFeedback ? 'ring-2 ring-brand-accent/15 shadow-[0_10px_22px_rgba(245,88,42,0.08)]' : ''}`}
+            >
+              <span className="kanban-sort-label">Ordem</span>
+              <span className="kanban-sort-track">
+                <span className={`kanban-sort-option ${sortOrder === 'recentes' ? 'is-active' : ''}`}>Recentes</span>
+                <span className={`kanban-sort-option ${sortOrder === 'antigas' ? 'is-active' : ''}`}>Antigas</span>
+                <span className={`kanban-sort-thumb ${sortOrder === 'antigas' ? 'is-alt' : ''}`} aria-hidden="true" />
+              </span>
+            </button>
             <button onClick={load} className="flex items-center gap-1 rounded-full border border-dark-border bg-dark-surface/70 px-3 py-1.5 hover:text-dark-text transition-colors">
               <RefreshCw className="w-3.5 h-3.5" /> Atualizar
             </button>
@@ -1036,9 +1031,24 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
           <span className="inline-flex items-center gap-1 rounded-full border border-dark-border bg-dark-surface/75 px-3 py-1 font-medium">
             {fichas.length} ficha{fichas.length !== 1 ? 's' : ''} neste período
           </span>
-          <button onClick={load} className="flex items-center gap-1 rounded-full border border-dark-border bg-dark-surface/70 px-3 py-1.5 hover:text-dark-text transition-colors">
-            <RefreshCw className="w-3.5 h-3.5" /> Atualizar
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleToggleSortOrderFast}
+              title={`Ordem atual: ${sortOrder === 'recentes' ? 'mais recentes' : 'mais antigas'}`}
+              aria-label={`Alternar ordem de todas as colunas. Atualmente: ${sortOrder === 'recentes' ? 'mais recentes' : 'mais antigas'}`}
+              className={`kanban-col-sort kanban-sort-toggle flex items-center gap-2 px-2 py-1 rounded-full border text-[10px] font-semibold ${sortingFeedback ? 'ring-2 ring-brand-accent/15 shadow-[0_10px_22px_rgba(245,88,42,0.08)]' : ''}`}
+            >
+              <span className="kanban-sort-label">Ordem</span>
+              <span className="kanban-sort-track">
+                <span className={`kanban-sort-option ${sortOrder === 'recentes' ? 'is-active' : ''}`}>Recentes</span>
+                <span className={`kanban-sort-option ${sortOrder === 'antigas' ? 'is-active' : ''}`}>Antigas</span>
+                <span className={`kanban-sort-thumb ${sortOrder === 'antigas' ? 'is-alt' : ''}`} aria-hidden="true" />
+              </span>
+            </button>
+            <button onClick={load} className="flex items-center gap-1 rounded-full border border-dark-border bg-dark-surface/70 px-3 py-1.5 hover:text-dark-text transition-colors">
+              <RefreshCw className="w-3.5 h-3.5" /> Atualizar
+            </button>
+          </div>
         </div>
       )}
 
@@ -1090,9 +1100,6 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
                   newIds={newIds}
                   colIndex={i}
                   resolverNome={resolverNome}
-                  sortOrder={sortOrder}
-                  onToggleSortOrder={handleToggleSortOrderFast}
-                  sortingFeedback={sortingFeedback}
                   resolveImobiliariaInfo={resolveImobiliariaInfo}
                 />
               ))}
@@ -1153,26 +1160,6 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     </div>
   )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

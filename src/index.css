@@ -1259,7 +1259,16 @@ html.dark .kanban-col-body {
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  min-height: max(68vh, 640px);
+  /* clamp em vez de vh/px fixos: em notebook (100dvh ~768px) não força mais
+     altura do que cabe na tela; em monitor grande não cresce indefinidamente.
+     Mesmo padrão já validado em .apolices-gestao-page .kanban-viewport. */
+  min-height: clamp(26rem, calc(100dvh - 18rem), 46rem);
+}
+
+@media (max-width: 1100px) {
+  .kanban-viewport {
+    min-height: clamp(24rem, calc(100dvh - 16rem), 38rem);
+  }
 }
 
 .kanban-scroll {

@@ -4,6 +4,12 @@ export default {
   darkMode: 'class',
   theme: {
       extend: {
+      screens: {
+        // Monitores muito largos (ultrawide/4K) — usado só para conter a largura
+        // do conteúdo principal; não interfere nos breakpoints padrão (sm..2xl)
+        // que cobrem notebooks (1024-1440px) e desktops até 1920px.
+        uw: '2200px',
+      },
       colors: {
           brand: {
             primary:   'rgb(var(--brand-primary-rgb) / <alpha-value>)',

@@ -498,7 +498,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-12">
+      <div className="grid gap-4 lg:grid-cols-3 xl:grid-cols-12">
         {alerts.slice(0, 3).map(alert => (
           <div key={alert.id} className="xl:col-span-4">
             <AlertCard alert={alert} onNavigate={href => navigate(href)} />
@@ -506,8 +506,8 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-12">
-        <DataCard className="xl:col-span-8 overflow-hidden" title="Tendência de entrada" subtitle="Volume e ritmo dos últimos 30 dias." actions={<div className="ops-kicker">30 dias</div>}>
+      <div className="grid gap-6 lg:grid-cols-3 xl:grid-cols-12">
+        <DataCard className="lg:col-span-2 xl:col-span-8 overflow-hidden" title="Tendência de entrada" subtitle="Volume e ritmo dos últimos 30 dias." actions={<div className="ops-kicker">30 dias</div>}>
           {byDay.length === 0 ? (
             <EmptyState title="Sem dados para o período" description="Não houve movimentação suficiente para montar a série temporal." icon={<Activity className="w-6 h-6" />} />
           ) : (
@@ -562,7 +562,7 @@ export default function Dashboard() {
           )}
         </DataCard>
 
-        <DataCard className="xl:col-span-4" title="Radar operacional" subtitle="Sinais do período que pedem decisão rápida.">
+        <DataCard className="lg:col-span-1 xl:col-span-4" title="Radar operacional" subtitle="Sinais do período que pedem decisão rápida.">
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
               <p className="metric-label">Sem resposta</p>
@@ -695,8 +695,8 @@ export default function Dashboard() {
         )}
       </DataCard>
 
-      <div className="grid gap-6 xl:grid-cols-12">
-        <DataCard className="xl:col-span-5" title="Top imobiliárias" subtitle="Aprovações concentradas no período selecionado." actions={<div className="ops-kicker">Top 5</div>}>
+      <div className="grid gap-6 lg:grid-cols-3 xl:grid-cols-12">
+        <DataCard className="lg:col-span-1 xl:col-span-5" title="Top imobiliárias" subtitle="Aprovações concentradas no período selecionado." actions={<div className="ops-kicker">Top 5</div>}>
           {topImob.length === 0 ? (
             <EmptyState title="Sem aprovações ranqueadas" description="Ainda não houve aprovações suficientes para destacar imobiliárias nesta janela." icon={<Crown className="w-6 h-6" />} />
           ) : (
@@ -722,8 +722,62 @@ export default function Dashboard() {
           )}
         </DataCard>
 
+        {/* Atividade recente vem antes do card full-width (Fichas por imobiliária)
+            de propósito: junto com Top imobiliárias, os dois preenchem a linha toda
+            (5+7 em 12 colunas / 1+2 em 3), sem sobrar vão vazio antes do card full-width
+            quebrar para a linha seguinte — CSS Grid não reaproveita espaço de linhas
+            anteriores por padrão. */}
+        <DataCard className="lg:col-span-2 xl:col-span-7" title="Atividade recente" subtitle="Últimas movimentações registradas no fluxo operacional." actions={(
+          <button type="button" onClick={() => navigate('/fichas')} className="inline-flex items-center gap-1 text-[11px] font-semibold text-status-info hover:underline">
+            Ver todas <ExternalLink className="w-3 h-3" />
+          </button>
+        )}>
+          {activity.length === 0 ? (
+            <EmptyState title="Sem atividade recente" description="Assim que novas fichas entrarem ou mudarem de etapa, elas aparecerão aqui." icon={<Activity className="w-6 h-6" />} />
+          ) : (
+            <div className="space-y-2">
+              {activity.map(item => {
+                const statusMeta = STATUS_LABELS[item.status] ?? { label: item.status }
+                const chip = timeChip(item.created_at)
+                const owner = item.profiles?.nome || 'Livre'
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => navigate(`/fichas/${item.id}`)}
+                    className="w-full rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-brand-accent/30 hover:shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0" style={{ background: stringColor(owner) }}>
+                        {initials(owner)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-dark-text truncate">{item.nome_interessado || 'Sem nome'}</p>
+                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${chip.className}`}>{chip.label}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-dark-muted truncate">
+                          {item.imobiliaria || 'Sem imobiliária'} · {PRODUTO_LABELS[item.produto] || item.produto} · {owner}
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold" style={{ background: `${STATUS_CHART_COLORS[item.status] || chartTheme.gold}18`, color: STATUS_CHART_COLORS[item.status] || chartTheme.gold }}>
+                          {statusMeta.label}
+                        </span>
+                        <p className="mt-1 text-[10px] text-dark-muted">
+                          {formatDistanceToNow(parseISO(item.created_at), { locale: ptBR, addSuffix: true })}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </DataCard>
+
         <DataCard
-          className="xl:col-span-12 overflow-hidden border-brand-accent/15 shadow-[0_24px_60px_rgba(15,23,42,0.10)]"
+          className="col-span-full overflow-hidden border-brand-accent/15 shadow-[0_24px_60px_rgba(15,23,42,0.10)]"
           title="Fichas por imobiliária"
           subtitle="Catálogo completo das imobiliárias cadastradas com acesso direto às fichas por período e por nome."
           actions={
@@ -834,58 +888,10 @@ export default function Dashboard() {
             </div>
           )}
         </DataCard>
-        <DataCard className="xl:col-span-7" title="Atividade recente" subtitle="Últimas movimentações registradas no fluxo operacional." actions={(
-          <button type="button" onClick={() => navigate('/fichas')} className="inline-flex items-center gap-1 text-[11px] font-semibold text-status-info hover:underline">
-            Ver todas <ExternalLink className="w-3 h-3" />
-          </button>
-        )}>
-          {activity.length === 0 ? (
-            <EmptyState title="Sem atividade recente" description="Assim que novas fichas entrarem ou mudarem de etapa, elas aparecerão aqui." icon={<Activity className="w-6 h-6" />} />
-          ) : (
-            <div className="space-y-2">
-              {activity.map(item => {
-                const statusMeta = STATUS_LABELS[item.status] ?? { label: item.status }
-                const chip = timeChip(item.created_at)
-                const owner = item.profiles?.nome || 'Livre'
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => navigate(`/fichas/${item.id}`)}
-                    className="w-full rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-brand-accent/30 hover:shadow-sm"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0" style={{ background: stringColor(owner) }}>
-                        {initials(owner)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-semibold text-dark-text truncate">{item.nome_interessado || 'Sem nome'}</p>
-                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${chip.className}`}>{chip.label}</span>
-                        </div>
-                        <p className="mt-1 text-xs text-dark-muted truncate">
-                          {item.imobiliaria || 'Sem imobiliária'} · {PRODUTO_LABELS[item.produto] || item.produto} · {owner}
-                        </p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold" style={{ background: `${STATUS_CHART_COLORS[item.status] || chartTheme.gold}18`, color: STATUS_CHART_COLORS[item.status] || chartTheme.gold }}>
-                          {statusMeta.label}
-                        </span>
-                        <p className="mt-1 text-[10px] text-dark-muted">
-                          {formatDistanceToNow(parseISO(item.created_at), { locale: ptBR, addSuffix: true })}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          )}
-        </DataCard>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-12">
-        <DataCard className="xl:col-span-5" title="Ranking da equipe" subtitle="Ranking mensal por usuario com base nas fichas aprovadas e nas emissões registradas no periodo selecionado." actions={<div className="ops-kicker">{periodLabel}</div>}>
+      <div className="grid gap-6 lg:grid-cols-3 xl:grid-cols-12">
+        <DataCard className="lg:col-span-1 xl:col-span-5" title="Ranking da equipe" subtitle="Ranking mensal por usuario com base nas fichas aprovadas e nas emissões registradas no periodo selecionado." actions={<div className="ops-kicker">{periodLabel}</div>}>
           {teamRanking.length === 0 ? (
             <EmptyState title="Sem dados no período" description="O ranking mensal aparece assim que houver aprovações ou emissões atribuídas a usuarios." icon={<Users className="w-6 h-6" />} />
           ) : (
@@ -911,7 +917,7 @@ export default function Dashboard() {
           )}
         </DataCard>
 
-        <DataCard className="xl:col-span-7" title="Fila de cotações" subtitle="Fichas em cotação sob sua responsabilidade, priorizadas por idade." actions={(
+        <DataCard className="lg:col-span-2 xl:col-span-7" title="Fila de cotações" subtitle="Fichas em cotação sob sua responsabilidade, priorizadas por idade." actions={(
           <button type="button" onClick={() => navigate('/minhas-fichas')} className="inline-flex items-center gap-1 text-[11px] font-semibold text-status-info hover:underline">
             Minha carteira <ExternalLink className="w-3 h-3" />
           </button>
@@ -955,7 +961,7 @@ export default function Dashboard() {
       </div>
 
       <DataCard title="Métricas operacionais" subtitle="Leituras de eficiência para acompanhar ritmo, backlog e resultado.">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/30 p-4">
             <div className="flex items-center justify-between gap-3">
               <div>

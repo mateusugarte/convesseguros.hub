@@ -115,7 +115,14 @@ export default function Layout() {
   const { theme, toggleTheme } = useTheme()
 
   const [sidebarOpen, setSidebarOpen] = useState(() => {
-    try { return localStorage.getItem('sidebar-open') !== 'false' } catch { return true }
+    try {
+      const stored = localStorage.getItem('sidebar-open')
+      if (stored !== null) return stored !== 'false'
+    } catch {}
+    // Sem preferência salva: em notebooks (largura < 1440px) a sidebar de
+    // 284px consome espaço demais — abre já recolhida (rail de 92px) por padrão.
+    if (typeof window !== 'undefined' && window.innerWidth < 1440) return false
+    return true
   })
   const [isMobile, setIsMobile] = useState(false)
   const [abertasCount, setAbertasCount] = useState(0)
@@ -642,7 +649,9 @@ export default function Layout() {
         )}
 
         <main className={`flex h-full min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-transparent ${hideWorkspaceTopbar ? 'pt-0' : isDashboardRoute ? 'pt-4' : 'pt-2'}`}>
-          <div className="flex h-full min-h-full w-full min-w-0 flex-1 flex-col">
+          {/* uw:max-w conta a largura em monitores ultrawide/4K (>=2200px) para
+              tabelas/textos não esticarem até a borda; não afeta notebooks/1920px. */}
+          <div className="flex h-full min-h-full w-full min-w-0 flex-1 flex-col uw:max-w-[1900px] uw:mx-auto">
             <PageTransition>
               <Outlet />
             </PageTransition>

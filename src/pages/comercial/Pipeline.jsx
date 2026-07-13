@@ -238,8 +238,10 @@ function DroppableLane({ colId, children }) {
 // ── SwimLane (vertical column) ────────────────────────────────────────────────
 
 function SwimLane({ col, leads, tags, activeId, onCardClick, selectedIds, onSelect }) {
+  // largura vem de .kanban-col (var(--kanban-col-w), responsiva por media query
+  // em index.css) — sem w-[296px] fixo, que travava a mesma largura em qualquer tela
   return (
-    <div className="kanban-col w-[296px] flex-shrink-0 flex flex-col h-full">
+    <div className="kanban-col flex-shrink-0 flex flex-col h-full">
       {/* Header */}
       <div className="kanban-col-header flex items-center justify-between flex-shrink-0"
         style={{ background: col.color + '12', borderColor: col.color + '40' }}>
@@ -853,7 +855,10 @@ export default function Pipeline() {
               ))}
             </div>
 
-            <div style={{ height: 'calc(100vh - 28rem)' }} className="min-h-[520px] px-5 pb-5">
+            {/* clamp() em vez de calc()+min-h conflitantes: em notebook (100vh ~768px)
+                o cálculo antigo caía sempre no mínimo fixo de 520px; agora o piso é
+                menor (384px) e há também um teto (704px) para monitores grandes. */}
+            <div style={{ height: 'clamp(24rem, calc(100vh - 26rem), 44rem)' }} className="px-5 pb-5">
               <DndContext
                 sensors={sensors}
                 collisionDetection={kanbanPointerCollision}

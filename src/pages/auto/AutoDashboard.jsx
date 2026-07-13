@@ -180,7 +180,7 @@ export default function AutoDashboard() {
         </div>
       </DataCard>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <DataCard title="Emissões mensais" subtitle={`Novos negócios vs renovações até ${monthLabel}.`}>
           {loadingEmissoes ? (
             <div className="flex h-[280px] items-center justify-center text-sm text-dark-muted">Carregando emissões...</div>

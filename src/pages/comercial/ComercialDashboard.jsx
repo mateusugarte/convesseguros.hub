@@ -370,7 +370,7 @@ export default function ComercialDashboard() {
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <CrmMetricCard
           icon={Users}
           label="Leads ativos"
@@ -436,7 +436,7 @@ export default function ComercialDashboard() {
         />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.75fr)_minmax(320px,0.9fr)]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.75fr)_minmax(280px,0.9fr)] xl:grid-cols-[minmax(0,1.75fr)_minmax(320px,0.9fr)]">
         <div className="space-y-4">
           <CrmSectionCard
             title="Analytics comercial"

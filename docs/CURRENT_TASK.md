@@ -1,5 +1,75 @@
 # CURRENT TASK
 
+**Responsividade cross-resolution — implementação completa (2026-07-13, Claude):**
+usuário reportou que o sistema, ajustado visualmente para 1920x1080, fica "muito
+pequeno ou muito grande e mal posicionado" em outras resoluções, com prioridade
+explícita para notebooks. Tarefa é normalmente de especialidade Codex (UI/CSS/
+responsividade), usuário optou por Claude planejar e executar. Auditoria (Layout.jsx,
+index.css, tailwind.config.js + agente Explore varrendo `src/`) identificou 3 causas
+raiz e todas foram corrigidas em 5 fases:
+
+1. **Fase 0 — `Layout.jsx`/`tailwind.config.js`:** sidebar sem preferência salva
+   (`localStorage 'sidebar-open'`) agora abre já recolhida (rail 92px) por padrão em
+   larguras <1440px (notebooks); preferência explícita do usuário continua respeitada.
+   Novo breakpoint custom `uw: '2200px'` + `uw:max-w-[1900px] uw:mx-auto` no wrapper do
+   `<Outlet />` — conteúdo não estica mais sem teto em ultrawide/4K (não afeta
+   notebooks nem desktop 1920 padrão).
+2. **Fase 1 — `Dashboard.jsx`, `AutoDashboard.jsx`, `ComercialDashboard.jsx`:**
+   adicionado breakpoint `lg:` intermediário nos grids que só tinham `xl:`
+   (`xl:grid-cols-12` viravam 1 coluna forçada entre 1024-1280px — faixa exata de
+   1366x768/1440x900). Também fechado `md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4`
+   nas métricas operacionais/comerciais para scaling mais suave.
+3. **Fase 2 — avaliada, sem mudança extra:** a maioria dos grids `xl:grid-cols-4`
+   é de exatamente 4 itens fixos (não se beneficiam de `2xl:`); os grids com listas
+   dinâmicas já tinham `2xl:` (Dashboard imobiliárias, ComercialDashboard, Relatorio,
+   ApolicesLista). O teto `uw:max-w` da Fase 0 já resolve o "esticamento" em telas
+   grandes sem precisar tocar cada grid.
+4. **Fase 3 — `index.css`, `KanbanFichas.jsx`, `Pipeline.jsx`:** `.kanban-viewport`
+   trocou `min-height: max(68vh, 640px)` (fixo, estourava em notebook 768px de altura)
+   por `clamp(26rem, calc(100dvh - 18rem), 46rem)`, mesmo padrão já validado em
+   `.apolices-gestao-page`. `KanbanFichas.jsx` tinha um `style={{ height: 'max(68vh,
+   640px)' }}` inline pior ainda (height fixo, não min-height) — removido, herda da
+   classe. `Pipeline.jsx:856` tinha `calc(100vh - 28rem)` competindo com
+   `min-h-[520px]` (min-height quase sempre vencia, travando em 520px) — trocado por
+   `clamp(24rem, calc(100vh - 26rem), 44rem)`. `Pipeline.jsx:242` também tinha
+   `w-[296px]` fixo sobrescrevendo a largura responsiva de `.kanban-col` (var
+   `--kanban-col-w`, já ajustada por media query) — removido.
+5. **Fase 4 — avaliada, sem mudança:** grids `grid-cols-2/3` sem prefixo (LeadDetalhe,
+   GestaoComercial) estão dentro de modais com `max-w` já responsivo (`Modal.jsx`) —
+   não é problema de notebook/desktop, cosmético de mobile, fora do escopo pedido.
+6. **Fase 5 — validação visual (dev server + Chrome, login real do usuário):**
+   confirmado em 1366x768 e 1920x1080 nas 3 telas mais impactadas (Dashboard, Kanban de
+   Fichas, Pipeline comercial). **Bug real encontrado e corrigido durante a validação**
+   (pré-existente, não introduzido nesta sessão): a ordem dos cards em
+   "Top imobiliárias" → "Fichas por imobiliária" (full-width) → "Atividade recente"
+   deixava um vão vazio permanente ao lado de "Top imobiliárias" (CSS Grid não
+   reaproveita espaço de linhas anteriores quando um item full-width força quebra de
+   linha) — isso já acontecia em produção a 1920x1080, ficou mais visível ao adicionar
+   o breakpoint `lg:`. Corrigido reordenando: "Top imobiliárias" + "Atividade recente"
+   lado a lado primeiro (preenchem a linha inteira, 5+7 de 12 colunas / 1+2 de 3), card
+   full-width por último.
+
+`npm run build` verde a cada fase, `npm test` 64/64 verde ao final. Nenhuma mudança de
+lógica de negócio, banco, RLS ou autenticação — só CSS/Tailwind/JSX de layout.
+
+**Arquivos alterados:** `tailwind.config.js`, `src/components/Layout.jsx`,
+`src/index.css`, `src/components/KanbanFichas.jsx`, `src/pages/Dashboard.jsx`,
+`src/pages/auto/AutoDashboard.jsx`, `src/pages/comercial/ComercialDashboard.jsx`,
+`src/pages/comercial/Pipeline.jsx`.
+
+**Riscos remanescentes:** validação visual cobriu só notebook (1366x768) e desktop
+(1920x1080) com dados reais; ultrawide (3440x1440) e 4K (3840x2160) foram corrigidos
+pela análise de código (`uw:max-w` cap) mas não visualmente confirmados nesta sessão —
+recomenda-se checar ao menos uma vez em monitor grande real. Outras páginas com grids
+`xl:`-only não tocadas nesta rodada (fora das 3 mais usadas) podem ter o mesmo vácuo
+1024-1280px em menor escala — não é regressão, é escopo não coberto.
+
+**Próximos passos sugeridos:** validar visualmente em 1440x900 (segunda resolução de
+notebook mais comum) e em um monitor ultrawide/4K real se disponível; se aparecerem
+outras páginas com o mesmo sintoma, aplicar o mesmo padrão `lg:` intermediário.
+
+---
+
 **Upload em Lote — imobiliária por linha + duplicidade em 2 níveis (vermelho/laranja)
 (2026-07-08, Claude):** redesenho do workspace `upload_lote` a pedido do usuário, mudando
 uma decisão anterior (imobiliária deixa de ser única para o lote todo).

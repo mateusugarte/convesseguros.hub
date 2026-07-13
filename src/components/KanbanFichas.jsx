@@ -1042,10 +1042,9 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
         </div>
       )}
 
-      <div
-        className="kanban-viewport relative min-h-0 flex-1"
-        style={{ height: 'max(68vh, 640px)' }}
-      >
+      {/* Altura vem da classe .kanban-viewport (clamp por dvh, ver index.css) —
+          sem height inline fixo, que travava a mesma altura em notebook e 4K. */}
+      <div className="kanban-viewport relative min-h-0 flex-1">
         {/* Sombras de scroll */}
         {canScrollL && (
           <div className="absolute left-0 top-0 bottom-4 w-14 z-10 pointer-events-none"

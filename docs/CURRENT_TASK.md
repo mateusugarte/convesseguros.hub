@@ -1,5 +1,138 @@
 # CURRENT TASK
 
+**Banco de perguntas de quiz + área admin de curadoria (TREINAMENTOS) — 2026-07-14,
+Claude:** fecha o gap conhecido da entrega anterior (nenhum quiz tinha pergunta). Plano
+apresentado e aprovado nesta sessão (mesmo arquivo `~/.claude/plans/deep-rolling-wind.md`,
+sobrescrito para esta rodada). Pivô importante durante a conversa: o pedido original
+("admin cria o quiz, a IA sugere por lição") foi reinterpretado a pedido explícito do
+usuário — sem Edge Function/API de LLM em runtime; quem gera o banco de perguntas é o
+próprio Claude, nesta sessão, e o admin só cura/ativa a partir do banco gerado.
+
+1. **Conteúdo** (`docs/TREINAMENTOS_QUIZ_PERGUNTAS.md`, novo): 340 perguntas de múltipla
+   escolha (alvo era 375 — 9 módulos × 15 + 6 setores × 40), geradas por 6 agentes em
+   paralelo (um por setor), cada um restrito ao trecho correspondente de
+   `TREINAMENTOS_CONTEUDO_FIANCA.md`, sem inventar fatos. 4 blocos ficaram abaixo do alvo
+   (marcados `⚠️` no arquivo, motivo: material fonte curto — Transferência de Corretagem
+   13/15, quiz final de Renovações 32/40, Endosso 28/40, Cancelamentos 27/40) —
+   deliberado, não forçado. Defeito de qualidade encontrado e corrigido antes de
+   compilar: 3 dos 6 rascunhos saíram com a resposta correta concentrada em poucas
+   letras (Endosso: 100% em "a"); todas as alternativas dos 6 setores foram
+   reembaralhadas (conteúdo preservado) para distribuição a/b/c/d equilibrada.
+2. **Schema (sem migration nova — JSONB)**: cada pergunta em `conteudo.quiz` ganhou um
+   campo `status: 'sugerida' | 'ativa'`. Nasce `sugerida`; só fica visível ao funcionário
+   depois que um admin marca `ativa` na tela de curadoria.
+3. **Seed** (`scripts/generate-treinamentos-quiz-seed.mjs` → nova migration
+   `supabase/53_treinamentos_quiz_perguntas.sql`, **NÃO EXECUTADO NO SUPABASE**):
+   reaproveita `uuidv5`/`slugify`/`nodeId` de `scripts/generate-treinamentos-seed.mjs`
+   para recalcular os mesmos IDs dos 15 nós de quiz já semeados — verificado por
+   comparação direta que os 15 IDs-alvo do UPDATE batem com os IDs já existentes em
+   `52_treinamentos_seed_fianca.sql`. `UPDATE ... jsonb_set(conteudo, '{quiz}', ...)`,
+   idempotente.
+4. **Lógica pura**: `getActiveQuizQuestions(quiz)` em `trainingProgression.js` (+2
+   testes) filtra por `status === 'ativa'`. `TreinamentosLicao.jsx` (`QuizForm`) passou a
+   usar essa função em vez de `conteudo.quiz` cru.
+5. **Camada Supabase**: `updateQuizQuestions({ nodeId, quiz })` em `training.js` —
+   substitui `conteudo.quiz` inteiro via UPDATE; sem RLS nova, reaproveita
+   `training_nodes_update_admin` já existente.
+6. **UI de admin** (`src/pages/treinamentos/admin/`, `AdminRoute`, nav `adminOnly`):
+   `TreinamentosAdminQuizzes` (`/treinamentos/admin`, lista os 15 nós de quiz com
+   contagem sugerida/ativa) e `TreinamentosAdminQuizDetalhe`
+   (`/treinamentos/admin/quiz/:nodeId`, ativa/desativa/edita/remove pergunta, salva tudo
+   de uma vez). Edição é só em estado local até o "Salvar alterações".
+
+**Pendência**: `53_treinamentos_quiz_perguntas.sql` ainda não foi rodado no Supabase —
+igual ao fluxo das migrations 51/52, precisa de execução manual explícita no SQL Editor.
+Sem isso, os quizzes continuam sem pergunta em produção. `npm test` (87/87), `npm run
+build` e `npm run check:page-contexts` (sem novas pendências) rodados e conferidos.
+
+---
+
+**Base técnica de TREINAMENTOS — schema/RLS/seed aplicados no Supabase, lógica e UI
+funcionais (2026-07-14, Claude + usuário):** feature nova (currículo de treinamento
+para funcionários, produto Fiança). Plano técnico apresentado e aprovado nesta
+sessão (`~/.claude/plans/deep-rolling-wind.md`) antes de qualquer arquivo tocar
+banco — regra "Segurança" do CLAUDE.md deste projeto. **Atualização: usuário rodou
+as duas migrations manualmente no SQL Editor do Supabase — `training_nodes` e
+`training_progress` já existem e estão semeadas em produção/no banco do projeto.**
+
+**Conteúdo fonte:** `docs/TREINAMENTOS_CONTEUDO_FIANCA.md` (55 lições revisadas em
+sessão anterior, 6 setores, 9 módulos, produto Fiança) + `TREINAMENTOS_ARQUITETURA.md`
+(desenho de dados original).
+
+1. **Schema + RLS** (`supabase/51_treinamentos_schema.sql`, **EXECUTADO NO
+   SUPABASE pelo usuário**): `training_nodes` (árvore produto→setor→módulo→lição,
+   `conteudo JSONB`, `eh_quiz_modulo`/`eh_quiz_final_setor`) e `training_progress`
+   (por funcionário/nó, status/quiz_score/tentativas/concluido_em). RLS:
+   `training_nodes` legível por todo `authenticated`, escrita só admin
+   (`is_training_content_admin()`, mesmo padrão de `is_finance_admin()` em
+   `28_financeiro_apolices.sql`); `training_progress` ownership-based
+   (`funcionario_id = auth.uid()`), leitura extra para admin.
+   Desvios do desenho original documentados no plano: sem coluna `seguradora`
+   nem `prerequisito_node_id` (tudo derivado de `parent_id`+`ordem`+flags de
+   quiz); novo campo `tipo_conteudo_nota` para qualificadores híbridos da fonte.
+
+2. **Seed** (`scripts/generate-treinamentos-seed.mjs` → `supabase/52_treinamentos_seed_fianca.sql`,
+   **EXECUTADO NO SUPABASE pelo usuário**): parser do markdown fonte, gera 86 nós (produto +
+   6 setores + 9 módulos + 55 lições reais + 9 quiz de módulo + 6 quiz final de
+   setor sintéticos) com UUIDv5 determinístico (idempotente). Achado durante a
+   implementação, fora do plano original: `variacoes_por_seguradora` não bate 1:1
+   com uma seguradora só na fonte real (rótulos combinados como "Porto / Junto",
+   bullets sem seguradora nomeada) — usuário decidiu por lista `[{rotulo, texto}]`
+   em vez do dicionário de 5 chaves fixas do plano original, para não inventar a
+   qual seguradora cada bullet ambíguo pertence.
+
+3. **Lógica de progressão** (`src/lib/trainingProgression.js`, pura/testável —
+   21/21 testes em `trainingProgression.test.mjs`, registrado em `package.json`):
+   desbloqueio sequencial de lição/módulo, quiz de módulo desbloqueia o próximo
+   módulo (não "todas as lições"), quiz final de setor depende do último módulo,
+   nota de corte 70% (`QUIZ_PASSING_SCORE_PCT`), `gradeQuiz` nunca "passa" com 0
+   perguntas (`reason: 'no_questions'`).
+
+4. **Camada Supabase** (`src/lib/training.js`): `fetchTrainingTree`,
+   `fetchTrainingProgress`, `upsertLicaoProgress`, `submitQuizAttempt`.
+
+5. **UI funcional** (não é o acabamento final — Codex refina depois, como
+   combinado): `src/pages/treinamentos/{TreinamentosDashboard,TreinamentosSetor,
+   TreinamentosModulo,TreinamentosLicao}.jsx` + `CONTEXT.md` de cada uma;
+   `src/components/treinamentos/{TrainingStatusBadge,TrainingBreadcrumb,
+   TrainingChatButton}.jsx` (o último é o ponto de extensão pedido para o chat
+   com o CONVES IA — stub desabilitado, zero chamada de rede). Rotas em
+   `App.jsx` (`/treinamentos`, `/treinamentos/setores/:id`, `/modulos/:id`,
+   `/licoes/:id`) e novo grupo de nav "Treinamentos" em `Layout.jsx`.
+
+**Pendências / decisões em aberto:**
+- Nenhuma pergunta de quiz foi escrita — todo nó de quiz semeado com
+  `conteudo.quiz = []`. Por isso **nenhum módulo pode ser concluído ponta a
+  ponta com dados reais** até uma rodada de conteúdo separada escrever as
+  perguntas (mesmo rigor de "não inventar" usado no resto do currículo).
+- Setores de módulo único (Renovações, Endosso, Sinistros, Cancelamentos,
+  Cobrança) semeiam quiz de módulo E quiz final de setor sobre material quase
+  idêntico — sinalizado no plano, ainda não resolvido.
+- **Junto Seguros permanece sem fonte — decisão definitiva do usuário (2026-07-14),
+  não é mais um gap em aberto.** Todas as lições ficam com essa seguradora
+  ausente da lista `variacoes_por_seguradora`; não entra pauta de revisão
+  futura a menos que o usuário decida trazer material da Junto novamente.
+
+**Portão de execução:** `51_treinamentos_schema.sql` e `52_treinamentos_seed_fianca.sql`
+foram criados para revisão e **rodados manualmente pelo usuário no SQL Editor do
+Supabase em 2026-07-14** — mesmo fluxo já usado para outras migrations sensíveis
+deste projeto. `training_nodes`/`training_progress` existem e estão semeadas.
+Smoke test manual (login real, abrir `/treinamentos`) ainda não confirmado nesta
+sessão — este ambiente não tem `.env`/credenciais Supabase para validar.
+
+**Arquivos alterados/criados:** `supabase/51_treinamentos_schema.sql`,
+`supabase/52_treinamentos_seed_fianca.sql`, `scripts/generate-treinamentos-seed.mjs`,
+`src/lib/trainingProgression.js` (+`.test.mjs`), `src/lib/training.js`,
+`src/components/treinamentos/*.jsx`, `src/pages/treinamentos/*.jsx` (+`CONTEXT.md`),
+`src/App.jsx`, `src/components/Layout.jsx`, `package.json`, `docs/PROJECT_CONTEXT.md`.
+
+**Próximo passo sugerido:** revisar os dois arquivos `.sql`; se aprovado, rodar
+`51_...` e depois `52_...` manualmente no SQL Editor do Supabase; smoke test
+manual (sem `.env` neste ambiente); decidir sobre as pendências acima; só então
+autoria de perguntas de quiz.
+
+---
+
 **Responsividade cross-resolution — implementação completa (2026-07-13, Claude):**
 usuário reportou que o sistema, ajustado visualmente para 1920x1080, fica "muito
 pequeno ou muito grande e mal posicionado" em outras resoluções, com prioridade

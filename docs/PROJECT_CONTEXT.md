@@ -69,6 +69,15 @@ Conves Hub e uma plataforma interna para operacao de seguros com gestao de ficha
 
 - Financeiro [pronto]
 
+### Treinamentos
+
+- TreinamentosDashboard [em andamento]
+- TreinamentosSetor [em andamento]
+- TreinamentosModulo [em andamento]
+- TreinamentosLicao [em andamento]
+- TreinamentosAdminQuizzes [em andamento] — admin
+- TreinamentosAdminQuizDetalhe [em andamento] — admin
+
 ## Convencoes
 
 - Componentes funcionais.

@@ -17,6 +17,7 @@ import {
   Bell, LogOut, ChevronLeft, ChevronRight, Menu,
   Sun, Moon, Shield, TrendingUp,
   ChevronDown, FolderOpen, Calendar, RefreshCw, Car, Coins,
+  GraduationCap, ClipboardList,
 } from 'lucide-react'
 
 const LOGO = 'https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/conves/file.jpeg'
@@ -98,6 +99,13 @@ const NAV_GROUPS = [
       { to: '/renovacoes', icon: RefreshCw, label: 'Renovacoes', soon: true },
       { to: '/calendario', icon: Calendar, label: 'Calendário', soon: true },
       { to: '/materiais', icon: FolderOpen, label: 'Materiais', soon: true },
+    ],
+  },
+  {
+    label: 'Treinamentos',
+    items: [
+      { to: '/treinamentos', icon: GraduationCap, label: 'Treinamentos', end: true },
+      { to: '/treinamentos/admin', icon: ClipboardList, label: 'Gerenciar Quiz', adminOnly: true },
     ],
   },
   {

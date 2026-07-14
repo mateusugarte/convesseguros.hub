@@ -64,6 +64,14 @@ const Calendario         = lazy(() => import('./pages/comercial/Calendario'))
 const Jornadas           = lazy(() => import('./pages/comercial/Jornadas'))
 const Configuracoes      = lazy(() => import('./pages/Configuracoes'))
 
+// Treinamentos
+const TreinamentosDashboard = lazy(() => import('./pages/treinamentos/TreinamentosDashboard'))
+const TreinamentosSetor     = lazy(() => import('./pages/treinamentos/TreinamentosSetor'))
+const TreinamentosModulo    = lazy(() => import('./pages/treinamentos/TreinamentosModulo'))
+const TreinamentosLicao     = lazy(() => import('./pages/treinamentos/TreinamentosLicao'))
+const TreinamentosAdminQuizzes     = lazy(() => import('./pages/treinamentos/admin/TreinamentosAdminQuizzes'))
+const TreinamentosAdminQuizDetalhe = lazy(() => import('./pages/treinamentos/admin/TreinamentosAdminQuizDetalhe'))
+
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return <PageLoader />
@@ -135,6 +143,13 @@ function AppRoutes() {
           <Route path="comercial/calendario" element={<Calendario />} />
           <Route path="comercial/jornadas"   element={<Jornadas />} />
           <Route path="configuracoes"        element={<Configuracoes />} />
+          {/* Treinamentos */}
+          <Route path="treinamentos"                    element={<TreinamentosDashboard />} />
+          <Route path="treinamentos/setores/:setorId"   element={<TreinamentosSetor />} />
+          <Route path="treinamentos/modulos/:moduloId"  element={<TreinamentosModulo />} />
+          <Route path="treinamentos/licoes/:licaoId"    element={<TreinamentosLicao />} />
+          <Route path="treinamentos/admin" element={<AdminRoute><TreinamentosAdminQuizzes /></AdminRoute>} />
+          <Route path="treinamentos/admin/quiz/:nodeId" element={<AdminRoute><TreinamentosAdminQuizDetalhe /></AdminRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
+﻿import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
-import { Lock, CheckCircle2, PlayCircle, ListChecks } from 'lucide-react'
+import { Lock, CheckCircle2, PlayCircle, ListChecks, FileText } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { fetchTrainingTree, fetchTrainingProgress, trainingQueryKey, TRAINING_PRODUTO_FIANCA } from '../../lib/training'
 import {
@@ -16,21 +16,19 @@ import TrainingBreadcrumb from '../../components/treinamentos/TrainingBreadcrumb
 function LicaoRow({ licao, unlocked, status, index }) {
   const isQuiz = licao.eh_quiz_modulo || licao.eh_quiz_final_setor
   const content = (
-    <Card hoverable={unlocked} padding="lg" className={`flex items-center gap-4 ${unlocked ? '' : 'opacity-60'} ${isQuiz ? 'border border-brand-gold/30' : ''}`}>
-      <div className="w-9 h-9 rounded-full bg-dark-surface2 flex items-center justify-center flex-shrink-0">
+    <Card hoverable={unlocked} padding="lg" className={`training-path-row flex items-center gap-4 ${unlocked ? '' : 'is-locked'} ${isQuiz ? 'is-quiz' : ''}`}>
+      <div className="training-path-step">
         {status === 'concluido'
-          ? <CheckCircle2 className="w-5 h-5 text-status-success" />
+          ? <CheckCircle2 className="w-5 h-5" />
           : !unlocked
-            ? <Lock className="w-4 h-4 text-dark-muted" />
+            ? <Lock className="w-4 h-4" />
             : isQuiz
-              ? <ListChecks className="w-4 h-4 text-brand-gold" />
-              : <PlayCircle className="w-5 h-5 text-status-info" />}
+              ? <ListChecks className="w-4 h-4" />
+              : <PlayCircle className="w-5 h-5" />}
       </div>
       <div className="flex-1 min-w-0">
+        <p className="text-[10px] text-dark-muted uppercase tracking-wider mb-1">{isQuiz ? 'Quiz' : (licao.tipo_conteudo || `Licao ${index + 1}`)}</p>
         <p className="text-sm font-semibold text-dark-text truncate">{isQuiz ? licao.titulo : `${index + 1}. ${licao.titulo}`}</p>
-        {licao.tipo_conteudo && !isQuiz && (
-          <p className="text-[10px] text-dark-muted uppercase tracking-wider mt-0.5">{licao.tipo_conteudo}</p>
-        )}
       </div>
       <TrainingStatusBadge status={status} locked={!unlocked} />
     </Card>
@@ -67,22 +65,35 @@ export default function TreinamentosModulo() {
 
   if (!modulo) {
     return (
-      <div className="space-y-5 animate-fade-in">
+      <div className="training-page space-y-5 animate-fade-in">
         <TrainingBreadcrumb />
-        <EmptyState title="Módulo não encontrado" description="Verifique o link ou volte para a página de Treinamentos." />
+        <EmptyState title="Modulo nao encontrado" description="Verifique o link ou volte para a pagina de Treinamentos." />
       </div>
     )
   }
 
   const setor = nodes.find(n => n.id === modulo.parent_id)
   const licoes = getChildrenByType(nodes, modulo.id, 'licao')
+  const concluidas = licoes.filter(licao => getNodeProgressStatus(licao.id, progressMap) === 'concluido').length
+  const pct = licoes.length ? Math.round((concluidas / licoes.length) * 100) : 0
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="training-page space-y-6 animate-fade-in">
       <TrainingBreadcrumb setor={setor} modulo={modulo} />
-      <PageHeader eyebrow="Módulo" title={modulo.titulo} description={`${licoes.length} etapa${licoes.length !== 1 ? 's' : ''} — conclua em ordem, o quiz do módulo é a última etapa.`} />
+      <section className="training-detail-hero">
+        <div>
+          <p className="training-kicker training-kicker-soft">Modulo</p>
+          <h1>{modulo.titulo}</h1>
+          <p>{licoes.length} etapa{licoes.length !== 1 ? 's' : ''}. Conclua em ordem; o quiz do modulo e a ultima etapa.</p>
+        </div>
+        <div className="training-detail-meter">
+          <FileText className="w-5 h-5" />
+          <strong>{pct}%</strong>
+          <span>{concluidas}/{licoes.length} etapas</span>
+        </div>
+      </section>
 
-      <div className="space-y-3">
+      <div className="training-path-list">
         {licoes.map((licao, index) => {
           const unlocked = isLicaoUnlocked({ licao, siblingLicoes: licoes, progressMap })
           const status = getNodeProgressStatus(licao.id, progressMap)

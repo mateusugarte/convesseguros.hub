@@ -37,9 +37,39 @@ debugging, sem acesso a banco neste ambiente — análise estática de código):
   sem isso, mover uma ficha para Desistiu trocaria sua âncora de período para
   `created_at` e ela sumiria do mês sendo visto no momento do move.
 
-`npm test` (89/89, 3 testes novos em `relatorioCobranca.test.mjs`), `npm run
-build` e `npm run check:page-contexts` (mesmas pendências pré-existentes de
-`src/pages/auto/*`/`GestaoComercial.jsx`, não é regressão) verdes.
+**Ronda 2 (mesmo dia, feedback do usuário) — contagem errada no card:** usuário
+apontou mais 2 sintomas de contagem no card da visão geral: (a) "Aprovadas"
+continuava contando fichas que já tinham sido movidas para "Enviado Cobrança"
+(usuário pediu um jeito de considerar essas fichas como "em cobrança" e não mais
+"aprovada apenas" — perguntado se seria coluna nova no banco; usuário confirmou
+que **não**, só corrigir a contagem, reaproveitando o que já existe); (b) "Emitidas"
+mostrava 5 quando na verdade havia 6 apólices.
+
+- **(a):** o card usava `imobMetrics.aprovadas` (união deliberada de
+  aprovada+enviado_cobranca, mantida para a taxa de conversão) como o número
+  exibido na etiqueta "Aprovadas". Já existia, calculado à parte,
+  `imobMetrics.semCobrancaEnviada` (só as que NÃO foram enviadas ainda) — só não
+  era esse o valor mostrado. Trocada a etiqueta "Aprovadas" do card para usar
+  `semCobrancaEnviada`; `pendingCount`/cor do card continuam usando `aprovadas`
+  (união ampla), sem mudança de comportamento ali.
+- **(b):** `normalizeKey()` (`Relatorio.jsx`) só corrigia mojibake e baixava a
+  caixa, sem remover acento. Uma apólice com `imobiliaria` gravado com uma
+  variação de acento diferente da alias cadastrada caía num grupo "fantasma" no
+  `groupByImobiliaria` que nunca batia com nenhuma imobiliária real da tabela —
+  somava no total geral da página ("Apólices emitidas" no topo) mas sumia do card
+  daquela imobiliária especificamente. Trocado `normalizeKey` para reaproveitar
+  `normalizeImobiliariaKey` (`imobiliariasMapeamento.js`, já testado), que remove
+  acento além de mojibake/caixa/espaço duplicado. Mesma correção aplicada em
+  `useImobiliaria.js` (`resolverNome`, `resolverImobiliariaInfo`, construção do
+  `aliasMap`) — é a fonte de `resolverNome` usada em várias telas além do
+  relatório, então o mesmo tipo de gap por acento poderia afetar qualquer uma
+  delas.
+
+`npm test` (89/89, sem novos testes nesta ronda — mudança é só de qual campo já
+calculado é exibido, e troca de uma função de normalização por outra já testada
+em `imobiliariasMapeamento.test.mjs`), `npm run build` e `npm run
+check:page-contexts` (mesmas pendências pré-existentes de `src/pages/auto/*`/
+`GestaoComercial.jsx`, não é regressão) verdes.
 
 **Smoke test pendente (sem `.env`/Supabase neste ambiente):** abrir uma
 imobiliária que hoje mostra card com contagem mas detalhe zerado e confirmar que
@@ -47,7 +77,10 @@ os blocos passam a exibir as fichas; marcar cobrança enviada em todas as
 aprovadas de uma imobiliária com card vermelho e confirmar que o card vira azul/
 laranja (não fica mais preso em vermelho); selecionar fichas no detalhe, escolher
 "Desistências" no seletor "Mover para coluna..." e confirmar que elas aparecem no
-bloco Desistências e continuam visíveis no período atual do relatório.
+bloco Desistências e continuam visíveis no período atual do relatório; conferir
+que "Aprovadas" no card não conta mais fichas já em "Enviado Cobrança"; achar a
+imobiliária com "Emitidas" divergente do total real e confirmar que a contagem
+bateu depois da correção de acento.
 
 **Riscos remanescentes:** o filtro em memória no detalhe busca todas as fichas/
 apólices do período (sem filtro de imobiliária no banco) e filtra no cliente —

@@ -1,9 +1,9 @@
-@import './styles/tokens.css';
+﻿@import './styles/tokens.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Base gradient background — fixed, sem image loading */
+/* Base gradient background â€” fixed, sem image loading */
 html {
   background:
     radial-gradient(ellipse 70% 50% at 0% 0%, rgb(var(--brand-primary-rgb) / 0.06) 0%, transparent 60%),
@@ -76,7 +76,7 @@ html.dark {
 
 @layer components {
 
-  /* ── Buttons ──────────────────────────────────────────────────────────────── */
+  /* â”€â”€ Buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2
            text-white font-semibold text-sm
@@ -120,7 +120,7 @@ html.dark {
            transition-all duration-150;
   }
 
-  /* ── Cards ────────────────────────────────────────────────────────────────── */
+  /* â”€â”€ Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .card {
     position: relative;
     background: var(--glass-bg);
@@ -187,7 +187,7 @@ html.dark {
     transition-duration: 60ms;
   }
 
-  /* ── Form inputs ──────────────────────────────────────────────────────────── */
+  /* â”€â”€ Form inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .input {
     @apply w-full rounded-lg px-3 py-2
            text-sm outline-none
@@ -220,13 +220,13 @@ html.dark {
     box-shadow: 0 0 0 3px rgb(var(--brand-primary-rgb) / 0.12);
   }
 
-  /* ── Select dropdown animation ───────────────────────────────────────────── */
+  /* â”€â”€ Select dropdown animation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .select-dropdown-panel {
     animation: selectSlideIn 0.14s var(--ease-decel, cubic-bezier(0,0,0.2,1)) both;
     transform-origin: top center;
   }
 
-  /* ── Badges ───────────────────────────────────────────────────────────────── */
+  /* â”€â”€ Badges â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .badge {
     @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold;
   }
@@ -234,7 +234,7 @@ html.dark {
     @apply text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand-gold/15 text-brand-gold border border-brand-gold/30;
   }
 
-  /* Badge color variants — light mode */
+  /* Badge color variants â€” light mode */
   .badge-success { background: #A7F3D0; color: #047857; }
   .badge-danger  { background: #FEE2E2; color: #991B1B; }
   .badge-warning { background: #FEF3C7; color: #92400E; }
@@ -243,7 +243,7 @@ html.dark {
   .badge-muted   { background: #F1F5F9; color: #475569; }
   .badge-blue    { background: rgb(var(--brand-secondary-rgb) / 0.22); color: rgb(var(--brand-primary-rgb)); }
 
-  /* ── Sidebar nav ──────────────────────────────────────────────────────────── */
+  /* â”€â”€ Sidebar nav â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .nav-item {
     @apply flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200 cursor-pointer;
     min-height: 44px; /* touch target mobile */
@@ -270,7 +270,7 @@ html.dark {
     @apply my-2 border-t border-dark-border/60;
   }
 
-  /* ── Table ────────────────────────────────────────────────────────────────── */
+  /* â”€â”€ Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .table-row {
     @apply transition-colors duration-100 cursor-pointer;
   }
@@ -347,7 +347,7 @@ html.dark {
     background: rgba(255,255,255,0.04);
   }
 
-  /* ── WorkspacesSelect ────────────────────────────────────────────────────── */
+  /* â”€â”€ WorkspacesSelect â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .ws-trigger {
     display: flex;
     align-items: center;
@@ -362,7 +362,7 @@ html.dark {
     min-height: 38px;
   }
 
-  /* Avatar circle — trigger */
+  /* Avatar circle â€” trigger */
   .ws-avatar {
     width: 24px; height: 24px;
     border-radius: 7px;
@@ -384,7 +384,7 @@ html.dark {
     flex-shrink: 0; color: var(--glass-text-muted);
   }
 
-  /* Avatar circle — dropdown item */
+  /* Avatar circle â€” dropdown item */
   .ws-avatar-sm {
     width: 28px; height: 28px;
     border-radius: 8px;
@@ -398,7 +398,7 @@ html.dark {
     flex-shrink: 0; color: var(--glass-text-muted);
   }
 
-  /* ── DatePicker ──────────────────────────────────────────────────────────── */
+  /* â”€â”€ DatePicker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .dp-trigger {
     display: flex;
     align-items: center;
@@ -453,9 +453,9 @@ html.dark {
   .dp-footer-primary { color: rgb(var(--brand-primary-rgb)) !important; }
   .dp-footer-primary:hover { background: rgb(var(--brand-primary-rgb) / 0.10) !important; }
 
-  /* ── Kanban ───────────────────────────────────────────────────────────────── */
+  /* â”€â”€ Kanban â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-  /* Card — layout flex horizontal: grip | body */
+  /* Card â€” layout flex horizontal: grip | body */
   .kanban-card {
     position: relative;
     display: flex;
@@ -499,7 +499,7 @@ html.dark {
     transform: rotate(1.5deg) !important;
   }
 
-  /* Grip handle — drag trigger, hidden until card hover */
+  /* Grip handle â€” drag trigger, hidden until card hover */
   .kanban-grip {
     display: flex;
     align-items: center;
@@ -524,7 +524,7 @@ html.dark {
     cursor: grabbing;
   }
 
-  /* Card body — fills the remaining space */
+  /* Card body â€” fills the remaining space */
   .kanban-card-body {
     flex: 1;
     min-width: 0;
@@ -625,25 +625,25 @@ html.dark {
     border-color: rgba(16,185,129,0.38);
   }
 
-  /* Kanban column — responsive width via CSS custom property */
+  /* Kanban column â€” responsive width via CSS custom property */
 .kanban-col {
   width: var(--kanban-col-w, 304px);
   flex-shrink: 0;
 }
 
-  /* Kanban column body — responsive max-height */
+  /* Kanban column body â€” responsive max-height */
 .kanban-col-body {
     min-height: 0;
     max-height: none;
   }
 
-  /* Kanban scroll container — snap behavior */
+  /* Kanban scroll container â€” snap behavior */
   .kanban-scroll {
     -webkit-overflow-scrolling: touch;
     scroll-snap-type: x proximity;
   }
 
-  /* ── Glass utilities ──────────────────────────────────────────────────────── */
+  /* â”€â”€ Glass utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .glass-panel {
     background:
       linear-gradient(180deg, rgba(255,255,255,0.26), rgba(255,255,255,0.08)),
@@ -668,7 +668,7 @@ html.dark {
     box-shadow: none;
   }
 
-  /* ── Modal backdrop — replaces bg-black/40 backdrop-blur-sm ─────────────── */
+  /* â”€â”€ Modal backdrop â€” replaces bg-black/40 backdrop-blur-sm â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -692,7 +692,7 @@ html.dark {
     background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
   }
 
-  /* ── Page content animation ──────────────────────────────────────────────── */
+  /* â”€â”€ Page content animation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .page-content {
     animation: pageEnterKf 0.30s ease-out both;
   }
@@ -729,7 +729,7 @@ html.dark {
     box-shadow: 0 0 0 3px rgb(var(--brand-primary-rgb) / 0.12);
   }
 
-  /* ── Button active feedback (Apple scale(0.95) principle) ──────────────── */
+  /* â”€â”€ Button active feedback (Apple scale(0.95) principle) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .btn-primary:active:not(:disabled) {
     transform: scale(0.95);
     box-shadow: 0 1px 4px rgb(var(--brand-primary-rgb) / 0.18);
@@ -740,7 +740,7 @@ html.dark {
     transition-duration: 60ms;
   }
 
-  /* ── Staggered card reveal ────────────────────────────────────────────────── */
+  /* â”€â”€ Staggered card reveal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .stagger-1 { animation-delay: 40ms;  animation-fill-mode: both; }
   .stagger-2 { animation-delay: 80ms;  animation-fill-mode: both; }
   .stagger-3 { animation-delay: 120ms; animation-fill-mode: both; }
@@ -748,7 +748,7 @@ html.dark {
   .stagger-5 { animation-delay: 200ms; animation-fill-mode: both; }
 
 
-  /* ── Kanban card top reflection ───────────────────────────────────────────── */
+  /* â”€â”€ Kanban card top reflection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .kanban-card {
     position: relative;
   }
@@ -763,7 +763,7 @@ html.dark {
     z-index: 1;
   }
 
-  /* ── Typography — Premium tracking (Apple/Linear principle) ──────────────── */
+  /* â”€â”€ Typography â€” Premium tracking (Apple/Linear principle) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .title-display {
     font-family: var(--font-heading);
     font-weight: 600;
@@ -802,7 +802,7 @@ html.dark {
     opacity: 0.5;
   }
 
-  /* ── Kanban empty state ───────────────────────────────────────────────────── */
+  /* â”€â”€ Kanban empty state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .kanban-empty {
     display: flex;
     flex-direction: column;
@@ -840,13 +840,13 @@ html.dark {
   }
 }
 
-/* ── App Root ─────────────────────────────────────────────────────────────── */
+/* â”€â”€ App Root â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .app-root {
   position: relative;
   min-height: 100dvh;
 }
 
-/* ── Kanban: webkit scrollbar customizada ──────────────────────────────────── */
+/* â”€â”€ Kanban: webkit scrollbar customizada â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .kanban-scroll::-webkit-scrollbar         { height: 6px; }
 .kanban-scroll::-webkit-scrollbar-track  { background: transparent; }
 .kanban-scroll::-webkit-scrollbar-thumb  { background: rgb(var(--color-border)); border-radius: 999px; }
@@ -888,7 +888,7 @@ html.dark {
   @apply w-10 h-10 opacity-35;
 }
 
-/* ── Kanban mobile: coluna ocupa ~85vw, snap mandatório ───────────────────── */
+/* â”€â”€ Kanban mobile: coluna ocupa ~85vw, snap mandatÃ³rio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width: 768px) {
   :root { --kanban-col-w: min(85vw, 300px); }
 
@@ -901,19 +901,19 @@ html.dark {
   }
 }
 
-/* ── Landscape mobile/tablet: corrigir alturas ────────────────────────────── */
+/* â”€â”€ Landscape mobile/tablet: corrigir alturas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (orientation: landscape) and (max-height: 600px) {
   .kanban-col-body {
     max-height: calc(100vh - 140px);
   }
 
-  /* Modal bottom-sheet não pode ser tão alto em landscape */
+  /* Modal bottom-sheet nÃ£o pode ser tÃ£o alto em landscape */
   .fixed.items-end > div {
     max-height: 80vh;
   }
 }
 
-/* Dark mode — badge overrides */
+/* Dark mode â€” badge overrides */
 html.dark .badge-success { background: rgba(5,150,105,0.22);   color: #34D399; }
 html.dark .badge-danger  { background: rgba(239,68,68,0.15);   color: #EF4444; }
 html.dark .badge-warning { background: rgba(245,158,11,0.15);  color: #F59E0B; }
@@ -922,7 +922,7 @@ html.dark .badge-purple  { background: rgba(139,92,246,0.15);  color: #8B5CF6; }
 html.dark .badge-muted   { background: rgba(136,153,187,0.15); color: #8899BB; }
 html.dark .badge-blue    { background: rgb(var(--brand-primary-rgb) / 0.15);  color: rgb(var(--brand-secondary-rgb)); }
 
-/* Recharts theme overrides — use CSS variables */
+/* Recharts theme overrides â€” use CSS variables */
 .recharts-cartesian-grid-horizontal line,
 .recharts-cartesian-grid-vertical line {
   stroke: rgb(var(--color-border)) !important;
@@ -934,7 +934,7 @@ html.dark .badge-blue    { background: rgb(var(--brand-primary-rgb) / 0.15);  co
   outline: none !important;
 }
 
-/* ── Animation keyframes ────────────────────────────────────────────────────── */
+/* â”€â”€ Animation keyframes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @keyframes selectSlideIn {
   from { opacity: 0; transform: translateY(-6px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
@@ -976,7 +976,7 @@ html.dark .badge-blue    { background: rgb(var(--brand-primary-rgb) / 0.15);  co
   to   { width: 0%; }
 }
 
-/* ── Dark mode — nav + input visibility ─────────────────────────────────── */
+/* â”€â”€ Dark mode â€” nav + input visibility â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 html.dark .nav-item-inactive {
   color: rgba(200, 220, 255, 0.75) !important;
 }
@@ -1004,7 +1004,7 @@ html.dark .border-dark-border {
   border-color: rgba(100, 150, 255, 0.18) !important;
 }
 
-/* ── Light mode — nav visibility ──────────────────────────────────────── */
+/* â”€â”€ Light mode â€” nav visibility â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 html:not(.dark) .nav-item-inactive {
   color: rgba(8, 20, 50, 0.65) !important;
 }
@@ -1032,7 +1032,7 @@ html:not(.dark) textarea::placeholder {
   opacity: 1;
 }
 
-/* ── glass-panel dropdown — sombra e borda aprimoradas ──────────────────── */
+/* â”€â”€ glass-panel dropdown â€” sombra e borda aprimoradas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .glass-panel {
   border: 1px solid rgba(220, 227, 236, 0.95);
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06), 0 2px 8px rgba(15, 23, 42, 0.04);
@@ -1042,11 +1042,11 @@ html.dark .glass-panel {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.34), 0 2px 8px rgba(0, 0, 0, 0.22);
 }
 
-/* ── Animação de entrada (sobrescreve Tailwind fadeIn) ─────────────────────
-   IMPORTANTE: 'to' usa transform:none explícito para que animation-fill-mode
-   forwards não retenha um transform não-none, o que criaria um containing
-   block para position:fixed descendentes (bug crítico nos dropdowns de modal).
-─────────────────────────────────────────────────────────────────────────── */
+/* â”€â”€ AnimaÃ§Ã£o de entrada (sobrescreve Tailwind fadeIn) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   IMPORTANTE: 'to' usa transform:none explÃ­cito para que animation-fill-mode
+   forwards nÃ£o retenha um transform nÃ£o-none, o que criaria um containing
+   block para position:fixed descendentes (bug crÃ­tico nos dropdowns de modal).
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @keyframes modalOpen {
   from { opacity: 0; transform: translateY(10px) scale(0.985); }
   to   { opacity: 1; transform: none; }
@@ -1060,7 +1060,7 @@ html.dark .glass-panel {
   animation: modalOpen 0.20s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* ── Page transitions ───────────────────────────────────────────────────────── */
+/* â”€â”€ Page transitions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .page-enter {
   opacity: 0;
   transform: translateY(8px);
@@ -1071,18 +1071,18 @@ html.dark .glass-panel {
   transition: opacity 240ms ease, transform 240ms ease;
 }
 
-/* ── Tabela — scroll horizontal no mobile ───────────────────────────────── */
+/* â”€â”€ Tabela â€” scroll horizontal no mobile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width: 768px) {
   .overflow-x-auto {
     -webkit-overflow-scrolling: touch;
   }
-  /* Tap targets mínimos para inputs e selects */
+  /* Tap targets mÃ­nimos para inputs e selects */
   .input, .select {
     min-height: 42px;
   }
 }
 
-/* ── Kanban card stagger automático por posição ──────────────────────────── */
+/* â”€â”€ Kanban card stagger automÃ¡tico por posiÃ§Ã£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .kanban-col-body .kanban-card:nth-child(1)  { animation-delay: 0ms; }
 .kanban-col-body .kanban-card:nth-child(2)  { animation-delay: 40ms; }
 .kanban-col-body .kanban-card:nth-child(3)  { animation-delay: 80ms; }
@@ -1092,7 +1092,7 @@ html.dark .glass-panel {
 .kanban-col-body .kanban-card:nth-child(7)  { animation-delay: 230ms; }
 .kanban-col-body .kanban-card:nth-child(n+8) { animation-delay: 250ms; }
 
-/* ── Table rows stagger automático ──────────────────────────────────────── */
+/* â”€â”€ Table rows stagger automÃ¡tico â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 tbody .table-row {
   animation: staggerRow 0.18s ease-out both;
 }
@@ -1106,7 +1106,7 @@ tbody .table-row:nth-child(7)  { animation-delay: 180ms; }
 tbody .table-row:nth-child(8)  { animation-delay: 210ms; }
 tbody .table-row:nth-child(n+9) { animation-delay: 240ms; }
 
-/* ── Reduced motion — desativar todas as animações personalizadas ─────────── */
+/* â”€â”€ Reduced motion â€” desativar todas as animaÃ§Ãµes personalizadas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (prefers-reduced-motion: reduce) {
   .kanban-card,
   .modal-backdrop,
@@ -1117,7 +1117,7 @@ tbody .table-row:nth-child(n+9) { animation-delay: 240ms; }
   }
 }
 
-/* ── Topbar glass refinado ───────────────────────────────────────────────── */
+/* â”€â”€ Topbar glass refinado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .topbar-glass {
   -webkit-backdrop-filter: blur(16px) saturate(170%);
   backdrop-filter: blur(16px) saturate(170%);
@@ -1125,7 +1125,7 @@ tbody .table-row:nth-child(n+9) { animation-delay: 240ms; }
   border-bottom: 1px solid rgb(var(--color-border));
 }
 
-/* ── Shell CRM moderno ─────────────────────────────────────────────────────── */
+/* â”€â”€ Shell CRM moderno â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .shell-sidebar {
   -webkit-backdrop-filter: blur(18px) saturate(170%);
   backdrop-filter: blur(18px) saturate(170%);
@@ -1187,7 +1187,7 @@ html.dark .shell-subnav-item-active {
   border-color: rgba(74, 144, 217, 0.24);
 }
 
-/* ── Kanban premium workspace ─────────────────────────────────────────────── */
+/* â”€â”€ Kanban premium workspace â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .kanban-scroll {
   scroll-padding-inline: 8px;
   min-height: 100%;
@@ -1259,9 +1259,9 @@ html.dark .kanban-col-body {
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  /* clamp em vez de vh/px fixos: em notebook (100dvh ~768px) não força mais
-     altura do que cabe na tela; em monitor grande não cresce indefinidamente.
-     Mesmo padrão já validado em .apolices-gestao-page .kanban-viewport. */
+  /* clamp em vez de vh/px fixos: em notebook (100dvh ~768px) nÃ£o forÃ§a mais
+     altura do que cabe na tela; em monitor grande nÃ£o cresce indefinidamente.
+     Mesmo padrÃ£o jÃ¡ validado em .apolices-gestao-page .kanban-viewport. */
   min-height: clamp(26rem, calc(100dvh - 18rem), 46rem);
 }
 
@@ -1782,9 +1782,9 @@ html.dark .skeleton-surface {
   }
 }
 
-/* Acima de 1100px: colunas preenchem a largura disponível igualmente (sem
-   scroll horizontal nem necessidade de zoom manual). Abaixo disso, mantém
-   largura fixa + scroll com snap (fallback já existente para telas estreitas). */
+/* Acima de 1100px: colunas preenchem a largura disponÃ­vel igualmente (sem
+   scroll horizontal nem necessidade de zoom manual). Abaixo disso, mantÃ©m
+   largura fixa + scroll com snap (fallback jÃ¡ existente para telas estreitas). */
 @media (min-width: 1101px) {
   .apolices-gestao-page .kanban-columns-row {
     min-width: 0;
@@ -2260,4 +2260,543 @@ html.dark .ops-empty-state {
 
 
 
+
+
+/* Training area */
+.training-page {
+  --training-accent: rgb(var(--brand-primary-rgb));
+  --training-accent-soft: rgb(var(--brand-primary-rgb) / 0.10);
+  --training-gold: rgb(var(--brand-gold-rgb));
+}
+
+.training-hero,
+.training-detail-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 30px;
+  border: 1px solid var(--glass-border);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,255,255,0.68) 48%, rgb(var(--brand-secondary-rgb) / 0.18)),
+    var(--glass-bg-heavy);
+  box-shadow: var(--shadow-float), var(--glass-inset);
+}
+
+.training-hero::before,
+.training-detail-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.28), transparent 42%),
+    radial-gradient(circle at 86% 18%, rgb(var(--brand-gold-rgb) / 0.16), transparent 26%);
+  pointer-events: none;
+}
+
+.training-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 1.5rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.training-hero-main,
+.training-detail-hero > *,
+.training-hero-progress {
+  position: relative;
+  z-index: 1;
+}
+
+.training-hero-main {
+  display: grid;
+  gap: 1rem;
+  max-width: 48rem;
+}
+
+.training-hero h1,
+.training-detail-hero h1 {
+  color: rgb(var(--color-text));
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1.02;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.training-hero p,
+.training-detail-hero p {
+  margin-top: 0.75rem;
+  max-width: 58ch;
+  color: var(--glass-text-muted);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.training-kicker {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--brand-primary-rgb) / 0.16);
+  background: rgb(var(--brand-primary-rgb) / 0.08);
+  color: rgb(var(--brand-primary-rgb));
+  padding: 0.42rem 0.75rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.training-kicker-soft {
+  margin-bottom: 0.45rem;
+  background: rgb(var(--brand-secondary-rgb) / 0.14);
+}
+
+.training-hero-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 16rem;
+  border-radius: 24px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255,255,255,0.56);
+  padding: 0.85rem;
+}
+
+.training-progress-orb {
+  --training-progress: 0%;
+  width: 4.75rem;
+  height: 4.75rem;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at center, rgba(255,255,255,0.94) 0 58%, transparent 59%),
+    conic-gradient(rgb(var(--brand-primary-rgb)) var(--training-progress), rgb(var(--brand-secondary-rgb) / 0.22) 0);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.90), 0 14px 28px rgba(15, 23, 42, 0.08);
+}
+
+.training-progress-orb span {
+  font-weight: 800;
+  color: rgb(var(--brand-primary-rgb));
+  font-size: 1rem;
+}
+
+.training-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.training-metric {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.35rem 0.65rem;
+  border-radius: 20px;
+  border: 1px solid var(--glass-border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.82), rgba(255,255,255,0.50)), var(--glass-bg-heavy);
+  padding: 0.95rem;
+  box-shadow: var(--glass-shadow), var(--glass-inset);
+}
+
+.training-metric svg {
+  color: rgb(var(--brand-primary-rgb));
+}
+
+.training-metric span {
+  color: var(--glass-text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.training-metric strong {
+  grid-column: 1 / -1;
+  color: rgb(var(--color-text));
+  font-size: 1.65rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.training-next-card {
+  border-color: rgb(var(--brand-primary-rgb) / 0.18) !important;
+}
+
+.training-next-icon,
+.training-sector-icon,
+.training-quiz-icon,
+.training-path-step {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.training-next-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 18px;
+  background: rgb(var(--brand-primary-rgb) / 0.10);
+  color: rgb(var(--brand-primary-rgb));
+  border: 1px solid rgb(var(--brand-primary-rgb) / 0.14);
+}
+
+.training-section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.training-section-head.compact {
+  margin-bottom: 0.65rem;
+}
+
+.training-section-head h2 {
+  color: rgb(var(--color-text));
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.training-section-head > span {
+  color: var(--glass-text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.training-sector-card {
+  min-height: 12.5rem;
+}
+
+.training-sector-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgb(var(--brand-primary-rgb) / 0.12), rgb(var(--brand-secondary-rgb) / 0.20));
+  color: rgb(var(--brand-primary-rgb));
+}
+
+.training-progress-track {
+  height: 0.45rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(100, 116, 139, 0.14);
+}
+
+.training-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgb(var(--brand-primary-rgb)), rgb(var(--brand-secondary-rgb)));
+}
+
+.training-detail-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: clamp(1.1rem, 3vw, 1.7rem);
+}
+
+.training-detail-hero h1 {
+  font-size: clamp(1.65rem, 3vw, 2.45rem);
+}
+
+.training-detail-meter,
+.training-lesson-status {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  min-width: 8.5rem;
+  border-radius: 24px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255,255,255,0.58);
+  padding: 1rem;
+  color: rgb(var(--brand-primary-rgb));
+  text-align: center;
+}
+
+.training-detail-meter strong {
+  color: rgb(var(--color-text));
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.training-detail-meter span {
+  margin-top: 0.35rem;
+  color: var(--glass-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.training-path-list {
+  position: relative;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.training-path-row {
+  min-height: 4.6rem;
+  border-radius: 22px !important;
+}
+
+.training-path-row.is-locked {
+  opacity: 0.62;
+}
+
+.training-path-row.is-quiz,
+.training-quiz-card {
+  border-color: rgb(var(--brand-gold-rgb) / 0.34) !important;
+}
+
+.training-path-step {
+  width: 2.45rem;
+  height: 2.45rem;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--brand-primary-rgb) / 0.16);
+  background: rgb(var(--brand-primary-rgb) / 0.09);
+  color: rgb(var(--brand-primary-rgb));
+}
+
+.training-path-row.is-locked .training-path-step {
+  color: var(--glass-text-muted);
+  background: rgba(100, 116, 139, 0.10);
+  border-color: rgba(100, 116, 139, 0.16);
+}
+
+.training-quiz-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 14px;
+  color: rgb(var(--brand-gold-rgb));
+  background: rgb(var(--brand-gold-rgb) / 0.14);
+}
+
+.training-quiz-card.is-locked {
+  opacity: 0.62;
+}
+
+.training-lesson-hero {
+  align-items: stretch;
+}
+
+.training-lesson-status {
+  display: flex;
+  min-width: auto;
+  align-self: center;
+  gap: 0.7rem;
+}
+
+.training-content-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(13rem, 17rem);
+  align-items: start;
+  gap: 1rem;
+}
+
+.training-content-main,
+.training-variation-list,
+.training-quiz-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.training-content-card,
+.training-question-card,
+.training-note-card {
+  border-radius: 24px !important;
+}
+
+.training-rich-text {
+  display: grid;
+  gap: 0.85rem;
+  color: rgb(var(--color-text));
+  font-size: 0.94rem;
+  line-height: 1.75;
+}
+
+.training-rich-text strong {
+  font-weight: 800;
+  color: rgb(var(--brand-primary-rgb));
+}
+
+.training-rich-text ul {
+  display: grid;
+  gap: 0.5rem;
+  padding-left: 1.2rem;
+  list-style: disc;
+}
+
+.training-variation-title {
+  margin-bottom: 0.5rem;
+  color: rgb(var(--brand-primary-rgb));
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.training-note-card {
+  border-color: rgb(var(--brand-gold-rgb) / 0.30) !important;
+  background: linear-gradient(180deg, rgb(var(--brand-gold-rgb) / 0.08), rgba(255,255,255,0.58)), var(--glass-bg-heavy) !important;
+}
+
+.training-complete-panel {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  gap: 0.9rem;
+  border-radius: 24px;
+  border: 1px solid var(--glass-border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.84), rgba(255,255,255,0.56)), var(--glass-bg-heavy);
+  padding: 1rem;
+  box-shadow: var(--glass-shadow), var(--glass-inset);
+}
+
+.training-complete-panel p {
+  color: var(--glass-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.training-question-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.training-question-head span {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgb(var(--brand-primary-rgb) / 0.10);
+  color: rgb(var(--brand-primary-rgb));
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.training-question-head p {
+  color: rgb(var(--color-text));
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.training-answer-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.training-answer {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  border-radius: 16px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255,255,255,0.42);
+  padding: 0.75rem 0.85rem;
+  color: rgb(var(--color-text));
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.training-answer:hover {
+  transform: translateY(-1px);
+  border-color: rgb(var(--brand-primary-rgb) / 0.28);
+}
+
+.training-answer.is-selected {
+  border-color: rgb(var(--brand-primary-rgb) / 0.42);
+  background: rgb(var(--brand-primary-rgb) / 0.10);
+}
+
+.training-answer input {
+  accent-color: rgb(var(--brand-primary-rgb));
+}
+
+.training-result-card {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.training-result-card.is-pass {
+  border-color: rgba(5, 150, 105, 0.38) !important;
+}
+
+.training-result-card.is-fail {
+  border-color: rgba(220, 38, 38, 0.38) !important;
+}
+
+.training-action-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+html.dark .training-hero,
+html.dark .training-detail-hero,
+html.dark .training-metric,
+html.dark .training-hero-progress,
+html.dark .training-detail-meter,
+html.dark .training-lesson-status,
+html.dark .training-complete-panel,
+html.dark .training-answer {
+  background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.025)), var(--glass-bg-heavy);
+}
+
+html.dark .training-progress-orb {
+  background:
+    radial-gradient(circle at center, rgba(10,14,26,0.96) 0 58%, transparent 59%),
+    conic-gradient(rgb(var(--brand-primary-rgb)) var(--training-progress), rgba(255,255,255,0.10) 0);
+}
+
+@media (max-width: 900px) {
+  .training-hero,
+  .training-detail-hero,
+  .training-content-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .training-hero,
+  .training-detail-hero {
+    display: grid;
+  }
+
+  .training-hero-progress,
+  .training-detail-meter,
+  .training-lesson-status {
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .training-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .training-complete-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  .training-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .training-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .training-path-row,
+  .training-quiz-card {
+    align-items: flex-start;
+  }
+}
 

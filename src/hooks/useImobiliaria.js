@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { normalizeImobiliaria } from '../lib/normalizeImobiliaria'
 import { normalizeDisplayText } from '../lib/text'
+import { normalizeImobiliariaKey } from '../lib/imobiliariasMapeamento'
 
 // Módulo-level cache — compartilhado entre todas as instâncias do hook
 let _aliasMap = null   // { alias_lower → nome_canonico }
@@ -35,7 +36,7 @@ export function useImobiliaria() {
       ]).then(([{ data: aliasesData }, { data: gruposData }]) => {
         const mapa = {}
         aliasesData?.forEach(({ alias, imobiliarias: imob }) => {
-          if (imob) mapa[alias.toLowerCase().trim()] = imob.nome_canonico
+          if (imob) mapa[normalizeImobiliariaKey(alias)] = imob.nome_canonico
         })
         _aliasMap = mapa
         _grupos   = gruposData || []
@@ -55,7 +56,7 @@ export function useImobiliaria() {
   const resolverNome = useCallback((nomeOriginal) => {
     if (!nomeOriginal) return '—'
     const nomeLimpo = normalizeDisplayText(nomeOriginal) || nomeOriginal
-    const chave = nomeLimpo.toLowerCase().trim()
+    const chave = normalizeImobiliariaKey(nomeLimpo)
     if (aliasMap[chave]) return aliasMap[chave]
     return normalizeImobiliaria(nomeLimpo) || nomeLimpo
   }, [aliasMap])
@@ -64,7 +65,7 @@ export function useImobiliaria() {
     if (!nomeOriginal) return null
 
     const nomeResolvido = resolverNome(nomeOriginal)
-    const grupo = grupos.find(g => (g.nome_canonico || '').toLowerCase().trim() === nomeResolvido.toLowerCase().trim())
+    const grupo = grupos.find(g => normalizeImobiliariaKey(g.nome_canonico) === normalizeImobiliariaKey(nomeResolvido))
 
     if (!grupo) {
       return {

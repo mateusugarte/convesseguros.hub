@@ -39,6 +39,7 @@ import { PageHeader, MetricCard, DataCard, Select, Avatar, Modal } from '../comp
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
 import { normalizeDisplayText } from '../lib/text'
+import { normalizeImobiliariaKey } from '../lib/imobiliariasMapeamento'
 import { getEntityImageUrl } from '../lib/entityMedia'
 import { getFichaOperationalState, isFichaExpiredOperational, getReportEffectiveNow } from '../lib/fichaOperational'
 import { BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -125,9 +126,13 @@ function formatDateBR(value) {
   }
 }
 
-function normalizeKey(value) {
-  return normalizeDisplayText(String(value || '')).toLowerCase().trim()
-}
+// Reaproveita a mesma normalização (sem acento/caixa) já usada e testada em
+// imobiliariasMapeamento.js — a versão anterior aqui só corrigia mojibake e
+// baixava a caixa, sem remover acentos. Uma ficha/apólice com uma variação de
+// acento (ex.: apolice.imobiliaria com um acento diferente do alias cadastrado)
+// caía num grupo "fantasma" que nunca batia com nenhuma imobiliária real,
+// somando no total geral da página mas sumindo do card daquela imobiliária.
+const normalizeKey = normalizeImobiliariaKey
 
 async function fetchAllRows(queryFactory, pageSize = 1000) {
   let all = []
@@ -2413,7 +2418,7 @@ export default function Relatorio() {
                 <div className="mt-4 grid grid-cols-1 gap-2 text-[11px] sm:grid-cols-3">
                   <div className="rounded-2xl bg-dark-surface/70 px-3 py-2">
                     <p className="text-dark-muted">Aprovadas</p>
-                    <p className="mt-1 text-sm font-semibold text-dark-text">{imobMetrics.aprovadas}</p>
+                    <p className="mt-1 text-sm font-semibold text-dark-text">{imobMetrics.semCobrancaEnviada}</p>
                   </div>
                   <div className="rounded-2xl bg-dark-surface/70 px-3 py-2">
                     <p className="text-dark-muted">Cobrança</p>

@@ -1,7 +1,7 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
-import { CheckCircle2, HelpCircle } from 'lucide-react'
+import { CheckCircle2, HelpCircle, ListChecks, BookOpen } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../contexts/ToastContext'
 import {
@@ -58,11 +58,11 @@ function RichText({ text }) {
   if (currentList) blocks.push(currentList)
 
   return (
-    <div className="space-y-3 text-sm text-dark-text leading-relaxed">
+    <div className="training-rich-text">
       {blocks.map((block, i) => (
         block.type === 'ul'
           ? (
-            <ul key={i} className="list-disc pl-5 space-y-1.5">
+            <ul key={i}>
               {block.items.map((item, j) => <li key={j}>{renderInline(item)}</li>)}
             </ul>
           )
@@ -82,8 +82,8 @@ function QuizForm({ licao, funcionarioId, onDone }) {
     mutationFn: () => submitQuizAttempt({ funcionarioId, nodeId: licao.id, questions, answers }),
     onSuccess: ({ resultado: r }) => {
       setResultado(r)
-      if (r.passed) toast({ type: 'success', title: 'Quiz concluído!', message: `Nota ${r.scorePct}%` })
-      else toast({ type: 'error', title: 'Não atingiu a nota de corte', message: `Nota ${r.scorePct}% — mínimo ${QUIZ_PASSING_SCORE_PCT}%` })
+      if (r.passed) toast({ type: 'success', title: 'Quiz concluido!', message: `Nota ${r.scorePct}%` })
+      else toast({ type: 'error', title: 'Nao atingiu a nota de corte', message: `Nota ${r.scorePct}% - minimo ${QUIZ_PASSING_SCORE_PCT}%` })
       onDone()
     },
     onError: (error) => toast({ type: 'error', title: 'Erro ao enviar o quiz', message: error.message }),
@@ -93,8 +93,8 @@ function QuizForm({ licao, funcionarioId, onDone }) {
     return (
       <EmptyState
         icon={<HelpCircle className="w-6 h-6" />}
-        title="Quiz ainda não disponível"
-        description="As perguntas de avaliação deste quiz ainda não foram escritas. A lição fica marcada como pendente até o conteúdo de avaliação ser adicionado — nada foi inventado nesta etapa."
+        title="Quiz ainda nao disponivel"
+        description="As perguntas de avaliacao deste quiz ainda nao foram escritas. A licao fica marcada como pendente ate o conteudo de avaliacao ser adicionado."
       />
     )
   }
@@ -102,21 +102,23 @@ function QuizForm({ licao, funcionarioId, onDone }) {
   const allAnswered = questions.every(q => answers[q.id] !== undefined)
 
   return (
-    <div className="space-y-5">
+    <div className="training-quiz-form">
       {questions.map((question, index) => (
-        <Card key={question.id} padding="lg" className="space-y-3">
-          <p className="text-sm font-semibold text-dark-text">{index + 1}. {question.pergunta}</p>
-          <div className="space-y-2">
+        <Card key={question.id} padding="lg" className="training-question-card">
+          <div className="training-question-head">
+            <span>{index + 1}</span>
+            <p>{question.pergunta}</p>
+          </div>
+          <div className="training-answer-list">
             {(question.opcoes || []).map(opcao => (
-              <label key={opcao.id} className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 text-sm cursor-pointer transition-colors ${answers[question.id] === opcao.id ? 'border-brand-accent bg-brand-accent/10 text-status-info' : 'border-dark-border text-dark-text hover:border-brand-accent/40'}`}>
+              <label key={opcao.id} className={`training-answer ${answers[question.id] === opcao.id ? 'is-selected' : ''}`}>
                 <input
                   type="radio"
                   name={question.id}
                   checked={answers[question.id] === opcao.id}
                   onChange={() => setAnswers(prev => ({ ...prev, [question.id]: opcao.id }))}
-                  className="accent-brand-accent"
                 />
-                {opcao.texto}
+                <span>{opcao.texto}</span>
               </label>
             ))}
           </div>
@@ -124,21 +126,23 @@ function QuizForm({ licao, funcionarioId, onDone }) {
       ))}
 
       {resultado && (
-        <Card padding="lg" className={resultado.passed ? 'border border-status-success/40' : 'border border-status-danger/40'}>
-          <p className="text-sm font-semibold text-dark-text">
-            Nota: {resultado.scorePct}% ({resultado.correctCount}/{resultado.totalCount}) — {resultado.passed ? 'aprovado' : `abaixo da nota de corte de ${QUIZ_PASSING_SCORE_PCT}%`}
+        <Card padding="lg" className={resultado.passed ? 'training-result-card is-pass' : 'training-result-card is-fail'}>
+          <p>
+            Nota: {resultado.scorePct}% ({resultado.correctCount}/{resultado.totalCount}) - {resultado.passed ? 'aprovado' : `abaixo da nota de corte de ${QUIZ_PASSING_SCORE_PCT}%`}
           </p>
         </Card>
       )}
 
-      <Button
-        variant="primary"
-        disabled={!allAnswered}
-        loading={mutation.isPending}
-        onClick={() => mutation.mutate()}
-      >
-        Enviar respostas
-      </Button>
+      <div className="training-action-row">
+        <Button
+          variant="primary"
+          disabled={!allAnswered}
+          loading={mutation.isPending}
+          onClick={() => mutation.mutate()}
+        >
+          Enviar respostas
+        </Button>
+      </div>
     </div>
   )
 }
@@ -166,10 +170,10 @@ export default function TreinamentosLicao() {
   const concluirMutation = useMutation({
     mutationFn: () => upsertLicaoProgress({ funcionarioId, nodeId: licaoId, status: 'concluido', concluidoEm: new Date().toISOString() }),
     onSuccess: () => {
-      toast({ type: 'success', title: 'Lição concluída!' })
+      toast({ type: 'success', title: 'Licao concluida!' })
       queryClient.invalidateQueries({ queryKey })
     },
-    onError: (error) => toast({ type: 'error', title: 'Erro ao concluir lição', message: error.message }),
+    onError: (error) => toast({ type: 'error', title: 'Erro ao concluir licao', message: error.message }),
   })
 
   if (isLoading || !data) {
@@ -182,9 +186,9 @@ export default function TreinamentosLicao() {
 
   if (!licao) {
     return (
-      <div className="space-y-5 animate-fade-in">
+      <div className="training-page space-y-5 animate-fade-in">
         <TrainingBreadcrumb />
-        <EmptyState title="Lição não encontrada" description="Verifique o link ou volte para a página de Treinamentos." />
+        <EmptyState title="Licao nao encontrada" description="Verifique o link ou volte para a pagina de Treinamentos." />
       </div>
     )
   }
@@ -195,52 +199,67 @@ export default function TreinamentosLicao() {
 
   const siblingLicoes = modulo ? getChildrenByType(nodes, modulo.id, 'licao') : (licao.eh_quiz_final_setor ? getChildrenByType(nodes, setor?.id, 'licao') : [])
   const unlocked = licao.eh_quiz_final_setor
-    ? true // isSetorQuizUnlocked já é checado na página de setor antes de linkar aqui; evita duplicar a árvore de módulos aqui
+    ? true
     : isLicaoUnlocked({ licao, siblingLicoes, progressMap })
   const status = getNodeProgressStatus(licao.id, progressMap)
 
   return (
-    <div className="space-y-5 animate-fade-in pb-20">
+    <div className="training-page training-lesson-page space-y-6 animate-fade-in pb-20">
       <TrainingBreadcrumb setor={setor} modulo={isQuiz && !modulo ? null : modulo} licao={licao} />
-      <PageHeader
-        eyebrow={isQuiz ? 'Quiz' : (licao.tipo_conteudo || 'Lição')}
-        title={licao.titulo}
-        description={licao.tipo_conteudo_nota || undefined}
-        actions={<TrainingStatusBadge status={status} locked={!unlocked} />}
-      />
+      <section className="training-detail-hero training-lesson-hero">
+        <div>
+          <p className="training-kicker training-kicker-soft">{isQuiz ? 'Quiz' : (licao.tipo_conteudo || 'Licao')}</p>
+          <h1>{licao.titulo}</h1>
+          {licao.tipo_conteudo_nota && <p>{licao.tipo_conteudo_nota}</p>}
+        </div>
+        <div className="training-lesson-status">
+          {isQuiz ? <ListChecks className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
+          <TrainingStatusBadge status={status} locked={!unlocked} />
+        </div>
+      </section>
 
       {!unlocked ? (
-        <EmptyState title="Lição trancada" description="Conclua as etapas anteriores deste módulo para desbloquear este conteúdo." />
+        <EmptyState title="Licao trancada" description="Conclua as etapas anteriores deste modulo para desbloquear este conteudo." />
       ) : isQuiz ? (
         <QuizForm licao={licao} funcionarioId={funcionarioId} onDone={() => queryClient.invalidateQueries({ queryKey })} />
       ) : (
-        <div className="space-y-6">
-          <Card padding="lg">
-            <RichText text={licao.conteudo?.conteudo_geral} />
-          </Card>
-
-          {Array.isArray(licao.conteudo?.variacoes_por_seguradora) && licao.conteudo.variacoes_por_seguradora.length > 0 && (
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-dark-muted">Variações por seguradora</p>
-              {licao.conteudo.variacoes_por_seguradora.map((variacao, index) => (
-                <Card key={index} padding="lg">
-                  {variacao.rotulo && <p className="text-sm font-semibold text-status-info mb-1.5">{variacao.rotulo}</p>}
-                  <RichText text={variacao.texto} />
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {licao.conteudo?.notas && (
-            <Card padding="lg" className="border border-brand-gold/25">
-              <RichText text={licao.conteudo.notas} />
+        <div className="training-content-layout">
+          <div className="training-content-main">
+            <Card padding="lg" className="training-content-card">
+              <RichText text={licao.conteudo?.conteudo_geral} />
             </Card>
-          )}
+
+            {Array.isArray(licao.conteudo?.variacoes_por_seguradora) && licao.conteudo.variacoes_por_seguradora.length > 0 && (
+              <div className="training-variation-list">
+                <div className="training-section-head compact">
+                  <div>
+                    <p className="training-kicker training-kicker-soft">Referencia</p>
+                    <h2>Variacoes por seguradora</h2>
+                  </div>
+                </div>
+                {licao.conteudo.variacoes_por_seguradora.map((variacao, index) => (
+                  <Card key={index} padding="lg" className="training-content-card training-variation-card">
+                    {variacao.rotulo && <p className="training-variation-title">{variacao.rotulo}</p>}
+                    <RichText text={variacao.texto} />
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {licao.conteudo?.notas && (
+              <Card padding="lg" className="training-note-card">
+                <RichText text={licao.conteudo.notas} />
+              </Card>
+            )}
+          </div>
 
           {status !== 'concluido' && (
-            <Button variant="primary" iconLeft={<CheckCircle2 className="w-4 h-4" />} loading={concluirMutation.isPending} onClick={() => concluirMutation.mutate()}>
-              Concluir lição
-            </Button>
+            <aside className="training-complete-panel">
+              <p>Finalize esta etapa para liberar o proximo item da trilha.</p>
+              <Button variant="primary" iconLeft={<CheckCircle2 className="w-4 h-4" />} loading={concluirMutation.isPending} onClick={() => concluirMutation.mutate()}>
+                Concluir licao
+              </Button>
+            </aside>
           )}
         </div>
       )}

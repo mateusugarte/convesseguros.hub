@@ -6,6 +6,7 @@ import {
   buildImobiliariaRetornoPatch,
   buildCobrancaHistoricoPatch,
   buildRelatorioMovePatch,
+  buildDesistiuPatch,
   isCobrancaEnviadaVisivel,
   getCobrancaEnviadaDisplay,
   getImobiliariaRetornouDisplay,
@@ -73,6 +74,24 @@ test('buildRelatorioMovePatch move para expirada sem alterar o status real da fi
 
 test('buildRelatorioMovePatch com coluna desconhecida retorna null em vez de gravar status arbitrario', () => {
   assert.equal(buildRelatorioMovePatch({ status: 'aprovado' }, 'coluna_inexistente'), null)
+})
+
+test('buildDesistiuPatch marca cancelado, grava finalizada_em e limpa marcas de cobranca/expiracao', () => {
+  const ficha = { status: 'aprovado', raw_data: { cobranca_started_at: '2026-01-01', recovered_after_cobranca: true, imobiliaria_retornou: true, manually_expired: true, foo: 'bar' } }
+  const patch = buildDesistiuPatch(ficha, '2026-07-10T12:00:00.000Z')
+  assert.equal(patch.status, 'cancelado')
+  assert.equal(patch.finalizada_em, '2026-07-10T12:00:00.000Z')
+  assert.equal(patch.raw_data.cobranca_started_at, null)
+  assert.equal(patch.raw_data.recovered_after_cobranca, false)
+  assert.equal(patch.raw_data.imobiliaria_retornou, false)
+  assert.equal(patch.raw_data.manually_expired, false)
+  assert.equal(patch.raw_data.foo, 'bar')
+})
+
+test('buildRelatorioMovePatch com coluna desistiu delega para buildDesistiuPatch', () => {
+  const patch = buildRelatorioMovePatch({ status: 'aprovado', raw_data: {} }, 'desistiu', '2026-07-10T12:00:00.000Z')
+  assert.equal(patch.status, 'cancelado')
+  assert.equal(patch.finalizada_em, '2026-07-10T12:00:00.000Z')
 })
 
 test('ficha movida para expirada continua com status buscavel pelo relatorio (nao some do REPORT_STATUSES)', () => {

@@ -1,5 +1,65 @@
 # CURRENT TASK
 
+**Relatório (`/relatorio`) — mover para "Desistiu" + fichas "fantasma" no card por
+imobiliária (2026-07-14, Claude):** usuário reportou 3 sintomas ligados: (1) não
+havia como mover manualmente uma ficha para a coluna "Desistências"; (2) o card de
+algumas imobiliárias na visão geral ficava vermelho mesmo depois de todas as fichas
+aprovadas terem sido marcadas como cobrança enviada; (3) algumas imobiliárias
+mostravam ficha(s) no card da visão geral mas, ao abrir o relatório individual,
+tudo aparecia zerado (Aprovadas 0, Emitidas 0, etc). Investigação (systematic-
+debugging, sem acesso a banco neste ambiente — análise estática de código):
+
+- **Causa raiz de (2) e (3), a mesma:** a visão geral (`groupByImobiliaria`) agrupa
+  fichas usando `resolverNome()` (`useImobiliaria.js`) — resolução "fuzzy" (sem
+  acento/caixa, com fallback de title-case via `normalizeImobiliaria` para nomes
+  ainda não cadastrados como alias). Já o detalhe por imobiliária
+  (`/relatorio/:id`) buscava fichas/apólices com `.in('imobiliaria', aliases)` —
+  **match exato de string** contra `imobiliaria_aliases`. Uma ficha com uma
+  variação de texto ainda não virou alias (acento/caixa/espaço) era contada no
+  card da visão geral (o fallback de `resolverNome` "adivinha" o nome canônico)
+  mas nunca aparecia no detalhe (match exato não encontra) — o card parecia ter
+  fichas fantasma, e como a ação de marcar cobrança só existe na tela de detalhe,
+  essas fichas nunca podiam ser resolvidas, mantendo o card vermelho para sempre.
+  Corrigido em `Relatorio.jsx`: o filtro por imobiliária no detalhe deixou de ser
+  feito no banco via alias exato e passou a ser feito em memória reaplicando o
+  mesmo `resolverNome`/`normalizeKey` usado na visão geral — garante que card e
+  detalhe sempre concordem e nenhuma ficha aprovada fique escondida. `getAliases`
+  (não usado mais neste arquivo) removido do destructuring de `useImobiliaria()`.
+- **Causa raiz de (1):** `MANUAL_REPORT_MOVE_OPTIONS` só incluía
+  `aprovada`/`expirada`/`enviado_cobranca`; `buildRelatorioMovePatch`
+  (`relatorioCobranca.js`) não tinha caso para `desistiu`. Adicionado
+  `buildDesistiuPatch` (grava `status: 'cancelado'` + `finalizada_em`, mesma
+  convenção já usada pelo Kanban de Fichas ao cancelar, e limpa marcadores de
+  cobrança/expiração manual) e `desistiu` foi incluído em
+  `MANUAL_REPORT_MOVE_OPTIONS`, disponível no seletor "Mover para coluna..." do
+  toolbar de seleção em massa. `getFichaPeriodAnchorDate` (`Relatorio.jsx`) passou
+  a ancorar `cancelado` por `finalizada_em` (mesma regra de aprovado/emitido) —
+  sem isso, mover uma ficha para Desistiu trocaria sua âncora de período para
+  `created_at` e ela sumiria do mês sendo visto no momento do move.
+
+`npm test` (89/89, 3 testes novos em `relatorioCobranca.test.mjs`), `npm run
+build` e `npm run check:page-contexts` (mesmas pendências pré-existentes de
+`src/pages/auto/*`/`GestaoComercial.jsx`, não é regressão) verdes.
+
+**Smoke test pendente (sem `.env`/Supabase neste ambiente):** abrir uma
+imobiliária que hoje mostra card com contagem mas detalhe zerado e confirmar que
+os blocos passam a exibir as fichas; marcar cobrança enviada em todas as
+aprovadas de uma imobiliária com card vermelho e confirmar que o card vira azul/
+laranja (não fica mais preso em vermelho); selecionar fichas no detalhe, escolher
+"Desistências" no seletor "Mover para coluna..." e confirmar que elas aparecem no
+bloco Desistências e continuam visíveis no período atual do relatório.
+
+**Riscos remanescentes:** o filtro em memória no detalhe busca todas as fichas/
+apólices do período (sem filtro de imobiliária no banco) e filtra no cliente —
+mesmo padrão de custo que a visão geral já usa, mas pode pesar em bases muito
+grandes; considerar um índice/RPC dedicado se o volume crescer muito. O mesmo
+padrão de match exato por alias (`.in('imobiliaria', aliases)`) ainda existe em
+outros pontos do app (`apolices.js`, `fichas.js`) — fora do escopo desta correção
+(usuário pediu especificamente sobre Relatórios), mas pode ter o mesmo tipo de
+gap se alguma tela dependente de alias exato for usada como fonte de verdade.
+
+---
+
 **Banco de perguntas de quiz + área admin de curadoria (TREINAMENTOS) — 2026-07-14,
 Claude:** fecha o gap conhecido da entrega anterior (nenhum quiz tinha pergunta). Plano
 apresentado e aprovado nesta sessão (mesmo arquivo `~/.claude/plans/deep-rolling-wind.md`,

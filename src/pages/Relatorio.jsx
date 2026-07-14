@@ -71,11 +71,15 @@ const INCLUDED_REPORT_STATUSES = ['aprovado', 'emitido', 'cancelado', 'expirada'
 // "Data de aprovação" (finalizada_em, com fallback para created_at) é o âncora
 // de período para fichas aprovadas/emitidas — inclui enviado_cobranca e
 // recuperados, que são só variações de status='aprovado'/'emitido' com
-// marcadores extra em raw_data. As demais (cancelado, expirada) continuam
-// ancoradas em created_at.
+// marcadores extra em raw_data. "cancelado" (Desistiu) segue a mesma regra: o
+// Kanban de Fichas já grava finalizada_em ao cancelar, e o botão de mover para
+// Desistiu no relatório faz o mesmo — sem isso a ficha seria ancorada em
+// created_at e poderia sumir do período que está sendo visto no momento do
+// move. "expirada" é só um estado de exibição (nunca é status real), continua
+// ancorada em created_at.
 function getFichaPeriodAnchorDate(ficha) {
   const status = String(ficha?.status || '').toLowerCase()
-  if (status === 'aprovado' || status === 'emitido') {
+  if (status === 'aprovado' || status === 'emitido' || status === 'cancelado') {
     return ficha?.finalizada_em || ficha?.created_at || null
   }
   return ficha?.created_at || null
@@ -94,7 +98,7 @@ function isFichaWithinReportPeriod(ficha, rangeStart, rangeEnd) {
 const FICHA_REPORT_COLUMNS = 'id, created_at, finalizada_em, nome_interessado, nome_empresa, cpf, cnpj, cep, imobiliaria, status, produto, seguradora, orcamentista_forms, observacoes, raw_data, numero_apolice, data_emissao, valor_aluguel, assumida, orcamentista_id, profiles!orcamentista_id(nome, avatar_url)'
 const COBRANCA_TOGGLE_STORAGE = 'relatorio-cobranca-toggle'
 const RELATORIO_FINALIZADO_STORAGE = 'relatorio-finalizado-v1'
-const MANUAL_REPORT_MOVE_OPTIONS = COLUNAS.filter(col => ['aprovada', 'expirada', 'enviado_cobranca'].includes(col.id))
+const MANUAL_REPORT_MOVE_OPTIONS = COLUNAS.filter(col => ['aprovada', 'expirada', 'enviado_cobranca', 'desistiu'].includes(col.id))
 
 function pad2(value) {
   return String(value).padStart(2, '0')
@@ -1209,7 +1213,7 @@ export default function Relatorio() {
   const { imobiliariaId } = useParams()
   const toast = useToast()
   const { user } = useAuth()
-  const { resolverNome, resolverImobiliariaInfo, getAliases } = useImobiliaria()
+  const { resolverNome, resolverImobiliariaInfo } = useImobiliaria()
 
   const query = useMemo(() => new URLSearchParams(location.search), [location.search])
   const agora = new Date()
@@ -1292,20 +1296,30 @@ export default function Relatorio() {
     async function loadRows() {
       setLoading(true)
       try {
-        let imobiliariaAliases = null
+        let targetNomeCanonico = null
         if (isDetail) {
           const imob = imobiliariasRef.current.find(item => String(item.id) === String(imobiliariaId))
-          if (!imob) {
-            const { data } = await supabase.from('imobiliarias').select('id, nome_canonico, imagem_url, imagem_path, ativa').eq('id', imobiliariaId).single()
-            if (data) {
-              const { data: aliasData } = await supabase.from('imobiliaria_aliases').select('alias').eq('imobiliaria_id', data.id)
-              imobiliariaAliases = [data.nome_canonico, ...(aliasData || []).map(item => item.alias).filter(Boolean)]
-            }
+          if (imob) {
+            targetNomeCanonico = imob.nome_canonico
           } else {
-            const aliases = await getAliases(imob.nome_canonico)
-            imobiliariaAliases = aliases.length ? aliases : [imob.nome_canonico]
+            const { data } = await supabase.from('imobiliarias').select('id, nome_canonico, imagem_url, imagem_path, ativa').eq('id', imobiliariaId).single()
+            targetNomeCanonico = data?.nome_canonico || null
           }
         }
+
+        // Filtro por imobiliária aplicado em memória com a mesma resolução "fuzzy"
+        // (resolverNome, sem acento/caixa) usada para montar os cards da visão
+        // geral — em vez de um match exato de string contra imobiliaria_aliases.
+        // Antes, uma ficha com uma variação de texto (acento/caixa/espaço) ainda
+        // não cadastrada como alias aparecia contada no card da visão geral
+        // (resolverNome tem fallback de title-case para nomes não mapeados) mas
+        // sumia ao abrir o detalhe (o `.in('imobiliaria', aliases)` exigia igualdade
+        // exata) — o card parecia ter fichas "fantasma" (tudo 0 ao abrir) e nunca
+        // saía do vermelho, porque essas fichas eram invisíveis onde a cobrança é
+        // marcada como enviada.
+        const matchesTargetImob = rawImobiliaria => (
+          !targetNomeCanonico || normalizeKey(resolverNome(rawImobiliaria)) === normalizeKey(targetNomeCanonico)
+        )
 
         const createdRowsQuery = () => {
           let query = supabase
@@ -1325,9 +1339,6 @@ export default function Relatorio() {
               `and(created_at.gte.${rangeStart},created_at.lte.${end}),and(finalizada_em.gte.${rangeStart},finalizada_em.lte.${end})`
             )
           }
-          if (imobiliariaAliases?.length) {
-            query = query.in('imobiliaria', imobiliariaAliases)
-          }
 
           return query
         }
@@ -1341,18 +1352,22 @@ export default function Relatorio() {
           if (rangeStart && rangeEnd) {
             query = query.gte('data_emissao', rangeStart).lte('data_emissao', rangeEnd)
           }
-          if (imobiliariaAliases?.length) {
-            query = query.in('imobiliaria', imobiliariaAliases)
-          }
 
           return query
         }
 
-        const [createdRows, emittedRangeRows] = await Promise.all([
+        const [createdRowsAll, emittedRangeRowsAll] = await Promise.all([
           fetchAllRows(createdRowsQuery),
           fetchAllRows(apolicesRangeRowsQuery),
         ])
         if (!active) return
+
+        const createdRows = isDetail
+          ? (createdRowsAll || []).filter(item => matchesTargetImob(item.imobiliaria))
+          : createdRowsAll
+        const emittedRangeRows = isDetail
+          ? (emittedRangeRowsAll || []).filter(item => matchesTargetImob(item.imobiliaria))
+          : emittedRangeRowsAll
 
         setEmittedPolicies(emittedRangeRows || [])
 
@@ -1444,7 +1459,7 @@ export default function Relatorio() {
 
     loadRows()
     return () => { active = false }
-  }, [ano, mes, periodo, rangeStart, rangeEnd, imobiliariaId, getAliases, isDetail, toast])
+  }, [ano, mes, periodo, rangeStart, rangeEnd, imobiliariaId, resolverNome, isDetail, toast])
 
   useEffect(() => {
     if (typeof location.state?.scrollTop !== 'number') return

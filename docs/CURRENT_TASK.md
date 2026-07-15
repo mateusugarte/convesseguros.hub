@@ -1,5 +1,69 @@
 # CURRENT TASK
 
+**Ficha (`/fichas/:id`) — 2 bugs de cotação: valores/parcelas não salvavam para
+Pottencial/TOO Seguros e mensagem de retorno ignorava a seguradora selecionada
+manualmente (2026-07-15, Claude):** usuário reportou dois sintomas no bloco
+"Cotação e retorno" de `FichaDetalhePage.jsx`. Systematic-debugging (análise
+estática de código, sem `.env`/Supabase neste ambiente):
+
+1. **Causa raiz do bug de valores não salvos:** `updateCotacao` reconstruía o
+   array `raw_data.cotacoes` INTEIRO a partir do estado React `ficha` (closure
+   da renderização no momento do clique), não do banco. Como cada campo do card
+   (Status via `Select.onChange`, Valor da Parcela, % Desconto, Qtd. Parcelas,
+   Comissão via `InlineField.onSave`) dispara sua própria chamada assíncrona
+   independente e nenhuma delas aguarda a anterior, o fluxo natural de "aprovar"
+   uma seguradora (mudar Status + digitar Valor + digitar Parcelas em sequência
+   rápida) gerava 2-3 chamadas concorrentes partindo do MESMO `ficha` desatualizado
+   — a que terminasse por último sobrescrevia `raw_data.cotacoes` inteiro,
+   descartando as mudanças das chamadas anteriores (last-write-wins sobre um
+   snapshot obsoleto, não sobre o dado mais recente). `editarFicha` já buscava
+   `raw_data` fresco do banco antes de gravar, mas isso não ajudava porque o
+   chamador sempre mandava a chave `cotacoes` inteira, sobrescrevendo qualquer
+   coisa que a busca fresca tivesse. Como Pottencial/TOO Seguros são os últimos
+   da lista (`COTACAO_SEGURADORAS_BASE`), são os que acumulam mais chamadas em
+   voo quando o usuário preenche os cards em sequência — mas a race also podia
+   afetar qualquer seguradora dependendo da velocidade de digitação.
+   **Corrigido:** nova função `atualizarCotacaoFicha(id, seguradora, fields,
+   userId)` em `src/lib/fichas.js` — busca `raw_data` fresco do banco e mescla
+   só os campos daquela seguradora especificamente (mesmo padrão já usado por
+   `editarFicha`/`salvarRetornoGeradoFicha`), em vez de reconstruir o array
+   inteiro a partir do estado React. `updateCotacao` (`FichaDetalhePage.jsx`)
+   passou a chamar essa função, mantendo o update otimista local.
+2. **Causa raiz do bug da mensagem:** `buildCotacaoMessageData` calculava
+   `seguradoraEscolhida` só pela cotação aprovada de MENOR valor total
+   (`valor_parcela × parcelamento`), ignorando completamente a seguradora que o
+   usuário já escolhe manualmente pelo botão "Selecionar" de cada card
+   (`selecionarSeguradora`, grava em `ficha.seguradora`/
+   `raw_data.seguradora_escolhida`) — por isso a mensagem sempre saía com a
+   seguradora mais barata (ex. Porto Seguro) mesmo com Pottencial selecionada e
+   aprovada. **Corrigido:** `buildCotacaoMessageData` agora prioriza a cotação
+   aprovada que bate com `ficha.raw_data.seguradora_escolhida`/`ficha.seguradora`
+   quando existir; só cai no cálculo automático de menor valor se nada foi
+   selecionado manualmente (ou se a seguradora selecionada não estiver mais
+   aprovada). As linhas de preço/status de todas as seguradoras continuam
+   aparecendo normalmente — só o trecho "Segue link de biometria *SEGURADORA*"
+   passou a refletir a escolhida.
+
+`npm test` (89/89) e `npm run build` verdes. Nenhuma mudança de schema/RLS —
+só lógica de app em `src/lib/fichas.js` e `src/pages/FichaDetalhePage.jsx`.
+
+**Smoke test pendente (sem `.env`/Supabase neste ambiente):** abrir uma ficha,
+aprovar Pottencial e TOO Seguros preenchendo Status/Valor/Parcelas em sequência
+rápida, recarregar a página e confirmar que os valores persistiram; clicar
+"Selecionar" em um card aprovado (ex. Pottencial) e gerar a mensagem de retorno,
+confirmando que o trecho de biometria cita a seguradora selecionada mesmo se ela
+não for a mais barata.
+
+**Riscos remanescentes:** a correção fecha a race entre chamadas originadas na
+mesma aba/sessão; edição simultânea da mesma ficha por duas abas/pessoas ao
+mesmo tempo ainda pode colidir (fora do escopo reportado). Se dois campos do
+MESMO card forem salvos com timing quase idêntico (mesmo request), ainda existe
+uma janela pequena de corrida no round-trip ao banco — bem menor que antes
+(era do tamanho da digitação do usuário, agora é do tamanho de uma consulta
+Supabase), não eliminada por completo.
+
+---
+
 **Relatório (`/relatorio`) — mover para "Desistiu" + fichas "fantasma" no card por
 imobiliária (2026-07-14, Claude):** usuário reportou 3 sintomas ligados: (1) não
 havia como mover manualmente uma ficha para a coluna "Desistências"; (2) o card de

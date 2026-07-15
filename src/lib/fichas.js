@@ -925,6 +925,30 @@ export async function editarFicha(id, dados, userId, options = {}) {
   return null
 }
 
+// Atualiza só os campos de UMA seguradora dentro de raw_data.cotacoes, sempre a
+// partir do raw_data mais recente do banco — evita perder edições concorrentes
+// de outro campo/bloco de cotação salvo entre o carregamento da tela e este save
+// (ex.: status "aprovado" de um card e valor/parcelas de outro, salvos em sequência
+// rápida a partir do mesmo estado React desatualizado).
+export async function atualizarCotacaoFicha(id, seguradora, fields, userId) {
+  const { data: cur } = await supabase.from('fichas').select('raw_data').eq('id', id).single()
+  const raw = cur?.raw_data || {}
+  const cotacoesAtuais = Array.isArray(raw.cotacoes) ? raw.cotacoes : []
+  const existe = cotacoesAtuais.some(c => c?.seguradora === seguradora)
+  const nextCotacoes = existe
+    ? cotacoesAtuais.map(c => (c?.seguradora === seguradora ? { ...c, ...fields } : c))
+    : [...cotacoesAtuais, { seguradora, ...fields }]
+
+  const hist = Array.isArray(raw._edit_history) ? raw._edit_history : []
+  if (userId) hist.push({ editado_em: new Date().toISOString(), editado_por: userId })
+
+  const payload = { raw_data: { ...raw, cotacoes: nextCotacoes, _edit_history: hist } }
+  const { data, error } = await supabase.from('fichas').update(payload).eq('id', id).select('id')
+  if (error) return error
+  if (!data || data.length === 0) return { message: 'Sem permissão para editar esta ficha.' }
+  return null
+}
+
 export async function salvarRetornoGeradoFicha(id, retornoGerado, userId) {
   const { data: cur } = await supabase.from('fichas').select('raw_data').eq('id', id).single()
   const raw = cur?.raw_data || {}

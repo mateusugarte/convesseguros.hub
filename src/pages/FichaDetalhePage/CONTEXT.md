@@ -12,7 +12,11 @@ Página de detalhe completo de uma ficha individual. Permite visualizar, editar 
 - `SecaoDocumentos` — upload e listagem de documentos anexados
 
 ## Queries Supabase
-- `lib/fichas.js` — fetchFichaDetalhe (por id), editarFicha, deletarFicha
+- `lib/fichas.js` — fetchFichaDetalhe (por id), editarFicha, atualizarCotacaoFicha
+  (salva campos de UMA seguradora em `raw_data.cotacoes` sempre a partir do
+  `raw_data` mais recente do banco, evitando race entre saves concorrentes de
+  cards diferentes), deletarFicha, salvarRetornoGeradoFicha,
+  limparRetornoGeradoFicha
 - Contexto: `useAuth` para verificar se usuário pode finalizar (só quem assumiu)
 - Rota: `/fichas/:id`
 

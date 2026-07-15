@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { fetchFichaDetalhe, editarFicha, deletarFicha, salvarRetornoGeradoFicha, limparRetornoGeradoFicha, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
+import { fetchFichaDetalhe, editarFicha, atualizarCotacaoFicha, deletarFicha, salvarRetornoGeradoFicha, limparRetornoGeradoFicha, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useToast } from '../contexts/ToastContext'
@@ -277,7 +277,14 @@ function buildCotacaoMessageData(ficha, cotacoes = [], biometriaUrl = '') {
     && recusadas.length === seguradoras.filter(seg => (cotacoes.find(c => c.seguradora === seg)?.status === 'recusado')).length
     && aprovadas.length === 0
 
-  const escolhida = aprovadas
+  // Seguradora escolhida manualmente pelo usuário (botão "Selecionar" no card da
+  // cotação, ver `selecionarSeguradora`). Se ela ainda estiver aprovada, prevalece
+  // sobre o cálculo automático — a mensagem deve refletir a escolha do usuário, não
+  // sempre a de menor valor.
+  const seguradoraSelecionadaManualmente = ficha?.raw_data?.seguradora_escolhida || ficha?.seguradora || ''
+  const aprovadaSelecionadaManualmente = aprovadas.find(c => c.seguradora === seguradoraSelecionadaManualmente) || null
+
+  const escolhida = aprovadaSelecionadaManualmente || aprovadas
     .map(cotacao => ({
       ...cotacao,
       total: (toNumber(cotacao.valor_parcela) || 0) * (toNumber(cotacao.parcelamento) || 0),
@@ -437,10 +444,28 @@ export default function FichaDetalhePage() {
   }
 
   async function updateCotacao(seguradora, field, value) {
-    const raw = ficha?.raw_data || {}
-    const cotacoes = normalizarCotacoes(raw.cotacoes, ficha?.produto)
-    const nextCotacoes = cotacoes.map(c => (c.seguradora === seguradora ? { ...c, [field]: value } : c))
-    await updateField('raw_data', { ...raw, cotacoes: nextCotacoes })
+    const prev = ficha
+
+    // Optimistic update local, mas o save efetivo (atualizarCotacaoFicha) sempre
+    // busca o raw_data mais recente do banco antes de mesclar — evita que edições
+    // rápidas em campos/blocos diferentes (ex.: aprovar e já digitar valor/parcelas)
+    // se sobrescrevam por partirem do mesmo estado React desatualizado.
+    setFicha(f => {
+      if (!f) return f
+      const raw = f.raw_data || {}
+      const cotacoes = normalizarCotacoes(raw.cotacoes, f.produto)
+      const nextCotacoes = cotacoes.map(c => (c.seguradora === seguradora ? { ...c, [field]: value } : c))
+      return { ...f, raw_data: { ...raw, cotacoes: nextCotacoes } }
+    })
+
+    const err = await atualizarCotacaoFicha(id, seguradora, { [field]: value }, user?.id)
+    if (err) {
+      setFicha(prev)
+      toast({ type: 'error', title: 'Erro ao salvar campo' })
+    } else {
+      toast({ type: 'success', title: 'Campo atualizado' })
+    }
+    return err
   }
 
   async function selecionarSeguradora(cotacao) {

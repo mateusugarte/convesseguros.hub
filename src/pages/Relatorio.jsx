@@ -179,7 +179,7 @@ function getColuna(ficha, now) {
 
 function getNomeFicha(ficha) {
   if (!ficha) return '—'
-  if (ficha._isStandaloneApolice) return 'Apólice sem ficha vinculada'
+  if (ficha._isStandaloneApolice) return normalizeDisplayText(ficha.nome_interessado) || '—'
   if (ficha.produto === 'pessoa_juridica') {
     return normalizeDisplayText(ficha.nome_empresa || ficha.nome_interessado) || '—'
   }
@@ -538,6 +538,9 @@ function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggl
             <p className="text-sm font-semibold text-dark-text">{nome}</p>
           </div>
           <p className="mt-0.5 text-[11px] uppercase tracking-[0.1em] text-dark-muted">{getCanonicalImobiliariaNome(ficha)}</p>
+          <span className="mt-1 inline-flex items-center rounded-full bg-status-warning/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-status-warning">
+            Apólice sem ficha vinculada
+          </span>
         </div>
       ) : (
         <button type="button" onClick={() => onOpen(ficha.id)} className="min-w-0 flex-[1_1_20rem] text-left">
@@ -1388,7 +1391,7 @@ export default function Relatorio() {
         const apolicesRangeRowsQuery = () => {
           let query = supabase
             .from('apolices')
-            .select('id, ficha_id, numero_apolice, data_emissao, status_emissao, seguradora, imobiliaria, emitido_por, profiles!emitido_por(nome, avatar_url)')
+            .select('id, ficha_id, numero_apolice, data_emissao, status_emissao, seguradora, imobiliaria, emitido_por, nome_interessado, produto, profiles!emitido_por(nome, avatar_url)')
             .in('status_emissao', ['emitida', 'enviada'])
 
           if (rangeStart && rangeEnd) {
@@ -1665,8 +1668,8 @@ export default function Relatorio() {
         _emissorAvatar: apolice.profiles?.avatar_url || null,
         _imobiliariaNome: imobNome,
         _oper: { id: 'emitida', label: 'Emitida', className: 'badge-purple' },
-        produto: null,
-        nome_interessado: null,
+        produto: apolice.produto || null,
+        nome_interessado: apolice.nome_interessado || null,
         created_at: apolice.data_emissao || null,
       }
     })

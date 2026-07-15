@@ -47,6 +47,7 @@ export function Select({
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState(null)
   const triggerRef = useRef(null)
+  const dropRef = useRef(null)
 
   useEffect(() => {
     if (!open) {
@@ -78,7 +79,14 @@ export function Select({
   useEffect(() => {
     if (!open) return
     function handler(e) {
-      if (!triggerRef.current?.contains(e.target)) setOpen(false)
+      // O painel de opções é renderizado via createPortal em document.body,
+      // fora da subárvore do trigger — sem checar dropRef, todo clique numa
+      // opção é visto como "clique fora" no mousedown (que dispara antes do
+      // click) e fecha o dropdown antes do onClick da opção rodar, fazendo a
+      // seleção nunca "colar" (onChange nunca é chamado).
+      if (!triggerRef.current?.contains(e.target) && !dropRef.current?.contains(e.target)) {
+        setOpen(false)
+      }
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -101,6 +109,7 @@ export function Select({
 
       {open && pos && createPortal(
         <div
+          ref={dropRef}
           className="glass-panel animate-fade-in py-1"
           style={{ position: 'fixed', zIndex: 300, ...pos, maxHeight: 240, overflowY: 'auto' }}
         >

@@ -1,5 +1,60 @@
 # CURRENT TASK
 
+**Select compartilhado não registrava clique em opção (afeta toda a app) +
+apólice sem ficha mostrando aviso como nome, no Relatório (2026-07-15,
+Claude):** usuário reportou 2 bugs: (1) mover ficha para outra coluna em
+`/relatorio` "não funciona, principalmente para Desistências"; (2) em
+apólices, várias apareciam com o nome "apolice sem ficha vinculada" em vez
+do nome da pessoa + etiqueta.
+
+1. **Causa raiz de (1) — muito mais ampla do que o relatado:** `Select`
+   exportado por `src/components/ui/index.js` (usado como `import { Select }
+   from '../components/ui'` em várias telas, inclusive o toolbar "Mover para
+   coluna..." do Relatório) vem de `FormFields.jsx`, não do outro `Select.jsx`
+   (esse é exportado à parte como `PortalSelect`, não usado aqui). O painel de
+   opções desse `Select` é renderizado via `createPortal` direto em
+   `document.body`, fora da subárvore DOM do botão trigger. O listener de
+   "clique fora" (`mousedown` em `document`) só verificava
+   `triggerRef.current?.contains(e.target)` — como as opções ficam fora dessa
+   subárvore, TODO clique em qualquer opção era visto como "fora", fechando o
+   dropdown no `mousedown` antes do `click` da opção conseguir disparar
+   `onChange`. Resultado: nenhuma seleção "colava" nesse componente, em
+   nenhuma tela que o usa — o botão de ação dependente do valor selecionado
+   ficava travado desabilitado para sempre, sem erro no console, sem toast,
+   "nada acontece" (confirmado ao vivo: `npm run dev` local + login real do
+   usuário + Chrome DevTools/accessibility tree, tanto por coordenada quanto
+   por clique via ref de acessibilidade). **Corrigido:** adicionado `dropRef`
+   apontando para o container do portal, checado junto de `triggerRef` no
+   handler de clique-fora (mesmo padrão já usado corretamente no outro
+   `Select.jsx`/`PortalSelect`). Reproduzido e confirmado corrigido ao vivo:
+   "Aprovadas" → "Desistências" e volta, ficha realmente mudou de coluna.
+   Teste de dados real revertido ao estado original ao final (Supabase de
+   produção, sem `.env` de teste neste ambiente).
+2. **Causa raiz de (2):** `getNomeFicha` (`Relatorio.jsx`) usava o texto
+   "Apólice sem ficha vinculada" como se fosse o nome do card
+   (`ficha._isStandaloneApolice`), e a query que monta essas linhas sintéticas
+   (`apolicesRangeRowsQuery`, painel "Emitidas" do detalhe por imobiliária)
+   nem buscava `nome_interessado`/`produto` da apólice. **Corrigido:** query
+   passou a buscar `nome_interessado, produto`; `getNomeFicha` retorna o nome
+   real; card ganhou uma etiqueta laranja separada "Apólice sem ficha
+   vinculada" abaixo do nome — mesmo padrão visual já usado (e correto) em
+   `ApolicesLista.jsx`.
+
+`npm test` (89/89) e `npm run build` verdes. Nenhuma mudança de schema/RLS.
+
+**Arquivos alterados:** `src/components/ui/FormFields.jsx` (fix do Select,
+alto impacto — reaproveitado em várias telas além do Relatório),
+`src/pages/Relatorio.jsx`, `src/pages/Relatorio/CONTEXT.md`.
+
+**Riscos remanescentes:** o fix do `Select` é uma correção de bug em
+componente compartilhado — não foi feita uma varredura de todas as telas que
+o usam (fora do escopo relatado pelo usuário), mas qualquer outro fluxo com
+sintoma parecido de "dropdown abre mas seleção não gruda" tem a mesma causa
+raiz e já está corrigido pela mesma mudança. Não testado em telas fora do
+Relatório nesta sessão.
+
+---
+
 **Relatório — regras de negócio das métricas (visão geral, card por imobiliária,
 detalhe, painel "Emitidas") corrigidas conforme especificação do usuário
 (2026-07-15, Claude):** usuário recapitulou 4 regras de negócio que deveriam

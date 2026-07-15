@@ -26,6 +26,13 @@ Relatório mensal operacional em shell premium, com filtros por ano, mês e imob
   linhas sintéticas somente-leitura para apólices sem `ficha_id` (sem
   checkbox/seleção em massa, só "Abrir apólice"). As demais colunas de status
   continuam vindo só de `columnMap` (fichas).
+- **Apólice sem ficha vinculada (2026-07-15)**: a linha sintética mostra o
+  nome real do interessado (`apolice.nome_interessado`, buscado junto no
+  `select` de `apolicesRangeRowsQuery`) com uma etiqueta laranja "Apólice sem
+  ficha vinculada" abaixo — antes `getNomeFicha` usava esse texto como se
+  fosse o próprio nome (a query nem buscava `nome_interessado`), então toda
+  apólice sem ficha aparecia com o aviso no lugar do nome da pessoa. Mesmo
+  padrão visual já usado em `ApolicesLista.jsx`.
 
 ## Componentes usados
 - `PageHeader`

@@ -179,6 +179,7 @@ function getColuna(ficha, now) {
 
 function getNomeFicha(ficha) {
   if (!ficha) return '—'
+  if (ficha._isStandaloneApolice) return 'Apólice sem ficha vinculada'
   if (ficha.produto === 'pessoa_juridica') {
     return normalizeDisplayText(ficha.nome_empresa || ficha.nome_interessado) || '—'
   }
@@ -213,6 +214,18 @@ function isApprovedFicha(ficha) {
 
 function isSemCobrancaEnviada(ficha) {
   return getColuna(ficha) === 'aprovada'
+}
+
+// Fichas que já foram aprovadas neste período e já têm apólice emitida
+// (bucket 'emitida'/'recuperados'). `_withinPeriod` (setado em rowsWithHelpers)
+// evita contar fichas que só entraram em `rows` porque a apólice foi emitida
+// neste período, mas cuja aprovação em si aconteceu em outro mês (ver
+// `extraRows`/`extraIds` no carregamento) — sem esse filtro, "Fichas aprovadas"
+// contaria apólices de fichas aprovadas em meses diferentes.
+function isAprovadaEmitidaNoPeriodo(ficha) {
+  if (ficha?._withinPeriod === false) return false
+  const coluna = getColuna(ficha)
+  return coluna === 'emitida' || coluna === 'recuperados'
 }
 
 function isAguardandoRetorno(ficha) {
@@ -294,6 +307,7 @@ function summarizeRows(rows, emittedPolicies = []) {
     recuperadas: 0,
     expiradas: 0,
     aprovadasSemApolice: 0,
+    aprovadasEmitidas: 0,
     tempoEmissao: [],
     tempoCobranca: [],
   }
@@ -310,6 +324,7 @@ function summarizeRows(rows, emittedPolicies = []) {
     if (isAguardandoRetorno(ficha)) summary.aguardandoRetorno += 1
     if (coluna === 'expirada') summary.expiradas += 1
     if (isRecovered(ficha)) summary.recuperadas += 1
+    if (isAprovadaEmitidaNoPeriodo(ficha)) summary.aprovadasEmitidas += 1
 
     if (ficha._hasEmittedPolicy && getEffectiveDataEmissao(ficha) && ficha.created_at) {
       const start = new Date(ficha.created_at)
@@ -330,8 +345,11 @@ function summarizeRows(rows, emittedPolicies = []) {
   })
 
   summary.totalFichas = summary.aprovadas
-  summary.fichasAprovadas = summary.aprovadas
   summary.aprovadasSemApolice = summary.aprovadas
+  // "Fichas aprovadas" agora é o total de fichas que foram aprovadas neste
+  // período, incluindo as que já têm apólice emitida (antes ficava restrito
+  // às sem apólice, subestimando o total real de aprovações do mês).
+  summary.fichasAprovadas = summary.aprovadas + summary.aprovadasEmitidas
   summary.totalCobradas = summary.aguardandoRetorno + summary.recuperadas
   summary.taxaEmissao = summary.aprovadas > 0 ? (summary.emitidasComFicha / summary.aprovadas) * 100 : 0
   summary.taxaRecuperacao = summary.totalCobradas > 0 ? (summary.recuperadas / summary.totalCobradas) * 100 : 0
@@ -471,6 +489,7 @@ function ChartCard({ title, subtitle, data, dataKey = 'value', xKey = 'name', co
 }
 
 function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggleSelect, onToggleCobranca, onToggleRetornou }) {
+  const isStandaloneApolice = Boolean(ficha._isStandaloneApolice)
   const nome = getNomeFicha(ficha)
   const doc = getDocumento(ficha)
   const op = getOperacionalStatus(ficha)
@@ -486,14 +505,18 @@ function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggl
 
   return (
     <div className={`flex flex-wrap items-start gap-3 rounded-2xl border px-4 py-3 transition-colors lg:items-center ${rowClass}`}>
-      <button
-        type="button"
-        onClick={() => onToggleSelect(ficha.id)}
-        className="rounded-lg p-1 hover:bg-dark-surface2"
-        aria-label="Selecionar linha"
-      >
-        {selected ? <CheckSquare className="h-4 w-4 text-brand-primary" /> : <Square className="h-4 w-4 text-dark-muted" />}
-      </button>
+      {isStandaloneApolice ? (
+        <span className="h-6 w-6 shrink-0" aria-hidden="true" />
+      ) : (
+        <button
+          type="button"
+          onClick={() => onToggleSelect(ficha.id)}
+          className="rounded-lg p-1 hover:bg-dark-surface2"
+          aria-label="Selecionar linha"
+        >
+          {selected ? <CheckSquare className="h-4 w-4 text-brand-primary" /> : <Square className="h-4 w-4 text-dark-muted" />}
+        </button>
+      )}
 
       {ficha._orcamentistaNome && (
         <span title={ficha._orcamentistaNome}>
@@ -506,15 +529,27 @@ function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggl
         </span>
       )}
 
-      <button type="button" onClick={() => onOpen(ficha.id)} className="min-w-0 flex-[1_1_20rem] text-left">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: `${prodColor}20`, color: prodColor }}>
-            {normalizeDisplayText(ficha.produto) || ficha.produto || 'Fianca'}
-          </span>
-          <p className="text-sm font-semibold text-dark-text">{nome}</p>
+      {isStandaloneApolice ? (
+        <div className="min-w-0 flex-[1_1_20rem] text-left">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: `${prodColor}20`, color: prodColor }}>
+              Fianca
+            </span>
+            <p className="text-sm font-semibold text-dark-text">{nome}</p>
+          </div>
+          <p className="mt-0.5 text-[11px] uppercase tracking-[0.1em] text-dark-muted">{getCanonicalImobiliariaNome(ficha)}</p>
         </div>
-        <p className="mt-0.5 text-[11px] uppercase tracking-[0.1em] text-dark-muted">{getCanonicalImobiliariaNome(ficha)}</p>
-      </button>
+      ) : (
+        <button type="button" onClick={() => onOpen(ficha.id)} className="min-w-0 flex-[1_1_20rem] text-left">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: `${prodColor}20`, color: prodColor }}>
+              {normalizeDisplayText(ficha.produto) || ficha.produto || 'Fianca'}
+            </span>
+            <p className="text-sm font-semibold text-dark-text">{nome}</p>
+          </div>
+          <p className="mt-0.5 text-[11px] uppercase tracking-[0.1em] text-dark-muted">{getCanonicalImobiliariaNome(ficha)}</p>
+        </button>
+      )}
 
       <span className={`badge ${op?.color || 'badge-muted'}`}>{op?.label || '—'}</span>
 
@@ -560,13 +595,15 @@ function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggl
 
       {isEmissaoCard && (
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => onOpen(ficha.id)}
-            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-dark-border/60 bg-dark-surface/85 px-2.5 py-2 text-[10px] font-semibold text-dark-text transition-colors hover:border-brand-accent/45 hover:text-status-info"
-          >
-            <FileText className="h-3.5 w-3.5" /> Abrir ficha
-          </button>
+          {!isStandaloneApolice && (
+            <button
+              type="button"
+              onClick={() => onOpen(ficha.id)}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-dark-border/60 bg-dark-surface/85 px-2.5 py-2 text-[10px] font-semibold text-dark-text transition-colors hover:border-brand-accent/45 hover:text-status-info"
+            >
+              <FileText className="h-3.5 w-3.5" /> Abrir ficha
+            </button>
+          )}
           <button
             type="button"
             disabled={!ficha?._apolice?.id}
@@ -1526,8 +1563,9 @@ export default function Relatorio() {
       _key: resolverNome(item.imobiliaria),
       _logo: resolverImobiliariaInfo(item.imobiliaria),
       _imobiliariaNome: resolverImobiliariaInfo(item.imobiliaria)?.nome_canonico || resolverNome(item.imobiliaria) || item.imobiliaria || '—',
+      _withinPeriod: isFichaWithinReportPeriod(item, rangeStart, rangeEnd),
     }))
-  }, [rows, resolverNome, resolverImobiliariaInfo, effectiveNow])
+  }, [rows, resolverNome, resolverImobiliariaInfo, effectiveNow, rangeStart, rangeEnd])
 
   const summary = useMemo(() => summarizeRows(rowsWithHelpers, emittedPolicies), [rowsWithHelpers, emittedPolicies])
   const groupedByImob = useMemo(() => groupByImobiliaria(rowsWithHelpers, resolverNome, emittedPolicies), [rowsWithHelpers, resolverNome, emittedPolicies])
@@ -1597,6 +1635,42 @@ export default function Relatorio() {
     })
     return map
   }, [rowsWithHelpers])
+
+  // Painel "Emitidas" do detalhe por imobiliária: diferente das outras colunas
+  // (que agrupam fichas pelo bucket operacional), este bloco precisa mostrar
+  // TODA apólice emitida naquele mês para a imobiliária — inclusive as que
+  // nunca tiveram ficha vinculada (upload direto/em lote sem casamento de
+  // ficha), que `columnMap['emitida']` nunca contém porque só itera sobre
+  // `rows` (fichas). `emittedPolicies` já vem filtrado por imobiliária+período
+  // (ver loadRows), então cada apólice aqui vira 1 linha: a ficha enriquecida
+  // já existente (se `ficha_id` bater com alguma linha carregada) ou uma
+  // linha sintética somente-leitura para apólices sem ficha.
+  const emitidaLedgerRows = useMemo(() => {
+    if (!isDetail) return columnMap.emitida || []
+    const fichaById = new Map(rowsWithHelpers.map(item => [item.id, item]))
+    return emittedPolicies.map(apolice => {
+      const ficha = apolice.ficha_id ? fichaById.get(apolice.ficha_id) : null
+      if (ficha) return ficha
+
+      const imobNome = resolverImobiliariaInfo(apolice.imobiliaria)?.nome_canonico || resolverNome(apolice.imobiliaria) || apolice.imobiliaria || '—'
+      return {
+        id: `apolice-${apolice.id}`,
+        _isStandaloneApolice: true,
+        _apolice: apolice,
+        _hasEmittedPolicy: true,
+        _effectiveNumeroApolice: apolice.numero_apolice || null,
+        _effectiveDataEmissao: apolice.data_emissao || null,
+        _effectiveSeguradora: apolice.seguradora || null,
+        _emissorNome: apolice.profiles?.nome || null,
+        _emissorAvatar: apolice.profiles?.avatar_url || null,
+        _imobiliariaNome: imobNome,
+        _oper: { id: 'emitida', label: 'Emitida', className: 'badge-purple' },
+        produto: null,
+        nome_interessado: null,
+        created_at: apolice.data_emissao || null,
+      }
+    })
+  }, [isDetail, columnMap, rowsWithHelpers, emittedPolicies, resolverNome, resolverImobiliariaInfo])
 
   const visibleIds = useMemo(() => rowsWithHelpers.map(item => item.id), [rowsWithHelpers])
   const selectedRows = useMemo(() => rowsWithHelpers.filter(item => selectedIds.includes(item.id)), [rowsWithHelpers, selectedIds])
@@ -1701,6 +1775,9 @@ export default function Relatorio() {
   }
 
   function selectAllColumn(colunaId) {
+    // Seleção/cópia em massa continuam restritas a fichas reais (columnMap) —
+    // as apólices sem ficha do painel "Emitidas" (emitidaLedgerRows) não têm
+    // checkbox (não fazem sentido em mover/editar em massa), só são exibidas.
     const ids = (columnMap[colunaId] || []).map(item => item.id)
     setSelectedIds(ids)
   }
@@ -2150,9 +2227,10 @@ export default function Relatorio() {
           stats={
             <>
               <MetricCard label="Fichas aprovadas" value={summary.fichasAprovadas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
+              <MetricCard label="Aprovadas sem apólice" value={summary.aprovadasSemApolice} tone="secondary" icon={<Square className="h-4 w-4" />} />
               <MetricCard label="Sem cobrança enviada" value={summary.semCobrancaEnviada} tone="success" icon={<CheckSquare className="h-4 w-4" />} />
               <MetricCard label="Aguardando retorno" value={summary.aguardandoRetorno} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
-              <MetricCard label="Apólices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
+              <MetricCard label="Apólices emitidas" value={summary.aprovadasEmitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
               <MetricCard label="Emitidas sem ficha" value={summary.emitidasSemFichaVinculada} tone="warning" icon={<FileText className="h-4 w-4" />} />
               <MetricCard label="Expiradas" value={summary.expiradas} tone="accent" icon={<Square className="h-4 w-4" />} />
               <MetricCard label="Recuperadas" value={summary.recuperadas} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
@@ -2203,7 +2281,7 @@ export default function Relatorio() {
             >
               <BlocoRelatorio
                 coluna={coluna}
-                fichas={columnMap[coluna.id] || []}
+                fichas={coluna.id === 'emitida' ? emitidaLedgerRows : (columnMap[coluna.id] || [])}
                 onOpen={openFicha}
                 onOpenPolicy={openApolice}
                 selectedIds={new Set(selectedIds)}
@@ -2277,7 +2355,7 @@ export default function Relatorio() {
       >
         <div className="relatorio-metrics-grid grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4">
           <MetricCard label="Fichas aprovadas" value={summary.fichasAprovadas} tone="accent" icon={<LayoutGrid className="h-4 w-4" />} />
-          <MetricCard label="Apólices emitidas" value={summary.emitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
+          <MetricCard label="Apólices emitidas" value={summary.aprovadasEmitidas} tone="secondary" icon={<ShieldCheck className="h-4 w-4" />} />
           <MetricCard label="Taxa de emissão" value={`${summary.taxaEmissao.toFixed(1)}%`} tone="accent" icon={<BarChart2 className="h-4 w-4" />} />
           <MetricCard label="Aguardando retorno" value={summary.aguardandoRetorno} tone="warning" icon={<MoveRight className="h-4 w-4" />} />
           <MetricCard label="Sem cobrança enviada" value={summary.semCobrancaEnviada} tone="success" icon={<BellRing className="h-4 w-4" />} />

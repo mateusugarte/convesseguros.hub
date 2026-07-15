@@ -1,5 +1,58 @@
 # CURRENT TASK
 
+**Relatório — regras de negócio das métricas (visão geral, card por imobiliária,
+detalhe, painel "Emitidas") corrigidas conforme especificação do usuário
+(2026-07-15, Claude):** usuário recapitulou 4 regras de negócio que deveriam
+valer no `/relatorio` e pediu para conferir/corrigir cada uma. `src/pages/Relatorio.jsx`:
+
+1. **"Fichas aprovadas" (métricas do período, visão geral e detalhe):** antes
+   contava só `aprovada`+`enviado_cobranca` (excluía quem já tinha apólice) —
+   subestimava o total de aprovações do mês. Agora soma esse valor com as
+   fichas aprovadas no mesmo período que já têm apólice (bucket
+   `emitida`/`recuperados`). Novo `_withinPeriod` em `rowsWithHelpers`
+   (reaproveita `isFichaWithinReportPeriod` já existente) impede contar fichas
+   que só entraram em `rows` porque a apólice foi emitida neste período mas a
+   aprovação em si foi em outro mês (`extraRows`/`extraIds` do carregamento).
+2. **"Apólices emitidas" (métrica do período):** antes era o total bruto de
+   apólices emitidas no período (`emittedPolicies.length`, incluindo apólices
+   de fichas aprovadas em outro mês). Agora é "quantas das fichas aprovadas
+   deste período já emitiram" (`summary.aprovadasEmitidas`, novo campo).
+3. **Card por imobiliária (visão geral):** já estava correto — "Aprovadas"
+   já só contava bucket `aprovada` (fichaOperational.js já promove ficha com
+   apólice para bucket `emitida` antes de checar `aprovado`), "Emitidas" já
+   vinha de `emittedPolicies` por imobiliária. Nenhuma mudança de código aqui,
+   só validação.
+4. **Detalhe por imobiliária — nova métrica:** adicionado card "Aprovadas sem
+   apólice" (`summary.aprovadasSemApolice`, mesma fórmula do antigo "Fichas
+   aprovadas" — já existia calculado, só não era exibido no detalhe).
+5. **Painel de status "Emitidas" (detalhe por imobiliária):** antes só
+   mostrava fichas com apólice vinculada (`columnMap.emitida`, que itera sobre
+   `rows`/fichas — uma apólice emitida sem `ficha_id` nunca aparecia). Novo
+   `emitidaLedgerRows` mescla as fichas existentes com linhas sintéticas
+   somente-leitura (sem checkbox/seleção em massa, só botão "Abrir apólice")
+   para cada apólice de `emittedPolicies` sem `ficha_id` — agora mostra toda
+   apólice emitida da imobiliária no período. As outras 5 colunas de status
+   (Aprovadas/Enviado Cobrança/Recuperados/Expiradas/Desistências) continuam
+   vindo só de `columnMap` (fichas), sem mudança.
+
+`npm run build`, `npm test` (89/89) e `npm run check:page-contexts` (mesmas
+pendências pré-existentes de `src/pages/auto/*`/`GestaoComercial.jsx`, não é
+regressão) verdes.
+
+**Smoke test pendente (sem `.env`/Supabase neste ambiente):** abrir
+`/relatorio` de um mês com fichas aprovadas e algumas já emitidas, conferir
+que "Fichas aprovadas" bateu com o total real (incluindo emitidas) e que
+"Apólices emitidas" mostra só as emitidas dessas aprovadas; abrir o detalhe de
+uma imobiliária e conferir o novo card "Aprovadas sem apólice"; se houver
+apólice emitida sem ficha vinculada naquele mês/imobiliária, confirmar que ela
+aparece no painel "Emitidas" do detalhe (linha sem checkbox, com botão "Abrir
+apólice" funcionando).
+
+**Riscos remanescentes:** se uma ficha tiver 2 apólices emitidas dentro do
+mesmo período (reemissão), `emitidaLedgerRows` só reflete a mais recente
+vinculada à ficha (mesma limitação que já existia em `apolicesByFicha`/`_apolice`
+antes desta mudança) — caso raro, fora do escopo reportado pelo usuário.
+
 **Ficha (`/fichas/:id`) — 2 bugs de cotação: valores/parcelas não salvavam para
 Pottencial/TOO Seguros e mensagem de retorno ignorava a seguradora selecionada
 manualmente (2026-07-15, Claude):** usuário reportou dois sintomas no bloco

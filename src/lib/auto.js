@@ -66,6 +66,26 @@ function toFloatOrNull(value) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+function normalizeImportText(value) {
+  return String(value ?? '').trim()
+}
+
+function normalizeStatusRenovacaoAuto(value) {
+  const status = normalizeImportText(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+
+  if (status.includes('renov') || status.includes('fechado') || status.includes('vendeu')) {
+    return { status_cotacao: 'cotada_enviada', status_renovacao: 'renovada' }
+  }
+  if (status.includes('enviado')) return { status_cotacao: 'cotada_enviada', status_renovacao: 'pendente' }
+  if (status.includes('cotado')) return { status_cotacao: 'cotada_nao_enviada', status_renovacao: 'pendente' }
+  if (status.includes('cancel') || status.includes('nao renov') || status.includes('não renov')) {
+    return { status_cotacao: 'nao_cotada', status_renovacao: 'nao_renovada' }
+  }
+  return { status_cotacao: 'nao_cotada', status_renovacao: 'pendente' }
+}
 const AUTO_RENEWAL_COMPARE_FIELDS = [
   'renovacao_premio_liquido_ano_anterior',
   'renovacao_comissao_ano_anterior',
@@ -981,6 +1001,126 @@ export async function atualizarApoliceAuto(id, changes) {
   return data
 }
 
+export async function importarApolicesAutoPlanilha(rows = []) {
+  const resultado = {
+    total: rows.length,
+    importadas: 0,
+    atualizadas: 0,
+    ignoradas: 0,
+    erros: [],
+  }
+
+  for (const [index, row] of rows.entries()) {
+    const nomeCliente = normalizeImportText(row.nome_cliente)
+    const seguradora = normalizeImportText(row.seguradora)
+    const vigenciaFim = row.vigencia_fim || null
+
+    if (!nomeCliente || !vigenciaFim) {
+      resultado.ignoradas += 1
+      resultado.erros.push({ linha: row.linha || index + 1, motivo: 'Nome do segurado ou data de vencimento ausente.' })
+      continue
+    }
+
+    const premioLiquido = toFloatOrNull(row.premio_liquido) || 0
+    const pctComissao = toFloatOrNull(row.pct_comissao) || 0
+    const valorComissao = premioLiquido * pctComissao
+    const statusRenovacao = normalizeStatusRenovacaoAuto(row.status)
+    const observacoes = [
+      row.status ? `Status planilha: ${row.status}` : '',
+      row.limite ? `Limite: ${row.limite}` : '',
+      row.comissao_passada !== null && row.comissao_passada !== undefined && row.comissao_passada !== '' ? `Comissao passada: ${row.comissao_passada}` : '',
+      row.aba ? `Aba: ${row.aba}` : '',
+    ].filter(Boolean).join(' | ')
+
+    const payload = {
+      emissao_id: null,
+      cliente_id: null,
+      seguradora: seguradora || null,
+      numero_apolice: normalizeImportText(row.numero_apolice) || null,
+      vigencia_inicio: row.vigencia_inicio || null,
+      vigencia_fim: vigenciaFim,
+      premio_liquido: premioLiquido,
+      pct_comissao: pctComissao,
+      valor_comissao: valorComissao,
+      forma_pagamento: normalizeImportText(row.forma_pagamento) || observacoes || null,
+      parcelamento: normalizeImportText(row.parcelamento) || null,
+      tipo_producao: row.tipo_producao || 'individual',
+      responsavel: normalizeImportText(row.responsavel) || null,
+      eh_renovacao: true,
+      tem_repasse: false,
+      pct_repasse: null,
+      nome_repasse: null,
+      valor_repasse: null,
+      nome_cliente: nomeCliente,
+      cpf_cliente: normalizeImportText(row.cpf_cliente) || null,
+      celular_cliente: normalizeImportText(row.celular_cliente) || null,
+      condutor_nome: normalizeImportText(row.condutor_nome) || nomeCliente,
+      condutor_cpf: normalizeImportText(row.condutor_cpf) || normalizeImportText(row.cpf_cliente) || null,
+      modelo_veiculo: normalizeImportText(row.modelo_veiculo) || null,
+      placa: normalizeImportText(row.placa) || null,
+      renovacao_premio_liquido_ano_anterior: null,
+      renovacao_comissao_ano_anterior: toFloatOrNull(row.comissao_passada),
+      renovacao_premio_liquido_ano_atual: premioLiquido || null,
+      renovacao_comissao_ano_atual: valorComissao || null,
+      renovacao_diferenca_premio_liquido: null,
+      renovacao_diferenca_comissao: null,
+    }
+
+    const duplicateQuery = supabase
+      .from('apolices_auto')
+      .select('id')
+      .eq('nome_cliente', nomeCliente)
+      .eq('vigencia_fim', vigenciaFim)
+      .limit(1)
+
+    const { data: duplicadas, error: duplicateError } = seguradora
+      ? await duplicateQuery.eq('seguradora', seguradora)
+      : await duplicateQuery
+    if (duplicateError) throw duplicateError
+
+    let apoliceId = duplicadas?.[0]?.id || null
+    if (apoliceId) {
+      let { error } = await supabase
+        .from('apolices_auto')
+        .update(payload)
+        .eq('id', apoliceId)
+      if (isMissingColumnError(error, 'apolices_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
+        ;({ error } = await supabase
+          .from('apolices_auto')
+          .update(omitKeys(payload, AUTO_RENEWAL_COMPARE_FIELDS))
+          .eq('id', apoliceId))
+      }
+      if (error) throw error
+      resultado.atualizadas += 1
+    } else {
+      let { data, error } = await supabase
+        .from('apolices_auto')
+        .insert(payload)
+        .select('id')
+        .single()
+      if (isMissingColumnError(error, 'apolices_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
+        ;({ data, error } = await supabase
+          .from('apolices_auto')
+          .insert(omitKeys(payload, AUTO_RENEWAL_COMPARE_FIELDS))
+          .select('id')
+          .single())
+      }
+      if (error) throw error
+      apoliceId = data?.id || null
+      resultado.importadas += 1
+    }
+
+    if (apoliceId) {
+      const { error: renovacaoError } = await supabase
+        .from('renovacoes_auto')
+        .update(statusRenovacao)
+        .eq('apolice_id', apoliceId)
+      if (renovacaoError) throw renovacaoError
+    }
+  }
+
+  return resultado
+}
 // Usado quando a apolice nao tem emissao vinculada (emissoes_auto ausente):
 // monta um payload restrito as colunas reais de apolices_auto e recalcula
 // valor_comissao/valor_repasse/comparativo de renovacao a partir do form

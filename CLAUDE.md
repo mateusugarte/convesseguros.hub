@@ -15,6 +15,19 @@ Antes de qualquer tarefa, ler nesta ordem:
 5. documentacao da pagina correspondente
 6. solicitacao do usuario
 
+## ATENCAO: tarefa pausada em andamento (retomar antes de qualquer coisa)
+
+Existe uma tarefa multi-etapas pausada a pedido do usuario em 2026-07-17
+(importacao historica de apolices Auto + redesenho da pagina de Clientes
+Auto), executada via `superpowers:subagent-driven-development`, direto na
+branch `main`. Antes de comecar qualquer nova solicitacao do usuario, ler
+o bloco "TAREFA EM ANDAMENTO" no topo de `docs/CURRENT_TASK.md` — ele tem
+o status exato de cada task, os arquivos de plano/ledger e o proximo passo
+exato para retomar (gerar review package da Task 3 e seguir dali). So
+remover este aviso quando a tarefa inteira (todas as 11 tasks + revisao
+final) estiver concluida e `docs/CURRENT_TASK.md` atualizado de volta ao
+normal.
+
 ## Como agir
 
 - Atualizar `docs/CURRENT_TASK.md` no inicio e no fim da tarefa.

@@ -1622,7 +1622,7 @@ export default function AutoEmissoes() {
       )
     }
     return (
-      <div className="space-y-4 px-1 pb-8 animate-fade-in">
+      <div className="auto-page space-y-4 px-1 pb-8 animate-fade-in">
         <button onClick={() => navigate('/auto/emissoes')} className="btn-secondary inline-flex items-center gap-2">
           <ArrowLeft className="h-4 w-4" /> Voltar para emissões
         </button>
@@ -1634,7 +1634,7 @@ export default function AutoEmissoes() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="auto-page space-y-6 animate-fade-in">
       <PageHeader
         eyebrow="Modulo auto"
         title={isGestaoRoute ? 'Gestao AUTO' : 'Gestao de Emissoes'}

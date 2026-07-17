@@ -113,7 +113,7 @@ export default function AutoApoliceDetalhe() {
   if (!apolice) return <EmptyState title="Apólice não encontrada" description="O registro pode ter sido removido." />
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="auto-page space-y-6 animate-fade-in">
       <PageHeader
         eyebrow="Seguro Auto"
         title={form.numero_apolice || 'Apólice Auto'}

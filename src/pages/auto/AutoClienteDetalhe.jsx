@@ -25,7 +25,7 @@ export default function AutoClienteDetalhe() {
   const { cliente, apolices, cotacoes, emissoes, renovacoes, metricas, statusAtual, destaque } = data
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="auto-page space-y-6 animate-fade-in">
       <PageHeader
         eyebrow="Seguro Auto"
         title={cliente?.nome_completo || 'Cliente Auto'}

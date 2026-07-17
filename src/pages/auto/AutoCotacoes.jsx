@@ -315,7 +315,7 @@ export default function AutoCotacoes() {
   const resumoAtivo = resumo?.taxaConversao ? Math.round((resumo.taxaConversao ?? 0) * 100) : taxa
 
   return (
-    <div className="space-y-6">
+    <div className="auto-page space-y-6 animate-fade-in">
       <PageHeader
         eyebrow="Seguro Auto"
         title="Cotacoes"

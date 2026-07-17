@@ -151,7 +151,7 @@ export default function AutoClientes() {
   const savingId = isPending ? variables?.id : null
 
   return (
-    <div className="space-y-6">
+    <div className="auto-page space-y-6 animate-fade-in">
       <PageHeader
         eyebrow="Seguro Auto"
         title="Clientes e carteira"

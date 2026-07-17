@@ -89,7 +89,7 @@ export default function AutoDashboard() {
   })
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="auto-page space-y-6 animate-fade-in">
       <PageHeader
         eyebrow="Modulo auto"
         title="Dashboard Auto"

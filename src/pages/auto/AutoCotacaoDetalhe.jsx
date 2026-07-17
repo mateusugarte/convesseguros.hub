@@ -340,7 +340,7 @@ export default function AutoCotacaoDetalhe() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="auto-page space-y-6 animate-fade-in">
       <div className="flex justify-start">
         <button onClick={() => navigate(backTo)} className="btn-secondary">
           <ArrowLeft className="h-4 w-4" />

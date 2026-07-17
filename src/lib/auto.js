@@ -81,7 +81,7 @@ function normalizeStatusRenovacaoAuto(value) {
   }
   if (status.includes('enviado')) return { status_cotacao: 'cotada_enviada', status_renovacao: 'pendente' }
   if (status.includes('cotado')) return { status_cotacao: 'cotada_nao_enviada', status_renovacao: 'pendente' }
-  if (status.includes('cancel') || status.includes('nao renov') || status.includes('nï¿½o renov')) {
+  if (status.includes('cancel') || status.includes('nao renov') || status.includes('não renov')) {
     return { status_cotacao: 'nao_cotada', status_renovacao: 'nao_renovada' }
   }
   return { status_cotacao: 'nao_cotada', status_renovacao: 'pendente' }

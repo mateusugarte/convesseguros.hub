@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Car, ClipboardList, DollarSign, FileText, RefreshCw, ShieldCheck, Users } from 'lucide-react'
 import { DataCard, EmptyState, MetricCard, PageHeader } from '../../components/ui'
 import { getClienteAutoDetalhe } from '../../lib/auto'
-import { formatDateBR, formatDateTimeBR, formatMoney } from './autoShared'
+import { formatDateBR, formatDateTimeBR, formatMoney, formatMonthYearBR, getClienteStatusAuto } from './autoShared'
 
 function RowLink({ label, value, onClick }) {
   return (
@@ -22,7 +22,8 @@ export default function AutoClienteDetalhe() {
   if (isLoading) return <div className="py-16 text-center text-sm text-dark-muted">Carregando cliente...</div>
   if (!data) return <EmptyState title="Cliente não encontrado" description="O perfil pode ter sido removido ou ainda não existe vínculo suficiente para montar a área detalhada." />
 
-  const { cliente, apolices, cotacoes, emissoes, renovacoes, metricas, statusAtual, destaque } = data
+  const { cliente, apolices, cotacoes, emissoes, renovacoes, metricas, statusAtual, destaque, clienteDesde } = data
+  const clienteStatus = getClienteStatusAuto(apolices)
 
   return (
     <div className="auto-page space-y-6 animate-fade-in">
@@ -50,11 +51,17 @@ export default function AutoClienteDetalhe() {
             <div><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">CPF</p><p className="mt-1 text-dark-text">{cliente?.cpf || '—'}</p></div>
             <div><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Celular</p><p className="mt-1 text-dark-text">{cliente?.celular || cliente?.telefone || '—'}</p></div>
             <div><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Email</p><p className="mt-1 text-dark-text">{cliente?.email || '—'}</p></div>
+            <div><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Cliente desde</p><p className="mt-1 text-dark-text">{formatMonthYearBR(clienteDesde)}</p></div>
           </div>
         </DataCard>
 
         <DataCard title="Status atual">
           <div className="space-y-3 text-sm text-dark-muted">
+            {clienteStatus && (
+              <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${clienteStatus === 'ativo' ? 'bg-status-success/15 text-status-success' : 'bg-dark-border/60 text-dark-muted'}`}>
+                {clienteStatus === 'ativo' ? 'Cliente ativo' : 'Cliente inativo'}
+              </span>
+            )}
             <div className="rounded-2xl border border-dark-border/70 bg-dark-surface/60 p-3">{statusAtual}</div>
             <div className="rounded-2xl border border-dark-border/70 bg-dark-surface/60 p-3">Apólice ativa: <span className="font-semibold text-dark-text">{destaque.apoliceAtiva?.numero_apolice || 'Não'}</span></div>
             <div className="rounded-2xl border border-dark-border/70 bg-dark-surface/60 p-3">Renovação em andamento: <span className="font-semibold text-dark-text">{destaque.emRenovacao?.vigencia_fim ? formatDateBR(destaque.emRenovacao.vigencia_fim) : 'Não'}</span></div>
@@ -73,7 +80,19 @@ export default function AutoClienteDetalhe() {
 
       <div className="grid gap-4 xl:grid-cols-2">
         <DataCard title="Apólices vinculadas" subtitle="Clique para abrir a área interna da apólice.">
-          {apolices.length === 0 ? <EmptyState icon={<Car className="h-5 w-5" />} title="Sem apólices" description="Nenhuma apólice vinculada a este cliente." /> : <div className="space-y-3">{apolices.map(item => <RowLink key={item.id} label={`${item.numero_apolice || 'Sem número'} · ${item.seguradora || 'Sem seguradora'}`} value={`${formatDateBR(item.vigencia_inicio)} até ${formatDateBR(item.vigencia_fim)}`} onClick={() => navigate(`/auto/apolices/${item.id}`)} />)}</div>}
+          {apolices.length === 0 ? <EmptyState icon={<Car className="h-5 w-5" />} title="Sem apólices" description="Nenhuma apólice vinculada a este cliente." /> : <div className="space-y-3">{apolices.map(item => (
+            <RowLink
+              key={item.id}
+              label={(
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  {`${item.numero_apolice || 'Sem número'} · ${item.seguradora || 'Sem seguradora'}`}
+                  {item.origem_pre_sistema && <span className="badge badge-warning">Emitida antes do sistema</span>}
+                </span>
+              )}
+              value={`${formatDateBR(item.vigencia_inicio)} até ${formatDateBR(item.vigencia_fim)}`}
+              onClick={() => navigate(`/auto/apolices/${item.id}`)}
+            />
+          ))}</div>}
         </DataCard>
 
         <DataCard title="Renovações vinculadas" subtitle="Acompanhamento de vencimentos e status da carteira.">

@@ -108,3 +108,19 @@ export function statusToneClass(tone) {
       return 'bg-brand-secondary/10 text-status-info border-brand-secondary/15'
   }
 }
+
+export function isApoliceAtiva(apolice, hojeISO = new Date().toISOString().slice(0, 10)) {
+  return Boolean(apolice?.vigencia_fim && apolice.vigencia_fim >= hojeISO)
+}
+
+export function getClienteStatusAuto(apolices = [], hojeISO = new Date().toISOString().slice(0, 10)) {
+  if (!apolices.length) return null
+  return apolices.some(item => isApoliceAtiva(item, hojeISO)) ? 'ativo' : 'inativo'
+}
+
+export function formatMonthYearBR(value) {
+  if (!value) return '—'
+  const date = new Date(`${value}T12:00:00`)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+}

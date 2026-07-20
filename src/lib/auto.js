@@ -1344,12 +1344,18 @@ export async function getClienteAutoDetalhe(ref) {
     .select(`${RENOVACAO_AUTO_COLUMNS}, apolices_auto(id, numero_apolice, seguradora, vigencia_inicio, vigencia_fim), clientes_auto(nome_completo, telefone, celular, email)`)
     .order('vigencia_fim', { ascending: true })
 
+  function orFilterValue(value) {
+    return `"${String(value).replace(/"/g, '\\"')}"`
+  }
+
   function scopeByRef(query, { allowNome = false } = {}) {
-    if (clientId) return query.eq('cliente_id', clientId)
-    if (cpf) return query.eq('cpf_cliente', cpf)
-    if (refIsUuid) return query.eq('id', ref)
-    if (allowNome && nomeRef) return query.eq('nome_cliente', nomeRef)
-    return null
+    const filters = []
+    if (clientId) filters.push(`cliente_id.eq.${orFilterValue(clientId)}`)
+    if (cpf) filters.push(`cpf_cliente.eq.${orFilterValue(cpf)}`)
+    if (refIsUuid) filters.push(`id.eq.${orFilterValue(ref)}`)
+    if (allowNome && nomeRef) filters.push(`nome_cliente.eq.${orFilterValue(nomeRef)}`)
+    if (filters.length === 0) return null
+    return query.or(filters.join(','))
   }
 
   const scopedApolices = scopeByRef(apolicesQuery, { allowNome: true })
@@ -1394,8 +1400,14 @@ export async function getClienteAutoDetalhe(ref) {
     email: cotacoesLista[0]?.email_cliente || null,
   }
 
+  const clienteDesde = apolicesLista.reduce((min, item) => {
+    if (!item.vigencia_inicio) return min
+    return !min || item.vigencia_inicio < min ? item.vigencia_inicio : min
+  }, null)
+
   return {
     cliente: perfil,
+    clienteDesde,
     apolices: apolicesLista,
     emissoes: emissoesLista,
     cotacoes: cotacoesLista,

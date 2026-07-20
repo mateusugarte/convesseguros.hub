@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowRight, BadgeDollarSign, Car, CheckCircle2, ClipboardList, Eye, Save, Search, Users } from 'lucide-react'
+import { ArrowRight, BadgeDollarSign, Car, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, Eye, Save, Search, Users } from 'lucide-react'
 import { DataCard, EmptyState, FilterBar, MetricCard, PageHeader } from '../../components/ui'
 import { atualizarApoliceAuto, getAutoCarteiraClientes } from '../../lib/auto'
-import { formatDateBR } from './autoShared'
+import { formatDateBR, formatMonthYearBR, getClienteStatusAuto } from './autoShared'
+
+const PAGE_SIZE = 50
 
 function clientKey(item) {
   return item.cliente_id || item.cpf_cliente || item.nome_cliente || item.emissoes_auto?.cliente_id || item.id
@@ -22,6 +24,16 @@ function clientCpf(item) {
 
 function emissionDate(item) {
   return item.vigencia_inicio || item.created_at || null
+}
+
+function firstLetterOf(name) {
+  const clean = String(name || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .trim()
+    .toUpperCase()
+  const match = clean.match(/[A-Z]/)
+  return match ? match[0] : '#'
 }
 
 function ApoliceEditor({ apolice, onSave, saving }) {
@@ -61,6 +73,7 @@ function EmissionRow({ apolice, onSaveNumero, savingId, onOpenCotacao, onOpenApo
             <p className="truncate text-sm font-semibold text-dark-text">{lead.nome_cliente || apolice.nome_cliente || 'Cliente sem nome'}</p>
             <span className="badge badge-info">{apolice.seguradora || 'Sem seguradora'}</span>
             {apolice.numero_apolice ? <span className="badge badge-success">{apolice.numero_apolice}</span> : <span className="badge badge-warning">Sem número</span>}
+            {apolice.origem_pre_sistema && <span className="badge badge-warning">Emitida antes do sistema</span>}
           </div>
           <div className="mt-2 grid gap-2 text-xs text-dark-muted sm:grid-cols-2 xl:grid-cols-4">
             <span><strong className="text-dark-text">Vigência:</strong> {vigInicio} - {vigFim}</span>
@@ -95,6 +108,56 @@ function EmissionRow({ apolice, onSaveNumero, savingId, onOpenCotacao, onOpenApo
   )
 }
 
+function LetterFilterBar({ value, onChange, availableLetters }) {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      <button
+        type="button"
+        onClick={() => onChange('')}
+        className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${value === '' ? 'bg-brand-secondary text-white' : 'bg-dark-surface/70 text-dark-muted hover:text-dark-text'}`}
+      >
+        Todos
+      </button>
+      {letters.map(letter => {
+        const has = availableLetters.has(letter)
+        return (
+          <button
+            key={letter}
+            type="button"
+            disabled={!has}
+            onClick={() => onChange(letter)}
+            className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
+              value === letter
+                ? 'bg-brand-secondary text-white'
+                : has
+                  ? 'bg-dark-surface/70 text-dark-muted hover:text-dark-text'
+                  : 'cursor-not-allowed bg-dark-surface/30 text-dark-muted/30'
+            }`}
+          >
+            {letter}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function Pagination({ page, totalPages, onChange }) {
+  if (totalPages <= 1) return null
+  return (
+    <div className="flex items-center justify-center gap-3 py-2">
+      <button type="button" onClick={() => onChange(Math.max(1, page - 1))} disabled={page <= 1} className="btn-secondary inline-flex items-center gap-1 disabled:opacity-40">
+        <ChevronLeft className="h-4 w-4" /> Anterior
+      </button>
+      <span className="text-xs font-medium text-dark-muted">Página {page} de {totalPages}</span>
+      <button type="button" onClick={() => onChange(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="btn-secondary inline-flex items-center gap-1 disabled:opacity-40">
+        Próxima <ChevronRight className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
+
 export default function AutoClientes() {
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -102,6 +165,9 @@ export default function AutoClientes() {
   const [seguradora, setSeguradora] = useState('')
   const [inicio, setInicio] = useState('')
   const [fim, setFim] = useState('')
+  const [letraFiltro, setLetraFiltro] = useState('')
+  const [sortBy, setSortBy] = useState('nome')
+  const [page, setPage] = useState(1)
 
   const { data: apolices = [], isLoading } = useQuery({
     queryKey: ['auto-clientes-carteira', search, seguradora, inicio, fim],
@@ -116,6 +182,8 @@ export default function AutoClientes() {
     },
   })
 
+  const hoje = useMemo(() => new Date().toISOString().slice(0, 10), [])
+
   const grouped = useMemo(() => {
     const map = new Map()
     apolices.forEach(item => {
@@ -126,13 +194,16 @@ export default function AutoClientes() {
       map.get(key).items.push(item)
     })
 
-    return Array.from(map.values())
-      .map(group => {
-        const sortedItems = [...group.items].sort((a, b) => new Date(emissionDate(b) || 0).getTime() - new Date(emissionDate(a) || 0).getTime())
-        return { ...group, items: sortedItems, latest: sortedItems[0] }
-      })
-      .sort((a, b) => new Date(emissionDate(b.latest) || 0).getTime() - new Date(emissionDate(a.latest) || 0).getTime())
-  }, [apolices])
+    return Array.from(map.values()).map(group => {
+      const sortedItems = [...group.items].sort((a, b) => new Date(emissionDate(b) || 0).getTime() - new Date(emissionDate(a) || 0).getTime())
+      const clienteDesde = sortedItems.reduce((min, item) => {
+        if (!item.vigencia_inicio) return min
+        return !min || item.vigencia_inicio < min ? item.vigencia_inicio : min
+      }, null)
+      const status = getClienteStatusAuto(sortedItems, hoje)
+      return { ...group, items: sortedItems, latest: sortedItems[0], clienteDesde, status }
+    })
+  }, [apolices, hoje])
 
   const metrics = useMemo(() => {
     const totalClientes = grouped.length
@@ -147,6 +218,43 @@ export default function AutoClientes() {
     apolices.forEach(item => { if (item.seguradora) set.add(item.seguradora) })
     return Array.from(set).sort((a, b) => a.localeCompare(b))
   }, [apolices])
+
+  const availableLetters = useMemo(() => {
+    const set = new Set()
+    grouped.forEach(group => set.add(firstLetterOf(group.name)))
+    return set
+  }, [grouped])
+
+  const filteredByLetter = useMemo(() => {
+    if (!letraFiltro) return grouped
+    return grouped.filter(group => firstLetterOf(group.name) === letraFiltro)
+  }, [grouped, letraFiltro])
+
+  const sortedGrouped = useMemo(() => {
+    const list = [...filteredByLetter]
+    list.sort((a, b) => {
+      if (sortBy === 'quantidade') return b.items.length - a.items.length
+      if (sortBy === 'antigo') return (a.clienteDesde || '9999-99-99').localeCompare(b.clienteDesde || '9999-99-99')
+      if (sortBy === 'recente') return (emissionDate(b.latest) || '').localeCompare(emissionDate(a.latest) || '')
+      return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+    })
+    return list
+  }, [filteredByLetter, sortBy])
+
+  const totalPages = Math.max(1, Math.ceil(sortedGrouped.length / PAGE_SIZE))
+
+  const paginated = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return sortedGrouped.slice(start, start + PAGE_SIZE)
+  }, [sortedGrouped, page])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, seguradora, inicio, fim, letraFiltro, sortBy])
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages)
+  }, [page, totalPages])
 
   const savingId = isPending ? variables?.id : null
 
@@ -180,46 +288,72 @@ export default function AutoClientes() {
           <input type="date" value={inicio} onChange={e => setInicio(e.target.value)} className="input" />
           <input type="date" value={fim} onChange={e => setFim(e.target.value)} className="input" />
         </div>
+        <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <LetterFilterBar value={letraFiltro} onChange={setLetraFiltro} availableLetters={availableLetters} />
+          <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="select lg:w-64">
+            <option value="nome">Ordem alfabética</option>
+            <option value="recente">Mais recentes primeiro</option>
+            <option value="quantidade">Mais apólices primeiro</option>
+            <option value="antigo">Clientes mais antigos</option>
+          </select>
+        </div>
       </FilterBar>
 
       {isLoading ? (
         <div className="py-16 text-center text-sm text-dark-muted">Carregando carteira...</div>
-      ) : grouped.length === 0 ? (
-        <EmptyState icon={<Car className="h-5 w-5" />} title="Nenhuma emissão encontrada" description="Tente outro período, seguradora ou termo de busca." />
+      ) : sortedGrouped.length === 0 ? (
+        <EmptyState icon={<Car className="h-5 w-5" />} title="Nenhuma emissão encontrada" description="Tente outro período, seguradora, letra ou termo de busca." />
       ) : (
-        <div className="space-y-4">
-          {grouped.map(group => (
-            <DataCard key={group.key} title={group.name} subtitle={`${group.items.length} apólice(s)`} actions={group.cpf ? <span className="badge badge-muted">{group.cpf}</span> : null}>
-              <button
-                type="button"
-                onClick={() => navigate(`/auto/clientes/${encodeURIComponent(group.key)}`)}
-                className="mb-4 flex w-full items-center justify-between rounded-[28px] border border-brand-secondary/15 bg-gradient-to-r from-brand-secondary/8 via-dark-surface/40 to-brand-accent/8 px-4 py-4 text-left transition-colors hover:border-brand-secondary/30"
+        <>
+          <div className="space-y-4">
+            {paginated.map(group => (
+              <DataCard
+                key={group.key}
+                title={group.name}
+                subtitle={`${group.items.length} apólice(s)${group.clienteDesde ? ` · cliente desde ${formatMonthYearBR(group.clienteDesde)}` : ''}`}
+                actions={(
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {group.status && (
+                      <span className={`badge ${group.status === 'ativo' ? 'badge-success' : 'badge-muted'}`}>
+                        {group.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                      </span>
+                    )}
+                    {group.cpf && <span className="badge badge-muted">{group.cpf}</span>}
+                  </div>
+                )}
               >
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-info">Perfil do cliente</p>
-                  <p className="mt-1 text-base font-semibold text-dark-text">Abrir área completa com histórico, renovações e vínculo com a corretora</p>
-                </div>
-                <span className="inline-flex items-center gap-2 rounded-2xl border border-brand-secondary/20 bg-dark-surface/80 px-3 py-2 text-xs font-semibold text-status-info">
-                  <Eye className="h-4 w-4" />
-                  Abrir perfil
-                </span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/auto/clientes/${encodeURIComponent(group.key)}`)}
+                  className="mb-4 flex w-full items-center justify-between rounded-[28px] border border-brand-secondary/15 bg-gradient-to-r from-brand-secondary/8 via-dark-surface/40 to-brand-accent/8 px-4 py-4 text-left transition-colors hover:border-brand-secondary/30"
+                >
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-info">Perfil do cliente</p>
+                    <p className="mt-1 text-base font-semibold text-dark-text">Abrir área completa com histórico, renovações e vínculo com a corretora</p>
+                  </div>
+                  <span className="inline-flex items-center gap-2 rounded-2xl border border-brand-secondary/20 bg-dark-surface/80 px-3 py-2 text-xs font-semibold text-status-info">
+                    <Eye className="h-4 w-4" />
+                    Abrir perfil
+                  </span>
+                </button>
 
-              <div className="space-y-3">
-                {group.items.map(item => (
-                  <EmissionRow
-                    key={item.id}
-                    apolice={item}
-                    onSaveNumero={async (id, numero) => { await salvarNumero({ id, numero }) }}
-                    savingId={savingId}
-                    onOpenCotacao={cotacaoId => navigate(`/auto/cotacoes/${cotacaoId}`)}
-                    onOpenApolice={apoliceId => navigate(`/auto/apolices/${apoliceId}`)}
-                  />
-                ))}
-              </div>
-            </DataCard>
-          ))}
-        </div>
+                <div className="space-y-3">
+                  {group.items.map(item => (
+                    <EmissionRow
+                      key={item.id}
+                      apolice={item}
+                      onSaveNumero={async (id, numero) => { await salvarNumero({ id, numero }) }}
+                      savingId={savingId}
+                      onOpenCotacao={cotacaoId => navigate(`/auto/cotacoes/${cotacaoId}`)}
+                      onOpenApolice={apoliceId => navigate(`/auto/apolices/${apoliceId}`)}
+                    />
+                  ))}
+                </div>
+              </DataCard>
+            ))}
+          </div>
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+        </>
       )}
     </div>
   )

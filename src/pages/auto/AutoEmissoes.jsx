@@ -2,11 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
-import { ArrowLeft, ArrowRight, Car, CheckCircle2, FileText, Loader2, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, Upload, X, Plus } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Car, CheckCircle2, FileText, Loader2, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, Upload, X, Plus, History } from 'lucide-react'
 import { format, startOfMonth, startOfWeek } from 'date-fns'
 import {
   atualizarEmissaoAutoCompleta, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
-  emitirApoliceAuto, getApolicesAuto, getEmissaoAuto, getEmissaoColuna, getEmissoesAuto, importarApolicesAutoPlanilha, moverEmissaoColuna,
+  emitirApoliceAuto, getApolicesAuto, getEmissaoAuto, getEmissaoColuna, getEmissoesAuto, importarApolicesAutoPlanilha, importarApolicesAutoHistorico, moverEmissaoColuna,
   salvarResultadoCotacao,
 } from '../../lib/auto'
 import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../components/ui'
@@ -17,6 +17,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { formatDateBR, formatMoney } from './autoShared'
 import { uploadDocumento } from '../../lib/documentos'
 import { toNumber } from '../../lib/apolices'
+import { parseAutoHistoricoPlanilha } from '../../lib/autoHistoricoImport.js'
 
 const COLUNAS = [
   { id: 'pendentes', label: 'Cotacoes pendentes', hint: 'entradas novas do n8n e itens sem andamento', tone: 'warning' },
@@ -345,6 +346,11 @@ async function parseAutoPlanilhaFile(file) {
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' })
     return rowsFromAutoSheet(sheetName, rows)
   })
+}
+async function parseAutoHistoricoPlanilhaFile(file) {
+  const buffer = await file.arrayBuffer()
+  const workbook = XLSX.read(buffer, { type: 'array', cellDates: false, cellStyles: true })
+  return parseAutoHistoricoPlanilha(workbook)
 }
 function buildRenovacaoComparativo(form, premioLiquidoAtual, valorComissaoAtual) {
   const premioAnterior = toNumber(form.renovacao_premio_liquido_ano_anterior) || 0
@@ -1200,12 +1206,14 @@ export default function AutoEmissoes() {
   const [manualDocumento, setManualDocumento] = useState(null)
   const manualFileRef = useRef(null)
   const importFileRef = useRef(null)
+  const importHistoricoFileRef = useRef(null)
   const [form, setForm] = useState(FORM_EMISSAO_VAZIO)
   const [showApolices, setShowApolices] = useState(false)
   const [periodo, setPeriodo] = useState(periodoInicial)
   const [filtroInicio, setFiltroInicio] = useState(initialRange.inicio)
   const [filtroFim, setFiltroFim] = useState(initialRange.fim)
   const [importResumo, setImportResumo] = useState(null)
+  const [importHistoricoResumo, setImportHistoricoResumo] = useState(null)
 
   const { data: emissoes = [] } = useQuery({
     queryKey: ['auto-emissoes', periodo, filtroInicio, filtroFim],
@@ -1280,6 +1288,23 @@ export default function AutoEmissoes() {
     },
     onError: error => {
       toast({ type: 'error', title: 'Erro ao importar planilha', message: error?.message || 'Revise o arquivo enviado.' })
+    },
+  })
+  const { mutateAsync: importarHistoricoAsync, isPending: isImportingHistorico } = useMutation({
+    mutationFn: rows => importarApolicesAutoHistorico(rows),
+    onSuccess: resumo => {
+      qc.invalidateQueries({ queryKey: ['auto-clientes-carteira'] })
+      qc.invalidateQueries({ queryKey: ['auto-apolices'] })
+      qc.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] })
+      setImportHistoricoResumo(resumo)
+      toast({
+        type: 'success',
+        title: 'Historico importado',
+        message: `${resumo.importadas} apolices novas, ${resumo.duplicadas} ja existentes e ${resumo.ignoradas} ignoradas.`,
+      })
+    },
+    onError: error => {
+      toast({ type: 'error', title: 'Erro ao importar historico', message: error?.message || 'Revise o arquivo enviado.' })
     },
   })
   const { mutate: salvarEdicao, isPending: isSavingEdicao } = useMutation({
@@ -1386,11 +1411,31 @@ export default function AutoEmissoes() {
         toast({
           type: 'error',
           title: 'Planilha sem linhas reconhecidas',
-          message: 'Use colunas DATA, CIA, SEGURADO e STATUS, como na planilha de renovações auto.',
+          message: 'Use colunas DATA, CIA, SEGURADO e STATUS, como na planilha de renovaï¿½ï¿½es auto.',
         })
         return
       }
       await importarPlanilhaAsync(rows)
+    } catch (error) {
+      toast({ type: 'error', title: 'Erro ao ler planilha', message: error?.message || 'Arquivo invalido ou fora do modelo esperado.' })
+    }
+  }
+  async function handleImportHistorico(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    try {
+      const rows = await parseAutoHistoricoPlanilhaFile(file)
+      if (!rows.length) {
+        toast({
+          type: 'error',
+          title: 'Nenhuma linha verde encontrada',
+          message: 'So linhas com preenchimento verde (renovacao confirmada) sao importadas.',
+        })
+        return
+      }
+      await importarHistoricoAsync(rows)
     } catch (error) {
       toast({ type: 'error', title: 'Erro ao ler planilha', message: error?.message || 'Arquivo invalido ou fora do modelo esperado.' })
     }
@@ -1664,6 +1709,21 @@ export default function AutoEmissoes() {
               {isImportingPlanilha ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               Importar planilha
             </button>
+            <input
+              ref={importHistoricoFileRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleImportHistorico}
+              className="hidden"
+            />
+            <button
+              onClick={() => importHistoricoFileRef.current?.click()}
+              disabled={isImportingHistorico}
+              className="btn-secondary inline-flex items-center gap-2 disabled:opacity-50"
+            >
+              {isImportingHistorico ? <Loader2 className="h-4 w-4 animate-spin" /> : <History className="h-4 w-4" />}
+              Importar historico (renovacoes)
+            </button>
             <button onClick={() => { setManualMode('novo'); setManualForm(FORM_MANUAL_VAZIO); setManualDocumento(null); setManualOpen(true) }} className="btn-primary">
               Nova emissao
             </button>
@@ -1693,6 +1753,23 @@ export default function AutoEmissoes() {
             {importResumo.erros?.length > 0 && (
               <span className="rounded-2xl border border-status-warning/25 bg-status-warning/10 px-3 py-2 text-xs font-medium text-status-warning">
                 {importResumo.erros.length} linha(s) com aviso
+              </span>
+            )}
+          </div>
+        </DataCard>
+      )}
+      {importHistoricoResumo && (
+        <DataCard className="border-status-warning/25 bg-status-warning/5" bodyClassName="p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-dark-text">Ultima importacao de historico Auto</p>
+              <p className="mt-1 text-xs text-dark-muted">
+                {importHistoricoResumo.total} linhas verdes lidas. {importHistoricoResumo.importadas} novas, {importHistoricoResumo.duplicadas} ja existentes e {importHistoricoResumo.ignoradas} ignoradas.
+              </p>
+            </div>
+            {importHistoricoResumo.erros?.length > 0 && (
+              <span className="rounded-2xl border border-status-warning/25 bg-status-warning/10 px-3 py-2 text-xs font-medium text-status-warning">
+                {importHistoricoResumo.erros.length} linha(s) com aviso
               </span>
             )}
           </div>

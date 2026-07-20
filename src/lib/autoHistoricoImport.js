@@ -1,4 +1,6 @@
-import XLSX from 'xlsx'
+import * as XLSXModule from 'xlsx'
+
+const XLSX = XLSXModule.default ?? XLSXModule
 
 const GREEN_FILL_COLORS = new Set(['00B050', '92D050'])
 

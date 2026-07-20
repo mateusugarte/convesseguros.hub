@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { normalizeCompareText, somarUmAno } from './autoHistoricoImport.js'
 
 function parseMonthRef(monthRef) {
   if (typeof monthRef !== 'string') return null
@@ -81,7 +82,7 @@ function normalizeStatusRenovacaoAuto(value) {
   }
   if (status.includes('enviado')) return { status_cotacao: 'cotada_enviada', status_renovacao: 'pendente' }
   if (status.includes('cotado')) return { status_cotacao: 'cotada_nao_enviada', status_renovacao: 'pendente' }
-  if (status.includes('cancel') || status.includes('nao renov') || status.includes('não renov')) {
+  if (status.includes('cancel') || status.includes('nao renov') || status.includes('nï¿½o renov')) {
     return { status_cotacao: 'nao_cotada', status_renovacao: 'nao_renovada' }
   }
   return { status_cotacao: 'nao_cotada', status_renovacao: 'pendente' }
@@ -1117,6 +1118,104 @@ export async function importarApolicesAutoPlanilha(rows = []) {
         .eq('apolice_id', apoliceId)
       if (renovacaoError) throw renovacaoError
     }
+  }
+
+  return resultado
+}
+
+const HISTORICO_IMPORT_CHUNK_SIZE = 200
+const APOLICE_AUTO_ORIGEM_FIELDS = ['origem_pre_sistema']
+
+export async function importarApolicesAutoHistorico(rows = []) {
+  const resultado = { total: rows.length, importadas: 0, duplicadas: 0, ignoradas: 0, erros: [] }
+
+  const candidatos = []
+  rows.forEach((row, index) => {
+    const nomeCliente = normalizeImportText(row.nome_cliente)
+    const vigenciaInicio = row.vigencia_inicio || null
+    if (!nomeCliente || !vigenciaInicio) {
+      resultado.ignoradas += 1
+      resultado.erros.push({ aba: row.aba || null, linha: row.linha || index + 1, motivo: 'Nome ou data ausente.' })
+      return
+    }
+    const vigenciaFim = somarUmAno(vigenciaInicio)
+    if (!vigenciaFim) {
+      resultado.ignoradas += 1
+      resultado.erros.push({ aba: row.aba || null, linha: row.linha || index + 1, motivo: 'Data de inicio invalida.' })
+      return
+    }
+    candidatos.push({
+      nome_cliente: nomeCliente,
+      seguradora: normalizeImportText(row.seguradora) || null,
+      vigencia_inicio: vigenciaInicio,
+      vigencia_fim: vigenciaFim,
+      pct_comissao: row.pct_comissao ?? null,
+      comissao_passada: row.comissao_passada ?? null,
+    })
+  })
+
+  const { data: existentes, error: existentesError } = await supabase
+    .from('apolices_auto')
+    .select('nome_cliente, vigencia_fim, seguradora')
+    .eq('origem_pre_sistema', true)
+  if (existentesError) throw existentesError
+
+  const chavesExistentes = new Set(
+    (existentes ?? []).map(item => `${normalizeCompareText(item.nome_cliente)}|${item.vigencia_fim}|${normalizeCompareText(item.seguradora)}`)
+  )
+
+  const paraInserir = []
+  candidatos.forEach(candidato => {
+    const chave = `${normalizeCompareText(candidato.nome_cliente)}|${candidato.vigencia_fim}|${normalizeCompareText(candidato.seguradora)}`
+    if (chavesExistentes.has(chave)) {
+      resultado.duplicadas += 1
+      return
+    }
+    chavesExistentes.add(chave)
+    paraInserir.push({
+      emissao_id: null,
+      cliente_id: null,
+      seguradora: candidato.seguradora,
+      numero_apolice: null,
+      vigencia_inicio: candidato.vigencia_inicio,
+      vigencia_fim: candidato.vigencia_fim,
+      premio_liquido: null,
+      pct_comissao: candidato.pct_comissao,
+      valor_comissao: null,
+      forma_pagamento: null,
+      parcelamento: null,
+      tipo_producao: 'individual',
+      responsavel: null,
+      eh_renovacao: true,
+      tem_repasse: false,
+      pct_repasse: null,
+      nome_repasse: null,
+      valor_repasse: null,
+      nome_cliente: candidato.nome_cliente,
+      cpf_cliente: null,
+      celular_cliente: null,
+      condutor_nome: null,
+      condutor_cpf: null,
+      modelo_veiculo: null,
+      placa: null,
+      renovacao_comissao_ano_anterior: candidato.comissao_passada,
+      origem_pre_sistema: true,
+    })
+  })
+
+  for (let i = 0; i < paraInserir.length; i += HISTORICO_IMPORT_CHUNK_SIZE) {
+    const chunk = paraInserir.slice(i, i + HISTORICO_IMPORT_CHUNK_SIZE)
+    let { error } = await supabase.from('apolices_auto').insert(chunk)
+    if (isMissingColumnError(error, 'apolices_auto', APOLICE_AUTO_ORIGEM_FIELDS)) {
+      ;({ error } = await supabase
+        .from('apolices_auto')
+        .insert(chunk.map(item => omitKeys(item, APOLICE_AUTO_ORIGEM_FIELDS))))
+    }
+    if (error) {
+      resultado.erros.push({ aba: null, linha: null, motivo: `Lote ${Math.floor(i / HISTORICO_IMPORT_CHUNK_SIZE) + 1}: ${error.message}` })
+      continue
+    }
+    resultado.importadas += chunk.length
   }
 
   return resultado

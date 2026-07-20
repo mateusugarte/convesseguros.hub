@@ -22,6 +22,10 @@ test('limparNomeSegurado mantem nome sem traco, so normaliza espacos', () => {
   assert.equal(limparNomeSegurado('  NICASSIA   APARECIDA  ARAUJO '), 'NICASSIA APARECIDA ARAUJO')
 })
 
+test('limparNomeSegurado preserva nome composto com hifen sem espaco nos dois lados', () => {
+  assert.equal(limparNomeSegurado('ANA-BEATRIZ SOUZA'), 'ANA-BEATRIZ SOUZA')
+})
+
 test('normalizeCompareText remove acento e caixa para comparacao', () => {
   assert.equal(normalizeCompareText('José  DA Silva'), 'jose da silva')
 })

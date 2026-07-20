@@ -6,7 +6,7 @@ const GREEN_FILL_COLORS = new Set(['00B050', '92D050'])
 
 export function limparNomeSegurado(value) {
   const clean = String(value ?? '').replace(/\s+/g, ' ').trim()
-  const cutIndex = clean.indexOf('-')
+  const cutIndex = clean.search(/\s-|-\s/)
   if (cutIndex === -1) return clean
   return clean.slice(0, cutIndex).trim()
 }

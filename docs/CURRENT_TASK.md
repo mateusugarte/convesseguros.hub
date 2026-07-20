@@ -1,64 +1,31 @@
 # CURRENT TASK
 
-## ⏸️ TAREFA EM ANDAMENTO — PAUSADA A PEDIDO DO USUÁRIO (2026-07-17, retomar na
-segunda-feira, Claude): importação histórica de apólices Auto (planilha
-`02 RENOVAÇÕES AUTO.xlsx`) + redesenho da página de Clientes Auto. Usuário
-pediu para parar aqui e retomar na próxima sessão — **isto tem que ser a
-primeira coisa lida/retomada quando o Claude for acionado de novo**, antes de
-qualquer outra solicitação do usuário (ver nota em `CLAUDE.md`).
+## Importação histórica de apólices Auto + redesign de Clientes Auto (2026-07-20, Claude — retomada da pausa de 2026-07-17)
 
-**Onde estão os documentos desta tarefa:**
-- Spec aprovada: `docs/superpowers/specs/2026-07-17-auto-importacao-clientes-redesign-design.md`
-- Plano de implementação (11 tasks, código completo em cada passo): `docs/superpowers/plans/2026-07-17-auto-importacao-clientes-redesign.md`
-- Ledger de progresso (source of truth do que já foi feito/commitado): `.superpowers/sdd/progress-auto-importacao-clientes.md`
-- Sendo executado via skill `superpowers:subagent-driven-development` (fresh
-  subagent por task + review de spec/qualidade por task + review final de
-  branch no fim). Direto na branch `main`, sem worktree (decisão explícita do
-  usuário).
+Tarefa multi-etapas (11 tasks) executada via `superpowers:subagent-driven-development`, direto na branch `main`, sem worktree. Spec: `docs/superpowers/specs/2026-07-17-auto-importacao-clientes-redesign-design.md`. Plano: `docs/superpowers/plans/2026-07-17-auto-importacao-clientes-redesign.md`. Ledger completo: `.superpowers/sdd/progress-auto-importacao-clientes.md`.
 
-**Status exato ao pausar:**
-- **Task 1** (migration `supabase/54_apolices_auto_origem_pre_sistema.sql`,
-  coluna nova em `apolices_auto`) — commit `48342b7`, review aprovado. **A
-  migration NÃO foi rodada no Supabase** (precisa ser executada manualmente
-  pelo usuário no SQL Editor antes da importação funcionar de verdade).
-- **Task 2** (`APOLICE_AUTO_COLUMNS` inclui `origem_pre_sistema`) — commits
-  `a58f5ae`..`8791f8f`, review aprovado. (Ronda 1 encontrou uma corrupção de
-  byte incidental numa linha não relacionada em `src/lib/auto.js` — o editor
-  do subagente reescreveu um byte `0xE3` de mojibake pré-existente para
-  `0xEF BF BD`; corrigido byte-a-byte no commit de fix, re-review confirmou
-  diff limpo.)
-- **Task 3** (`src/lib/autoHistoricoImport.js` + testes) — commit `39fa125`,
-  implementado e com 11 testes novos passando (suíte completa 100/100
-  verde), **mas AINDA NÃO REVISADO** (a sessão foi pausada antes de gerar o
-  review package e despachar o task-reviewer). O relatório do implementador
-  (`.superpowers/sdd/task-3-report.md`) menciona um desvio do plano: trocou
-  `import * as XLSX from 'xlsx'` por um import default, "para acessar
-  `XLSX.SSF`" — **isso precisa ser conferido contra o texto exato do plano
-  antes de aprovar a task**, não foi verificado ainda.
-- **Próximo passo ao retomar:** gerar o review package da Task 3
-  (`scripts/review-package 8791f8f 39fa125`), despachar o task-reviewer,
-  resolver achados, e continuar a partir da Task 4 conforme o plano.
+**Tasks 1-10 completas e revisadas (Task 11 é esta própria entrada). Revisão final de branch ainda pendente** (próximo passo desta sessão) antes de considerar a tarefa inteiramente fechada.
 
-**⚠️ Observação importante encontrada ao pausar — possível edição
-concorrente:** `git status`/`git diff --stat` mostram mudanças **não
-commitadas** (working tree sujo) em `src/index.css` (+274 linhas) e em quase
-todas as páginas de `src/pages/auto/*.jsx` (`AutoApoliceDetalhe`,
-`AutoClienteDetalhe`, `AutoClientes`, `AutoCotacaoDetalhe`, `AutoCotacoes`,
-`AutoDashboard`, `AutoEmissoes`, `AutoRenovacoes`, `AutoSinistros` — a
-maioria só 1-2 linhas, `AutoEmissoes.jsx` com 4). **Nenhuma dessas mudanças
-foi feita por esta tarefa** (as tasks 1-3 só tocaram
-`supabase/54_...sql`, `src/lib/auto.js`, `src/lib/autoHistoricoImport.js`,
-`src/lib/autoHistoricoImport.test.mjs` e `package.json` — confirmado por
-`git show --stat` de cada commit). A árvore de trabalho estava limpa no
-início desta sessão. Isso é consistente com edição concorrente de outra
-sessão/IA (Codex, conforme fluxo descrito em `CLAUDE.md`) enquanto esta
-sessão rodava em paralelo — **não foi tocado, revertido nem stashado**
-(seguindo a regra de nunca descartar trabalho não commitado de origem
-desconhecida). Ao retomar: rodar `git status`/`git diff` de novo antes de
-qualquer coisa para ver se essas mudanças ainda estão lá, mudaram, ou já
-foram commitadas por outro processo, e coordenar com o usuário se
-necessário antes de continuar a Task 4 em diante (evitar conflito com essas
-edições no mesmo módulo Auto).
+1. **Migration `origem_pre_sistema`** (`supabase/54_apolices_auto_origem_pre_sistema.sql`, commit `48342b7`) — coluna booleana nova em `apolices_auto`. **AINDA NÃO EXECUTADA NO SUPABASE** — precisa rodar manualmente no SQL Editor antes de qualquer importação funcionar de verdade em produção.
+2. **`APOLICE_AUTO_COLUMNS`** passou a incluir `origem_pre_sistema` (commits `a58f5ae`..`8791f8f`).
+3. **Parser puro `src/lib/autoHistoricoImport.js`** (commit `39fa125`, 11 testes): lê a planilha `02 RENOVAÇÕES AUTO.xlsx`, filtra só linhas com célula verde (`00B050`/`92D050`) na coluna SEGURADO/CLIENTE, limpa o nome (corta no primeiro traço), soma 1 ano à vigência de início. Import do pacote `xlsx` precisou de um ajuste posterior (ver item 4) por um dual-package hazard real entre Node e Vite.
+4. **`importarApolicesAutoHistorico`** em `src/lib/auto.js` (commits `50906ea` + `235ff93`): importa em lote com deduplicação (chave nome+vigência_fim+seguradora). **Incidente de processo durante esta task:** um implementer subagent (modelo econômico) fez, fora do escopo pedido, um commit não autorizado revertendo a correção já revisada da Task 3 no import do `xlsx`, o que quebrou os testes — detectado e corrigido pelo controller antes da revisão (fix real: `import * as XLSXModule from 'xlsx'; const XLSX = XLSXModule.default ?? XLSXModule`, compatível com `node --test` e `vite build` ao mesmo tempo). Documentado em `.superpowers/sdd/task-4-report.md`.
+5. **Botão "Importar histórico (renovações)"** em `AutoEmissoes.jsx` (commit `c38a8b4`), conectando o parser + a função de importação, com card de resumo (total/importadas/duplicadas/ignoradas/erros).
+6. **Limpeza de nome generalizada**: o importador mensal existente (`rowsFromAutoSheet`) passou a usar `limparNomeSegurado` (mesma função do histórico) em vez da função local antiga `cleanNomeSegurado`, unificando a regra (corta no primeiro traço) — mudança de comportamento deliberada, validada contra ~109 linhas reais com traço na spec do plano.
+7. **Helpers testados** em `src/pages/auto/autoShared.js` (commit `885687b`): `isApoliceAtiva`, `getClienteStatusAuto`, `formatMonthYearBR`.
+8. **Bug do perfil corrigido** em `getClienteAutoDetalhe` (`src/lib/auto.js`, commit `cb2da0f`): a busca de apólices do cliente combinava identificadores com prioridade (só o primeiro que existisse era usado); agora combina todos com `.or(...)` do Supabase — uma apólice só com `nome_cliente` não fica mais invisível no perfil. Também retorna `clienteDesde` (data da apólice mais antiga).
+9. **"Cliente desde" + etiquetas** em `AutoClienteDetalhe.jsx` (commit `c6db6c1`): badge ativo/inativo, badge "Emitida antes do sistema" por apólice.
+10. **Redesenho de `AutoClientes.jsx`** (commit `a7ea174`): filtro por letra inicial, 4 critérios de ordenação, paginação de 50/página, badge de status por cliente.
+
+**Pendências / smoke tests que dependem de ambiente com `.env`/Supabase (não disponível nesta sessão):**
+- Rodar `54_apolices_auto_origem_pre_sistema.sql` manualmente no SQL Editor do Supabase.
+- Depois disso, subir a planilha real `02 RENOVAÇÕES AUTO.xlsx` pelo botão novo em Emissões e conferir o resumo de importação (contagens batendo com o esperado, nenhuma linha verde perdida).
+- Abrir um cliente com apólice pré-sistema e confirmar visualmente o badge "Emitida antes do sistema" e o "Cliente desde".
+- Abrir `/auto/clientes` e conferir filtro por letra, ordenação e paginação com dados reais (mais de 50 clientes).
+
+**Riscos remanescentes:** `limparNomeSegurado` (item 6) corta qualquer nome no primeiro traço simples — um nome real com hífen legítimo (raro, não encontrado nos ~109 casos analisados) seria truncado; monitorar após uso em produção. Import do `xlsx` (item 3/4) agora depende de um padrão específico (`XLSXModule.default ?? XLSXModule`) para funcionar em Node e Vite simultaneamente — se o pacote `xlsx` for atualizado de versão major no futuro, reconferir esse comportamento.
+
+`npm test` (107/107) e `npm run build` verdes em todas as tasks.
 
 ---
 

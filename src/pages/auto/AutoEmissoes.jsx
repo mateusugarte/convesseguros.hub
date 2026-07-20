@@ -17,7 +17,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { formatDateBR, formatMoney } from './autoShared'
 import { uploadDocumento } from '../../lib/documentos'
 import { toNumber } from '../../lib/apolices'
-import { parseAutoHistoricoPlanilha } from '../../lib/autoHistoricoImport.js'
+import { limparNomeSegurado, parseAutoHistoricoPlanilha } from '../../lib/autoHistoricoImport.js'
 
 const COLUNAS = [
   { id: 'pendentes', label: 'Cotacoes pendentes', hint: 'entradas novas do n8n e itens sem andamento', tone: 'warning' },
@@ -240,13 +240,6 @@ function cleanPlanilhaText(value) {
   return String(value ?? '').replace(/\s+/g, ' ').trim()
 }
 
-function cleanNomeSegurado(value) {
-  return cleanPlanilhaText(value)
-    .replace(/\s*-{2,}\s*.*$/i, '')
-    .replace(/\s+-\s+(equipe|luciano|victor|vini)$/i, '')
-    .trim()
-}
-
 function excelDateToISO(value) {
   if (value === null || value === undefined || value === '') return ''
   if (value instanceof Date && !Number.isNaN(value.getTime())) return format(value, 'yyyy-MM-dd')
@@ -310,7 +303,7 @@ function rowsFromAutoSheet(sheetName, rows) {
         const row = rows[rowIndex]
         if (normalizePlanilhaHeader(row[dataCol]) === 'data') break
 
-        const nome = cleanNomeSegurado(row[seguradoCol])
+        const nome = limparNomeSegurado(row[seguradoCol])
         const vigenciaFim = excelDateToISO(row[dataCol])
         if (!nome && !vigenciaFim) continue
         if (!nome || !vigenciaFim) continue

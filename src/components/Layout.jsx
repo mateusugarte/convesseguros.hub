@@ -75,6 +75,7 @@ const NAV_GROUPS = [
           { to: '/auto/cotacoes',        label: 'Cotacoes' },
           { to: '/auto/clientes',        label: 'Clientes' },
           { to: '/auto/sinistros',       label: 'Sinistros' },
+          { to: '/auto/etiquetas',       label: 'Etiquetas' },
         ],
       },
     ],

@@ -250,6 +250,25 @@ async function resolverClienteAutoId(payload = {}) {
   return data.id
 }
 
+// Quando uma cotacao de renovacao vira apolice emitida: marca a cotacao como
+// convertida (fecha o funil de conversao) e a renovacao que a originou como
+// concluida, para que ela pare de aparecer como pendente em /auto/renovacoes.
+async function concluirCotacaoEVincularRenovacao(cotacaoId) {
+  if (!cotacaoId) return
+
+  const { error: statusError } = await supabase
+    .from('cotacoes_auto')
+    .update({ status: 'convertida' })
+    .eq('id', cotacaoId)
+  if (statusError) throw statusError
+
+  const { error: renovacaoError } = await supabase
+    .from('renovacoes_auto')
+    .update({ status_renovacao: 'renovada' })
+    .eq('cotacao_id', cotacaoId)
+  if (renovacaoError) throw renovacaoError
+}
+
 export function getEmissaoColuna(item) {
   const raw = item?.coluna
   if (typeof raw !== 'string') return 'pendentes'
@@ -677,6 +696,9 @@ export async function atualizarEmissaoAutoCompleta(payload) {
       const { error: docError } = await uploadApoliceDocumento(payload, apoliceId)
       if (docError) throw docError
     }
+    if (payload.coluna === 'apolice_emitida') {
+      await concluirCotacaoEVincularRenovacao(payload.cotacao_id)
+    }
   }
 }
 
@@ -768,6 +790,7 @@ export async function emitirApoliceAuto(payload) {
       const { error: docError } = await uploadApoliceDocumento(payload, retry.data?.id)
       if (docError) throw docError
     }
+    await concluirCotacaoEVincularRenovacao(payload.cotacao_id)
     return retry.data
   }
   if (error) throw error
@@ -775,6 +798,7 @@ export async function emitirApoliceAuto(payload) {
     const { error: docError } = await uploadApoliceDocumento(payload, data?.id)
     if (docError) throw docError
   }
+  await concluirCotacaoEVincularRenovacao(payload.cotacao_id)
   return data
 }
 
@@ -879,10 +903,12 @@ export async function criarEmissaoManualAuto(payload) {
 }
 
 // Renovacoes
+const RENOVACAO_LISTA_SELECT = '*, clientes_auto(nome_completo, telefone, celular, email), apolices_auto(id, emissao_id, numero_apolice, seguradora, vigencia_inicio, vigencia_fim, premio_liquido, valor_comissao, forma_pagamento, parcelamento, nome_cliente, modelo_veiculo, placa, created_at), cotacoes_auto:cotacao_id(id, status, tipo, created_at, emissoes_auto(coluna))'
+
 export async function getRenovacoesAuto({ periodo, mes } = {}) {
   let q = supabase
     .from('renovacoes_auto')
-    .select('*, clientes_auto(nome_completo, telefone, celular, email), apolices_auto(id, emissao_id, numero_apolice, seguradora, vigencia_inicio, vigencia_fim, premio_liquido, valor_comissao, forma_pagamento, parcelamento, nome_cliente, modelo_veiculo, placa, created_at)')
+    .select(RENOVACAO_LISTA_SELECT)
     .order('vigencia_fim', { ascending: true })
 
   if (periodo === 'proximo_mes') {
@@ -907,6 +933,91 @@ export async function atualizarStatusRenovacao(id, campos) {
     .update(campos)
     .eq('id', id)
   if (error) throw error
+}
+
+// Cria (ou reaproveita) a cotacao de renovacao vinculada a uma linha de
+// renovacoes_auto. Usada tanto pelo botao "Cotar" na propria renovacao quanto
+// pelo fluxo "Nova cotacao > Renovacao" da Gestao Auto — mesma funcao, para os
+// dois pontos de entrada nunca divergirem em comportamento. Se ja existir uma
+// cotacao ativa vinculada (status != 'perdida'), retorna ela em vez de criar
+// outra, evitando duplicidade por clique repetido.
+export async function iniciarCotacaoRenovacao(renovacaoId) {
+  if (!renovacaoId) throw new Error('Renovacao invalida.')
+
+  const { data: renovacao, error: renovacaoError } = await supabase
+    .from('renovacoes_auto')
+    .select(`
+      id, cliente_id, apolice_id, seguradora, vigencia_fim, cotacao_id,
+      clientes_auto(nome_completo, cpf, celular, telefone, email),
+      apolices_auto(nome_cliente, cpf_cliente, celular_cliente, condutor_nome, condutor_cpf, modelo_veiculo, placa, vigencia_inicio, vigencia_fim)
+    `)
+    .eq('id', renovacaoId)
+    .single()
+  if (renovacaoError) throw renovacaoError
+
+  if (renovacao.cotacao_id) {
+    const { data: cotacaoExistente, error: cotacaoError } = await supabase
+      .from('cotacoes_auto')
+      .select('id, status')
+      .eq('id', renovacao.cotacao_id)
+      .maybeSingle()
+    if (cotacaoError) throw cotacaoError
+    if (cotacaoExistente && cotacaoExistente.status !== 'perdida') {
+      return { cotacaoId: cotacaoExistente.id, created: false }
+    }
+  }
+
+  const apolice = renovacao.apolices_auto || {}
+  const cliente = renovacao.clientes_auto || {}
+
+  const cotacao = await criarCotacaoAuto({
+    cliente_id: renovacao.cliente_id,
+    tipo: 'renovacao',
+    status: 'pendente',
+    nome_cliente: apolice.nome_cliente || cliente.nome_completo || null,
+    cpf_cliente: apolice.cpf_cliente || cliente.cpf || null,
+    celular_cliente: apolice.celular_cliente || cliente.celular || cliente.telefone || null,
+    email_cliente: cliente.email || null,
+    condutor_nome: apolice.condutor_nome || null,
+    condutor_cpf: apolice.condutor_cpf || null,
+    modelo_veiculo: apolice.modelo_veiculo || null,
+    placa: apolice.placa || null,
+    vigencia_inicio: apolice.vigencia_inicio || null,
+    vigencia_fim: renovacao.vigencia_fim || apolice.vigencia_fim || null,
+    seguradora_preferencial: renovacao.seguradora ? { nome: renovacao.seguradora } : undefined,
+  })
+
+  const { error: linkError } = await supabase
+    .from('renovacoes_auto')
+    .update({ cotacao_id: cotacao.id })
+    .eq('id', renovacaoId)
+  if (linkError) throw linkError
+
+  return { cotacaoId: cotacao.id, created: true }
+}
+
+export async function getRenovacoesDisponiveisParaCotacao(search = '') {
+  const { data, error } = await supabase
+    .from('renovacoes_auto')
+    .select('id, cliente_id, seguradora, vigencia_fim, cotacao_id, clientes_auto(nome_completo, celular, telefone), apolices_auto(numero_apolice, modelo_veiculo, placa)')
+    .order('vigencia_fim', { ascending: true })
+    .limit(200)
+  if (error) throw error
+
+  const termo = search.trim().toLowerCase()
+  const resultado = data ?? []
+  if (!termo) return resultado
+
+  return resultado.filter(item => {
+    const texto = [
+      item.clientes_auto?.nome_completo,
+      item.seguradora,
+      item.apolices_auto?.numero_apolice,
+      item.apolices_auto?.modelo_veiculo,
+      item.apolices_auto?.placa,
+    ].filter(Boolean).join(' ').toLowerCase()
+    return texto.includes(termo)
+  })
 }
 
 // Apolices
@@ -1593,5 +1704,67 @@ export async function getAutoCotacoesMensais({ tipo, meses = 6 } = {}) {
       perdidas: subset.filter(item => item.status === 'perdida').length,
     }),
   })
+}
+
+// Etiquetas (predefinidas + manuais nos cards de emissoes_auto)
+export async function getAutoTags() {
+  const { data, error } = await supabase
+    .from('auto_tags')
+    .select('id, nome, cor, ativa, ordem, created_at, updated_at')
+    .order('ordem', { ascending: true })
+    .order('nome', { ascending: true })
+  if (error) throw error
+  return data ?? []
+}
+
+export async function criarAutoTag({ nome, cor, ordem = 0 }) {
+  const { data, error } = await supabase
+    .from('auto_tags')
+    .insert({ nome: nome?.trim(), cor: cor || '#4A90D9', ordem })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function atualizarAutoTag(id, changes) {
+  const { data, error } = await supabase
+    .from('auto_tags')
+    .update(changes)
+    .eq('id', id)
+    .select()
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+// Remove a etiqueta predefinida e limpa a referencia em qualquer card que a
+// esteja usando, para nao deixar ids orfaos em emissoes_auto.tags.
+export async function excluirAutoTag(id) {
+  const { data: emissoesComTag, error: buscaError } = await supabase
+    .from('emissoes_auto')
+    .select('id, tags')
+    .contains('tags', [id])
+  if (buscaError) throw buscaError
+
+  for (const emissao of emissoesComTag ?? []) {
+    const tagsRestantes = (emissao.tags ?? []).filter(tagId => tagId !== id)
+    const { error: updateError } = await supabase
+      .from('emissoes_auto')
+      .update({ tags: tagsRestantes })
+      .eq('id', emissao.id)
+    if (updateError) throw updateError
+  }
+
+  const { error } = await supabase.from('auto_tags').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function atualizarTagsEmissao(id, tags) {
+  const { error } = await supabase
+    .from('emissoes_auto')
+    .update({ tags: Array.isArray(tags) ? tags : [], updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw error
 }
 

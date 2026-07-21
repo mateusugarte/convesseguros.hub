@@ -1,5 +1,83 @@
 # CURRENT TASK
 
+## Revisao e melhoria completa do modulo Auto (2026-07-21, Claude — EM ANDAMENTO)
+
+Pedido do usuario: auditoria + correcao de renovacoes (mes/ano dinamico, dias restantes,
+destaque de urgencia), vinculo renovacao<->cotacao com fluxo "Cotar" duplicado-safe, fix do
+alinhamento do Kanban de Gestao Auto, sistema de etiquetas, filtros de emissoes por mes/ano
+real. Auditoria completa apresentada e aprovada pelo usuario (ver resposta do agente nesta
+sessao). Decisoes do usuario: (1) CHECK constraint de `emissoes_auto.coluna` ja foi corrigido
+manualmente em producao para aceitar 'proposta_transmitida'/'apolice_emitida' — so preciso
+sincronizar a migration versionada; (2) executar tudo nesta sessao, em fases; (3) eu crio os
+arquivos `.sql`, usuario roda manualmente no SQL Editor do Supabase (mesmo padrao ja usado
+no projeto).
+
+**Status: Fases 1-4 concluidas nesta sessao (renovacao/cotacao, Kanban, etiquetas,
+emissoes). Pendente: rodar migration no Supabase + fases 5-6 (sinistros, verificacao do
+webhook de seguro novo, permissoes por papel, revisao exaustiva de estados de erro) —
+ver `docs/superpowers` ou pedir para continuar.**
+
+1. **Migration `supabase/55_auto_renovacao_cotacao_tags.sql` (NAO EXECUTADA NO
+   SUPABASE)**: adiciona `renovacoes_auto.cotacao_id` (vinculo renovacao<->cotacao),
+   sincroniza o CHECK de `emissoes_auto.coluna` para aceitar
+   `proposta_transmitida`/`apolice_emitida` (usuario confirmou que producao ja aceita
+   esses valores manualmente; a migration so sincroniza o arquivo versionado com a
+   realidade), e cria `auto_tags` (etiquetas predefinidas) + `emissoes_auto.tags`
+   (etiquetas manuais). Precisa ser rodada manualmente no SQL Editor antes de usar
+   "Cotar"/etiquetas em producao.
+2. **`src/pages/auto/autoShared.js`**: novos helpers puros e testados (10 testes novos,
+   116/116 no total) — `diasParaVencer` (calculo por dia de calendario, nao por
+   horario), `getRenovacaoUrgencia` (hierarquia concluida > vencida > urgente <=10 dias
+   > mes atual/proximo mes), `getRenewalQuoteStatus` (deriva o status da cotacao de
+   renovacao a partir do vinculo `renovacao.cotacoes_auto`, sem campo duplicado que
+   pudesse dessincronizar).
+3. **`src/lib/auto.js`**: `iniciarCotacaoRenovacao(renovacaoId)` — funcao unica usada
+   pelo botao "Cotar" (`AutoRenovacoes.jsx`) e pelo picker "Nova cotacao > Renovacao"
+   (`AutoCotacoes.jsx`); reaproveita a cotacao ja vinculada se ainda nao estiver
+   perdida (evita duplicidade por clique). `concluirCotacaoEVincularRenovacao` —
+   chamada por `emitirApoliceAuto`/`atualizarEmissaoAutoCompleta` ao criar a apolice:
+   marca `cotacoes_auto.status='convertida'` (bug real corrigido — nada gravava esse
+   status antes, entao "taxa de conversao" nunca refletia emissoes reais) e a
+   `renovacoes_auto` de origem como `status_renovacao='renovada'`. Novo CRUD de
+   etiquetas: `getAutoTags`/`criarAutoTag`/`atualizarAutoTag`/`excluirAutoTag` (limpa
+   referencias orfas em `emissoes_auto.tags` antes de excluir) /`atualizarTagsEmissao`.
+4. **`AutoRenovacoes.jsx`**: logo da seguradora (`SeguradoraBadge`), destaque vermelho
+   real para <=10 dias (antes so vencidas ficavam vermelhas, ate 15 dias era so
+   laranja), botao "Cotar"/"Ver cotacao" substituindo o antigo `<select>` manual de
+   status_cotacao (que nao criava cotacao nenhuma).
+5. **`AutoCotacoes.jsx`**: aba "Renovacao" deixou de ser um formulario manual solto
+   (sem vinculo com nenhuma renovacao real) e virou um picker de renovacoes reais da
+   carteira (busca por cliente/seguradora/placa), que cria/abre a cotacao vinculada.
+   Botao "Nova cotacao" adicionado tambem em `/auto/gestao`.
+6. **`AutoEmissoes.jsx`**: Kanban trocou de `grid xl:grid-cols-2 2xl:grid-cols-5` (bug
+   real: 6 colunas em um grid de 5, a 6a sempre quebrava para baixo) para uma faixa
+   horizontal com `overflow-x-auto` e colunas de largura fixa — todas as 6 ficam
+   sempre na mesma linha, com rolagem horizontal em telas menores. "Ultimas emissoes"
+   passou a ter selecao de mes/ano (`input type="month"`, considera ano) em vez de
+   depender do filtro generico de periodo (que tinha "semana" como padrao); adicionados
+   filtros por seguradora/tipo/status/responsavel e busca por texto. Etiquetas
+   manuais nos cards (`ModalDetalhe`) e chips no card do kanban.
+7. **`src/pages/auto/AutoEtiquetas.jsx`** (novo, rota `/auto/etiquetas`): CRUD de
+   etiquetas predefinidas (nome, cor, ativar/desativar, reordenar, excluir com
+   confirmacao e limpeza de vinculos).
+8. **`src/pages/auto/CONTEXT.md`** (novo): fechа o gap identificado na auditoria —
+   modulo Auto era o unico grande sem `CONTEXT.md`; `npm run check:page-contexts`
+   agora so acusa `GestaoComercial.jsx` (pendencia pre-existente, fora de escopo).
+
+`npm test` (116/116) e `npm run build` verdes apos cada fase.
+
+**Nao coberto nesta sessao (fica para uma proxima rodada, a pedido do usuario ou por
+tempo)**: area de Sinistros (fora de escopo, continua "em preparacao"); verificacao do
+fluxo de webhook/formulario de seguro novo fora deste repo (n8n); enforcement de
+permissoes por papel no backend (RLS de todas as tabelas auto ainda e
+`FOR ALL TO authenticated USING (true)` — bandeira de seguranca ja levantada na
+auditoria, precisa de conversa dedicada antes de mudar RLS); revisao exaustiva de
+estados de erro/loading em todos os fluxos (cobertos os principais: erro ao criar
+cotacao de renovacao, etiquetas, emissoes vazias/filtradas).
+
+---
+
+
 ## Importação histórica de apólices Auto + redesign de Clientes Auto (2026-07-20, Claude — retomada da pausa de 2026-07-17)
 
 Tarefa multi-etapas (11 tasks) executada via `superpowers:subagent-driven-development`, direto na branch `main`, sem worktree. Spec: `docs/superpowers/specs/2026-07-17-auto-importacao-clientes-redesign-design.md`. Plano: `docs/superpowers/plans/2026-07-17-auto-importacao-clientes-redesign.md`. Ledger completo: `.superpowers/sdd/progress-auto-importacao-clientes.md`.

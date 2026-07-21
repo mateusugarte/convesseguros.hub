@@ -52,6 +52,7 @@ const AutoCotacoes   = lazy(() => import('./pages/auto/AutoCotacoes'))
 const AutoCotacoesConsulta = lazy(() => import('./pages/auto/AutoCotacoesConsulta'))
 const AutoCotacaoDetalhe = lazy(() => import('./pages/auto/AutoCotacaoDetalhe'))
 const AutoSinistros  = lazy(() => import('./pages/auto/AutoSinistros'))
+const AutoEtiquetas  = lazy(() => import('./pages/auto/AutoEtiquetas'))
 
 // Área Comercial
 const ComercialDashboard = lazy(() => import('./pages/comercial/ComercialDashboard'))
@@ -133,6 +134,7 @@ function AppRoutes() {
           <Route path="auto/cotacoes/consulta" element={<AutoCotacoesConsulta />} />
           <Route path="auto/cotacoes/:id" element={<AutoCotacaoDetalhe />} />
           <Route path="auto/sinistros"      element={<AutoSinistros />} />
+          <Route path="auto/etiquetas"      element={<AutoEtiquetas />} />
           {/* Área Comercial */}
           <Route path="comercial"            element={<ComercialDashboard />} />
           <Route path="comercial/gestao"     element={<GestaoComercial />} />

@@ -124,3 +124,64 @@ export function formatMonthYearBR(value) {
   if (Number.isNaN(date.getTime())) return '—'
   return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 }
+
+// Dias restantes ate a vigencia final, comparando por dia de calendario (nao
+// por horario exato) para nao variar conforme a hora em que a pagina e aberta.
+export function diasParaVencer(value, hoje = new Date()) {
+  if (!value) return null
+  const alvo = new Date(`${value}T12:00:00`)
+  if (Number.isNaN(alvo.getTime())) return null
+  const base = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
+  const alvoDia = new Date(alvo.getFullYear(), alvo.getMonth(), alvo.getDate())
+  return Math.round((alvoDia - base) / (1000 * 60 * 60 * 24))
+}
+
+export function formatDiasParaVencer(dias) {
+  if (typeof dias !== 'number' || Number.isNaN(dias)) return 'Sem data'
+  if (dias === 0) return 'Vence hoje'
+  if (dias === 1) return 'Vence amanha'
+  if (dias === -1) return 'Vencida ha 1 dia'
+  if (dias < 0) return `Vencida ha ${Math.abs(dias)} dias`
+  return `Faltam ${dias} dias`
+}
+
+export const RENOVACAO_URGENCIA_META = {
+  vencida: { label: 'Vencida', rowClass: 'border-status-danger/50 bg-status-danger/10', badgeClass: 'badge-danger' },
+  urgente: { label: 'Urgente (ate 10 dias)', rowClass: 'border-status-danger/30 bg-status-danger/5', badgeClass: 'badge-danger' },
+  mes_atual: { label: 'Vence este mes', rowClass: 'border-status-warning/25 bg-status-warning/5', badgeClass: 'badge-warning' },
+  proximo_mes: { label: 'Vence no proximo mes', rowClass: 'border-dark-border/70', badgeClass: 'badge-muted' },
+  concluida: { label: 'Concluida', rowClass: 'border-status-success/25 bg-status-success/5 opacity-75', badgeClass: 'badge-success' },
+}
+
+// Hierarquia: concluida > vencida > urgente (<=10 dias) > mes atual/proximo mes.
+export function getRenovacaoUrgencia({ dias, concluida = false, proximoMes = false } = {}) {
+  if (concluida) return 'concluida'
+  if (typeof dias === 'number' && !Number.isNaN(dias)) {
+    if (dias < 0) return 'vencida'
+    if (dias <= 10) return 'urgente'
+  }
+  return proximoMes ? 'proximo_mes' : 'mes_atual'
+}
+
+export const RENEWAL_QUOTE_STATUS_META = {
+  nao_cotada: { label: 'Ainda nao cotada', tone: 'muted' },
+  em_andamento: { label: 'Cotacao em andamento', tone: 'warning' },
+  aguardando_retorno: { label: 'Aguardando retorno', tone: 'secondary' },
+  concluida: { label: 'Concluida', tone: 'success' },
+  perdida: { label: 'Perdida ou cancelada', tone: 'danger' },
+}
+
+// Deriva o status da cotacao de renovacao a partir do vinculo renovacao ->
+// cotacao (renovacao.cotacoes_auto), em vez de depender de um campo separado
+// que poderia ficar dessincronizado. Sem cotacao vinculada => "nao cotada".
+export function getRenewalQuoteStatus(renovacao) {
+  const cotacao = renovacao?.cotacoes_auto
+  if (!cotacao) return 'nao_cotada'
+  if (cotacao.status === 'perdida') return 'perdida'
+  if (cotacao.status === 'convertida') return 'concluida'
+
+  const emissao = Array.isArray(cotacao.emissoes_auto) ? cotacao.emissoes_auto[0] : cotacao.emissoes_auto
+  const coluna = emissao?.coluna
+  if (coluna === 'negociando' || coluna === 'aguardando_vistoria') return 'aguardando_retorno'
+  return 'em_andamento'
+}

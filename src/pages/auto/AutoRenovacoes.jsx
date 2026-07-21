@@ -2,9 +2,20 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { CalendarClock, CheckCircle2, Clock, ExternalLink, RefreshCw, Send, XCircle } from 'lucide-react'
-import { getRenovacoesAuto, atualizarStatusRenovacao } from '../../lib/auto'
+import { getRenovacoesAuto, iniciarCotacaoRenovacao } from '../../lib/auto'
 import { PageHeader, MetricCard, FilterBar, DataCard, EmptyState } from '../../components/ui'
-import { RENOVACAO_STATUS, monthKey } from './autoShared'
+import SeguradoraBadge from '../../components/SeguradoraBadge'
+import {
+  RENOVACAO_STATUS,
+  monthKey,
+  diasParaVencer,
+  formatDiasParaVencer,
+  getRenovacaoUrgencia,
+  RENOVACAO_URGENCIA_META,
+  getRenewalQuoteStatus,
+  RENEWAL_QUOTE_STATUS_META,
+  toneClasses,
+} from './autoShared'
 
 const PERIODOS = [
   { value: 'mes_atual', label: 'Mês selecionado' },
@@ -15,16 +26,11 @@ const PERIODOS = [
 
 const ACOMPANHAR_FILTROS = [
   { value: 'todas', label: 'Todas' },
-  { value: 'cotada_enviada', label: 'Cotadas e enviadas' },
-  { value: 'cotada_nao_enviada', label: 'Cotadas não enviadas' },
+  { value: 'em_andamento', label: 'Em andamento' },
+  { value: 'aguardando_retorno', label: 'Aguardando retorno' },
   { value: 'nao_cotada', label: 'Não cotadas' },
+  { value: 'concluida', label: 'Concluídas' },
 ]
-
-const STATUS_COTACAO = {
-  nao_cotada: { label: 'Não cotada', shell: 'border-status-danger/20 bg-status-danger/10', badge: 'bg-status-danger/10 text-status-danger' },
-  cotada_nao_enviada: { label: 'Cotada - não enviada', shell: 'border-status-warning/20 bg-status-warning/10', badge: 'bg-status-warning/10 text-status-warning' },
-  cotada_enviada: { label: 'Cotada e enviada', shell: 'border-status-success/20 bg-status-success/10', badge: 'bg-status-success/10 text-status-success' },
-}
 
 function currentMonthRef() {
   const now = new Date()
@@ -48,13 +54,6 @@ function formatarData(str) {
   return new Date(`${str}T12:00:00`).toLocaleDateString('pt-BR')
 }
 
-function diasParaVencer(str) {
-  if (!str) return null
-  const hoje = new Date()
-  const alvo = new Date(`${str}T12:00:00`)
-  return Math.ceil((alvo - hoje) / (1000 * 60 * 60 * 24))
-}
-
 export default function AutoRenovacoes() {
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -73,34 +72,52 @@ export default function AutoRenovacoes() {
     queryFn: () => getRenovacoesAuto({ periodo: '' }),
   })
 
-  const { mutate: atualizarStatus } = useMutation({
-    mutationFn: ({ id, status_cotacao }) => atualizarStatusRenovacao(id, { status_cotacao }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
-      qc.invalidateQueries({ queryKey: ['auto-renovacoes-todas'] })
+  const [cotandoId, setCotandoId] = useState(null)
+
+  const { mutateAsync: cotarRenovacao } = useMutation({
+    mutationFn: renovacaoId => iniciarCotacaoRenovacao(renovacaoId),
+    onSuccess: async ({ cotacaoId }) => {
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes-todas'] })
+      await qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
+      navigate(`/auto/cotacoes/${cotacaoId}`)
     },
+    onSettled: () => setCotandoId(null),
   })
+
+  const handleCotar = async (renovacaoId) => {
+    if (cotandoId) return
+    setCotandoId(renovacaoId)
+    try {
+      await cotarRenovacao(renovacaoId)
+    } catch (err) {
+      window.alert(err?.message || 'Erro ao iniciar cotação de renovação.')
+    }
+  }
 
   const metricas = useMemo(() => ({
     total: renovacoes.length,
-    enviadas: renovacoes.filter(item => item.status_cotacao === 'cotada_enviada').length,
-    pendentes: renovacoes.filter(item => item.status_cotacao !== 'cotada_enviada').length,
+    enviadas: renovacoes.filter(item => getRenewalQuoteStatus(item) === 'aguardando_retorno').length,
+    pendentes: renovacoes.filter(item => getRenewalQuoteStatus(item) !== 'concluida').length,
     vencemNoMes: todasRenovacoes.filter(item => monthKey(item.vigencia_fim) === mesRef).length,
     vencemMesSeguinte: todasRenovacoes.filter(item => monthKey(item.vigencia_fim) === mesSeguinteRef).length,
   }), [renovacoes, todasRenovacoes, mesRef, mesSeguinteRef])
 
-  const acompanharResumo = useMemo(() => ({
-    total: todasRenovacoes.length,
-    enviadas: todasRenovacoes.filter(item => item.status_cotacao === 'cotada_enviada').length,
-    cotadaNaoEnviada: todasRenovacoes.filter(item => item.status_cotacao === 'cotada_nao_enviada').length,
-    naoCotada: todasRenovacoes.filter(item => item.status_cotacao === 'nao_cotada' || !item.status_cotacao).length,
-    renovadas: todasRenovacoes.filter(item => item.status_renovacao === 'renovada').length,
-    pendentes: todasRenovacoes.filter(item => item.status_renovacao === 'pendente').length,
-  }), [todasRenovacoes])
+  const acompanharResumo = useMemo(() => {
+    const status = todasRenovacoes.map(getRenewalQuoteStatus)
+    return {
+      total: todasRenovacoes.length,
+      enviadas: status.filter(s => s === 'aguardando_retorno').length,
+      cotadaNaoEnviada: status.filter(s => s === 'em_andamento').length,
+      naoCotada: status.filter(s => s === 'nao_cotada').length,
+      renovadas: todasRenovacoes.filter(item => item.status_renovacao === 'renovada').length,
+      pendentes: todasRenovacoes.filter(item => item.status_renovacao === 'pendente').length,
+    }
+  }, [todasRenovacoes])
 
   const acompanharLista = useMemo(() => {
     if (acompanharFiltro === 'todas') return todasRenovacoes
-    return todasRenovacoes.filter(item => (item.status_cotacao || 'nao_cotada') === acompanharFiltro)
+    return todasRenovacoes.filter(item => getRenewalQuoteStatus(item) === acompanharFiltro)
   }, [todasRenovacoes, acompanharFiltro])
 
   return (
@@ -120,7 +137,7 @@ export default function AutoRenovacoes() {
             <MetricCard label="Renovações" value={metricas.total} hint="itens no recorte ativo" icon={<RefreshCw className="w-5 h-5" />} />
             <MetricCard label="Vencem no mês" value={metricas.vencemNoMes} hint={formatarMes(mesRef)} tone="warning" icon={<CalendarClock className="w-5 h-5" />} />
             <MetricCard label="Vencem mês seguinte" value={metricas.vencemMesSeguinte} hint={formatarMes(mesSeguinteRef)} tone="warning" icon={<Clock className="w-5 h-5" />} />
-            <MetricCard label="Cotadas e enviadas" value={metricas.enviadas} hint="prontas para retorno" tone="success" icon={<CheckCircle2 className="w-5 h-5" />} />
+            <MetricCard label="Aguardando retorno" value={metricas.enviadas} hint="em negociação/vistoria" tone="success" icon={<CheckCircle2 className="w-5 h-5" />} />
           </>
         )}
       />
@@ -141,7 +158,7 @@ export default function AutoRenovacoes() {
                 O módulo agora respeita o mês selecionado e destaca o que vence no período, o que vence no mês seguinte e o status operacional de cada apólice.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
-                <span className="badge badge-success">{metricas.enviadas} enviadas</span>
+                <span className="badge badge-success">{metricas.enviadas} aguardando retorno</span>
                 <span className="badge badge-warning">{metricas.pendentes} pendentes</span>
                 <span className="badge badge-muted">{metricas.total} no recorte</span>
               </div>
@@ -150,8 +167,8 @@ export default function AutoRenovacoes() {
 
           <div className="grid gap-3 bg-dark-surface2/45 p-6 md:p-8 sm:grid-cols-2 lg:grid-cols-1">
             {[
-              { label: 'Cotadas e enviadas', value: acompanharResumo.enviadas, hint: 'prontas para fechamento', tone: 'success' },
-              { label: 'Cotadas não enviadas', value: acompanharResumo.cotadaNaoEnviada, hint: 'aguardando envio', tone: 'warning' },
+              { label: 'Aguardando retorno', value: acompanharResumo.enviadas, hint: 'em negociação/vistoria', tone: 'success' },
+              { label: 'Cotação em andamento', value: acompanharResumo.cotadaNaoEnviada, hint: 'cotação criada, sem retorno ainda', tone: 'warning' },
               { label: 'Não cotadas', value: acompanharResumo.naoCotada, hint: 'sem cotação iniciada', tone: 'danger' },
               { label: 'Renovadas', value: acompanharResumo.renovadas, hint: `de ${acompanharResumo.total} no total`, tone: 'accent' },
             ].map(item => (
@@ -195,28 +212,35 @@ export default function AutoRenovacoes() {
           <div className="space-y-3">
             {renovacoes.map(item => {
               const apolice = item.apolices_auto || {}
-              const statusInfo = STATUS_COTACAO[item.status_cotacao] || STATUS_COTACAO.nao_cotada
               const renovacaoInfo = RENOVACAO_STATUS[item.status_renovacao || 'pendente'] || RENOVACAO_STATUS.pendente
               const dias = diasParaVencer(item.vigencia_fim)
+              const concluida = item.status_renovacao === 'renovada'
+              const proximoMes = monthKey(item.vigencia_fim) === mesSeguinteRef
+              const urgenciaKey = getRenovacaoUrgencia({ dias, concluida, proximoMes })
+              const urgencia = RENOVACAO_URGENCIA_META[urgenciaKey]
+              const quoteStatusKey = getRenewalQuoteStatus(item)
+              const quoteStatus = RENEWAL_QUOTE_STATUS_META[quoteStatusKey]
               const apoliceId = apolice.id || item.apolice_id
+              const seguradoraNome = item.seguradora || apolice.seguradora || null
+              const isCotando = cotandoId === item.id
               return (
                 <article
                   key={item.id}
                   onClick={() => apoliceId && navigate(`/auto/apolices/${apoliceId}`)}
-                  className={`group relative overflow-hidden rounded-3xl border p-4 transition-all ${statusInfo.shell} ${apoliceId ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}
+                  className={`group relative overflow-hidden rounded-3xl border p-4 transition-all ${urgencia.rowClass} ${apoliceId ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}
                 >
                   <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-transparent via-white/60 to-transparent opacity-60" />
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0 flex-1 space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-sm font-semibold text-dark-text">{item.clientes_auto?.nome_completo || apolice.nome_cliente || '-'}</h3>
-                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${statusInfo.badge}`}>{statusInfo.label}</span>
+                        <span className={`badge ${urgencia.badgeClass}`}>{urgencia.label}</span>
+                        <span className={`badge ${toneClasses(quoteStatus.tone)}`}>{quoteStatus.label}</span>
                         <span className={`badge ${renovacaoInfo.cls}`}>{renovacaoInfo.label}</span>
                         {typeof dias === 'number' && (
-                          <span className={`badge ${dias < 0 ? 'badge-danger' : dias <= 15 ? 'badge-warning' : 'badge-muted'}`}>
-                            {dias < 0 ? `${Math.abs(dias)} dia(s) vencida` : `${dias} dia(s) para vencer`}
-                          </span>
+                          <span className="badge badge-muted">{formatDiasParaVencer(dias)}</span>
                         )}
+                        <span className="badge badge-muted">{proximoMes ? 'Próximo mês' : 'Mês atual'}</span>
                       </div>
 
                       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 text-sm">
@@ -232,7 +256,11 @@ export default function AutoRenovacoes() {
                         </div>
                         <div className="rounded-2xl border border-white/60 bg-white/70 p-3">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Seguradora</p>
-                          <p className="mt-1 font-semibold text-dark-text">{item.seguradora || apolice.seguradora || 'Não informada'}</p>
+                          {seguradoraNome ? (
+                            <SeguradoraBadge nome={seguradoraNome} size="sm" className="mt-1" />
+                          ) : (
+                            <p className="mt-1 font-semibold text-dark-text">Não informada</p>
+                          )}
                           <p className="mt-1 text-xs text-dark-muted">Veículo: {apolice.modelo_veiculo || '—'} · Placa: {apolice.placa || '—'}</p>
                         </div>
                         <div className="rounded-2xl border border-white/60 bg-white/70 p-3">
@@ -244,15 +272,23 @@ export default function AutoRenovacoes() {
                     </div>
 
                     <div className="flex min-w-[240px] flex-col gap-3" onClick={e => e.stopPropagation()}>
-                      <select
-                        value={item.status_cotacao || 'nao_cotada'}
-                        onChange={e => atualizarStatus({ id: item.id, status_cotacao: e.target.value })}
-                        className="rounded-2xl border border-dark-border/70 bg-dark-surface/90 px-3 py-2 text-sm text-dark-text shadow-sm outline-none transition-colors focus:border-brand-accent/40"
-                      >
-                        <option value="nao_cotada">Não cotada</option>
-                        <option value="cotada_nao_enviada">Cotada - não enviada</option>
-                        <option value="cotada_enviada">Cotada e enviada</option>
-                      </select>
+                      {item.cotacao_id ? (
+                        <button
+                          onClick={() => navigate(`/auto/cotacoes/${item.cotacao_id}`)}
+                          className="btn-secondary inline-flex items-center justify-center gap-2"
+                        >
+                          Ver cotação
+                          <ExternalLink className="h-4 w-4" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleCotar(item.id)}
+                          disabled={isCotando}
+                          className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-60"
+                        >
+                          {isCotando ? 'Criando cotação...' : 'Cotar'}
+                        </button>
+                      )}
                       {apoliceId && (
                         <button onClick={() => navigate(`/auto/apolices/${apoliceId}`)} className="btn-secondary inline-flex items-center justify-center gap-2">
                           Abrir apólice
@@ -272,7 +308,7 @@ export default function AutoRenovacoes() {
         <div className="rounded-[28px] border border-status-success/20 bg-gradient-to-br from-status-success/8 to-white/70 p-4 shadow-sm">
           <div className="flex items-center gap-2 text-status-success">
             <Send className="w-4 h-4" />
-            <p className="text-xs font-semibold uppercase tracking-[0.14em]">Cotadas e enviadas</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em]">Aguardando retorno</p>
           </div>
           <p className="mt-3 text-3xl font-bold text-dark-text">{acompanharResumo.enviadas}</p>
           <p className="mt-1 text-xs text-dark-muted">prontas para fechamento</p>
@@ -281,7 +317,7 @@ export default function AutoRenovacoes() {
         <div className="rounded-[28px] border border-status-warning/20 bg-gradient-to-br from-status-warning/8 to-white/70 p-4 shadow-sm">
           <div className="flex items-center gap-2 text-status-warning">
             <Clock className="w-4 h-4" />
-            <p className="text-xs font-semibold uppercase tracking-[0.14em]">Cotadas não enviadas</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em]">Cotação em andamento</p>
           </div>
           <p className="mt-3 text-3xl font-bold text-dark-text">{acompanharResumo.cotadaNaoEnviada}</p>
           <p className="mt-1 text-xs text-dark-muted">aguardando envio ao cliente</p>
@@ -346,22 +382,36 @@ export default function AutoRenovacoes() {
               </thead>
               <tbody className="divide-y divide-dark-border/40">
                 {acompanharLista.map(item => {
-                  const cotacaoInfo = STATUS_COTACAO[item.status_cotacao || 'nao_cotada']
+                  const quoteStatusKey = getRenewalQuoteStatus(item)
+                  const cotacaoInfo = RENEWAL_QUOTE_STATUS_META[quoteStatusKey]
                   const renovacaoInfo = RENOVACAO_STATUS[item.status_renovacao || 'pendente'] || RENOVACAO_STATUS.pendente
                   const apoliceId = item.apolices_auto?.id || item.apolice_id
+                  const isCotando = cotandoId === item.id
                   return (
                     <tr key={item.id} className="transition-colors hover:bg-brand-accent/5">
                       <td className="py-3 pr-4 font-medium text-dark-text">{item.clientes_auto?.nome_completo || '-'}</td>
                       <td className="py-3 pr-4 text-dark-muted">{item.seguradora || '-'}</td>
                       <td className="py-3 pr-4 text-dark-muted">{formatarData(item.vigencia_fim)}</td>
-                      <td className="py-3 pr-4"><span className={`badge ${cotacaoInfo.badge}`}>{cotacaoInfo.label}</span></td>
+                      <td className="py-3 pr-4"><span className={`badge ${toneClasses(cotacaoInfo.tone)}`}>{cotacaoInfo.label}</span></td>
                       <td className="py-3 pr-4"><span className={`badge ${renovacaoInfo.cls}`}>{renovacaoInfo.label}</span></td>
                       <td className="py-3">
-                        {apoliceId ? (
-                          <button onClick={() => navigate(`/auto/apolices/${apoliceId}`)} className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-3 py-1.5 text-xs font-semibold text-status-info">
-                            Abrir apólice
-                          </button>
-                        ) : '—'}
+                        <div className="flex flex-wrap gap-2">
+                          {item.cotacao_id ? (
+                            <button onClick={() => navigate(`/auto/cotacoes/${item.cotacao_id}`)} className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-3 py-1.5 text-xs font-semibold text-status-info">
+                              Ver cotação
+                            </button>
+                          ) : (
+                            <button onClick={() => handleCotar(item.id)} disabled={isCotando} className="rounded-2xl border border-brand-accent/30 bg-brand-accent/10 px-3 py-1.5 text-xs font-semibold text-status-info disabled:opacity-60">
+                              {isCotando ? 'Criando...' : 'Cotar'}
+                            </button>
+                          )}
+                          {apoliceId && (
+                            <button onClick={() => navigate(`/auto/apolices/${apoliceId}`)} className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-3 py-1.5 text-xs font-semibold text-status-info">
+                              Abrir apólice
+                            </button>
+                          )}
+                          {!item.cotacao_id && !apoliceId && '—'}
+                        </div>
                       </td>
                     </tr>
                   )

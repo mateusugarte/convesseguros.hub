@@ -9,13 +9,19 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Link } from 'react-router-dom'
-import { AlertCircle, BadgeDollarSign, Briefcase, CalendarDays, Car, CircleCheckBig, Heart, Mail, Phone, Search, ShieldHalf, Sparkles, TrendingUp, UserRound } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { AlertCircle, BadgeDollarSign, CalendarDays, Car, CircleCheckBig, Mail, Phone, RefreshCw, Search, ShieldHalf, Sparkles, TrendingUp, UserRound } from 'lucide-react'
 import { PageHeader, MetricCard, DataCard, EmptyState } from '../../components/ui'
-import SeguradoraSelect from '../../components/SeguradoraSelect'
-import { criarCotacaoAuto, getAutoCotacoesMensais, getAutoCotacoesResumo, getCotacoesAuto } from '../../lib/auto'
-import { toNumber } from '../../lib/apolices'
-import { COTACAO_STATUS, formatDateTimeBR, formatMoney, statusToneClass, toneClasses } from './autoShared'
+import SeguradoraBadge from '../../components/SeguradoraBadge'
+import {
+  criarCotacaoAuto,
+  getAutoCotacoesMensais,
+  getAutoCotacoesResumo,
+  getCotacoesAuto,
+  getRenovacoesDisponiveisParaCotacao,
+  iniciarCotacaoRenovacao,
+} from '../../lib/auto'
+import { COTACAO_STATUS, diasParaVencer, formatDateTimeBR, formatDiasParaVencer, toneClasses } from './autoShared'
 
 const LISTA_TABS = [
   { value: 'lista', label: 'Lista' },
@@ -51,14 +57,6 @@ const NOVO_VAZIO = {
   vigencia_fim: '',
 }
 
-const REN_VAZIO = {
-  cpf: '',
-  vigencia_inicio: '',
-  vigencia_fim: '',
-  seguradora_preferencial: { nome: '', premio_total: '', premio_liquido: '', pct_comissao: '' },
-  seguradora_mais_barata: { nome: '', premio_total: '', premio_liquido: '', pct_comissao: '' },
-}
-
 function QuoteStatusBadge({ status }) {
   const meta = COTACAO_STATUS[status] || COTACAO_STATUS.aberta
   return <span className={`badge ${toneClasses(meta.tone)}`}>{meta.label}</span>
@@ -91,12 +89,6 @@ function iconLabel(Icon, text) {
   )
 }
 
-function calcComissao(seg) {
-  const premioLiquido = toNumber(seg.premio_liquido) || 0
-  const pctComissao = toNumber(seg.pct_comissao) || 0
-  return premioLiquido * pctComissao
-}
-
 function sortByRecency(items) {
   return [...items].sort((a, b) => {
     const ta = new Date(a.updated_at || a.created_at || 0).getTime()
@@ -123,13 +115,15 @@ function ChartTip({ active, payload, label }) {
 }
 
 export default function AutoCotacoes() {
+  const navigate = useNavigate()
   const [tab, setTab] = useState('lista')
   const [filtroStatus, setFiltroStatus] = useState('todas')
   const [filtroTipo, setFiltroTipo] = useState('todos')
   const [filtroPeriodo, setFiltroPeriodo] = useState('90d')
   const [searchLista, setSearchLista] = useState('')
   const [novo, setNovo] = useState(NOVO_VAZIO)
-  const [renovacao, setRenovacao] = useState(REN_VAZIO)
+  const [searchRenovacao, setSearchRenovacao] = useState('')
+  const [renovacaoSelecionadaId, setRenovacaoSelecionadaId] = useState(null)
   const [erro, setErro] = useState(null)
   const qc = useQueryClient()
 
@@ -184,35 +178,21 @@ export default function AutoCotacoes() {
     onError: err => setErro(err?.message || 'Erro ao salvar cotacao.'),
   })
 
-  const { mutateAsync: salvarRenovacao, isPending: salvandoRenovacao } = useMutation({
-    mutationFn: async payload => criarCotacaoAuto({
-      tipo: 'renovacao',
-      status: 'pendente',
-      cpf_cliente: payload.cpf || null,
-      vigencia_inicio: payload.vigencia_inicio || null,
-      vigencia_fim: payload.vigencia_fim || null,
-      seguradora_preferencial: {
-        ...payload.seguradora_preferencial,
-        premio_total: toNumber(payload.seguradora_preferencial.premio_total),
-        premio_liquido: toNumber(payload.seguradora_preferencial.premio_liquido),
-        pct_comissao: toNumber(payload.seguradora_preferencial.pct_comissao),
-        valor_comissao: calcComissao(payload.seguradora_preferencial),
-      },
-      seguradora_mais_barata: {
-        ...payload.seguradora_mais_barata,
-        premio_total: toNumber(payload.seguradora_mais_barata.premio_total),
-        premio_liquido: toNumber(payload.seguradora_mais_barata.premio_liquido),
-        pct_comissao: toNumber(payload.seguradora_mais_barata.pct_comissao),
-        valor_comissao: calcComissao(payload.seguradora_mais_barata),
-      },
-    }),
-    onSuccess: async () => {
+  const { data: renovacoesDisponiveis = [], isLoading: loadingRenovacoes } = useQuery({
+    queryKey: ['auto-renovacoes-disponiveis', searchRenovacao],
+    queryFn: () => getRenovacoesDisponiveisParaCotacao(searchRenovacao),
+    enabled: tab === 'renovacao',
+  })
+
+  const { mutateAsync: cotarRenovacaoSelecionada, isPending: iniciandoRenovacao } = useMutation({
+    mutationFn: renovacaoId => iniciarCotacaoRenovacao(renovacaoId),
+    onSuccess: async ({ cotacaoId }) => {
       setErro(null)
-      setRenovacao(REN_VAZIO)
+      setRenovacaoSelecionadaId(null)
       await invalidar()
-      setTab('lista')
+      navigate(`/auto/cotacoes/${cotacaoId}`)
     },
-    onError: err => setErro(err?.message || 'Erro ao salvar renovacao.'),
+    onError: err => setErro(err?.message || 'Erro ao iniciar cotacao de renovacao.'),
   })
 
   const cotacoesOrdenadas = useMemo(() => sortByRecency(cotacoes), [cotacoes])
@@ -572,59 +552,68 @@ export default function AutoCotacoes() {
               </div>
             </DataCard>
           ) : (
-            <DataCard title="Renovacao" subtitle="Comparativo entre seguradora preferencial e mais barata.">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label={iconLabel(UserRound, 'CPF do cliente')} value={renovacao.cpf} onChange={value => setRenovacao(prev => ({ ...prev, cpf: value }))} />
-                <Field label={iconLabel(CalendarDays, 'Vigencia inicio')} type="date" value={renovacao.vigencia_inicio} onChange={value => setRenovacao(prev => ({ ...prev, vigencia_inicio: value }))} />
-                <Field label={iconLabel(CalendarDays, 'Vigencia fim')} type="date" value={renovacao.vigencia_fim} onChange={value => setRenovacao(prev => ({ ...prev, vigencia_fim: value }))} />
+            <DataCard title="Cotar renovacao" subtitle="Selecione a apolice a renovar. A cotacao criada fica automaticamente vinculada a essa renovacao.">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-muted" />
+                <input
+                  value={searchRenovacao}
+                  onChange={e => setSearchRenovacao(e.target.value)}
+                  placeholder="Buscar por cliente, seguradora, apolice, veiculo ou placa..."
+                  className="input pl-10"
+                />
               </div>
 
-              <div className="mt-5 grid gap-4 lg:grid-cols-2">
-                {[
-                  { key: 'seguradora_preferencial', title: 'Seguradora preferencial' },
-                  { key: 'seguradora_mais_barata', title: 'Seguradora mais barata' },
-                ].map(section => (
-                  <div key={section.key} className="rounded-2xl border border-dark-border/70 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">{section.title}</p>
-                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                      <Field label={iconLabel(Briefcase, 'Nome')}>
-                        <SeguradoraSelect
-                          value={renovacao[section.key].nome}
-                          onChange={value => setRenovacao(prev => ({
-                            ...prev,
-                            [section.key]: { ...prev[section.key], nome: value },
-                          }))}
-                          produto="auto"
-                          placeholder="Selecionar seguradora"
-                        />
-                      </Field>
-                      <Field label={iconLabel(BadgeDollarSign, 'Premio total')} type="text" inputMode="decimal" value={renovacao[section.key].premio_total} onChange={value => setRenovacao(prev => ({
-                        ...prev,
-                        [section.key]: { ...prev[section.key], premio_total: value },
-                      }))} />
-                      <Field label={iconLabel(BadgeDollarSign, 'Premio liquido')} type="text" inputMode="decimal" value={renovacao[section.key].premio_liquido} onChange={value => setRenovacao(prev => ({
-                        ...prev,
-                        [section.key]: { ...prev[section.key], premio_liquido: value },
-                      }))} />
-                      <Field label={iconLabel(BadgeDollarSign, '% Comissao')} type="text" inputMode="decimal" value={renovacao[section.key].pct_comissao} onChange={value => setRenovacao(prev => ({
-                        ...prev,
-                        [section.key]: { ...prev[section.key], pct_comissao: value },
-                      }))} />
-                    </div>
-                    <div className={`mt-4 rounded-2xl border px-3 py-2 text-sm ${statusToneClass('success')}`}>
-                      Comissao estimada: {formatMoney(calcComissao(renovacao[section.key]))}
-                    </div>
-                  </div>
-                ))}
+              <div className="mt-4 space-y-2">
+                {loadingRenovacoes ? (
+                  <div className="py-10 text-center text-sm text-dark-muted">Carregando renovacoes...</div>
+                ) : renovacoesDisponiveis.length === 0 ? (
+                  <EmptyState
+                    icon={<RefreshCw className="h-5 w-5" />}
+                    title="Nenhuma renovacao encontrada"
+                    description="Ajuste a busca ou confira a area de Renovacoes para ver a carteira completa."
+                  />
+                ) : (
+                  renovacoesDisponiveis.map(item => {
+                    const apolice = item.apolices_auto || {}
+                    const dias = diasParaVencer(item.vigencia_fim)
+                    const selecionada = renovacaoSelecionadaId === item.id
+                    const jaTemCotacao = Boolean(item.cotacao_id)
+                    return (
+                      <button
+                        type="button"
+                        key={item.id}
+                        onClick={() => setRenovacaoSelecionadaId(item.id)}
+                        className={`w-full rounded-2xl border p-4 text-left transition-colors ${
+                          selecionada
+                            ? 'border-brand-accent bg-brand-accent/10'
+                            : 'border-dark-border/70 hover:border-brand-accent/40 hover:bg-dark-surface2/30'
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-dark-text">{item.clientes_auto?.nome_completo || 'Cliente sem nome'}</p>
+                          {jaTemCotacao && <span className="badge badge-info">Ja possui cotacao</span>}
+                        </div>
+                        <div className="mt-2 grid gap-2 text-xs text-dark-muted sm:grid-cols-2 lg:grid-cols-4">
+                          <span>Veiculo: {apolice.modelo_veiculo || '—'}{apolice.placa ? ` · ${apolice.placa}` : ''}</span>
+                          <span className="inline-flex items-center gap-1.5">
+                            {item.seguradora ? <SeguradoraBadge nome={item.seguradora} size="xs" /> : 'Seguradora nao informada'}
+                          </span>
+                          <span>Vigencia fim: {item.vigencia_fim ? new Date(`${item.vigencia_fim}T12:00:00`).toLocaleDateString('pt-BR') : '—'}</span>
+                          <span>{formatDiasParaVencer(dias)}</span>
+                        </div>
+                      </button>
+                    )
+                  })
+                )}
               </div>
 
               <div className="mt-5 flex items-center gap-3">
                 <button
-                  onClick={() => salvarRenovacao(renovacao)}
-                  disabled={salvandoRenovacao || !renovacao.cpf}
+                  onClick={() => cotarRenovacaoSelecionada(renovacaoSelecionadaId)}
+                  disabled={!renovacaoSelecionadaId || iniciandoRenovacao}
                   className="btn-primary"
                 >
-                  {salvandoRenovacao ? 'Salvando...' : 'Salvar renovacao'}
+                  {iniciandoRenovacao ? 'Criando cotacao...' : 'Criar/abrir cotacao de renovacao'}
                 </button>
                 <button type="button" onClick={() => setTab('lista')} className="btn-secondary">
                   Voltar para lista

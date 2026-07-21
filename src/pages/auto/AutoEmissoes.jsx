@@ -3,10 +3,10 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
 import { ArrowLeft, ArrowRight, Car, CheckCircle2, FileText, Loader2, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, Upload, X, Plus, History } from 'lucide-react'
-import { format, startOfMonth, startOfWeek } from 'date-fns'
+import { endOfMonth, format, startOfMonth, startOfWeek } from 'date-fns'
 import {
-  atualizarEmissaoAutoCompleta, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
-  emitirApoliceAuto, getApolicesAuto, getEmissaoAuto, getEmissaoColuna, getEmissoesAuto, importarApolicesAutoPlanilha, importarApolicesAutoHistorico, moverEmissaoColuna,
+  atualizarEmissaoAutoCompleta, atualizarTagsEmissao, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
+  emitirApoliceAuto, getApolicesAuto, getAutoTags, getEmissaoAuto, getEmissaoColuna, getEmissoesAuto, importarApolicesAutoPlanilha, importarApolicesAutoHistorico, moverEmissaoColuna,
   salvarResultadoCotacao,
 } from '../../lib/auto'
 import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../components/ui'
@@ -506,7 +506,8 @@ function getEditFormInicial(emissao) {
   }
 }
 
-function CardEmissao({ emissao, onDragStart, onClick }) {
+function CardEmissao({ emissao, onDragStart, onClick, tagsPorId }) {
+  const cardTags = (emissao.tags ?? []).map(id => tagsPorId?.get(id)).filter(Boolean)
   const coluna = getEmissaoColuna(emissao)
   const colunaMeta = getColunaMeta(coluna)
   const tipo = emissao.cotacoes_auto?.tipo || emissao.tipo
@@ -557,6 +558,19 @@ function CardEmissao({ emissao, onDragStart, onClick }) {
             <p className="truncate text-base font-semibold text-dark-text">{nome}</p>
             <p className="mt-1 truncate text-sm text-dark-muted">{veiculo}</p>
           </div>
+          {cardTags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {cardTags.map(tag => (
+                <span
+                  key={tag.id}
+                  className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                  style={{ background: `${tag.cor}18`, color: tag.cor }}
+                >
+                  {tag.nome}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
           {isRecusada && <span className="rounded-full bg-red-100 px-2.5 py-1 text-[10px] font-semibold text-red-600">Recusada</span>}
@@ -628,7 +642,7 @@ function BoolRow({ label, value }) {
 
 // ─── Modal Detalhe ─────────────────────────────────────────────────────
 
-function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, onEmitirApolice, onEditar, onExcluir, isDeleting, page = false }) {
+function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, onEmitirApolice, onEditar, onExcluir, isDeleting, page = false, tagsAtivas = [], onSalvarTags }) {
   const c = emissao.cotacoes_auto || {}
   const apolice = getApoliceVinculada(emissao)
   const temCotacao = Boolean(emissao.cotacoes_auto?.id || emissao.cotacao_id)
@@ -699,6 +713,36 @@ function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, 
                 </div>
               </div>
             </div>
+
+            {onSalvarTags && (
+              <div className="mt-4 rounded-[28px] border border-white/70 bg-white/80 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Etiquetas</p>
+                {tagsAtivas.length === 0 ? (
+                  <p className="mt-2 text-xs text-dark-muted">Nenhuma etiqueta predefinida ativa. Crie em Auto &gt; Etiquetas.</p>
+                ) : (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {tagsAtivas.map(tag => {
+                      const selecionada = (emissao.tags ?? []).includes(tag.id)
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => {
+                            const atual = emissao.tags ?? []
+                            const proximo = selecionada ? atual.filter(id => id !== tag.id) : [...atual, tag.id]
+                            onSalvarTags(emissao.id, proximo)
+                          }}
+                          className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${selecionada ? '' : 'border-dark-border/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'}`}
+                          style={selecionada ? { borderColor: `${tag.cor}80`, background: `${tag.cor}22`, color: tag.cor } : undefined}
+                        >
+                          {tag.nome}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             {seguradoras.length > 0 && (
               <div className="mt-4 rounded-[28px] border border-white/70 bg-white/80 p-4">
@@ -1182,7 +1226,7 @@ export default function AutoEmissoes() {
   const toast = useToast()
   const { user } = useAuth()
   const isGestaoRoute = location.pathname.startsWith('/auto/gestao')
-  const periodoInicial = isGestaoRoute ? 'todos' : 'semana'
+  const periodoInicial = isGestaoRoute ? 'todos' : 'mes'
   const initialRange = useMemo(() => getPeriodoRange(periodoInicial), [periodoInicial])
 
   const [dragging, setDragging] = useState(null)
@@ -1207,10 +1251,36 @@ export default function AutoEmissoes() {
   const [filtroFim, setFiltroFim] = useState(initialRange.fim)
   const [importResumo, setImportResumo] = useState(null)
   const [importHistoricoResumo, setImportHistoricoResumo] = useState(null)
+  const [mesAnoEmissoes, setMesAnoEmissoes] = useState(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  })
+  const [buscaEmissoes, setBuscaEmissoes] = useState('')
+  const [filtroSeguradoraEmissoes, setFiltroSeguradoraEmissoes] = useState('todas')
+  const [filtroTipoEmissoes, setFiltroTipoEmissoes] = useState('todos')
+  const [filtroStatusEmissoes, setFiltroStatusEmissoes] = useState('todos')
+  const [filtroResponsavelEmissoes, setFiltroResponsavelEmissoes] = useState('todos')
 
   const { data: emissoes = [] } = useQuery({
     queryKey: ['auto-emissoes', periodo, filtroInicio, filtroFim],
     queryFn: () => getEmissoesAuto({ inicio: filtroInicio || undefined, fim: filtroFim || undefined }),
+  })
+
+  const { data: autoTags = [] } = useQuery({
+    queryKey: ['auto-tags'],
+    queryFn: getAutoTags,
+  })
+  const tagsAtivas = useMemo(() => autoTags.filter(tag => tag.ativa), [autoTags])
+  const tagsPorId = useMemo(() => new Map(autoTags.map(tag => [tag.id, tag])), [autoTags])
+
+  const { mutate: salvarTagsEmissao } = useMutation({
+    mutationFn: ({ id, tags }) => atualizarTagsEmissao(id, tags),
+    onMutate: async ({ id, tags }) => {
+      await qc.cancelQueries({ queryKey: ['auto-emissoes'] })
+      qc.setQueriesData({ queryKey: ['auto-emissoes'] }, old =>
+        Array.isArray(old) ? old.map(item => (item.id === id ? { ...item, tags } : item)) : old)
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['auto-emissoes'] }),
   })
 
   const { data: emissaoDaRota, isLoading: isLoadingEmissao } = useQuery({
@@ -1441,6 +1511,19 @@ export default function AutoEmissoes() {
     setFiltroFim(range.fim)
   }
 
+  // Selecao explicita de mes+ano para "Ultimas emissoes" (considera o ano
+  // junto ao mes, evitando misturar emissoes de anos diferentes).
+  function handleMesAnoEmissoesChange(value) {
+    setMesAnoEmissoes(value)
+    if (!value) return
+    const [ano, mes] = value.split('-').map(Number)
+    if (!ano || !mes) return
+    const base = new Date(ano, mes - 1, 1)
+    setPeriodo('custom')
+    setFiltroInicio(toDateInput(startOfMonth(base)))
+    setFiltroFim(toDateInput(endOfMonth(base)))
+  }
+
   function handleDrop(colunaDestino) {
     if (!dragging) return
     if (colunaDestino === 'cotacao_feita') {
@@ -1633,6 +1716,38 @@ export default function AutoEmissoes() {
     { label: 'Emitidas', value: metricas.emitidas, tone: 'accent' },
   ]
 
+  const seguradorasEmissoesOpcoes = useMemo(() => {
+    const nomes = new Set()
+    emissoes.forEach(item => { const nome = seguradoraEmissao(item); if (nome && nome !== '-') nomes.add(nome) })
+    return Array.from(nomes).sort()
+  }, [emissoes])
+
+  const responsaveisEmissoesOpcoes = useMemo(() => {
+    const nomes = new Set()
+    emissoes.forEach(item => { const resp = getApoliceVinculada(item)?.responsavel; if (resp) nomes.add(resp) })
+    return Array.from(nomes).sort()
+  }, [emissoes])
+
+  const emissoesFiltradas = useMemo(() => {
+    const termo = buscaEmissoes.trim().toLowerCase()
+    return emissoes.filter(item => {
+      if (filtroSeguradoraEmissoes !== 'todas' && seguradoraEmissao(item) !== filtroSeguradoraEmissoes) return false
+      const tipoItem = item.cotacoes_auto?.tipo || item.tipo
+      if (filtroTipoEmissoes !== 'todos' && tipoItem !== filtroTipoEmissoes) return false
+      if (filtroStatusEmissoes !== 'todos' && getEmissaoColuna(item) !== filtroStatusEmissoes) return false
+      if (filtroResponsavelEmissoes !== 'todos' && (getApoliceVinculada(item)?.responsavel || '') !== filtroResponsavelEmissoes) return false
+      if (!termo) return true
+      const texto = [
+        nomeEmissao(item),
+        seguradoraEmissao(item),
+        item.modelo_veiculo,
+        item.placa,
+        item.numero_apolice,
+      ].filter(Boolean).join(' ').toLowerCase()
+      return texto.includes(termo)
+    })
+  }, [emissoes, buscaEmissoes, filtroSeguradoraEmissoes, filtroTipoEmissoes, filtroStatusEmissoes, filtroResponsavelEmissoes])
+
   const isManualSubmitting = manualMode === 'editar' ? isSavingEdicao : isCreatingManual
   const precisaDocumentoApoliceManual = manualMode !== 'editar' && manualForm.coluna === 'apolice_emitida'
 
@@ -1666,7 +1781,8 @@ export default function AutoEmissoes() {
         </button>
         <ModalDetalhe page emissao={emissaoDetalhada} onClose={() => navigate('/auto/emissoes')}
           onAbrirCotacao={() => abrirCotacaoCompleta(emissaoDetalhada)} onRegistrarResultado={setModalResultado}
-          onEmitirApolice={setModalEmissao} onEditar={abrirEditor} onExcluir={handleExcluir} isDeleting={isDeleting} />
+          onEmitirApolice={setModalEmissao} onEditar={abrirEditor} onExcluir={handleExcluir} isDeleting={isDeleting}
+          tagsAtivas={tagsAtivas} onSalvarTags={(id, tags) => salvarTagsEmissao({ id, tags })} />
       </div>
     )
   }
@@ -1716,6 +1832,9 @@ export default function AutoEmissoes() {
             >
               {isImportingHistorico ? <Loader2 className="h-4 w-4 animate-spin" /> : <History className="h-4 w-4" />}
               Importar historico (renovacoes)
+            </button>
+            <button onClick={() => navigate('/auto/cotacoes')} className="btn-primary">
+              Nova cotacao
             </button>
             <button onClick={() => { setManualMode('novo'); setManualForm(FORM_MANUAL_VAZIO); setManualDocumento(null); setManualOpen(true) }} className="btn-primary">
               Nova emissao
@@ -1823,7 +1942,7 @@ export default function AutoEmissoes() {
             </div>
           </FilterBar>
 
-          <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-5">
+          <div className="-mx-1 flex gap-4 overflow-x-auto pb-2 pt-1 px-1 snap-x snap-mandatory md:snap-none">
             {COLUNAS.map(coluna => {
               const cards = emissoes.filter(item => getEmissaoColuna(item) === coluna.id)
               return (
@@ -1831,7 +1950,7 @@ export default function AutoEmissoes() {
                   key={coluna.id}
                   title={coluna.label}
                   subtitle={`${cards.length} item(ns)`}
-                  className={dragOver === coluna.id ? 'ring-2 ring-brand-accent/20' : ''}
+                  className={`w-[300px] shrink-0 snap-start ${dragOver === coluna.id ? 'ring-2 ring-brand-accent/20' : ''}`}
                   bodyClassName="pt-4"
                 >
                   <div
@@ -1856,6 +1975,7 @@ export default function AutoEmissoes() {
                           emissao={item}
                           onDragStart={setDragging}
                           onClick={abrirDetalhe}
+                          tagsPorId={tagsPorId}
                         />
                       ))
                     )}
@@ -1926,12 +2046,58 @@ export default function AutoEmissoes() {
             </div>
           </FilterBar>
 
-          <DataCard title="Ultimas emissoes" subtitle={`${emissoes.length} registro(s)`}>
+          <DataCard
+            title="Ultimas emissoes"
+            subtitle={`${emissoesFiltradas.length} de ${emissoes.length} registro(s) no periodo selecionado`}
+            actions={(
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-dark-muted">Mes/ano:</span>
+                <input type="month" value={mesAnoEmissoes} onChange={e => handleMesAnoEmissoesChange(e.target.value)} className="input" />
+              </div>
+            )}
+          >
+            <div className="mb-4 flex flex-wrap gap-2">
+              <div className="relative min-w-[220px] flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-muted" />
+                <input
+                  value={buscaEmissoes}
+                  onChange={e => setBuscaEmissoes(e.target.value)}
+                  placeholder="Buscar cliente, veiculo, placa ou apolice..."
+                  className="input pl-10"
+                />
+              </div>
+              <select value={filtroSeguradoraEmissoes} onChange={e => setFiltroSeguradoraEmissoes(e.target.value)} className="select">
+                <option value="todas">Todas seguradoras</option>
+                {seguradorasEmissoesOpcoes.map(nome => <option key={nome} value={nome}>{nome}</option>)}
+              </select>
+              <select value={filtroTipoEmissoes} onChange={e => setFiltroTipoEmissoes(e.target.value)} className="select">
+                <option value="todos">Novo e renovacao</option>
+                <option value="novo">Seguro novo</option>
+                <option value="renovacao">Renovacao</option>
+              </select>
+              <select value={filtroStatusEmissoes} onChange={e => setFiltroStatusEmissoes(e.target.value)} className="select">
+                <option value="todos">Todos os status</option>
+                {COLUNAS.map(coluna => <option key={coluna.id} value={coluna.id}>{coluna.label}</option>)}
+              </select>
+              {responsaveisEmissoesOpcoes.length > 0 && (
+                <select value={filtroResponsavelEmissoes} onChange={e => setFiltroResponsavelEmissoes(e.target.value)} className="select">
+                  <option value="todos">Todos responsaveis</option>
+                  {responsaveisEmissoesOpcoes.map(nome => <option key={nome} value={nome}>{nome}</option>)}
+                </select>
+              )}
+            </div>
+
             {emissoes.length === 0 ? (
               <EmptyState
                 icon={<FileText className="w-6 h-6" />}
                 title="Nenhuma emissao encontrada"
                 description="Use os atalhos acima para criar uma nova emissao ou abrir as apolices emitidas."
+              />
+            ) : emissoesFiltradas.length === 0 ? (
+              <EmptyState
+                icon={<FileText className="w-6 h-6" />}
+                title="Nenhuma emissao para os filtros aplicados"
+                description="Ajuste a busca, o mes/ano ou os filtros selecionados."
               />
             ) : (
               <div className="overflow-x-auto">
@@ -1940,6 +2106,7 @@ export default function AutoEmissoes() {
                     <tr className="border-b border-dark-border/60 text-left">
                       <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Cliente</th>
                       <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora</th>
+                      <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Tipo</th>
                       <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Status</th>
                       <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Apolice</th>
                       <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Vigencia</th>
@@ -1947,11 +2114,12 @@ export default function AutoEmissoes() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-dark-border/40">
-                    {emissoes.slice(0, 10).map(item => (
+                    {emissoesFiltradas.slice(0, 25).map(item => (
                       <tr key={item.id} onClick={() => abrirDetalhe(item)} className="cursor-pointer transition-colors hover:bg-brand-accent/5">
                         <td className="py-3 pr-4 font-medium text-dark-text">{nomeEmissao(item)}</td>
                         <td className="py-3 pr-4 text-dark-muted">{seguradoraEmissao(item)}</td>
-                        <td className="py-3 pr-4 text-dark-muted">{getEmissaoColuna(item)}</td>
+                        <td className="py-3 pr-4 text-dark-muted">{(item.cotacoes_auto?.tipo || item.tipo) === 'renovacao' ? 'Renovacao' : 'Novo'}</td>
+                        <td className="py-3 pr-4 text-dark-muted">{getColunaMeta(getEmissaoColuna(item)).label}</td>
                         <td className="py-3 pr-4 text-dark-muted">{item.numero_apolice || '—'}</td>
                         <td className="py-3 pr-4 text-dark-muted">
                           {item.vigencia_inicio ? formatDateBR(item.vigencia_inicio) : '—'} — {item.vigencia_fim ? formatDateBR(item.vigencia_fim) : '—'}
@@ -2607,6 +2775,8 @@ export default function AutoEmissoes() {
           onEditar={abrirEditor}
           onExcluir={handleExcluir}
           isDeleting={isDeleting}
+          tagsAtivas={tagsAtivas}
+          onSalvarTags={(id, tags) => salvarTagsEmissao({ id, tags })}
         />
       )}
     </div>

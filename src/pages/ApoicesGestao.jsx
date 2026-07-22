@@ -1351,6 +1351,9 @@ function UploadLoteWorkspace({ onBack, onCriado, toast, getAliases, user }) {
     const alvos = itens.filter(i => i.selecionado && i.status === 'ok' && i.imobiliariaSelecionada)
     let sucesso = 0
     let falhas = 0
+    let vinculoFalhas = 0
+    let primeiroErro = ''
+    const criadas = []
 
     for (const item of alvos) {
       setItens(prev => prev.map(i => (i.id === item.id ? { ...i, status: 'criando' } : i)))
@@ -1374,6 +1377,7 @@ function UploadLoteWorkspace({ onBack, onCriado, toast, getAliases, user }) {
       const { data, error } = await criarApolice(payload)
       if (error) {
         falhas += 1
+        if (!primeiroErro) primeiroErro = error.message
         setItens(prev => prev.map(i => (i.id === item.id ? { ...i, status: 'erro_criacao', erro: error.message } : i)))
         continue
       }
@@ -1385,15 +1389,21 @@ function UploadLoteWorkspace({ onBack, onCriado, toast, getAliases, user }) {
         userId: user?.id,
       })
 
+      let erroVinculo = ''
       if (item.fichaSelecionadaId) {
-        await vincularApoliceAFicha(item.fichaSelecionadaId, payload)
+        const { error: vinculoError } = await vincularApoliceAFicha(item.fichaSelecionadaId, payload)
+        if (vinculoError) {
+          vinculoFalhas += 1
+          erroVinculo = 'Ficha não foi atualizada: ' + vinculoError.message
+        }
       }
 
       sucesso += 1
+      criadas.push(data)
       setItens(prev => prev.map(i => (i.id === item.id ? {
         ...i,
         status: 'criado',
-        erro: uploadError ? 'PDF não anexado: ' + uploadError.message : '',
+        erro: [uploadError ? 'PDF não anexado: ' + uploadError.message : '', erroVinculo].filter(Boolean).join(' · '),
       } : i)))
     }
 
@@ -1401,14 +1411,18 @@ function UploadLoteWorkspace({ onBack, onCriado, toast, getAliases, user }) {
     setItens(prev => prev.filter(i => i.status !== 'criado'))
 
     if (sucesso) {
+      const avisos = []
+      if (falhas) avisos.push(`${falhas} com erro — revise a lista.`)
+      if (vinculoFalhas) avisos.push(`${vinculoFalhas} apólice(s) sem vincular à ficha — verifique manualmente.`)
       toast({
-        type: 'success',
+        type: vinculoFalhas ? 'warning' : 'success',
         title: `${sucesso} apólice(s) criada(s)`,
-        message: falhas ? `${falhas} com erro — revise a lista.` : undefined,
+        message: avisos.join(' ') || undefined,
+        duration: vinculoFalhas ? 10000 : undefined,
       })
-      onCriado?.()
+      onCriado?.(criadas)
     } else if (falhas) {
-      toast({ type: 'error', title: 'Nenhuma apólice criada', message: 'Revise os itens com erro na lista.' })
+      toast({ type: 'error', title: 'Nenhuma apólice criada', message: primeiroErro || 'Revise os itens com erro na lista.', duration: 10000 })
     }
   }
 
@@ -1870,15 +1884,18 @@ export default function ApoicesGestao() {
   }
 
   function handleCriado(novaApolice) {
-    if (!novaApolice?.id) {
+    const lista = (Array.isArray(novaApolice) ? novaApolice : [novaApolice]).filter(item => item?.id)
+    if (!lista.length) {
       load()
       return
     }
 
     startTransition(() => {
       setApolices(prev => {
-        const semDuplicata = prev.filter(item => item.id !== novaApolice.id)
-        return [{ ...novaApolice, status_emissao: novaApolice.status_emissao || 'recebida' }, ...semDuplicata]
+        const idsNovos = new Set(lista.map(item => item.id))
+        const semDuplicatas = prev.filter(item => !idsNovos.has(item.id))
+        const normalizadas = lista.map(item => ({ ...item, status_emissao: item.status_emissao || 'recebida' }))
+        return [...normalizadas, ...semDuplicatas]
       })
     })
   }

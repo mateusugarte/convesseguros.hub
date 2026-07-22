@@ -4,7 +4,7 @@ import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDraggable, useDroppable,
 } from '@dnd-kit/core'
-import { fetchFichasKanban, assumirFicha, moverFichaStatusComRawData, moverFichaStatus } from '../lib/fichas'
+import { fetchFichasKanban, assumirFicha, moverFichaStatusComRawData, moverFichaStatus, normalizeSearchText } from '../lib/fichas'
 import { toNumber } from '../lib/apolices'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useAuth } from '../contexts/AuthContext'
@@ -90,6 +90,27 @@ function getColumnId(ficha, userId) {
   if (ficha.status === 'pendente') return 'pendente'
   if (ficha.status === 'em_cotacao') return ficha.orcamentista_id === userId ? 'minhas' : 'assumidas'
   return ficha.status
+}
+
+function fichaMatchesSearch(ficha, normalizedTerm) {
+  if (!normalizedTerm) return true
+  const rd = ficha.raw_data || {}
+  const haystack = [
+    ficha.nome_interessado,
+    ficha.nome_empresa,
+    rd.nome,
+    rd.nome_interessado,
+    rd.nome_empresa,
+    rd.razao_social,
+    rd.empresa,
+    ficha.imobiliaria,
+    ficha.seguradora,
+    ficha.cpf,
+    ficha.cnpj,
+  ]
+    .map(normalizeSearchText)
+    .join(' ')
+  return haystack.includes(normalizedTerm)
 }
 
 function groupFichas(fichas, userId, sortOrder = 'recentes') {
@@ -548,7 +569,7 @@ function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) 
 
 // -- KanbanFichas --------------------------------------------------------------
 
-export default function KanbanFichas({ produto, externalDateFrom, externalDateTo, contextState }) {
+export default function KanbanFichas({ produto, externalDateFrom, externalDateTo, contextState, search = '' }) {
   const { user }         = useAuth()
   const toast            = useToast()
   const navigate         = useNavigate()
@@ -664,7 +685,12 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     scrollRef.current?.scrollBy({ left: dir === 'left' ? -280 : 280, behavior: 'smooth' })
   }
 
-  const cols = useMemo(() => groupFichas(fichas, user?.id, sortOrder), [fichas, user?.id, sortOrder])
+  const normalizedSearch = useMemo(() => normalizeSearchText(search.trim()), [search])
+  const fichasFiltradas = useMemo(
+    () => (normalizedSearch ? fichas.filter(f => fichaMatchesSearch(f, normalizedSearch)) : fichas),
+    [fichas, normalizedSearch]
+  )
+  const cols = useMemo(() => groupFichas(fichasFiltradas, user?.id, sortOrder), [fichasFiltradas, user?.id, sortOrder])
   const activeCard = useMemo(() => (activeId ? fichas.find(f => f.id === activeId) : null), [activeId, fichas])
 
   async function handleAssumir(fichaId) {
@@ -1004,7 +1030,8 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
           )}
           <div className="ml-auto flex items-center gap-2 text-xs text-dark-muted">
             <span className="inline-flex items-center gap-1 rounded-full border border-dark-border bg-dark-surface/75 px-3 py-1 font-medium">
-              {fichas.length} ficha{fichas.length !== 1 ? 's' : ''}
+              {fichasFiltradas.length} ficha{fichasFiltradas.length !== 1 ? 's' : ''}
+              {normalizedSearch ? ` de ${fichas.length}` : ''}
             </span>
             <button
               onClick={handleToggleSortOrderFast}
@@ -1029,7 +1056,8 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
       {useExternal && (
         <div className="flex items-center justify-between rounded-2xl border border-dark-border/60 bg-dark-surface2/50 px-3 py-2 text-xs text-dark-muted shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
           <span className="inline-flex items-center gap-1 rounded-full border border-dark-border bg-dark-surface/75 px-3 py-1 font-medium">
-            {fichas.length} ficha{fichas.length !== 1 ? 's' : ''} neste período
+            {fichasFiltradas.length} ficha{fichasFiltradas.length !== 1 ? 's' : ''}
+            {normalizedSearch ? ` de ${fichas.length}` : ''} neste período
           </span>
           <div className="flex items-center gap-2">
             <button

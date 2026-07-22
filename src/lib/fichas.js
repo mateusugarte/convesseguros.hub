@@ -41,11 +41,13 @@ export const SEGURADORAS = [
   'Potencial',
 ]
 
-// "Em Aberto" = fichas que ainda precisam de atenção
-export const STATUS_EM_ABERTO = ['pendente', 'em_cotacao']
+// "Em Aberto" = fichas que ainda precisam de atenção — inclui "em_analise"
+// (ficha já assumida, ainda sem decisão de aprovado/recusado); sem isso ela
+// ficava "presa" na aba Passadas mesmo estando com o trabalho em andamento.
+export const STATUS_EM_ABERTO = ['pendente', 'em_cotacao', 'em_analise']
 
-// "Passadas" = fichas já finalizadas/encerradas
-export const STATUS_PASSADOS = ['em_analise', 'aprovado', 'recusado', 'emitido', 'cancelado', 'cpf_invalido', 'expirada']
+// "Passadas" = fichas já finalizadas/encerradas (decisão tomada)
+export const STATUS_PASSADOS = ['aprovado', 'recusado', 'emitido', 'cancelado', 'cpf_invalido', 'expirada']
 
 function pad2(value) {
   return String(value).padStart(2, '0')

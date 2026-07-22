@@ -863,7 +863,7 @@ function TabelaPassadas({ fichas, user, navigate, onEditar, resolverNome }) {
 
 // -- PageShell -----------------------------------------------------------------
 
-function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, onRelatorio, viewToggle, selectorSlot, children }) {
+function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, onRelatorio, viewToggle, selectorSlot, topBar, children }) {
   return (
     <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-5 animate-fade-in">
       <PageHeader
@@ -898,6 +898,8 @@ function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, 
           </div>
         )}
       />
+
+      {topBar}
 
       <DataCard
         title="Recorte de trabalho"
@@ -934,6 +936,7 @@ export default function Fichas() {
   const [mesesComFichas,  setMesesComFichas]  = useState([agora.getMonth() + 1])
 
   const [tab,            setTab]            = useState('abertas')
+  const [kanbanSearch,   setKanbanSearch]   = useState('')
   const [search,         setSearch]         = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [semSeguradora,  setSemSeguradora]  = useState(false)
@@ -1162,6 +1165,27 @@ export default function Fichas() {
     </div>
   )
 
+  const kanbanSearchBar = (
+    <div className={`flex items-center gap-2 bg-dark-surface2 border rounded-2xl px-3 py-2.5 transition-colors ${
+      kanbanSearch ? 'border-brand-accent/50' : 'border-dark-border'
+    }`}>
+      <Search className="w-4 h-4 text-dark-muted flex-shrink-0" />
+      <input
+        type="text"
+        placeholder="Buscar por nome, CPF, CNPJ, imobiliária ou seguradora..."
+        value={kanbanSearch}
+        onChange={e => setKanbanSearch(e.target.value)}
+        className="text-sm flex-1 outline-none bg-transparent text-dark-text placeholder-dark-muted"
+      />
+      {kanbanSearch && (
+        <button
+          onClick={() => setKanbanSearch('')}
+          className="text-dark-muted hover:text-dark-text transition-colors flex-shrink-0 text-xs"
+        >✕</button>
+      )}
+    </div>
+  )
+
   return (
     <PageShell
       prodInfo={prodInfo}
@@ -1173,6 +1197,7 @@ export default function Fichas() {
       onRelatorio={() => setRelatorio(true)}
       viewToggle={<ViewToggle view={view} onChange={setView} />}
       selectorSlot={selectorSlot}
+      topBar={view === 'kanban' ? kanbanSearchBar : null}
     >
       {/* ModalAssumir e ModalFinalizar são overlays  renderizam sobre o board */}
       {assumir && (
@@ -1193,6 +1218,7 @@ export default function Fichas() {
           externalDateFrom={dateFrom}
           externalDateTo={dateTo}
           contextState={{ produto, mes, ano }}
+          search={kanbanSearch}
         />
       ) : (
         <>
@@ -1328,10 +1354,7 @@ export default function Fichas() {
               </div>
             ) : (
               <div className="flex min-h-0 flex-1 flex-col px-5 pb-4">
-                <div
-                  className="overflow-auto rounded-2xl border border-dark-border/60 bg-dark-surface/70"
-                  style={{ maxHeight: 'calc(15 * 3.25rem + 4.5rem)' }}
-                >
+                <div className="flex-1 min-h-[420px] overflow-auto rounded-2xl border border-dark-border/60 bg-dark-surface/70">
                   <div className="overflow-x-auto">
                     {tab === 'abertas' ? (
                       <TabelaAberta fichas={fichas} user={user} navigate={navigate} onDetalhe={id => navigate(`/fichas/${id}`)} onAssumir={setAssumir} onFinalizar={setFinalizar} onEditar={setEditar} resolverNome={resolverNome} />

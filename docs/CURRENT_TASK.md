@@ -1,5 +1,103 @@
 # CURRENT TASK
 
+## Fichas — busca "Em Aberto" não achava fichas assumidas + busca no Kanban (2026-07-22, Claude — CONCLUÍDA)
+
+Usuário reportou 3 problemas na tela de Fichas (`/fichas`): (1) tabela de resultados da aba
+Lista muito pequena na tela ("só aparecem 2 linhas"); (2) buscando fichas "em aberto", uma
+ficha já assumida (mas ainda sem decisão de aprovado/recusado) não aparecia; pediu um filtro
+que inclua esse caso; (3) pediu uma barra de busca simples no Kanban, acima do filtro de
+mês, que filtre os cards de cada coluna em tempo real conforme o usuário digita.
+
+1. **Causa raiz de (2), confirmada por leitura de código:** `STATUS_EM_ABERTO` (`lib/fichas.js`)
+   só tinha `['pendente', 'em_cotacao']`; `STATUS_PASSADOS` incluía `'em_analise'` junto com
+   os status realmente terminais (`aprovado`/`recusado`/`emitido`/`cancelado`/etc). Uma
+   ficha `em_analise` (assumida, ainda em decisão) caía na aba "Passadas" da Lista mesmo
+   sem estar de fato finalizada — exatamente o sintoma relatado. **Corrigido:** `em_analise`
+   movido para `STATUS_EM_ABERTO`. Conferido que `Relatorio.jsx` usa sua própria constante
+   local (`INCLUDED_REPORT_STATUSES`) e não é afetado; `Dashboard.jsx` (contagem "em aberto"
+   por produto) também usa `STATUS_EM_ABERTO` e passa a contar `em_analise` corretamente
+   como aberta (mesma classe de bug, corrigida de brinde).
+2. **(1):** a tabela de resultados da aba Lista (`src/pages/Fichas.jsx`) usava um
+   `maxHeight` fixo em `calc(15 * 3.25rem + 4.5rem)` em vez de esticar dentro do espaço
+   flexível já disponível (`flex-1 min-h-0`, mesmo padrão usado no Kanban/`.kanban-viewport`
+   do resto do projeto). Trocado por `flex-1 min-h-[420px]` — a tabela agora usa todo o
+   espaço vertical disponível na tela em vez de ficar limitada a um valor fixo.
+3. **(3):** novo prop `topBar` em `PageShell` (`Fichas.jsx`), renderizado entre o cabeçalho
+   da página e o card "Recorte de trabalho" (onde fica o filtro de período/mês) — só
+   preenchido quando `view === 'kanban'`. Novo state `kanbanSearch` (independente do
+   `search`/`debouncedSearch` da view Lista, que tem debounce e faz query no servidor);
+   passado como prop `search` para `KanbanFichas`, que filtra a lista já carregada
+   (client-side, sem nova query) por nome/imobiliária/CPF/CNPJ/seguradora
+   (`fichaMatchesSearch`, novo helper em `KanbanFichas.jsx`) antes de agrupar em colunas —
+   cada coluna mostra só os cards que batem com a busca, colunas não somem mesmo com 0
+   resultado.
+
+`npm test` (116/116), `npm run build` e `npm run check:page-contexts` (mesma pendência
+pré-existente de `GestaoComercial.jsx`, não é regressão) verdes. Nenhuma mudança de
+schema/RLS — só lógica de app em `src/lib/fichas.js`, `src/pages/Fichas.jsx` e
+`src/components/KanbanFichas.jsx`. `CONTEXT.md` de `Fichas` atualizado.
+
+**Smoke test pendente (sem login real neste ambiente):** abrir `/fichas`, assumir uma ficha
+e movê-la para "Em Análise" no Kanban, depois ir na view Lista → aba "Em Aberto" e confirmar
+que ela aparece lá (não mais em "Passadas"); na view Kanban, digitar um nome/CPF na nova
+barra de busca acima do filtro de mês e confirmar que cada coluna filtra só os cards que
+batem, sem sumir colunas vazias; conferir visualmente que a tabela da aba Lista ocupa mais
+espaço vertical em telas normais (notebook/desktop).
+
+---
+
+## Gestão de Apólices (Fiança) — Upload em Lote não aparecia no Kanban (2026-07-22, Claude — CONCLUÍDA)
+
+Usuário reportou: apólices sendo cadastradas pelo "Upload em Lote" (`/apolices` gestão) não
+apareciam na tela de gestão, sem nenhum erro visível. Systematic-debugging com acesso real
+ao Supabase de produção (`.env.local` disponível nesta sessão): consultadas as apólices
+recentes direto no banco — todas estavam sendo gravadas corretamente (`status_emissao`
+válido, sem registros órfãos/nulos, sem documentos órfãos). Causa raiz era 100% front-end.
+
+1. **Causa raiz:** `ApoicesGestao.jsx` tem 3 fluxos de criação (Iniciar Emissão, Upload
+   Direto, Upload em Lote). Os dois primeiros chamam `onCriado(apoliceCriada)` →
+   `handleCriado` insere o item direto na lista local, aparecendo no Kanban imediatamente,
+   **independente dos filtros ativos** (período "Hoje"/imobiliária). O Upload em Lote
+   (`registrarSelecionadas`) chamava `onCriado?.()` **sem argumento** → caía no branch que
+   faz `load()` (recarrega do banco respeitando os filtros correntes). Se o filtro de
+   período/imobiliária não batesse com o item recém-criado, a apólice era criada com
+   sucesso no banco mas sumia da tela sem nenhum aviso — exatamente o sintoma relatado.
+   Upload em Lote é o workspace mais novo, nunca tinha sido testado ao vivo antes desta
+   sessão (ver entrada anterior deste arquivo, "aguardando smoke test manual").
+2. **Bug secundário de erro engolido:** em `registrarSelecionadas`, o retorno de
+   `vincularApoliceAFicha(...)` nunca era checado — se o vínculo com a ficha falhasse (ex.:
+   ficha já assumida por outro usuário, bloqueada pela RLS de `fichas`), o erro era
+   descartado silenciosamente, sem qualquer indicação ao usuário.
+3. **Corrigido:** `registrarSelecionadas` agora coleta as apólices realmente criadas
+   (`criadas`) e passa esse array para `onCriado(criadas)`; `handleCriado` passou a aceitar
+   apólice única OU array, inserindo sempre direto na lista local (mesmo comportamento já
+   correto dos outros 2 fluxos) — elimina a dependência do filtro ativo para a apólice
+   aparecer. Erro de vínculo de ficha agora é capturado e mostrado (por item, na lista, e
+   resumido no toast final com `type: 'warning'`). Toast de "Nenhuma apólice criada" e de
+   sucesso com falhas agora mostram a mensagem de erro real do Supabase (não só "revise a
+   lista"), com duração maior (10s) para não passar despercebido — atende ao pedido do
+   usuário de "apitar erro mostrando o erro que está aparecendo" caso isso volte a
+   acontecer.
+
+`npm test` (116/116) e `npm run build` verdes. Nenhuma mudança de schema/RLS — só lógica de
+app em `src/pages/ApoicesGestao.jsx`. Script de diagnóstico usado para consultar o Supabase
+de produção (`scripts/_debug_apolices.mjs`) foi temporário e já removido, não commitado.
+
+**Smoke test pendente (ambiente sem login real neste momento):** subir 2+ PDFs pelo Upload
+em Lote com o filtro "Hoje" ou uma imobiliária específica ativos no Kanban, confirmar que as
+apólices aparecem imediatamente após "Registrar selecionadas" sem precisar trocar de filtro;
+forçar uma falha de vínculo de ficha (ficha assumida por outro usuário) e confirmar que o
+toast de aviso aparece com a mensagem real.
+
+**Riscos remanescentes:** a apólice criada é inserida na lista local ignorando o filtro
+ativo (mesmo comportamento já existente nos outros 2 fluxos) — se o usuário clicar
+"Atualizar" logo em seguida, o `load()` manual pode fazê-la sumir de novo caso não bata com
+o filtro selecionado; isso é esperado/consistente, não uma regressão desta correção, mas
+pode gerar confusão futura — considerar um aviso quando o item criado não bate com o filtro
+ativo, se o usuário reportar isso novamente.
+
+---
+
 ## Revisao e melhoria completa do modulo Auto (2026-07-21, Claude — EM ANDAMENTO)
 
 Pedido do usuario: auditoria + correcao de renovacoes (mes/ano dinamico, dias restantes,

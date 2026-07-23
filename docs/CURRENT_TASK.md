@@ -1,5 +1,218 @@
 # CURRENT TASK
 
+## Botão "Reprocessar PDF" nunca lia o arquivo de verdade + bug real de dados no parser da TOO — achado e corrigido testando contra PDFs reais do projeto (2026-07-23, Claude — CONCLUÍDA)
+
+Usuário insistiu que a leitura de PDF "não está indo" mesmo depois da rodada anterior, e
+pediu especificamente pra eu testar contra os PDFs reais que já existem no projeto em vez de
+só analisar código. Achei 4 PDFs de exemplo reais em `info.docs/apólices.example/` — um por
+seguradora suportada (Porto, Pottencial, TOO, Tokio Marine) — e escrevi um script temporário
+(`pdfjs-dist/legacy/build/pdf.mjs` + `parseApoliceText` importado direto de
+`src/lib/apoliceParser.js`, removido depois de usar) pra extrair o texto de cada um e rodar
+o parser de verdade, igual ao fluxo do app. Isso permitiu reproduzir de verdade (Phase 1 do
+`systematic-debugging`) em vez de adivinhar.
+
+1. **Causa raiz real do "clica e não vai" — confirmada, reproduzida e corrigida:** o botão
+   "Reprocessar PDF" do Upload Direto (`ApoicesGestao.jsx:1044`) estava com
+   `onClick={handleExtrair}` — passando a função direto pro `onClick` em vez de embrulhar
+   numa arrow function. `handleExtrair(fileOverride = null)` trata qualquer primeiro
+   argumento truthy como "o arquivo a ler"; como o React chama o handler de `onClick` com o
+   `SyntheticEvent` do clique como primeiro argumento, `fileOverride` virava o evento do
+   clique (sempre truthy) em vez de `null` — `fileAtual = fileOverride || pdfFile` pegava o
+   evento, `parseApolice(seguradora, fileAtual)` tentava chamar `.arrayBuffer()` num objeto
+   de evento, e isso sempre lançava exceção. Ou seja: a leitura automática ao ANEXAR o PDF
+   pela primeira vez sempre funcionou (`handleArquivo` chama `handleExtrair(file)`
+   corretamente, com o arquivo de verdade) — mas qualquer clique manual em "Reprocessar PDF"
+   (o botão de releitura, usado depois de trocar o arquivo ou depois de um erro) **sempre
+   falhava**, mostrando um erro genérico sem nunca tentar ler o PDF de verdade. Esse é
+   exatamente o botão de "releitura" que o usuário descreveu. **Corrigido:**
+   `onClick={() => handleExtrair()}`. O botão "Tentar novamente" do Upload em Lote já estava
+   correto (`onClick={onTentarNovamente}`, onde `onTentarNovamente` já vinha embrulhado como
+   `() => tentarNovamente(item)` do componente pai) — não precisou de mudança.
+2. **Validação contra PDFs reais — todos os 4 passaram** (`numero_apolice`, nome do
+   locatário/proprietário, vigência, valor da parcela, endereço — todos extraídos
+   corretamente).
+3. **Bug real de dados encontrado durante a validação, não relacionado ao "não lê":**
+   `parseTooSeguros` (única seguradora testada que expôs isso) tinha as regexes de
+   Bairro/Cidade/UF/CEP soltas, cada una casando contra a **primeira** ocorrência desses
+   rótulos no PDF inteiro — o PDF da TOO repete "Bairro:"/"Cidade:"/"UF:"/"CEP:" em mais de
+   um bloco (o de endereço de correspondência do garantido vem ANTES do endereço de risco de
+   verdade). Resultado: o campo `endereco` da apólice saía com uma mistura de texto de
+   blocos completamente diferentes do PDF (incluindo nome/CPF do garantido, datas de
+   vigência etc., tudo colado). **Corrigido:** os 5 campos (endereço, bairro, cidade, UF,
+   CEP) agora são casados juntos num único padrão, ancorado a aparecer logo depois de "Local
+   do Risco:" — garante que vêm todos do mesmo bloco. Mantido um fallback pras regexes
+   antigas separadas, caso um layout futuro não siga essa sequência exata.
+
+`npm test` (116/116) e `npm run build` verdes. Nenhuma mudança de schema/RLS — só lógica de
+app em `src/pages/ApoicesGestao.jsx` e `src/lib/apoliceParser.js`. `CONTEXT.md` de
+`ApoicesGestao` atualizado. Script de diagnóstico usado pra validar contra os PDFs reais foi
+temporário e já removido, não commitado (mesmo padrão de sessões anteriores).
+
+**Smoke test pendente (sem login real neste ambiente):** no Upload Direto, subir um PDF,
+deixar a leitura automática rodar, depois clicar manualmente em "Reprocessar PDF" e
+confirmar que ele lê de novo (sem erro genérico); trocar o arquivo por outro PDF e clicar em
+"Reprocessar PDF" de novo; subir o PDF de exemplo da TOO Seguros (ou um real) e conferir que
+o campo de endereço sai limpo (rua/bairro/cidade/UF corretos, sem texto de outras seções
+misturado).
+
+**Riscos remanescentes:** a validação usou só os 4 PDFs de exemplo do repositório (1 por
+seguradora) — um PDF real de produção com uma variação de layout ainda não vista pode expor
+outro gap; se isso acontecer, o próximo passo é o mesmo desta rodada (pegar o PDF real e
+testar direto contra o parser, não adivinhar pela regex).
+
+---
+
+## Apólices Gestão — upload não pode travar se o storage do Supabase falhar (2026-07-23, Claude — CONCLUÍDA)
+
+Follow-up da entrada abaixo ("Kanban de Fichas quebrando... + apólice sumindo"). Usuário
+levantou uma hipótese concreta pro sintoma "algumas apólices somem": o storage do Supabase
+pode ter estourado cota, e pediu explicitamente que o **documento (PDF) em si não precisa
+ser salvo obrigatoriamente** — o que importa é a leitura dos dados e a criação do card da
+apólice.
+
+1. **Achado ao reler o código:** `criarApolice` (grava a apólice no banco) já rodava ANTES
+   de `uploadDocumento` (grava o PDF no bucket `documentos`) nos dois fluxos com PDF (Upload
+   Direto e Upload em Lote) — ou seja, a intenção de "não travar por causa do documento" já
+   existia parcialmente. Mas nenhuma das duas chamadas (nem `vincularApoliceAFicha`, nem o
+   restante do corpo do loop do lote) estava protegida por `try/catch` — o código assumia
+   que toda chamada Supabase sempre resolve como `{ data, error }`. Isso é verdade pra a
+   maioria dos métodos, mas `storage.upload()` pode **lançar exceção** de verdade em cenários
+   de rede/timeout/cota, não só devolver `{ error }`.
+2. **Bug real no Upload em Lote (`registrarSelecionadas`), o mais grave dos dois:** o `for`
+   loop que processa cada apólice selecionada do lote não tinha nenhum try/catch. Se
+   `uploadDocumento` (ou qualquer chamada) lançasse uma exceção no meio do processamento do
+   item N, a exceção subia e abortava a função `async` inteira — **os itens N+1 em diante do
+   mesmo lote nunca eram processados**, `registrando` ficava travado em `true` pra sempre, e
+   nem `onCriado(criadas)` era chamado pros itens que JÁ tinham sido criados com sucesso
+   antes do item que quebrou. Resultado: apólices realmente gravadas no banco (confirmado em
+   sessão anterior, consultando o Supabase de produção direto) que nunca aparecem no Kanban
+   e cujo lote trava sem aviso nenhum pro usuário — bate exatamente com "subimos algumas
+   apólices e não aparecem".
+3. **Corrigido nos dois fluxos** (`UploadDiretoWorkspace.criarUploadDireto` e
+   `UploadLoteWorkspace.registrarSelecionadas`, `ApoicesGestao.jsx`):
+   - `uploadDocumento` (e, no lote, também `vincularApoliceAFicha`) agora rodam dentro de um
+     `try/catch` próprio — qualquer falha (retornada OU lançada) vira só um aviso não
+     bloqueante no card/toast; a apólice já criada no banco sempre conta como sucesso e é
+     passada para `onCriado`.
+   - No lote, o corpo inteiro do loop por item também ganhou um `try/catch` externo — uma
+     exceção inesperada em UM item marca só aquele item com erro e o loop **continua** pros
+     próximos, em vez de abortar o lote inteiro em silêncio.
+   - Toast de "PDF não anexado" no Upload Direto passou de `error` pra `warning` (não é mais
+     tratado como falha crítica, já que o documento é opcional).
+
+`npm test` (116/116) e `npm run build` verdes. Nenhuma mudança de schema/RLS/bucket — só
+lógica de app em `src/pages/ApoicesGestao.jsx`. `CONTEXT.md` de `ApoicesGestao` atualizado.
+
+**Smoke test pendente (sem login real neste ambiente):** subir um lote de 3+ PDFs pelo
+Upload em Lote; se possível, simular uma falha de storage real (ex. um arquivo gigante, ou
+checar se a cota do bucket `documentos` já está de fato cheia no Supabase) e confirmar que
+mesmo assim todas as apólices do lote são criadas e aparecem no Kanban, com só um aviso de
+"PDF não anexado" no item afetado — e que os itens **depois** do que falhou continuam sendo
+processados.
+
+**Riscos remanescentes:** se o bucket `documentos` estiver realmente com a cota estourada,
+os PDFs continuarão não sendo salvos até o usuário liberar espaço ou trocar de plano no
+Supabase — esta correção só garante que isso não impede mais a criação da apólice/card, não
+resolve a causa raiz do storage cheio (fora do escopo de código, é uma decisão de
+infraestrutura/plano do Supabase).
+
+---
+
+## Kanban de Fichas quebrando ao mover para "Canceladas" + modal de Aprovação simplificado + apólice sumindo (Iniciar Emissão) + PDFs de Tokio Marine não lidos (2026-07-23, Claude — CONCLUÍDA)
+
+Usuário reportou 4 problemas: (1) "sistema de atualização de status das fichas não está
+funcionando, algumas fichas arrastamos para outras colunas e não está indo" + pediu para
+melhorar a animação do drag-and-drop; (2) não quer mais que o modal de aprovação peça
+número de orçamento, só "retorno foi enviado?" e "passado direto pela imob?"; (3) PDFs de
+apólice não sendo lidos pela automação; (4) apólices sendo cadastradas mas sem aparecer o
+card na tela de gestão. Systematic-debugging (análise estática de código + `git log -S`
+para achar quando cada regressão foi introduzida; sem `.env`/Supabase neste ambiente).
+
+1. **Causa raiz de (1), confirmada via `git log -S "function ModalConfirmarCancelado"`:**
+   o componente `ModalConfirmarCancelado` (`KanbanFichas.jsx`) foi apagado por acidente no
+   commit `124a8d3` (02/07, um commit que só devia estar corrigindo mojibake/encoding) —
+   mas o JSX que o renderiza (`<ModalConfirmarCancelado onConfirmar=... />`, disparado ao
+   arrastar qualquer ficha para a coluna "Canceladas") continuou no arquivo. Resultado:
+   `ModalConfirmarCancelado is not defined` — `ReferenceError` que quebra o render assim
+   que alguém tenta mover uma ficha para "Canceladas", exatamente o sintoma "arrastei e não
+   foi" (sem toast de erro, porque o crash acontece antes de qualquer chamada ao Supabase).
+   **Corrigido:** componente restaurado (mesmo texto/comportamento de antes — motivo do
+   cancelamento obrigatório).
+2. **Causa raiz adicional de (1), ligada a (2):** mover para "Aprovadas" abria um modal que
+   exigia Seguradora + Valor da Parcela + **N° Orçamento** (todos obrigatórios) antes de
+   liberar o botão "Avançar" — se o orçamentista não tinha o número do orçamento em mãos no
+   momento do drag, ficava travado sem conseguir avançar nem entender por quê (a ficha
+   volta pra coluna de origem, sem nenhum aviso). **Corrigido, conforme decisão do usuário
+   (perguntado explicitamente: manter Seguradora/Valor Parcela obrigatórios, só tirar o N°
+   Orçamento):** campo N° Orçamento removido do modal; novo campo obrigatório "Retorno
+   enviado?" (Sim/Não) grava direto em `fichas.retorno_enviado` — o mesmo campo que já
+   controla o badge "Retorno enviado/pendente" do card (antes só dava pra setar esse campo
+   por outros fluxos, nunca pelo drag de aprovação); "Passado pela imobiliária?" continua
+   como estava.
+3. **Melhoria de animação (pedido explícito do usuário):** `DragOverlay` das duas telas com
+   kanban `@dnd-kit` (Fichas e Apólices) usava `dropAnimation={null}`, que desligava
+   qualquer animação de soltura — o card simplesmente sumia ao soltar, sem "pousar" na
+   coluna. Novo `KANBAN_DROP_ANIMATION` (`lib/kanbanDnd.js`, compartilhado pelas 2 telas)
+   anima a soltura suavemente. Card de origem durante o drag ganhou uma transição de
+   opacidade+escala mais suave (era um corte abrupto pra opacity 0.3, sem transform). Cards
+   que acabaram de ser movidos (por drag direto ou pelos modais de recusa/cancelamento/
+   aprovação) ganham um pulso verde breve (`animate-card-new`, já existia para fichas novas
+   via realtime, só reaproveitado) como confirmação visual clara de que o move funcionou.
+4. **Causa raiz de (4):** `ApoicesGestao.jsx` tem 3 fluxos de criação de apólice. Upload
+   Direto e Upload em Lote já tinham sido corrigidos numa sessão anterior (ver entrada
+   abaixo, "Upload em Lote não aparecia no Kanban") para chamar `onCriado(apoliceCriada)` e
+   inserir a apólice direto na lista local, sem depender do filtro ativo. **O 3º fluxo,
+   "Iniciar Emissão" (`IniciarEmissaoWorkspace`), ficou de fora daquela correção** — ele
+   descartava o retorno de `criarApolice` (`const { error } = ...`, sem capturar `data`) e
+   chamava `onCriado?.()` sem nenhum argumento, caindo no branch que faz `load()`
+   respeitando o filtro de período/imobiliária ativo no Kanban — se o filtro não batesse
+   com a apólice recém-criada, ela sumia da tela (mesma classe de bug já documentada, só
+   que num fluxo diferente). **Corrigido:** captura `data` do `criarApolice` e passa pra
+   `onCriado(data)`, mesmo padrão dos outros 2 fluxos.
+5. **Investigação de (3), sem PDF de amostra disponível neste ambiente:** não dá pra
+   reproduzir "PDF não lido" sem o arquivo real que falhou (`superpowers:systematic-
+   debugging` — Phase 1 exige reprodução, não dá pra adivinhar regex às cegas). Achado real
+   via leitura de código: `apoliceParser.js` tem 3 versões históricas do parser de Tokio
+   Marine (`parseTokioMarine` V1, `V2`, `V3` — cada uma nasceu porque a seguradora mudou o
+   layout do PDF), mas só a V3 estava conectada (`PARSERS.tokio = parseTokioMarineV3`) — um
+   PDF de Tokio Marine no layout V1 ou V2 (ex.: renovação antiga, proposta gerada antes da
+   última mudança de layout) falharia hoje, silenciosamente reproduzindo o sintoma
+   relatado. **Corrigido defensivamente:** cada seguradora agora mapeia para uma **cadeia**
+   de parsers (`findParserChain`) — tenta o layout mais novo primeiro e cai pros anteriores
+   se não achar `numero_apolice`/nome útil, em vez de assumir que só existe o layout mais
+   recente. Isso NÃO garante que resolve o problema relatado (pode ser outra seguradora, ou
+   um 4º layout novo do Tokio Marine, ou um PDF escaneado sem camada de texto — `pdfjs-dist`
+   não faz OCR) — **se o problema persistir, preciso de uma amostra do PDF que falhou (ou
+   pelo menos: qual seguradora, e a mensagem de erro exata que aparece no upload) pra ajustar
+   a regex certa.**
+
+`npm test` (116/116), `npm run build` e `npm run check:page-contexts` (mesma pendência
+pré-existente de `GestaoComercial.jsx`, não é regressão) verdes. Nenhuma mudança de
+schema/RLS — só lógica de app em `src/components/KanbanFichas.jsx`,
+`src/pages/ApoicesGestao.jsx`, `src/lib/apoliceParser.js`, `src/lib/kanbanDnd.js`.
+`CONTEXT.md` de `Fichas` e `ApoicesGestao` atualizados.
+
+**Smoke test pendente (sem login real neste ambiente):** abrir `/fichas` no Kanban, arrastar
+uma ficha em cotação para "Canceladas" e confirmar que o modal abre normalmente (sem tela
+branca/erro no console) e pede o motivo; arrastar uma ficha para "Aprovadas" e confirmar que
+o modal não pede mais N° Orçamento, pede "Retorno enviado?" e volta a marcar o badge de
+retorno do card corretamente; observar a animação de soltura do card (deve "pousar" suave em
+vez de sumir/aparecer instantâneo) e o pulso verde de confirmação após qualquer move; em
+`/apolices` gestão, criar uma "solicitação" pelo workspace "Iniciar Emissão" com um filtro de
+período/imobiliária ativo que não bateria com a nova apólice, e confirmar que ela aparece
+imediatamente no Kanban mesmo assim; se possível, subir de novo o(s) PDF(s) de apólice que
+não estavam sendo lidos e ver se a cadeia de fallback do Tokio Marine resolveu — se não
+resolveu, trazer o PDF/seguradora/erro exato para uma nova rodada de debugging.
+
+**Riscos remanescentes:** a correção de (5) é uma defesa contra um cenário plausível
+(layout antigo do Tokio Marine), não uma confirmação de causa raiz — sem uma amostra real do
+PDF que falhou, existe a chance de o problema relatado ser outra coisa (outra seguradora,
+PDF escaneado sem texto, ou um layout 4 ainda não visto). O modal de aprovação agora grava
+`retorno_enviado` — fichas aprovadas antes desta correção continuam com esse campo como
+estava (não há backfill).
+
+---
+
 ## Fichas — busca "Em Aberto" não achava fichas assumidas + busca no Kanban (2026-07-22, Claude — CONCLUÍDA)
 
 Usuário reportou 3 problemas na tela de Fichas (`/fichas`): (1) tabela de resultados da aba

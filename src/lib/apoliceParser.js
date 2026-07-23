@@ -513,16 +513,33 @@ function parseTooSeguros(text) {
   ])
   if (email) r.email_proprietario = email
 
-  const localRisco = normalized.match(/Local do Risco:\s*(.+?)(?=\s+Bairro:|\s+Tipo de LOCA|$)/i)
-  const bairro = normalized.match(/Bairro:\s*(.+?)(?=\s+Cidade:|$)/i)
-  const cidade = normalized.match(/Cidade:\s*(.+?)(?=\s+UF:|$)/i)
-  const estado = normalized.match(/UF:\s*([A-Z]{2})/i)
-  const cep = normalized.match(/CEP:\s*([\d.]+(?:-[\d]+)?)/i)
-  if (localRisco) r.endereco_linha = localRisco[1].trim()
-  if (bairro) r.bairro = bairro[1].trim()
-  if (cidade) r.cidade = cidade[1].trim()
-  if (estado) r.estado = estado[1].trim().toUpperCase()
-  if (cep) r.cep = cep[1].replace(/[.\-]/g, '')
+  // O PDF da TOO costuma repetir "Bairro:"/"Cidade:"/"UF:"/"CEP:" em mais de um
+  // bloco (ex.: endereço de correspondência do garantido, antes do endereço de
+  // risco de verdade) — casar cada rótulo separado e isolado pega o primeiro que
+  // aparecer no texto inteiro, que pode não ter nada a ver com "Local do Risco".
+  // Por isso o padrão principal casa os 5 campos juntos, na sequência em que
+  // aparecem logo depois de "Local do Risco:", garantindo que vêm do mesmo bloco.
+  const riscoCompleto = normalized.match(
+    /Local do Risco:\s*(.+?)\s+Bairro:\s*(.+?)\s+Cidade:\s*(.+?)\s+UF:\s*([A-Z]{2})\s+CEP:\s*([\d.]+(?:-[\d]+)?)/i
+  )
+  if (riscoCompleto) {
+    r.endereco_linha = riscoCompleto[1].trim()
+    r.bairro = riscoCompleto[2].trim()
+    r.cidade = riscoCompleto[3].trim()
+    r.estado = riscoCompleto[4].trim().toUpperCase()
+    r.cep = riscoCompleto[5].replace(/[.\-]/g, '')
+  } else {
+    const localRisco = normalized.match(/Local do Risco:\s*(.+?)(?=\s+Bairro:|\s+Tipo de LOCA|$)/i)
+    const bairro = normalized.match(/Bairro:\s*(.+?)(?=\s+Cidade:|$)/i)
+    const cidade = normalized.match(/Cidade:\s*(.+?)(?=\s+UF:|$)/i)
+    const estado = normalized.match(/UF:\s*([A-Z]{2})/i)
+    const cep = normalized.match(/CEP:\s*([\d.]+(?:-[\d]+)?)/i)
+    if (localRisco) r.endereco_linha = localRisco[1].trim()
+    if (bairro) r.bairro = bairro[1].trim()
+    if (cidade) r.cidade = cidade[1].trim()
+    if (estado) r.estado = estado[1].trim().toUpperCase()
+    if (cep) r.cep = cep[1].replace(/[.\-]/g, '')
+  }
 
   r.endereco = [r.endereco_linha, r.bairro, r.cidade, r.estado].filter(Boolean).join(', ')
 
@@ -559,34 +576,46 @@ function parseTooSeguros(text) {
   return r
 }
 
+// Tokio Marine já mudou de layout de PDF 3 vezes (V1 -> V2 -> V3); PDFs mais
+// antigos (renovações, propostas geradas antes da última mudança) ainda podem
+// chegar no layout anterior. Por isso a chave usa uma cadeia de parsers — tenta
+// o layout mais recente primeiro e cai para os anteriores se não achar dados
+// úteis, em vez de assumir que só o layout mais novo existe.
 const PARSERS = {
-  porto: parsePortoSeguro,
-  'porto seguro': parsePortoSeguro,
-  pottencial: parsePottencial,
-  tokio: parseTokioMarineV3,
-  'tokio marine': parseTokioMarineV3,
-  too: parseTooSeguros,
-  'too seguros': parseTooSeguros,
+  porto: [parsePortoSeguro],
+  'porto seguro': [parsePortoSeguro],
+  pottencial: [parsePottencial],
+  tokio: [parseTokioMarineV3, parseTokioMarineV2, parseTokioMarine],
+  'tokio marine': [parseTokioMarineV3, parseTokioMarineV2, parseTokioMarine],
+  too: [parseTooSeguros],
+  'too seguros': [parseTooSeguros],
 }
 
-function findParser(seguradora) {
+function findParserChain(seguradora) {
   if (!seguradora) return null
   const s = seguradora.toLowerCase().trim()
   if (PARSERS[s]) return PARSERS[s]
-  for (const [key, fn] of Object.entries(PARSERS)) {
-    if (s.includes(key) || key.includes(s)) return fn
+  for (const [key, fns] of Object.entries(PARSERS)) {
+    if (s.includes(key) || key.includes(s)) return fns
   }
   return null
 }
 
-export function parseApoliceText(seguradora, text) {
-  const parser = findParser(seguradora)
+function hasUsableData(r) {
+  return Boolean(r?.numero_apolice || r?.nome_locatario || r?.nome_proprietario)
+}
 
-  if (!parser) {
+export function parseApoliceText(seguradora, text) {
+  const chain = findParserChain(seguradora)
+
+  if (!chain) {
     return { campos: {}, extras: {}, semParser: true, _text: text }
   }
 
-  const raw = parser(text)
+  let raw = chain[0](text)
+  for (let i = 1; i < chain.length && !hasUsableData(raw); i += 1) {
+    raw = chain[i](text)
+  }
   if (!raw.status_emissao && (raw.numero_apolice || raw.numero_proposta || raw.inicio_vigencia || raw.fim_vigencia)) {
     raw.status_emissao = 'emitida'
   }

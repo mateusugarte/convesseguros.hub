@@ -10,7 +10,7 @@ import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { supabase } from '../lib/supabase'
-import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/kanbanDnd'
+import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS, KANBAN_DROP_ANIMATION } from '../lib/kanbanDnd'
 import ImobiliariaIdentity from './ImobiliariaIdentity'
 import FichaStatusBadge from './FichaStatusBadge'
 import ModalFinalizar from './ModalFinalizar'
@@ -312,9 +312,10 @@ function DraggableCard({ ficha, userId, onDetalhe, onAssumir, onFinalizar, isNew
       {...listeners}
       {...attributes}
       style={{
-        opacity:    isDragging ? 0.3 : 1,
+        opacity:    isDragging ? 0.32 : 1,
+        transform:  isDragging ? 'scale(0.96)' : 'scale(1)',
         cursor:     'grab',
-        transition: isDragging ? 'none' : 'opacity 0.15s ease',
+        transition: isDragging ? 'none' : 'opacity 200ms ease, transform 200ms ease',
         touchAction: 'none',
       }}
       onClick={() => !isDragging && onDetalhe(ficha.id)}
@@ -495,14 +496,55 @@ function ModalConfirmarRecusado({ onConfirmar, salvando }) {
   )
 }
 
+// -- ModalConfirmarCancelado ----------------------------------------------------
+
+function ModalConfirmarCancelado({ onConfirmar, onCancelar, salvando }) {
+  const [motivo, setMotivo] = useState('')
+  const motivoLimpo = motivo.trim()
+
+  return (
+    <div className="glass-panel rounded-2xl overflow-hidden animate-fade-in">
+      <div className="px-6 py-4 border-b border-dark-border">
+        <p className="font-semibold text-dark-text">Confirmar Cancelamento</p>
+      </div>
+      <div className="px-6 py-5 space-y-4">
+        <div>
+          <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
+            Motivo do cancelamento <span className="text-status-danger">*</span>
+          </label>
+          <textarea
+            value={motivo}
+            onChange={e => setMotivo(e.target.value)}
+            rows={4}
+            placeholder="Descreva o motivo do cancelamento..."
+            className="w-full rounded-xl border border-dark-border bg-dark-surface/80 px-3 py-2 text-sm text-dark-text outline-none transition-colors focus:border-brand-accent/50"
+          />
+        </div>
+      </div>
+      <div className="flex items-center justify-end gap-3 px-6 pb-5">
+        <button onClick={onCancelar} disabled={salvando} className="btn-secondary text-sm">
+          Cancelar
+        </button>
+        <button
+          onClick={() => motivoLimpo && onConfirmar(motivoLimpo)}
+          disabled={!motivoLimpo || salvando}
+          className="btn-primary text-sm"
+        >
+          {salvando ? 'Salvando...' : 'Confirmar'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // -- ModalConfirmarAprovado ----------------------------------------------------
 
 function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) {
   const [seguradora,      setSeguradora]      = useState('')
   const [valorParcela,    setValorParcela]    = useState('')
-  const [numeroOrcamento, setNumeroOrcamento] = useState('')
+  const [retornoEnviado,  setRetornoEnviado]  = useState(null)
   const [passadoPelaImobiliaria, setPassadoPelaImobiliaria] = useState(false)
-  const valido = seguradora && valorParcela && numeroOrcamento.trim()
+  const valido = seguradora && valorParcela && retornoEnviado !== null
 
   return (
     <div className="glass-panel rounded-2xl overflow-hidden animate-fade-in">
@@ -516,25 +558,29 @@ function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) 
           </label>
           <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={produto} required />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
-              Valor Parcela (R$) <span className="text-status-danger">*</span>
-            </label>
-            <input
-              type="text" inputMode="decimal"
-              value={valorParcela} onChange={e => setValorParcela(e.target.value)}
-              placeholder="0,00" className="input text-sm"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
-              N° Orçamento <span className="text-status-danger">*</span>
-            </label>
-            <input
-              value={numeroOrcamento} onChange={e => setNumeroOrcamento(e.target.value)}
-              placeholder="Ex: 12345" className="input text-sm"
-            />
+        <div>
+          <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
+            Valor Parcela (R$) <span className="text-status-danger">*</span>
+          </label>
+          <input
+            type="text" inputMode="decimal"
+            value={valorParcela} onChange={e => setValorParcela(e.target.value)}
+            placeholder="0,00" className="input text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
+            Retorno enviado? <span className="text-status-danger">*</span>
+          </label>
+          <div className="flex gap-3">
+            {[{ v: true, l: 'Sim', cls: 'border-status-success text-status-success bg-status-success/20' },
+              { v: false, l: 'Não', cls: 'border-status-danger text-status-danger bg-status-danger/20' }].map(({ v, l, cls }) => (
+              <button key={l} type="button" onClick={() => setRetornoEnviado(v)}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
+                  retornoEnviado === v ? cls : 'border-dark-border text-dark-muted hover:border-dark-text'
+                }`}>{l}</button>
+            ))}
           </div>
         </div>
 
@@ -554,7 +600,7 @@ function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) 
             onClick={() => valido && onConfirmar({
               seguradora,
             valorParcela: toNumber(valorParcela),
-            numeroOrcamento: numeroOrcamento.trim(),
+            retornoEnviado,
             passadoPelaImobiliaria,
           })}
           disabled={!valido || salvando}
@@ -590,11 +636,22 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   const [sortingFeedback, setSortingFeedback] = useState(false)
   const [collapsed,  setCollapsed]  = useState(new Set())
   const [newIds,     setNewIds]     = useState(new Set())
+  const [justMovedIds, setJustMovedIds] = useState(new Set())
 
   const [canScrollL, setCanScrollL] = useState(false)
   const [canScrollR, setCanScrollR] = useState(false)
   const scrollRef        = useRef(null)
   const newIdTimeoutsRef = useRef(new Set())
+  const movedIdTimeoutsRef = useRef(new Set())
+
+  const markJustMoved = useCallback((fichaId) => {
+    setJustMovedIds(prev => new Set([...prev, fichaId]))
+    const t = setTimeout(() => {
+      setJustMovedIds(prev => { const next = new Set(prev); next.delete(fichaId); return next })
+      movedIdTimeoutsRef.current.delete(t)
+    }, 1400)
+    movedIdTimeoutsRef.current.add(t)
+  }, [])
 
   const [pendingRecusado,  setPendingRecusado]  = useState(null)
   const [salvandoRecusado, setSalvandoRecusado] = useState(false)
@@ -661,6 +718,8 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
       supabase.removeChannel(ch)
       newIdTimeoutsRef.current.forEach(t => clearTimeout(t))
       newIdTimeoutsRef.current.clear()
+      movedIdTimeoutsRef.current.forEach(t => clearTimeout(t))
+      movedIdTimeoutsRef.current.clear()
     }
   }, [produto])
 
@@ -692,6 +751,10 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   )
   const cols = useMemo(() => groupFichas(fichasFiltradas, user?.id, sortOrder), [fichasFiltradas, user?.id, sortOrder])
   const activeCard = useMemo(() => (activeId ? fichas.find(f => f.id === activeId) : null), [activeId, fichas])
+  const highlightIds = useMemo(
+    () => (newIds.size || justMovedIds.size ? new Set([...newIds, ...justMovedIds]) : newIds),
+    [newIds, justMovedIds]
+  )
 
   async function handleAssumir(fichaId) {
     const fichaOriginal = fichas.find(f => f.id === fichaId)
@@ -726,6 +789,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
       await supabase.from('fichas').update({
         finalizada_em: new Date().toISOString(),
       }).eq('id', pendingRecusado.fichaId)
+      markJustMoved(pendingRecusado.fichaId)
       toast({ type: 'success', title: 'Ficha recusada' })
     } else {
       setFichas(prev => prev.map(f => f.id === pendingRecusado.fichaId ? pendingRecusado.fichaOriginal : f))
@@ -765,6 +829,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
         finalizada_em: finalizadaEm,
         finalizado_por: user?.id || null,
       }).eq('id', pendingCancelado.fichaId)
+      markJustMoved(pendingCancelado.fichaId)
       toast({ type: 'success', title: 'Ficha cancelada' })
     } else {
       setFichas(prev => prev.map(f => f.id === pendingCancelado.fichaId ? pendingCancelado.fichaOriginal : f))
@@ -779,7 +844,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     setPendingCancelado(null)
   }
 
-  async function handleConfirmarAprovado({ seguradora, valorParcela, numeroOrcamento, passadoPelaImobiliaria }) {
+  async function handleConfirmarAprovado({ seguradora, valorParcela, retornoEnviado, passadoPelaImobiliaria }) {
     if (!pendingAprovado) return
     setSalvandoAprovado(true)
     const err = await moverFichaStatusComRawData(pendingAprovado.fichaId, 'aprovado', {
@@ -790,7 +855,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
       const patch = {
         seguradora,
         valor_parcela: valorParcela,
-        numero_orcamento: numeroOrcamento,
+        retorno_enviado: retornoEnviado,
         finalizada_em: new Date().toISOString(),
         raw_data: {
           ...(pendingAprovado.fichaOriginal?.raw_data || {}),
@@ -803,6 +868,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
           : f
       )))
       await supabase.from('fichas').update(patch).eq('id', pendingAprovado.fichaId)
+      markJustMoved(pendingAprovado.fichaId)
       toast({ type: 'success', title: 'Ficha aprovada!' })
       setPendingAprovado(null)
       load()
@@ -885,6 +951,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
       toast({ type: 'error', title: 'Erro ao mover ficha' })
       load()
     } else {
+      markJustMoved(fichaId)
       const colLabel = COLUMNS.find(c => c.id === targetCol)?.label ?? targetCol
       toast({ type: 'success', title: `Movida para ${colLabel}` })
     }
@@ -1125,7 +1192,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
                   onFinalizar={handleFinalizarFast}
                   collapsed={collapsed.has(column.id)}
                   onToggleCollapse={columnCollapseHandlers[column.id]}
-                  newIds={newIds}
+                  newIds={highlightIds}
                   colIndex={i}
                   resolverNome={resolverNome}
                   resolveImobiliariaInfo={resolveImobiliariaInfo}
@@ -1134,7 +1201,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
             </div>
           </div>
 
-          <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
+          <DragOverlay dropAnimation={KANBAN_DROP_ANIMATION} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
             {activeCard && (
               <div style={{ width: 'var(--kanban-col-w, 304px)', pointerEvents: 'none', '--kanban-accent': PRODUTO_COLOR[activeCard?.produto] || '#000079', cursor: 'grabbing' }}>
                 <MemoFichaCard ficha={activeCard} isDragOverlay resolverNome={resolverNome} resolveImobiliariaInfo={resolveImobiliariaInfo} />

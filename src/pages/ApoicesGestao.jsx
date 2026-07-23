@@ -47,7 +47,7 @@ import { KanbanSkeleton } from '../components/Skeleton'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import { Avatar, Modal } from '../components/ui'
 import ImobiliariaSelect from '../components/ImobiliariaSelect'
-import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS } from '../lib/kanbanDnd'
+import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS, KANBAN_DROP_ANIMATION } from '../lib/kanbanDnd'
 
 const COLUNAS = [
   { id: 'recebida', label: 'Recebida', color: '#3B82F6' },
@@ -511,7 +511,7 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, onAbrirApolice, toast, grup
       data_emissao: new Date().toISOString().slice(0, 10),
     }
 
-    const { error } = await criarApolice(payload)
+    const { data, error } = await criarApolice(payload)
     setCriando(false)
 
     if (error) {
@@ -520,7 +520,7 @@ function IniciarEmissaoWorkspace({ onBack, onCriado, onAbrirApolice, toast, grup
     }
 
     toast({ type: 'success', title: 'Solicitação criada' })
-    onCriado?.()
+    onCriado?.(data)
     onBack?.()
   }
 
@@ -853,16 +853,25 @@ function UploadDiretoWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos
       return
     }
 
-    const { error: uploadError } = await uploadDocumento({
-      file: pdfFile,
-      apoliceId: data?.id,
-      cpfCnpj: cpf || cnpj,
-      userId: user?.id,
-    })
+    // Anexar o PDF é conveniência, não obrigação: se o storage falhar (cota
+    // cheia, rede, etc.) a apólice já criada no banco não pode ficar presa por
+    // isso — captura qualquer exceção e segue como aviso não bloqueante.
+    let uploadError = null
+    try {
+      const result = await uploadDocumento({
+        file: pdfFile,
+        apoliceId: data?.id,
+        cpfCnpj: cpf || cnpj,
+        userId: user?.id,
+      })
+      uploadError = result.error
+    } catch (uploadErr) {
+      uploadError = uploadErr
+    }
 
     setCriando(false)
     if (uploadError) {
-      toast({ type: 'error', title: 'Apólice criada, mas o PDF não foi anexado', message: uploadError.message })
+      toast({ type: 'warning', title: 'Apólice criada, mas o PDF não foi anexado', message: uploadError.message || 'Erro ao salvar o documento.', duration: 10000 })
     } else {
       toast({ type: 'success', title: 'Apólice criada a partir do PDF' })
     }
@@ -1032,7 +1041,7 @@ function UploadDiretoWorkspace({ onBack, onCriado, onAbrirApolice, toast, grupos
               {pdfFile && !extraindo && (
                 <button
                   type="button"
-                  onClick={handleExtrair}
+                  onClick={() => handleExtrair()}
                   className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm transition-all text-white"
                   style={{ background: '#000079' }}
                 >
@@ -1358,53 +1367,75 @@ function UploadLoteWorkspace({ onBack, onCriado, toast, getAliases, user }) {
     for (const item of alvos) {
       setItens(prev => prev.map(i => (i.id === item.id ? { ...i, status: 'criando' } : i)))
 
-      const numeroApolice = String(item.dadosExtraidos?.numero_apolice || '').trim()
-      const duplicada = numeroApolice
-        ? await buscarApolicePorNumero(numeroApolice).catch(() => null)
-        : null
-      if (duplicada && !item.confirmadoDiferente) {
-        falhas += 1
+      try {
+        const numeroApolice = String(item.dadosExtraidos?.numero_apolice || '').trim()
+        const duplicada = numeroApolice
+          ? await buscarApolicePorNumero(numeroApolice).catch(() => null)
+          : null
+        if (duplicada && !item.confirmadoDiferente) {
+          falhas += 1
+          setItens(prev => prev.map(i => (i.id === item.id ? {
+            ...i,
+            status: 'ok',
+            duplicidadeNumero: duplicada,
+            erro: 'Apólice duplicada — confirme em "Verificar dados" antes de registrar.',
+          } : i)))
+          continue
+        }
+
+        const payload = montarPayloadApoliceLote(item, { seguradora, user })
+        const { data, error } = await criarApolice(payload)
+        if (error) {
+          falhas += 1
+          if (!primeiroErro) primeiroErro = error.message
+          setItens(prev => prev.map(i => (i.id === item.id ? { ...i, status: 'erro_criacao', erro: error.message } : i)))
+          continue
+        }
+
+        // Anexar o PDF é conveniência, não obrigação: se o storage falhar (cota
+        // cheia, rede, etc.) a apólice já criada no banco não pode ficar presa
+        // por isso — captura qualquer exceção e segue como aviso não bloqueante.
+        let uploadErrorMsg = ''
+        try {
+          const { error: uploadError } = await uploadDocumento({
+            file: item.file,
+            apoliceId: data?.id,
+            cpfCnpj: payload.cpf || payload.cnpj,
+            userId: user?.id,
+          })
+          if (uploadError) uploadErrorMsg = uploadError.message
+        } catch (uploadErr) {
+          uploadErrorMsg = uploadErr?.message || 'Falha ao anexar o PDF.'
+        }
+
+        let erroVinculo = ''
+        if (item.fichaSelecionadaId) {
+          try {
+            const { error: vinculoError } = await vincularApoliceAFicha(item.fichaSelecionadaId, payload)
+            if (vinculoError) {
+              vinculoFalhas += 1
+              erroVinculo = 'Ficha não foi atualizada: ' + vinculoError.message
+            }
+          } catch (vinculoErr) {
+            vinculoFalhas += 1
+            erroVinculo = 'Ficha não foi atualizada: ' + (vinculoErr?.message || 'erro inesperado')
+          }
+        }
+
+        sucesso += 1
+        criadas.push(data)
         setItens(prev => prev.map(i => (i.id === item.id ? {
           ...i,
-          status: 'ok',
-          duplicidadeNumero: duplicada,
-          erro: 'Apólice duplicada — confirme em "Verificar dados" antes de registrar.',
+          status: 'criado',
+          erro: [uploadErrorMsg ? 'PDF não anexado: ' + uploadErrorMsg : '', erroVinculo].filter(Boolean).join(' · '),
         } : i)))
-        continue
-      }
-
-      const payload = montarPayloadApoliceLote(item, { seguradora, user })
-      const { data, error } = await criarApolice(payload)
-      if (error) {
+      } catch (err) {
+        // Falha inesperada neste item (ex.: exceção de rede/storage) não pode
+        // travar o resto do lote — os itens seguintes continuam sendo processados.
         falhas += 1
-        if (!primeiroErro) primeiroErro = error.message
-        setItens(prev => prev.map(i => (i.id === item.id ? { ...i, status: 'erro_criacao', erro: error.message } : i)))
-        continue
+        if (!primeiroErro) primeiroErro = err?.message || 'Erro inesperado ao registrar esta apólice.'
+        setItens(prev => prev.map(i => (i.id === item.id ? { ...i, status: 'erro_criacao', erro: err?.message || 'Erro inesperado.' } : i)))
       }
-
-      const { error: uploadError } = await uploadDocumento({
-        file: item.file,
-        apoliceId: data?.id,
-        cpfCnpj: payload.cpf || payload.cnpj,
-        userId: user?.id,
-      })
-
-      let erroVinculo = ''
-      if (item.fichaSelecionadaId) {
-        const { error: vinculoError } = await vincularApoliceAFicha(item.fichaSelecionadaId, payload)
-        if (vinculoError) {
-          vinculoFalhas += 1
-          erroVinculo = 'Ficha não foi atualizada: ' + vinculoError.message
-        }
-      }
-
-      sucesso += 1
-      criadas.push(data)
-      setItens(prev => prev.map(i => (i.id === item.id ? {
-        ...i,
-        status: 'criado',
-        erro: [uploadError ? 'PDF não anexado: ' + uploadError.message : '', erroVinculo].filter(Boolean).join(' · '),
-      } : i)))
     }
 
     setRegistrando(false)
@@ -2056,7 +2087,7 @@ export default function ApoicesGestao() {
                 ))}
               </div>
 
-              <DragOverlay dropAnimation={null} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
+              <DragOverlay dropAnimation={KANBAN_DROP_ANIMATION} modifiers={KANBAN_DRAG_OVERLAY_MODIFIERS}>
                 {activeCard ? (
                   <div style={{ width: 'var(--kanban-col-w, 286px)', pointerEvents: 'none' }}>
                     <KanbanCard apolice={activeCard} resolverNome={resolverNome} resolverImobiliariaInfo={resolverImobiliariaInfo} isDragOverlay />

@@ -29,6 +29,22 @@ Hub central de fichas: visão lista/kanban com filtros por produto, status, imob
 - `Relatorio.jsx` usa sua própria constante local (`INCLUDED_REPORT_STATUSES`), não estas —
   mudar `STATUS_EM_ABERTO`/`STATUS_PASSADOS` aqui não afeta o Relatório.
 
+## Drag-and-drop no Kanban (mover ficha entre colunas)
+- Arrastar para **Recusadas**/**Canceladas**/**Aprovadas** abre um modal de confirmação
+  (`ModalConfirmarRecusado`/`ModalConfirmarCancelado`/`ModalConfirmarAprovado`) antes de
+  gravar — as outras colunas movem direto (`moverFichaStatus`).
+- **Aprovadas**: pede Seguradora e Valor da Parcela (obrigatórios, usados no badge da
+  seguradora e no Relatório), "Retorno enviado?" (Sim/Não, grava `retorno_enviado` — o
+  mesmo campo que já controla o badge "Retorno enviado/pendente" do card) e "Passado pela
+  imobiliária?" (checkbox, grava em `raw_data.passado_pela_imobiliaria`). **Não pede mais
+  número de orçamento** (removido a pedido do usuário — quem precisar registrar o número
+  do orçamento ainda pode editar `numero_orcamento` direto na ficha).
+- Cards que acabaram de ser movidos (por drag ou pelos modais acima) ganham um pulso verde
+  breve (`animate-card-new`, reaproveitado do mesmo destaque usado em fichas novas via
+  realtime) como confirmação visual de que o move funcionou.
+- O overlay de drag usa `KANBAN_DROP_ANIMATION` (`lib/kanbanDnd.js`) para "pousar" suavemente
+  na coluna de destino em vez de sumir instantaneamente.
+
 ## Busca no Kanban
 - Barra de busca simples acima do card "Recorte de trabalho" (filtro de período/mês),
   visível só na view Kanban (`PageShell` prop `topBar`). Filtra client-side (sem nova query)

@@ -185,3 +185,36 @@ export function getRenewalQuoteStatus(renovacao) {
   if (coluna === 'negociando' || coluna === 'aguardando_vistoria') return 'aguardando_retorno'
   return 'em_andamento'
 }
+
+export const AVISO_VIRADA_DIAS = 15
+export const PRAZO_ENVIO_ORCAMENTO_DIAS = 7
+
+function mesRefDe(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+// Mes-alvo do lembrete de virada de mes: comeca a valer 15 dias antes do
+// mes seguinte comecar; se esse mes ja foi concluido mas um mes anterior
+// (ate 2 meses atras) ainda estiver pendente, retorna o mais antigo pendente
+// em vez de "esquecer" dele. Retorna null quando nao ha nada pendente.
+export function getMesAlvoRenovacao(hoje = new Date(), statusPorMes = {}, avisoDias = AVISO_VIRADA_DIAS) {
+  // Check if next month's window has opened
+  const proximo = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1)
+  const abreProximo = new Date(proximo.getFullYear(), proximo.getMonth(), 1 - avisoDias)
+
+  if (hoje < abreProximo) {
+    // Next month's window hasn't opened yet, no active work
+    return null
+  }
+
+  // Next month's window has opened, check from next to 2 months back
+  for (let offset = 1; offset >= -2; offset -= 1) {
+    const refDate = new Date(hoje.getFullYear(), hoje.getMonth() + offset, 1)
+    const mesRef = mesRefDe(refDate)
+    if (!statusPorMes[mesRef]?.concluido_em) {
+      return mesRef
+    }
+  }
+
+  return null
+}

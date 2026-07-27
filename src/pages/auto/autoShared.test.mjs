@@ -9,6 +9,7 @@ const {
   formatDiasParaVencer,
   getRenovacaoUrgencia,
   getRenewalQuoteStatus,
+  getMesAlvoRenovacao,
 } = await import('./autoShared.js')
 
 test('isApoliceAtiva true quando vigencia_fim e hoje ou no futuro', () => {
@@ -109,4 +110,32 @@ test('getRenewalQuoteStatus usa a coluna da emissao para "aguardando retorno"', 
     getRenewalQuoteStatus({ cotacoes_auto: { status: 'aberta', emissoes_auto: [{ coluna: 'cotacao_feita' }] } }),
     'em_andamento'
   )
+})
+
+test('getMesAlvoRenovacao retorna null quando nenhuma janela abriu ainda', () => {
+  const hoje = new Date(2026, 6, 10) // 10/jul, mais de 15 dias antes de 01/ago
+  assert.equal(getMesAlvoRenovacao(hoje, {}), null)
+})
+
+test('getMesAlvoRenovacao retorna o mes seguinte quando faltam <=15 dias para virar', () => {
+  const hoje = new Date(2026, 6, 17) // 17/jul, 15 dias antes de 01/ago
+  assert.equal(getMesAlvoRenovacao(hoje, {}), '2026-08')
+})
+
+test('getMesAlvoRenovacao ignora mes ja concluido e volta pro mes atual', () => {
+  const hoje = new Date(2026, 6, 20)
+  const status = { '2026-08': { concluido_em: '2026-07-18T00:00:00Z' } }
+  // mes atual (2026-07) nunca foi concluido e sua janela ja abriu ha muito tempo
+  assert.equal(getMesAlvoRenovacao(hoje, status), '2026-07')
+})
+
+test('getMesAlvoRenovacao retorna null quando tudo ate o mes seguinte esta concluido', () => {
+  const hoje = new Date(2026, 6, 20)
+  const status = {
+    '2026-05': { concluido_em: '2026-05-01T00:00:00Z' },
+    '2026-06': { concluido_em: '2026-06-01T00:00:00Z' },
+    '2026-07': { concluido_em: '2026-07-01T00:00:00Z' },
+    '2026-08': { concluido_em: '2026-07-18T00:00:00Z' },
+  }
+  assert.equal(getMesAlvoRenovacao(hoje, status), null)
 })

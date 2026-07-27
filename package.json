@@ -8,7 +8,7 @@
     "build": "vite build --configLoader native",
     "preview": "vite preview",
     "check:page-contexts": "node scripts/validate-page-contexts.mjs",
-    "test": "node --test src/lib/financeiroCalc.test.mjs src/lib/financeiroProducaoCalc.test.mjs src/lib/financeiroFaturasCalc.test.mjs src/lib/relatorioCobranca.test.mjs src/lib/apoliceParser.test.mjs src/lib/apolices.test.mjs src/lib/fichaOperacional.test.mjs src/lib/imobiliariasMapeamento.test.mjs src/lib/trainingProgression.test.mjs src/lib/autoHistoricoImport.test.mjs src/lib/auto.test.mjs src/lib/autoComissaoImport.test.mjs src/pages/auto/autoShared.test.mjs"
+    "test": "node --test src/lib/financeiroCalc.test.mjs src/lib/financeiroProducaoCalc.test.mjs src/lib/financeiroFaturasCalc.test.mjs src/lib/relatorioCobranca.test.mjs src/lib/apoliceParser.test.mjs src/lib/apolices.test.mjs src/lib/fichaOperational.test.mjs src/lib/imobiliariasMapeamento.test.mjs src/lib/trainingProgression.test.mjs src/lib/autoHistoricoImport.test.mjs src/lib/auto.test.mjs src/lib/autoComissaoImport.test.mjs src/pages/auto/autoShared.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

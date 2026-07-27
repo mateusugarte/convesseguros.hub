@@ -7,13 +7,15 @@ import {
 } from 'recharts'
 import {
   BarChart3, CalendarDays, Car, FileText, RefreshCw, ShieldCheck, TrendingUp,
-  DollarSign, Percent, AlertCircle, ArrowRight,
+  DollarSign, Percent, AlertCircle, ArrowRight, Megaphone,
 } from 'lucide-react'
 import {
   getDashboardAutoMetrics,
   getGraficoEmissoesMensais,
   getGraficoCotacoesStatus,
+  getAutoRenovacaoMesStatus,
 } from '../../lib/auto'
+import { getMesAlvoRenovacao } from './autoShared'
 import { PageHeader, MetricCard, DataCard, EmptyState } from '../../components/ui'
 
 function formatMoney(value) {
@@ -38,6 +40,22 @@ export default function AutoDashboard() {
   const navigate = useNavigate()
   const [mesRef, setMesRef] = useState(currentMonthRef)
   const monthLabel = useMemo(() => formatMonthRef(mesRef), [mesRef])
+
+  const mesesParaChecarStatus = useMemo(() => {
+    const hoje = new Date()
+    return Array.from({ length: 4 }, (_, i) => {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth() - 2 + i, 1)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    })
+  }, [])
+
+  const { data: statusPorMes = {} } = useQuery({
+    queryKey: ['auto-renovacao-mes-status', mesesParaChecarStatus],
+    queryFn: () => getAutoRenovacaoMesStatus(mesesParaChecarStatus),
+  })
+
+  const mesAlvoRenovacao = useMemo(() => getMesAlvoRenovacao(new Date(), statusPorMes), [statusPorMes])
+  const mesAlvoLabel = useMemo(() => formatMonthRef(mesAlvoRenovacao || ''), [mesAlvoRenovacao])
 
   const { data: metrics, isLoading: loadingMetrics } = useQuery({
     queryKey: ['auto-dashboard-metrics', mesRef],
@@ -117,6 +135,29 @@ export default function AutoDashboard() {
           />
         ))}
       />
+
+      {mesAlvoRenovacao && (
+        <div className="flex flex-col gap-4 rounded-[28px] border border-status-warning/30 bg-status-warning/8 p-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-3">
+            <Megaphone className="mt-0.5 h-5 w-5 shrink-0 text-status-warning" />
+            <div>
+              <p className="text-sm font-semibold text-dark-text">
+                Organizar e puxar renovações do mês de {mesAlvoLabel}
+              </p>
+              <p className="mt-1 text-xs text-dark-muted">
+                Faltam poucos dias para virar o mês — organize a carteira de renovações antes que o prazo aperte.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate(`/auto/renovacoes?mes=${mesAlvoRenovacao}&puxar=1`)}
+            className="btn-primary inline-flex shrink-0 items-center gap-2"
+          >
+            Organizar e puxar renovações
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <DataCard className="overflow-hidden border-brand-accent/15" bodyClassName="p-0">
         <div className="grid gap-0 lg:grid-cols-[1.25fr_0.75fr]">

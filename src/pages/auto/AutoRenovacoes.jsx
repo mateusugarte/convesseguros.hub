@@ -69,6 +69,31 @@ function formatarData(str) {
   return new Date(`${str}T12:00:00`).toLocaleDateString('pt-BR')
 }
 
+function normalizarNomeAba(valor) {
+  return String(valor ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+// As abas da planilha real sao nomeadas pelo mes ("JULHO 2026"). Procuramos a
+// aba do mes esperado (mes-alvo um ano antes), ignorando caixa e acentos.
+function encontrarAbaDoMes(sheetNames = [], monthRef) {
+  const [ano, mes] = String(monthRef || '').split('-').map(Number)
+  if (!ano || !mes) return null
+  const nomeMes = normalizarNomeAba(new Date(ano, mes - 1, 1).toLocaleDateString('pt-BR', { month: 'long' }))
+  if (!nomeMes) return null
+  const alvo = `${nomeMes} ${ano}`
+  return sheetNames.find(nome => normalizarNomeAba(nome) === alvo)
+    || sheetNames.find(nome => {
+      const normalizado = normalizarNomeAba(nome)
+      return normalizado.includes(nomeMes) && normalizado.includes(String(ano))
+    })
+    || null
+}
+
 export default function AutoRenovacoes() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -79,10 +104,27 @@ export default function AutoRenovacoes() {
   const [resumoPuxar, setResumoPuxar] = useState(null)
   const xlsInputRef = useRef(null)
   const qc = useQueryClient()
-  const [mesRef, setMesRef] = useState(currentMonthRef)
+  // O banner do Dashboard navega para /auto/renovacoes?mes=<mes>&puxar=1: a
+  // lista precisa abrir no mesmo mes que o painel "puxar renovacoes".
+  const [mesRef, setMesRef] = useState(() => searchParams.get('mes') || currentMonthRef())
   const [periodo, setPeriodo] = useState('mes_atual')
   const [acompanharFiltro, setAcompanharFiltro] = useState('todas')
   const mesSeguinteRef = useMemo(() => shiftMonth(mesRef, 1), [mesRef])
+
+  // Mantem a URL em sincronia com o mes da lista e com o painel aberto, para
+  // que recarregar ou compartilhar o link volte no mesmo recorte. O guard de
+  // igualdade evita loop de navegacao. (mesParaPuxar continua sendo estado
+  // local do painel — so o mes da lista viaja na URL.)
+  useEffect(() => {
+    const mesNaUrl = searchParams.get('mes')
+    const puxarNaUrl = searchParams.get('puxar') === '1'
+    if (mesNaUrl === mesRef && puxarNaUrl === painelPuxarAberto) return
+    const next = new URLSearchParams(searchParams)
+    next.set('mes', mesRef)
+    if (painelPuxarAberto) next.set('puxar', '1')
+    else next.delete('puxar')
+    setSearchParams(next, { replace: true })
+  }, [mesRef, painelPuxarAberto, searchParams, setSearchParams])
 
   const { data: renovacoes = [], isLoading } = useQuery({
     queryKey: ['auto-renovacoes', periodo, mesRef],
@@ -139,7 +181,9 @@ export default function AutoRenovacoes() {
     try {
       const buffer = await file.arrayBuffer()
       const workbook = XLSX.read(buffer, { type: 'array', cellDates: false })
-      const abaAlvo = workbook.SheetNames.find(nome => nome.trim().toLowerCase() === searchParams.get('aba')?.toLowerCase())
+      // A UI pede a aba do mes-alvo um ano antes; se ela nao existir na
+      // planilha, caimos na ultima aba para nao travar o upload.
+      const abaAlvo = encontrarAbaDoMes(workbook.SheetNames, shiftMonth(mesParaPuxar, -12))
         || workbook.SheetNames[workbook.SheetNames.length - 1]
       const rows = parseAutoComissaoPlanilha(workbook, abaAlvo)
       await puxarPlanilha(rows)
@@ -359,7 +403,7 @@ export default function AutoRenovacoes() {
               <div className="rounded-2xl border border-brand-accent/20 bg-brand-accent/5 px-4 py-3 text-sm text-dark-text">
                 {resumoPuxar.tipo === 'sistema'
                   ? `${resumoPuxar.encontradas} apólice(s) encontrada(s), ${resumoPuxar.criadas} nova(s) renovação(ões) criada(s).`
-                  : `${resumoPuxar.lidas} linha(s) lida(s), ${resumoPuxar.importadas} nova(s), ${resumoPuxar.duplicadas} duplicada(s) ignorada(s).`}
+                  : `${resumoPuxar.lidas} linha(s) lida(s), ${resumoPuxar.importadas} nova(s), ${resumoPuxar.duplicadas} duplicada(s) ignorada(s)${resumoPuxar.foraDoMes ? `, ${resumoPuxar.foraDoMes} fora do mes selecionado` : ''}.`}
               </div>
             )}
 
@@ -407,7 +451,7 @@ export default function AutoRenovacoes() {
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0 flex-1 space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-sm font-semibold text-dark-text">{item.clientes_auto?.nome_completo || apolice.nome_cliente || '-'}</h3>
+                        <h3 className="text-sm font-semibold text-dark-text">{item.clientes_auto?.nome_completo || apolice.nome_cliente || item.nome_segurado_anterior || '-'}</h3>
                         <span className={`badge ${urgencia.badgeClass}`}>{urgencia.label}</span>
                         <span className={`badge ${toneClasses(areaStatus.tone)}`}>{areaStatus.label}</span>
                         <span className={`badge ${renovacaoInfo.cls}`}>{renovacaoInfo.label}</span>
@@ -425,7 +469,7 @@ export default function AutoRenovacoes() {
                         </div>
                         <div className="rounded-2xl border border-white/60 bg-white/70 p-3">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Cliente vinculado</p>
-                          <p className="mt-1 font-semibold text-dark-text">{item.clientes_auto?.nome_completo || apolice.nome_cliente || '-'}</p>
+                          <p className="mt-1 font-semibold text-dark-text">{item.clientes_auto?.nome_completo || apolice.nome_cliente || item.nome_segurado_anterior || '-'}</p>
                           <p className="mt-1 text-xs text-dark-muted">{item.clientes_auto?.celular || item.clientes_auto?.telefone || item.clientes_auto?.email || 'Sem contato principal'}</p>
                         </div>
                         <div className="rounded-2xl border border-white/60 bg-white/70 p-3">
@@ -579,7 +623,7 @@ export default function AutoRenovacoes() {
                   const isCotando = cotandoId === item.id
                   return (
                     <tr key={item.id} className="transition-colors hover:bg-brand-accent/5">
-                      <td className="py-3 pr-4 font-medium text-dark-text">{item.clientes_auto?.nome_completo || '-'}</td>
+                      <td className="py-3 pr-4 font-medium text-dark-text">{item.clientes_auto?.nome_completo || item.apolices_auto?.nome_cliente || item.nome_segurado_anterior || '-'}</td>
                       <td className="py-3 pr-4 text-dark-muted">{item.seguradora || '-'}</td>
                       <td className="py-3 pr-4 text-dark-muted">{formatarData(item.vigencia_fim)}</td>
                       <td className="py-3 pr-4"><span className={`badge ${toneClasses(cotacaoInfo.tone)}`}>{cotacaoInfo.label}</span></td>

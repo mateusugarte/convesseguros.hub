@@ -2,6 +2,16 @@
 -- Lembrete de virada de mes, puxar renovacoes (banco + planilha), arrastar
 -- para gestao com formulario reduzido, e cotacao de endosso.
 -- Rodar manualmente no SQL Editor do Supabase (mesmo padrao das migrations anteriores).
+--
+-- A migration inteira roda dentro de uma transacao (BEGIN/COMMIT): ou tudo e
+-- aplicado, ou nada e aplicado. Nao existe estado "meio migrado".
+--
+-- Antes de rodar, se falhar no CREATE UNIQUE INDEX, rode este diagnostico:
+-- SELECT apolice_id, count(*) FROM renovacoes_auto WHERE apolice_id IS NOT NULL GROUP BY apolice_id HAVING count(*) > 1;
+-- (as linhas retornadas sao apolices com renovacao duplicada; mantenha apenas
+-- uma renovacao por apolice antes de rodar a migration de novo)
+
+BEGIN;
 
 -- 1. Estado do lembrete de virada de mes (um registro por mes-alvo, ex: '2026-08')
 CREATE TABLE IF NOT EXISTS auto_renovacao_mes_status (
@@ -79,3 +89,5 @@ CREATE TABLE IF NOT EXISTS endossos_auto (
 ALTER TABLE endossos_auto ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS endossos_auto_all ON endossos_auto;
 CREATE POLICY endossos_auto_all ON endossos_auto FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+COMMIT;

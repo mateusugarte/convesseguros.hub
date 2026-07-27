@@ -370,6 +370,13 @@ function getFormEmissaoInicial(emissao) {
   const preferida = c.seguradora_preferencial?.nome || c.seguradora_mais_barata?.nome || ''
   const primeiraAprovada = aprovadas[0]?.nome || preferida
   const seguradoraBase = aprovadas.find(seg => seg.nome === preferida) || aprovadas[0] || null
+  const tipoCotacao = c.tipo || emissao?.tipo || 'novo'
+  // Endosso nao tem seguradoras aprovadas: herda a seguradora que ja esta na
+  // emissao ou na apolice de origem (copiada para seguradora_preferencial por
+  // criarCotacaoEndosso).
+  const seguradoraInicial = tipoCotacao === 'endosso'
+    ? (emissao?.seguradora || preferida || '')
+    : primeiraAprovada
 
   return {
     ...FORM_EMISSAO_VAZIO,
@@ -386,7 +393,7 @@ function getFormEmissaoInicial(emissao) {
     ),
     modelo_veiculo: emissao?.modelo_veiculo || c.modelo_veiculo || '',
     placa: emissao?.placa || c.placa || '',
-    seguradora: primeiraAprovada,
+    seguradora: seguradoraInicial,
     numero_apolice: emissao?.numero_apolice || c.numero_orcamento || '',
     data_emissao: emissao?.data_emissao || new Date().toISOString().slice(0, 10),
     vigencia_inicio: emissao?.vigencia_inicio || c.vigencia_inicio || '',
@@ -505,7 +512,7 @@ function getEditFormInicial(emissao) {
     renovacao_premio_liquido_ano_anterior: toNumberOrEmpty(apolice?.renovacao_premio_liquido_ano_anterior ?? emissao?.renovacao_premio_liquido_ano_anterior ?? ''),
     renovacao_comissao_ano_anterior: toNumberOrEmpty(apolice?.renovacao_comissao_ano_anterior ?? emissao?.renovacao_comissao_ano_anterior ?? ''),
     renovacao_premio_liquido_ano_atual: toNumberOrEmpty(apolice?.renovacao_premio_liquido_ano_atual ?? emissao?.renovacao_premio_liquido_ano_atual ?? premioLiquido),
-    renovacao_comissao_ano_atual: toNumberOrEmpty(apolice?.renovacao_comissao_ano_atual ?? emissao?.renovacao_comissao_ano_atual ?? ((toNumber(premioLiquido) || 0) * (toNumber(pctComissao) || 0))),
+    renovacao_comissao_ano_atual: toNumberOrEmpty(apolice?.renovacao_comissao_ano_atual ?? emissao?.renovacao_comissao_ano_atual ?? calcularValorComissaoAuto(toNumber(premioLiquido) || 0, toNumber(pctComissao) || 0)),
     seguradoras_cotadas: normalizeSeguradorasCotadas(aprovadas),
   }
 }
@@ -872,7 +879,7 @@ function ModalEditarJson({ emissao, value, onChange, onClose, onSave, isSaving }
 }
 
 function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
-  const valorComissao = (toNumber(seg.premio_liquido) || 0) * (toNumber(seg.pct_comissao) || 0) / 100
+  const valorComissao = calcularValorComissaoAuto(toNumber(seg.premio_liquido) || 0, toNumber(seg.pct_comissao) || 0)
 
   return (
     <div className="rounded-3xl border border-brand-secondary/20 bg-brand-secondary/5 p-4">
@@ -998,7 +1005,7 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
           valor_total: toNumber(s.valor_total) || 0,
           premio_liquido: toNumber(s.premio_liquido) || 0,
           pct_comissao: toNumber(s.pct_comissao) || 0,
-          valor_comissao: (toNumber(s.premio_liquido) || 0) * (toNumber(s.pct_comissao) || 0) / 100,
+          valor_comissao: calcularValorComissaoAuto(toNumber(s.premio_liquido) || 0, toNumber(s.pct_comissao) || 0),
           parcelamentos: s.parcelamentos,
           forma_pagamento: s.forma_pagamento,
         }))
@@ -1415,6 +1422,10 @@ export default function AutoEmissoes() {
   })
 
   const seguradorasAprovadas = useMemo(() => getSeguradorasAprovadas(modalEmissao), [modalEmissao])
+  // Tipo real da emissao aberta no modal (vem da cotacao quando existe).
+  // Endosso nao passa por cotacao com seguradoras aprovadas, entao o campo
+  // Seguradora fica livre para digitacao nesse caso.
+  const tipoEmissaoModal = modalEmissao?.cotacoes_auto?.tipo || modalEmissao?.tipo || 'novo'
 
   function setField(campo, valor) {
     setForm(current => {
@@ -1435,7 +1446,7 @@ export default function AutoEmissoes() {
       }
       if (campo === 'eh_renovacao' && valor) {
         next.renovacao_premio_liquido_ano_atual = next.renovacao_premio_liquido_ano_atual || next.premio_liquido
-        next.renovacao_comissao_ano_atual = next.renovacao_comissao_ano_atual || ((toNumber(next.premio_liquido) || 0) * (toNumber(next.pct_comissao) || 0))
+        next.renovacao_comissao_ano_atual = next.renovacao_comissao_ano_atual || calcularValorComissaoAuto(toNumber(next.premio_liquido) || 0, toNumber(next.pct_comissao) || 0)
       }
       return next
     })
@@ -1460,7 +1471,7 @@ export default function AutoEmissoes() {
       }
       if (campo === 'eh_renovacao' && valor) {
         next.renovacao_premio_liquido_ano_atual = next.renovacao_premio_liquido_ano_atual || next.premio_liquido
-        next.renovacao_comissao_ano_atual = next.renovacao_comissao_ano_atual || ((toNumber(next.premio_liquido) || 0) * (toNumber(next.pct_comissao) || 0))
+        next.renovacao_comissao_ano_atual = next.renovacao_comissao_ano_atual || calcularValorComissaoAuto(toNumber(next.premio_liquido) || 0, toNumber(next.pct_comissao) || 0)
       }
       return next
     })
@@ -1566,7 +1577,7 @@ export default function AutoEmissoes() {
         valor_total: toNumber(seg.valor_total) || 0,
         premio_liquido: toNumber(seg.premio_liquido) || 0,
         pct_comissao: toNumber(seg.pct_comissao) || 0,
-        valor_comissao: (toNumber(seg.premio_liquido) || 0) * (toNumber(seg.pct_comissao) || 0) / 100,
+        valor_comissao: calcularValorComissaoAuto(toNumber(seg.premio_liquido) || 0, toNumber(seg.pct_comissao) || 0),
         parcelamentos: seg.parcelamentos || '',
         forma_pagamento: seg.forma_pagamento || '',
       }))
@@ -1705,7 +1716,7 @@ export default function AutoEmissoes() {
       eh_renovacao: manualForm.eh_renovacao,
       ...(
         manualForm.eh_renovacao
-          ? buildRenovacaoComparativo(manualForm, toNumber(manualForm.premio_liquido) || 0, (toNumber(manualForm.premio_liquido) || 0) * (toNumber(manualForm.pct_comissao) || 0))
+          ? buildRenovacaoComparativo(manualForm, toNumber(manualForm.premio_liquido) || 0, calcularValorComissaoAuto(toNumber(manualForm.premio_liquido) || 0, toNumber(manualForm.pct_comissao) || 0))
           : {
               renovacao_premio_liquido_ano_anterior: null,
               renovacao_comissao_ano_anterior: null,
@@ -2297,27 +2308,31 @@ export default function AutoEmissoes() {
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <CampoTexto label="Data de emissão" campo="data_emissao" value={form.data_emissao} onChange={setField} type="date" />
-                    <div>
-                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora</label>
-                      {seguradorasAprovadas.length > 0 ? (
-                        <select
-                          value={form.seguradora}
-                          onChange={e => setField('seguradora', e.target.value)}
-                          className="w-full rounded-2xl border border-dark-border bg-dark-surface/90 px-3 py-2 text-sm text-dark-text outline-none"
-                        >
-                          <option value="">Selecionar seguradora aprovada</option>
-                          {seguradorasAprovadas.map(seg => (
-                            <option key={seg.nome} value={seg.nome}>
-                              {seg.nome}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <div className="rounded-2xl border border-dark-border bg-dark-surface/70 px-3 py-2 text-sm text-dark-muted">
-                          Nenhuma seguradora aprovada nesta ficha
-                        </div>
-                      )}
-                    </div>
+                    {tipoEmissaoModal === 'endosso' ? (
+                      <CampoTexto label="Seguradora" campo="seguradora" value={form.seguradora} onChange={setField} />
+                    ) : (
+                      <div>
+                        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora</label>
+                        {seguradorasAprovadas.length > 0 ? (
+                          <select
+                            value={form.seguradora}
+                            onChange={e => setField('seguradora', e.target.value)}
+                            className="w-full rounded-2xl border border-dark-border bg-dark-surface/90 px-3 py-2 text-sm text-dark-text outline-none"
+                          >
+                            <option value="">Selecionar seguradora aprovada</option>
+                            {seguradorasAprovadas.map(seg => (
+                              <option key={seg.nome} value={seg.nome}>
+                                {seg.nome}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div className="rounded-2xl border border-dark-border bg-dark-surface/70 px-3 py-2 text-sm text-dark-muted">
+                            Nenhuma seguradora aprovada nesta ficha
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <CampoTexto label="Numero da apolice" campo="numero_apolice" value={form.numero_apolice} onChange={setField} />
                     <CampoTexto label="Vigencia inicio" campo="vigencia_inicio" value={form.vigencia_inicio} onChange={setField} type="date" />
                     <CampoTexto
@@ -2415,12 +2430,7 @@ export default function AutoEmissoes() {
                     <div>
                       <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Tipo (automático)</p>
                       <span className="badge badge-info">
-                        {(() => {
-                          const tipoReal = modalEmissao?.cotacoes_auto?.tipo || modalEmissao?.tipo || 'novo'
-                          if (tipoReal === 'renovacao') return 'Renovação'
-                          if (tipoReal === 'endosso') return 'Endosso'
-                          return 'Seguro novo'
-                        })()}
+                        {tipoEmissaoModal === 'renovacao' ? 'Renovação' : tipoEmissaoModal === 'endosso' ? 'Endosso' : 'Seguro novo'}
                       </span>
                     </div>
                     <label className="flex items-center gap-2 text-sm text-dark-text">
@@ -2558,7 +2568,7 @@ export default function AutoEmissoes() {
                     <div className="mt-6 rounded-3xl border border-status-success/20 bg-status-success/10 px-4 py-4 text-sm font-medium text-status-success shadow-sm">
                       <p className="text-[10px] uppercase tracking-[0.16em] text-status-success/80">Comissao calculada</p>
                       <p className="mt-2 text-2xl font-semibold">
-                        {formatMoney((toNumber(manualForm.premio_liquido) || 0) * (toNumber(manualForm.pct_comissao) || 0))}
+                        {formatMoney(calcularValorComissaoAuto(toNumber(manualForm.premio_liquido) || 0, toNumber(manualForm.pct_comissao) || 0))}
                       </p>
                     </div>
                   )}
@@ -2744,7 +2754,7 @@ export default function AutoEmissoes() {
                         </div>
                         <div className="rounded-2xl border border-status-success/20 bg-dark-surface/80 p-3">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissao deste ano</p>
-                          <p className="mt-2 text-sm font-semibold text-dark-text">{formatMoney((toNumber(manualForm.premio_liquido) || 0) * (toNumber(manualForm.pct_comissao) || 0))}</p>
+                          <p className="mt-2 text-sm font-semibold text-dark-text">{formatMoney(calcularValorComissaoAuto(toNumber(manualForm.premio_liquido) || 0, toNumber(manualForm.pct_comissao) || 0))}</p>
                         </div>
                       </div>
                     </div>

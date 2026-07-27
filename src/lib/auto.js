@@ -126,6 +126,33 @@ function isMissingColumnError(error, table, columns = []) {
   return columns.some(column => message.includes(`'${column}'`))
 }
 
+// Colunas de apolices_auto que podem ainda nao existir no ambiente (migration
+// pendente). Cada grupo nasce junto na mesma migration, entao, se o Postgres
+// reclamar de uma coluna do grupo, o grupo inteiro sai do payload no retry.
+const APOLICE_AUTO_FALLBACK_GROUPS = [AUTO_RENEWAL_COMPARE_FIELDS, ['data_emissao']]
+
+function apoliceColunasAusentes(error) {
+  if (!error) return []
+  return APOLICE_AUTO_FALLBACK_GROUPS
+    .filter(grupo => isMissingColumnError(error, 'apolices_auto', grupo))
+    .flat()
+}
+
+// Executa um insert/update em apolices_auto tolerando colunas que ainda nao
+// existem no banco: a cada erro de "coluna inexistente", remove o grupo
+// correspondente do payload e repete, ate acabarem os grupos conhecidos.
+async function escreverApoliceAutoComFallback(payload, executar) {
+  let removidas = []
+  let resultado = await executar(payload)
+  for (let tentativa = 0; tentativa < APOLICE_AUTO_FALLBACK_GROUPS.length; tentativa += 1) {
+    const ausentes = apoliceColunasAusentes(resultado.error).filter(coluna => !removidas.includes(coluna))
+    if (!ausentes.length) return resultado
+    removidas = removidas.concat(ausentes)
+    resultado = await executar(omitKeys(payload, removidas))
+  }
+  return resultado
+}
+
 function buildApoliceAutoPayload(payload, clienteId, premioLiquido, pctComissao, valorComissao, comparativoRenovacao, valorRepasse) {
   return {
     emissao_id: payload.emissao_id || null,
@@ -560,7 +587,7 @@ export async function atualizarEmissaoAutoCompleta(payload) {
   const clienteId = await resolverClienteAutoId(payload)
   const premioLiquido = parseFloat(payload.premio_liquido) || 0
   const pctComissao = parseFloat(payload.pct_comissao) || 0
-  const valorComissao = premioLiquido * pctComissao
+  const valorComissao = calcularValorComissaoAuto(premioLiquido, pctComissao)
   const comparativoRenovacao = buildRenewalComparisonPayload(payload, premioLiquido, valorComissao)
   const valorRepasse = payload.tem_repasse && payload.pct_repasse
     ? valorComissao * parseFloat(payload.pct_repasse)
@@ -660,40 +687,11 @@ export async function atualizarEmissaoAutoCompleta(payload) {
   if (salvarApolice) {
     const apolicePayload = buildApoliceAutoPayload(payload, clienteId, premioLiquido, pctComissao, valorComissao, comparativoRenovacao, valorRepasse)
 
-    let apoliceError = null
-    let apoliceData = null
-
-    if (payload.apolice_id) {
-      ;({ error: apoliceError } = await supabase
-        .from('apolices_auto')
-        .update(apolicePayload)
-        .eq('id', payload.apolice_id)
-        .select()
-        .maybeSingle())
-    } else {
-      ;({ data: apoliceData, error: apoliceError } = await supabase
-        .from('apolices_auto')
-        .insert(apolicePayload)
-        .select()
-        .single())
-    }
-    if (isMissingColumnError(apoliceError, 'apolices_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
-      const payloadSemComparativo = omitKeys(apolicePayload, AUTO_RENEWAL_COMPARE_FIELDS)
-      if (payload.apolice_id) {
-        ;({ error: apoliceError } = await supabase
-          .from('apolices_auto')
-          .update(payloadSemComparativo)
-          .eq('id', payload.apolice_id)
-          .select()
-          .maybeSingle())
-      } else {
-        ;({ data: apoliceData, error: apoliceError } = await supabase
-          .from('apolices_auto')
-          .insert(payloadSemComparativo)
-          .select()
-          .single())
-      }
-    }
+    const { data: apoliceData, error: apoliceError } = await escreverApoliceAutoComFallback(apolicePayload, body => (
+      payload.apolice_id
+        ? supabase.from('apolices_auto').update(body).eq('id', payload.apolice_id).select().maybeSingle()
+        : supabase.from('apolices_auto').insert(body).select().single()
+    ))
     if (apoliceError) throw apoliceError
     const apoliceId = payload.apolice_id || apoliceData?.id || null
     if (apoliceId && payload.documento_apolice) {
@@ -787,40 +785,50 @@ export async function emitirApoliceAuto(payload) {
     if (endossoError) throw endossoError
 
     if (endosso?.apolice_id) {
-      const apolicePayloadEndosso = buildApoliceAutoPayload(payloadComTipoDerivado, clienteId, premioLiquido, pctComissao, valorComissao, comparativoRenovacao, valorRepasse)
-      const { data: apoliceAtualizada, error: updateError } = await supabase
+      // O formulario reduzido de endosso so coleta um subconjunto das colunas da
+      // apolice. Gravar o payload completo (buildApoliceAutoPayload) apagaria os
+      // dados originais que o formulario nao conhece — responsavel, tipo de
+      // producao, repasse, dados do segurado/condutor/veiculo e o comparativo de
+      // renovacao. Por isso montamos um patch estreito: as colunas nao citadas
+      // aqui simplesmente nao sao tocadas pelo update.
+      const { data: apoliceOriginal, error: apoliceOriginalError } = await supabase
         .from('apolices_auto')
-        .update({ ...apolicePayloadEndosso, emissao_id: payload.emissao_id, data_emissao: payload.data_emissao || null })
+        .select('id, seguradora, numero_apolice')
         .eq('id', endosso.apolice_id)
-        .select()
         .single()
+      if (apoliceOriginalError) throw apoliceOriginalError
+
+      const patchEndosso = {
+        seguradora: payloadComTipoDerivado.seguradora || apoliceOriginal?.seguradora || null,
+        numero_apolice: payloadComTipoDerivado.numero_apolice || apoliceOriginal?.numero_apolice || null,
+        data_emissao: payloadComTipoDerivado.data_emissao || null,
+        vigencia_inicio: payloadComTipoDerivado.vigencia_inicio || null,
+        vigencia_fim: payloadComTipoDerivado.vigencia_fim || null,
+        premio_liquido: premioLiquido,
+        pct_comissao: pctComissao,
+        valor_comissao: valorComissao,
+        forma_pagamento: payloadComTipoDerivado.forma_pagamento || null,
+        parcelamento: payloadComTipoDerivado.parcelamento || null,
+        emissao_id: payload.emissao_id || null,
+      }
+
+      const { data: apoliceAtualizada, error: updateError } = await escreverApoliceAutoComFallback(patchEndosso, body => (
+        supabase.from('apolices_auto').update(body).eq('id', endosso.apolice_id).select().single()
+      ))
       if (updateError) throw updateError
+      if (payload.documento_apolice) {
+        const { error: docError } = await uploadApoliceDocumento(payload, endosso.apolice_id)
+        if (docError) throw docError
+      }
       await concluirCotacaoEVincularRenovacao(payload.cotacao_id)
       return apoliceAtualizada
     }
   }
 
   const apolicePayload = buildApoliceAutoPayload(payloadComTipoDerivado, clienteId, premioLiquido, pctComissao, valorComissao, comparativoRenovacao, valorRepasse)
-  const { data, error } = await supabase
-    .from('apolices_auto')
-    .insert(apolicePayload)
-    .select()
-    .single()
-  if (isMissingColumnError(error, 'apolices_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
-    const payloadSemComparativo = omitKeys(apolicePayload, AUTO_RENEWAL_COMPARE_FIELDS)
-    const retry = await supabase
-      .from('apolices_auto')
-      .insert(payloadSemComparativo)
-      .select()
-      .single()
-    if (retry.error) throw retry.error
-    if (payload.documento_apolice) {
-      const { error: docError } = await uploadApoliceDocumento(payload, retry.data?.id)
-      if (docError) throw docError
-    }
-    await concluirCotacaoEVincularRenovacao(payload.cotacao_id)
-    return retry.data
-  }
+  const { data, error } = await escreverApoliceAutoComFallback(apolicePayload, body => (
+    supabase.from('apolices_auto').insert(body).select().single()
+  ))
   if (error) throw error
   if (payload.documento_apolice) {
     const { error: docError } = await uploadApoliceDocumento(payload, data?.id)
@@ -913,18 +921,9 @@ export async function criarEmissaoManualAuto(payload) {
     placa: payload.placa || null,
   }
 
-  let { data: apolice, error: apoliceError } = await supabase
-    .from('apolices_auto')
-    .insert(apolicePayload)
-    .select()
-    .single()
-  if (isMissingColumnError(apoliceError, 'apolices_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
-    ;({ data: apolice, error: apoliceError } = await supabase
-      .from('apolices_auto')
-      .insert(omitKeys(apolicePayload, AUTO_RENEWAL_COMPARE_FIELDS))
-      .select()
-      .single())
-  }
+  const { data: apolice, error: apoliceError } = await escreverApoliceAutoComFallback(apolicePayload, body => (
+    supabase.from('apolices_auto').insert(body).select().single()
+  ))
   if (apoliceError) throw apoliceError
 
   return { emissao, apolice }
@@ -1003,6 +1002,10 @@ export async function criarCotacaoEndosso({
     placa: apolice.placa,
     vigencia_inicio: apolice.vigencia_inicio,
     vigencia_fim: apolice.vigencia_fim,
+    // cotacoes_auto nao tem coluna "seguradora"; a seguradora da apolice
+    // endossada viaja em seguradora_preferencial para o formulario de emissao
+    // do endosso ja nascer preenchido com ela.
+    seguradora_preferencial: apolice.seguradora ? { nome: apolice.seguradora } : undefined,
   })
 
   const { data: endosso, error: endossoError } = await supabase
@@ -1066,6 +1069,9 @@ export async function puxarRenovacoesDoSistema(mesRef) {
     .select('id, cliente_id, seguradora, vigencia_inicio, vigencia_fim, premio_liquido, pct_comissao, nome_cliente, numero_apolice')
     .gte('vigencia_inicio', inicio)
     .lte('vigencia_inicio', fim)
+    // renovacoes_auto.vigencia_fim e NOT NULL: uma apolice legada sem vigencia
+    // final derrubaria o insert do lote inteiro, e nao so a propria linha.
+    .not('vigencia_fim', 'is', null)
   if (apolicesError) throw apolicesError
 
   const apolicesElegiveis = apolices ?? []
@@ -1103,9 +1109,16 @@ export async function puxarRenovacoesDoSistema(mesRef) {
 }
 
 export async function puxarRenovacoesDePlanilha(mesRef, rows = []) {
-  if (!Array.isArray(rows) || !rows.length) return { lidas: 0, importadas: 0, duplicadas: 0 }
+  if (!Array.isArray(rows) || !rows.length) return { lidas: 0, importadas: 0, duplicadas: 0, foraDoMes: 0 }
 
   const { inicio, fim } = getRangeFromMonthRef(mesRef, 0)
+
+  // A dedupe abaixo so olha renovacoes existentes dentro da janela do mes-alvo.
+  // Linhas com vigencia_fim fora dessa janela escapariam da dedupe e poderiam
+  // ser inseridas de novo a cada re-upload, entao sao descartadas antes.
+  const linhasDoMes = rows.filter(row => row?.vigencia_fim && row.vigencia_fim >= inicio && row.vigencia_fim <= fim)
+  const foraDoMes = rows.length - linhasDoMes.length
+
   const { data: existentesDb, error: existentesError } = await supabase
     .from('renovacoes_auto')
     .select('nome_segurado_anterior, apolices_auto(nome_cliente)')
@@ -1121,7 +1134,7 @@ export async function puxarRenovacoesDePlanilha(mesRef, rows = []) {
 
   const novas = []
   let duplicadas = 0
-  for (const row of rows) {
+  for (const row of linhasDoMes) {
     const nomeChave = normalizeCompareText(limparNomeSegurado(row.nome_cliente))
     if (!nomeChave || nomesExistentes.has(nomeChave)) {
       if (nomeChave) duplicadas += 1
@@ -1148,7 +1161,7 @@ export async function puxarRenovacoesDePlanilha(mesRef, rows = []) {
     if (insertError) throw insertError
   }
 
-  return { lidas: rows.length, importadas: novas.length, duplicadas }
+  return { lidas: rows.length, importadas: novas.length, duplicadas, foraDoMes }
 }
 
 // Cria (ou reaproveita) a cotacao de renovacao vinculada a uma linha de
@@ -1163,7 +1176,7 @@ export async function iniciarCotacaoRenovacao(renovacaoId) {
   const { data: renovacao, error: renovacaoError } = await supabase
     .from('renovacoes_auto')
     .select(`
-      id, cliente_id, apolice_id, seguradora, vigencia_fim, cotacao_id,
+      id, cliente_id, apolice_id, seguradora, vigencia_fim, cotacao_id, nome_segurado_anterior,
       clientes_auto(nome_completo, cpf, celular, telefone, email),
       apolices_auto(nome_cliente, cpf_cliente, celular_cliente, condutor_nome, condutor_cpf, modelo_veiculo, placa, vigencia_inicio, vigencia_fim)
     `)
@@ -1190,7 +1203,9 @@ export async function iniciarCotacaoRenovacao(renovacaoId) {
     cliente_id: renovacao.cliente_id,
     tipo: 'renovacao',
     status: 'pendente',
-    nome_cliente: apolice.nome_cliente || cliente.nome_completo || null,
+    // Renovacao vinda de XLS nao tem apolice nem cliente vinculado: o unico
+    // nome disponivel e o texto puro em nome_segurado_anterior.
+    nome_cliente: apolice.nome_cliente || cliente.nome_completo || renovacao.nome_segurado_anterior || null,
     cpf_cliente: apolice.cpf_cliente || cliente.cpf || null,
     celular_cliente: apolice.celular_cliente || cliente.celular || cliente.telefone || null,
     email_cliente: cliente.email || null,
@@ -1351,7 +1366,7 @@ export async function importarApolicesAutoPlanilha(rows = []) {
 
     const premioLiquido = toFloatOrNull(row.premio_liquido) || 0
     const pctComissao = toFloatOrNull(row.pct_comissao) || 0
-    const valorComissao = premioLiquido * pctComissao
+    const valorComissao = calcularValorComissaoAuto(premioLiquido, pctComissao)
     const statusRenovacao = normalizeStatusRenovacaoAuto(row.status)
     const observacoes = [
       row.status ? `Status planilha: ${row.status}` : '',
@@ -1408,31 +1423,15 @@ export async function importarApolicesAutoPlanilha(rows = []) {
 
     let apoliceId = duplicadas?.[0]?.id || null
     if (apoliceId) {
-      let { error } = await supabase
-        .from('apolices_auto')
-        .update(payload)
-        .eq('id', apoliceId)
-      if (isMissingColumnError(error, 'apolices_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
-        ;({ error } = await supabase
-          .from('apolices_auto')
-          .update(omitKeys(payload, AUTO_RENEWAL_COMPARE_FIELDS))
-          .eq('id', apoliceId))
-      }
+      const { error } = await escreverApoliceAutoComFallback(payload, body => (
+        supabase.from('apolices_auto').update(body).eq('id', apoliceId)
+      ))
       if (error) throw error
       resultado.atualizadas += 1
     } else {
-      let { data, error } = await supabase
-        .from('apolices_auto')
-        .insert(payload)
-        .select('id')
-        .single()
-      if (isMissingColumnError(error, 'apolices_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
-        ;({ data, error } = await supabase
-          .from('apolices_auto')
-          .insert(omitKeys(payload, AUTO_RENEWAL_COMPARE_FIELDS))
-          .select('id')
-          .single())
-      }
+      const { data, error } = await escreverApoliceAutoComFallback(payload, body => (
+        supabase.from('apolices_auto').insert(body).select('id').single()
+      ))
       if (error) throw error
       apoliceId = data?.id || null
       resultado.importadas += 1
@@ -1555,7 +1554,7 @@ export async function importarApolicesAutoHistorico(rows = []) {
 export async function atualizarApoliceAutoSemEmissao(id, form) {
   const premioLiquido = parseFloat(form.premio_liquido) || 0
   const pctComissao = parseFloat(form.pct_comissao) || 0
-  const valorComissao = premioLiquido * pctComissao
+  const valorComissao = calcularValorComissaoAuto(premioLiquido, pctComissao)
   const comparativoRenovacao = buildRenewalComparisonPayload(form, premioLiquido, valorComissao)
   const valorRepasse = form.tem_repasse && form.pct_repasse
     ? valorComissao * parseFloat(form.pct_repasse)
@@ -1565,20 +1564,9 @@ export async function atualizarApoliceAutoSemEmissao(id, form) {
   delete payload.cliente_id
   delete payload.emissao_id
 
-  let { data, error } = await supabase
-    .from('apolices_auto')
-    .update(payload)
-    .eq('id', id)
-    .select()
-    .maybeSingle()
-  if (isMissingColumnError(error, 'apolices_auto', AUTO_RENEWAL_COMPARE_FIELDS)) {
-    ;({ data, error } = await supabase
-      .from('apolices_auto')
-      .update(omitKeys(payload, AUTO_RENEWAL_COMPARE_FIELDS))
-      .eq('id', id)
-      .select()
-      .maybeSingle())
-  }
+  const { data, error } = await escreverApoliceAutoComFallback(payload, body => (
+    supabase.from('apolices_auto').update(body).eq('id', id).select().maybeSingle()
+  ))
   if (error) throw error
   return data
 }

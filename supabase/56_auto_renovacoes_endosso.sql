@@ -27,7 +27,7 @@ CREATE POLICY auto_renovacao_mes_status_all ON auto_renovacao_mes_status FOR ALL
 
 -- 2. renovacoes_auto: novos campos usados pela area "Renovacoes do mes"
 ALTER TABLE renovacoes_auto
-  ADD COLUMN IF NOT EXISTS origem text DEFAULT 'sistema' CHECK (origem IN ('sistema','xls')),
+  ADD COLUMN IF NOT EXISTS origem text DEFAULT 'sistema' CHECK (origem IN ('sistema','xls','manual')),
   ADD COLUMN IF NOT EXISTS data_limite_envio date,
   ADD COLUMN IF NOT EXISTS motivo_cancelamento text,
   ADD COLUMN IF NOT EXISTS nome_segurado_anterior text,

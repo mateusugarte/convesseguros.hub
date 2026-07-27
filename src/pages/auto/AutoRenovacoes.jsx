@@ -4,7 +4,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
 import { CalendarClock, CheckCircle2, Clock, ExternalLink, RefreshCw, Send, Upload, XCircle } from 'lucide-react'
 import {
+  buscarClientesAuto,
   cancelarRenovacao,
+  criarRenovacaoManual,
   getAutoRenovacaoMesStatus,
   getRenovacoesAuto,
   iniciarCotacaoRenovacao,
@@ -12,6 +14,7 @@ import {
   puxarRenovacoesDePlanilha,
   puxarRenovacoesDoSistema,
 } from '../../lib/auto'
+import SeguradoraSelect from '../../components/SeguradoraSelect'
 import { parseAutoComissaoPlanilha } from '../../lib/autoComissaoImport'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../contexts/ToastContext'
@@ -172,6 +175,67 @@ export default function AutoRenovacoes() {
       toast({ type: 'success', title: 'Mês marcado como concluído' })
     },
     onError: err => toast({ type: 'error', title: 'Erro ao marcar mês concluído', message: err?.message || 'Tente novamente.' }),
+  })
+
+  const [manualBusca, setManualBusca] = useState('')
+  const [manualClientes, setManualClientes] = useState([])
+  const [buscandoManual, setBuscandoManual] = useState(false)
+  const [manualClienteId, setManualClienteId] = useState('')
+  const [manualNomeLivre, setManualNomeLivre] = useState('')
+  const [manualSeguradora, setManualSeguradora] = useState('')
+  const [manualVigenciaFim, setManualVigenciaFim] = useState('')
+  const [manualDataLimite, setManualDataLimite] = useState('')
+
+  async function handleBuscarClienteManual() {
+    const termo = manualBusca.trim()
+    if (!termo) return
+    setBuscandoManual(true)
+    try {
+      setManualClientes(await buscarClientesAuto(termo))
+    } catch (err) {
+      toast({ type: 'error', title: 'Erro ao buscar cliente', message: err?.message || 'Tente novamente.' })
+    } finally {
+      setBuscandoManual(false)
+    }
+  }
+
+  // Sugere a data limite 7 dias antes do vencimento na primeira vez que o
+  // usuario preenche o vencimento; depois disso o campo fica livre para
+  // edicao manual sem ser sobrescrito de novo.
+  function handleVigenciaFimManual(value) {
+    setManualVigenciaFim(value)
+    if (!manualDataLimite && value) {
+      const data = new Date(`${value}T12:00:00`)
+      data.setDate(data.getDate() - 7)
+      setManualDataLimite(data.toISOString().slice(0, 10))
+    }
+  }
+
+  function limparFormularioManual() {
+    setManualBusca('')
+    setManualClientes([])
+    setManualClienteId('')
+    setManualNomeLivre('')
+    setManualSeguradora('')
+    setManualVigenciaFim('')
+    setManualDataLimite('')
+  }
+
+  const { mutateAsync: criarManualAsync, isPending: criandoManual } = useMutation({
+    mutationFn: () => criarRenovacaoManual({
+      cliente_id: manualClienteId || null,
+      nomeManual: manualClienteId ? null : manualNomeLivre,
+      seguradora: manualSeguradora,
+      vigencia_fim: manualVigenciaFim,
+      data_limite_envio: manualDataLimite || null,
+    }),
+    onSuccess: async () => {
+      toast({ type: 'success', title: 'Renovação criada', message: 'A renovação já aparece na lista abaixo.' })
+      limparFormularioManual()
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes-todas'] })
+    },
+    onError: err => toast({ type: 'error', title: 'Erro ao criar renovação', message: err?.message || 'Tente novamente.' }),
   })
 
   async function handleUploadPlanilhaRenovacao(event) {
@@ -397,6 +461,74 @@ export default function AutoRenovacoes() {
                   {puxandoPlanilha ? 'Importando...' : 'Selecionar planilha (.xlsx)'}
                 </label>
               </div>
+            </div>
+
+            <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
+              <p className="text-sm font-semibold text-dark-text">Criar manualmente</p>
+              <p className="mt-1 text-xs text-dark-muted">Cadastre uma renovação direto, sem depender do puxar automático nem de planilha.</p>
+
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Segurado</label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      value={manualBusca}
+                      onChange={e => { setManualBusca(e.target.value); setManualClienteId('') }}
+                      placeholder="Buscar cliente já cadastrado (nome ou CPF)"
+                      className="input flex-1"
+                    />
+                    <button type="button" onClick={handleBuscarClienteManual} disabled={buscandoManual} className="btn-secondary disabled:opacity-60">
+                      {buscandoManual ? 'Buscando...' : 'Buscar'}
+                    </button>
+                  </div>
+
+                  {manualClientes.length > 0 && (
+                    <select
+                      value={manualClienteId}
+                      onChange={e => setManualClienteId(e.target.value)}
+                      className="input mt-2 w-full"
+                    >
+                      <option value="">Cliente não cadastrado — digitar nome abaixo</option>
+                      {manualClientes.map(cliente => (
+                        <option key={cliente.id} value={cliente.id}>
+                          {cliente.nome_completo} · {cliente.cpf || 'sem CPF'}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  {!manualClienteId && (
+                    <input
+                      value={manualNomeLivre}
+                      onChange={e => setManualNomeLivre(e.target.value)}
+                      placeholder="Nome do segurado (cliente ainda não cadastrado)"
+                      className="input mt-2 w-full"
+                    />
+                  )}
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora</label>
+                  <SeguradoraSelect value={manualSeguradora} onChange={setManualSeguradora} produto="auto" placeholder="Selecionar seguradora" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Data de vencimento</label>
+                  <input type="date" value={manualVigenciaFim} onChange={e => handleVigenciaFimManual(e.target.value)} className="input w-full" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Data limite da cotação</label>
+                  <input type="date" value={manualDataLimite} onChange={e => setManualDataLimite(e.target.value)} className="input w-full" />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => criarManualAsync()}
+                disabled={criandoManual || !manualVigenciaFim || (!manualClienteId && !manualNomeLivre.trim())}
+                className="btn-primary mt-3 inline-flex items-center gap-2 disabled:opacity-60"
+              >
+                {criandoManual ? 'Criando...' : 'Criar renovação'}
+              </button>
             </div>
 
             {resumoPuxar && (

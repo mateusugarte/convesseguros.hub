@@ -1207,6 +1207,62 @@ export async function puxarRenovacoesDePlanilha(mesRef, rows = []) {
   return { lidas: rows.length, importadas: novas.length, duplicadas, foraDoMes }
 }
 
+// Busca leve de clientes_auto por nome/CPF, para autocomplete em formularios
+// (ex.: "Criar renovacao manualmente"). Nao depende de nenhuma apolice
+// existir — funciona mesmo com a carteira zerada.
+export async function buscarClientesAuto(termo) {
+  const texto = String(termo || '').trim()
+  if (!texto) return []
+  const { data, error } = await supabase
+    .from('clientes_auto')
+    .select('id, nome_completo, cpf, celular')
+    .or(`nome_completo.ilike.%${texto}%,cpf.ilike.%${texto}%`)
+    .order('nome_completo', { ascending: true })
+    .limit(10)
+  if (error) throw error
+  return data ?? []
+}
+
+// Cria uma renovacao pendente direto pelo formulario "Criar manualmente" do
+// painel de Renovacoes, sem depender do puxar automatico (sistema/planilha).
+// cliente_id vem preenchido quando o usuario seleccionou um cliente ja
+// cadastrado (busca por nome/CPF); nesse caso o nome real do cliente vira
+// nome_segurado_anterior tambem, para o card exibir o nome sem precisar de
+// outro join. Sem cliente_id, nomeManual e o unico nome disponivel.
+export async function criarRenovacaoManual({ cliente_id, nomeManual, seguradora, vigencia_fim, data_limite_envio }) {
+  if (!vigencia_fim) throw new Error('Informe a data de vencimento.')
+
+  let nomeSegurado = nomeManual || null
+  if (cliente_id) {
+    const { data: cliente, error: clienteError } = await supabase
+      .from('clientes_auto')
+      .select('nome_completo')
+      .eq('id', cliente_id)
+      .single()
+    if (clienteError) throw clienteError
+    nomeSegurado = cliente.nome_completo
+  }
+  if (!nomeSegurado) throw new Error('Selecione um cliente ou informe o nome do segurado.')
+
+  const { data, error } = await supabase
+    .from('renovacoes_auto')
+    .insert({
+      cliente_id: cliente_id || null,
+      apolice_id: null,
+      seguradora: seguradora || null,
+      vigencia_fim,
+      data_limite_envio: data_limite_envio || subtrairDias(vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS),
+      status_cotacao: 'nao_cotada',
+      status_renovacao: 'pendente',
+      origem: 'manual',
+      nome_segurado_anterior: nomeSegurado,
+    })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
 // Cria (ou reaproveita) a cotacao de renovacao vinculada a uma linha de
 // renovacoes_auto. Usada tanto pelo botao "Cotar" na propria renovacao quanto
 // pelo fluxo "Nova cotacao > Renovacao" da Gestao Auto — mesma funcao, para os

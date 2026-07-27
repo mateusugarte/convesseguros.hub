@@ -138,6 +138,48 @@ function apoliceColunasAusentes(error) {
     .flat()
 }
 
+// Erro de coluna inexistente num SELECT tem formato diferente do erro de
+// insert/update (que passa pelo cache de schema do PostgREST antes de
+// chegar no Postgres): aqui e o erro cru do Postgres (42703), sem a frase
+// "column of 'tabela'" que isMissingColumnError procura. Quando a tabela e
+// referenciada via embed (ex.: apolices_auto dentro de emissoes_auto), o
+// Postgres alias a tabela como "apolices_auto_1" — o regex aceita o sufixo
+// numerico opcional.
+function isMissingSelectColumnError(error, table, columns = []) {
+  if (error?.code !== '42703') return false
+  const message = String(error?.message || '')
+  return columns.some(column => new RegExp(`${table}(_\\d+)?\\.${column}\\b`).test(message))
+}
+
+function apoliceColunasAusentesSelect(error) {
+  if (!error) return []
+  return APOLICE_AUTO_FALLBACK_GROUPS
+    .filter(grupo => isMissingSelectColumnError(error, 'apolices_auto', grupo))
+    .flat()
+}
+
+function apoliceAutoColunasSemGrupos(removidas) {
+  if (!removidas.length) return APOLICE_AUTO_COLUMNS
+  const remover = new Set(removidas)
+  return APOLICE_AUTO_COLUMNS.split(', ').filter(coluna => !remover.has(coluna)).join(', ')
+}
+
+// Roda um SELECT que usa APOLICE_AUTO_COLUMNS tolerando colunas que ainda nao
+// existem no banco (migration pendente): a cada erro de "coluna inexistente",
+// remove o grupo correspondente da lista de colunas e repete a consulta.
+// `executar(colunas)` recebe a string de colunas e monta/roda a query.
+async function selecionarComFallbackApolice(executar) {
+  let removidas = []
+  let resultado = await executar(apoliceAutoColunasSemGrupos(removidas))
+  for (let tentativa = 0; tentativa < APOLICE_AUTO_FALLBACK_GROUPS.length; tentativa += 1) {
+    const ausentes = apoliceColunasAusentesSelect(resultado.error).filter(coluna => !removidas.includes(coluna))
+    if (!ausentes.length) return resultado
+    removidas = removidas.concat(ausentes)
+    resultado = await executar(apoliceAutoColunasSemGrupos(removidas))
+  }
+  return resultado
+}
+
 // Executa um insert/update em apolices_auto tolerando colunas que ainda nao
 // existem no banco: a cada erro de "coluna inexistente", remove o grupo
 // correspondente do payload e repete, ate acabarem os grupos conhecidos.
@@ -541,11 +583,11 @@ export async function getApoliceAutoDetalhe(id) {
   if (!id) return null
 
   const [{ data: apolice, error }, { data: renovacoes, error: renovacoesError }] = await Promise.all([
-    supabase
+    selecionarComFallbackApolice(cols => supabase
       .from('apolices_auto')
-      .select(`${APOLICE_AUTO_COLUMNS}, emissoes_auto(${EMISSAO_AUTO_COLUMNS}, cotacoes_auto(${COTACAO_AUTO_COLUMNS}))`)
+      .select(`${cols}, emissoes_auto(${EMISSAO_AUTO_COLUMNS}, cotacoes_auto(${COTACAO_AUTO_COLUMNS}))`)
       .eq('id', id)
-      .single(),
+      .single()),
     supabase
       .from('renovacoes_auto')
       .select(RENOVACAO_AUTO_COLUMNS)
@@ -1639,27 +1681,6 @@ export async function getClienteAutoDetalhe(ref) {
   // cliente_id, sem nome) com um filtro que sempre falharia.
   const nomeRef = !clientId && !cpf && !refIsUuid ? ref : null
 
-  const apolicesQuery = supabase
-    .from('apolices_auto')
-    .select(`${APOLICE_AUTO_COLUMNS}, emissoes_auto(${EMISSAO_AUTO_COLUMNS}, cotacoes_auto(${COTACAO_AUTO_COLUMNS}))`)
-    .order('vigencia_inicio', { ascending: false, nullsFirst: false })
-    .order('created_at', { ascending: false })
-
-  const emissoesQuery = supabase
-    .from('emissoes_auto')
-    .select(`${EMISSAO_AUTO_COLUMNS}, cotacoes_auto(${COTACAO_AUTO_COLUMNS}), apolices_auto(${APOLICE_AUTO_COLUMNS})`)
-    .order('created_at', { ascending: false })
-
-  const cotacoesQuery = supabase
-    .from('cotacoes_auto')
-    .select(COTACAO_AUTO_COLUMNS)
-    .order('created_at', { ascending: false })
-
-  const renovacoesQuery = supabase
-    .from('renovacoes_auto')
-    .select(`${RENOVACAO_AUTO_COLUMNS}, apolices_auto(id, numero_apolice, seguradora, vigencia_inicio, vigencia_fim), clientes_auto(nome_completo, telefone, celular, email)`)
-    .order('vigencia_fim', { ascending: true })
-
   function orFilterValue(value) {
     return `"${String(value).replace(/"/g, '\\"')}"`
   }
@@ -1674,24 +1695,68 @@ export async function getClienteAutoDetalhe(ref) {
     return query.or(filters.join(','))
   }
 
-  const scopedApolices = scopeByRef(apolicesQuery, { allowNome: true })
-  const scopedEmissoes = scopeByRef(emissoesQuery, { allowNome: true })
-  const scopedCotacoes = scopeByRef(cotacoesQuery, { allowNome: true })
-  // renovacoes_auto nao tem coluna nome_cliente (so cliente_id) - sem escopo
-  // valido, nao ha como filtrar sem sempre falhar; retorna vazio.
-  const scopedRenovacoes = scopeByRef(renovacoesQuery)
+  // Reconstroi as 4 queries do zero a cada tentativa: um query builder do
+  // Supabase so pode ser executado uma vez, entao o retry por coluna
+  // ausente (migration pendente) precisa remontar tudo, nao so reawaitar.
+  function montarQueries(apoliceCols) {
+    const apolicesQuery = supabase
+      .from('apolices_auto')
+      .select(`${apoliceCols}, emissoes_auto(${EMISSAO_AUTO_COLUMNS}, cotacoes_auto(${COTACAO_AUTO_COLUMNS}))`)
+      .order('vigencia_inicio', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
 
-  const [
+    const emissoesQuery = supabase
+      .from('emissoes_auto')
+      .select(`${EMISSAO_AUTO_COLUMNS}, cotacoes_auto(${COTACAO_AUTO_COLUMNS}), apolices_auto(${apoliceCols})`)
+      .order('created_at', { ascending: false })
+
+    const cotacoesQuery = supabase
+      .from('cotacoes_auto')
+      .select(COTACAO_AUTO_COLUMNS)
+      .order('created_at', { ascending: false })
+
+    const renovacoesQuery = supabase
+      .from('renovacoes_auto')
+      .select(`${RENOVACAO_AUTO_COLUMNS}, apolices_auto(id, numero_apolice, seguradora, vigencia_inicio, vigencia_fim), clientes_auto(nome_completo, telefone, celular, email)`)
+      .order('vigencia_fim', { ascending: true })
+
+    const scopedApolices = scopeByRef(apolicesQuery, { allowNome: true })
+    const scopedEmissoes = scopeByRef(emissoesQuery, { allowNome: true })
+    const scopedCotacoes = scopeByRef(cotacoesQuery, { allowNome: true })
+    // renovacoes_auto nao tem coluna nome_cliente (so cliente_id) - sem escopo
+    // valido, nao ha como filtrar sem sempre falhar; retorna vazio.
+    const scopedRenovacoes = scopeByRef(renovacoesQuery)
+
+    return Promise.all([
+      scopedApolices ?? Promise.resolve({ data: [], error: null }),
+      scopedEmissoes ?? Promise.resolve({ data: [], error: null }),
+      scopedCotacoes ?? Promise.resolve({ data: [], error: null }),
+      scopedRenovacoes ?? Promise.resolve({ data: [], error: null }),
+    ])
+  }
+
+  let removidas = []
+  let [
     { data: apolices, error: apolicesError },
     { data: emissoes, error: emissoesError },
     { data: cotacoes, error: cotacoesError },
     { data: renovacoes, error: renovacoesError },
-  ] = await Promise.all([
-    scopedApolices ?? Promise.resolve({ data: [], error: null }),
-    scopedEmissoes ?? Promise.resolve({ data: [], error: null }),
-    scopedCotacoes ?? Promise.resolve({ data: [], error: null }),
-    scopedRenovacoes ?? Promise.resolve({ data: [], error: null }),
-  ])
+  ] = await montarQueries(apoliceAutoColunasSemGrupos(removidas))
+
+  for (let tentativa = 0; tentativa < APOLICE_AUTO_FALLBACK_GROUPS.length; tentativa += 1) {
+    const ausentes = [...new Set([
+      ...apoliceColunasAusentesSelect(apolicesError),
+      ...apoliceColunasAusentesSelect(emissoesError),
+    ])].filter(coluna => !removidas.includes(coluna))
+    if (!ausentes.length) break
+    removidas = removidas.concat(ausentes)
+    ;([
+      { data: apolices, error: apolicesError },
+      { data: emissoes, error: emissoesError },
+      { data: cotacoes, error: cotacoesError },
+      { data: renovacoes, error: renovacoesError },
+    ] = await montarQueries(apoliceAutoColunasSemGrupos(removidas)))
+  }
 
   if (apolicesError) throw apolicesError
   if (emissoesError) throw emissoesError

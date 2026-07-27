@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { normalizeCompareText, somarUmAno } from './autoHistoricoImport.js'
+import { calcularValorComissaoAuto } from './autoCalc.js'
 
 function parseMonthRef(monthRef) {
   if (typeof monthRef !== 'string') return null
@@ -721,7 +722,7 @@ export async function emitirApoliceAuto(payload) {
   const clienteId = await resolverClienteAutoId(payload)
   const premioLiquido = parseFloat(payload.premio_liquido) || 0
   const pctComissao = parseFloat(payload.pct_comissao) || 0
-  const valorComissao = premioLiquido * pctComissao
+  const valorComissao = calcularValorComissaoAuto(premioLiquido, pctComissao)
   const comparativoRenovacao = buildRenewalComparisonPayload(payload, premioLiquido, valorComissao)
 
   const valorRepasse = payload.tem_repasse && payload.pct_repasse
@@ -806,7 +807,7 @@ export async function criarEmissaoManualAuto(payload) {
   const clienteId = await resolverClienteAutoId(payload)
   const premioLiquido = parseFloat(payload.premio_liquido) || 0
   const pctComissao = parseFloat(payload.pct_comissao) || 0
-  const valorComissao = premioLiquido * pctComissao
+  const valorComissao = calcularValorComissaoAuto(premioLiquido, pctComissao)
   const comparativoRenovacao = buildRenewalComparisonPayload(payload, premioLiquido, valorComissao)
   const valorRepasse = payload.tem_repasse && payload.pct_repasse
     ? valorComissao * parseFloat(payload.pct_repasse)

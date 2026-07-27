@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, BadgeDollarSign, CalendarDays, Car, Check, Pencil, ShieldCheck, UserRound, X, Mail, Heart, Phone } from 'lucide-react'
 import { DataCard, EmptyState, MetricCard, PageHeader } from '../../components/ui'
 import SeguradoraSelect from '../../components/SeguradoraSelect'
-import { deletarCotacaoAuto, getCotacaoAutoPorId, atualizarCotacaoAuto } from '../../lib/auto'
+import { calcularValorComissaoAuto, deletarCotacaoAuto, getCotacaoAutoPorId, atualizarCotacaoAuto } from '../../lib/auto'
 import { COTACAO_STATUS, formatDateTimeBR, formatMoney, toneClasses } from './autoShared'
 
 function QuoteStatusBadge({ status }) {
@@ -476,7 +476,7 @@ export default function AutoCotacaoDetalhe() {
                     <div className="rounded-2xl border border-brand-accent/15 bg-brand-accent/6 p-4">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissao estimada</p>
                       <p className="mt-2 text-sm font-semibold text-dark-text">
-                        {formatMoney(Number(cotacao?.[section.key]?.premio_liquido || 0) * Number(cotacao?.[section.key]?.pct_comissao || 0))}
+                        {formatMoney(calcularValorComissaoAuto(cotacao?.[section.key]?.premio_liquido, cotacao?.[section.key]?.pct_comissao))}
                       </p>
                     </div>
                   </div>

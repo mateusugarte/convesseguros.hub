@@ -4,5 +4,5 @@
 export function calcularValorComissaoAuto(premioLiquido, pctComissao) {
   const premio = parseFloat(premioLiquido) || 0
   const pct = parseFloat(pctComissao) || 0
-  return premio * (pct / 100) * 0.9
+  return premio * (pct / 100)
 }

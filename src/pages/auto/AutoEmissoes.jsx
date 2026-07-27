@@ -395,7 +395,7 @@ function getFormEmissaoInicial(emissao) {
     placa: emissao?.placa || c.placa || '',
     seguradora: seguradoraInicial,
     numero_apolice: emissao?.numero_apolice || c.numero_orcamento || '',
-    data_emissao: emissao?.data_emissao || new Date().toISOString().slice(0, 10),
+    data_emissao: emissao?.data_emissao || getApoliceVinculada(emissao)?.data_emissao || new Date().toISOString().slice(0, 10),
     vigencia_inicio: emissao?.vigencia_inicio || c.vigencia_inicio || '',
     vigencia_fim: emissao?.vigencia_fim || c.vigencia_fim || '',
     premio_liquido: emissao?.premio_liquido
@@ -485,6 +485,7 @@ function getEditFormInicial(emissao) {
     estado_civil_condutor: c.estado_civil_condutor || '',
     modelo_veiculo: emissao?.modelo_veiculo || apolice?.modelo_veiculo || c.modelo_veiculo || '',
     placa: emissao?.placa || apolice?.placa || c.placa || '',
+    data_emissao: apolice?.data_emissao || '',
     uso_veiculo: c.uso_veiculo || '',
     cep_pernoite: c.cep_pernoite || '',
     jovens_18_26: Boolean(c.jovens_18_26),
@@ -1703,6 +1704,7 @@ export default function AutoEmissoes() {
       placa: manualForm.placa,
       seguradora: manualForm.seguradora,
       numero_apolice: manualForm.numero_apolice,
+      data_emissao: manualForm.data_emissao || null,
       vigencia_inicio: manualForm.vigencia_inicio,
       vigencia_fim: manualForm.vigencia_fim,
       premio_liquido: toNumber(manualForm.premio_liquido),
@@ -1864,7 +1866,7 @@ export default function AutoEmissoes() {
             <button onClick={() => navigate('/auto/cotacoes')} className="btn-primary">
               Nova cotacao
             </button>
-            <button onClick={() => { setManualMode('novo'); setManualForm(FORM_MANUAL_VAZIO); setManualDocumento(null); setManualOpen(true) }} className="btn-primary">
+            <button onClick={() => { setManualMode('novo'); setManualForm({ ...FORM_MANUAL_VAZIO, data_emissao: new Date().toISOString().slice(0, 10) }); setManualDocumento(null); setManualOpen(true) }} className="btn-primary">
               Nova emissao
             </button>
             <button onClick={() => setShowApolices(true)} className="btn-secondary">
@@ -2065,7 +2067,7 @@ export default function AutoEmissoes() {
               <button onClick={() => navigate('/auto/gestao')} className="rounded-2xl border border-brand-secondary/30 bg-brand-secondary/10 px-3 py-2 text-xs font-semibold text-status-info">
                 Abrir Gestao AUTO
               </button>
-              <button onClick={() => { setManualMode('novo'); setManualForm(FORM_MANUAL_VAZIO); setManualDocumento(null); setManualOpen(true) }} className="rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted hover:border-brand-accent/40 hover:text-dark-text">
+              <button onClick={() => { setManualMode('novo'); setManualForm({ ...FORM_MANUAL_VAZIO, data_emissao: new Date().toISOString().slice(0, 10) }); setManualDocumento(null); setManualOpen(true) }} className="rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted hover:border-brand-accent/40 hover:text-dark-text">
                 Nova emissao
               </button>
               <button onClick={() => setShowApolices(true)} className="rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted hover:border-brand-accent/40 hover:text-dark-text">
@@ -2654,6 +2656,7 @@ export default function AutoEmissoes() {
                       />
                     </div>
                     <CampoTexto label="Numero da apolice" campo="numero_apolice" value={manualForm.numero_apolice} onChange={setManualField} />
+                    <CampoTexto label="Data de emissão" campo="data_emissao" value={manualForm.data_emissao} onChange={setManualField} type="date" />
                     <CampoTexto label="Vigencia inicio" campo="vigencia_inicio" value={manualForm.vigencia_inicio} onChange={setManualField} type="date" />
                     <CampoTexto label="Vigencia fim" campo="vigencia_fim" value={manualForm.vigencia_fim} onChange={setManualField} type="date" />
                     <CampoTexto label="Premio liquido" campo="premio_liquido" value={manualForm.premio_liquido} onChange={setManualField} type="text" inputMode="decimal" />

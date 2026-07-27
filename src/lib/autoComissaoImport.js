@@ -51,14 +51,20 @@ function findColumn(headerRow, labels) {
 export function extrairLinhasComissaoDaAba(rows) {
   if (!rows.length) return []
   const headerRow = rows[0]
+  const corretor = findColumn(headerRow, ['corretor'])
   const cols = {
     vigencia: findColumn(headerRow, ['vigencia']),
     segurado: findColumn(headerRow, ['segurado']),
     seguradora: findColumn(headerRow, ['seguradora', 'cia']),
     premio: findColumn(headerRow, ['premio liquido']),
     pctComissao: findColumn(headerRow, ['comissao']),
+    // Abas mais antigas da planilha real (ex.: MAIO-SETEMBRO 2025) tem essa
+    // coluna sem rotulo (celula em branco), mas o dado continua na mesma
+    // posicao de sempre: logo apos "CORRETOR". Sem esse fallback, extrair
+    // dessas abas retorna todo mundo com tipo vazio e nunca acha renovacao.
     tipo: findColumn(headerRow, ['o que e']),
   }
+  if (cols.tipo < 0 && corretor >= 0) cols.tipo = corretor + 1
   if (cols.segurado < 0) return []
 
   const result = []

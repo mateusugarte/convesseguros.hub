@@ -33,6 +33,17 @@ test('extrairLinhasComissaoDaAba ignora linha sem segurado', () => {
   assert.equal(extrairLinhasComissaoDaAba(rows).length, 0)
 })
 
+test('extrairLinhasComissaoDaAba usa fallback de posicao quando o cabecalho do tipo esta em branco (abas reais MAIO-SETEMBRO 2025)', () => {
+  const headerSemRotuloDeTipo = ['TRANSMISSÃO ', 'VIGÊNCIA', 'SEGURADO', 'QNT. DE PARCELAS', 'SEGURADORA', 'PREMIO LIQUIDO', '% COMISSAO', 'VALOR DA COMISSÃO', 'REPASSE COMISSÃO', 'CORRETOR', ' ']
+  const rows = [
+    headerSemRotuloDeTipo,
+    [45863, 46235, 'ALINE MONICA RIBEIRO', '06X', 'MAPFRE', 1328.1, 0.15, 179.29, '', '', 'RENOVAÇÃO '],
+  ]
+  const linhas = extrairLinhasComissaoDaAba(rows)
+  assert.equal(linhas.length, 1)
+  assert.equal(linhas[0].tipo, 'renovacao')
+})
+
 test('parseAutoComissaoPlanilha filtra so linhas tipo RENOVACAO da aba pedida', () => {
   const rows = [
     HEADER,

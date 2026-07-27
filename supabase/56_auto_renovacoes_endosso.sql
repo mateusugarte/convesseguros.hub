@@ -7,9 +7,13 @@
 CREATE TABLE IF NOT EXISTS auto_renovacao_mes_status (
   mes_ref        text PRIMARY KEY,
   concluido_em   timestamptz,
-  concluido_por  uuid REFERENCES profiles(id),
+  concluido_por  uuid REFERENCES public.profiles(id),
   created_at     timestamptz DEFAULT now()
 );
+
+ALTER TABLE auto_renovacao_mes_status ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS auto_renovacao_mes_status_all ON auto_renovacao_mes_status;
+CREATE POLICY auto_renovacao_mes_status_all ON auto_renovacao_mes_status FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- 2. renovacoes_auto: novos campos usados pela area "Renovacoes do mes"
 ALTER TABLE renovacoes_auto

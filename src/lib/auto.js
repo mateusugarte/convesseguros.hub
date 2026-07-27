@@ -132,6 +132,7 @@ function buildApoliceAutoPayload(payload, clienteId, premioLiquido, pctComissao,
     cliente_id: clienteId,
     seguradora: payload.seguradora || null,
     numero_apolice: payload.numero_apolice || null,
+    data_emissao: payload.data_emissao || null,
     vigencia_inicio: payload.vigencia_inicio || null,
     vigencia_fim: payload.vigencia_fim || null,
     premio_liquido: premioLiquido,
@@ -725,7 +726,9 @@ export async function emitirApoliceAuto(payload) {
   const premioLiquido = parseFloat(payload.premio_liquido) || 0
   const pctComissao = parseFloat(payload.pct_comissao) || 0
   const valorComissao = calcularValorComissaoAuto(premioLiquido, pctComissao)
-  const comparativoRenovacao = buildRenewalComparisonPayload(payload, premioLiquido, valorComissao)
+  const ehRenovacao = payload.tipo === 'renovacao' || Boolean(payload.eh_renovacao)
+  const payloadComTipoDerivado = { ...payload, eh_renovacao: ehRenovacao }
+  const comparativoRenovacao = buildRenewalComparisonPayload(payloadComTipoDerivado, premioLiquido, valorComissao)
 
   const valorRepasse = payload.tem_repasse && payload.pct_repasse
     ? valorComissao * parseFloat(payload.pct_repasse)
@@ -775,7 +778,7 @@ export async function emitirApoliceAuto(payload) {
 
   if (colunaDestino !== 'apolice_emitida') return { emissao: { id: payload.emissao_id }, apolice: null }
 
-  const apolicePayload = buildApoliceAutoPayload(payload, clienteId, premioLiquido, pctComissao, valorComissao, comparativoRenovacao, valorRepasse)
+  const apolicePayload = buildApoliceAutoPayload(payloadComTipoDerivado, clienteId, premioLiquido, pctComissao, valorComissao, comparativoRenovacao, valorRepasse)
   const { data, error } = await supabase
     .from('apolices_auto')
     .insert(apolicePayload)

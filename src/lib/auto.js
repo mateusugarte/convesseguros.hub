@@ -938,6 +938,26 @@ export async function atualizarStatusRenovacao(id, campos) {
   if (error) throw error
 }
 
+export async function getAutoRenovacaoMesStatus(mesRefs = []) {
+  if (!mesRefs.length) return {}
+  const { data, error } = await supabase
+    .from('auto_renovacao_mes_status')
+    .select('mes_ref, concluido_em, concluido_por')
+    .in('mes_ref', mesRefs)
+  if (error) throw error
+  return Object.fromEntries((data ?? []).map(item => [item.mes_ref, item]))
+}
+
+export async function marcarMesRenovacaoConcluido(mesRef, userId) {
+  const { error } = await supabase
+    .from('auto_renovacao_mes_status')
+    .upsert(
+      { mes_ref: mesRef, concluido_em: new Date().toISOString(), concluido_por: userId || null },
+      { onConflict: 'mes_ref' }
+    )
+  if (error) throw error
+}
+
 // Cria (ou reaproveita) a cotacao de renovacao vinculada a uma linha de
 // renovacoes_auto. Usada tanto pelo botao "Cotar" na propria renovacao quanto
 // pelo fluxo "Nova cotacao > Renovacao" da Gestao Auto — mesma funcao, para os

@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { normalizeCompareText, somarUmAno } from './autoHistoricoImport.js'
+import { limparNomeSegurado, normalizeCompareText, somarUmAno } from './autoHistoricoImport.js'
 import { calcularValorComissaoAuto } from './autoCalc.js'
 
 export { calcularValorComissaoAuto }
@@ -1015,6 +1015,55 @@ export async function puxarRenovacoesDoSistema(mesRef) {
   if (insertError) throw insertError
 
   return { encontradas: apolicesElegiveis.length, criadas: faltantes.length }
+}
+
+export async function puxarRenovacoesDePlanilha(mesRef, rows = []) {
+  if (!Array.isArray(rows) || !rows.length) return { lidas: 0, importadas: 0, duplicadas: 0 }
+
+  const { inicio, fim } = getRangeFromMonthRef(mesRef, 0)
+  const { data: existentesDb, error: existentesError } = await supabase
+    .from('renovacoes_auto')
+    .select('nome_segurado_anterior, apolices_auto(nome_cliente)')
+    .gte('vigencia_fim', inicio)
+    .lte('vigencia_fim', fim)
+  if (existentesError) throw existentesError
+
+  const nomesExistentes = new Set(
+    (existentesDb ?? [])
+      .map(item => normalizeCompareText(limparNomeSegurado(item.apolices_auto?.nome_cliente || item.nome_segurado_anterior || '')))
+      .filter(Boolean)
+  )
+
+  const novas = []
+  let duplicadas = 0
+  for (const row of rows) {
+    const nomeChave = normalizeCompareText(limparNomeSegurado(row.nome_cliente))
+    if (!nomeChave || nomesExistentes.has(nomeChave)) {
+      if (nomeChave) duplicadas += 1
+      continue
+    }
+    nomesExistentes.add(nomeChave)
+    novas.push({
+      apolice_id: null,
+      cliente_id: null,
+      seguradora: row.seguradora || null,
+      vigencia_fim: row.vigencia_fim,
+      data_limite_envio: subtrairDias(row.vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS),
+      status_cotacao: 'nao_cotada',
+      status_renovacao: 'pendente',
+      origem: 'xls',
+      nome_segurado_anterior: row.nome_cliente,
+      premio_liquido_anterior: row.premio_liquido,
+      pct_comissao_anterior: row.pct_comissao,
+    })
+  }
+
+  if (novas.length) {
+    const { error: insertError } = await supabase.from('renovacoes_auto').insert(novas)
+    if (insertError) throw insertError
+  }
+
+  return { lidas: rows.length, importadas: novas.length, duplicadas }
 }
 
 // Cria (ou reaproveita) a cotacao de renovacao vinculada a uma linha de

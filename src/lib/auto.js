@@ -958,6 +958,65 @@ export async function marcarMesRenovacaoConcluido(mesRef, userId) {
   if (error) throw error
 }
 
+const PRAZO_ENVIO_ORCAMENTO_DIAS = 7
+
+function subtrairDias(dataISO, dias) {
+  const match = String(dataISO || '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+  const [, ano, mes, dia] = match
+  const date = new Date(Number(ano), Number(mes) - 1, Number(dia))
+  date.setDate(date.getDate() - dias)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+export async function puxarRenovacoesDoSistema(mesRef) {
+  const alvo = parseMonthRef(mesRef)
+  if (!alvo) throw new Error('Mes invalido.')
+
+  const anoAnterior = new Date(alvo.getFullYear() - 1, alvo.getMonth(), 1)
+  const { inicio, fim } = inicioFimMes(0, anoAnterior)
+
+  const { data: apolices, error: apolicesError } = await supabase
+    .from('apolices_auto')
+    .select('id, cliente_id, seguradora, vigencia_inicio, vigencia_fim, premio_liquido, pct_comissao, nome_cliente, numero_apolice')
+    .gte('vigencia_inicio', inicio)
+    .lte('vigencia_inicio', fim)
+  if (apolicesError) throw apolicesError
+
+  const apolicesElegiveis = apolices ?? []
+  if (!apolicesElegiveis.length) return { encontradas: 0, criadas: 0 }
+
+  const { data: existentes, error: existentesError } = await supabase
+    .from('renovacoes_auto')
+    .select('apolice_id')
+    .in('apolice_id', apolicesElegiveis.map(item => item.id))
+  if (existentesError) throw existentesError
+
+  const apoliceIdsComRenovacao = new Set((existentes ?? []).map(item => item.apolice_id))
+  const faltantes = apolicesElegiveis.filter(item => !apoliceIdsComRenovacao.has(item.id))
+  if (!faltantes.length) return { encontradas: apolicesElegiveis.length, criadas: 0 }
+
+  const payload = faltantes.map(apolice => ({
+    apolice_id: apolice.id,
+    cliente_id: apolice.cliente_id,
+    seguradora: apolice.seguradora,
+    vigencia_fim: apolice.vigencia_fim,
+    data_limite_envio: subtrairDias(apolice.vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS),
+    status_cotacao: 'nao_cotada',
+    status_renovacao: 'pendente',
+    origem: 'sistema',
+    nome_segurado_anterior: apolice.nome_cliente,
+    numero_apolice_anterior: apolice.numero_apolice,
+    premio_liquido_anterior: apolice.premio_liquido,
+    pct_comissao_anterior: apolice.pct_comissao,
+  }))
+
+  const { error: insertError } = await supabase.from('renovacoes_auto').insert(payload)
+  if (insertError) throw insertError
+
+  return { encontradas: apolicesElegiveis.length, criadas: faltantes.length }
+}
+
 // Cria (ou reaproveita) a cotacao de renovacao vinculada a uma linha de
 // renovacoes_auto. Usada tanto pelo botao "Cotar" na propria renovacao quanto
 // pelo fluxo "Nova cotacao > Renovacao" da Gestao Auto — mesma funcao, para os

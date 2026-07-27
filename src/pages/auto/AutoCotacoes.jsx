@@ -14,9 +14,12 @@ import { AlertCircle, BadgeDollarSign, CalendarDays, Car, CircleCheckBig, Mail, 
 import { PageHeader, MetricCard, DataCard, EmptyState } from '../../components/ui'
 import SeguradoraBadge from '../../components/SeguradoraBadge'
 import {
+  buscarClientePorCpf,
   criarCotacaoAuto,
+  criarCotacaoEndosso,
   getAutoCotacoesMensais,
   getAutoCotacoesResumo,
+  getClienteAutoDetalhe,
   getCotacoesAuto,
   getRenovacoesDisponiveisParaCotacao,
   iniciarCotacaoRenovacao,
@@ -27,6 +30,7 @@ const LISTA_TABS = [
   { value: 'lista', label: 'Lista' },
   { value: 'novo', label: 'Novo seguro' },
   { value: 'renovacao', label: 'Renovacao' },
+  { value: 'endosso', label: 'Endosso' },
 ]
 
 const STATUS_FILTROS = [
@@ -124,6 +128,10 @@ export default function AutoCotacoes() {
   const [novo, setNovo] = useState(NOVO_VAZIO)
   const [searchRenovacao, setSearchRenovacao] = useState('')
   const [renovacaoSelecionadaId, setRenovacaoSelecionadaId] = useState(null)
+  const [endossoBuscaCliente, setEndossoBuscaCliente] = useState('')
+  const [endossoClienteRef, setEndossoClienteRef] = useState(null)
+  const [endossoApoliceId, setEndossoApoliceId] = useState('')
+  const [endossoForm, setEndossoForm] = useState({ motivo: '', campo_alterado: '', valor_anterior: '', valor_atual: '', valor_endosso: '' })
   const [erro, setErro] = useState(null)
   const qc = useQueryClient()
 
@@ -194,6 +202,41 @@ export default function AutoCotacoes() {
     },
     onError: err => setErro(err?.message || 'Erro ao iniciar cotacao de renovacao.'),
   })
+
+  const { data: endossoCliente, isFetching: buscandoEndossoCliente } = useQuery({
+    queryKey: ['auto-endosso-cliente', endossoClienteRef],
+    queryFn: () => getClienteAutoDetalhe(endossoClienteRef),
+    enabled: Boolean(endossoClienteRef),
+  })
+
+  const { mutateAsync: salvarEndosso, isPending: salvandoEndosso } = useMutation({
+    mutationFn: () => criarCotacaoEndosso({
+      cliente_id: endossoCliente?.cliente?.id,
+      apolice_id: endossoApoliceId,
+      motivo: endossoForm.motivo,
+      campo_alterado: endossoForm.campo_alterado,
+      valor_anterior: endossoForm.valor_anterior,
+      valor_atual: endossoForm.valor_atual,
+      valor_endosso: endossoForm.valor_endosso,
+    }),
+    onSuccess: async ({ cotacao }) => {
+      setErro(null)
+      setEndossoBuscaCliente('')
+      setEndossoClienteRef(null)
+      setEndossoApoliceId('')
+      setEndossoForm({ motivo: '', campo_alterado: '', valor_anterior: '', valor_atual: '', valor_endosso: '' })
+      await invalidar()
+      navigate(`/auto/cotacoes/${cotacao.id}`)
+    },
+    onError: err => setErro(err?.message || 'Erro ao salvar endosso.'),
+  })
+
+  async function handleBuscarEndossoCliente() {
+    const termo = endossoBuscaCliente.trim()
+    if (!termo) return
+    setEndossoApoliceId('')
+    setEndossoClienteRef(termo)
+  }
 
   const cotacoesOrdenadas = useMemo(() => sortByRecency(cotacoes), [cotacoes])
 
@@ -549,6 +592,59 @@ export default function AutoCotacoes() {
                 <button type="button" onClick={() => setTab('lista')} className="btn-secondary">
                   Voltar para lista
                 </button>
+              </div>
+            </DataCard>
+          ) : tab === 'endosso' ? (
+            <DataCard title="Nova cotação de endosso" subtitle="Busque o cliente, selecione a apólice pela vigência e descreva a alteração.">
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-end gap-2">
+                  <Field label="Buscar cliente (nome ou CPF)" value={endossoBuscaCliente} onChange={setEndossoBuscaCliente} placeholder="Nome ou CPF" />
+                  <button onClick={handleBuscarEndossoCliente} disabled={buscandoEndossoCliente} className="btn-secondary disabled:opacity-60">
+                    {buscandoEndossoCliente ? 'Buscando...' : 'Buscar'}
+                  </button>
+                </div>
+
+                {endossoCliente?.apolices?.length > 0 && (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-dark-muted">Apólice (mais recente primeiro)</label>
+                    <select
+                      value={endossoApoliceId}
+                      onChange={e => setEndossoApoliceId(e.target.value)}
+                      className="input w-full"
+                    >
+                      <option value="">Selecionar apólice</option>
+                      {endossoCliente.apolices.map(apolice => (
+                        <option key={apolice.id} value={apolice.id}>
+                          {apolice.numero_apolice || 'Sem número'} · {apolice.seguradora} · vigência {apolice.vigencia_inicio} a {apolice.vigencia_fim}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {endossoClienteRef && !buscandoEndossoCliente && !endossoCliente?.apolices?.length && (
+                  <p className="text-sm text-dark-muted">Nenhuma apólice encontrada para este cliente.</p>
+                )}
+
+                {endossoApoliceId && (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <Field label="Motivo do endosso" value={endossoForm.motivo} onChange={v => setEndossoForm(f => ({ ...f, motivo: v }))} placeholder="Ex.: troca de veículo" />
+                    <Field label="Campo alterado" value={endossoForm.campo_alterado} onChange={v => setEndossoForm(f => ({ ...f, campo_alterado: v }))} placeholder="Ex.: Placa" />
+                    <Field label="Informação anterior" value={endossoForm.valor_anterior} onChange={v => setEndossoForm(f => ({ ...f, valor_anterior: v }))} />
+                    <Field label="Informação atualizada" value={endossoForm.valor_atual} onChange={v => setEndossoForm(f => ({ ...f, valor_atual: v }))} />
+                    <Field label="Valor do endosso" value={endossoForm.valor_endosso} onChange={v => setEndossoForm(f => ({ ...f, valor_endosso: v }))} type="text" inputMode="decimal" placeholder="0,00" />
+                  </div>
+                )}
+
+                {endossoApoliceId && (
+                  <button
+                    onClick={() => salvarEndosso()}
+                    disabled={salvandoEndosso || !endossoForm.motivo.trim()}
+                    className="btn-primary disabled:opacity-60"
+                  >
+                    {salvandoEndosso ? 'Salvando...' : 'Criar cotação de endosso'}
+                  </button>
+                )}
               </div>
             </DataCard>
           ) : (

@@ -1641,6 +1641,7 @@ export default function AutoEmissoes() {
   function handleEmitir() {
     emitirAsync({
       emissao_id: modalEmissao.id,
+      cotacao_id: modalEmissao.cotacao_id || null,
       cliente_id: modalEmissao.cliente_id,
       tipo: modalEmissao.cotacoes_auto?.tipo || modalEmissao.tipo || 'novo',
       data_emissao: form.data_emissao || null,

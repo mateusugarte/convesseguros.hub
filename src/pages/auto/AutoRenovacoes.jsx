@@ -1,8 +1,19 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { CalendarClock, CheckCircle2, Clock, ExternalLink, RefreshCw, Send, XCircle } from 'lucide-react'
-import { getRenovacoesAuto, iniciarCotacaoRenovacao } from '../../lib/auto'
+import * as XLSX from 'xlsx'
+import { CalendarClock, CheckCircle2, Clock, ExternalLink, RefreshCw, Send, Upload, XCircle } from 'lucide-react'
+import {
+  getAutoRenovacaoMesStatus,
+  getRenovacoesAuto,
+  iniciarCotacaoRenovacao,
+  marcarMesRenovacaoConcluido,
+  puxarRenovacoesDePlanilha,
+  puxarRenovacoesDoSistema,
+} from '../../lib/auto'
+import { parseAutoComissaoPlanilha } from '../../lib/autoComissaoImport'
+import { useAuth } from '../../contexts/AuthContext'
+import { useToast } from '../../contexts/ToastContext'
 import { PageHeader, MetricCard, FilterBar, DataCard, EmptyState } from '../../components/ui'
 import SeguradoraBadge from '../../components/SeguradoraBadge'
 import {
@@ -56,6 +67,13 @@ function formatarData(str) {
 
 export default function AutoRenovacoes() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [painelPuxarAberto, setPainelPuxarAberto] = useState(() => searchParams.get('puxar') === '1')
+  const [mesParaPuxar, setMesParaPuxar] = useState(() => searchParams.get('mes') || currentMonthRef())
+  const [resumoPuxar, setResumoPuxar] = useState(null)
+  const xlsInputRef = useRef(null)
   const qc = useQueryClient()
   const [mesRef, setMesRef] = useState(currentMonthRef)
   const [periodo, setPeriodo] = useState('mes_atual')
@@ -71,6 +89,60 @@ export default function AutoRenovacoes() {
     queryKey: ['auto-renovacoes-todas'],
     queryFn: () => getRenovacoesAuto({ periodo: '' }),
   })
+
+  const { data: statusMesPuxar } = useQuery({
+    queryKey: ['auto-renovacao-mes-status-unico', mesParaPuxar],
+    queryFn: async () => (await getAutoRenovacaoMesStatus([mesParaPuxar]))[mesParaPuxar] || null,
+    enabled: painelPuxarAberto,
+  })
+
+  const { mutateAsync: puxarDoSistema, isPending: puxandoSistema } = useMutation({
+    mutationFn: () => puxarRenovacoesDoSistema(mesParaPuxar),
+    onSuccess: async resultado => {
+      setResumoPuxar({ tipo: 'sistema', ...resultado })
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes-todas'] })
+      toast({ type: 'success', title: 'Renovações puxadas', message: `${resultado.criadas} nova(s) de ${resultado.encontradas} encontrada(s).` })
+    },
+    onError: err => toast({ type: 'error', title: 'Erro ao puxar renovações', message: err?.message || 'Tente novamente.' }),
+  })
+
+  const { mutateAsync: puxarPlanilha, isPending: puxandoPlanilha } = useMutation({
+    mutationFn: rows => puxarRenovacoesDePlanilha(mesParaPuxar, rows),
+    onSuccess: async resultado => {
+      setResumoPuxar({ tipo: 'xls', ...resultado })
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes-todas'] })
+      toast({ type: 'success', title: 'Planilha importada', message: `${resultado.importadas} nova(s), ${resultado.duplicadas} duplicada(s) ignorada(s).` })
+    },
+    onError: err => toast({ type: 'error', title: 'Erro ao importar planilha', message: err?.message || 'Arquivo inválido.' }),
+  })
+
+  const { mutateAsync: marcarConcluido, isPending: marcandoConcluido } = useMutation({
+    mutationFn: () => marcarMesRenovacaoConcluido(mesParaPuxar, user?.id),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['auto-renovacao-mes-status-unico', mesParaPuxar] })
+      await qc.invalidateQueries({ queryKey: ['auto-renovacao-mes-status'] })
+      toast({ type: 'success', title: 'Mês marcado como concluído' })
+    },
+    onError: err => toast({ type: 'error', title: 'Erro ao marcar mês concluído', message: err?.message || 'Tente novamente.' }),
+  })
+
+  async function handleUploadPlanilhaRenovacao(event) {
+    const file = event.target.files?.[0]
+    if (xlsInputRef.current) xlsInputRef.current.value = ''
+    if (!file) return
+    try {
+      const buffer = await file.arrayBuffer()
+      const workbook = XLSX.read(buffer, { type: 'array', cellDates: false })
+      const abaAlvo = workbook.SheetNames.find(nome => nome.trim().toLowerCase() === searchParams.get('aba')?.toLowerCase())
+        || workbook.SheetNames[workbook.SheetNames.length - 1]
+      const rows = parseAutoComissaoPlanilha(workbook, abaAlvo)
+      await puxarPlanilha(rows)
+    } catch (error) {
+      toast({ type: 'error', title: 'Erro ao ler planilha', message: error?.message || 'Arquivo inválido ou fora do modelo esperado.' })
+    }
+  }
 
   const [cotandoId, setCotandoId] = useState(null)
 
@@ -129,6 +201,9 @@ export default function AutoRenovacoes() {
         actions={(
           <div className="flex flex-wrap items-center gap-2">
             <input type="month" value={mesRef} onChange={e => setMesRef(e.target.value || currentMonthRef())} className="input" />
+            <button onClick={() => setPainelPuxarAberto(v => !v)} className="btn-secondary">
+              {painelPuxarAberto ? 'Ocultar puxar renovações' : 'Puxar renovações'}
+            </button>
             <button onClick={() => navigate('/auto/emissoes')} className="btn-secondary">Abrir emissões</button>
           </div>
         )}
@@ -202,6 +277,86 @@ export default function AutoRenovacoes() {
           ))}
         </div>
       </FilterBar>
+
+      {painelPuxarAberto && (
+        <DataCard
+          title="Puxar renovações"
+          subtitle="Traga para a lista as apólices que vencem no mês escolhido, a partir do sistema ou de uma planilha."
+          actions={(
+            <button onClick={() => setPainelPuxarAberto(false)} className="btn-secondary text-xs">Fechar</button>
+          )}
+        >
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 rounded-2xl border border-dark-border bg-dark-surface/75 px-3 py-2 text-sm text-dark-text">
+                Mês a organizar
+                <input
+                  type="month"
+                  value={mesParaPuxar}
+                  onChange={e => { setMesParaPuxar(e.target.value); setResumoPuxar(null) }}
+                  className="bg-transparent outline-none"
+                />
+              </label>
+              {statusMesPuxar?.concluido_em ? (
+                <span className="badge badge-success">Mês já marcado como concluído em {formatarData(statusMesPuxar.concluido_em.slice(0, 10))}</span>
+              ) : (
+                <span className="badge badge-warning">Mês ainda não concluído</span>
+              )}
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
+                <p className="text-sm font-semibold text-dark-text">Puxar do sistema</p>
+                <p className="mt-1 text-xs text-dark-muted">Busca apólices emitidas no mesmo mês, um ano antes.</p>
+                <button
+                  onClick={() => puxarDoSistema()}
+                  disabled={puxandoSistema}
+                  className="btn-primary mt-3 inline-flex items-center gap-2 disabled:opacity-60"
+                >
+                  {puxandoSistema ? 'Puxando...' : 'Puxar renovações do sistema'}
+                </button>
+              </div>
+              <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
+                <p className="text-sm font-semibold text-dark-text">Puxar por planilha</p>
+                <p className="mt-1 text-xs text-dark-muted">Suba a aba do mês-alvo um ano antes (ex.: para {formatarMes(mesParaPuxar)}, a aba de {formatarMes(shiftMonth(mesParaPuxar, -12))}).</p>
+                <input
+                  ref={xlsInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleUploadPlanilhaRenovacao}
+                  className="hidden"
+                  id="upload-planilha-renovacao"
+                />
+                <label
+                  htmlFor="upload-planilha-renovacao"
+                  className={`btn-secondary mt-3 inline-flex cursor-pointer items-center gap-2 ${puxandoPlanilha ? 'pointer-events-none opacity-60' : ''}`}
+                >
+                  <Upload className="h-4 w-4" />
+                  {puxandoPlanilha ? 'Importando...' : 'Selecionar planilha (.xlsx)'}
+                </label>
+              </div>
+            </div>
+
+            {resumoPuxar && (
+              <div className="rounded-2xl border border-brand-accent/20 bg-brand-accent/5 px-4 py-3 text-sm text-dark-text">
+                {resumoPuxar.tipo === 'sistema'
+                  ? `${resumoPuxar.encontradas} apólice(s) encontrada(s), ${resumoPuxar.criadas} nova(s) renovação(ões) criada(s).`
+                  : `${resumoPuxar.lidas} linha(s) lida(s), ${resumoPuxar.importadas} nova(s), ${resumoPuxar.duplicadas} duplicada(s) ignorada(s).`}
+              </div>
+            )}
+
+            <div className="flex justify-end border-t border-dark-border/60 pt-4">
+              <button
+                onClick={() => marcarConcluido()}
+                disabled={marcandoConcluido}
+                className="btn-secondary inline-flex items-center gap-2 disabled:opacity-60"
+              >
+                {marcandoConcluido ? 'Salvando...' : 'Marcar mês concluído'}
+              </button>
+            </div>
+          </div>
+        </DataCard>
+      )}
 
       <DataCard title="Lista de renovações" subtitle="Clique em uma renovação para abrir a área completa da apólice." className="overflow-hidden">
         {isLoading ? (

@@ -949,6 +949,58 @@ export async function cancelarRenovacao(id, motivo) {
   if (error) throw error
 }
 
+export async function criarCotacaoEndosso({
+  cliente_id,
+  apolice_id,
+  motivo,
+  campo_alterado,
+  valor_anterior,
+  valor_atual,
+  valor_endosso,
+}) {
+  if (!apolice_id) throw new Error('Selecione a apólice a ser endossada.')
+  if (!motivo || !motivo.trim()) throw new Error('Informe o motivo do endosso.')
+
+  const { data: apolice, error: apoliceError } = await supabase
+    .from('apolices_auto')
+    .select('id, cliente_id, nome_cliente, cpf_cliente, celular_cliente, condutor_nome, condutor_cpf, modelo_veiculo, placa, seguradora, numero_apolice, vigencia_inicio, vigencia_fim')
+    .eq('id', apolice_id)
+    .single()
+  if (apoliceError) throw apoliceError
+
+  const cotacao = await criarCotacaoAuto({
+    cliente_id: cliente_id || apolice.cliente_id,
+    tipo: 'endosso',
+    status: 'pendente',
+    nome_cliente: apolice.nome_cliente,
+    cpf_cliente: apolice.cpf_cliente,
+    celular_cliente: apolice.celular_cliente,
+    condutor_nome: apolice.condutor_nome,
+    condutor_cpf: apolice.condutor_cpf,
+    modelo_veiculo: apolice.modelo_veiculo,
+    placa: apolice.placa,
+    vigencia_inicio: apolice.vigencia_inicio,
+    vigencia_fim: apolice.vigencia_fim,
+  })
+
+  const { data: endosso, error: endossoError } = await supabase
+    .from('endossos_auto')
+    .insert({
+      apolice_id,
+      cotacao_id: cotacao.id,
+      motivo: motivo.trim(),
+      campo_alterado: campo_alterado || null,
+      valor_anterior: valor_anterior || null,
+      valor_atual: valor_atual || null,
+      valor_endosso: valor_endosso === '' || valor_endosso === undefined ? null : Number(valor_endosso),
+    })
+    .select()
+    .single()
+  if (endossoError) throw endossoError
+
+  return { cotacao, endosso }
+}
+
 export async function getAutoRenovacaoMesStatus(mesRefs = []) {
   if (!mesRefs.length) return {}
   const { data, error } = await supabase

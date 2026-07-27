@@ -219,3 +219,54 @@ export function getMesAlvoRenovacao(hoje = new Date(), statusPorMes = {}, avisoD
 
   return null
 }
+
+export const RENOVACAO_AREA_STATUS_META = {
+  puxado: { label: 'Puxado', tone: 'muted' },
+  cotacao_feita: { label: 'Cotação feita', tone: 'secondary' },
+  negociando: { label: 'Negociando', tone: 'accent' },
+  aguardando_vistoria: { label: 'Aguardando vistoria', tone: 'warning' },
+  proposta_transmitida: { label: 'Proposta Transmitida', tone: 'success' },
+  renovado: { label: 'Renovado', tone: 'success' },
+  cancelado: { label: 'Cancelado', tone: 'danger' },
+  vencido: { label: 'Vencido', tone: 'danger' },
+}
+
+// Status da area "Renovacoes do mes": reaproveita a coluna real do Kanban de
+// Gestao Auto (via renovacao.cotacoes_auto.emissoes_auto.coluna) em vez de
+// inventar uma maquina de estados paralela.
+export function getRenovacaoAreaStatus(renovacao, hojeISO = new Date().toISOString().slice(0, 10)) {
+  if (renovacao?.status_renovacao === 'renovada') return 'renovado'
+  if (renovacao?.status_renovacao === 'nao_renovada') return 'cancelado'
+
+  const cotacao = renovacao?.cotacoes_auto
+  const vencida = Boolean(renovacao?.vigencia_fim && renovacao.vigencia_fim < hojeISO)
+
+  if (!cotacao) return vencida ? 'vencido' : 'puxado'
+
+  const emissao = Array.isArray(cotacao.emissoes_auto) ? cotacao.emissoes_auto[0] : cotacao.emissoes_auto
+  const coluna = emissao?.coluna || 'pendentes'
+  if (coluna === 'pendentes') return vencida ? 'vencido' : 'puxado'
+  if (coluna === 'apolice_emitida') return 'renovado'
+  return coluna
+}
+
+// "Comissao atual" e a comissao da apolice vigente hoje (prestes a renovar);
+// "comissao anterior" e a comissao do ciclo ANTES dessa apolice, recalculada
+// a partir dos valores em dinheiro ja guardados em apolices_auto (nao existe
+// coluna de percentual do ciclo anterior — evita duplicar dado). Quando a
+// renovacao nao tem apolice vinculada (origem xls sem match), usa o unico
+// dado disponivel (pct_comissao_anterior da propria linha) como "atual".
+export function getComissaoAtualAnterior(renovacao) {
+  const apolice = renovacao?.apolices_auto
+  if (apolice) {
+    const atual = typeof apolice.pct_comissao === 'number' ? apolice.pct_comissao : null
+    const premioAnterior = Number(apolice.renovacao_premio_liquido_ano_anterior) || 0
+    const comissaoAnterior = Number(apolice.renovacao_comissao_ano_anterior) || 0
+    const anterior = premioAnterior > 0
+      ? Math.round((comissaoAnterior / premioAnterior) * 100 * 100) / 100
+      : null
+    return { atual, anterior }
+  }
+  const atualSemApolice = typeof renovacao?.pct_comissao_anterior === 'number' ? renovacao.pct_comissao_anterior : null
+  return { atual: atualSemApolice, anterior: null }
+}

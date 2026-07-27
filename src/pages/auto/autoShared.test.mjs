@@ -10,6 +10,8 @@ const {
   getRenovacaoUrgencia,
   getRenewalQuoteStatus,
   getMesAlvoRenovacao,
+  getRenovacaoAreaStatus,
+  getComissaoAtualAnterior,
 } = await import('./autoShared.js')
 
 test('isApoliceAtiva true quando vigencia_fim e hoje ou no futuro', () => {
@@ -138,4 +140,54 @@ test('getMesAlvoRenovacao retorna null quando tudo ate o mes seguinte esta concl
     '2026-08': { concluido_em: '2026-07-18T00:00:00Z' },
   }
   assert.equal(getMesAlvoRenovacao(hoje, status), null)
+})
+
+test('getRenovacaoAreaStatus retorna puxado quando nao ha cotacao vinculada e nao venceu', () => {
+  const renovacao = { status_renovacao: 'pendente', vigencia_fim: '2099-01-01', cotacoes_auto: null }
+  assert.equal(getRenovacaoAreaStatus(renovacao, '2026-07-24'), 'puxado')
+})
+
+test('getRenovacaoAreaStatus retorna vencido quando passou da vigencia sem cotacao', () => {
+  const renovacao = { status_renovacao: 'pendente', vigencia_fim: '2026-01-01', cotacoes_auto: null }
+  assert.equal(getRenovacaoAreaStatus(renovacao, '2026-07-24'), 'vencido')
+})
+
+test('getRenovacaoAreaStatus reflete a coluna real do kanban quando ha cotacao em andamento', () => {
+  const renovacao = {
+    status_renovacao: 'pendente',
+    vigencia_fim: '2099-01-01',
+    cotacoes_auto: { status: 'pendente', emissoes_auto: { coluna: 'negociando' } },
+  }
+  assert.equal(getRenovacaoAreaStatus(renovacao, '2026-07-24'), 'negociando')
+})
+
+test('getRenovacaoAreaStatus retorna renovado quando status_renovacao=renovada', () => {
+  const renovacao = { status_renovacao: 'renovada', vigencia_fim: '2026-01-01' }
+  assert.equal(getRenovacaoAreaStatus(renovacao, '2026-07-24'), 'renovado')
+})
+
+test('getRenovacaoAreaStatus retorna cancelado quando status_renovacao=nao_renovada', () => {
+  const renovacao = { status_renovacao: 'nao_renovada', vigencia_fim: '2026-01-01' }
+  assert.equal(getRenovacaoAreaStatus(renovacao, '2026-07-24'), 'cancelado')
+})
+
+test('getComissaoAtualAnterior usa a apolice vinculada quando existir', () => {
+  const renovacao = {
+    pct_comissao_anterior: 99,
+    apolices_auto: {
+      pct_comissao: 20,
+      renovacao_premio_liquido_ano_anterior: 1000,
+      renovacao_comissao_ano_anterior: 150,
+    },
+  }
+  const resultado = getComissaoAtualAnterior(renovacao)
+  assert.equal(resultado.atual, 20)
+  assert.equal(resultado.anterior, 15)
+})
+
+test('getComissaoAtualAnterior cai para os dados da planilha quando nao ha apolice vinculada', () => {
+  const renovacao = { pct_comissao_anterior: 18, apolices_auto: null }
+  const resultado = getComissaoAtualAnterior(renovacao)
+  assert.equal(resultado.atual, 18)
+  assert.equal(resultado.anterior, null)
 })

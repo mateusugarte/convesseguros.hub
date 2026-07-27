@@ -1,5 +1,39 @@
 # CURRENT TASK
 
+## Renovações Auto — lembrete de virada de mês, puxar renovações (sistema + planilha), lista com status real, endosso (2026-07-27, Claude — CONCLUÍDA)
+
+Execução completa das 19 tasks do plano `docs/superpowers/plans/2026-07-24-auto-renovacoes-endosso.md` via `superpowers:subagent-driven-development`, direto na branch `main` (decisão do usuário, mesmo padrão de sessões anteriores do módulo Auto). Spec: `docs/superpowers/specs/2026-07-24-auto-renovacoes-endosso-design.md`. Ledger completo (até ser removido): `.superpowers/sdd/2026-07-24-auto-renovacoes-endosso/progress.md`.
+
+**As 4 frentes do spec, entregues:**
+1. Banner de lembrete de virada de mês no Dashboard Auto (15 dias antes) + estado "mês concluído".
+2. Painel "Puxar renovações" em `/auto/renovacoes` — do sistema (apólices emitidas há 1 ano) ou de planilha (`01 COMISSÃO - AUTO.xlsx`), com dedup por nome.
+3. Lista de renovações com status real do Kanban de Gestão, comparativo de comissão atual x anterior, botão "Fazer Cotação" e "Cancelar renovação".
+4. Fórmula de comissão corrigida em todo o módulo (`premio × pct/100 × 0.9`, estava tratando `pct_comissao` como fração e sem o fator 0.9) + formulário de emissão reduzido (data de emissão, vigência fim automática, tipo somente-leitura) + cotação de Endosso (nova aba em `/auto/cotacoes`, atualiza a apólice original em vez de criar uma nova).
+
+**Arquivos alterados/criados (principais):**
+- `supabase/56_auto_renovacoes_endosso.sql` (nova migration — **AINDA NÃO EXECUTADA NO SUPABASE**, usuário precisa rodar manualmente no SQL Editor antes de qualquer coisa funcionar de verdade em produção).
+- `src/lib/auto.js`, `src/lib/autoCalc.js` (novo), `src/lib/autoComissaoImport.js` (novo).
+- `src/pages/auto/autoShared.js`, `AutoDashboard.jsx`, `AutoRenovacoes.jsx`, `AutoEmissoes.jsx`, `AutoCotacoes.jsx`.
+- `src/lib/auto.test.mjs` (novo), `src/lib/autoComissaoImport.test.mjs` (novo), `src/pages/auto/autoShared.test.mjs` (ampliado), `package.json` (lista de testes).
+
+19 tasks + revisão final de branch (opus) executadas com sucesso; 2 achados Critical + 7 Important da revisão final corrigidos numa rodada única de fix (commit `1a957f3`). `npm test` (134/134) e `npm run build` verdes.
+
+**Decisão de usuário durante a execução:** o card de Endosso não conseguia ser emitido (campo Seguradora ficava travado, só liberava com "seguradora aprovada" de uma cotação prévia — conceito que não existe para endosso). Perguntado, usuário decidiu: "endosso serve para seguros já ativos, sempre será permitido, liberar esse campo para endosso" — implementado exatamente assim.
+
+**Riscos remanescentes (nenhum bloqueia o merge, mas recomendado corrigir antes de confiar 100% nos fluxos abaixo em produção):**
+1. **"Fazer Cotação" numa renovação vinda de planilha lança erro de CPF obrigatório** — `resolverClienteAutoId` exige `cliente_id` ou `cpf_cliente`, que uma renovação importada da planilha nunca tem (só nome). A lista já mostra o nome corretamente (corrigido), mas cotar a partir dela ainda falha com um toast de erro. Precisa de UI para pedir o CPF antes de cotar, ou desabilitar o botão nesse caso.
+2. **`data_emissao` é gravado na emissão mas nunca lido de volta** — reabrir/editar uma apólice sempre reseta esse campo para "hoje" (o formulário nunca carrega o valor já salvo). Fica "grava e esquece" até isso ser corrigido.
+3. **Duas telas fora do escopo direto ainda mostram comissão com a fórmula antiga** (~100x errada): `AutoApoliceDetalhe.jsx` (card "Comissão") e `AutoCotacaoDetalhe.jsx` ("Comissão estimada"). Mesma classe de bug já corrigida em `auto.js`/`AutoEmissoes.jsx`, só não coberta pelo escopo desta rodada.
+4. Endosso: campos como Tipo de produção/Responsável/Condutor/Repasse aparecem editáveis no modal de emissão mas são intencionalmente descartados ao atualizar a apólice original (só os campos que o formulário reduzido realmente edita são gravados) — os campos "parecem vivos" sem ser, e `valor_repasse` pode ficar dessincronizado do novo `valor_comissao`.
+5. Migration `56_auto_renovacoes_endosso.sql` não rodada no Supabase ainda — nada das 4 frentes funciona de verdade em produção até isso ser feito (arquivo já está transacional/idempotente, com uma query de diagnóstico de duplicatas no cabeçalho, caso o `CREATE UNIQUE INDEX` falhe).
+
+**Próximos passos sugeridos:**
+1. Rodar `supabase/56_auto_renovacoes_endosso.sql` no SQL Editor do Supabase.
+2. Smoke test manual completo: banner → puxar do sistema → puxar por planilha → lista → Fazer Cotação → Kanban → emissão reduzida → endosso (criar cotação de endosso, emitir, confirmar que a apólice original foi atualizada, não uma nova).
+3. Corrigir os riscos 1-3 acima como próxima rodada de trabalho.
+
+---
+
 ## Botão "Reprocessar PDF" nunca lia o arquivo de verdade + bug real de dados no parser da TOO — achado e corrigido testando contra PDFs reais do projeto (2026-07-23, Claude — CONCLUÍDA)
 
 Usuário insistiu que a leitura de PDF "não está indo" mesmo depois da rodada anterior, e

@@ -1263,6 +1263,50 @@ export async function criarRenovacaoManual({ cliente_id, nomeManual, seguradora,
   return data
 }
 
+// Entrada alternativa de "Nova cotacao > Renovacao" quando o usuario busca o
+// cliente/apolice livremente (em vez de escolher de uma renovacao ja
+// pendente). Garante que existe uma linha em renovacoes_auto para essa
+// apolice (cria uma se for a primeira vez) e delega para
+// iniciarCotacaoRenovacao — mesma logica de criar/reaproveitar cotacao,
+// nunca duplicada.
+export async function iniciarCotacaoRenovacaoPorApolice(apoliceId) {
+  if (!apoliceId) throw new Error('Selecione a apólice a renovar.')
+
+  const { data: existente, error: existenteError } = await supabase
+    .from('renovacoes_auto')
+    .select('id')
+    .eq('apolice_id', apoliceId)
+    .maybeSingle()
+  if (existenteError) throw existenteError
+
+  if (existente?.id) return iniciarCotacaoRenovacao(existente.id)
+
+  const { data: apolice, error: apoliceError } = await supabase
+    .from('apolices_auto')
+    .select('id, cliente_id, seguradora, vigencia_fim')
+    .eq('id', apoliceId)
+    .single()
+  if (apoliceError) throw apoliceError
+
+  const { data: nova, error: insertError } = await supabase
+    .from('renovacoes_auto')
+    .insert({
+      apolice_id: apolice.id,
+      cliente_id: apolice.cliente_id,
+      seguradora: apolice.seguradora,
+      vigencia_fim: apolice.vigencia_fim,
+      data_limite_envio: subtrairDias(apolice.vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS),
+      status_cotacao: 'nao_cotada',
+      status_renovacao: 'pendente',
+      origem: 'sistema',
+    })
+    .select('id')
+    .single()
+  if (insertError) throw insertError
+
+  return iniciarCotacaoRenovacao(nova.id)
+}
+
 // Cria (ou reaproveita) a cotacao de renovacao vinculada a uma linha de
 // renovacoes_auto. Usada tanto pelo botao "Cotar" na propria renovacao quanto
 // pelo fluxo "Nova cotacao > Renovacao" da Gestao Auto — mesma funcao, para os

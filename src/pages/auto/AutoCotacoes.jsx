@@ -23,6 +23,7 @@ import {
   getCotacoesAuto,
   getRenovacoesDisponiveisParaCotacao,
   iniciarCotacaoRenovacao,
+  iniciarCotacaoRenovacaoPorApolice,
 } from '../../lib/auto'
 import { COTACAO_STATUS, diasParaVencer, formatDateTimeBR, formatDiasParaVencer, toneClasses } from './autoShared'
 
@@ -59,6 +60,16 @@ const NOVO_VAZIO = {
   origem_lead: '',
   vigencia_inicio: '',
   vigencia_fim: '',
+}
+
+// Campos minimos para uma renovacao de cliente que ainda nao existe na base
+// (mesmo minimo do "Novo seguro" — o resto e preenchido depois, ao cotar).
+const RENOVACAO_NOVO_CLIENTE_VAZIO = {
+  nome_completo: '',
+  cpf: '',
+  celular: '',
+  modelo_veiculo: '',
+  placa: '',
 }
 
 function QuoteStatusBadge({ status }) {
@@ -128,6 +139,11 @@ export default function AutoCotacoes() {
   const [novo, setNovo] = useState(NOVO_VAZIO)
   const [searchRenovacao, setSearchRenovacao] = useState('')
   const [renovacaoSelecionadaId, setRenovacaoSelecionadaId] = useState(null)
+  const [renovacaoClienteExiste, setRenovacaoClienteExiste] = useState(true)
+  const [renovacaoBuscaCliente, setRenovacaoBuscaCliente] = useState('')
+  const [renovacaoClienteRef, setRenovacaoClienteRef] = useState(null)
+  const [renovacaoApoliceId, setRenovacaoApoliceId] = useState('')
+  const [renovacaoNovoCliente, setRenovacaoNovoCliente] = useState(RENOVACAO_NOVO_CLIENTE_VAZIO)
   const [endossoBuscaCliente, setEndossoBuscaCliente] = useState('')
   const [endossoClienteRef, setEndossoClienteRef] = useState(null)
   const [endossoApoliceId, setEndossoApoliceId] = useState('')
@@ -201,6 +217,51 @@ export default function AutoCotacoes() {
       navigate(`/auto/cotacoes/${cotacaoId}`)
     },
     onError: err => setErro(err?.message || 'Erro ao iniciar cotacao de renovacao.'),
+  })
+
+  const { data: renovacaoCliente, isFetching: buscandoRenovacaoCliente } = useQuery({
+    queryKey: ['auto-renovacao-busca-cliente', renovacaoClienteRef],
+    queryFn: () => getClienteAutoDetalhe(renovacaoClienteRef),
+    enabled: Boolean(renovacaoClienteRef),
+  })
+
+  const { mutateAsync: iniciarRenovacaoPorApolice, isPending: iniciandoRenovacaoPorApolice } = useMutation({
+    mutationFn: () => iniciarCotacaoRenovacaoPorApolice(renovacaoApoliceId),
+    onSuccess: async ({ cotacaoId }) => {
+      setErro(null)
+      setRenovacaoBuscaCliente('')
+      setRenovacaoClienteRef(null)
+      setRenovacaoApoliceId('')
+      await invalidar()
+      navigate(`/auto/cotacoes/${cotacaoId}`)
+    },
+    onError: err => setErro(err?.message || 'Erro ao iniciar cotação de renovação.'),
+  })
+
+  function handleBuscarClienteRenovacao() {
+    const termo = renovacaoBuscaCliente.trim()
+    if (!termo) return
+    setRenovacaoApoliceId('')
+    setRenovacaoClienteRef(termo)
+  }
+
+  const { mutateAsync: salvarRenovacaoClienteNovo, isPending: salvandoRenovacaoClienteNovo } = useMutation({
+    mutationFn: async payload => criarCotacaoAuto({
+      tipo: 'renovacao',
+      status: 'pendente',
+      nome_cliente: payload.nome_completo || null,
+      cpf_cliente: payload.cpf || null,
+      celular_cliente: payload.celular || null,
+      modelo_veiculo: payload.modelo_veiculo || null,
+      placa: payload.placa || null,
+    }),
+    onSuccess: async cotacao => {
+      setErro(null)
+      setRenovacaoNovoCliente(RENOVACAO_NOVO_CLIENTE_VAZIO)
+      await invalidar()
+      navigate(`/auto/cotacoes/${cotacao.id}`)
+    },
+    onError: err => setErro(err?.message || 'Erro ao salvar cotação de renovação.'),
   })
 
   const { data: endossoCliente, isFetching: buscandoEndossoCliente } = useQuery({
@@ -648,7 +709,87 @@ export default function AutoCotacoes() {
               </div>
             </DataCard>
           ) : (
-            <DataCard title="Cotar renovacao" subtitle="Selecione a apolice a renovar. A cotacao criada fica automaticamente vinculada a essa renovacao.">
+            <>
+              <DataCard title="Buscar cliente e apólice" subtitle="Renovação de um cliente/apólice específico, mesmo que ainda não esteja na lista de pendentes abaixo.">
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRenovacaoClienteExiste(true)}
+                    className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-colors ${renovacaoClienteExiste ? 'border-brand-accent bg-brand-accent/10 text-status-info' : 'border-dark-border text-dark-muted hover:border-brand-accent/40'}`}
+                  >
+                    Cliente já cadastrado
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRenovacaoClienteExiste(false)}
+                    className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-colors ${!renovacaoClienteExiste ? 'border-brand-accent bg-brand-accent/10 text-status-info' : 'border-dark-border text-dark-muted hover:border-brand-accent/40'}`}
+                  >
+                    Cliente novo (ainda não cadastrado)
+                  </button>
+                </div>
+
+                {renovacaoClienteExiste ? (
+                  <div className="mt-4 space-y-4">
+                    <div className="flex flex-wrap items-end gap-2">
+                      <Field label="Buscar cliente (nome ou CPF)" value={renovacaoBuscaCliente} onChange={setRenovacaoBuscaCliente} placeholder="Nome ou CPF" />
+                      <button onClick={handleBuscarClienteRenovacao} disabled={buscandoRenovacaoCliente} className="btn-secondary disabled:opacity-60">
+                        {buscandoRenovacaoCliente ? 'Buscando...' : 'Buscar'}
+                      </button>
+                    </div>
+
+                    {renovacaoCliente?.apolices?.length > 0 && (
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-dark-muted">Apólice (mais recente primeiro)</label>
+                        <select
+                          value={renovacaoApoliceId}
+                          onChange={e => setRenovacaoApoliceId(e.target.value)}
+                          className="input w-full"
+                        >
+                          <option value="">Selecionar apólice</option>
+                          {renovacaoCliente.apolices.map(apolice => (
+                            <option key={apolice.id} value={apolice.id}>
+                              {apolice.numero_apolice || 'Sem número'} · {apolice.seguradora} · {apolice.modelo_veiculo || 'veículo não informado'}{apolice.placa ? ` (${apolice.placa})` : ''} · vigência {apolice.vigencia_inicio} a {apolice.vigencia_fim}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {renovacaoClienteRef && !buscandoRenovacaoCliente && !renovacaoCliente?.apolices?.length && (
+                      <p className="text-sm text-dark-muted">Nenhuma apólice encontrada para este cliente.</p>
+                    )}
+
+                    {renovacaoApoliceId && (
+                      <button
+                        onClick={() => iniciarRenovacaoPorApolice()}
+                        disabled={iniciandoRenovacaoPorApolice}
+                        className="btn-primary disabled:opacity-60"
+                      >
+                        {iniciandoRenovacaoPorApolice ? 'Criando...' : 'Criar/abrir cotação de renovação'}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-4 space-y-4">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <Field label="Nome completo" value={renovacaoNovoCliente.nome_completo} onChange={v => setRenovacaoNovoCliente(f => ({ ...f, nome_completo: v }))} />
+                      <Field label="CPF" value={renovacaoNovoCliente.cpf} onChange={v => setRenovacaoNovoCliente(f => ({ ...f, cpf: v }))} />
+                      <Field label="Celular" value={renovacaoNovoCliente.celular} onChange={v => setRenovacaoNovoCliente(f => ({ ...f, celular: v }))} />
+                      <Field label="Modelo do veículo" value={renovacaoNovoCliente.modelo_veiculo} onChange={v => setRenovacaoNovoCliente(f => ({ ...f, modelo_veiculo: v }))} />
+                      <Field label="Placa" value={renovacaoNovoCliente.placa} onChange={v => setRenovacaoNovoCliente(f => ({ ...f, placa: v }))} placeholder="Opcional" />
+                    </div>
+                    <button
+                      onClick={() => salvarRenovacaoClienteNovo(renovacaoNovoCliente)}
+                      disabled={salvandoRenovacaoClienteNovo || !renovacaoNovoCliente.nome_completo || !renovacaoNovoCliente.cpf}
+                      className="btn-primary disabled:opacity-60"
+                    >
+                      {salvandoRenovacaoClienteNovo ? 'Salvando...' : 'Criar cotação de renovação'}
+                    </button>
+                  </div>
+                )}
+              </DataCard>
+
+              <DataCard title="Cotar renovacao" subtitle="Selecione a apolice a renovar. A cotacao criada fica automaticamente vinculada a essa renovacao.">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-muted" />
                 <input
@@ -715,7 +856,8 @@ export default function AutoCotacoes() {
                   Voltar para lista
                 </button>
               </div>
-            </DataCard>
+              </DataCard>
+            </>
           )}
         </div>
 

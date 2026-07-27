@@ -906,7 +906,7 @@ export async function criarEmissaoManualAuto(payload) {
 }
 
 // Renovacoes
-const RENOVACAO_LISTA_SELECT = '*, clientes_auto(nome_completo, telefone, celular, email), apolices_auto(id, emissao_id, numero_apolice, seguradora, vigencia_inicio, vigencia_fim, premio_liquido, valor_comissao, forma_pagamento, parcelamento, nome_cliente, modelo_veiculo, placa, created_at), cotacoes_auto:cotacao_id(id, status, tipo, created_at, emissoes_auto(coluna))'
+const RENOVACAO_LISTA_SELECT = '*, clientes_auto(nome_completo, telefone, celular, email), apolices_auto(id, emissao_id, numero_apolice, seguradora, vigencia_inicio, vigencia_fim, premio_liquido, pct_comissao, valor_comissao, forma_pagamento, parcelamento, nome_cliente, modelo_veiculo, placa, created_at, renovacao_premio_liquido_ano_anterior, renovacao_comissao_ano_anterior), cotacoes_auto:cotacao_id(id, status, tipo, created_at, emissoes_auto(coluna))'
 
 export async function getRenovacoesAuto({ periodo, mes } = {}) {
   let q = supabase

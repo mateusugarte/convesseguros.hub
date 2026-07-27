@@ -194,9 +194,10 @@ function mesRefDe(date) {
 }
 
 // Mes-alvo do lembrete de virada de mes: comeca a valer 15 dias antes do
-// mes seguinte comecar; se esse mes ja foi concluido mas um mes anterior
-// (ate 2 meses atras) ainda estiver pendente, retorna o mais antigo pendente
-// em vez de "esquecer" dele. Retorna null quando nao ha nada pendente.
+// mes seguinte comecar (janela nao abre antes). Varre de proximo mes ate
+// 2 meses atras, retornando o primeiro (mais proximo de hoje) mes ainda
+// nao concluido. Assim naturalmente mostra backlog mais antigo quando meses
+// mais recentes sao completados. Retorna null quando nao ha nada pendente.
 export function getMesAlvoRenovacao(hoje = new Date(), statusPorMes = {}, avisoDias = AVISO_VIRADA_DIAS) {
   // Check if next month's window has opened
   const proximo = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1)

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
 import { CalendarClock, CheckCircle2, Clock, ExternalLink, RefreshCw, Send, Upload, XCircle } from 'lucide-react'
 import {
+  cancelarRenovacao,
   getAutoRenovacaoMesStatus,
   getRenovacoesAuto,
   iniciarCotacaoRenovacao,
@@ -25,6 +26,9 @@ import {
   RENOVACAO_URGENCIA_META,
   getRenewalQuoteStatus,
   RENEWAL_QUOTE_STATUS_META,
+  getRenovacaoAreaStatus,
+  RENOVACAO_AREA_STATUS_META,
+  getComissaoAtualAnterior,
   toneClasses,
 } from './autoShared'
 
@@ -165,6 +169,20 @@ export default function AutoRenovacoes() {
     } catch (err) {
       window.alert(err?.message || 'Erro ao iniciar cotação de renovação.')
     }
+  }
+
+  const { mutateAsync: cancelarRenovacaoAsync, isPending: cancelando } = useMutation({
+    mutationFn: ({ id, motivo }) => cancelarRenovacao(id, motivo),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes-todas'] })
+    },
+  })
+
+  function handleCancelar(id) {
+    const motivo = window.prompt('Motivo do cancelamento (opcional):')
+    if (motivo === null) return
+    cancelarRenovacaoAsync({ id, motivo: motivo || null })
   }
 
   const metricas = useMemo(() => ({
@@ -373,8 +391,9 @@ export default function AutoRenovacoes() {
               const proximoMes = monthKey(item.vigencia_fim) === mesSeguinteRef
               const urgenciaKey = getRenovacaoUrgencia({ dias, concluida, proximoMes })
               const urgencia = RENOVACAO_URGENCIA_META[urgenciaKey]
-              const quoteStatusKey = getRenewalQuoteStatus(item)
-              const quoteStatus = RENEWAL_QUOTE_STATUS_META[quoteStatusKey]
+              const areaStatusKey = getRenovacaoAreaStatus(item)
+              const areaStatus = RENOVACAO_AREA_STATUS_META[areaStatusKey]
+              const comissao = getComissaoAtualAnterior(item)
               const apoliceId = apolice.id || item.apolice_id
               const seguradoraNome = item.seguradora || apolice.seguradora || null
               const isCotando = cotandoId === item.id
@@ -390,7 +409,7 @@ export default function AutoRenovacoes() {
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-sm font-semibold text-dark-text">{item.clientes_auto?.nome_completo || apolice.nome_cliente || '-'}</h3>
                         <span className={`badge ${urgencia.badgeClass}`}>{urgencia.label}</span>
-                        <span className={`badge ${toneClasses(quoteStatus.tone)}`}>{quoteStatus.label}</span>
+                        <span className={`badge ${toneClasses(areaStatus.tone)}`}>{areaStatus.label}</span>
                         <span className={`badge ${renovacaoInfo.cls}`}>{renovacaoInfo.label}</span>
                         {typeof dias === 'number' && (
                           <span className="badge badge-muted">{formatDiasParaVencer(dias)}</span>
@@ -423,6 +442,13 @@ export default function AutoRenovacoes() {
                           <p className="mt-1 font-semibold text-dark-text">Emissão #{apolice.emissao_id || '—'}</p>
                           <p className="mt-1 text-xs text-dark-muted">Pagamento: {apolice.forma_pagamento || '—'} · Parcelamento: {apolice.parcelamento || '—'}</p>
                         </div>
+                        <div className="rounded-2xl border border-white/60 bg-white/70 p-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Prazo e comissão</p>
+                          <p className="mt-1 text-xs text-dark-muted">Limite p/ envio: {formatarData(item.data_limite_envio)}</p>
+                          <p className="mt-1 text-xs text-dark-muted">
+                            Comissão atual: {comissao.atual != null ? `${comissao.atual}%` : '—'} · anterior: {comissao.anterior != null ? `${comissao.anterior}%` : '—'}
+                          </p>
+                        </div>
                       </div>
                     </div>
 
@@ -441,13 +467,22 @@ export default function AutoRenovacoes() {
                           disabled={isCotando}
                           className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-60"
                         >
-                          {isCotando ? 'Criando cotação...' : 'Cotar'}
+                          {isCotando ? 'Criando cotação...' : 'Fazer Cotação'}
                         </button>
                       )}
                       {apoliceId && (
                         <button onClick={() => navigate(`/auto/apolices/${apoliceId}`)} className="btn-secondary inline-flex items-center justify-center gap-2">
                           Abrir apólice
                           <ExternalLink className="h-4 w-4" />
+                        </button>
+                      )}
+                      {areaStatusKey !== 'renovado' && areaStatusKey !== 'cancelado' && (
+                        <button
+                          onClick={() => handleCancelar(item.id)}
+                          disabled={cancelando}
+                          className="rounded-2xl border border-status-danger/30 bg-status-danger/5 px-3 py-2 text-xs font-semibold text-status-danger transition-colors hover:bg-status-danger/10 disabled:opacity-60"
+                        >
+                          Cancelar renovação
                         </button>
                       )}
                     </div>
@@ -537,8 +572,8 @@ export default function AutoRenovacoes() {
               </thead>
               <tbody className="divide-y divide-dark-border/40">
                 {acompanharLista.map(item => {
-                  const quoteStatusKey = getRenewalQuoteStatus(item)
-                  const cotacaoInfo = RENEWAL_QUOTE_STATUS_META[quoteStatusKey]
+                  const areaStatusKeyTabela = getRenovacaoAreaStatus(item)
+                  const cotacaoInfo = RENOVACAO_AREA_STATUS_META[areaStatusKeyTabela]
                   const renovacaoInfo = RENOVACAO_STATUS[item.status_renovacao || 'pendente'] || RENOVACAO_STATUS.pendente
                   const apoliceId = item.apolices_auto?.id || item.apolice_id
                   const isCotando = cotandoId === item.id

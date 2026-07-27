@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx'
 import { ArrowLeft, ArrowRight, Car, CheckCircle2, FileText, Loader2, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, Upload, X, Plus, History } from 'lucide-react'
 import { endOfMonth, format, startOfMonth, startOfWeek } from 'date-fns'
 import {
-  atualizarEmissaoAutoCompleta, atualizarTagsEmissao, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
+  atualizarEmissaoAutoCompleta, atualizarTagsEmissao, calcularValorComissaoAuto, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
   emitirApoliceAuto, getApolicesAuto, getAutoTags, getEmissaoAuto, getEmissaoColuna, getEmissoesAuto, importarApolicesAutoPlanilha, importarApolicesAutoHistorico, moverEmissaoColuna,
   salvarResultadoCotacao,
 } from '../../lib/auto'
@@ -1611,7 +1611,7 @@ export default function AutoEmissoes() {
 
   const premioLiquido = toNumber(form.premio_liquido) || 0
   const pctComissao = toNumber(form.pct_comissao) || 0
-  const valorComissao = premioLiquido * pctComissao
+  const valorComissao = calcularValorComissaoAuto(premioLiquido, pctComissao)
   const valorRepasse = form.tem_repasse ? valorComissao * (toNumber(form.pct_repasse) || 0) : 0
   const renovacaoComparativo = form.eh_renovacao
     ? buildRenovacaoComparativo(form, premioLiquido, valorComissao)

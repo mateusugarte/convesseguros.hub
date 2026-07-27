@@ -2,6 +2,8 @@ import { supabase } from './supabase'
 import { normalizeCompareText, somarUmAno } from './autoHistoricoImport.js'
 import { calcularValorComissaoAuto } from './autoCalc.js'
 
+export { calcularValorComissaoAuto }
+
 function parseMonthRef(monthRef) {
   if (typeof monthRef !== 'string') return null
   const match = monthRef.match(/^(\d{4})-(\d{2})$/)

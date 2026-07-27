@@ -17,7 +17,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { formatDateBR, formatMoney } from './autoShared'
 import { uploadDocumento } from '../../lib/documentos'
 import { toNumber } from '../../lib/apolices'
-import { limparNomeSegurado, parseAutoHistoricoPlanilha } from '../../lib/autoHistoricoImport.js'
+import { limparNomeSegurado, parseAutoHistoricoPlanilha, somarUmAno } from '../../lib/autoHistoricoImport.js'
 
 const COLUNAS = [
   { id: 'pendentes', label: 'Cotacoes pendentes', hint: 'entradas novas do n8n e itens sem andamento', tone: 'warning' },
@@ -47,6 +47,7 @@ const FORM_EMISSAO_VAZIO = {
   placa: '',
   seguradora: '',
   numero_apolice: '',
+  data_emissao: '',
   vigencia_inicio: '',
   vigencia_fim: '',
   coluna: 'proposta_transmitida',
@@ -77,6 +78,7 @@ const FORM_MANUAL_VAZIO = {
   placa: '',
   seguradora: '',
   numero_apolice: '',
+  data_emissao: '',
   vigencia_inicio: '',
   vigencia_fim: '',
   coluna: 'proposta_transmitida',
@@ -135,6 +137,7 @@ const FORM_EDICAO_VAZIO = {
   garagem_estudo: false,
   seguradora: '',
   numero_apolice: '',
+  data_emissao: '',
   vigencia_inicio: '',
   vigencia_fim: '',
   coluna: 'proposta_transmitida',
@@ -385,6 +388,7 @@ function getFormEmissaoInicial(emissao) {
     placa: emissao?.placa || c.placa || '',
     seguradora: primeiraAprovada,
     numero_apolice: emissao?.numero_apolice || c.numero_orcamento || '',
+    data_emissao: emissao?.data_emissao || new Date().toISOString().slice(0, 10),
     vigencia_inicio: emissao?.vigencia_inicio || c.vigencia_inicio || '',
     vigencia_fim: emissao?.vigencia_fim || c.vigencia_fim || '',
     premio_liquido: emissao?.premio_liquido
@@ -1613,6 +1617,16 @@ export default function AutoEmissoes() {
   const pctComissao = toNumber(form.pct_comissao) || 0
   const valorComissao = calcularValorComissaoAuto(premioLiquido, pctComissao)
   const valorRepasse = form.tem_repasse ? valorComissao * (toNumber(form.pct_repasse) || 0) : 0
+
+  useEffect(() => {
+    if (!form.vigencia_inicio) return
+    const calculado = somarUmAno(form.vigencia_inicio)
+    if (calculado && form.vigencia_fim !== calculado && !form._vigenciaFimEditadaManualmente) {
+      setForm(current => ({ ...current, vigencia_fim: calculado }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.vigencia_inicio])
+
   const renovacaoComparativo = form.eh_renovacao
     ? buildRenovacaoComparativo(form, premioLiquido, valorComissao)
     : {
@@ -2279,6 +2293,7 @@ export default function AutoEmissoes() {
                     )}
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
+                    <CampoTexto label="Data de emissão" campo="data_emissao" value={form.data_emissao} onChange={setField} type="date" />
                     <div>
                       <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora</label>
                       {seguradorasAprovadas.length > 0 ? (
@@ -2302,11 +2317,27 @@ export default function AutoEmissoes() {
                     </div>
                     <CampoTexto label="Numero da apolice" campo="numero_apolice" value={form.numero_apolice} onChange={setField} />
                     <CampoTexto label="Vigencia inicio" campo="vigencia_inicio" value={form.vigencia_inicio} onChange={setField} type="date" />
-                    <CampoTexto label="Vigencia fim" campo="vigencia_fim" value={form.vigencia_fim} onChange={setField} type="date" />
+                    <CampoTexto
+                      label="Vigencia fim (automático, editável)"
+                      campo="vigencia_fim"
+                      value={form.vigencia_fim}
+                      onChange={(campo, valor) => { setField(campo, valor); setField('_vigenciaFimEditadaManualmente', true) }}
+                      type="date"
+                    />
                     <CampoTexto label="Premio liquido" campo="premio_liquido" value={form.premio_liquido} onChange={setField} type="text" inputMode="decimal" />
                     <CampoTexto label="% Comissao" campo="pct_comissao" value={form.pct_comissao} onChange={setField} type="text" inputMode="decimal" />
                     <CampoTexto label="Forma de pagamento" campo="forma_pagamento" value={form.forma_pagamento} onChange={setField} />
-                    <CampoTexto label="Parcelamento (vezes)" campo="parcelamento" value={form.parcelamento} onChange={setField} />
+                    <div>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Quantidade de parcelas</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={String(form.parcelamento || '').replace(/x$/i, '')}
+                        onChange={e => setField('parcelamento', e.target.value ? `${e.target.value}x` : '')}
+                        className="w-full rounded-2xl border border-dark-border bg-dark-surface/90 px-3 py-2 text-sm text-dark-text outline-none"
+                        placeholder="Ex.: 12"
+                      />
+                    </div>
                   </div>
 
                   <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
@@ -2378,14 +2409,17 @@ export default function AutoEmissoes() {
                   </div>
 
                   <div className="grid gap-3 rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
-                    <label className="flex items-center gap-2 text-sm text-dark-text">
-                      <input
-                        type="checkbox"
-                        checked={form.eh_renovacao}
-                        onChange={e => setField('eh_renovacao', e.target.checked)}
-                      />
-                      E renovacao da carteira?
-                    </label>
+                    <div>
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Tipo (automático)</p>
+                      <span className="badge badge-info">
+                        {(() => {
+                          const tipoReal = modalEmissao?.cotacoes_auto?.tipo || modalEmissao?.tipo || 'novo'
+                          if (tipoReal === 'renovacao') return 'Renovação'
+                          if (tipoReal === 'endosso') return 'Endosso'
+                          return 'Seguro novo'
+                        })()}
+                      </span>
+                    </div>
                     <label className="flex items-center gap-2 text-sm text-dark-text">
                       <input
                         type="checkbox"

@@ -778,6 +778,28 @@ export async function emitirApoliceAuto(payload) {
 
   if (colunaDestino !== 'apolice_emitida') return { emissao: { id: payload.emissao_id }, apolice: null }
 
+  if (payloadComTipoDerivado.tipo === 'endosso' && payload.cotacao_id) {
+    const { data: endosso, error: endossoError } = await supabase
+      .from('endossos_auto')
+      .select('apolice_id')
+      .eq('cotacao_id', payload.cotacao_id)
+      .maybeSingle()
+    if (endossoError) throw endossoError
+
+    if (endosso?.apolice_id) {
+      const apolicePayloadEndosso = buildApoliceAutoPayload(payloadComTipoDerivado, clienteId, premioLiquido, pctComissao, valorComissao, comparativoRenovacao, valorRepasse)
+      const { data: apoliceAtualizada, error: updateError } = await supabase
+        .from('apolices_auto')
+        .update({ ...apolicePayloadEndosso, emissao_id: payload.emissao_id, data_emissao: payload.data_emissao || null })
+        .eq('id', endosso.apolice_id)
+        .select()
+        .single()
+      if (updateError) throw updateError
+      await concluirCotacaoEVincularRenovacao(payload.cotacao_id)
+      return apoliceAtualizada
+    }
+  }
+
   const apolicePayload = buildApoliceAutoPayload(payloadComTipoDerivado, clienteId, premioLiquido, pctComissao, valorComissao, comparativoRenovacao, valorRepasse)
   const { data, error } = await supabase
     .from('apolices_auto')

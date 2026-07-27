@@ -938,6 +938,14 @@ export async function atualizarStatusRenovacao(id, campos) {
   if (error) throw error
 }
 
+export async function cancelarRenovacao(id, motivo) {
+  const { error } = await supabase
+    .from('renovacoes_auto')
+    .update({ status_renovacao: 'nao_renovada', motivo_cancelamento: motivo || null })
+    .eq('id', id)
+  if (error) throw error
+}
+
 export async function getAutoRenovacaoMesStatus(mesRefs = []) {
   if (!mesRefs.length) return {}
   const { data, error } = await supabase

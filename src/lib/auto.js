@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 import { limparNomeSegurado, normalizeCompareText, somarUmAno } from './autoHistoricoImport.js'
-import { calcularValorComissaoAuto } from './autoCalc.js'
+import { calcularValorComissaoAuto, subtrairDiasUteis } from './autoCalc.js'
 
 export { calcularValorComissaoAuto }
 
@@ -1089,16 +1089,7 @@ export async function marcarMesRenovacaoConcluido(mesRef, userId) {
   if (error) throw error
 }
 
-const PRAZO_ENVIO_ORCAMENTO_DIAS = 7
-
-function subtrairDias(dataISO, dias) {
-  const match = String(dataISO || '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (!match) return null
-  const [, ano, mes, dia] = match
-  const date = new Date(Number(ano), Number(mes) - 1, Number(dia))
-  date.setDate(date.getDate() - dias)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
+const PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS = 7
 
 export async function puxarRenovacoesDoSistema(mesRef) {
   const alvo = parseMonthRef(mesRef)
@@ -1135,7 +1126,7 @@ export async function puxarRenovacoesDoSistema(mesRef) {
     cliente_id: apolice.cliente_id,
     seguradora: apolice.seguradora,
     vigencia_fim: apolice.vigencia_fim,
-    data_limite_envio: subtrairDias(apolice.vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS),
+    data_limite_envio: subtrairDiasUteis(apolice.vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS),
     status_cotacao: 'nao_cotada',
     status_renovacao: 'pendente',
     origem: 'sistema',
@@ -1189,7 +1180,7 @@ export async function puxarRenovacoesDePlanilha(mesRef, rows = []) {
       cliente_id: null,
       seguradora: row.seguradora || null,
       vigencia_fim: row.vigencia_fim,
-      data_limite_envio: subtrairDias(row.vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS),
+      data_limite_envio: subtrairDiasUteis(row.vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS),
       status_cotacao: 'nao_cotada',
       status_renovacao: 'pendente',
       origem: 'xls',
@@ -1251,7 +1242,7 @@ export async function criarRenovacaoManual({ cliente_id, nomeManual, seguradora,
       apolice_id: null,
       seguradora: seguradora || null,
       vigencia_fim,
-      data_limite_envio: data_limite_envio || subtrairDias(vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS),
+      data_limite_envio: data_limite_envio || subtrairDiasUteis(vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS),
       status_cotacao: 'nao_cotada',
       status_renovacao: 'pendente',
       origem: 'manual',
@@ -1295,7 +1286,7 @@ export async function iniciarCotacaoRenovacaoPorApolice(apoliceId) {
       cliente_id: apolice.cliente_id,
       seguradora: apolice.seguradora,
       vigencia_fim: apolice.vigencia_fim,
-      data_limite_envio: subtrairDias(apolice.vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS),
+      data_limite_envio: subtrairDiasUteis(apolice.vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS),
       status_cotacao: 'nao_cotada',
       status_renovacao: 'pendente',
       origem: 'sistema',

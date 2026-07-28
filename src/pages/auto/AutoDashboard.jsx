@@ -2,24 +2,56 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
-  LineChart, Line, CartesianGrid,
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from 'recharts'
 import {
-  BarChart3, CalendarDays, Car, FileText, RefreshCw, ShieldCheck, TrendingUp,
-  DollarSign, Percent, AlertCircle, ArrowRight, Megaphone,
+  ArrowRight,
+  CalendarDays,
+  Car,
+  CircleDollarSign,
+  FileText,
+  Gauge,
+  Layers3,
+  Megaphone,
+  Plus,
+  RefreshCw,
+  ShieldCheck,
+  Sparkles,
+  TrendingUp,
 } from 'lucide-react'
 import {
-  getDashboardAutoMetrics,
-  getGraficoEmissoesMensais,
-  getGraficoCotacoesStatus,
   getAutoRenovacaoMesStatus,
+  getDashboardAutoMetrics,
+  getGraficoCotacoesStatus,
+  getGraficoEmissoesMensais,
 } from '../../lib/auto'
+import {
+  AutoActionCard,
+  AutoBadge,
+  AutoInlineAlert,
+  AutoPageHeader,
+  AutoPanel,
+  AutoStatStrip,
+} from '../../components/auto'
+import { EmptyState } from '../../components/ui'
 import { getMesAlvoRenovacao } from './autoShared'
-import { PageHeader, MetricCard, DataCard, EmptyState } from '../../components/ui'
+
+const moneyFormatter = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+  maximumFractionDigits: 0,
+})
 
 function formatMoney(value) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value ?? 0)
+  return moneyFormatter.format(Number(value) || 0)
 }
 
 function currentMonthRef() {
@@ -36,6 +68,42 @@ function formatMonthRef(monthRef) {
   })
 }
 
+function ChartTooltip({ active, payload, label, percentage = false }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="auto-chart-tooltip">
+      <strong>{label}</strong>
+      {payload.map(item => (
+        <span key={item.dataKey}>
+          <i style={{ background: item.color }} />
+          {item.name}: <b>{percentage ? `${item.value}%` : item.value}</b>
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function FinanceMetric({ label, current, previous, money = true }) {
+  const currentValue = Number(current) || 0
+  const previousValue = Number(previous) || 0
+  const delta = currentValue - previousValue
+  const percentage = previousValue ? Math.round((delta / previousValue) * 100) : null
+  const formatter = money ? formatMoney : value => value
+
+  return (
+    <div className="auto-finance-metric">
+      <span>{label}</span>
+      <strong>{formatter(currentValue)}</strong>
+      <div className={delta >= 0 ? 'is-positive' : 'is-negative'}>
+        <TrendingUp aria-hidden="true" />
+        <b>{delta >= 0 ? '+' : ''}{formatter(delta)}</b>
+        {percentage !== null && <small>{percentage >= 0 ? '+' : ''}{percentage}%</small>}
+      </div>
+      <small>Anterior: {formatter(previousValue)}</small>
+    </div>
+  )
+}
+
 export default function AutoDashboard() {
   const navigate = useNavigate()
   const [mesRef, setMesRef] = useState(currentMonthRef)
@@ -43,9 +111,9 @@ export default function AutoDashboard() {
 
   const mesesParaChecarStatus = useMemo(() => {
     const hoje = new Date()
-    return Array.from({ length: 4 }, (_, i) => {
-      const d = new Date(hoje.getFullYear(), hoje.getMonth() - 2 + i, 1)
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    return Array.from({ length: 4 }, (_, index) => {
+      const date = new Date(hoje.getFullYear(), hoje.getMonth() - 2 + index, 1)
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
     })
   }, [])
 
@@ -54,8 +122,14 @@ export default function AutoDashboard() {
     queryFn: () => getAutoRenovacaoMesStatus(mesesParaChecarStatus),
   })
 
-  const mesAlvoRenovacao = useMemo(() => getMesAlvoRenovacao(new Date(), statusPorMes), [statusPorMes])
-  const mesAlvoLabel = useMemo(() => formatMonthRef(mesAlvoRenovacao || ''), [mesAlvoRenovacao])
+  const mesAlvoRenovacao = useMemo(
+    () => getMesAlvoRenovacao(new Date(), statusPorMes),
+    [statusPorMes],
+  )
+  const mesAlvoLabel = useMemo(
+    () => formatMonthRef(mesAlvoRenovacao || ''),
+    [mesAlvoRenovacao],
+  )
 
   const { data: metrics, isLoading: loadingMetrics } = useQuery({
     queryKey: ['auto-dashboard-metrics', mesRef],
@@ -73,219 +147,258 @@ export default function AutoDashboard() {
   })
 
   const loading = loadingMetrics || loadingEmissoes || loadingCotacoes
+  const hasEmissoes = graficoEmissoes.some(item => item.novos || item.renovacoes)
+  const hasCotacoes = graficoCotacoes.some(item => item.abertas || item.convertidas || item.perdidas)
 
-  const kpis = [
-    { key: 'novosNoMes', label: 'Novos no mês', hint: 'apólices novas emitidas', tone: 'accent', icon: <Car className="w-5 h-5" /> },
-    { key: 'renovacoesNoMes', label: 'Renovações no mês', hint: 'carteira renovada', tone: 'success', icon: <RefreshCw className="w-5 h-5" /> },
-    { key: 'cotacoesNoMes', label: 'Cotações no mês', hint: 'entrada comercial', tone: 'secondary', icon: <FileText className="w-5 h-5" /> },
-    { key: 'renovacoesConcluidas', label: 'Renovações concluídas', hint: 'status renovada', tone: 'success', icon: <ShieldCheck className="w-5 h-5" /> },
-    { key: 'vencendoNoMes', label: 'Vencendo no mês', hint: 'vigência final no período', tone: 'warning', icon: <CalendarDays className="w-5 h-5" /> },
-    { key: 'vencendoProximoMes', label: 'Vencendo mês seguinte', hint: 'fila preventiva', tone: 'warning', icon: <TrendingUp className="w-5 h-5" /> },
-    { key: 'taxaConversao', label: 'Taxa de conversão', hint: '% de cotações convertidas', tone: 'accent', icon: <Percent className="w-5 h-5" />, format: v => `${v}%` },
-    { key: 'renovacoesPendentes', label: 'Renovações pendentes', hint: 'aguardando cotação ou envio', tone: 'danger', icon: <AlertCircle className="w-5 h-5" /> },
-    { key: 'comissaoTotal', label: 'Comissão no mês', hint: 'soma das comissões emitidas', tone: 'success', icon: <DollarSign className="w-5 h-5" />, format: formatMoney },
-  ]
-
-  const resumoOperacional = [
-    { label: 'Cotações do período', value: metrics?.cotacoesNoMes ?? 0, hint: monthLabel },
-    { label: 'Conversão', value: `${metrics?.taxaConversao ?? 0}%`, hint: 'cotações que viraram negócio' },
-    { label: 'Pendências', value: metrics?.renovacoesPendentes ?? 0, hint: 'itens ainda sem tratativa' },
-  ]
-
-  const resumoRenovacao = [
-    { label: 'Comissão do mês', value: formatMoney(metrics?.renovacoesComissaoMesAtual ?? 0), hint: monthLabel },
-    { label: 'Comissão ano anterior', value: formatMoney(metrics?.renovacoesComissaoAnoAnterior ?? 0), hint: 'mesmo mês do ano anterior' },
-    { label: 'Diferença de comissão', value: formatMoney(metrics?.renovacoesComissaoDiferenca ?? 0), hint: 'crescimento ou retração' },
-  ]
-
-  const tendenciaConversao = graficoCotacoes.map(item => {
+  const tendenciaConversao = useMemo(() => graficoCotacoes.map(item => {
     const total = item.abertas + item.convertidas + item.perdidas
-    return {
-      ...item,
-      taxa: total > 0 ? Math.round((item.convertidas / total) * 100) : 0,
-    }
-  })
+    return { ...item, taxa: total > 0 ? Math.round((item.convertidas / total) * 100) : 0 }
+  }), [graficoCotacoes])
+
+  const stats = [
+    {
+      key: 'cotacoes',
+      label: 'Cotações abertas',
+      value: loading ? '—' : metrics?.cotacoesNoMes ?? 0,
+      hint: monthLabel,
+      tone: 'info',
+      icon: FileText,
+    },
+    {
+      key: 'conversao',
+      label: 'Conversão',
+      value: loading ? '—' : `${metrics?.taxaConversao ?? 0}%`,
+      hint: 'resultado comercial',
+      tone: 'success',
+      icon: Gauge,
+    },
+    {
+      key: 'renovacoes',
+      label: 'Renovações concluídas',
+      value: loading ? '—' : metrics?.renovacoesConcluidas ?? 0,
+      hint: 'carteira protegida',
+      tone: 'renewal',
+      icon: ShieldCheck,
+    },
+    {
+      key: 'pendencias',
+      label: 'Ação necessária',
+      value: loading ? '—' : metrics?.renovacoesPendentes ?? 0,
+      hint: 'renovações pendentes',
+      tone: Number(metrics?.renovacoesPendentes) > 0 ? 'warning' : 'neutral',
+      icon: Megaphone,
+    },
+    {
+      key: 'comissao',
+      label: 'Comissão do mês',
+      value: loading ? '—' : formatMoney(metrics?.comissaoTotal),
+      hint: 'valor emitido',
+      tone: 'success',
+      icon: CircleDollarSign,
+    },
+  ]
 
   return (
-    <div className="auto-page space-y-6 animate-fade-in">
-      <PageHeader
-        eyebrow="Modulo auto"
-        title="Dashboard Auto"
-        description={`Leitura executiva de novos negócios, renovações, comissão e conversão do módulo Auto em ${monthLabel}.`}
-        actions={(
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-2 rounded-2xl border border-dark-border bg-dark-surface/75 px-3 py-2 text-sm text-dark-text">
-              <CalendarDays className="h-4 w-4 text-dark-muted" />
-              <input type="month" value={mesRef} onChange={e => setMesRef(e.target.value || currentMonthRef())} className="bg-transparent outline-none" />
-            </label>
-            <button onClick={() => navigate('/auto/renovacoes')} className="btn-secondary inline-flex items-center gap-2">
-              Abrir renovações
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
+    <div className="auto-page auto-v2-page auto-dashboard-command">
+      <AutoPageHeader
+        context="Central de comando"
+        title="Operação Auto"
+        description={`Uma visão clara do ritmo comercial, da carteira e das decisões de ${monthLabel}.`}
+        meta={(
+          <>
+            <AutoBadge tone="success" icon={Sparkles}>Operação sincronizada</AutoBadge>
+            <AutoBadge>{metrics?.novosNoMes ?? 0} novos negócios</AutoBadge>
+          </>
         )}
-        stats={kpis.map(item => (
-          <MetricCard
-            key={item.key}
-            label={item.label}
-            value={item.format ? item.format(metrics?.[item.key] ?? 0) : (metrics?.[item.key] ?? (loading ? '...' : 0))}
-            hint={item.hint}
-            tone={item.tone}
-            icon={item.icon}
-          />
-        ))}
+        actions={(
+          <>
+            <label className="auto-month-control">
+              <CalendarDays aria-hidden="true" />
+              <input
+                type="month"
+                value={mesRef}
+                onChange={event => setMesRef(event.target.value || currentMonthRef())}
+                aria-label="Mês analisado"
+              />
+            </label>
+            <button type="button" onClick={() => navigate('/auto/cotacoes')} className="btn-primary auto-primary-action">
+              <Plus aria-hidden="true" />
+              Nova cotação
+            </button>
+          </>
+        )}
       />
 
       {mesAlvoRenovacao && (
-        <div className="flex flex-col gap-4 rounded-[28px] border border-status-warning/30 bg-status-warning/8 p-5 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-start gap-3">
-            <Megaphone className="mt-0.5 h-5 w-5 shrink-0 text-status-warning" />
-            <div>
-              <p className="text-sm font-semibold text-dark-text">
-                Organizar e puxar renovações do mês de {mesAlvoLabel}
-              </p>
-              <p className="mt-1 text-xs text-dark-muted">
-                Faltam poucos dias para virar o mês — organize a carteira de renovações antes que o prazo aperte.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => navigate(`/auto/renovacoes?mes=${mesAlvoRenovacao}&puxar=1`)}
-            className="btn-primary inline-flex shrink-0 items-center gap-2"
-          >
-            Organizar e puxar renovações
-            <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
+        <AutoInlineAlert
+          tone="warning"
+          icon={Megaphone}
+          title={`Prepare a carteira de ${mesAlvoLabel}`}
+          description="Antecipe os contatos e evite concentração de vencimentos na virada do mês."
+          actions={(
+            <button
+              type="button"
+              onClick={() => navigate(`/auto/renovacoes?mes=${mesAlvoRenovacao}&puxar=1`)}
+              className="btn-primary inline-flex items-center gap-2"
+            >
+              Organizar agora
+              <ArrowRight aria-hidden="true" />
+            </button>
+          )}
+        />
       )}
 
-      <DataCard className="overflow-hidden border-brand-accent/15" bodyClassName="p-0">
-        <div className="grid gap-0 lg:grid-cols-[1.25fr_0.75fr]">
-          <div className="relative overflow-hidden bg-gradient-to-br from-brand-accent/12 via-transparent to-brand-secondary/10 p-6 md:p-8">
-            <div className="absolute right-0 top-0 h-32 w-32 rounded-full bg-brand-accent/10 blur-3xl" />
-            <div className="absolute bottom-0 left-1/3 h-24 w-24 rounded-full bg-brand-secondary/10 blur-3xl" />
-            <div className="relative z-[1] max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-dark-surface/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-status-info">
-                <BarChart3 className="h-3.5 w-3.5" />
-                Recorte de {monthLabel}
-              </div>
-              <h2 className="mt-4 text-2xl font-semibold text-dark-text md:text-3xl">
-                Uma mesa única para cotar, renovar e emitir.
-              </h2>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-dark-muted">
-                O painel passa a respeitar o mês escolhido para que a leitura executiva do Auto acompanhe exatamente o período analisado.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                <span className="badge badge-info">{metrics?.cotacoesNoMes ?? 0} cotações</span>
-                <span className="badge badge-success">{metrics?.taxaConversao ?? 0}% conversão</span>
-                <span className="badge badge-warning">{metrics?.renovacoesPendentes ?? 0} pendências</span>
-              </div>
-            </div>
-          </div>
+      <AutoStatStrip items={stats} className="auto-dashboard-stats" />
 
-          <div className="grid gap-3 bg-dark-surface2/45 p-6 md:p-8 sm:grid-cols-3 lg:grid-cols-1">
-            {resumoOperacional.map(item => (
-              <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-dark-surface/70 p-4 shadow-sm">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{item.label}</p>
-                <p className="mt-2 text-2xl font-semibold text-dark-text">{item.value}</p>
-                <p className="mt-2 text-sm leading-6 text-dark-muted">{item.hint}</p>
-              </div>
-            ))}
+      <section className="auto-command-section auto-v2-enter">
+        <div className="auto-section-heading">
+          <div>
+            <span>Fluxos principais</span>
+            <h2>O que você quer movimentar agora?</h2>
           </div>
+          <small>Atalhos com contexto do período selecionado</small>
         </div>
-      </DataCard>
+        <div className="auto-action-grid auto-v2-stagger">
+          <AutoActionCard
+            icon={FileText}
+            eyebrow="Comercial"
+            title="Cotações"
+            description="Crie propostas e acompanhe retornos."
+            value={metrics?.cotacoesNoMes ?? 0}
+            tone="info"
+            onClick={() => navigate('/auto/cotacoes')}
+          />
+          <AutoActionCard
+            icon={Layers3}
+            eyebrow="Operação"
+            title="Pipeline"
+            description="Mova cada negócio até a emissão."
+            value={metrics?.renovacoesPendentes ?? 0}
+            tone="warning"
+            onClick={() => navigate('/auto/gestao')}
+          />
+          <AutoActionCard
+            icon={RefreshCw}
+            eyebrow="Carteira"
+            title="Renovações"
+            description="Priorize vencimentos e proteja clientes."
+            value={metrics?.vencendoNoMes ?? 0}
+            tone="renewal"
+            onClick={() => navigate('/auto/renovacoes')}
+          />
+          <AutoActionCard
+            icon={Car}
+            eyebrow="Relacionamento"
+            title="Clientes e apólices"
+            description="Consulte histórico, veículos e vigências."
+            value={metrics?.novosNoMes ?? 0}
+            tone="success"
+            onClick={() => navigate('/auto/clientes')}
+          />
+        </div>
+      </section>
 
-      <DataCard title="Renovações Auto" subtitle={`Comparativo da carteira renovada em ${monthLabel}.`}>
-        <div className="grid gap-3 md:grid-cols-3">
-          {resumoRenovacao.map(item => (
-            <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-dark-surface/75 p-4 shadow-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{item.label}</p>
-              <p className="mt-2 text-2xl font-semibold text-dark-text">{item.value}</p>
-              <p className="mt-2 text-sm leading-6 text-dark-muted">{item.hint}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-3xl border border-brand-secondary/15 bg-brand-secondary/5 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-info">Prêmio líquido do mês</p>
-            <p className="mt-2 text-xl font-semibold text-dark-text">{formatMoney(metrics?.renovacoesPremioLiquidoMesAtual ?? 0)}</p>
-          </div>
-          <div className="rounded-3xl border border-brand-secondary/15 bg-brand-secondary/5 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-info">Prêmio líquido ano anterior</p>
-            <p className="mt-2 text-xl font-semibold text-dark-text">{formatMoney(metrics?.renovacoesPremioLiquidoAnoAnterior ?? 0)}</p>
-          </div>
-          <div className="rounded-3xl border border-brand-secondary/15 bg-brand-secondary/5 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-info">Diferença de prêmio líquido</p>
-            <p className="mt-2 text-xl font-semibold text-dark-text">{formatMoney(metrics?.renovacoesPremioLiquidoDiferenca ?? 0)}</p>
-          </div>
-        </div>
-      </DataCard>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <DataCard title="Emissões mensais" subtitle={`Novos negócios vs renovações até ${monthLabel}.`}>
+      <div className="auto-dashboard-grid">
+        <AutoPanel
+          className="auto-chart-panel auto-chart-panel-wide"
+          title="Ritmo de emissões"
+          description="Seguro novo e renovação nos últimos seis meses."
+          actions={<AutoBadge tone="info">6 meses</AutoBadge>}
+        >
           {loadingEmissoes ? (
-            <div className="flex h-[280px] items-center justify-center text-sm text-dark-muted">Carregando emissões...</div>
-          ) : graficoEmissoes.length === 0 || graficoEmissoes.every(item => item.novos === 0 && item.renovacoes === 0) ? (
-            <EmptyState icon={<BarChart3 className="w-6 h-6" />} title="Sem emissão suficiente" description="O comparativo mensal aparece quando houver emissão no módulo Auto." />
+            <div className="auto-chart-loading"><span />Carregando movimento...</div>
+          ) : !hasEmissoes ? (
+            <EmptyState
+              icon={<Car className="h-6 w-6" />}
+              title="O ritmo aparece com as primeiras emissões"
+              description="Os dados mensais serão comparados automaticamente."
+            />
           ) : (
-            <div className="h-[300px]">
+            <div className="auto-chart-canvas">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={graficoEmissoes} margin={{ top: 12, right: 8, left: -18, bottom: 0 }}>
-                  <XAxis dataKey="mes" tick={{ fontSize: 11, fill: 'rgba(122,97,109,0.72)' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: 'rgba(122,97,109,0.72)' }} axisLine={false} tickLine={false} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="novos" name="Novos" fill="#ff2d55" radius={[10, 10, 0, 0]} />
-                  <Bar dataKey="renovacoes" name="Renovações" fill="#10b981" radius={[10, 10, 0, 0]} />
+                <BarChart data={graficoEmissoes} margin={{ top: 12, right: 4, left: -22, bottom: 0 }} barGap={5}>
+                  <CartesianGrid vertical={false} stroke="rgba(100,116,139,0.13)" strokeDasharray="4 6" />
+                  <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#7c879c' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#7c879c' }} allowDecimals={false} />
+                  <Tooltip cursor={{ fill: 'rgba(63,94,251,0.05)' }} content={<ChartTooltip />} />
+                  <Bar dataKey="novos" name="Novos" fill="#3563e9" radius={[8, 8, 3, 3]} maxBarSize={26} />
+                  <Bar dataKey="renovacoes" name="Renovações" fill="#0ea5a4" radius={[8, 8, 3, 3]} maxBarSize={26} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           )}
-        </DataCard>
-
-        <DataCard title="Funil de cotações" subtitle={`Pendentes, convertidas e perdidas até ${monthLabel}.`}>
-          {loadingCotacoes ? (
-            <div className="flex h-[280px] items-center justify-center text-sm text-dark-muted">Carregando cotações...</div>
-          ) : graficoCotacoes.length === 0 || graficoCotacoes.every(item => item.abertas === 0 && item.convertidas === 0 && item.perdidas === 0) ? (
-            <EmptyState icon={<TrendingUp className="w-6 h-6" />} title="Sem cotações suficientes" description="O funil mensal aparece quando houver cotações registradas." />
-          ) : (
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={graficoCotacoes} margin={{ top: 12, right: 8, left: -18, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(15, 23, 42, 0.06)" />
-                  <XAxis dataKey="mes" tick={{ fontSize: 11, fill: 'rgba(122,97,109,0.72)' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: 'rgba(122,97,109,0.72)' }} axisLine={false} tickLine={false} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="abertas" name="Pendentes" fill="#f59e0b" radius={[10, 10, 0, 0]} />
-                  <Bar dataKey="convertidas" name="Convertidas" fill="#10b981" radius={[10, 10, 0, 0]} />
-                  <Bar dataKey="perdidas" name="Perdidas" fill="#ef4444" radius={[10, 10, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </DataCard>
-      </div>
-
-      <DataCard title="Tendência de conversão" subtitle={`Evolução mensal da taxa de conversão até ${monthLabel}.`}>
-        {loadingCotacoes ? (
-          <div className="flex h-[200px] items-center justify-center text-sm text-dark-muted">Carregando tendência...</div>
-        ) : tendenciaConversao.every(item => item.convertidas === 0 && item.abertas === 0 && item.perdidas === 0) ? (
-          <EmptyState icon={<Percent className="w-5 h-5" />} title="Sem dados de conversão" description="A tendência de conversão aparece assim que houver cotações com status atualizado." />
-        ) : (
-          <div className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={tendenciaConversao} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(15, 23, 42, 0.06)" />
-                <XAxis dataKey="mes" tick={{ fontSize: 11, fill: 'rgba(122,97,109,0.72)' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: 'rgba(122,97,109,0.72)' }} axisLine={false} tickLine={false} unit="%" />
-                <Tooltip formatter={v => `${v}%`} />
-                <Line type="monotone" dataKey="taxa" name="Taxa de conversão" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
+          <div className="auto-chart-legend">
+            <span><i className="is-blue" />Seguro novo</span>
+            <span><i className="is-teal" />Renovação</span>
           </div>
-        )}
-      </DataCard>
+        </AutoPanel>
+
+        <AutoPanel
+          className="auto-finance-panel"
+          title="Saúde da renovação"
+          description="Comparação direta com o mesmo mês do ciclo anterior."
+        >
+          <div className="auto-finance-stack">
+            <FinanceMetric
+              label="Comissão"
+              current={metrics?.renovacoesComissaoMesAtual}
+              previous={metrics?.renovacoesComissaoAnoAnterior}
+            />
+            <FinanceMetric
+              label="Prêmio líquido"
+              current={metrics?.renovacoesPremioLiquidoMesAtual}
+              previous={metrics?.renovacoesPremioLiquidoAnoAnterior}
+            />
+          </div>
+          <button type="button" onClick={() => navigate('/auto/renovacoes')} className="auto-panel-link">
+            Abrir carteira de renovações
+            <ArrowRight aria-hidden="true" />
+          </button>
+        </AutoPanel>
+
+        <AutoPanel
+          className="auto-chart-panel auto-conversion-panel"
+          title="Conversão comercial"
+          description="Percentual mensal de cotações que viraram negócio."
+          actions={<AutoBadge tone="success">{metrics?.taxaConversao ?? 0}% no período</AutoBadge>}
+        >
+          {loadingCotacoes ? (
+            <div className="auto-chart-loading"><span />Calculando conversão...</div>
+          ) : !hasCotacoes ? (
+            <EmptyState
+              icon={<Gauge className="h-6 w-6" />}
+              title="Ainda não há conversões para comparar"
+              description="Atualize o resultado das cotações para formar a tendência."
+            />
+          ) : (
+            <div className="auto-chart-canvas is-compact">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={tendenciaConversao} margin={{ top: 16, right: 6, left: -22, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="autoConversionGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.28} />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} stroke="rgba(100,116,139,0.13)" strokeDasharray="4 6" />
+                  <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#7c879c' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#7c879c' }} unit="%" domain={[0, 100]} />
+                  <Tooltip content={<ChartTooltip percentage />} />
+                  <Area
+                    type="monotone"
+                    dataKey="taxa"
+                    name="Conversão"
+                    stroke="#10b981"
+                    strokeWidth={3}
+                    fill="url(#autoConversionGradient)"
+                    activeDot={{ r: 5, fill: '#10b981', stroke: '#fff', strokeWidth: 3 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </AutoPanel>
+      </div>
     </div>
   )
 }

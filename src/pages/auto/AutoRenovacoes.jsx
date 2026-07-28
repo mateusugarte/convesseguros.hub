@@ -33,7 +33,11 @@ import {
   RENOVACAO_AREA_STATUS_META,
   getComissaoAtualAnterior,
   toneClasses,
+  isValidIsoDate,
+  subtrairDiasUteis,
 } from './autoShared'
+
+const PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS = 7
 
 const PERIODOS = [
   { value: 'mes_atual', label: 'Mês selecionado' },
@@ -100,7 +104,7 @@ function encontrarAbaDoMes(sheetNames = [], monthRef) {
 export default function AutoRenovacoes() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { toast } = useToast()
+  const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const [painelPuxarAberto, setPainelPuxarAberto] = useState(() => searchParams.get('puxar') === '1')
   const [mesParaPuxar, setMesParaPuxar] = useState(() => searchParams.get('mes') || currentMonthRef())
@@ -199,15 +203,16 @@ export default function AutoRenovacoes() {
     }
   }
 
-  // Sugere a data limite 7 dias antes do vencimento na primeira vez que o
-  // usuario preenche o vencimento; depois disso o campo fica livre para
-  // edicao manual sem ser sobrescrito de novo.
+  // Sugere a data limite 7 dias uteis antes do vencimento na primeira vez que
+  // o usuario preenche o vencimento; depois disso o campo fica livre para
+  // edicao manual sem ser sobrescrito de novo. So calcula quando o valor for
+  // uma data completa e valida — o input nativo de data dispara onChange a
+  // cada digito, e um valor parcial/invalido nao deve gerar sugestao (isso
+  // travava a sugestao com um ano incorreto, ex. digitando o ano de um em um).
   function handleVigenciaFimManual(value) {
     setManualVigenciaFim(value)
-    if (!manualDataLimite && value) {
-      const data = new Date(`${value}T12:00:00`)
-      data.setDate(data.getDate() - 7)
-      setManualDataLimite(data.toISOString().slice(0, 10))
+    if (!manualDataLimite && isValidIsoDate(value)) {
+      setManualDataLimite(subtrairDiasUteis(value, PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS))
     }
   }
 

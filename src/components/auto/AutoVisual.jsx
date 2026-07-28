@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   ChevronRight,
   LoaderCircle,
+  Sparkles,
   TrendingDown,
   TrendingUp,
 } from 'lucide-react'
@@ -28,6 +29,7 @@ export function AutoPageHeader({
 }) {
   return (
     <header className="auto-v2-header auto-v2-enter">
+      <div className="auto-v2-header-glow" aria-hidden="true" />
       <div className="auto-v2-header-main">
         <div className="auto-v2-header-copy">
           {onBack && (
@@ -36,7 +38,12 @@ export function AutoPageHeader({
               <span>{backLabel}</span>
             </button>
           )}
-          <p className="auto-v2-context">{context}</p>
+          <div className="auto-v2-context">
+            <span className="auto-v2-context-mark">
+              <Sparkles aria-hidden="true" />
+            </span>
+            <span>{context}</span>
+          </div>
           <h1>{title}</h1>
           {description && <p className="auto-v2-description">{description}</p>}
           {meta && <div className="auto-v2-header-meta">{meta}</div>}
@@ -49,7 +56,7 @@ export function AutoPageHeader({
 
 export function AutoStatStrip({ items = [], className = '' }) {
   return (
-    <section className={`auto-v2-stat-strip auto-v2-stagger ${className}`} aria-label="Indicadores">
+    <section className={`auto-v2-stat-strip auto-v2-stagger ${className}`} style={{ '--auto-stat-count': Math.min(items.length || 1, 5) }} aria-label="Indicadores">
       {items.map(item => {
         const Icon = item.icon
         return (
@@ -59,7 +66,11 @@ export function AutoStatStrip({ items = [], className = '' }) {
               <strong>{item.value}</strong>
               {item.hint && <small>{item.hint}</small>}
             </div>
-            {Icon && <Icon className="auto-v2-stat-icon" aria-hidden="true" />}
+            {Icon && (
+              <span className="auto-v2-stat-icon-wrap">
+                <Icon className="auto-v2-stat-icon" aria-hidden="true" />
+              </span>
+            )}
           </div>
         )
       })}
@@ -97,7 +108,7 @@ export function AutoPanel({ title, description, actions, children, className = '
     <section className={`auto-v2-panel auto-v2-enter ${className}`}>
       {(title || description || actions) && (
         <header>
-          <div>
+          <div className="auto-v2-panel-heading">
             {title && <h2>{title}</h2>}
             {description && <p>{description}</p>}
           </div>
@@ -208,4 +219,32 @@ export function AutoInlineAlert({ title, description, tone = 'warning', icon: Ic
 
 export function AutoStickyActions({ children }) {
   return <div className="auto-v2-sticky-actions">{children}</div>
+}
+export function AutoActionCard({
+  icon: Icon,
+  eyebrow,
+  title,
+  description,
+  value,
+  tone = 'info',
+  onClick,
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`auto-v2-action-card ${TONE_CLASS[tone] || TONE_CLASS.info}`}
+    >
+      <span className="auto-v2-action-icon">
+        {Icon && <Icon aria-hidden="true" />}
+      </span>
+      <span className="auto-v2-action-copy">
+        {eyebrow && <small>{eyebrow}</small>}
+        <strong>{title}</strong>
+        {description && <span>{description}</span>}
+      </span>
+      {value !== undefined && <b>{value}</b>}
+      <ChevronRight className="auto-v2-action-arrow" aria-hidden="true" />
+    </button>
+  )
 }

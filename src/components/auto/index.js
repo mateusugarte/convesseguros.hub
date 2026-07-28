@@ -1,4 +1,5 @@
 export {
+  AutoActionCard,
   AutoBadge,
   AutoInfoGrid,
   AutoInlineAlert,

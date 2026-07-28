@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-const { calcularValorComissaoAuto } = await import('./autoCalc.js')
+const { calcularValorComissaoAuto, isValidIsoDate, subtrairDiasUteis } = await import('./autoCalc.js')
 
 test('calcularValorComissaoAuto aplica o percentual direto sobre o premio liquido', () => {
   // premio 1000, comissao 10% => 100 (exemplo confirmado pelo usuario)
@@ -22,4 +22,39 @@ test('calcularValorComissaoAuto trata premio ou comissao ausentes como zero', ()
 test('calcularValorComissaoAuto aplica percentuais diferentes corretamente', () => {
   // premio 2206.98, comissao 15% => 331.047
   assert.equal(Math.round(calcularValorComissaoAuto(2206.98, 15) * 10000) / 10000, 331.047)
+})
+
+test('isValidIsoDate aceita data completa e valida', () => {
+  assert.equal(isValidIsoDate('2027-02-01'), true)
+})
+
+test('isValidIsoDate rejeita mes/dia invalidos', () => {
+  assert.equal(isValidIsoDate('2027-13-01'), false)
+  assert.equal(isValidIsoDate('2027-02-30'), false)
+})
+
+test('isValidIsoDate rejeita valores parciais que o input nativo de data emite durante a digitacao do ano', () => {
+  // Regressao: o input type=date dispara onChange a cada digito do ano
+  // (0002 -> 0020 -> 0202 -> 2027). Anos de 1-3 digitos nao podem passar,
+  // mesmo quando o ano resultante "bate" no round-trip do Date (ex. ano 202,
+  // que o construtor new Date(ano, mes, dia) NAO trata como relativo a 1900
+  // por estar fora do intervalo 0-99, ao contrario de anos de 1-2 digitos).
+  assert.equal(isValidIsoDate('0002-02-01'), false)
+  assert.equal(isValidIsoDate('0020-02-01'), false)
+  assert.equal(isValidIsoDate('0202-02-01'), false)
+})
+
+test('isValidIsoDate rejeita formato incompleto/nao-ISO', () => {
+  assert.equal(isValidIsoDate(''), false)
+  assert.equal(isValidIsoDate(null), false)
+  assert.equal(isValidIsoDate('2027-2-1'), false)
+})
+
+test('subtrairDiasUteis pula fins de semana (7 dias uteis antes de uma segunda-feira)', () => {
+  // 2027-02-01 e uma segunda-feira; 7 dias uteis antes cai numa quinta.
+  assert.equal(subtrairDiasUteis('2027-02-01', 7), '2027-01-21')
+})
+
+test('subtrairDiasUteis retorna null para data invalida', () => {
+  assert.equal(subtrairDiasUteis('0202-02-01', 7), null)
 })

@@ -1,5 +1,28 @@
 # CURRENT TASK
 
+## "Criar renovação manualmente" não criava nada + ano errado na data limite + 2 bugs adicionais achados ao vivo (2026-07-28, Claude — CONCLUÍDA, migration pendente)
+
+Usuário reportou 3 sintomas em `/auto/renovacoes`: (1) CPF não deveria ser obrigatório pra criar a primeira renovação; (2) data limite da cotação deve ser 7 dias ÚTEIS antes do vencimento, e "o ano deve sair correto"; (3) clicando em "Criar renovação" com os campos preenchidos, nada acontecia. Pediu também para apagar todos os clientes do setor Auto do banco. `superpowers:systematic-debugging` com login real do usuário no navegador (Chrome via MCP) + `npm run dev` local — reproduzido ao vivo em vez de só analisar código.
+
+**Causas raiz encontradas e corrigidas (todas reproduzidas ao vivo, não só lidas no código):**
+
+1. **(3) causa raiz real — CHECK constraint desatualizado em produção:** `renovacoes_auto_origem_check` em produção só aceitava `'sistema'`/`'xls'` — a migration `56_auto_renovacoes_endosso.sql` usa `ADD COLUMN IF NOT EXISTS origem ... CHECK (...IN ('sistema','xls','manual'))`, mas como a coluna `origem` já existia quando essa migration rodou (criada numa versão anterior do arquivo, antes de 'manual' existir como origem), o `IF NOT EXISTS` pulou a cláusula inteira e o CHECK em produção nunca foi atualizado. Toda tentativa de criar renovação manual falhava com `new row for relation "renovacoes_auto" violates check constraint "renovacoes_auto_origem_check"`. **Corrigido:** nova migration `supabase/58_auto_renovacao_origem_manual_dias_uteis.sql` (recria o CHECK aceitando `'manual'`) — **AINDA NÃO EXECUTADA NO SUPABASE, usuário precisa rodar manualmente no SQL Editor antes de "Criar renovação" funcionar de verdade em produção.**
+2. **Bug que mascarava o erro acima (encontrado por acaso, ao vivo):** `AutoRenovacoes.jsx` fazia `const { toast } = useToast()`, mas `useToast()` retorna a função direto (não um objeto) — único arquivo do projeto inteiro com esse padrão errado (todos os outros ~25 arquivos fazem `const toast = useToast()`). Resultado: toda chamada de `toast(...)` nesta página (sucesso ou erro, em puxar do sistema/planilha/criar manual/cancelar/marcar concluído) lançava `TypeError: toast is not a function`, silenciando qualquer feedback ao usuário — exatamente o sintoma "clico e não acontece nada". **Corrigido.**
+3. **(2) causa raiz do "ano errado":** `handleVigenciaFimManual` calculava a sugestão de data limite a cada tecla digitada no campo nativo `<input type="date">` (o browser dispara `onChange` a cada dígito do ano: `0002` → `0020` → `0202` → `2027`). O valor intermediário `0202-02-01` (ano 202) passava incólume pela validação de data porque `new Date(ano, mes, dia)` só trata anos de 0-99 como relativos a 1900 — um ano de 3 dígitos "bate" no round-trip sem ser uma data real. Esse valor errado ficava travado (guard `!manualDataLimite` impedia recalcular depois). **Corrigido:** `isValidIsoDate` (nova, `src/lib/autoCalc.js`) agora exige ano entre 1900-2200; a sugestão só é calculada quando o valor for uma data completa e válida.
+4. **(2) regra de negócio:** troquei "7 dias corridos" por "7 dias úteis" (pula sábado/domingo, sem calendário de feriados) em TODOS os pontos que calculam a data limite: `handleVigenciaFimManual` (front-end), `puxarRenovacoesDoSistema`/`puxarRenovacoesDePlanilha`/`criarRenovacaoManual` (`src/lib/auto.js`) e o trigger `fn_criar_renovacao_auto` (nova função SQL `subtrair_dias_uteis`, na migration 58 acima). Nova função pura `subtrairDiasUteis` em `src/lib/autoCalc.js`, testada (6 testes novos).
+5. **(1) CPF:** já não era obrigatório no código atual (`criarRenovacaoManual` aceita `nomeManual` sem cliente cadastrado) — confirmado, nenhuma mudança necessária.
+6. **Bug adicional achado ao vivo, sem relação com o pedido original:** `/auto/clientes` (e outras 6 páginas que usam `AutoPageHeader`) mostravam tela toda branca — `ReferenceError: Sparkles is not defined` em `src/components/auto/AutoVisual.jsx` (ícone usado sem import). **Corrigido** (import faltante).
+
+**Descoberta importante durante a sessão:** havia edição concorrente ao vivo no mesmo repositório (`AutoDashboard.jsx`, parte de `AutoVisual.jsx`, `src/styles/auto-ui.css` — redesign visual "V2" do Dashboard Auto, provavelmente Codex, coerente com a divisão de trabalho do projeto). Não foi tocado nem revertido — fora do escopo desta tarefa.
+
+**Ainda pendente:**
+- Rodar `supabase/58_auto_renovacao_origem_manual_dias_uteis.sql` no SQL Editor do Supabase (bloqueia "Criar renovação" em produção até isso ser feito).
+- Decisão do usuário sobre rodar `supabase/57_zerar_dados_auto.sql` (apaga todos os 48 clientes/49 apólices reais do setor Auto, com backup automático em tabelas `*_backup_20260727`) — confirmado que os dados ainda existem em produção (script anterior nunca foi executado).
+
+`npm test` (142/142) e `npm run build` verdes.
+
+---
+
 ## Renovações Auto — lembrete de virada de mês, puxar renovações (sistema + planilha), lista com status real, endosso (2026-07-27, Claude — CONCLUÍDA)
 
 Execução completa das 19 tasks do plano `docs/superpowers/plans/2026-07-24-auto-renovacoes-endosso.md` via `superpowers:subagent-driven-development`, direto na branch `main` (decisão do usuário, mesmo padrão de sessões anteriores do módulo Auto). Spec: `docs/superpowers/specs/2026-07-24-auto-renovacoes-endosso-design.md`. Ledger completo (até ser removido): `.superpowers/sdd/2026-07-24-auto-renovacoes-endosso/progress.md`.

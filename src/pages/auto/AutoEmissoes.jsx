@@ -556,7 +556,7 @@ function CardEmissao({ emissao, onDragStart, onClick, tagsPorId }) {
       onDragStart={() => onDragStart(emissao)}
       onClick={() => onClick(emissao)}
       title="Abrir detalhes da emissao"
-      className={['group relative flex min-h-[290px] w-full flex-col overflow-hidden rounded-[30px] border p-4 text-left transition-all hover:-translate-y-1 hover:shadow-[0_22px_48px_rgba(15,23,42,0.12)]', shellClass].join(' ')}
+      className={['auto-kanban-card group relative flex min-h-[290px] w-full flex-col overflow-hidden rounded-[30px] border p-4 text-left transition-all hover:-translate-y-1 hover:shadow-[0_22px_48px_rgba(15,23,42,0.12)]', shellClass].join(' ')}
     >
       <div className={['absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r', accentClass].join(' ')} />
       <div className="flex items-start justify-between gap-3">
@@ -1821,17 +1821,17 @@ export default function AutoEmissoes() {
     <div className="auto-page space-y-6 animate-fade-in">
       <PageHeader
         eyebrow="Modulo auto"
-        title={isGestaoRoute ? 'Gestao AUTO' : 'Gestao de Emissoes'}
+        title={isGestaoRoute ? 'Pipeline Auto' : 'Apólices e emissões'}
         description={isGestaoRoute
-          ? 'Area dedicada ao kanban operacional do modulo Auto.'
-          : 'Area de emissao e consulta de apolices do modulo Auto.'}
+          ? 'Acompanhe cada negócio da cotação até a apólice, com contexto e prioridade.'
+          : 'Consulte emissões recentes, documentos e toda a carteira de apólices Auto.'}
         actions={(
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => navigate(isGestaoRoute ? '/auto/emissoes' : '/auto/gestao')}
               className="btn-secondary"
             >
-              {isGestaoRoute ? 'Ir para Emissoes' : 'Gestao AUTO'}
+              {isGestaoRoute ? 'Ver apólices e emissões' : 'Abrir Pipeline'}
             </button>
             <input
               ref={importFileRef}
@@ -1972,7 +1972,7 @@ export default function AutoEmissoes() {
             </div>
           </FilterBar>
 
-          <div className="-mx-1 flex gap-4 overflow-x-auto pb-2 pt-1 px-1 snap-x snap-mandatory md:snap-none">
+          <div className="auto-kanban-board -mx-1 flex gap-4 overflow-x-auto pb-2 pt-1 px-1 snap-x snap-mandatory md:snap-none">
             {COLUNAS.map(coluna => {
               const cards = emissoes.filter(item => getEmissaoColuna(item) === coluna.id)
               return (
@@ -1980,14 +1980,14 @@ export default function AutoEmissoes() {
                   key={coluna.id}
                   title={coluna.label}
                   subtitle={`${cards.length} item(ns)`}
-                  className={`w-[300px] shrink-0 snap-start ${dragOver === coluna.id ? 'ring-2 ring-brand-accent/20' : ''}`}
+                  className={`auto-kanban-column w-[300px] shrink-0 snap-start ${dragOver === coluna.id ? 'ring-2 ring-brand-accent/20' : ''}`}
                   bodyClassName="pt-4"
                 >
                   <div
                     onDragOver={e => { e.preventDefault(); setDragOver(coluna.id) }}
                     onDrop={() => handleDrop(coluna.id)}
                     onDragLeave={() => setDragOver(null)}
-                    className="min-h-[72vh] space-y-3"
+                    className="auto-kanban-dropzone min-h-[72vh] space-y-3"
                   >
                     {cards.length === 0 ? (
                       <EmptyState
@@ -2031,7 +2031,7 @@ export default function AutoEmissoes() {
                     Consulte as emissoes recentes e abra a gestao quando precisar do kanban.
                   </h2>
                   <p className="mt-3 max-w-2xl text-sm leading-6 text-dark-muted">
-                    Aqui ficam a visao geral, os atalhos e a consulta das apolices emitidas. O kanban foi movido para a area dedicada de Gestao AUTO.
+                    Aqui ficam a visao geral, os atalhos e a consulta das apolices emitidas. O kanban foi movido para a area dedicada de Pipeline Auto.
                   </p>
                   <div className="mt-5 flex flex-wrap gap-2">
                     <span className="badge badge-warning">{metricas.pendentes} pendentes</span>
@@ -2065,7 +2065,7 @@ export default function AutoEmissoes() {
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-xs font-medium text-dark-muted">Atalhos da area</span>
               <button onClick={() => navigate('/auto/gestao')} className="rounded-2xl border border-brand-secondary/30 bg-brand-secondary/10 px-3 py-2 text-xs font-semibold text-status-info">
-                Abrir Gestao AUTO
+                Abrir Pipeline Auto
               </button>
               <button onClick={() => { setManualMode('novo'); setManualForm({ ...FORM_MANUAL_VAZIO, data_emissao: new Date().toISOString().slice(0, 10) }); setManualDocumento(null); setManualOpen(true) }} className="rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted hover:border-brand-accent/40 hover:text-dark-text">
                 Nova emissao

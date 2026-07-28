@@ -61,6 +61,18 @@ classificar cards.
   `apolice_emitida`) e cria `auto_tags` + `emissoes_auto.tags`. Precisa ser
   executada manualmente no SQL Editor do Supabase antes de os recursos de
   vinculo renovacao<->cotacao e etiquetas funcionarem em producao.
+- Migration `supabase/58_auto_renovacao_origem_manual_dias_uteis.sql` corrige
+  o CHECK `renovacoes_auto_origem_check` (a migration 56 nao conseguiu
+  atualiza-lo em producao porque a coluna `origem` ja existia — `ADD COLUMN IF
+  NOT EXISTS` pula a clausula inteira, inclusive o CHECK, quando a coluna ja
+  existe) e cria a funcao SQL `subtrair_dias_uteis`, usada pelo trigger
+  `fn_criar_renovacao_auto`. Precisa ser executada manualmente no SQL Editor
+  antes de "Criar renovacao manualmente" funcionar em producao.
+- Data limite da cotacao de renovacao = 7 dias UTEIS antes do vencimento
+  (pula sabado/domingo, sem calendario de feriados) — regra unica em
+  `isValidIsoDate`/`subtrairDiasUteis` (`src/lib/autoCalc.js`), usada tanto no
+  front-end (`AutoRenovacoes.jsx`) quanto no backend (`src/lib/auto.js` e o
+  trigger SQL acima). Nao usar dias corridos nem duplicar essa logica.
 - O Kanban de `/auto/gestao` usa uma faixa horizontal com rolagem
   (`overflow-x-auto` + colunas de largura fixa) em vez de um grid fixo — as 6
   colunas de `COLUNAS` (`AutoEmissoes.jsx`) sempre ficam na mesma linha, sem

@@ -326,6 +326,10 @@ export default function Layout() {
   }, [])
 
   useEffect(() => {
+    if (isMobile) setSidebarOpen(false)
+  }, [location.pathname, isMobile])
+
+  useEffect(() => {
     setExpandedItems(prev => {
       const next = new Set(prev)
       if (location.pathname.startsWith('/fichas')) next.add('/fichas')
@@ -337,15 +341,22 @@ export default function Layout() {
   }, [location.pathname])
 
   function toggleExpand(to) {
+    const shouldOpenSidebar = !sidebarOpen && !isMobile
+    if (shouldOpenSidebar) setSidebarOpen(true)
     setExpandedItems(prev => {
       const next = new Set(prev)
+      if (shouldOpenSidebar) {
+        next.add(to)
+        return next
+      }
       if (next.has(to)) next.delete(to)
       else next.add(to)
       return next
     })
   }
 
-  const sidebarWidth = isMobile ? 'w-72' : sidebarOpen ? 'w-[300px]' : 'w-[84px]'
+  const showSidebarDetails = sidebarOpen || isMobile
+  const sidebarWidth = isMobile ? 'w-[min(88vw,320px)]' : 'w-full'
   const shellSidebarStyle = {
     background: 'var(--shell-sidebar-bg)',
     borderRight: '1px solid var(--shell-sidebar-border)',
@@ -366,12 +377,12 @@ export default function Layout() {
   }
 
   const shellGridStyle = !isMobile
-    ? { gridTemplateColumns: sidebarOpen ? '300px minmax(0, 1fr)' : '84px minmax(0, 1fr)' }
+    ? { gridTemplateColumns: sidebarOpen ? '306px minmax(0, 1fr)' : '86px minmax(0, 1fr)' }
     : undefined
 
   return (
     <div
-      className={`app-shell-root relative overflow-hidden ${isMobile ? 'block' : 'grid'} ${shellClassName}`}
+      className={`app-shell-root relative overflow-hidden ${isMobile ? 'block is-mobile-shell' : 'grid'} ${sidebarOpen ? 'is-sidebar-open' : 'is-sidebar-compact'} ${shellClassName}`}
       style={shellGridStyle}
     >
       {isMobile && sidebarOpen && (
@@ -387,51 +398,48 @@ export default function Layout() {
       )}
 
       <aside
+        aria-label="Navegação principal"
         className={`shell-sidebar ${isMobile
-          ? `fixed left-0 top-0 h-full z-[400] transition-[width,transform] duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
-          : 'relative z-[200] h-full min-h-0 transition-[width,box-shadow,transform] duration-300'
+          ? `fixed left-0 top-0 h-full z-[400] transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
+          : 'relative z-[200] h-full min-h-0'
         } flex flex-col ${sidebarWidth} ${(!sidebarOpen && !isMobile) ? 'is-collapsed' : 'is-expanded'}`}
         style={shellSidebarStyle}
       >
         <div
-          className={`shell-sidebar-brand flex items-center h-16 border-b flex-shrink-0 ${!sidebarOpen && !isMobile ? 'justify-between gap-2 px-2' : 'gap-3 px-4'}`}
+          className="shell-sidebar-brand flex items-center h-16 gap-3 border-b px-4 flex-shrink-0"
           style={{ borderColor: 'var(--shell-panel-border)' }}
         >
           <div className="shell-sidebar-logo w-9 h-9 rounded-2xl overflow-hidden flex-shrink-0 ring-1 ring-black/5 shadow-sm">
             <img src={LOGO} alt="Conves" className="w-full h-full object-cover" width="32" height="32" loading="eager" />
           </div>
-          {(sidebarOpen || isMobile) && (
-            <div className="shell-sidebar-brand-copy min-w-0">
+          <div className="shell-sidebar-detail shell-sidebar-brand-copy min-w-0" aria-hidden={!showSidebarDetails}>
               <div className="flex items-center gap-1.5">
                 <p className="text-sm font-bold leading-none text-dark-text" style={{ fontFamily: 'var(--font-heading)' }}>Conves</p>
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-gold flex-shrink-0 opacity-80" />
               </div>
               <p className="text-[10px] mt-0.5 truncate tracking-[0.18em] uppercase text-dark-muted">{workspaceLabel}</p>
-            </div>
-          )}
+          </div>
 
-          {!isMobile && (
-            <button
-              onClick={() => setSidebarOpen(o => !o)}
-              className="shell-sidebar-toggle ml-auto flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-2xl transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
-              style={{
-                background: 'var(--shell-panel-bg)',
-                border: '1px solid var(--shell-panel-border)',
-                boxShadow: 'var(--shell-panel-shadow)',
-              }}
-              title={sidebarOpen ? 'Recolher menu' : 'Expandir menu'}
-              aria-label={sidebarOpen ? 'Recolher menu' : 'Expandir menu'}
-            >
-              {sidebarOpen
-                ? <ChevronLeft className="w-3.5 h-3.5 text-dark-muted" />
-                : <ChevronRight className="w-3.5 h-3.5 text-dark-muted" />
-              }
-            </button>
-          )}
+          <button
+            onClick={() => isMobile ? setSidebarOpen(false) : setSidebarOpen(open => !open)}
+            className="shell-sidebar-toggle ml-auto flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-2xl transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
+            style={{
+              background: 'var(--shell-panel-bg)',
+              border: '1px solid var(--shell-panel-border)',
+              boxShadow: 'var(--shell-panel-shadow)',
+            }}
+            title={isMobile ? 'Fechar menu' : sidebarOpen ? 'Recolher menu' : 'Expandir menu'}
+            aria-label={isMobile ? 'Fechar menu' : sidebarOpen ? 'Recolher menu' : 'Expandir menu'}
+            aria-expanded={sidebarOpen}
+          >
+            {(isMobile || sidebarOpen)
+              ? <ChevronLeft className="w-3.5 h-3.5 text-dark-muted" />
+              : <ChevronRight className="w-3.5 h-3.5 text-dark-muted" />
+            }
+          </button>
         </div>
 
-        {(sidebarOpen || isMobile) && (
-          <div className="px-3 py-3 border-b" style={{ borderColor: 'var(--shell-panel-border)' }}>
+        <div className="shell-workspace-summary shell-sidebar-detail px-3 py-3 border-b" aria-hidden={!showSidebarDetails} style={{ borderColor: 'var(--shell-panel-border)' }}>
             <div className="shell-sidebar-card rounded-[28px] p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -448,8 +456,7 @@ export default function Layout() {
                 </span>
               </div>
             </div>
-          </div>
-        )}
+        </div>
 
         <div className="shell-sidebar-tools">
           <button
@@ -460,22 +467,20 @@ export default function Layout() {
             aria-label="Abrir busca universal"
           >
             <Search aria-hidden="true" />
-            {(sidebarOpen || isMobile) && (
-              <span>
-                <strong>Busca universal</strong>
-                <small>Fichas, apólices e clientes</small>
-              </span>
-            )}
-            {(sidebarOpen || isMobile) && <kbd>Ctrl K</kbd>}
+            <span className="shell-sidebar-detail" aria-hidden={!showSidebarDetails}>
+              <strong>Busca universal</strong>
+              <small>Fichas, apólices e clientes</small>
+            </span>
+            <kbd className="shell-sidebar-detail" aria-hidden={!showSidebarDetails}>Ctrl K</kbd>
           </button>
         </div>
 
-        <nav className="shell-sidebar-nav flex-1 px-2 py-3 overflow-y-auto space-y-0.5 scrollbar-none">
+        <nav aria-label="Áreas do sistema" className="shell-sidebar-nav flex-1 px-2 py-3 overflow-y-auto space-y-0.5">
           {NAV_GROUPS.map((group, gi) => (
             <div key={gi} className="shell-nav-group">
               {gi > 0 && <div className="my-2 border-t border-dark-border/30" />}
-              {group.label && (sidebarOpen || isMobile) && (
-                <p className="shell-nav-group-label px-3 pt-1 pb-2 text-[9px] font-bold text-dark-muted uppercase tracking-[0.16em]">
+              {group.label && (
+                <p className="shell-sidebar-detail shell-nav-group-label px-3 pt-1 pb-2 text-[9px] font-bold text-dark-muted uppercase tracking-[0.16em]" aria-hidden={!showSidebarDetails}>
                   {group.label}
                 </p>
               )}
@@ -497,16 +502,14 @@ export default function Layout() {
                         className={`shell-nav-item w-full flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-250 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-white pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`}
                       >
                         <Icon className="w-4 h-4 flex-shrink-0" />
-                        {(sidebarOpen || isMobile) && (
-                          <>
-                            <span className="flex-1 text-left truncate">{item.label}</span>
-                            <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform duration-200 text-dark-muted ${isExpanded ? 'rotate-180' : ''}`} />
-                          </>
-                        )}
+                        <span className="shell-sidebar-detail flex-1 text-left truncate" aria-hidden={!showSidebarDetails}>{item.label}</span>
+                        <span className="shell-sidebar-detail" aria-hidden={!showSidebarDetails}>
+                          <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform duration-200 text-dark-muted ${isExpanded ? 'rotate-180' : ''}`} />
+                        </span>
                       </button>
 
-                      {(sidebarOpen || isMobile) && isExpanded && (
-                        <div className="ml-3 mt-1 border-l border-dark-border/40 pl-3 space-y-1">
+                      {isExpanded && (
+                        <div className="shell-subnav-list ml-3 mt-1 border-l border-dark-border/40 pl-3 space-y-1">
                           {item.subitems.map(sub => {
                             if (sub.managerOnly && !canManageCommercial(profile)) return null
                             return (
@@ -534,15 +537,11 @@ export default function Layout() {
                       key={item.to}
                       title={(!sidebarOpen && !isMobile) ? item.label : undefined}
                         data-label={item.label}
-                      className={`shell-nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm opacity-50 cursor-not-allowed min-h-[42px] text-dark-muted ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}`}
+                      className="shell-nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm opacity-50 cursor-not-allowed min-h-[42px] text-dark-muted"
                     >
                       <Icon className="w-4 h-4 flex-shrink-0" />
-                      {(sidebarOpen || isMobile) && (
-                        <>
-                          <span className="flex-1 truncate">{item.label}</span>
-                          <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-brand-gold/15 text-brand-gold border border-brand-gold/25">Em breve</span>
-                        </>
-                      )}
+                      <span className="shell-sidebar-detail flex-1 truncate" aria-hidden={!showSidebarDetails}>{item.label}</span>
+                      <span className="shell-sidebar-detail text-[9px] font-semibold px-2 py-0.5 rounded-full bg-brand-gold/15 text-brand-gold border border-brand-gold/25" aria-hidden={!showSidebarDetails}>Em breve</span>
                     </div>
                   )
                 }
@@ -555,11 +554,11 @@ export default function Layout() {
                     title={(!sidebarOpen && !isMobile) ? item.label : undefined}
                     data-label={item.label}
                     className={({ isActive }) =>
-                      `shell-nav-item flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-250 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-white pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60 hover:translate-x-0.5 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`
+                      `shell-nav-item flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-250 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-white pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60 hover:translate-x-0.5 px-3'}`
                     }
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
-                    {(sidebarOpen || isMobile) && <span className="flex-1 truncate">{item.label}</span>}
+                    <span className="shell-sidebar-detail flex-1 truncate" aria-hidden={!showSidebarDetails}>{item.label}</span>
                   </NavLink>
                 )
               })}
@@ -568,7 +567,9 @@ export default function Layout() {
         </nav>
 
         <div
-          className={`shell-user-card border-t px-3 py-3 flex-shrink-0 ${(!sidebarOpen && !isMobile) ? 'flex justify-center' : 'flex items-center gap-2.5'}`}
+          className="shell-user-card flex items-center gap-2.5 border-t px-3 py-3 flex-shrink-0"
+          data-label={profile?.nome || 'Perfil'}
+          title={!showSidebarDetails ? (profile?.nome || 'Perfil') : undefined}
           style={{ borderColor: 'var(--shell-panel-border)' }}
         >
           <Avatar

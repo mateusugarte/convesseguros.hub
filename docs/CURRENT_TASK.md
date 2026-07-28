@@ -1,5 +1,21 @@
 # CURRENT TASK
 
+## "Iniciar cotação" quebrava com erro de schema cache + regra "só nome/seguradora/vencimento obrigatórios" (2026-07-28, Claude — CONCLUÍDA, migration pendente)
+
+Follow-up imediato da entrada abaixo. Usuário tentou "Iniciar cotação" numa das renovações recém-criadas e recebeu `Could not find the 'vigencia_fim' column of 'cotacoes_auto' in the schema cache`. Pediu também, indo além do bug: para cotações de renovação, a ÚNICA informação obrigatória na criação deve ser nome, seguradora e vencimento — nada mais (nem CPF).
+
+1. **Causa raiz confirmada por leitura de código, mesma classe de bug já vista nesta sessão:** `34_auto_schema_sync.sql` e `39_auto_schema_hardening.sql` já continham `ALTER TABLE cotacoes_auto ADD COLUMN IF NOT EXISTS vigencia_inicio date, ADD COLUMN IF NOT EXISTS vigencia_fim date` — mas nenhuma das duas rodou em produção. A migration 59 (sessão anterior) corrigiu o mesmo gap para `apolices_auto`/`emissoes_auto`, só não cobriu `cotacoes_auto`. Toda chamada a `criarCotacaoAuto` que envia `vigencia_fim` (inclusive "Iniciar cotação" de uma renovação) sempre quebrava com esse erro do PostgREST. **Corrigido:** nova migration `supabase/61_auto_cotacao_vigencia_colunas_faltantes.sql` (idempotente, mesmo padrão da 59) — **AINDA NÃO EXECUTADA NO SUPABASE, bloqueia "Iniciar cotação" até rodar.**
+2. **Regra nova, pedida explicitamente:** `criarCotacaoAuto` (`src/lib/auto.js`) agora valida, só para `tipo === 'renovacao'`: nome do segurado, seguradora e vencimento (`vigencia_fim`) obrigatórios — lança erro claro em português se faltar algum, em vez de deixar o Postgres/PostgREST quebrar com mensagem técnica. CPF continua opcional (já resolvido na entrada anterior). "Novo negócio" e "endosso" não são afetados (continuam exigindo CPF/cliente de verdade, pois geram registro real do seguro).
+3. **Efeito colateral corrigido:** o mini-formulário "Buscar cliente e apólice > Cliente novo" (`AutoCotacoes.jsx`, aba Renovação) nunca teve campos de Seguradora/Vencimento — só nome/CPF/celular/veículo/placa, com CPF obrigatório. Como a nova regra exige seguradora+vencimento e dispensa CPF, esse formulário ganhou `SeguradoraSelect` + campo de data, e o botão "Criar cotação de renovação" passou a exigir nome+seguradora+vencimento (CPF virou opcional, "pode preencher depois").
+
+`npm test` (142/142) e `npm run build` verdes. Sem smoke test ao vivo nesta rodada.
+
+**Risco remanescente:** renovações manuais criadas ANTES desta correção sem seguradora preenchida (seguradora é opcional na criação da renovação em si) vão bloquear em "Iniciar cotação" com a nova mensagem "Seguradora é obrigatória..." — o usuário precisa usar "Editar" (`ModalEditarRenovacao`) para preencher a seguradora antes de tentar de novo. Migration 61 também precisa rodar antes de qualquer "Iniciar cotação" funcionar de verdade em produção.
+
+**Próximos passos sugeridos:** rodar `supabase/61_auto_cotacao_vigencia_colunas_faltantes.sql` no SQL Editor; smoke test: "Iniciar cotação" numa renovação com seguradora preenchida (deve abrir a cotação normalmente, sem CPF) e numa sem seguradora (deve mostrar o toast de erro claro, não mais o erro de schema).
+
+---
+
 ## Campo "Possui 2 veículos?" na criação de renovação + "Iniciar cotação" exigia CPF (2026-07-28, Claude — CONCLUÍDA, migration pendente)
 
 Dois pedidos na mesma sessão: (1) no formulário "Criar manualmente" de `/auto/renovacoes/puxar`, adicionar um campo opcional "Possui 2 veículos?" que, se marcado, libera um campo de texto livre para dizer qual veículo é aquela renovação; (2) clicar em "Iniciar cotação" numa renovação pendente retornava "CPF do cliente é obrigatório para salvar o registro do seguro auto" — pedido para permitir criar a cotação de renovação sem CPF, o usuário preenche depois direto na tela da cotação.

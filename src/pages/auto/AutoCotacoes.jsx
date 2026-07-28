@@ -13,6 +13,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertCircle, BadgeDollarSign, CalendarDays, Car, CircleCheckBig, Mail, Phone, RefreshCw, Search, ShieldHalf, Sparkles, TrendingUp, UserRound } from 'lucide-react'
 import { PageHeader, MetricCard, DataCard, EmptyState } from '../../components/ui'
 import SeguradoraBadge from '../../components/SeguradoraBadge'
+import SeguradoraSelect from '../../components/SeguradoraSelect'
 import {
   buscarClientePorCpf,
   criarCotacaoAuto,
@@ -70,6 +71,8 @@ const RENOVACAO_NOVO_CLIENTE_VAZIO = {
   celular: '',
   modelo_veiculo: '',
   placa: '',
+  seguradora: '',
+  vigencia_fim: '',
 }
 
 function QuoteStatusBadge({ status }) {
@@ -264,6 +267,8 @@ export default function AutoCotacoes() {
       celular_cliente: payload.celular || null,
       modelo_veiculo: payload.modelo_veiculo || null,
       placa: payload.placa || null,
+      seguradora_preferencial: payload.seguradora ? { nome: payload.seguradora } : undefined,
+      vigencia_fim: payload.vigencia_fim || null,
     }),
     onSuccess: async cotacao => {
       setErro(null)
@@ -783,14 +788,23 @@ export default function AutoCotacoes() {
                   <div className="mt-4 space-y-4">
                     <div className="grid gap-3 md:grid-cols-2">
                       <Field label="Nome completo" value={renovacaoNovoCliente.nome_completo} onChange={v => setRenovacaoNovoCliente(f => ({ ...f, nome_completo: v }))} />
-                      <Field label="CPF" value={renovacaoNovoCliente.cpf} onChange={v => setRenovacaoNovoCliente(f => ({ ...f, cpf: v }))} />
+                      <Field label="Seguradora">
+                        <SeguradoraSelect
+                          value={renovacaoNovoCliente.seguradora}
+                          onChange={v => setRenovacaoNovoCliente(f => ({ ...f, seguradora: v }))}
+                          produto="auto"
+                          placeholder="Selecionar seguradora"
+                        />
+                      </Field>
+                      <Field label="Vencimento" type="date" value={renovacaoNovoCliente.vigencia_fim} onChange={v => setRenovacaoNovoCliente(f => ({ ...f, vigencia_fim: v }))} />
+                      <Field label="CPF" value={renovacaoNovoCliente.cpf} onChange={v => setRenovacaoNovoCliente(f => ({ ...f, cpf: v }))} placeholder="Opcional — pode preencher depois" />
                       <Field label="Celular" value={renovacaoNovoCliente.celular} onChange={v => setRenovacaoNovoCliente(f => ({ ...f, celular: v }))} />
                       <Field label="Modelo do veículo" value={renovacaoNovoCliente.modelo_veiculo} onChange={v => setRenovacaoNovoCliente(f => ({ ...f, modelo_veiculo: v }))} />
                       <Field label="Placa" value={renovacaoNovoCliente.placa} onChange={v => setRenovacaoNovoCliente(f => ({ ...f, placa: v }))} placeholder="Opcional" />
                     </div>
                     <button
                       onClick={() => salvarRenovacaoClienteNovo(renovacaoNovoCliente)}
-                      disabled={salvandoRenovacaoClienteNovo || !renovacaoNovoCliente.nome_completo || !renovacaoNovoCliente.cpf}
+                      disabled={salvandoRenovacaoClienteNovo || !renovacaoNovoCliente.nome_completo || !renovacaoNovoCliente.seguradora || !renovacaoNovoCliente.vigencia_fim}
                       className="btn-primary disabled:opacity-60"
                     >
                       {salvandoRenovacaoClienteNovo ? 'Salvando...' : 'Criar cotação de renovação'}

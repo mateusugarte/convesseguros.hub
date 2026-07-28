@@ -410,6 +410,22 @@ export async function getCotacoesAuto({ tipo, status, seguradora, inicio, fim } 
 }
 
 export async function criarCotacaoAuto(payload) {
+  // Cotacao de renovacao: a UNICA informacao obrigatoria para criar e nome,
+  // seguradora e vencimento (decisao explicita do usuario) — nada de CPF,
+  // veiculo, condutor etc. nesta etapa, o resto e preenchido depois direto
+  // no detalhe da cotacao, conforme o usuario vai cotando.
+  if (payload.tipo === 'renovacao') {
+    if (!payload.nome_cliente || !String(payload.nome_cliente).trim()) {
+      throw new Error('Nome do segurado é obrigatório para criar a cotação de renovação.')
+    }
+    if (!payload.seguradora_preferencial?.nome) {
+      throw new Error('Seguradora é obrigatória para criar a cotação de renovação.')
+    }
+    if (!payload.vigencia_fim) {
+      throw new Error('Vencimento é obrigatório para criar a cotação de renovação.')
+    }
+  }
+
   // Cotacao de renovacao pode ser criada sem CPF: o card "Iniciar cotacao"
   // parte de uma renovacao que pode nunca ter tido cliente cadastrado (veio
   // de planilha, ou so tem nome livre) — o usuario preenche o CPF depois,

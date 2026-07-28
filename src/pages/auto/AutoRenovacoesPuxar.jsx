@@ -4,8 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
 import { ArrowLeft, CalendarClock, ExternalLink, RefreshCw, Upload, XCircle } from 'lucide-react'
 import {
+  atualizarStatusRenovacao,
   buscarClientesAuto,
   criarRenovacaoManual,
+  excluirRenovacao,
   getAutoRenovacaoMesStatus,
   getRenovacoesAuto,
   marcarMesRenovacaoConcluido,
@@ -18,6 +20,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../contexts/ToastContext'
 import { PageHeader, DataCard, EmptyState } from '../../components/ui'
 import SeguradoraBadge from '../../components/SeguradoraBadge'
+import ModalEditarRenovacao from './ModalEditarRenovacao'
 import { isValidIsoDate, subtrairDiasUteis } from './autoShared'
 
 const PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS = 7
@@ -134,6 +137,32 @@ export default function AutoRenovacoesPuxar() {
     },
     onError: err => toast({ type: 'error', title: 'Erro ao marcar mês concluído', message: err?.message || 'Tente novamente.' }),
   })
+
+  const [editandoRenovacao, setEditandoRenovacao] = useState(null)
+
+  const { mutateAsync: salvarEdicaoAsync, isPending: salvandoEdicao } = useMutation({
+    mutationFn: ({ id, campos }) => atualizarStatusRenovacao(id, campos),
+    onSuccess: async () => {
+      await refetchListaDoMes()
+      toast({ type: 'success', title: 'Renovação atualizada' })
+      setEditandoRenovacao(null)
+    },
+    onError: err => toast({ type: 'error', title: 'Erro ao atualizar renovação', message: err?.message || 'Tente novamente.' }),
+  })
+
+  const { mutateAsync: excluirRenovacaoAsync, isPending: excluindo } = useMutation({
+    mutationFn: id => excluirRenovacao(id),
+    onSuccess: async () => {
+      await refetchListaDoMes()
+      toast({ type: 'success', title: 'Renovação excluída' })
+    },
+    onError: err => toast({ type: 'error', title: 'Erro ao excluir renovação', message: err?.message || 'Tente novamente.' }),
+  })
+
+  function handleExcluir(id) {
+    if (!window.confirm('Excluir esta renovação definitivamente? Essa ação não pode ser desfeita.')) return
+    excluirRenovacaoAsync(id)
+  }
 
   const [manualBusca, setManualBusca] = useState('')
   const [manualClientes, setManualClientes] = useState([])
@@ -398,18 +427,26 @@ export default function AutoRenovacoesPuxar() {
                       <td className="py-3 pr-4 text-dark-muted">{formatarData(item.vigencia_fim)}</td>
                       <td className="py-3 pr-4"><span className="badge badge-muted">{origemLabel}</span></td>
                       <td className="py-3">
-                        {item.cotacao_id ? (
-                          <button onClick={() => navigate(`/auto/cotacoes/${item.cotacao_id}`)} className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-3 py-1.5 text-xs font-semibold text-status-info inline-flex items-center gap-1">
-                            Ver cotação
-                            <ExternalLink className="h-3.5 w-3.5" />
+                        <div className="flex flex-wrap gap-2">
+                          {item.cotacao_id ? (
+                            <button onClick={() => navigate(`/auto/cotacoes/${item.cotacao_id}`)} className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-3 py-1.5 text-xs font-semibold text-status-info inline-flex items-center gap-1">
+                              Ver cotação
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </button>
+                          ) : apoliceId ? (
+                            <button onClick={() => navigate(`/auto/apolices/${apoliceId}`)} className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-3 py-1.5 text-xs font-semibold text-status-info">
+                              Abrir apólice
+                            </button>
+                          ) : (
+                            <span className="text-xs text-dark-muted">Ainda não cotada</span>
+                          )}
+                          <button onClick={() => setEditandoRenovacao(item)} className="rounded-2xl border border-dark-border px-3 py-1.5 text-xs font-semibold text-dark-muted hover:border-brand-accent/40 hover:text-dark-text">
+                            Editar
                           </button>
-                        ) : apoliceId ? (
-                          <button onClick={() => navigate(`/auto/apolices/${apoliceId}`)} className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-3 py-1.5 text-xs font-semibold text-status-info">
-                            Abrir apólice
+                          <button onClick={() => handleExcluir(item.id)} disabled={excluindo} className="rounded-2xl border border-status-danger/30 bg-status-danger/5 px-3 py-1.5 text-xs font-semibold text-status-danger hover:bg-status-danger/10 disabled:opacity-60">
+                            Excluir
                           </button>
-                        ) : (
-                          <span className="text-xs text-dark-muted">Ainda não cotada</span>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   )
@@ -419,6 +456,15 @@ export default function AutoRenovacoesPuxar() {
           </div>
         )}
       </DataCard>
+
+      {editandoRenovacao && (
+        <ModalEditarRenovacao
+          renovacao={editandoRenovacao}
+          onClose={() => setEditandoRenovacao(null)}
+          isSaving={salvandoEdicao}
+          onSave={campos => salvarEdicaoAsync({ id: editandoRenovacao.id, campos })}
+        />
+      )}
     </div>
   )
 }

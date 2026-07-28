@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { CalendarClock, CheckCircle2, Clock, ExternalLink, RefreshCw, Send, XCircle } from 'lucide-react'
+import { CalendarClock, CheckCircle2, Clock, ExternalLink, PencilLine, RefreshCw, Send, Trash2, XCircle } from 'lucide-react'
 import {
+  atualizarStatusRenovacao,
   cancelarRenovacao,
+  excluirRenovacao,
   getRenovacoesAuto,
   iniciarCotacaoRenovacao,
 } from '../../lib/auto'
 import { useToast } from '../../contexts/ToastContext'
 import { PageHeader, MetricCard, FilterBar, DataCard, EmptyState } from '../../components/ui'
 import SeguradoraBadge from '../../components/SeguradoraBadge'
+import ModalEditarRenovacao from './ModalEditarRenovacao'
 import {
   RENOVACAO_STATUS,
   monthKey,
@@ -60,6 +63,7 @@ function formatarData(str) {
   if (!str) return '-'
   return new Date(`${str}T12:00:00`).toLocaleDateString('pt-BR')
 }
+
 
 export default function AutoRenovacoes() {
   const navigate = useNavigate()
@@ -130,6 +134,34 @@ export default function AutoRenovacoes() {
     if (motivo === null) return
     cancelarRenovacaoAsync({ id, motivo: motivo || null })
   }
+
+  const { mutateAsync: excluirRenovacaoAsync, isPending: excluindo } = useMutation({
+    mutationFn: id => excluirRenovacao(id),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes-todas'] })
+      toast({ type: 'success', title: 'Renovação excluída' })
+    },
+    onError: err => toast({ type: 'error', title: 'Erro ao excluir renovação', message: err?.message || 'Tente novamente.' }),
+  })
+
+  function handleExcluir(id) {
+    if (!window.confirm('Excluir esta renovação definitivamente? Essa ação não pode ser desfeita.')) return
+    excluirRenovacaoAsync(id)
+  }
+
+  const [editandoRenovacao, setEditandoRenovacao] = useState(null)
+
+  const { mutateAsync: salvarEdicaoAsync, isPending: salvandoEdicao } = useMutation({
+    mutationFn: ({ id, campos }) => atualizarStatusRenovacao(id, campos),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes-todas'] })
+      toast({ type: 'success', title: 'Renovação atualizada' })
+      setEditandoRenovacao(null)
+    },
+    onError: err => toast({ type: 'error', title: 'Erro ao atualizar renovação', message: err?.message || 'Tente novamente.' }),
+  })
 
   const metricas = useMemo(() => ({
     total: renovacoes.length,
@@ -353,6 +385,23 @@ export default function AutoRenovacoes() {
                           Cancelar renovação
                         </button>
                       )}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setEditandoRenovacao(item)}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-2xl border border-dark-border px-3 py-2 text-xs font-semibold text-dark-muted transition-colors hover:border-brand-accent/40 hover:text-dark-text"
+                        >
+                          <PencilLine className="h-3.5 w-3.5" />
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleExcluir(item.id)}
+                          disabled={excluindo}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-2xl border border-status-danger/30 bg-status-danger/5 px-3 py-2 text-xs font-semibold text-status-danger transition-colors hover:bg-status-danger/10 disabled:opacity-60"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Excluir
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </article>
@@ -470,7 +519,12 @@ export default function AutoRenovacoes() {
                               Abrir apólice
                             </button>
                           )}
-                          {!item.cotacao_id && !apoliceId && '—'}
+                          <button onClick={() => setEditandoRenovacao(item)} className="rounded-2xl border border-dark-border px-3 py-1.5 text-xs font-semibold text-dark-muted hover:border-brand-accent/40 hover:text-dark-text">
+                            Editar
+                          </button>
+                          <button onClick={() => handleExcluir(item.id)} disabled={excluindo} className="rounded-2xl border border-status-danger/30 bg-status-danger/5 px-3 py-1.5 text-xs font-semibold text-status-danger hover:bg-status-danger/10 disabled:opacity-60">
+                            Excluir
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -481,6 +535,15 @@ export default function AutoRenovacoes() {
           </div>
         )}
       </DataCard>
+
+      {editandoRenovacao && (
+        <ModalEditarRenovacao
+          renovacao={editandoRenovacao}
+          onClose={() => setEditandoRenovacao(null)}
+          isSaving={salvandoEdicao}
+          onSave={campos => salvarEdicaoAsync({ id: editandoRenovacao.id, campos })}
+        />
+      )}
     </div>
   )
 }

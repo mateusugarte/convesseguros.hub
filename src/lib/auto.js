@@ -1035,6 +1035,17 @@ export async function cancelarRenovacao(id, motivo) {
   if (error) throw error
 }
 
+// Exclusao definitiva (diferente de cancelarRenovacao, que so marca
+// status_renovacao='nao_renovada' e mantem a linha). Nao mexe em
+// apolices_auto/cotacoes_auto — so remove o registro de renovacoes_auto.
+export async function excluirRenovacao(id) {
+  const { error } = await supabase
+    .from('renovacoes_auto')
+    .delete()
+    .eq('id', id)
+  if (error) throw error
+}
+
 export async function criarCotacaoEndosso({
   cliente_id,
   apolice_id,

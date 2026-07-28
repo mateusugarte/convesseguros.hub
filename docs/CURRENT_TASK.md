@@ -9,7 +9,13 @@ Depois de implementar a coluna "Renovações"/área dedicada (entrada abaixo), u
 3. **Corrigido:** nova migration `supabase/59_auto_apolices_emissoes_renovacao_colunas_faltantes.sql` (idempotente — repete o `ADD COLUMN IF NOT EXISTS` das migrations 38/39 em `apolices_auto` e `emissoes_auto`, mais `NOTIFY pgrst, 'reload schema'`). **AINDA NÃO EXECUTADA NO SUPABASE — bloqueia toda a área de renovações até isso ser feito.**
 4. **Defesa em profundidade adicionada** (`AutoRenovacoes.jsx`, `AutoRenovacoesPuxar.jsx`, `AutoEmissoes.jsx`): as 4 queries afetadas agora expõem `isError`/`error` e mostram um `EmptyState` de erro real (com a mensagem do Postgres) em vez de continuarem mostrando silenciosamente "nenhuma renovação encontrada" quando a query falha — para essa classe de bug nunca mais passar despercebida.
 
-**Dados de teste no banco (não removidos, decisão do usuário):** durante o diagnóstico ficaram 3 linhas de teste em `renovacoes_auto` — "Cliente Smoke Test" (minha, `vigencia_fim=2026-07-15`) e 2x "ALINE MONICA RIBEIRO" (do próprio usuário, aparentemente duplicada, `vigencia_fim=2026-08-01`). Nenhuma foi apagada — avisar o usuário e perguntar se quer que sejam removidas.
+**Dados de teste no banco:** minha linha de teste ("Cliente Smoke Test") foi excluída (via REST direto, com o access_token real do usuário, já que o app ainda não tinha um botão de excluir naquele momento). As 2 linhas "ALINE MONICA RIBEIRO" (`vigencia_fim=2026-08-01`) são do próprio usuário — não apaguei, ele decide se são duplicata ou não (agora tem botão "Excluir" na UI para fazer isso quando quiser).
+
+**Follow-up na mesma sessão — CRUD completo de renovações:** usuário pediu para permitir editar/excluir/"fazer qualquer coisa" com renovações existentes. Adicionado:
+- `excluirRenovacao(id)` (`src/lib/auto.js`) — exclusão definitiva (DELETE), diferente de `cancelarRenovacao` (que so marca `status_renovacao='nao_renovada'`, mantém a linha). Os dois continuam existindo separados, por decisão do usuário.
+- `atualizarStatusRenovacao` (já existia, já era genérico o suficiente) reaproveitado para editar seguradora/vencimento/data limite.
+- Novo componente compartilhado `src/pages/auto/ModalEditarRenovacao.jsx` — usado tanto em `AutoRenovacoes.jsx` (lista principal + tabela "Acompanhar renovações") quanto em `AutoRenovacoesPuxar.jsx` (lista de confirmação do mês), para não duplicar a UI de edição em 2 arquivos.
+- Botões "Editar"/"Excluir" adicionados nos 2 lugares acima. Não adicionados ainda no card leve do Kanban (`CardRenovacaoPendente`) — esse card ficou só com Iniciar cotação/Cancelar, por escopo (não foi pedido explicitamente lá).
 
 `npm test` (142/142) e `npm run build` verdes após as mudanças de error-handling.
 

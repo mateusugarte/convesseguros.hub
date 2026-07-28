@@ -1243,6 +1243,7 @@ export default function AutoEmissoes() {
 
   const [dragging, setDragging] = useState(null)
   const [dragOver, setDragOver] = useState(null)
+  const [kanbanDensity, setKanbanDensity] = useState(() => localStorage.getItem('auto-kanban-density') || 'comfortable')
   const [modalResultado, setModalResultado] = useState(null)
   const [modalEmissao, setModalEmissao] = useState(null)
   const [detalhe, setDetalhe] = useState(null)
@@ -1272,6 +1273,10 @@ export default function AutoEmissoes() {
   const [filtroTipoEmissoes, setFiltroTipoEmissoes] = useState('todos')
   const [filtroStatusEmissoes, setFiltroStatusEmissoes] = useState('todos')
   const [filtroResponsavelEmissoes, setFiltroResponsavelEmissoes] = useState('todos')
+
+  useEffect(() => {
+    localStorage.setItem('auto-kanban-density', kanbanDensity)
+  }, [kanbanDensity])
 
   const { data: emissoes = [] } = useQuery({
     queryKey: ['auto-emissoes', periodo, filtroInicio, filtroFim],
@@ -1972,7 +1977,20 @@ export default function AutoEmissoes() {
             </div>
           </FilterBar>
 
-          <div className="auto-kanban-board -mx-1 flex gap-4 overflow-x-auto pb-2 pt-1 px-1 snap-x snap-mandatory md:snap-none">
+          <div className="auto-density-row" role="group" aria-label="Densidade dos cards do Pipeline">
+            <span>Visualização</span>
+            <div>
+              <button type="button" className={kanbanDensity === 'comfortable' ? 'is-active' : ''} onClick={() => setKanbanDensity('comfortable')}>
+                Detalhada
+              </button>
+              <button type="button" className={kanbanDensity === 'compact' ? 'is-active' : ''} onClick={() => setKanbanDensity('compact')}>
+                Compacta
+              </button>
+            </div>
+            <small>{kanbanDensity === 'compact' ? 'Mais negócios visíveis por vez' : 'Todos os dados importantes no card'}</small>
+          </div>
+
+          <div className={`auto-kanban-board is-${kanbanDensity} -mx-1 flex gap-4 overflow-x-auto pb-2 pt-1 px-1 snap-x snap-mandatory md:snap-none`}>
             {COLUNAS.map(coluna => {
               const cards = emissoes.filter(item => getEmissaoColuna(item) === coluna.id)
               return (

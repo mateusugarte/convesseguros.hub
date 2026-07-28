@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   BarChart,
@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertCircle, BadgeDollarSign, CalendarDays, Car, CircleCheckBig, Mail, Phone, RefreshCw, Search, ShieldHalf, Sparkles, TrendingUp, UserRound } from 'lucide-react'
 import { PageHeader, MetricCard, DataCard, EmptyState } from '../../components/ui'
 import SeguradoraBadge from '../../components/SeguradoraBadge'
@@ -131,7 +131,9 @@ function ChartTip({ active, payload, label }) {
 
 export default function AutoCotacoes() {
   const navigate = useNavigate()
-  const [tab, setTab] = useState('lista')
+  const [searchParams] = useSearchParams()
+  const modoInicial = LISTA_TABS.some(item => item.value === searchParams.get('modo')) ? searchParams.get('modo') : 'lista'
+  const [tab, setTab] = useState(modoInicial)
   const [filtroStatus, setFiltroStatus] = useState('todas')
   const [filtroTipo, setFiltroTipo] = useState('todos')
   const [filtroPeriodo, setFiltroPeriodo] = useState('90d')
@@ -150,6 +152,14 @@ export default function AutoCotacoes() {
   const [endossoForm, setEndossoForm] = useState({ motivo: '', campo_alterado: '', valor_anterior: '', valor_atual: '', valor_endosso: '' })
   const [erro, setErro] = useState(null)
   const qc = useQueryClient()
+
+  useEffect(() => {
+    const modo = searchParams.get('modo')
+    if (LISTA_TABS.some(item => item.value === modo)) {
+      setTab(modo)
+      setErro(null)
+    }
+  }, [searchParams])
 
   const { data: cotacoes = [], isLoading: loadingLista } = useQuery({
     queryKey: ['auto-cotacoes-todas'],

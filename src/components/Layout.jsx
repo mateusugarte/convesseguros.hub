@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { lazy, Suspense, useState, useEffect } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -19,6 +19,8 @@ import {
   ChevronDown, FolderOpen, Calendar, RefreshCw, Car, Coins,
   GraduationCap, ClipboardList,
 } from 'lucide-react'
+
+const AutoWorkspaceBar = lazy(() => import('./auto/AutoWorkspaceBar'))
 
 const LOGO = 'https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/conves/file.jpeg'
 
@@ -150,6 +152,7 @@ export default function Layout() {
   })
 
   const isCommercialRoute = location.pathname.startsWith('/comercial')
+  const isAutoRoute = location.pathname.startsWith('/auto')
   const isDashboardRoute = location.pathname === '/'
   const isJornadasRoute = location.pathname.startsWith('/comercial/jornadas')
   const shellClassName = isCommercialRoute ? 'crm-shell' : 'ops-shell'
@@ -661,6 +664,11 @@ export default function Layout() {
           {/* uw:max-w conta a largura em monitores ultrawide/4K (>=2200px) para
               tabelas/textos não esticarem até a borda; não afeta notebooks/1920px. */}
           <div className="flex h-full min-h-full w-full min-w-0 flex-1 flex-col uw:max-w-[1900px] uw:mx-auto">
+            {isAutoRoute && (
+              <Suspense fallback={<div className="auto-workspace-loading" aria-hidden="true"><span /><span /><span /></div>}>
+                <AutoWorkspaceBar />
+              </Suspense>
+            )}
             <PageTransition>
               <Outlet />
             </PageTransition>

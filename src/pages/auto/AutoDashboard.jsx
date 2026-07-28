@@ -250,6 +250,61 @@ export default function AutoDashboard() {
 
       <AutoStatStrip items={stats} className="auto-dashboard-stats" />
 
+      <section className="auto-intelligence-grid auto-v2-enter" aria-label="Inteligência operacional">
+        <article className="auto-performance-orbit-card">
+          <div className="auto-performance-copy">
+            <span>Eficiência comercial</span>
+            <h2>Conversão do período</h2>
+            <p>Leitura imediata de quantas oportunidades avançaram para negócio fechado.</p>
+            <button type="button" onClick={() => navigate('/auto/cotacoes')}>
+              Analisar cotações
+              <ArrowRight aria-hidden="true" />
+            </button>
+          </div>
+          <div
+            className="auto-performance-orbit"
+            style={{ '--auto-orbit-value': `${Math.max(0, Math.min(100, Number(metrics?.taxaConversao) || 0)) * 3.6}deg` }}
+            aria-label={`${metrics?.taxaConversao ?? 0}% de conversão`}
+          >
+            <div>
+              <strong>{metrics?.taxaConversao ?? 0}%</strong>
+              <small>convertidas</small>
+            </div>
+          </div>
+        </article>
+
+        <article className="auto-priority-card">
+          <header>
+            <div>
+              <span>Radar de prioridades</span>
+              <h2>Onde agir primeiro</h2>
+            </div>
+            <AutoBadge tone={Number(metrics?.renovacoesPendentes) > 0 ? 'warning' : 'success'}>
+              {Number(metrics?.renovacoesPendentes) > 0 ? 'Atenção necessária' : 'Operação em dia'}
+            </AutoBadge>
+          </header>
+          <div className="auto-priority-list">
+            <button type="button" onClick={() => navigate('/auto/renovacoes')}>
+              <span className="is-amber"><RefreshCw aria-hidden="true" /></span>
+              <div><strong>Renovações sem tratativa</strong><small>Carteira aguardando próxima ação</small></div>
+              <b>{metrics?.renovacoesPendentes ?? 0}</b>
+              <ArrowRight aria-hidden="true" />
+            </button>
+            <button type="button" onClick={() => navigate('/auto/renovacoes')}>
+              <span className="is-coral"><CalendarDays aria-hidden="true" /></span>
+              <div><strong>Vencimentos neste mês</strong><small>Prioridade de contato e proposta</small></div>
+              <b>{metrics?.vencendoNoMes ?? 0}</b>
+              <ArrowRight aria-hidden="true" />
+            </button>
+            <button type="button" onClick={() => navigate('/auto/gestao')}>
+              <span className="is-blue"><Layers3 aria-hidden="true" /></span>
+              <div><strong>Negócios no fluxo</strong><small>Cotações abertas no período</small></div>
+              <b>{metrics?.cotacoesNoMes ?? 0}</b>
+              <ArrowRight aria-hidden="true" />
+            </button>
+          </div>
+        </article>
+      </section>
       <section className="auto-command-section auto-v2-enter">
         <div className="auto-section-heading">
           <div>

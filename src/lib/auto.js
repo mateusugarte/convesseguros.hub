@@ -2128,4 +2128,41 @@ export async function atualizarTagsEmissao(id, tags) {
     .eq('id', id)
   if (error) throw error
 }
+// Busca universal do workspace Auto. As consultas são limitadas e executadas
+// em paralelo para manter o command center rápido mesmo com carteiras grandes.
+export async function buscarAutoGlobal(termo) {
+  const texto = String(termo || '').trim().replace(/[%_,()]/g, ' ')
+  if (texto.length < 2) return { clientes: [], apolices: [], cotacoes: [] }
 
+  const busca = `%${texto}%`
+  const [clientesResult, apolicesResult, cotacoesResult] = await Promise.all([
+    supabase
+      .from('clientes_auto')
+      .select('id, nome_completo, cpf, celular')
+      .or(`nome_completo.ilike.${busca},cpf.ilike.${busca},celular.ilike.${busca}`)
+      .order('nome_completo', { ascending: true })
+      .limit(6),
+    supabase
+      .from('apolices_auto')
+      .select('id, nome_cliente, cpf_cliente, numero_apolice, seguradora, modelo_veiculo, placa, vigencia_fim')
+      .or(`nome_cliente.ilike.${busca},cpf_cliente.ilike.${busca},numero_apolice.ilike.${busca},modelo_veiculo.ilike.${busca},placa.ilike.${busca}`)
+      .order('created_at', { ascending: false })
+      .limit(6),
+    supabase
+      .from('cotacoes_auto')
+      .select('id, nome_cliente, cpf_cliente, modelo_veiculo, placa, tipo, status, created_at')
+      .or(`nome_cliente.ilike.${busca},cpf_cliente.ilike.${busca},modelo_veiculo.ilike.${busca},placa.ilike.${busca}`)
+      .order('created_at', { ascending: false })
+      .limit(6),
+  ])
+
+  if (clientesResult.error) throw clientesResult.error
+  if (apolicesResult.error) throw apolicesResult.error
+  if (cotacoesResult.error) throw cotacoesResult.error
+
+  return {
+    clientes: clientesResult.data ?? [],
+    apolices: apolicesResult.data ?? [],
+    cotacoes: cotacoesResult.data ?? [],
+  }
+}

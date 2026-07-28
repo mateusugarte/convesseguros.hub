@@ -336,6 +336,9 @@ export default function AutoRenovacoes() {
                             <p className="mt-1 font-semibold text-dark-text">Não informada</p>
                           )}
                           <p className="mt-1 text-xs text-dark-muted">Veículo: {apolice.modelo_veiculo || '—'} · Placa: {apolice.placa || '—'}</p>
+                          {item.identificacao_veiculo && (
+                            <p className="mt-1 text-xs text-dark-muted">2 veículos — esta renovação: {item.identificacao_veiculo}</p>
+                          )}
                         </div>
                         <div className="rounded-2xl border border-white/60 bg-white/70 p-3">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Informações da emissão</p>
@@ -498,7 +501,12 @@ export default function AutoRenovacoes() {
                   const isCotando = cotandoId === item.id
                   return (
                     <tr key={item.id} className="transition-colors hover:bg-brand-accent/5">
-                      <td className="py-3 pr-4 font-medium text-dark-text">{item.clientes_auto?.nome_completo || item.apolices_auto?.nome_cliente || item.nome_segurado_anterior || '-'}</td>
+                      <td className="py-3 pr-4 font-medium text-dark-text">
+                        {item.clientes_auto?.nome_completo || item.apolices_auto?.nome_cliente || item.nome_segurado_anterior || '-'}
+                        {item.identificacao_veiculo && (
+                          <p className="mt-0.5 text-xs font-normal text-dark-muted">Veículo: {item.identificacao_veiculo}</p>
+                        )}
+                      </td>
                       <td className="py-3 pr-4 text-dark-muted">{item.seguradora || '-'}</td>
                       <td className="py-3 pr-4 text-dark-muted">{formatarData(item.vigencia_fim)}</td>
                       <td className="py-3 pr-4"><span className={`badge ${toneClasses(cotacaoInfo.tone)}`}>{cotacaoInfo.label}</span></td>

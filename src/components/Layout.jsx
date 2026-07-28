@@ -345,7 +345,7 @@ export default function Layout() {
     })
   }
 
-  const sidebarWidth = isMobile ? 'w-72' : sidebarOpen ? 'w-[284px]' : 'w-[92px]'
+  const sidebarWidth = isMobile ? 'w-72' : sidebarOpen ? 'w-[300px]' : 'w-[84px]'
   const shellSidebarStyle = {
     background: 'var(--shell-sidebar-bg)',
     borderRight: '1px solid var(--shell-sidebar-border)',
@@ -366,7 +366,7 @@ export default function Layout() {
   }
 
   const shellGridStyle = !isMobile
-    ? { gridTemplateColumns: sidebarOpen ? '284px minmax(0, 1fr)' : '92px minmax(0, 1fr)' }
+    ? { gridTemplateColumns: sidebarOpen ? '300px minmax(0, 1fr)' : '84px minmax(0, 1fr)' }
     : undefined
 
   return (
@@ -376,7 +376,7 @@ export default function Layout() {
     >
       {isMobile && sidebarOpen && (
           <div
-            className="fixed inset-0 z-[300]"
+            className="shell-sidebar-scrim fixed inset-0 z-[300]"
             style={{
               background: 'rgba(248, 250, 255, 0.97)',
               backdropFilter: 'blur(96px) saturate(110%)',
@@ -390,18 +390,18 @@ export default function Layout() {
         className={`shell-sidebar ${isMobile
           ? `fixed left-0 top-0 h-full z-[400] transition-[width,transform] duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
           : 'relative z-[200] h-full min-h-0 transition-[width,box-shadow,transform] duration-300'
-        } flex flex-col ${sidebarWidth}`}
+        } flex flex-col ${sidebarWidth} ${(!sidebarOpen && !isMobile) ? 'is-collapsed' : 'is-expanded'}`}
         style={shellSidebarStyle}
       >
         <div
-          className={`flex items-center h-16 border-b flex-shrink-0 ${!sidebarOpen && !isMobile ? 'justify-between gap-2 px-2' : 'gap-3 px-4'}`}
+          className={`shell-sidebar-brand flex items-center h-16 border-b flex-shrink-0 ${!sidebarOpen && !isMobile ? 'justify-between gap-2 px-2' : 'gap-3 px-4'}`}
           style={{ borderColor: 'var(--shell-panel-border)' }}
         >
-          <div className="w-9 h-9 rounded-2xl overflow-hidden flex-shrink-0 ring-1 ring-black/5 shadow-sm">
+          <div className="shell-sidebar-logo w-9 h-9 rounded-2xl overflow-hidden flex-shrink-0 ring-1 ring-black/5 shadow-sm">
             <img src={LOGO} alt="Conves" className="w-full h-full object-cover" width="32" height="32" loading="eager" />
           </div>
           {(sidebarOpen || isMobile) && (
-            <div className="min-w-0">
+            <div className="shell-sidebar-brand-copy min-w-0">
               <div className="flex items-center gap-1.5">
                 <p className="text-sm font-bold leading-none text-dark-text" style={{ fontFamily: 'var(--font-heading)' }}>Conves</p>
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-gold flex-shrink-0 opacity-80" />
@@ -413,7 +413,7 @@ export default function Layout() {
           {!isMobile && (
             <button
               onClick={() => setSidebarOpen(o => !o)}
-              className="ml-auto flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-2xl transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
+              className="shell-sidebar-toggle ml-auto flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-2xl transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
               style={{
                 background: 'var(--shell-panel-bg)',
                 border: '1px solid var(--shell-panel-border)',
@@ -451,12 +451,31 @@ export default function Layout() {
           </div>
         )}
 
-        <nav className="flex-1 px-2 py-3 overflow-y-auto space-y-0.5 scrollbar-none">
+        <div className="shell-sidebar-tools">
+          <button
+            type="button"
+            className="shell-sidebar-command"
+            onClick={() => setCmdOpen(true)}
+            data-label="Busca universal"
+            aria-label="Abrir busca universal"
+          >
+            <Search aria-hidden="true" />
+            {(sidebarOpen || isMobile) && (
+              <span>
+                <strong>Busca universal</strong>
+                <small>Fichas, apólices e clientes</small>
+              </span>
+            )}
+            {(sidebarOpen || isMobile) && <kbd>Ctrl K</kbd>}
+          </button>
+        </div>
+
+        <nav className="shell-sidebar-nav flex-1 px-2 py-3 overflow-y-auto space-y-0.5 scrollbar-none">
           {NAV_GROUPS.map((group, gi) => (
-            <div key={gi}>
+            <div key={gi} className="shell-nav-group">
               {gi > 0 && <div className="my-2 border-t border-dark-border/30" />}
               {group.label && (sidebarOpen || isMobile) && (
-                <p className="px-3 pt-1 pb-2 text-[9px] font-bold text-dark-muted uppercase tracking-[0.16em]">
+                <p className="shell-nav-group-label px-3 pt-1 pb-2 text-[9px] font-bold text-dark-muted uppercase tracking-[0.16em]">
                   {group.label}
                 </p>
               )}
@@ -474,6 +493,7 @@ export default function Layout() {
                       <button
                         onClick={() => toggleExpand(item.to)}
                         title={(!sidebarOpen && !isMobile) ? item.label : undefined}
+                        data-label={item.label}
                         className={`shell-nav-item w-full flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-250 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-white pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`}
                       >
                         <Icon className="w-4 h-4 flex-shrink-0" />
@@ -513,6 +533,7 @@ export default function Layout() {
                     <div
                       key={item.to}
                       title={(!sidebarOpen && !isMobile) ? item.label : undefined}
+                        data-label={item.label}
                       className={`shell-nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm opacity-50 cursor-not-allowed min-h-[42px] text-dark-muted ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}`}
                     >
                       <Icon className="w-4 h-4 flex-shrink-0" />
@@ -532,6 +553,7 @@ export default function Layout() {
                     to={item.to}
                     end={item.end}
                     title={(!sidebarOpen && !isMobile) ? item.label : undefined}
+                    data-label={item.label}
                     className={({ isActive }) =>
                       `shell-nav-item flex items-center gap-3 py-2.5 text-sm font-medium transition-all duration-250 cursor-pointer min-h-[42px] ${isActive ? 'shell-nav-item-active text-white pl-[calc(0.8rem-2px)] pr-3' : 'text-dark-muted hover:text-dark-text hover:bg-dark-surface2/60 hover:translate-x-0.5 px-3'} ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`
                     }
@@ -567,7 +589,7 @@ export default function Layout() {
                   >
                     <Bell className="h-4 w-4" />
                     {notifications.length > 0 && (
-                      <span className="absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-status-warning px-1 text-[9px] font-bold text-white">
+                      <span className="shell-notification-dot absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-status-warning px-1 text-[9px] font-bold text-white">
                         {notifications.length > 9 ? '9+' : notifications.length}
                       </span>
                     )}
@@ -583,6 +605,16 @@ export default function Layout() {
                   </span>
                 </p>
               )}
+              <div className="shell-user-actions">
+                <button type="button" className="shell-user-action" onClick={toggleTheme}>
+                  {theme === 'dark' ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+                  <span>{theme === 'dark' ? 'Tema claro' : 'Tema escuro'}</span>
+                </button>
+                <button type="button" className="shell-user-action is-danger" onClick={signOut}>
+                  <LogOut aria-hidden="true" />
+                  <span>Sair</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -729,4 +761,3 @@ export default function Layout() {
     </div>
   )
 }
-

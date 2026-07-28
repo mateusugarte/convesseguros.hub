@@ -266,11 +266,12 @@ function buildRenewalComparisonPayload(payload = {}, premioLiquidoAtual = 0, com
   }
 }
 
-async function resolverClienteAutoId(payload = {}) {
+async function resolverClienteAutoId(payload = {}, { exigirIdentificacao = true } = {}) {
   if (isUuid(payload.cliente_id)) return payload.cliente_id
 
   const cpf = normalizeCpf(payload.cpf_cliente || payload.cpf)
   if (!cpf) {
+    if (!exigirIdentificacao) return null
     throw new Error('CPF do cliente é obrigatório para salvar o registro do seguro auto.')
   }
 
@@ -409,7 +410,13 @@ export async function getCotacoesAuto({ tipo, status, seguradora, inicio, fim } 
 }
 
 export async function criarCotacaoAuto(payload) {
-  const clienteId = await resolverClienteAutoId(payload)
+  // Cotacao de renovacao pode ser criada sem CPF: o card "Iniciar cotacao"
+  // parte de uma renovacao que pode nunca ter tido cliente cadastrado (veio
+  // de planilha, ou so tem nome livre) — o usuario preenche o CPF depois,
+  // direto no detalhe da cotacao, conforme vai cotando. Os demais fluxos
+  // (novo negocio, emissao) continuam exigindo CPF, pois geram o registro
+  // real do seguro.
+  const clienteId = await resolverClienteAutoId(payload, { exigirIdentificacao: payload.tipo !== 'renovacao' })
   const insertPayload = {
     cliente_id: clienteId,
     tipo: payload.tipo || 'novo',
@@ -1253,7 +1260,7 @@ export async function buscarClientesAuto(termo) {
 // cadastrado (busca por nome/CPF); nesse caso o nome real do cliente vira
 // nome_segurado_anterior tambem, para o card exibir o nome sem precisar de
 // outro join. Sem cliente_id, nomeManual e o unico nome disponivel.
-export async function criarRenovacaoManual({ cliente_id, nomeManual, seguradora, vigencia_fim, data_limite_envio }) {
+export async function criarRenovacaoManual({ cliente_id, nomeManual, seguradora, vigencia_fim, data_limite_envio, identificacaoVeiculo }) {
   if (!vigencia_fim) throw new Error('Informe a data de vencimento.')
 
   let nomeSegurado = nomeManual || null
@@ -1280,6 +1287,7 @@ export async function criarRenovacaoManual({ cliente_id, nomeManual, seguradora,
       status_renovacao: 'pendente',
       origem: 'manual',
       nome_segurado_anterior: nomeSegurado,
+      identificacao_veiculo: identificacaoVeiculo || null,
     })
     .select()
     .single()

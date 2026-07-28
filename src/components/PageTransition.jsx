@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 
 export function PageTransition({ children, className = '' }) {
   const location = useLocation()
-  // Start visible — prevents white flash on first render
+  // Start visible to prevent a white flash on the first render.
   const [visible, setVisible] = useState(true)
   const prevPath = useRef(location.pathname)
 
@@ -11,19 +11,13 @@ export function PageTransition({ children, className = '' }) {
     if (prevPath.current === location.pathname) return
     prevPath.current = location.pathname
     setVisible(false)
-    const t = setTimeout(() => setVisible(true), 20)
-    return () => clearTimeout(t)
+    const timeoutId = setTimeout(() => setVisible(true), 20)
+    return () => clearTimeout(timeoutId)
   }, [location.pathname])
 
   return (
     <div
-      className={`flex h-full min-h-0 w-full flex-1 flex-col ${className}`}
-      style={{
-        opacity:    visible ? 1 : 0,
-        transform:  visible ? 'none' : 'translateY(8px)',
-        transition: visible ? 'opacity 240ms cubic-bezier(0.16, 1, 0.3, 1), transform 240ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
-        willChange: visible ? 'auto' : 'opacity, transform',
-      }}
+      className={`shell-page-transition ${visible ? 'is-visible' : 'is-entering'} flex h-full min-h-0 w-full flex-1 flex-col ${className}`}
     >
       {children}
     </div>

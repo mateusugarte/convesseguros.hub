@@ -172,6 +172,8 @@ export default function AutoRenovacoesPuxar() {
   const [manualSeguradora, setManualSeguradora] = useState('')
   const [manualVigenciaFim, setManualVigenciaFim] = useState('')
   const [manualDataLimite, setManualDataLimite] = useState('')
+  const [manualPossuiDoisVeiculos, setManualPossuiDoisVeiculos] = useState(false)
+  const [manualIdentificacaoVeiculo, setManualIdentificacaoVeiculo] = useState('')
 
   async function handleBuscarClienteManual() {
     const termo = manualBusca.trim()
@@ -206,6 +208,8 @@ export default function AutoRenovacoesPuxar() {
     setManualSeguradora('')
     setManualVigenciaFim('')
     setManualDataLimite('')
+    setManualPossuiDoisVeiculos(false)
+    setManualIdentificacaoVeiculo('')
   }
 
   const { mutateAsync: criarManualAsync, isPending: criandoManual } = useMutation({
@@ -215,6 +219,7 @@ export default function AutoRenovacoesPuxar() {
       seguradora: manualSeguradora,
       vigencia_fim: manualVigenciaFim,
       data_limite_envio: manualDataLimite || null,
+      identificacaoVeiculo: manualPossuiDoisVeiculos ? manualIdentificacaoVeiculo.trim() || null : null,
     }),
     onSuccess: async () => {
       toast({ type: 'success', title: 'Renovação criada', message: 'Já aparece na lista abaixo.' })
@@ -359,6 +364,27 @@ export default function AutoRenovacoesPuxar() {
             <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Data limite da cotação</label>
             <input type="date" value={manualDataLimite} onChange={e => setManualDataLimite(e.target.value)} className="input w-full" />
           </div>
+          <div className="md:col-span-2">
+            <label className="flex items-center gap-2 text-sm text-dark-text">
+              <input
+                type="checkbox"
+                checked={manualPossuiDoisVeiculos}
+                onChange={e => {
+                  setManualPossuiDoisVeiculos(e.target.checked)
+                  if (!e.target.checked) setManualIdentificacaoVeiculo('')
+                }}
+              />
+              Possui 2 veículos?
+            </label>
+            {manualPossuiDoisVeiculos && (
+              <input
+                value={manualIdentificacaoVeiculo}
+                onChange={e => setManualIdentificacaoVeiculo(e.target.value)}
+                placeholder="Qual veículo é essa renovação? (ex.: Gol branco placa ABC1234)"
+                className="input mt-2 w-full"
+              />
+            )}
+          </div>
         </div>
 
         <button
@@ -420,7 +446,12 @@ export default function AutoRenovacoesPuxar() {
                   const origemLabel = item.origem === 'manual' ? 'Manual' : item.origem === 'xls' ? 'Planilha' : 'Sistema'
                   return (
                     <tr key={item.id} className="transition-colors hover:bg-brand-accent/5">
-                      <td className="py-3 pr-4 font-medium text-dark-text">{nome}</td>
+                      <td className="py-3 pr-4 font-medium text-dark-text">
+                        {nome}
+                        {item.identificacao_veiculo && (
+                          <p className="mt-0.5 text-xs font-normal text-dark-muted">Veículo: {item.identificacao_veiculo}</p>
+                        )}
+                      </td>
                       <td className="py-3 pr-4 text-dark-muted">
                         {seguradoraNome ? <SeguradoraBadge nome={seguradoraNome} size="sm" /> : '-'}
                       </td>

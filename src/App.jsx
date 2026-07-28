@@ -44,6 +44,7 @@ const FinanceiroFaturaDetalhe = lazy(() => import('./pages/Financeiro/Financeiro
 // Área Auto
 const AutoDashboard  = lazy(() => import('./pages/auto/AutoDashboard'))
 const AutoRenovacoes = lazy(() => import('./pages/auto/AutoRenovacoes'))
+const AutoRenovacoesPuxar = lazy(() => import('./pages/auto/AutoRenovacoesPuxar'))
 const AutoEmissoes   = lazy(() => import('./pages/auto/AutoEmissoes'))
 const AutoClientes   = lazy(() => import('./pages/auto/AutoClientesV2'))
 const AutoClienteDetalhe = lazy(() => import('./pages/auto/AutoClienteDetalheV2'))
@@ -125,6 +126,7 @@ function AppRoutes() {
           <Route path="auto"                element={<AutoDashboard />} />
           <Route path="auto/gestao"         element={<AutoEmissoes />} />
           <Route path="auto/renovacoes"     element={<AutoRenovacoes />} />
+          <Route path="auto/renovacoes/puxar" element={<AutoRenovacoesPuxar />} />
           <Route path="auto/emissoes"       element={<AutoEmissoes />} />
           <Route path="auto/emissoes/:id"   element={<AutoEmissoes />} />
           <Route path="auto/clientes"       element={<AutoClientes />} />

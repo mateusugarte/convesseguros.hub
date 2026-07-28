@@ -238,7 +238,7 @@ export default function AutoDashboard() {
           actions={(
             <button
               type="button"
-              onClick={() => navigate(`/auto/renovacoes?mes=${mesAlvoRenovacao}&puxar=1`)}
+              onClick={() => navigate(`/auto/renovacoes/puxar?mes=${mesAlvoRenovacao}`)}
               className="btn-primary inline-flex items-center gap-2"
             >
               Organizar agora

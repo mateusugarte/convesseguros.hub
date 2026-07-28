@@ -154,8 +154,12 @@ export default function ApolicesDashboard() {
   const { resolverNome } = useImobiliaria()
   const agora = new Date()
 
-  const [ano, setAno] = useState(agora.getFullYear())
-  const [mes, setMes] = useState(agora.getMonth() + 1)
+  const [ano, setAno] = useState(() => {
+    try { return Number(localStorage.getItem('fianca-apolices-ano')) || agora.getFullYear() } catch { return agora.getFullYear() }
+  })
+  const [mes, setMes] = useState(() => {
+    try { return Number(localStorage.getItem('fianca-apolices-mes')) || agora.getMonth() + 1 } catch { return agora.getMonth() + 1 }
+  })
   const [kpis, setKpis] = useState(null)
   const [porDia, setPorDia] = useState([])
   const [topImob, setTopImob] = useState([])
@@ -163,6 +167,13 @@ export default function ApolicesDashboard() {
   const [filtroSeg, setFiltroSeg] = useState('mes')
   const [segLogos, setSegLogos] = useState({})
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('fianca-apolices-ano', String(ano))
+      localStorage.setItem('fianca-apolices-mes', String(mes))
+    } catch {}
+  }, [ano, mes])
 
   const [inicioMes, fimMes] = getMonthRange(ano, mes)
   const mesLabel = `${MESES_FULL[mes - 1]} ${ano}`

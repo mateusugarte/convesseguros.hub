@@ -929,7 +929,9 @@ export default function Fichas() {
   const [ano,     setAno]     = useState(agora.getFullYear())
   const [mes,     setMes]     = useState(agora.getMonth() + 1)
   const [periodoFiltro, setPeriodoFiltro] = useState('mes')
-  const [view,    setView]    = useState('kanban')
+  const [view,    setView]    = useState(() => {
+    try { return localStorage.getItem('fianca-fichas-view') || 'kanban' } catch { return 'kanban' }
+  })
 
   const [contagem,        setContagem]        = useState({})
   const [anos,            setAnos]            = useState([agora.getFullYear()])
@@ -947,6 +949,10 @@ export default function Fichas() {
   const [loading,        setLoading]        = useState(false)
 
   const PAGE_SIZE = 30
+
+  useEffect(() => {
+    try { localStorage.setItem('fianca-fichas-view', view) } catch {}
+  }, [view])
 
   // Debounce: dispara query 400ms após o usuário parar de digitar
   useEffect(() => {
@@ -982,6 +988,17 @@ export default function Fichas() {
   useEffect(() => {
     setProduto(resolveProdutoFromPathname(location.pathname))
   }, [location.pathname])
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('novo') !== '1') return
+    setCriar(true)
+    params.delete('novo')
+    navigate(
+      { pathname: location.pathname, search: params.toString() ? `?${params}` : '' },
+      { replace: true },
+    )
+  }, [location.pathname, location.search, navigate])
 
   // Contagem de produtos (sempre carregado)
   useEffect(() => {

@@ -429,6 +429,8 @@ export default function Dashboard() {
   const totalByDay = Math.max(...byDay.map(item => item.total), 0)
   const approvalsByDay = byDay.reduce((sum, item) => sum + item.aprovadas, 0)
   const refusalsByDay = byDay.reduce((sum, item) => sum + item.recusadas, 0)
+  const decidedByDay = approvalsByDay + refusalsByDay
+  const approvalRate = decidedByDay > 0 ? Math.round((approvalsByDay / decidedByDay) * 100) : 0
   const updatedAt = format(new Date(), "dd/MM 'às' HH:mm", { locale: ptBR })
 
   if (query.isLoading) return <DashboardSkeleton />
@@ -494,6 +496,43 @@ export default function Dashboard() {
               <MetricCard label="Mês" value={kpis?.mes ?? '—'} hint="volume mensal" tone="warning" icon={<BarChart3 className="w-5 h-5" />} />
               <MetricCard label="Emitidas" value={emitted} hint="status emitido" tone="success" icon={<CheckCircle2 className="w-5 h-5" />} />
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="fianca-command-deck" aria-label="Pulso e prioridades da operação">
+        <div className="fianca-pulse-card">
+          <div>
+            <span>Pulso da operação</span>
+            <h2>Conversão da janela</h2>
+            <p>Aprovações sobre decisões registradas nos últimos 30 dias.</p>
+          </div>
+          <div className="fianca-pulse-orbit" style={{ '--fianca-orbit': `${Math.min(approvalRate, 100) * 3.6}deg` }}>
+            <div><strong>{approvalRate}%</strong><small>aprovação</small></div>
+          </div>
+        </div>
+
+        <div className="fianca-priority-deck">
+          <header>
+            <div><span>Próximas decisões</span><h2>O que pede atenção agora</h2></div>
+            <small>atalhos acionáveis</small>
+          </header>
+          <div>
+            <button type="button" onClick={() => navigate('/fichas/todos')}>
+              <span className="is-amber"><AlertTriangle /></span>
+              <div><strong>Backlog geral</strong><small>Fichas aguardando avanço</small></div>
+              <b>{kpis?.emAberto ?? 0}</b><ArrowRight />
+            </button>
+            <button type="button" onClick={() => navigate('/minhas-fichas')}>
+              <span className="is-coral"><Clock3 /></span>
+              <div><strong>Sem resposta</strong><small>Acima da janela esperada</small></div>
+              <b>{metrics?.semResposta ?? 0}</b><ArrowRight />
+            </button>
+            <button type="button" onClick={() => navigate('/apolices/gestao')}>
+              <span className="is-teal"><CheckCircle2 /></span>
+              <div><strong>Emitidas no período</strong><small>Acompanhar pós-aprovação</small></div>
+              <b>{emitted}</b><ArrowRight />
+            </button>
           </div>
         </div>
       </section>

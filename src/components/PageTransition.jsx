@@ -1,7 +1,7 @@
 import { useLocation } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 
-export function PageTransition({ children }) {
+export function PageTransition({ children, className = '' }) {
   const location = useLocation()
   // Start visible — prevents white flash on first render
   const [visible, setVisible] = useState(true)
@@ -17,7 +17,7 @@ export function PageTransition({ children }) {
 
   return (
     <div
-      className="flex h-full min-h-0 w-full flex-1 flex-col"
+      className={`flex h-full min-h-0 w-full flex-1 flex-col ${className}`}
       style={{
         opacity:    visible ? 1 : 0,
         transform:  visible ? 'none' : 'translateY(8px)',

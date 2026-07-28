@@ -2,11 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
-import { ArrowLeft, ArrowRight, Car, CheckCircle2, FileText, Loader2, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, Upload, X, Plus, History } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Car, CheckCircle2, FileText, Loader2, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, Upload, X, XCircle, Plus, History } from 'lucide-react'
 import { endOfMonth, format, startOfMonth, startOfWeek } from 'date-fns'
 import {
-  atualizarEmissaoAutoCompleta, atualizarTagsEmissao, calcularValorComissaoAuto, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
-  emitirApoliceAuto, getApolicesAuto, getAutoTags, getEmissaoAuto, getEmissaoColuna, getEmissoesAuto, importarApolicesAutoPlanilha, importarApolicesAutoHistorico, moverEmissaoColuna,
+  atualizarEmissaoAutoCompleta, atualizarTagsEmissao, calcularValorComissaoAuto, cancelarRenovacao, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
+  emitirApoliceAuto, getApolicesAuto, getAutoTags, getEmissaoAuto, getEmissaoColuna, getEmissoesAuto, getRenovacoesPendentesSemCotacao,
+  iniciarCotacaoRenovacao, importarApolicesAutoPlanilha, importarApolicesAutoHistorico, moverEmissaoColuna,
   salvarResultadoCotacao,
 } from '../../lib/auto'
 import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../components/ui'
@@ -14,7 +15,10 @@ import SeguradoraBadge from '../../components/SeguradoraBadge'
 import SeguradoraSelect from '../../components/SeguradoraSelect'
 import { useToast } from '../../contexts/ToastContext'
 import { useAuth } from '../../contexts/AuthContext'
-import { formatDateBR, formatMoney } from './autoShared'
+import {
+  formatDateBR, formatDiasParaVencer, formatMoney, diasParaVencer,
+  getRenovacaoUrgencia, RENOVACAO_URGENCIA_META,
+} from './autoShared'
 import { uploadDocumento } from '../../lib/documentos'
 import { toNumber } from '../../lib/apolices'
 import { limparNomeSegurado, parseAutoHistoricoPlanilha, somarUmAno } from '../../lib/autoHistoricoImport.js'
@@ -625,6 +629,58 @@ function CardEmissao({ emissao, onDragStart, onClick, tagsPorId }) {
         <span className="inline-flex items-center gap-1 font-semibold text-status-info">Abrir <ArrowRight className="h-3.5 w-3.5" /></span>
       </div>
     </button>
+  )
+}
+
+// Card leve para a coluna virtual "Renovacoes": renovacoes ainda sem cotacao
+// vinculada (renovacoes_auto.cotacao_id nulo), fora do modelo de
+// emissoes_auto/cotacoes_auto que alimenta as demais colunas. Sem
+// drag-and-drop — "mover" essa renovacao significa iniciar a cotacao de
+// verdade, nao so trocar um rotulo.
+function CardRenovacaoPendente({ renovacao, onIniciarCotacao, onCancelar, iniciando, cancelando }) {
+  const apolice = renovacao.apolices_auto || {}
+  const nome = renovacao.clientes_auto?.nome_completo || apolice.nome_cliente || renovacao.nome_segurado_anterior || 'Segurado'
+  const seguradora = renovacao.seguradora || apolice.seguradora || null
+  const dias = diasParaVencer(renovacao.vigencia_fim)
+  const urgenciaKey = getRenovacaoUrgencia({ dias, concluida: false, proximoMes: false })
+  const urgencia = RENOVACAO_URGENCIA_META[urgenciaKey]
+
+  return (
+    <div className="auto-kanban-card relative flex w-full flex-col overflow-hidden rounded-[30px] border border-brand-accent/20 bg-brand-accent/5 p-4 text-left shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
+      <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-brand-accent to-brand-secondary" />
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-dark-surface px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Renovação</span>
+        {typeof dias === 'number' && (
+          <span className={`badge ${urgencia.badgeClass}`}>{formatDiasParaVencer(dias)}</span>
+        )}
+      </div>
+      <p className="mt-2 truncate text-base font-semibold text-dark-text">{nome}</p>
+      <div className="mt-3 flex items-center gap-3 rounded-[22px] border border-white/70 bg-white/70 p-3">
+        {seguradora ? <SeguradoraBadge nome={seguradora} size="md" /> : <span className="text-xs text-dark-muted">Seguradora não informada</span>}
+        <div className="min-w-0 text-xs text-dark-muted">
+          <p>Vencimento: {formatDateBR(renovacao.vigencia_fim)}</p>
+          {renovacao.data_limite_envio && <p>Limite p/ envio: {formatDateBR(renovacao.data_limite_envio)}</p>}
+        </div>
+      </div>
+      <div className="mt-4 flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => onIniciarCotacao(renovacao.id)}
+          disabled={iniciando}
+          className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-60"
+        >
+          {iniciando ? 'Iniciando...' : 'Iniciar cotação'}
+        </button>
+        <button
+          type="button"
+          onClick={() => onCancelar(renovacao.id)}
+          disabled={cancelando}
+          className="rounded-2xl border border-status-danger/30 bg-status-danger/5 px-3 py-2 text-xs font-semibold text-status-danger transition-colors hover:bg-status-danger/10 disabled:opacity-60"
+        >
+          Cancelar renovação
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -1311,6 +1367,48 @@ export default function AutoEmissoes() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['auto-emissoes'] }),
   })
 
+  // Coluna virtual "Renovacoes": renovacoes ainda sem cotacao vinculada,
+  // sempre visivel (nao segue o filtro de periodo do resto do Kanban) para
+  // nao sumir da vista so porque o filtro mudou para "Semana".
+  const { data: renovacoesPendentes = [], isError: isErrorRenovacoesPendentes, error: errorRenovacoesPendentes } = useQuery({
+    queryKey: ['auto-renovacoes-pendentes'],
+    queryFn: () => getRenovacoesPendentesSemCotacao(),
+  })
+
+  const [iniciandoCotacaoId, setIniciandoCotacaoId] = useState(null)
+
+  const { mutateAsync: iniciarCotacaoRenovacaoAsync } = useMutation({
+    mutationFn: renovacaoId => iniciarCotacaoRenovacao(renovacaoId),
+    onSuccess: async ({ cotacaoId }) => {
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes-pendentes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
+      navigate(`/auto/cotacoes/${cotacaoId}`)
+    },
+    onSettled: () => setIniciandoCotacaoId(null),
+  })
+
+  const handleIniciarCotacaoRenovacao = async renovacaoId => {
+    if (iniciandoCotacaoId) return
+    setIniciandoCotacaoId(renovacaoId)
+    try {
+      await iniciarCotacaoRenovacaoAsync(renovacaoId)
+    } catch (err) {
+      toast({ type: 'error', title: 'Erro ao iniciar cotação de renovação', message: err?.message || 'Tente novamente.' })
+    }
+  }
+
+  const { mutateAsync: cancelarRenovacaoAsync, isPending: cancelandoRenovacao } = useMutation({
+    mutationFn: ({ id, motivo }) => cancelarRenovacao(id, motivo),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['auto-renovacoes-pendentes'] }),
+    onError: err => toast({ type: 'error', title: 'Erro ao cancelar renovação', message: err?.message || 'Tente novamente.' }),
+  })
+
+  function handleCancelarRenovacaoPendente(id) {
+    const motivo = window.prompt('Motivo do cancelamento (opcional):')
+    if (motivo === null) return
+    cancelarRenovacaoAsync({ id, motivo: motivo || null })
+  }
+
   const { mutate: salvarResultado, isPending: isSavingResultado } = useMutation({
     mutationFn: ({ id, payload }) => salvarResultadoCotacao(id, payload),
     onSuccess: () => {
@@ -1991,6 +2089,41 @@ export default function AutoEmissoes() {
           </div>
 
           <div className={`auto-kanban-board is-${kanbanDensity} -mx-1 flex gap-4 overflow-x-auto pb-2 pt-1 px-1 snap-x snap-mandatory md:snap-none`}>
+            <DataCard
+              title="Renovações"
+              subtitle={`${renovacoesPendentes.length} item(ns)`}
+              className="auto-kanban-column w-[300px] shrink-0 snap-start"
+              bodyClassName="pt-4"
+            >
+              <div className="auto-kanban-dropzone min-h-[72vh] space-y-3">
+                {isErrorRenovacoesPendentes ? (
+                  <EmptyState
+                    icon={<XCircle className="w-6 h-6" />}
+                    title="Erro ao carregar renovações"
+                    description={errorRenovacoesPendentes?.message || 'Tente recarregar a página.'}
+                    className="py-8"
+                  />
+                ) : renovacoesPendentes.length === 0 ? (
+                  <EmptyState
+                    icon={<RefreshCw className="w-6 h-6" />}
+                    title="Sem renovações pendentes"
+                    description="Renovações criadas em /auto/renovacoes aparecem aqui até a cotação ser iniciada."
+                    className="py-8"
+                  />
+                ) : (
+                  renovacoesPendentes.map(item => (
+                    <CardRenovacaoPendente
+                      key={item.id}
+                      renovacao={item}
+                      onIniciarCotacao={handleIniciarCotacaoRenovacao}
+                      onCancelar={handleCancelarRenovacaoPendente}
+                      iniciando={iniciandoCotacaoId === item.id}
+                      cancelando={cancelandoRenovacao}
+                    />
+                  ))
+                )}
+              </div>
+            </DataCard>
             {COLUNAS.map(coluna => {
               const cards = emissoes.filter(item => getEmissaoColuna(item) === coluna.id)
               return (

@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchFichasDoOrcamentista, fetchFichasPassadasDoOrcamentista, fetchFichaDetalhe, deletarFicha, STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
 import { useAuth } from '../contexts/AuthContext'
@@ -75,13 +75,24 @@ export default function MinhasFichas() {
   const { user, profile } = useAuth()
   const toast = useToast()
   const agora = new Date()
-  const [tab, setTab] = useState('abertas')
+  const [tab, setTab] = useState(() => {
+    try { return localStorage.getItem('fianca-minha-fila-tab') || 'abertas' } catch { return 'abertas' }
+  })
   const [finalizar, setFinalizar] = useState(null)
   const [detalhe, setDetalhe] = useState(null)
   const [editar, setEditar] = useState(null)
   const [filtroAno, setFiltroAno] = useState(agora.getFullYear())
   const [filtroMes, setFiltroMes] = useState(agora.getMonth() + 1)
-  const [filtroRapido, setFiltroRapido] = useState('todos')
+  const [filtroRapido, setFiltroRapido] = useState(() => {
+    try { return localStorage.getItem('fianca-minha-fila-periodo') || 'todos' } catch { return 'todos' }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('fianca-minha-fila-tab', tab)
+      localStorage.setItem('fianca-minha-fila-periodo', filtroRapido)
+    } catch {}
+  }, [tab, filtroRapido])
 
   const queryClient = useQueryClient()
   const avatarColor = stringColor(profile?.nome || '')

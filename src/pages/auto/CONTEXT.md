@@ -3,7 +3,7 @@
 ## Page
 
 - Name: Auto (Dashboard, Cotacoes, Gestao AUTO/Emissoes, Renovacoes, Clientes, Sinistros, Etiquetas)
-- Route: `/auto`, `/auto/cotacoes(/:id)(/consulta)`, `/auto/gestao`, `/auto/emissoes(/:id)`, `/auto/renovacoes`, `/auto/clientes(/:id)`, `/auto/apolices/:id`, `/auto/sinistros`, `/auto/etiquetas`
+- Route: `/auto`, `/auto/cotacoes(/:id)(/consulta)`, `/auto/gestao`, `/auto/emissoes(/:id)`, `/auto/renovacoes`, `/auto/renovacoes/puxar`, `/auto/clientes(/:id)`, `/auto/apolices/:id`, `/auto/sinistros`, `/auto/etiquetas`
 - Domain: Seguro Auto (cotacao -> emissao -> apolice -> renovacao)
 
 ## Purpose
@@ -77,6 +77,23 @@ classificar cards.
   (`overflow-x-auto` + colunas de largura fixa) em vez de um grid fixo — as 6
   colunas de `COLUNAS` (`AutoEmissoes.jsx`) sempre ficam na mesma linha, sem
   nenhuma "cair" para baixo isolada.
+- O Kanban tem uma coluna virtual extra "Renovações" (renderizada antes de
+  `COLUNAS.map`, não faz parte do array `COLUNAS`) — mostra renovações de
+  `renovacoes_auto` ainda sem `cotacao_id`, via `getRenovacoesPendentesSemCotacao`
+  (`src/lib/auto.js`). Sempre visível, ignora o filtro de período do resto do
+  Kanban (decisão deliberada — renovações têm horizonte próprio, não devem
+  sumir só porque o filtro virou "Semana"). Sem drag-and-drop: "mover" um card
+  dessa coluna significa clicar "Iniciar cotação" (chama `iniciarCotacaoRenovacao`
+  já existente; o card desaparece daqui e a emissão real aparece em "Cotações
+  pendentes" via o trigger de banco que já existia). "Cancelar" reaproveita
+  `cancelarRenovacao`.
+- `/auto/renovacoes/puxar` (`AutoRenovacoesPuxar.jsx`) é a área dedicada para
+  organizar as renovações de um mês: puxar do sistema, puxar por planilha e
+  criar manualmente — os 3 blocos que antes ficavam num painel inline em
+  `/auto/renovacoes` (removido de lá). Mostra uma lista "Renovações de \<mês\>"
+  que se atualiza a cada ação, para o usuário ver o que já foi adicionado sem
+  precisar voltar para `/auto/renovacoes`. O botão "Puxar renovações" nessa
+  outra tela e o banner do Dashboard navegam direto para cá.
 - Destaque de urgencia das renovacoes segue hierarquia definida em
   `getRenovacaoUrgencia`/`RENOVACAO_URGENCIA_META` (`autoShared.js`): concluida
   > vencida > urgente (<=10 dias) > mes atual/proximo mes.

@@ -997,6 +997,28 @@ export async function getRenovacoesAuto({ periodo, mes } = {}) {
   return data ?? []
 }
 
+// Renovacoes ainda sem cotacao vinculada (nao cotadas nem canceladas) — usada
+// pela coluna "Renovacoes" do Kanban de Gestao Auto (card leve, antes de
+// existir uma cotacao/emissao de verdade) e pela lista de conferencia da
+// area "Puxar renovacoes".
+export async function getRenovacoesPendentesSemCotacao(mes) {
+  let q = supabase
+    .from('renovacoes_auto')
+    .select(RENOVACAO_LISTA_SELECT)
+    .is('cotacao_id', null)
+    .neq('status_renovacao', 'nao_renovada')
+    .order('vigencia_fim', { ascending: true })
+
+  if (mes) {
+    const { inicio, fim } = getRangeFromMonthRef(mes, 0)
+    q = q.gte('vigencia_fim', inicio).lte('vigencia_fim', fim)
+  }
+
+  const { data, error } = await q
+  if (error) throw error
+  return data ?? []
+}
+
 export async function atualizarStatusRenovacao(id, campos) {
   const { error } = await supabase
     .from('renovacoes_auto')

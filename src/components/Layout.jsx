@@ -21,8 +21,24 @@ import {
 } from 'lucide-react'
 
 const AutoWorkspaceBar = lazy(() => import('./auto/AutoWorkspaceBar'))
+const FiancaWorkspaceBar = lazy(() => import('./fianca/FiancaWorkspaceBar'))
 
 const LOGO = 'https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/conves/file.jpeg'
+
+const FIANCA_ROUTE_PREFIXES = [
+  '/fichas',
+  '/emissoes',
+  '/minhas-fichas',
+  '/relatorio',
+  '/imobiliarias',
+  '/seguradoras',
+  '/financeiro',
+  '/apolices',
+]
+
+function isFiancaPath(pathname) {
+  return pathname === '/' || FIANCA_ROUTE_PREFIXES.some(prefix => pathname.startsWith(prefix))
+}
 
 const NAV_GROUPS = [
   {
@@ -153,6 +169,7 @@ export default function Layout() {
 
   const isCommercialRoute = location.pathname.startsWith('/comercial')
   const isAutoRoute = location.pathname.startsWith('/auto')
+  const isFiancaRoute = isFiancaPath(location.pathname)
   const isDashboardRoute = location.pathname === '/'
   const isJornadasRoute = location.pathname.startsWith('/comercial/jornadas')
   const shellClassName = isCommercialRoute ? 'crm-shell' : 'ops-shell'
@@ -182,6 +199,16 @@ export default function Layout() {
   useEffect(() => {
     try { localStorage.setItem('sidebar-open', String(sidebarOpen)) } catch {}
   }, [sidebarOpen])
+
+  useEffect(() => {
+    const workspace = isFiancaRoute ? 'fianca' : isAutoRoute ? 'auto' : isCommercialRoute ? 'comercial' : 'core'
+    document.documentElement.dataset.workspace = workspace
+    return () => {
+      if (document.documentElement.dataset.workspace === workspace) {
+        delete document.documentElement.dataset.workspace
+      }
+    }
+  }, [isFiancaRoute, isAutoRoute, isCommercialRoute])
 
   useEffect(() => {
     function check() {
@@ -276,14 +303,18 @@ export default function Layout() {
 
   useEffect(() => {
     const handler = e => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setCmdOpen(o => !o)
+      }
+      if (isFiancaRoute && e.altKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault()
+        navigate('/fichas?novo=1')
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [])
+  }, [isFiancaRoute, navigate])
 
   useEffect(() => {
     function onToggleShell(event) {
@@ -559,7 +590,7 @@ export default function Layout() {
       </aside>
 
       <div className="flex h-full min-w-0 min-h-0 w-full flex-1 flex-col overflow-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
-        {!hideWorkspaceTopbar && isDashboardRoute && (
+        {!hideWorkspaceTopbar && isDashboardRoute && !isFiancaRoute && (
           <header className="shell-topbar sticky top-3 z-[300] h-16 flex items-center justify-between px-5 flex-shrink-0 topbar-glass rounded-[28px]" style={shellTopbarStyle}>
           <div className="flex items-center gap-3">
             <button
@@ -669,7 +700,17 @@ export default function Layout() {
                 <AutoWorkspaceBar />
               </Suspense>
             )}
-            <PageTransition>
+            {isFiancaRoute && (
+              <Suspense fallback={<div className="fianca-workspace-loading" aria-hidden="true"><span /><span /><span /></div>}>
+                <FiancaWorkspaceBar
+                  onSearch={() => setCmdOpen(true)}
+                  onNewFicha={() => navigate('/fichas?novo=1')}
+                  openCount={abertasCount}
+                  isAdmin={Boolean(profile?.is_admin)}
+                />
+              </Suspense>
+            )}
+            <PageTransition className={isFiancaRoute ? 'fianca-page-scope' : ''}>
               <Outlet />
             </PageTransition>
           </div>
@@ -681,6 +722,9 @@ export default function Layout() {
         onClose={() => setCmdOpen(false)}
         onOpenFicha={id => { navigate(`/fichas/${id}`); setCmdOpen(false) }}
         onOpenApolice={id => { navigate(`/apolices/${id}`); setCmdOpen(false) }}
+        onNewFicha={() => { navigate('/fichas?novo=1'); setCmdOpen(false) }}
+        onOpenQueue={() => { navigate('/minhas-fichas'); setCmdOpen(false) }}
+        onOpenPolicies={() => { navigate('/apolices'); setCmdOpen(false) }}
       />
     </div>
   )

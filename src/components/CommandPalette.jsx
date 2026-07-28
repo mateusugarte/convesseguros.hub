@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Search, X } from 'lucide-react'
+import { FileCheck2, FilePlus2, Search, UserRoundCheck, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { STATUS_LABELS, PRODUTO_LABELS } from '../lib/fichas'
 import { STATUS_EMISSAO_LABELS } from '../lib/apolices'
@@ -17,7 +17,15 @@ function makeResultKey(type, id) {
   return `${type}:${id}`
 }
 
-export default function CommandPalette({ open, onClose, onOpenFicha, onOpenApolice }) {
+export default function CommandPalette({
+  open,
+  onClose,
+  onOpenFicha,
+  onOpenApolice,
+  onNewFicha,
+  onOpenQueue,
+  onOpenPolicies,
+}) {
   const [query,   setQuery]   = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
@@ -36,17 +44,21 @@ export default function CommandPalette({ open, onClose, onOpenFicha, onOpenApoli
     const t = setTimeout(async () => {
       const s = query.trim()
       const term = normalizeSearchText(s)
+      const escaped = s.replace(/[%_,()]/g, ' ').replace(/\s+/g, ' ').trim()
+      const pattern = `%${escaped}%`
       const [fichasRes, apolicesRes] = await Promise.all([
         supabase
           .from('fichas')
           .select('id, nome_interessado, nome_empresa, cnpj, cpf, imobiliaria, produto, status, created_at, numero_apolice, raw_data')
+          .or(`nome_interessado.ilike.${pattern},nome_empresa.ilike.${pattern},cpf.ilike.${pattern},cnpj.ilike.${pattern},imobiliaria.ilike.${pattern},numero_apolice.ilike.${pattern}`)
           .order('created_at', { ascending: false })
-          .limit(20),
+          .limit(12),
         supabase
           .from('apolices')
           .select('id, ficha_id, numero_apolice, nome_interessado, imobiliaria, status_emissao, created_at, fichas!ficha_id(nome_interessado, nome_empresa, cpf, cnpj, produto)')
+          .or(`numero_apolice.ilike.${pattern},nome_interessado.ilike.${pattern},imobiliaria.ilike.${pattern}`)
           .order('created_at', { ascending: false })
-          .limit(20),
+          .limit(12),
       ])
 
       const matchesFicha = (row) => {
@@ -207,9 +219,28 @@ export default function CommandPalette({ open, onClose, onOpenFicha, onOpenApoli
         )}
 
         {!query && (
-          <div className="py-6 text-center text-dark-muted text-xs space-y-1">
-            <p>Busca rápida de fichas e apólices</p>
-            <p className="text-dark-muted/50">Nome, CPF, CNPJ, apólice ou imobiliária</p>
+          <div className="fianca-command-home">
+            <div>
+              <p>Busca rápida de fichas e apólices</p>
+              <p className="text-dark-muted/50">Nome, CPF, CNPJ, apólice ou imobiliária</p>
+            </div>
+            <div className="fianca-command-quick">
+              <button type="button" onClick={onNewFicha}>
+                <span><FilePlus2 /></span>
+                <strong>Nova ficha</strong>
+                <small>Iniciar atendimento</small>
+              </button>
+              <button type="button" onClick={onOpenQueue}>
+                <span><UserRoundCheck /></span>
+                <strong>Minha fila</strong>
+                <small>Retomar cotações</small>
+              </button>
+              <button type="button" onClick={onOpenPolicies}>
+                <span><FileCheck2 /></span>
+                <strong>Apólices</strong>
+                <small>Consultar carteira</small>
+              </button>
+            </div>
           </div>
         )}
       </div>

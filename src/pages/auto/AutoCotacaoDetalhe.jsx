@@ -6,13 +6,14 @@ import { DataCard, EmptyState, MetricCard, PageHeader } from '../../components/u
 import SeguradoraSelect from '../../components/SeguradoraSelect'
 import { calcularValorComissaoAuto, deletarCotacaoAuto, getCotacaoAutoPorId, atualizarCotacaoAuto } from '../../lib/auto'
 import { COTACAO_STATUS, formatDateTimeBR, formatMoney, toneClasses } from './autoShared'
+import { formatDecimalBRInput, parseDecimalBR } from '../../lib/numberInput'
 
 function QuoteStatusBadge({ status }) {
   const meta = COTACAO_STATUS[status] || COTACAO_STATUS.aberta
   return <span className={`badge ${toneClasses(meta.tone)}`}>{meta.label}</span>
 }
 
-function DetailField({ label, value, onSave, type = 'text', rows, placeholder, readOnly = false }) {
+function DetailField({ label, value, onSave, type = 'text', rows, placeholder, readOnly = false, inputMode }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value ?? '')
   const [saving, setSaving] = useState(false)
@@ -69,6 +70,7 @@ function DetailField({ label, value, onSave, type = 'text', rows, placeholder, r
               value={draft}
               onChange={e => setDraft(e.target.value)}
               type={type}
+              inputMode={inputMode}
               placeholder={placeholder}
               className={inputClass}
             />
@@ -439,45 +441,76 @@ export default function AutoCotacaoDetalhe() {
                   <div className="grid gap-3 sm:grid-cols-2">
                     <DetailField
                       label={<span className="inline-flex items-center gap-1.5"><BadgeDollarSign className="h-3.5 w-3.5" /> Premio total</span>}
-                      type="number"
-                      value={cotacao?.[section.key]?.premio_total}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={formatDecimalBRInput(cotacao?.[section.key]?.premio_total)}
                       onSave={value => salvarCampo({
                         field: section.key,
                         value: {
                           ...(cotacao?.[section.key] || {}),
-                          premio_total: value,
+                          premio_total: value === null ? null : parseDecimalBR(value),
                         },
                       })}
                     />
                     <DetailField
                       label={<span className="inline-flex items-center gap-1.5"><BadgeDollarSign className="h-3.5 w-3.5" /> Premio liquido</span>}
-                      type="number"
-                      value={cotacao?.[section.key]?.premio_liquido}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={formatDecimalBRInput(cotacao?.[section.key]?.premio_liquido)}
                       onSave={value => salvarCampo({
                         field: section.key,
                         value: {
                           ...(cotacao?.[section.key] || {}),
-                          premio_liquido: value,
+                          premio_liquido: value === null ? null : parseDecimalBR(value),
                         },
                       })}
                     />
                     <DetailField
                       label={<span className="inline-flex items-center gap-1.5"><BadgeDollarSign className="h-3.5 w-3.5" /> % Comissao</span>}
-                      type="number"
-                      value={cotacao?.[section.key]?.pct_comissao}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={formatDecimalBRInput(cotacao?.[section.key]?.pct_comissao)}
                       onSave={value => salvarCampo({
                         field: section.key,
                         value: {
                           ...(cotacao?.[section.key] || {}),
-                          pct_comissao: value,
+                          pct_comissao: value === null ? null : parseDecimalBR(value),
                         },
                       })}
                     />
-                    <div className="rounded-2xl border border-brand-accent/15 bg-brand-accent/6 p-4">
+                    <DetailField
+                      label={<span className="inline-flex items-center gap-1.5"><BadgeDollarSign className="h-3.5 w-3.5" /> Comissao ano passado</span>}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={formatDecimalBRInput(cotacao?.[section.key]?.comissao_ano_passado)}
+                      onSave={value => salvarCampo({
+                        field: section.key,
+                        value: {
+                          ...(cotacao?.[section.key] || {}),
+                          comissao_ano_passado: value === null ? null : parseDecimalBR(value),
+                        },
+                      })}
+                    />
+                    <div className="rounded-2xl border border-brand-accent/15 bg-brand-accent/6 p-4 sm:col-span-2">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissao estimada</p>
                       <p className="mt-2 text-sm font-semibold text-dark-text">
                         {formatMoney(calcularValorComissaoAuto(cotacao?.[section.key]?.premio_liquido, cotacao?.[section.key]?.pct_comissao))}
                       </p>
+                      {Number(cotacao?.[section.key]?.comissao_ano_passado) > 0 && (
+                        <p className="mt-1 text-xs text-dark-muted">
+                          {(() => {
+                            const atual = calcularValorComissaoAuto(cotacao?.[section.key]?.premio_liquido, cotacao?.[section.key]?.pct_comissao)
+                            const anterior = Number(cotacao[section.key].comissao_ano_passado)
+                            const diferenca = atual - anterior
+                            const sinal = diferenca > 0 ? '+' : ''
+                            return `vs. ano passado (${formatMoney(anterior)}): ${sinal}${formatMoney(diferenca)}`
+                          })()}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

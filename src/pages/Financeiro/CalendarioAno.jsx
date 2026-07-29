@@ -8,8 +8,10 @@ export default function CalendarioAno({ cells, mesSelecionado, onSelectMes }) {
         return (
           <button
             key={c.mes}
+            type="button"
             onClick={() => onSelectMes(c.mesNum)}
-            className={`rounded-2xl border p-3 text-left transition-colors ${
+            aria-pressed={ativo}
+            className={`finance-month-card rounded-2xl border p-3 text-left ${
               ativo
                 ? 'border-brand-secondary bg-brand-secondary/10'
                 : 'border-dark-border/70 bg-dark-surface2/40 hover:border-dark-border'

@@ -44,6 +44,11 @@ Hub financeiro admin-only do Seguro Fianca com sub-abas: Visao Geral, Producao e
 - Restrito a `profile.is_admin`; rota envolvida por `AdminRoute`.
 - Tabelas financeiras com RLS via `is_finance_admin()`.
 
+## Sistema visual (2026-07-29)
+- `src/styles/report-finance-ui.css` centraliza a identidade do hub: navegacao executiva, herois, KPIs, filtros, calendario, rankings, tabelas, estados responsivos e tema escuro.
+- As classes `financeiro-hub` e `financeiro-page` isolam o novo tema para nao interferir em outras areas do sistema.
+- Componentes compartilhados em `src/components/financeiro/` usam classes semanticas `finance-*`; regras de calculo, consultas e navegacao permanecem nas fontes descritas acima.
+
 ## Regras
 - Comissao gerada (total) = `% comissao` (pct_comissao) x `premio_liquido`; fallback para `valor_comissao`.
 - Comissao mensal (recebida estimada) = comissao total / parcelamento; agenda comeca no mes seguinte a emissao.

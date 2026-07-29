@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
-import { ArrowLeft, ArrowRight, Car, CheckCircle2, FileText, Loader2, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, Upload, X, XCircle, Plus, History } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarDays, Car, CheckCircle2, ChevronLeft, ChevronRight, FileText, Loader2, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, Upload, X, XCircle, Plus, History } from 'lucide-react'
 import { endOfMonth, format, startOfMonth, startOfWeek } from 'date-fns'
 import {
   atualizarEmissaoAutoCompleta, atualizarTagsEmissao, calcularValorComissaoAuto, cancelarRenovacao, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
@@ -10,7 +10,7 @@ import {
   iniciarCotacaoRenovacao, importarApolicesAutoPlanilha, importarApolicesAutoHistorico, moverEmissaoColuna,
   salvarResultadoCotacao,
 } from '../../lib/auto'
-import { PageHeader, MetricCard, DataCard, FilterBar, EmptyState } from '../../components/ui'
+import { PageHeader, MetricCard, DataCard, DatePicker, FilterBar, EmptyState } from '../../components/ui'
 import SeguradoraBadge from '../../components/SeguradoraBadge'
 import SeguradoraSelect from '../../components/SeguradoraSelect'
 import { useToast } from '../../contexts/ToastContext'
@@ -30,6 +30,27 @@ const COLUNAS = [
   { id: 'aguardando_vistoria', label: 'Aguardando vistoria', hint: 'dependem de validacao', tone: 'warning' },
   { id: 'proposta_transmitida', label: 'Proposta Transmitida', hint: 'proposta enviada para a seguradora', tone: 'success' },
   { id: 'apolice_emitida', label: 'Apólice Emitida', hint: 'apólice finalizada com documento', tone: 'accent' },
+]
+
+const KANBAN_STAGES = [
+  { id: 'renovacoes', label: 'Renovações', shortLabel: 'Renovações', color: '#0ea5a4' },
+  ...COLUNAS.map(coluna => ({
+    ...coluna,
+    shortLabel: coluna.id === 'aguardando_vistoria'
+      ? 'Vistoria'
+      : coluna.id === 'proposta_transmitida'
+        ? 'Proposta'
+        : coluna.id === 'apolice_emitida'
+          ? 'Emitida'
+          : coluna.label,
+    color: coluna.tone === 'warning'
+      ? '#f59e0b'
+      : coluna.tone === 'success'
+        ? '#10b981'
+        : coluna.tone === 'accent'
+          ? '#38bdf8'
+          : '#3563e9',
+  })),
 ]
 
 const PERIOD_OPTIONS = [
@@ -220,6 +241,36 @@ function getSeguradorasAprovadas(emissao) {
       nome: aprovadaNome(seg),
     }))
     .filter(seg => seg.nome)
+}
+
+// Ao arrastar um card para "Cotacao feita" pela primeira vez, o modal de
+// resultado abria sempre em branco - o usuario tinha que redigitar a
+// seguradora e os valores que ja estavam preenchidos na cotacao (seguradora
+// preferencial, ou a mais barata na falta dela - mesma ordem de prioridade
+// usada em getFormEmissaoInicial/seguradoraEmissao). Se a emissao ja tem um
+// resultado registrado (reabrindo o modal depois de "Editar"), usa esse
+// resultado em vez de voltar a copiar da cotacao.
+function getSeguradorasResultadoInicial(emissao) {
+  const jaRegistradas = getSeguradorasAprovadas(emissao)
+  if (jaRegistradas.length > 0) {
+    return jaRegistradas.map(seg => ({ ...NOVA_SEGURADORA, ...seg }))
+  }
+
+  const c = emissao?.cotacoes_auto || {}
+  const preferencial = c.seguradora_preferencial
+  const maisBarata = c.seguradora_mais_barata
+  const base = preferencial?.nome ? preferencial : (maisBarata?.nome ? maisBarata : null)
+  if (!base) return [{ ...NOVA_SEGURADORA }]
+
+  return [{
+    ...NOVA_SEGURADORA,
+    nome: base.nome || '',
+    valor_total: base.premio_total ?? '',
+    premio_liquido: base.premio_liquido ?? '',
+    pct_comissao: base.pct_comissao ?? '',
+    parcelamentos: base.parcelamentos || '',
+    forma_pagamento: base.forma_pagamento || '',
+  }]
 }
 
 function isSeguradoCondutorData(nomeCliente, cpfCliente, condutorNome, condutorCpf) {
@@ -1032,10 +1083,12 @@ function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
 
 function ModalResultado({ emissao, onClose, onSave, isSaving }) {
   const [resultado, setResultado] = useState('aprovada')
-  const [seguradoras, setSeguradoras] = useState([{ ...NOVA_SEGURADORA }])
+  const [seguradoras, setSeguradoras] = useState(() => getSeguradorasResultadoInicial(emissao))
 
   const c = emissao.cotacoes_auto || {}
   const nome = nomeEmissao(emissao)
+  const herdouDaCotacao = getSeguradorasAprovadas(emissao).length === 0
+    && Boolean(c.seguradora_preferencial?.nome || c.seguradora_mais_barata?.nome)
 
   const canSave = resultado === 'recusada' || (
     resultado === 'aprovada' &&
@@ -1119,6 +1172,11 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
             <p className="text-xs text-dark-muted">
               Adicione ao menos uma seguradora com o resultado da cotacao.
             </p>
+            {herdouDaCotacao && (
+              <div className="rounded-2xl border border-status-success/25 bg-status-success/8 px-3 py-2 text-xs text-status-success">
+                Seguradora e valores preenchidos automaticamente a partir da cotacao. Confira antes de salvar.
+              </div>
+            )}
             {seguradoras.map((seg, idx) => (
               <FormSeguradora
                 key={idx}
@@ -1313,6 +1371,8 @@ export default function AutoEmissoes() {
   const manualFileRef = useRef(null)
   const importFileRef = useRef(null)
   const importHistoricoFileRef = useRef(null)
+  const kanbanScrollRef = useRef(null)
+  const [kanbanNavigation, setKanbanNavigation] = useState({ index: 0, canLeft: false, canRight: true })
   const [form, setForm] = useState(FORM_EMISSAO_VAZIO)
   const [showApolices, setShowApolices] = useState(false)
   const [periodo, setPeriodo] = useState(periodoInicial)
@@ -1374,6 +1434,77 @@ export default function AutoEmissoes() {
     queryKey: ['auto-renovacoes-pendentes'],
     queryFn: () => getRenovacoesPendentesSemCotacao(),
   })
+
+  const kanbanCounts = useMemo(() => {
+    const counts = new Map(KANBAN_STAGES.map(stage => [stage.id, 0]))
+    counts.set('renovacoes', renovacoesPendentes.length)
+    emissoes.forEach(item => {
+      const stage = getEmissaoColuna(item)
+      counts.set(stage, (counts.get(stage) || 0) + 1)
+    })
+    return counts
+  }, [emissoes, renovacoesPendentes.length])
+
+  const updateKanbanNavigation = useCallback(() => {
+    const container = kanbanScrollRef.current
+    if (!container) return
+    const columns = Array.from(container.querySelectorAll('.auto-kanban-column'))
+    if (!columns.length) return
+
+    const firstOffset = columns[0].offsetLeft
+    const currentLeft = container.scrollLeft
+    let nearestIndex = 0
+    let nearestDistance = Number.POSITIVE_INFINITY
+
+    columns.forEach((column, index) => {
+      const distance = Math.abs((column.offsetLeft - firstOffset) - currentLeft)
+      if (distance < nearestDistance) {
+        nearestDistance = distance
+        nearestIndex = index
+      }
+    })
+
+    const next = {
+      index: nearestIndex,
+      canLeft: currentLeft > 8,
+      canRight: currentLeft < container.scrollWidth - container.clientWidth - 8,
+    }
+    setKanbanNavigation(previous => (
+      previous.index === next.index && previous.canLeft === next.canLeft && previous.canRight === next.canRight
+        ? previous
+        : next
+    ))
+  }, [])
+
+  const scrollToKanbanColumn = useCallback((requestedIndex) => {
+    const container = kanbanScrollRef.current
+    if (!container) return
+    const columns = Array.from(container.querySelectorAll('.auto-kanban-column'))
+    if (!columns.length) return
+    const index = Math.max(0, Math.min(requestedIndex, columns.length - 1))
+    const firstOffset = columns[0].offsetLeft
+    container.scrollTo({ left: columns[index].offsetLeft - firstOffset, behavior: 'smooth' })
+    setKanbanNavigation(previous => ({ ...previous, index }))
+  }, [])
+
+  const scrollKanbanByColumn = useCallback((direction) => {
+    scrollToKanbanColumn(kanbanNavigation.index + direction)
+  }, [kanbanNavigation.index, scrollToKanbanColumn])
+
+  useEffect(() => {
+    if (!isGestaoRoute) return undefined
+    const container = kanbanScrollRef.current
+    if (!container) return undefined
+    const handleChange = () => updateKanbanNavigation()
+    const frame = window.requestAnimationFrame(handleChange)
+    container.addEventListener('scroll', handleChange, { passive: true })
+    window.addEventListener('resize', handleChange, { passive: true })
+    return () => {
+      window.cancelAnimationFrame(frame)
+      container.removeEventListener('scroll', handleChange)
+      window.removeEventListener('resize', handleChange)
+    }
+  }, [isGestaoRoute, kanbanDensity, emissoes.length, renovacoesPendentes.length, updateKanbanNavigation])
 
   const [iniciandoCotacaoId, setIniciandoCotacaoId] = useState(null)
 
@@ -2024,7 +2155,7 @@ export default function AutoEmissoes() {
         <>
           <FilterBar>
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-xs font-medium text-dark-muted">Periodo das emissoes</span>
+              <span className="auto-pipeline-filter-label"><CalendarDays /> Período das emissões</span>
               <div className="inline-flex flex-wrap rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-1 shadow-sm">
                 {PERIOD_OPTIONS.map(option => {
                   const active = periodo === option.value
@@ -2043,21 +2174,17 @@ export default function AutoEmissoes() {
                 })}
               </div>
               {periodo === 'custom' && (
-                <>
-                  <input
-                    type="date"
-                    value={filtroInicio}
-                    onChange={e => setFiltroInicio(e.target.value)}
-                    className="rounded-2xl border border-dark-border bg-dark-surface/80 px-3 py-2 text-sm text-dark-text outline-none"
-                  />
-                  <span className="text-xs text-dark-muted">ate</span>
-                  <input
-                    type="date"
-                    value={filtroFim}
-                    onChange={e => setFiltroFim(e.target.value)}
-                    className="rounded-2xl border border-dark-border bg-dark-surface/80 px-3 py-2 text-sm text-dark-text outline-none"
-                  />
-                </>
+                <div className="auto-pipeline-date-range" aria-label="Intervalo personalizado">
+                  <label>
+                    <span>De</span>
+                    <DatePicker value={filtroInicio} onChange={setFiltroInicio} className="auto-date-picker" />
+                  </label>
+                  <span className="auto-pipeline-date-separator">até</span>
+                  <label>
+                    <span>Até</span>
+                    <DatePicker value={filtroFim} onChange={setFiltroFim} className="auto-date-picker" />
+                  </label>
+                </div>
               )}
               {periodo !== 'custom' && filtroInicio && filtroFim && (
                 <span className="text-xs text-dark-muted">
@@ -2075,24 +2202,64 @@ export default function AutoEmissoes() {
             </div>
           </FilterBar>
 
-          <div className="auto-density-row" role="group" aria-label="Densidade dos cards do Pipeline">
-            <span>Visualização</span>
-            <div>
-              <button type="button" className={kanbanDensity === 'comfortable' ? 'is-active' : ''} onClick={() => setKanbanDensity('comfortable')}>
-                Detalhada
-              </button>
-              <button type="button" className={kanbanDensity === 'compact' ? 'is-active' : ''} onClick={() => setKanbanDensity('compact')}>
-                Compacta
-              </button>
+          <section className="auto-pipeline-command" aria-label="Navegação da Pipeline AUTO">
+            <div className="auto-pipeline-command-main">
+              <div className="auto-pipeline-command-copy">
+                <span className="auto-pipeline-command-icon"><Car /></span>
+                <div>
+                  <strong>Jornada da operação</strong>
+                  <small>Use as setas ou escolha uma etapa para navegar sem rolagem manual.</small>
+                </div>
+              </div>
+              <div className="auto-pipeline-command-actions">
+                <div className="auto-density-row" role="group" aria-label="Densidade dos cards do Pipeline">
+                  <span>Visualização</span>
+                  <div>
+                    <button type="button" className={kanbanDensity === 'comfortable' ? 'is-active' : ''} onClick={() => setKanbanDensity('comfortable')}>Detalhada</button>
+                    <button type="button" className={kanbanDensity === 'compact' ? 'is-active' : ''} onClick={() => setKanbanDensity('compact')}>Compacta</button>
+                  </div>
+                </div>
+                <div className="auto-pipeline-arrow-group">
+                  <button type="button" onClick={() => scrollKanbanByColumn(-1)} disabled={!kanbanNavigation.canLeft} aria-label="Ver coluna anterior" title="Coluna anterior"><ChevronLeft /></button>
+                  <span><strong>{kanbanNavigation.index + 1}</strong> de {KANBAN_STAGES.length}</span>
+                  <button type="button" onClick={() => scrollKanbanByColumn(1)} disabled={!kanbanNavigation.canRight} aria-label="Ver próxima coluna" title="Próxima coluna"><ChevronRight /></button>
+                </div>
+              </div>
             </div>
-            <small>{kanbanDensity === 'compact' ? 'Mais negócios visíveis por vez' : 'Todos os dados importantes no card'}</small>
-          </div>
+            <div className="auto-pipeline-stage-track">
+              {KANBAN_STAGES.map((stage, index) => (
+                <button
+                  key={stage.id}
+                  type="button"
+                  onClick={() => scrollToKanbanColumn(index)}
+                  className={kanbanNavigation.index === index ? 'is-active' : ''}
+                  style={{ '--stage-color': stage.color }}
+                  aria-current={kanbanNavigation.index === index ? 'step' : undefined}
+                >
+                  <span>{String(index + 1).padStart(2, '0')}</span>
+                  <strong>{stage.shortLabel}</strong>
+                  <small>{kanbanCounts.get(stage.id) || 0}</small>
+                </button>
+              ))}
+            </div>
+          </section>
 
-          <div className={`auto-kanban-board is-${kanbanDensity} -mx-1 flex gap-4 overflow-x-auto pb-2 pt-1 px-1 snap-x snap-mandatory md:snap-none`}>
+          <div className="auto-kanban-shell">
+            <button type="button" onClick={() => scrollKanbanByColumn(-1)} disabled={!kanbanNavigation.canLeft} className="auto-kanban-edge-nav is-left" aria-label="Voltar uma coluna"><ChevronLeft /></button>
+            <div
+              ref={kanbanScrollRef}
+              tabIndex="0"
+              onKeyDown={event => {
+                if (event.key === 'ArrowLeft') { event.preventDefault(); scrollKanbanByColumn(-1) }
+                if (event.key === 'ArrowRight') { event.preventDefault(); scrollKanbanByColumn(1) }
+              }}
+              className={`auto-kanban-board is-${kanbanDensity} relative -mx-1 flex gap-4 overflow-x-auto pb-3 pt-1 px-1 snap-x snap-mandatory md:snap-proximity`}
+              aria-label="Quadro da Pipeline AUTO. Use as setas do teclado para mudar de coluna."
+            >
             <DataCard
-              title="Renovações"
+              title={<span className="auto-kanban-column-title"><span>01</span>Renovações</span>}
               subtitle={`${renovacoesPendentes.length} item(ns)`}
-              className="auto-kanban-column w-[300px] shrink-0 snap-start"
+              className="auto-kanban-column auto-kanban-column-renewals w-[300px] shrink-0 snap-start"
               bodyClassName="pt-4"
             >
               <div className="auto-kanban-dropzone min-h-[72vh] space-y-3">
@@ -2129,9 +2296,9 @@ export default function AutoEmissoes() {
               return (
                 <DataCard
                   key={coluna.id}
-                  title={coluna.label}
+                  title={<span className="auto-kanban-column-title"><span>{String(KANBAN_STAGES.findIndex(stage => stage.id === coluna.id) + 1).padStart(2, '0')}</span>{coluna.label}</span>}
                   subtitle={`${cards.length} item(ns)`}
-                  className={`auto-kanban-column w-[300px] shrink-0 snap-start ${dragOver === coluna.id ? 'ring-2 ring-brand-accent/20' : ''}`}
+                  className={`auto-kanban-column auto-column-tone-${coluna.tone} w-[300px] shrink-0 snap-start ${dragOver === coluna.id ? 'ring-2 ring-brand-accent/20' : ''}`}
                   bodyClassName="pt-4"
                 >
                   <div
@@ -2164,6 +2331,8 @@ export default function AutoEmissoes() {
                 </DataCard>
               )
             })}
+            </div>
+            <button type="button" onClick={() => scrollKanbanByColumn(1)} disabled={!kanbanNavigation.canRight} className="auto-kanban-edge-nav is-right" aria-label="Avançar uma coluna"><ChevronRight /></button>
           </div>
         </>
       ) : (

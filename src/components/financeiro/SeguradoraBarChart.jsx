@@ -12,7 +12,7 @@ export default function SeguradoraBarChart({ data = [], color = 'bg-brand-second
   }
 
   return (
-    <div className="space-y-3">
+    <div className="finance-bar-chart space-y-3">
       {lista.map(d => {
         const pct = max > 0 ? Math.max(4, Math.round((Number(d.value) / max) * 100)) : 0
         return (

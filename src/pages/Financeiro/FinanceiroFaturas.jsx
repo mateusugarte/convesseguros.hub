@@ -192,7 +192,7 @@ export default function FinanceiroFaturas() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="financeiro-page space-y-5">
       <PageHeader
         eyebrow="Financeiro · Faturas"
         title="Calendário de faturas"

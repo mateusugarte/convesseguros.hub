@@ -7,6 +7,7 @@ import './styles/fianca-ui.css'
 import './styles/system-ui.css'
 import './styles/modal-ui.css'
 import './styles/kanban-ui.css'
+import './styles/report-finance-ui.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

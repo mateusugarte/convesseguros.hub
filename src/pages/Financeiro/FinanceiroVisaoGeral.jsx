@@ -25,7 +25,7 @@ function KpiCard({ label, value, hint, icon, accent = false, color = 'brand-seco
   }
   const c = colorMap[color] || colorMap['brand-secondary']
   return (
-    <div className={`relative overflow-hidden rounded-[26px] border bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.88))] p-5 shadow-[0_20px_50px_-36px_rgba(16,185,129,0.5)] ${accent ? c.border : 'border-emerald-500/12'}`}>
+    <div className={`finance-kpi-card relative overflow-hidden rounded-[26px] border p-5 ${accent ? c.border : 'border-emerald-500/12'}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="mb-1 text-xs font-medium uppercase tracking-wide text-dark-muted">{label}</p>
@@ -96,8 +96,8 @@ export default function FinanceiroVisaoGeral() {
   const maxRanking = ranking[0]?.premioTotal || 0
 
   return (
-    <div className="space-y-6">
-      <section className="overflow-hidden rounded-[32px] border border-emerald-500/15 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_42%),linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.92))] px-6 py-6 shadow-[0_28px_72px_-44px_rgba(16,185,129,0.5)]">
+    <div className="financeiro-page space-y-6">
+      <section className="financeiro-hero px-6 py-6">
         <p className="mb-1 inline-flex rounded-full border border-emerald-500/15 bg-dark-surface/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">Financeiro · Produção</p>
         <h1 className="text-3xl font-bold text-dark-text">Visão geral do Seguro Fiança</h1>
         <p className="mt-2 max-w-2xl text-sm text-dark-muted">
@@ -167,7 +167,7 @@ export default function FinanceiroVisaoGeral() {
                 <button
                   key={item.imobiliaria}
                   onClick={() => navigate(`/financeiro/producao/${encodeURIComponent(item.imobiliaria)}`)}
-                  className="group relative w-full overflow-hidden rounded-[24px] border border-emerald-500/15 bg-dark-surface/92 px-4 py-4 text-left shadow-[0_18px_48px_-36px_rgba(16,185,129,0.45)] transition-all hover:-translate-y-0.5 hover:border-emerald-500/30"
+                  className="finance-ranking-row group relative w-full overflow-hidden rounded-[24px] border px-4 py-4 text-left"
                 >
                   <div className="absolute inset-y-0 left-0 bg-[linear-gradient(90deg,rgba(16,185,129,0.15),rgba(52,211,153,0.04))] transition-all" style={{ width: `${pct}%` }} />
                   <div className="relative flex items-start justify-between gap-3">

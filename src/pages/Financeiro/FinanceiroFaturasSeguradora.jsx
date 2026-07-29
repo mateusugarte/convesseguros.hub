@@ -84,7 +84,7 @@ export default function FinanceiroFaturasSeguradora() {
   const totalAtivas = useMemo(() => linhas.reduce((s, l) => s + l.ativas, 0), [linhas])
 
   return (
-    <div className="space-y-5">
+    <div className="financeiro-page space-y-5">
       <button
         onClick={() => navigate('/financeiro/faturas')}
         className="inline-flex items-center gap-1.5 text-sm text-dark-muted transition-colors hover:text-dark-text"

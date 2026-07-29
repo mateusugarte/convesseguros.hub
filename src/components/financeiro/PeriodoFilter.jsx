@@ -38,7 +38,7 @@ export default function PeriodoFilter({ onChange, initial }) {
   const anos = [agora.getFullYear() + 1, agora.getFullYear(), agora.getFullYear() - 1, agora.getFullYear() - 2]
 
   return (
-    <div className="space-y-3">
+    <div className="finance-period-filter space-y-3">
       <div className="inline-flex rounded-xl bg-dark-surface2/60 p-1">
         {[['mes', 'Mês'], ['intervalo', 'Intervalo']].map(([v, label]) => (
           <button

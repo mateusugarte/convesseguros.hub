@@ -41,7 +41,7 @@ export default function ApolicesListPanel({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} subtitle={subtitle} maxWidth="xl">
-      <div className="space-y-4">
+      <div className="finance-apolices-list space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Select
             value={seg}
@@ -57,7 +57,7 @@ export default function ApolicesListPanel({
         ) : filtradas.length === 0 ? (
           <div className="py-12 text-center text-sm text-dark-muted">Nenhuma apólice encontrada.</div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="finance-table-scroll overflow-x-auto">
             <table className="table-table text-sm">
               <thead className="table-thead">
                 <tr>

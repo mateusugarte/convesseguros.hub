@@ -1,5 +1,35 @@
 # CURRENT TASK
 
+## Redesign da Pipeline AUTO e calendários (2026-07-29, Codex — CONCLUÍDA)
+
+Objetivo: melhorar integralmente a experiência de `/auto/gestao`, preservando drag-and-drop e fluxos de resultado/emissão, com navegação por setas que avança ou retorna uma coluna sem exigir scroll horizontal manual. Também modernizar os controles de período e os calendários usados no módulo AUTO, com melhor legibilidade, foco e responsividade.
+
+Arquivos em uso: `src/pages/auto/AutoEmissoes.jsx`, `src/styles/auto-ui.css`, `src/components/ui/DatePicker.jsx`, `src/pages/auto/CONTEXT.md` e este handoff.
+
+Entrega: a Pipeline passou a ter mapa clicável das 7 etapas, contadores, setas superiores e flutuantes para avançar/voltar exatamente uma coluna, indicador de posição e navegação por teclado. Colunas, cabeçalhos, cards, dropzones, densidade, dark mode e mobile foram refinados. O período personalizado usa o `DatePicker` visual; o componente ganhou dias da semana legíveis, estados selecionado/hoje, navegação e acessibilidade melhores. Inputs nativos de data/mês de todo o escopo `.auto-page` também receberam o novo acabamento.
+
+Regras preservadas: drag-and-drop, coluna virtual de renovações, abertura dos modais de resultado/emissão, filtros, queries e mutations não foram alterados. `npm test` 142/142, `npm run build` verde e `git diff --check` sem erros. A inspeção visual automatizada não abriu porque a ponte do navegador interno falhou antes da navegação; permanece recomendado um smoke test autenticado em `/auto/gestao` para conferir setas, drag-and-drop e calendário com dados reais.
+
+Responsável atual: Codex. Próximo passo sugerido: smoke test autenticado e aprovação visual do usuário.
+
+---
+
+## Preenchimento de cotações Auto: números com vírgula, campo "Comissão ano passado" e auto-preenchimento ao arrastar para "Cotação feita" (2026-07-29, Claude — CONCLUÍDA, sem smoke test ao vivo)
+
+Usuário reportou 2 problemas no preenchimento de cotações do seguro Auto e pediu 1 melhoria de fluxo: (1) os campos numéricos (Prêmio total, Prêmio líquido, % Comissão) na tela de detalhe da cotação não aceitavam vírgula como separador decimal; (2) pediu um campo "Comissão ano passado" no preenchimento da cotação; (3), numa interrupção durante a investigação, pediu que ao arrastar um card para a coluna "Cotação feita" no Kanban de Gestão Auto, o modal de resultado já viesse com a seguradora e os valores preenchidos automaticamente, em vez de abrir em branco.
+
+1. **Causa raiz de (1):** `AutoCotacaoDetalhe.jsx` (seção "Seguradoras", campos Premio total/Premio liquido/% Comissao) usava `<input type="number">` nativo do HTML, que não aceita vírgula como separador decimal na maioria dos navegadores/locales — exatamente o sintoma relatado. **Corrigido:** trocado para `type="text"` + `inputMode="decimal"`, reaproveitando `parseDecimalBR`/`formatDecimalBRInput` (`src/lib/numberInput.js`), o mesmo helper já usado em `ModalFicha.jsx`/`FinanceiroProducao.jsx` para o mesmo problema — aceita `1.234,56`, `1234,56` ou `1234.56` e sempre grava número. Exibição ao sair do modo edição também passou a mostrar formatado em pt-BR (antes mostrava o número cru, ex. `1234.5`, o que reforçava a confusão sobre o separador esperado).
+2. **(2):** novo campo "Comissão ano passado" em cada bloco de seguradora (preferencial/mais barata) da cotação — gravado como `comissao_ano_passado` dentro do próprio `jsonb` de `seguradora_preferencial`/`seguradora_mais_barata` (`cotacoes_auto`), **sem migration** (coluna já é `jsonb`, aceita chave nova livremente). Card "Comissão estimada" ganhou uma linha de comparação (`vs. ano passado (R$ X): +R$ Y`) quando o campo está preenchido. É um dado diferente do `renovacao_comissao_ano_anterior` que já existe em `emissoes_auto`/`apolices_auto` (esse é auto-calculado a partir do histórico real da apólice, no estágio de emissão/renovação; o novo é digitado manualmente no estágio de cotação, antes de existir emissão).
+3. **(3):** `AutoEmissoes.jsx` — `ModalResultado` (aberto ao soltar um card em "Cotação feita") inicializava `seguradoras` sempre com um item em branco. Nova função `getSeguradorasResultadoInicial(emissao)`: se a emissão já tem resultado registrado (reabrindo para editar), usa esse resultado; senão copia da seguradora selecionada na cotação (`seguradora_preferencial`, com fallback para `seguradora_mais_barata` — mesma ordem de prioridade já usada em `getFormEmissaoInicial`/`seguradoraEmissao`), mapeando `premio_total → valor_total`. Banner verde no modal avisa quando os dados vieram herdados da cotação, para o usuário conferir antes de salvar.
+
+`npm test` (142/142) e `npm run build` verdes. Nenhuma mudança de schema/RLS/migration — só lógica de app em `src/pages/auto/AutoCotacaoDetalhe.jsx` e `src/pages/auto/AutoEmissoes.jsx`.
+
+**Smoke test pendente (sem login real nesta rodada):** em `/auto/cotacoes/:id`, editar Premio total/liquido/% Comissao digitando com vírgula (ex. `1.500,00`) e confirmar que salva certo; preencher "Comissão ano passado" e ver a comparação aparecer; no Kanban de Gestão Auto, arrastar um card de "Cotações pendentes" para "Cotação feita" numa cotação que já tem seguradora preferencial/mais barata preenchida e confirmar que o modal abre com a seguradora e os valores já preenchidos (com o aviso verde), permitindo só conferir e salvar.
+
+**Riscos remanescentes:** o auto-preenchimento em (3) só herda de `seguradora_preferencial`/`seguradora_mais_barata` — se a cotação nunca teve nenhuma das duas preenchida (ex. lead muito no início), o modal continua abrindo em branco como antes (comportamento correto, não há o que herdar). Campos `forma_pagamento`/`parcelamentos` são copiados se existirem no jsonb, mas a tela de cotação hoje não os edita diretamente (só ficariam preenchidos se vierem de outro fluxo) — não é regressão, é o mesmo dado que já era lido em `getFormEmissaoInicial`.
+
+---
+
 ## "Iniciar cotação" quebrava com erro de schema cache + regra "só nome/seguradora/vencimento obrigatórios" (2026-07-28, Claude — CONCLUÍDA, migration pendente)
 
 Follow-up imediato da entrada abaixo. Usuário tentou "Iniciar cotação" numa das renovações recém-criadas e recebeu `Could not find the 'vigencia_fim' column of 'cotacoes_auto' in the schema cache`. Pediu também, indo além do bug: para cotações de renovação, a ÚNICA informação obrigatória na criação deve ser nome, seguradora e vencimento — nada mais (nem CPF).

@@ -504,7 +504,7 @@ function LinhaRelatorio({ ficha, coluna, onOpen, onOpenPolicy, selected, onToggl
     : 'border-dark-border/60 bg-dark-surface/70'
 
   return (
-    <div className={`flex flex-wrap items-start gap-3 rounded-2xl border px-4 py-3 transition-colors lg:items-center ${rowClass}`}>
+    <div className={`report-ledger-row flex flex-wrap items-start gap-3 rounded-2xl border px-4 py-3 transition-colors lg:items-center ${rowClass}`}>
       {isStandaloneApolice ? (
         <span className="h-6 w-6 shrink-0" aria-hidden="true" />
       ) : (
@@ -638,6 +638,7 @@ function BlocoRelatorio({
 }) {
   return (
     <DataCard
+      className="report-status-block"
       title={
         <span className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full" style={{ background: coluna.color }} />
@@ -705,7 +706,7 @@ function BlocoRelatorio({
 
 function PeriodControl({ periodo, ano, mes, anos, onPeriod, onAno, onMes }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="report-period-control flex flex-wrap items-center gap-2">
       <div className="flex items-center gap-1 rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-1">
         {PERIOD_OPTIONS.map(opt => (
           <button
@@ -765,7 +766,7 @@ function SelectedToolbar({
   setTarget,
 }) {
   return (
-    <DataCard className="border-brand-accent/15 bg-brand-accent/5" bodyClassName="py-4">
+    <DataCard className="report-selection-toolbar border-brand-accent/15 bg-brand-accent/5" bodyClassName="py-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">Selecao em massa</p>
@@ -2208,7 +2209,7 @@ export default function Relatorio() {
           <button
             type="button"
             onClick={onClickAlertaTopo}
-            className={`w-full rounded-[28px] border px-5 py-4 text-left shadow-sm transition-colors ${alertaTopo.tipo === 'warning' ? 'border-orange-300 bg-orange-50 text-orange-900 hover:bg-orange-100' : 'border-red-300 bg-red-50 text-red-900 hover:bg-red-100'}`}
+            className={`report-priority-alert w-full rounded-[28px] border px-5 py-4 text-left ${alertaTopo.tipo === 'warning' ? 'is-warning border-orange-300 bg-orange-50 text-orange-900' : 'is-danger border-red-300 bg-red-50 text-red-900'}`}
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -2330,7 +2331,7 @@ export default function Relatorio() {
         <button
           type="button"
           onClick={onClickAlertaTopo}
-          className={`w-full rounded-[28px] border px-5 py-4 text-left shadow-sm transition-colors ${alertaTopo.tipo === 'warning' ? 'border-orange-300 bg-orange-50 text-orange-900 hover:bg-orange-100' : 'border-red-300 bg-red-50 text-red-900 hover:bg-red-100'}`}
+          className={`report-priority-alert w-full rounded-[28px] border px-5 py-4 text-left ${alertaTopo.tipo === 'warning' ? 'is-warning border-orange-300 bg-orange-50 text-orange-900' : 'is-danger border-red-300 bg-red-50 text-red-900'}`}
         >
           <div className="flex items-start justify-between gap-4">
             <div>

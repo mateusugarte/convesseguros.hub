@@ -53,6 +53,10 @@ Hub central de fichas: visão lista/kanban com filtros por produto, status, imob
   quando "Aprovado" revela Seguradora, Valor da parcela e os controles de retorno.
 - Aprovação exige Seguradora e Valor da parcela. O botão final é explicitamente
   **Concluir aprovação** e grava `valor_parcela` junto com o restante da finalização.
+- Ao concluir como Aprovado, Seguradora e Valor da parcela são puxados primeiro da cotação
+  aprovada em `raw_data.cotacoes` (respeitando `seguradora_escolhida`), depois do snapshot
+  do retorno e, por último, dos campos gerais da ficha. Quando ambos já existem, o modal
+  mostra um resumo confirmado e não solicita o preenchimento novamente.
 - Fichas do próprio usuário em `em_cotacao` ou `em_analise` podem ser concluídas pelo card,
   pela lista e pela tela de detalhe.
 - A camada visual compartilhada dos boards fica em `styles/kanban-ui.css`.

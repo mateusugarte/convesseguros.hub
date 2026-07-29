@@ -9,13 +9,13 @@ export default function RankingSeguradoras({ data = [], emptyLabel = 'Sem dados 
   const max = Math.max(...lista.map(d => Number(d.value) || 0))
 
   return (
-    <div className="space-y-2">
+    <div className="finance-seguradora-ranking space-y-2">
       {lista.map((d, i) => {
         const pct = max > 0 ? Math.max(8, Math.round((Number(d.value) / max) * 100)) : 0
         return (
           <div
             key={d.seguradora}
-            className="relative overflow-hidden rounded-[22px] border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.88))] px-4 py-3 shadow-[0_18px_44px_-34px_rgba(16,185,129,0.45)]"
+            className="finance-seguradora-row relative overflow-hidden rounded-[22px] border px-4 py-3"
           >
             <div className="absolute inset-y-0 left-0 bg-[linear-gradient(90deg,rgba(16,185,129,0.16),rgba(52,211,153,0.05))]" style={{ width: `${pct}%` }} />
             <div className="relative flex items-center justify-between gap-3">

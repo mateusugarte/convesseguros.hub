@@ -103,6 +103,13 @@ classificar cards.
   dessincronizadas. Só as etiquetas manuais (escolhidas pelo usuario a partir
   de `auto_tags`) sao persistidas em `emissoes_auto.tags`.
 
+## Experiência da Pipeline e calendários (2026-07-29)
+
+- `/auto/gestao` mantém as 7 colunas na mesma faixa horizontal, mas não depende mais de scroll manual: `KANBAN_STAGES` alimenta um mapa clicável, contadores e setas que avançam/retornam uma coluna por vez.
+- O contêiner do quadro acompanha a coluna visível, suporta `ArrowLeft`/`ArrowRight` pelo teclado e mantém o drag-and-drop HTML existente sem mudar os fluxos especiais de `cotacao_feita`, `proposta_transmitida` e `apolice_emitida`.
+- `auto-ui.css` concentra o novo acabamento de toolbar, etapas, setas laterais, colunas, cartões, estados vazios, densidades, tema escuro e breakpoints móveis.
+- O filtro personalizado da Pipeline usa `DatePicker`; o componente compartilhado recebeu rótulos completos dos dias, estados semânticos, atalhos e acessibilidade. Inputs `date`/`month` dentro de `.auto-page` também seguem a identidade visual AUTO.
+
 ## Handoff Checklist
 
 - Read `docs/IA_ORCHESTRATOR.md`

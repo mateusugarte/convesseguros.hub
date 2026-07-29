@@ -467,6 +467,23 @@
 .finish-context-note > svg { width: 19px; height: 19px; color: rgb(var(--brand-primary-rgb)); }
 .finish-context-note p { margin: 0; font-size: 10px; }
 .finish-context-note strong { display: block; margin-bottom: 2px; color: rgb(var(--color-text)); }
+.finish-approved-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgb(5 150 105 / .26);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgb(5 150 105 / .09), rgb(5 150 105 / .035));
+}
+.finish-approved-summary-icon { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 13px; background: rgb(5 150 105 / .13); color: rgb(5 150 105); }
+.finish-approved-summary-icon svg { width: 20px; height: 20px; }
+.finish-approved-summary small { display: block; color: rgb(5 150 105); font-size: 8.5px; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
+.finish-approved-summary strong { display: block; margin-top: 3px; color: rgb(var(--color-text)); font-size: 12px; }
+.finish-approved-summary p { margin: 2px 0 0; color: rgb(var(--color-muted)); font-size: 10px; }
+.finish-approved-summary button { padding: 7px 9px; border: 1px solid rgb(5 150 105 / .22); border-radius: 9px; color: rgb(5 150 105); font-size: 9px; font-weight: 700; transition: 150ms ease; }
+.finish-approved-summary button:hover { background: rgb(5 150 105 / .08); }
 .finish-error { margin-top: 14px; padding: 10px 12px; border: 1px solid rgb(190 24 93 / .2); border-radius: 11px; background: rgb(190 24 93 / .07); color: rgb(190 24 93); font-size: 10.5px; }
 
 .finish-flow-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
@@ -487,6 +504,8 @@ html.dark .apolice-kanban-hero { background: radial-gradient(circle at 90% 10%, 
   .finish-field-wide { grid-column: auto; }
   .finish-step-copy-inline { display: block; }
   .finish-selected-status { width: 100%; margin-top: 12px; }
+  .finish-approved-summary { grid-template-columns: auto minmax(0, 1fr); }
+  .finish-approved-summary button { grid-column: 1 / -1; width: 100%; }
   .finish-flow-footer { display: block; }
   .finish-flow-footer > p { display: none; }
   .finish-flow-footer > div { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); width: 100%; }

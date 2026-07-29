@@ -24,15 +24,71 @@ function fichaNome(ficha) {
   return ficha?.nome_empresa || ficha?.nome_interessado || raw.nome_empresa || raw.razao_social || raw.nome || 'Ficha sem nome'
 }
 
+function normalizeSeguradora(value) {
+  return String(value || '').trim().toLocaleLowerCase('pt-BR')
+}
+
+function resolveCotacaoAprovada(ficha) {
+  const raw = ficha?.raw_data || {}
+  const cotacoesAtuais = Array.isArray(raw.cotacoes) ? raw.cotacoes : []
+  const cotacoesSnapshot = Array.isArray(raw.retorno_gerado?.cotacoes_snapshot)
+    ? raw.retorno_gerado.cotacoes_snapshot
+    : []
+  const cotacoes = cotacoesAtuais.some(item => item?.status === 'aprovado')
+    ? cotacoesAtuais
+    : cotacoesSnapshot
+  const aprovadas = cotacoes.filter(item => item?.status === 'aprovado')
+  const preferidas = [
+    raw.seguradora_escolhida,
+    raw.retorno_gerado?.seguradora_escolhida,
+    ficha?.seguradora,
+  ].filter(Boolean)
+
+  const escolhidaManualmente = preferidas
+    .map(nome => aprovadas.find(item => normalizeSeguradora(item?.seguradora) === normalizeSeguradora(nome)))
+    .find(Boolean)
+
+  const escolhida = escolhidaManualmente || aprovadas
+    .map(item => ({
+      ...item,
+      _total: (toNumber(item?.valor_parcela) || 0) * (toNumber(item?.parcelamento) || 0),
+    }))
+    .sort((a, b) => {
+      const totalA = a._total > 0 ? a._total : Number.POSITIVE_INFINITY
+      const totalB = b._total > 0 ? b._total : Number.POSITIVE_INFINITY
+      return totalA - totalB
+    })[0]
+
+  return {
+    seguradora: escolhida?.seguradora || preferidas[0] || '',
+    valorParcela: escolhida?.valor_parcela ?? ficha?.valor_parcela ?? '',
+    encontrada: Boolean(escolhida),
+  }
+}
+
+function formatMoneyBR(value) {
+  const number = toNumber(value)
+  if (!(number > 0)) return '—'
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(number)
+}
+
+function formatValueInput(value) {
+  if (value === '' || value == null) return ''
+  const number = toNumber(value)
+  if (!Number.isFinite(number)) return ''
+  return number.toLocaleString('pt-BR', { useGrouping: false, maximumFractionDigits: 2 })
+}
+
 export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSuccess }) {
   const { user } = useAuth()
+  const cotacaoAprovada = useMemo(() => resolveCotacaoAprovada(ficha), [ficha])
   const [step, setStep] = useState(defaultStatus ? 2 : 1)
   const [status, setStatus] = useState(defaultStatus || '')
   const [seguradora, setSeguradora] = useState(
-    ficha?.seguradora || ficha?.raw_data?.retorno_gerado?.seguradora_escolhida || ''
+    cotacaoAprovada.seguradora
   )
   const [valorParcela, setValorParcela] = useState(
-    ficha?.valor_parcela ? String(ficha.valor_parcela).replace('.', ',') : ''
+    formatValueInput(cotacaoAprovada.valorParcela)
   )
   const [retornoEnviado, setRetornoEnviado] = useState(Boolean(ficha?.retorno_enviado))
   const [passadoPelaImobiliaria, setPassadoPelaImobiliaria] = useState(
@@ -40,11 +96,13 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [editarDadosAprovacao, setEditarDadosAprovacao] = useState(false)
 
   const selectedStatus = useMemo(() => STATUS_FINAIS.find(item => item.value === status), [status])
   const precisaSeguradora = status === 'aprovado' || status === 'emitido'
   const precisaValor = status === 'aprovado'
   const valorNumerico = toNumber(valorParcela)
+  const dadosAprovacaoPreenchidos = Boolean(seguradora.trim()) && valorNumerico > 0
   const detalhesValidos = (!precisaSeguradora || Boolean(seguradora.trim())) && (!precisaValor || valorNumerico > 0)
   const SelectedIcon = selectedStatus?.icon || CircleCheckBig
 
@@ -146,19 +204,30 @@ export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSucces
               </div>
 
               <div className="finish-details-grid">
-                {precisaSeguradora && (
+                {status === 'aprovado' && dadosAprovacaoPreenchidos && !editarDadosAprovacao && (
+                  <div className="finish-approved-summary finish-field-wide">
+                    <span className="finish-approved-summary-icon"><CircleCheckBig /></span>
+                    <div>
+                      <small>{cotacaoAprovada.encontrada ? 'Cotação aprovada localizada' : 'Dados da aprovação já preenchidos'}</small>
+                      <strong>{seguradora}</strong>
+                      <p>{formatMoneyBR(valorNumerico)} por parcela</p>
+                    </div>
+                    <button type="button" onClick={() => setEditarDadosAprovacao(true)}>Alterar dados</button>
+                  </div>
+                )}
+                {precisaSeguradora && (status !== 'aprovado' || !dadosAprovacaoPreenchidos || editarDadosAprovacao) && (
                   <div className="finish-field finish-field-wide">
                     <label>Seguradora <span>*</span></label>
                     <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={ficha?.produto} required />
                   </div>
                 )}
-                {precisaValor && (
+                {precisaValor && (!dadosAprovacaoPreenchidos || editarDadosAprovacao) && (
                   <div className="finish-field">
                     <label htmlFor="finish-valor-parcela">Valor da parcela <span>*</span></label>
                     <div className="finish-money-input"><span>R$</span><input id="finish-valor-parcela" type="text" inputMode="decimal" value={valorParcela} onChange={event => setValorParcela(event.target.value)} placeholder="0,00" autoComplete="off" /></div>
                   </div>
                 )}
-                <div className={`finish-field${precisaValor ? '' : ' finish-field-wide'}`}>
+                <div className={`finish-field${precisaValor && (!dadosAprovacaoPreenchidos || editarDadosAprovacao) ? '' : ' finish-field-wide'}`}>
                   <span className="finish-field-label">Retorno enviado?</span>
                   <div className="finish-segmented" role="group" aria-label="Retorno enviado">
                     <button type="button" onClick={() => setRetornoEnviado(true)} className={retornoEnviado ? 'is-active is-positive' : ''}>Sim, enviado</button>

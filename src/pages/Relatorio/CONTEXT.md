@@ -49,5 +49,10 @@ Relatório mensal operacional em shell premium, com filtros por ano, mês e imob
 ## Status
 em andamento
 
+## Sistema visual (2026-07-29)
+- `src/styles/report-finance-ui.css` aplica a identidade operacional do relatorio: cabeçalhos, indicadores, alertas prioritarios, filtros de periodo, blocos de status, linhas de ficha e barra de selecao em massa.
+- O escopo `.relatorio-page` preserva as regras de metricas, drag-and-drop, cobranca e selecao em massa; a mudança e somente de apresentacao e hierarquia visual.
+- O layout possui ajustes especificos para telas pequenas, tema escuro e preferencia por movimento reduzido.
+
 ## Usuários que utilizam
 Gestores e orçamentistas seniores

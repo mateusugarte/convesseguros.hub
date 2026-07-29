@@ -49,11 +49,11 @@ export function DatePicker({
   const calcPos = useCallback(() => {
     if (!wrapRef.current) return
     const rect  = wrapRef.current.getBoundingClientRect()
-    const dropH = 310
+    const dropH = 380
     const below = window.innerHeight - rect.bottom - 8
     const above = rect.top - 8
     const flipUp = below < dropH && above > below
-    const dropW = 280
+    const dropW = Math.min(320, window.innerWidth - 16)
     const left  = Math.max(8, Math.min(rect.left, window.innerWidth - dropW - 8))
     setPos({
       left, width: dropW,
@@ -131,7 +131,7 @@ export function DatePicker({
   const days = buildCalendarDays()
 
   return (
-    <div ref={wrapRef} className={`relative ${className}`}>
+    <div ref={wrapRef} className={`dp-root relative ${className}`}>
       <div
         className="dp-trigger w-full"
         style={{
@@ -150,6 +150,7 @@ export function DatePicker({
           onClick={() => !disabled && setOpen(o => !o)}
           className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-transparent text-dark-muted transition-colors hover:border-brand-accent/20 hover:text-dark-text"
           aria-label="Abrir calendario"
+          aria-expanded={open}
         >
           <Calendar
             className="w-3.5 h-3.5 flex-shrink-0"
@@ -162,10 +163,12 @@ export function DatePicker({
           disabled={disabled}
           value={draft}
           onChange={e => setDraft(e.target.value)}
+          onFocus={() => !disabled && setOpen(true)}
           onBlur={commitDraft}
           onKeyDown={e => {
             if (e.key === 'Enter') commitDraft()
             if (e.key === 'Escape') setOpen(false)
+            if (e.key === 'ArrowDown') setOpen(true)
           }}
           placeholder={placeholder}
           className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-dark-muted"
@@ -196,7 +199,7 @@ export function DatePicker({
           }}
         >
           <div
-            className="animate-fade-in"
+            className="dp-popover animate-fade-in"
             style={{
               background:           'var(--glass-bg-heavy)',
               backdropFilter:       'var(--glass-blur-strong)',
@@ -208,15 +211,16 @@ export function DatePicker({
             }}
           >
             {/* Month nav */}
-            <div className="flex items-center justify-between mb-3">
+            <div className="dp-calendar-header flex items-center justify-between mb-3">
               <button
                 type="button"
                 onClick={() => setCurrentDate(d => subMonths(d, 1))}
                 className="dp-nav-btn"
+                aria-label="Mês anterior"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span style={{
+              <span className="dp-month-label" style={{
                 fontSize: 13, fontWeight: 600,
                 color: 'var(--glass-text-primary)',
                 textTransform: 'capitalize',
@@ -227,15 +231,16 @@ export function DatePicker({
                 type="button"
                 onClick={() => setCurrentDate(d => addMonths(d, 1))}
                 className="dp-nav-btn"
+                aria-label="Próximo mês"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
             {/* Week headers */}
-            <div className="grid grid-cols-7 mb-1.5">
-              {['D','S','T','Q','Q','S','S'].map((d, i) => (
-                <div key={i} style={{
+            <div className="dp-weekdays grid grid-cols-7 mb-1.5">
+              {['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map((d, i) => (
+                <div key={i} className="dp-weekday" style={{
                   textAlign: 'center', fontSize: 9, fontWeight: 700,
                   letterSpacing: '0.06em',
                   color: 'var(--glass-text-muted)',
@@ -247,7 +252,7 @@ export function DatePicker({
             </div>
 
             {/* Day grid */}
-            <div className="grid grid-cols-7 gap-y-0.5">
+            <div className="dp-days grid grid-cols-7 gap-y-0.5">
               {days.map((day, i) => {
                 const inMonth = isSameMonth(day, currentDate)
                 const isSel   = selected && isSameDay(day, selected)
@@ -258,7 +263,9 @@ export function DatePicker({
                     key={i}
                     type="button"
                     onClick={() => selectDay(day)}
-                    className="dp-day"
+                    className={`dp-day${isSel ? ' is-selected' : ''}${isNow ? ' is-today' : ''}${!inMonth ? ' is-outside' : ''}`}
+                    aria-label={format(day, "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                    aria-pressed={Boolean(isSel)}
                     style={{
                       opacity:    inMonth ? 1 : 0.25,
                       background: isSel
@@ -281,7 +288,7 @@ export function DatePicker({
             </div>
 
             {/* Footer shortcuts */}
-            <div className="mt-3 pt-2.5 flex items-center justify-between"
+            <div className="dp-calendar-footer mt-3 pt-2.5 flex items-center justify-between"
               style={{ borderTop: '1px solid var(--glass-border)' }}>
               <button type="button" onClick={() => selectDay(new Date())} className="dp-footer-btn dp-footer-primary">
                 Hoje

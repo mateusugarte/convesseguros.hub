@@ -172,7 +172,7 @@ export default function FinanceiroFaturaImobiliaria() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="financeiro-page space-y-5">
       <button
         onClick={() => navigate(`/financeiro/faturas?mes=${mesRef}`)}
         className="inline-flex items-center gap-1.5 text-sm text-dark-muted transition-colors hover:text-dark-text"
@@ -180,7 +180,7 @@ export default function FinanceiroFaturaImobiliaria() {
         <ArrowLeft className="h-4 w-4" /> Voltar para imobiliárias
       </button>
 
-      <section className="overflow-hidden rounded-[30px] border border-emerald-500/15 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_40%),linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.92))] px-6 py-6 shadow-[0_26px_70px_-42px_rgba(16,185,129,0.55)]">
+      <section className="financeiro-hero px-6 py-6">
         <PageHeader
           eyebrow={`Financeiro · Fatura · ${mesLabel}`}
           title={selecionada}

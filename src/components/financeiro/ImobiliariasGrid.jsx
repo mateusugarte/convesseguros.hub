@@ -32,8 +32,8 @@ export default function ImobiliariasGrid({ onSelect }) {
   }, [nomes, catalogo, busca])
 
   return (
-    <div className="space-y-4">
-      <div className="relative max-w-md">
+    <div className="finance-imobiliarias-grid space-y-4">
+      <div className="finance-search relative max-w-md">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-700/55" />
         <input
           value={busca}
@@ -52,7 +52,7 @@ export default function ImobiliariasGrid({ onSelect }) {
             <button
               key={nome}
               onClick={() => onSelect?.(nome)}
-              className="group overflow-hidden rounded-[26px] border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(236,253,245,0.92))] px-4 py-4 text-left shadow-[0_18px_48px_-32px_rgba(16,185,129,0.55)] transition-all hover:-translate-y-0.5 hover:border-emerald-500/30"
+              className="finance-imobiliaria-card group overflow-hidden rounded-[26px] border px-4 py-4 text-left"
             >
               <div className="flex items-start justify-between gap-3">
                 <ImobiliariaIdentity nome={nome} imagemPath={meta?.imagemPath} imagemUrl={meta?.imagemUrl} size="md" />

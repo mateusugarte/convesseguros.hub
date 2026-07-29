@@ -1,5 +1,20 @@
 # CURRENT TASK
 
+## Performance: carga global do módulo Comercial rodava em toda página, para todo usuário (2026-07-29, Claude — CONCLUÍDA, sem smoke test ao vivo)
+
+Usuário reportou o sistema "um pouco lento" e pediu foco em responsividade/velocidade "em tudo", sem mexer em nada visível ou funcional.
+
+1. **Causa raiz principal, encontrada por leitura de código:** `Layout.jsx` chamava `initComercialStore(user.id)` (`src/lib/comercial.js`) num `useEffect` disparado assim que `user` fica disponível — ou seja, em **toda** sessão, em **toda** página do sistema (Dashboard, Fichas, Apólices, Auto, Treinamentos etc.), mesmo que o usuário nunca abra o módulo Comercial. Essa função busca 5 tabelas inteiras sem paginação em paralelo (`comercial_leads`, `comercial_vendas`, `comercial_eventos`, `comercial_jornadas`, `comercial_scripts`, todas com `select('*')` e sem `limit`). Só o módulo Comercial (`Pipeline`, `BaseLeads`, `LeadDetalhe`, `Vendas`, `Calendario`, `Jornadas`, `GestaoComercial`, `ComercialDashboard`, via `useComercial()`) consome esses dados — confirmado por grep, nenhuma outra tela depende do store. **Corrigido:** o `useEffect` que chama `initComercialStore` agora só dispara quando a rota atual é `/comercial/*` (`isCommercialRoute`, já calculado no componente). O cache interno do store (`_userId === userId && _loaded`) já evitava refetch em navegações subsequentes — não mudou. Efeito colateral aceitável: a primeira vez que o usuário abre uma tela Comercial na sessão passa a buscar os dados naquele momento (antes já era assim quando alguém navegava rápido demais logo após o login, já que a busca sempre foi assíncrona) — nenhuma tela nova de loading foi criada, é o mesmo estado inicial vazio que o hook `useComercial()` já tratava.
+2. **`CommandPalette`** (paleta de busca universal, Ctrl+K) estava com import estático em `Layout.jsx`, entrando no bundle inicial de toda página mesmo sem nunca ser aberta. **Corrigido:** virou `lazy()` e só é montado (dentro de `Suspense`) quando `cmdOpen` é true.
+
+`npm test` (142/142) e `npm run build` verdes. Nenhuma mudança de schema/RLS/rotas/regra de negócio — só o timing de quando um fetch já existente dispara, e code-splitting de um componente. `src/pages/comercial/*` e o restante do fluxo do módulo Comercial não foram tocados.
+
+**Smoke test pendente (sem login real nesta rodada):** confirmar que Dashboard/Fichas/Apólices/Auto abrem mais rápido logo após o login; entrar em qualquer tela `/comercial/*` e confirmar que os dados (leads, vendas, eventos, jornadas, scripts) ainda carregam normalmente; abrir a busca universal (Ctrl+K) e confirmar que ainda funciona (pode haver uma fração de segundo a mais na primeiríssima abertura, por causa do lazy load).
+
+**Riscos remanescentes:** nenhuma mudança de comportamento visível esperada; o único risco é um usuário que navegue extremamente rápido do login direto para uma tela Comercial ver o estado vazio inicial por um instante a mais do que antes (mesma race condition que já existia, só desloca o início do fetch). Não investiguei outras páginas em profundidade (Kanban de Fichas/Apólices/Auto, listas grandes) por serem áreas com histórico recente de bugs sutis de drag-and-drop — evitei mexer lá para não arriscar regressão funcional; se ainda estiver lento após essa correção, o próximo lugar a olhar é ali.
+
+---
+
 ## Redesign da Pipeline AUTO e calendários (2026-07-29, Codex — CONCLUÍDA)
 
 Objetivo: melhorar integralmente a experiência de `/auto/gestao`, preservando drag-and-drop e fluxos de resultado/emissão, com navegação por setas que avança ou retorna uma coluna sem exigir scroll horizontal manual. Também modernizar os controles de período e os calendários usados no módulo AUTO, com melhor legibilidade, foco e responsividade.

@@ -7,7 +7,6 @@ import { supabase } from '../lib/supabase'
 import { fetchContagemAbertaOrcamentista, PRODUTO_LABELS } from '../lib/fichas'
 import { canManageCommercial, initComercialStore } from '../lib/comercial'
 import { Avatar } from './ui'
-import CommandPalette from './CommandPalette'
 import { PageTransition } from './PageTransition'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -22,6 +21,7 @@ import {
 
 const AutoWorkspaceBar = lazy(() => import('./auto/AutoWorkspaceBar'))
 const FiancaWorkspaceBar = lazy(() => import('./fianca/FiancaWorkspaceBar'))
+const CommandPalette = lazy(() => import('./CommandPalette'))
 
 const LOGO = 'https://uqkzxtelctaaqvrihnfg.supabase.co/storage/v1/object/public/conves/file.jpeg'
 
@@ -224,8 +224,16 @@ export default function Layout() {
   useEffect(() => {
     if (!user) return
     fetchContagemAbertaOrcamentista(user.id).then(setAbertasCount)
-    initComercialStore(user.id)
   }, [user])
+
+  // O store comercial carrega 5 tabelas inteiras (leads, vendas, eventos,
+  // jornadas, scripts) sem paginação — só vale a pena buscar quando o
+  // usuário de fato entra em alguma tela do módulo Comercial, não em toda
+  // navegação do sistema.
+  useEffect(() => {
+    if (!user || !isCommercialRoute) return
+    initComercialStore(user.id)
+  }, [user, isCommercialRoute])
 
   useEffect(() => {
     if (!user?.id) {
@@ -750,15 +758,19 @@ export default function Layout() {
         </main>
       </div>
 
-      <CommandPalette
-        open={cmdOpen}
-        onClose={() => setCmdOpen(false)}
-        onOpenFicha={id => { navigate(`/fichas/${id}`); setCmdOpen(false) }}
-        onOpenApolice={id => { navigate(`/apolices/${id}`); setCmdOpen(false) }}
-        onNewFicha={() => { navigate('/fichas?novo=1'); setCmdOpen(false) }}
-        onOpenQueue={() => { navigate('/minhas-fichas'); setCmdOpen(false) }}
-        onOpenPolicies={() => { navigate('/apolices'); setCmdOpen(false) }}
-      />
+      {cmdOpen && (
+        <Suspense fallback={null}>
+          <CommandPalette
+            open={cmdOpen}
+            onClose={() => setCmdOpen(false)}
+            onOpenFicha={id => { navigate(`/fichas/${id}`); setCmdOpen(false) }}
+            onOpenApolice={id => { navigate(`/apolices/${id}`); setCmdOpen(false) }}
+            onNewFicha={() => { navigate('/fichas?novo=1'); setCmdOpen(false) }}
+            onOpenQueue={() => { navigate('/minhas-fichas'); setCmdOpen(false) }}
+            onOpenPolicies={() => { navigate('/apolices'); setCmdOpen(false) }}
+          />
+        </Suspense>
+      )}
     </div>
   )
 }

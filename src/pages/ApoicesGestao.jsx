@@ -50,10 +50,10 @@ import ImobiliariaSelect from '../components/ImobiliariaSelect'
 import { kanbanPointerCollision, KANBAN_DRAG_OVERLAY_MODIFIERS, KANBAN_DROP_ANIMATION } from '../lib/kanbanDnd'
 
 const COLUNAS = [
-  { id: 'recebida', label: 'Recebida', color: '#3B82F6' },
-  { id: 'proposta_transmitida', label: 'Proposta Transmitida', color: '#F59E0B' },
-  { id: 'emitida', label: 'Proposta Transmitida', color: '#8B5CF6' },
-  { id: 'enviada', label: 'Apólice Enviada', color: '#059669' },
+  { id: 'recebida', label: 'Recebidas', hint: 'Novas solicitações', color: '#3B82F6' },
+  { id: 'proposta_transmitida', label: 'Transmitidas', hint: 'Na seguradora', color: '#D97706' },
+  { id: 'emitida', label: 'Emitidas', hint: 'Apólice disponível', color: '#7C3AED' },
+  { id: 'enviada', label: 'Enviadas', hint: 'Entregues ao cliente', color: '#059669' },
 ]
 
 const PRODUTO_ICON = { residencial_pf: Home, comercial_pf: Briefcase, pessoa_juridica: Building }
@@ -196,7 +196,7 @@ const KanbanCard = memo(function KanbanCard({ apolice, resolverNome, resolverImo
 
   return (
     <div
-      className={`kanban-card${isDragOverlay ? ' kanban-card-dragging' : ''}`}
+      className={`kanban-card apolice-kanban-card${isDragOverlay ? ' kanban-card-dragging' : ''}`}
       style={{ '--kanban-accent': semFicha ? '#F97316' : produtoColor }}
     >
       {!isDragOverlay && (
@@ -402,11 +402,14 @@ const DroppableColumn = memo(function DroppableColumn({ col, apolices, resolverN
   const { setNodeRef, isOver } = useDroppable({ id: col.id })
 
   return (
-    <div className="kanban-col flex h-full flex-col flex-shrink-0" style={{ contain: 'layout paint style' }}>
-      <div className="kanban-col-header" style={{ background: `${col.color}14`, borderColor: `${col.color}45` }}>
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-2 h-2 rounded-full" style={{ background: col.color }} />
-          <span className="text-[12px] font-semibold" style={{ color: col.color }}>{col.label}</span>
+    <div className="kanban-col apolice-kanban-col flex h-full flex-col flex-shrink-0" style={{ contain: 'layout paint style' }}>
+      <div className="kanban-col-header apolice-kanban-col-header" style={{ '--column-accent': col.color }}>
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="apolice-column-marker" style={{ background: col.color }} />
+          <div className="min-w-0">
+            <span className="apolice-column-title" style={{ color: col.color }}>{col.label}</span>
+            <p className="apolice-column-hint">{col.hint}</p>
+          </div>
         </div>
         <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md" style={{ background: `${col.color}24`, color: col.color }}>
           {apolices.length}
@@ -426,7 +429,7 @@ const DroppableColumn = memo(function DroppableColumn({ col, apolices, resolverN
       >
         {apolices.length === 0 ? (
           <div className="flex items-center justify-center h-20 rounded-xl border border-dashed border-dark-border/50 text-[11px] text-dark-muted">
-            Vazia
+            Solte uma apólice aqui
           </div>
         ) : (
           <ColumnCardList
@@ -1933,14 +1936,15 @@ export default function ApoicesGestao() {
 
   return (
     <div className="apolices-gestao-page flex h-full min-h-0 w-full flex-1 flex-col gap-4 animate-fade-in">
-      <div className="flex items-start justify-between flex-wrap gap-3">
+      <div className="apolice-kanban-hero flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="title-page text-dark-text">Gestão de Apólices</h1>
-          <p className="text-xs text-dark-muted mt-0.5">Arraste as apólices entre as colunas para atualizar o status</p>
+          <span className="apolice-kanban-eyebrow">Pipeline de emissão</span>
+          <h1 className="title-page text-dark-text">Gestão de apólices</h1>
+          <p className="text-xs text-dark-muted mt-0.5">Acompanhe cada emissão e arraste os cards para avançar.</p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="apolice-kanban-toolbar flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1 bg-dark-surface2 border border-dark-border rounded-lg p-0.5">
           {['total', 'hoje', 'semana', 'mes'].map(item => (
             <button

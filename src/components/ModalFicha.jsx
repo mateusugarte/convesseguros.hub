@@ -11,6 +11,7 @@ import SeguradoraBadge from './SeguradoraBadge'
 import SeguradoraSelect from './SeguradoraSelect'
 import ImobiliariaSelect from './ImobiliariaSelect'
 import { Select } from './ui/Select'
+import { ModalFrame } from './ui/ModalFrame'
 
 
 const STATUS_OPTIONS  = ['pendente','em_cotacao','em_analise','aprovado','recusado','emitido','cancelado','cpf_invalido','expirada']
@@ -284,22 +285,29 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
   }
 
   return (
-    <div className="animate-fade-in">
-      <div className="glass-modal rounded-[24px] overflow-hidden">
+    <ModalFrame
+      onClose={onClose}
+      size="wide"
+      closeOnBackdrop={!saving}
+      closeOnEscape={!saving}
+      surfaceClassName="glass-modal ficha-modal"
+      ariaLabel={isEdit ? 'Editar ficha' : 'Nova ficha'}
+    >
+      <div className="glass-modal">
         {/* Header */}
         <div className="modal-shell-header flex items-center gap-3 px-6 py-4 border-b border-dark-border/60">
-          <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
+          <button onClick={onClose} className="modal-close-button flex-shrink-0" aria-label="Fechar formulário">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="w-9 h-9 rounded-2xl bg-brand-secondary/20 flex items-center justify-center flex-shrink-0">
             {isEdit ? <Save className="w-4 h-4 text-status-info" /> : <Plus className="w-4 h-4 text-status-info" />}
           </div>
-          <h2 className="font-bold text-dark-text">
+          <h2 className="min-w-0 truncate font-bold text-dark-text">
             {isEdit ? `Editar — ${ficha.nome_empresa || ficha.nome_interessado || ''}` : 'Nova Ficha'}
           </h2>
         </div>
 
-        <form onSubmit={handleSubmit} className="modal-shell-body px-6 py-5 space-y-6">
+        <form id="ficha-modal-form" onSubmit={handleSubmit} className="modal-shell-body px-6 py-5 space-y-6">
 
           {/* ── Identificação ── */}
           <Sec title="Identificação">
@@ -624,15 +632,16 @@ export default function ModalFicha({ ficha, onClose, onSuccess }) {
             </p>
           )}
 
-          <div className="modal-shell-footer flex justify-end gap-3 pt-4 border-t border-dark-border/60">
-            <button type="button" onClick={onClose} className="btn-secondary min-h-[44px] sm:min-h-0">Cancelar</button>
-            <button type="submit" disabled={saving} className="btn-primary flex items-center gap-2 min-h-[44px] sm:min-h-0">
-              {isEdit ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-              {saving ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Criar Ficha'}
-            </button>
-          </div>
         </form>
+
+        <footer className="modal-shell-footer flex justify-end gap-3 border-t border-dark-border/60">
+          <button type="button" onClick={onClose} disabled={saving} className="btn-secondary min-h-[44px] sm:min-h-0">Cancelar</button>
+          <button type="submit" form="ficha-modal-form" disabled={saving} className="btn-primary flex items-center justify-center gap-2 min-h-[44px] sm:min-h-0">
+            {isEdit ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {saving ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Criar Ficha'}
+          </button>
+        </footer>
       </div>
-    </div>
+    </ModalFrame>
   )
 }

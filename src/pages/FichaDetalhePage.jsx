@@ -539,7 +539,7 @@ export default function FichaDetalhePage() {
   const isComPlus = ficha.produto === 'comercial_pf' || isPJ
   const isMe      = ficha.orcamentista_id === user?.id
   const canAssumir  = !ficha.assumida && ficha.status === 'pendente'
-  const canFinalizar = isMe && ficha.status === 'em_cotacao'
+  const canFinalizar = isMe && ['em_cotacao', 'em_analise'].includes(ficha.status)
   const nomePrincipal = isPJ ? (ficha.nome_empresa || ficha.nome_interessado || 'Sem nome') : (ficha.nome_interessado || 'Sem nome')
   const cotacoesAprovadas = cotacoesNormalizadas.filter(c => c.status === 'aprovado').length
   const cotacoesRecusadas = cotacoesNormalizadas.filter(c => c.status === 'recusado').length
@@ -612,18 +612,10 @@ export default function FichaDetalhePage() {
     }
   }
 
-  if (editar) return (
-    <ModalFicha ficha={ficha} onClose={() => setEditar(false)} onSuccess={() => { setEditar(false); load() }} />
-  )
-  if (assumir) return (
-    <ModalAssumir id={ficha.id} onClose={() => setAssumir(false)} onSuccess={() => { setAssumir(false); load() }} />
-  )
-  if (finalizar) return (
-    <ModalFinalizar ficha={ficha} onClose={() => setFinalizar(false)} onSuccess={() => { setFinalizar(false); load() }} />
-  )
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <>
+      <div className="space-y-5 animate-fade-in">
       <PageHeader
         eyebrow="Ficha individual"
         title={nomePrincipal}
@@ -1176,8 +1168,17 @@ export default function FichaDetalhePage() {
           </DataCard>
         </div>
       </div>
+      </div>
 
-    </div>
+      {editar && (
+        <ModalFicha ficha={ficha} onClose={() => setEditar(false)} onSuccess={() => { setEditar(false); load() }} />
+      )}
+      {assumir && (
+        <ModalAssumir id={ficha.id} onClose={() => setAssumir(false)} onSuccess={() => { setAssumir(false); load() }} />
+      )}
+      {finalizar && (
+        <ModalFinalizar ficha={ficha} onClose={() => setFinalizar(false)} onSuccess={() => { setFinalizar(false); load() }} />
+      )}
+    </>
   )
 }
-

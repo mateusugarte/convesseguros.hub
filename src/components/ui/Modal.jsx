@@ -1,13 +1,6 @@
-import { useEffect, useState, useCallback } from 'react'
-import { createPortal } from 'react-dom'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { X } from 'lucide-react'
-
-const WIDTHS = {
-  sm: 'max-w-md',
-  md: 'max-w-lg',
-  lg: 'max-w-2xl',
-  xl: 'max-w-4xl',
-}
+import { ModalFrame } from './ModalFrame'
 
 export function Modal({
   isOpen = true,
@@ -20,76 +13,70 @@ export function Modal({
 }) {
   const [visible, setVisible] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const closeTimerRef = useRef(null)
+  const titleId = useId()
 
   useEffect(() => {
     if (isOpen) {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
       setMounted(true)
-      requestAnimationFrame(() => setVisible(true))
-      return
+      const frameId = requestAnimationFrame(() => setVisible(true))
+      return () => cancelAnimationFrame(frameId)
     }
 
     setVisible(false)
-    const timeout = setTimeout(() => setMounted(false), 180)
-    return () => clearTimeout(timeout)
+    closeTimerRef.current = setTimeout(() => {
+      setMounted(false)
+      closeTimerRef.current = null
+    }, 180)
+    return () => clearTimeout(closeTimerRef.current)
   }, [isOpen])
 
-  const handleClose = useCallback(() => {
-    setVisible(false)
-    setTimeout(onClose, 180)
-  }, [onClose])
+  useEffect(() => () => clearTimeout(closeTimerRef.current), [])
 
-  useEffect(() => {
-    if (!isOpen) return
-    function onKeyDown(event) {
-      if (event.key === 'Escape') handleClose()
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [isOpen, handleClose])
+  const handleClose = useCallback(() => {
+    if (!onClose || closeTimerRef.current) return
+    setVisible(false)
+    closeTimerRef.current = setTimeout(() => {
+      setMounted(false)
+      closeTimerRef.current = null
+      onClose()
+    }, 180)
+  }, [onClose])
 
   if (!mounted) return null
 
-  return createPortal(
-    <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 400 }}>
-      <div className="modal-backdrop" style={{ opacity: visible ? 1 : 0 }} onClick={handleClose} />
-
-      <div
-        className={`relative glass-modal w-full ${WIDTHS[maxWidth] || maxWidth} max-h-[90vh] flex flex-col`}
-        style={{
-          opacity: visible ? 1 : 0,
-          transform: visible ? 'scale(1) translateY(0)' : 'scale(0.96) translateY(20px)',
-          transition: visible
-            ? 'opacity 280ms cubic-bezier(0.16,1,0.3,1), transform 280ms cubic-bezier(0.16,1,0.3,1)'
-            : 'opacity 180ms ease-in, transform 180ms ease-in',
-        }}
-      >
-        {(title || subtitle) && (
-          <div className="modal-shell-header flex items-start justify-between gap-4 px-5 py-4 border-b border-dark-border/60 flex-shrink-0 rounded-t-[24px]">
-            <div className="min-w-0">
-              {title && <h2 className="title-section text-dark-text">{title}</h2>}
-              {subtitle && <p className="mt-1 text-sm text-dark-muted">{subtitle}</p>}
-            </div>
-            <button
-              onClick={handleClose}
-              className="btn-ghost p-1.5 -mr-1 cursor-pointer rounded-xl transition-all hover:rotate-90 hover:scale-110 duration-200"
-              aria-label="Fechar"
-            >
-              <X className="w-4 h-4" />
-            </button>
+  return (
+    <ModalFrame
+      onClose={handleClose}
+      size={maxWidth}
+      className={visible ? 'is-open' : 'is-closing'}
+      surfaceClassName="glass-modal"
+      ariaLabel={title || 'Janela de diálogo'}
+      labelledBy={title ? titleId : undefined}
+    >
+      {(title || subtitle) && (
+        <header className="modal-shell-header flex items-start justify-between gap-4 border-b">
+          <div className="min-w-0">
+            {title && <h2 id={titleId} className="title-section text-dark-text">{title}</h2>}
+            {subtitle && <p className="mt-1 break-words text-sm text-dark-muted">{subtitle}</p>}
           </div>
-        )}
+          <button type="button" onClick={handleClose} className="modal-close-button" aria-label="Fechar">
+            <X className="h-4 w-4" />
+          </button>
+        </header>
+      )}
 
-        <div className="modal-shell-body overflow-y-auto flex-1 p-5">
-          {children}
-        </div>
-
-        {footer && (
-          <div className="modal-shell-footer px-5 py-4 border-t border-dark-border/60 flex-shrink-0 rounded-b-[24px]">
-            {footer}
-          </div>
-        )}
+      <div className="modal-shell-body p-5">
+        {children}
       </div>
-    </div>,
-    document.body,
+
+      {footer && (
+        <footer className="modal-shell-footer border-t">
+          {footer}
+        </footer>
+      )}
+    </ModalFrame>
   )
 }

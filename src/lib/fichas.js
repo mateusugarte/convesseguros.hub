@@ -877,7 +877,7 @@ export async function moverFichaStatusComRawData(fichaId, novoStatus, { assumir 
   return null
 }
 
-export async function finalizarFichaComRawData(id, { status, seguradora, retorno_enviado, userId, rawDataPatch }) {
+export async function finalizarFichaComRawData(id, { status, seguradora, valor_parcela, retorno_enviado, userId, rawDataPatch }) {
   const update = {
     status,
     seguradora,
@@ -885,6 +885,7 @@ export async function finalizarFichaComRawData(id, { status, seguradora, retorno
     finalizada_em: new Date().toISOString(),
     finalizado_por: userId || null,
   }
+  if (valor_parcela !== undefined) update.valor_parcela = valor_parcela
 
   if (rawDataPatch && Object.keys(rawDataPatch).length > 0) {
     const { data: current, error: currentError } = await supabase
@@ -1160,7 +1161,6 @@ export async function fetchRankingFichasMensal(inicioFiltro, fimFiltro) {
     return new Date(b.latestAt) - new Date(a.latestAt)
   })
 }
-
 
 
 

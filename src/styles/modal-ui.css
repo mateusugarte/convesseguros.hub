@@ -1,0 +1,317 @@
+/* Responsive dialogs for Fichas and Apólices */
+.modal-viewport {
+  position: fixed;
+  z-index: 900;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  padding:
+    max(12px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+  isolation: isolate;
+}
+
+.modal-backdrop-soft {
+  z-index: 0;
+  border: 0;
+  background:
+    radial-gradient(circle at 18% 12%, rgb(var(--brand-primary-rgb) / .14), transparent 28rem),
+    radial-gradient(circle at 84% 88%, rgb(var(--brand-secondary-rgb) / .12), transparent 30rem),
+    rgba(230, 236, 247, .72) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(125%) !important;
+  backdrop-filter: blur(18px) saturate(125%) !important;
+  cursor: default;
+  animation: modal-backdrop-enter 180ms ease-out both;
+}
+
+.modal-surface {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: min(100%, 640px);
+  max-height: calc(100dvh - max(24px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgb(var(--color-border) / .82);
+  border-radius: clamp(18px, 2vw, 26px);
+  outline: none;
+  background:
+    linear-gradient(155deg, rgb(var(--color-surface) / .985), rgb(var(--color-surface2) / .97));
+  box-shadow:
+    0 32px 90px rgba(19, 31, 79, .18),
+    0 8px 24px rgba(19, 31, 79, .08),
+    inset 0 1px 0 rgba(255, 255, 255, .82);
+  animation: modal-surface-enter 260ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.modal-surface-sm { width: min(100%, 420px); }
+.modal-surface-md { width: min(100%, 560px); }
+.modal-surface-lg { width: min(100%, 760px); }
+.modal-surface-xl { width: min(100%, 980px); }
+.modal-surface-wide { width: min(100%, 1180px); }
+
+.modal-viewport.is-closing .modal-backdrop-soft {
+  opacity: 0;
+  transition: opacity 180ms ease-in;
+}
+
+.modal-viewport.is-closing .modal-surface {
+  opacity: 0;
+  transform: translateY(12px) scale(0.985);
+  transition: opacity 180ms ease-in, transform 180ms ease-in;
+}
+
+.ficha-action-modal > .glass-modal {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.modal-surface > .glass-modal,
+.modal-surface.glass-modal {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.modal-surface .modal-shell-header {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  padding: clamp(14px, 2vw, 20px) clamp(16px, 2.4vw, 26px);
+  border-color: rgb(var(--color-border) / .66) !important;
+  background:
+    linear-gradient(135deg, rgb(var(--brand-primary-rgb) / .09), transparent 58%),
+    rgb(var(--color-surface) / .95);
+}
+
+.modal-surface .modal-shell-body {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-color: rgb(var(--brand-primary-rgb) / .25) transparent;
+  background:
+    linear-gradient(180deg, rgb(var(--color-surface2) / .35), transparent 8rem);
+}
+
+.modal-surface .modal-shell-body::-webkit-scrollbar {
+  width: 7px;
+}
+
+.modal-surface .modal-shell-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-surface .modal-shell-body::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgb(var(--brand-primary-rgb) / .26);
+  background-clip: padding-box;
+}
+
+.modal-surface .modal-shell-footer {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  padding: clamp(12px, 1.8vw, 18px) clamp(16px, 2.4vw, 26px);
+  border-color: rgb(var(--color-border) / .7) !important;
+  background: rgb(var(--color-surface) / .97);
+  box-shadow: 0 -10px 30px rgba(19, 31, 79, .045);
+}
+
+.modal-close-button {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(var(--color-border) / .72);
+  border-radius: 12px;
+  background: rgb(var(--color-surface2) / .72);
+  color: rgb(var(--color-muted));
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease, transform 180ms ease;
+}
+
+.modal-close-button:hover {
+  border-color: rgb(var(--brand-primary-rgb) / .3);
+  background: rgb(var(--color-surface));
+  color: rgb(var(--color-text));
+  transform: translateY(-1px);
+}
+
+.modal-close-button:focus-visible {
+  outline: 2px solid rgb(var(--brand-primary-rgb) / .65);
+  outline-offset: 2px;
+}
+
+.ficha-modal .modal-shell-body {
+  padding: clamp(16px, 2vw, 26px);
+}
+
+.ficha-modal .modal-shell-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.ficha-modal .modal-shell-body > section,
+.ficha-modal .modal-shell-body > div {
+  scroll-margin-top: 18px;
+}
+
+html.dark .modal-backdrop-soft {
+  background:
+    radial-gradient(circle at 18% 12%, rgb(var(--brand-primary-rgb) / .2), transparent 28rem),
+    radial-gradient(circle at 84% 88%, rgb(var(--brand-secondary-rgb) / .16), transparent 30rem),
+    rgba(15, 23, 42, .68) !important;
+}
+
+html.dark .modal-surface {
+  border-color: rgba(137, 156, 202, .2);
+  background:
+    linear-gradient(155deg, rgba(15, 24, 46, .99), rgba(8, 15, 31, .985));
+  box-shadow: 0 36px 100px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .045);
+}
+
+html.dark .modal-surface .modal-shell-header,
+html.dark .modal-surface .modal-shell-footer {
+  background-color: rgba(11, 18, 36, .96);
+}
+
+@keyframes modal-backdrop-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-surface-enter {
+  from { opacity: 0; transform: translateY(18px) scale(.975); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-height: 720px) and (min-width: 641px) {
+  .modal-viewport {
+    place-items: start center;
+    padding-block: 8px;
+  }
+
+  .modal-surface {
+    max-height: calc(100dvh - 16px);
+    border-radius: 20px;
+  }
+
+  .modal-surface .modal-shell-header {
+    padding-block: 12px;
+  }
+
+  .modal-surface .modal-shell-footer {
+    padding-block: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .modal-viewport {
+    place-items: end center;
+    padding: max(6px, env(safe-area-inset-top)) 6px max(6px, env(safe-area-inset-bottom));
+  }
+
+  .modal-backdrop-soft {
+    background:
+      radial-gradient(circle at 50% 100%, rgb(var(--brand-primary-rgb) / .12), transparent 24rem),
+      rgba(224, 231, 243, .78) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(120%) !important;
+    backdrop-filter: blur(14px) saturate(120%) !important;
+  }
+
+  html.dark .modal-backdrop-soft {
+    background:
+      radial-gradient(circle at 50% 100%, rgb(var(--brand-primary-rgb) / .18), transparent 24rem),
+      rgba(15, 23, 42, .72) !important;
+  }
+
+  .modal-surface,
+  .modal-surface-sm,
+  .modal-surface-md,
+  .modal-surface-lg,
+  .modal-surface-xl,
+  .modal-surface-wide {
+    width: 100%;
+    max-height: calc(100dvh - max(12px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
+    border-radius: 22px 22px 14px 14px;
+    animation-name: modal-sheet-enter;
+  }
+
+  .modal-surface::before {
+    width: 42px;
+    height: 4px;
+    margin: 7px auto -3px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: rgb(var(--color-border));
+    content: '';
+  }
+
+  .modal-surface .modal-shell-header {
+    padding: 13px 15px;
+  }
+
+  .modal-surface .modal-shell-body,
+  .ficha-modal .modal-shell-body {
+    padding: 15px;
+  }
+
+  .modal-surface .modal-shell-footer,
+  .ficha-modal .modal-shell-footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 12px 15px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .modal-surface .modal-shell-footer > button,
+  .modal-surface .modal-shell-footer > .btn-primary,
+  .modal-surface .modal-shell-footer > .btn-secondary {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .ficha-modal .modal-shell-body .grid {
+    column-gap: 12px;
+  }
+}
+
+@media (max-width: 390px) {
+  .modal-surface .modal-shell-footer,
+  .ficha-modal .modal-shell-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-surface .modal-shell-footer > :first-child {
+    order: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-backdrop-soft,
+  .modal-surface {
+    animation-duration: .01ms !important;
+  }
+}
+
+@keyframes modal-sheet-enter {
+  from { opacity: 0; transform: translateY(34px); }
+  to { opacity: 1; transform: none; }
+}

@@ -96,6 +96,10 @@ alternativos, alternados pelo state `workspace`:
 - `lib/documentos.js` — `uploadDocumento`
 - Hook: `useImobiliaria` (grupos + `getAliases`)
 - Colunas do kanban: recebida → proposta_transmitida → emitida → enviada
+- Os títulos visuais são "Recebidas", "Transmitidas", "Emitidas" e "Enviadas"; a coluna
+  `emitida` não deve ser rotulada como "Proposta Transmitida".
+- O visual compartilhado de colunas, cards, estados de drop e responsividade fica em
+  `styles/kanban-ui.css`, sem alterar os ids de status nem a persistência do drag-and-drop.
 
 ## Status
 pronto (kanban, Iniciar Emissão, Upload Direto); Upload em Lote novo, aguardando smoke

@@ -1,169 +1,200 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { finalizarFichaComRawData } from '../lib/fichas'
+import { toNumber } from '../lib/apolices'
 import { useAuth } from '../contexts/AuthContext'
-import { CheckCircle2, ArrowLeft, ShieldCheck } from 'lucide-react'
+import {
+  ArrowLeft, ArrowRight, Ban, Check, CircleCheckBig, FileCheck2,
+  SearchCheck, ShieldAlert, TimerOff, UserX,
+} from 'lucide-react'
 import SeguradoraSelect from './SeguradoraSelect'
+import { ModalFrame } from './ui/ModalFrame'
 
 const STATUS_FINAIS = [
-  { value: 'aprovado',     label: 'Aprovado',     color: 'text-status-success' },
-  { value: 'recusado',     label: 'Recusado',     color: 'text-status-danger' },
-  { value: 'emitido',      label: 'Emitido',      color: 'text-status-info' },
-  { value: 'em_analise',   label: 'Em Análise',   color: 'text-status-info' },
-  { value: 'cancelado',    label: 'Cancelado',    color: 'text-dark-muted' },
-  { value: 'cpf_invalido', label: 'CPF Inválido', color: 'text-status-warning' },
-  { value: 'expirada',     label: 'Expirada',     color: 'text-dark-muted' },
+  { value: 'aprovado', label: 'Aprovado', description: 'Aceita e pronta para seguir para emissão.', icon: CircleCheckBig, tone: 'success' },
+  { value: 'recusado', label: 'Recusado', description: 'Análise concluída sem aprovação.', icon: Ban, tone: 'danger' },
+  { value: 'emitido', label: 'Emitido', description: 'A apólice já foi emitida pela seguradora.', icon: FileCheck2, tone: 'info' },
+  { value: 'em_analise', label: 'Em análise', description: 'Ainda aguarda uma decisão da seguradora.', icon: SearchCheck, tone: 'info' },
+  { value: 'cancelado', label: 'Cancelado', description: 'Atendimento interrompido ou cancelado.', icon: UserX, tone: 'neutral' },
+  { value: 'cpf_invalido', label: 'CPF inválido', description: 'O documento impede a continuidade.', icon: ShieldAlert, tone: 'warning' },
+  { value: 'expirada', label: 'Expirada', description: 'O prazo desta oportunidade foi encerrado.', icon: TimerOff, tone: 'neutral' },
 ]
+
+function fichaNome(ficha) {
+  const raw = ficha?.raw_data || {}
+  return ficha?.nome_empresa || ficha?.nome_interessado || raw.nome_empresa || raw.razao_social || raw.nome || 'Ficha sem nome'
+}
 
 export default function ModalFinalizar({ ficha, defaultStatus, onClose, onSuccess }) {
   const { user } = useAuth()
-  const [status,    setStatus]    = useState(defaultStatus || '')
-  const seguradoraDefinida = ficha?.seguradora || ficha?.raw_data?.retorno_gerado?.seguradora_escolhida || ''
-  const [seguradora,setSeguradora]= useState(seguradoraDefinida)
+  const [step, setStep] = useState(defaultStatus ? 2 : 1)
+  const [status, setStatus] = useState(defaultStatus || '')
+  const [seguradora, setSeguradora] = useState(
+    ficha?.seguradora || ficha?.raw_data?.retorno_gerado?.seguradora_escolhida || ''
+  )
+  const [valorParcela, setValorParcela] = useState(
+    ficha?.valor_parcela ? String(ficha.valor_parcela).replace('.', ',') : ''
+  )
   const [retornoEnviado, setRetornoEnviado] = useState(Boolean(ficha?.retorno_enviado))
-  const [passadoPelaImobiliaria, setPassadoPelaImobiliaria] = useState(Boolean(ficha?.raw_data?.passado_pela_imobiliaria))
-  const [loading,   setLoading]   = useState(false)
-  const [error,     setError]     = useState('')
+  const [passadoPelaImobiliaria, setPassadoPelaImobiliaria] = useState(
+    Boolean(ficha?.raw_data?.passado_pela_imobiliaria)
+  )
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  useEffect(() => {
-    setSeguradora(seguradoraDefinida)
-  }, [seguradoraDefinida])
+  const selectedStatus = useMemo(() => STATUS_FINAIS.find(item => item.value === status), [status])
+  const precisaSeguradora = status === 'aprovado' || status === 'emitido'
+  const precisaValor = status === 'aprovado'
+  const valorNumerico = toNumber(valorParcela)
+  const detalhesValidos = (!precisaSeguradora || Boolean(seguradora.trim())) && (!precisaValor || valorNumerico > 0)
+  const SelectedIcon = selectedStatus?.icon || CircleCheckBig
 
-  useEffect(() => {
-    setRetornoEnviado(Boolean(ficha?.retorno_enviado))
-  }, [ficha?.retorno_enviado])
-
-  useEffect(() => {
-    setPassadoPelaImobiliaria(Boolean(ficha?.raw_data?.passado_pela_imobiliaria))
-  }, [ficha?.raw_data?.passado_pela_imobiliaria])
+  function avancar() {
+    if (!status) return setError('Selecione o resultado do atendimento.')
+    setError('')
+    setStep(2)
+  }
 
   async function handleFinalizar() {
-    if (!status) { setError('Selecione o status final.'); return }
-    const precisaSeguradora = status !== 'recusado'
-    if (precisaSeguradora && !seguradoraDefinida && !seguradora.trim()) {
-      setError('Selecione a seguradora final.')
-      return
-    }
+    if (precisaSeguradora && !seguradora.trim()) return setError('Selecione a seguradora para concluir.')
+    if (precisaValor && !(valorNumerico > 0)) return setError('Informe um valor de parcela válido para concluir a aprovação.')
+
     setLoading(true)
     setError('')
     const err = await finalizarFichaComRawData(ficha.id, {
       status,
-      seguradora: precisaSeguradora ? (seguradoraDefinida || seguradora).trim() || null : null,
+      seguradora: seguradora.trim() || null,
+      valor_parcela: precisaValor ? valorNumerico : undefined,
       retorno_enviado: retornoEnviado,
       userId: user?.id,
-      rawDataPatch: status === 'aprovado'
-        ? { passado_pela_imobiliaria: passadoPelaImobiliaria }
-        : undefined,
+      rawDataPatch: status === 'aprovado' ? { passado_pela_imobiliaria: passadoPelaImobiliaria } : undefined,
     })
     if (err) {
       console.error('Erro ao finalizar ficha:', err)
-      setError(err.message || 'Não foi possível finalizar a ficha.')
-    } else onSuccess()
+      setError(err.message || 'Não foi possível concluir a ficha.')
+      setLoading(false)
+      return
+    }
     setLoading(false)
+    onSuccess()
   }
 
   return (
-    <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 animate-fade-in">
-      <div className="modal-backdrop" onClick={!loading ? onClose : undefined} />
-      <div className="relative glass-modal rounded-[24px] overflow-hidden w-full max-w-md max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="modal-shell-header flex items-center gap-3 px-6 py-4 border-b border-dark-border/60">
-          <button onClick={onClose} className="p-1.5 rounded-xl text-dark-muted hover:text-dark-text hover:bg-dark-surface2 transition-all flex-shrink-0">
+    <ModalFrame
+      onClose={onClose}
+      size="lg"
+      closeOnBackdrop={!loading}
+      closeOnEscape={!loading}
+      surfaceClassName="ficha-action-modal finish-flow-modal"
+      ariaLabel="Concluir atendimento da ficha"
+    >
+      <div className="finish-flow">
+        <header className="modal-shell-header finish-flow-header">
+          <button
+            type="button"
+            onClick={step === 2 && !defaultStatus ? () => setStep(1) : onClose}
+            className="modal-close-button"
+            aria-label={step === 2 && !defaultStatus ? 'Voltar para resultados' : 'Fechar'}
+            disabled={loading}
+          >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="w-9 h-9 rounded-2xl bg-status-success/15 flex items-center justify-center flex-shrink-0">
-            <CheckCircle2 className="w-5 h-5 text-status-success" />
+          <div className="finish-flow-heading">
+            <span>Encerrar atendimento</span>
+            <h2>Concluir ficha</h2>
+            <p>{fichaNome(ficha)}</p>
           </div>
+          <div className="finish-flow-progress" aria-label={`Etapa ${step} de 2`}>
+            <span className="is-active">1</span><i className={step >= 2 ? 'is-active' : ''} /><span className={step >= 2 ? 'is-active' : ''}>2</span>
+          </div>
+        </header>
+
+        <main className="modal-shell-body finish-flow-body">
+          {step === 1 ? (
+            <section className="finish-step" aria-labelledby="finish-outcome-title">
+              <div className="finish-step-copy">
+                <span>Etapa 1 de 2</span>
+                <h3 id="finish-outcome-title">Qual foi o resultado?</h3>
+                <p>Escolha o desfecho para mostrarmos apenas os campos necessários.</p>
+              </div>
+              <div className="finish-outcome-grid">
+                {STATUS_FINAIS.map(item => {
+                  const Icon = item.icon
+                  const active = status === item.value
+                  return (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => { setStatus(item.value); setError('') }}
+                      className={`finish-outcome finish-tone-${item.tone}${active ? ' is-selected' : ''}`}
+                      aria-pressed={active}
+                    >
+                      <span className="finish-outcome-icon"><Icon /></span>
+                      <span className="finish-outcome-copy"><strong>{item.label}</strong><small>{item.description}</small></span>
+                      <span className="finish-outcome-check">{active && <Check className="w-3.5 h-3.5" />}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          ) : (
+            <section className="finish-step" aria-labelledby="finish-details-title">
+              <div className="finish-step-copy finish-step-copy-inline">
+                <div><span>Etapa 2 de 2</span><h3 id="finish-details-title">Revise os detalhes</h3><p>Confirme as informações antes de concluir.</p></div>
+                <div className={`finish-selected-status finish-tone-${selectedStatus?.tone || 'neutral'}`}>
+                  <SelectedIcon /><span><small>Resultado</small><strong>{selectedStatus?.label}</strong></span>
+                </div>
+              </div>
+
+              <div className="finish-details-grid">
+                {precisaSeguradora && (
+                  <div className="finish-field finish-field-wide">
+                    <label>Seguradora <span>*</span></label>
+                    <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={ficha?.produto} required />
+                  </div>
+                )}
+                {precisaValor && (
+                  <div className="finish-field">
+                    <label htmlFor="finish-valor-parcela">Valor da parcela <span>*</span></label>
+                    <div className="finish-money-input"><span>R$</span><input id="finish-valor-parcela" type="text" inputMode="decimal" value={valorParcela} onChange={event => setValorParcela(event.target.value)} placeholder="0,00" autoComplete="off" /></div>
+                  </div>
+                )}
+                <div className={`finish-field${precisaValor ? '' : ' finish-field-wide'}`}>
+                  <span className="finish-field-label">Retorno enviado?</span>
+                  <div className="finish-segmented" role="group" aria-label="Retorno enviado">
+                    <button type="button" onClick={() => setRetornoEnviado(true)} className={retornoEnviado ? 'is-active is-positive' : ''}>Sim, enviado</button>
+                    <button type="button" onClick={() => setRetornoEnviado(false)} className={!retornoEnviado ? 'is-active' : ''}>Ainda não</button>
+                  </div>
+                </div>
+                {status === 'aprovado' && (
+                  <button type="button" className={`finish-toggle finish-field-wide${passadoPelaImobiliaria ? ' is-active' : ''}`} onClick={() => setPassadoPelaImobiliaria(value => !value)} aria-pressed={passadoPelaImobiliaria}>
+                    <span className="finish-toggle-mark">{passadoPelaImobiliaria && <Check className="w-3.5 h-3.5" />}</span>
+                    <span><strong>Passado pela imobiliária</strong><small>Marque quando a aprovação já foi comunicada e validada.</small></span>
+                  </button>
+                )}
+                {!precisaSeguradora && (
+                  <div className="finish-context-note finish-field-wide"><SelectedIcon /><p><strong>Nenhum dado adicional obrigatório.</strong> Revise o retorno e conclua quando estiver pronto.</p></div>
+                )}
+              </div>
+            </section>
+          )}
+          {error && <div className="finish-error" role="alert">{error}</div>}
+        </main>
+
+        <footer className="modal-shell-footer finish-flow-footer">
+          <p>{step === 1 ? 'O status só muda depois da confirmação final.' : `A ficha será movida para “${selectedStatus?.label || status}”.`}</p>
           <div>
-            <h2 className="font-bold text-dark-text">Finalizar Ficha</h2>
-            {ficha?.nome_interessado && (
-              <p className="text-xs text-dark-muted">{ficha.nome_interessado}</p>
+            <button type="button" onClick={onClose} disabled={loading} className="btn-secondary">Cancelar</button>
+            {step === 1 ? (
+              <button type="button" onClick={avancar} disabled={!status} className="btn-primary finish-primary-action">Continuar <ArrowRight className="w-4 h-4" /></button>
+            ) : (
+              <button type="button" onClick={handleFinalizar} disabled={loading || !detalhesValidos} className="btn-primary finish-primary-action">
+                {loading ? 'Concluindo...' : status === 'aprovado' ? 'Concluir aprovação' : 'Concluir ficha'}
+                {!loading && <Check className="w-4 h-4" />}
+              </button>
             )}
           </div>
-        </div>
-
-        <div className="modal-shell-body px-6 py-5 space-y-4">
-          {/* Status */}
-          <div>
-            <label className="block text-xs font-medium text-dark-muted mb-2 uppercase tracking-wider">
-              Status Final <span className="text-status-danger">*</span>
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {STATUS_FINAIS.map(s => (
-                <button
-                  key={s.value}
-                  onClick={() => setStatus(s.value)}
-                  className={`px-3 py-3 rounded-xl border text-sm font-medium transition-all ${
-                    status === s.value
-                      ? 'border-brand-accent bg-brand-accent/10 text-dark-text'
-                      : 'border-dark-border bg-dark-surface2 text-dark-muted hover:border-dark-muted'
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Seguradora */}
-          <div>
-            <label className="block text-xs font-medium text-dark-muted mb-1.5 uppercase tracking-wider">Seguradora</label>
-            {seguradoraDefinida && status !== 'recusado' ? (
-              <div className="rounded-2xl border border-brand-accent/20 bg-brand-accent/5 px-4 py-3">
-                <div className="flex items-center gap-2 text-status-info">
-                  <ShieldCheck className="w-4 h-4" />
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">Seguradora já definida</span>
-                </div>
-                <p className="mt-1 text-sm font-semibold text-dark-text">{seguradoraDefinida}</p>
-              </div>
-            ) : (
-              status === 'recusado' ? (
-                <div className="rounded-2xl border border-dashed border-dark-border bg-dark-surface2 px-4 py-3 text-sm text-dark-muted">
-                  Ficha recusada: não é necessário selecionar seguradora.
-                </div>
-              ) : (
-                <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={ficha?.produto} required />
-            )
-          )}
-          </div>
-
-          <label className="flex items-center gap-3 p-3 rounded-xl border border-dark-border bg-dark-surface2 cursor-pointer hover:border-brand-accent/40 transition-colors">
-            <input
-              type="checkbox"
-              checked={retornoEnviado}
-              onChange={e => setRetornoEnviado(e.target.checked)}
-              className="w-5 h-5 rounded accent-brand-accent"
-            />
-            <span className="text-sm text-dark-text">Retorno enviado?</span>
-          </label>
-
-          {status === 'aprovado' && (
-            <label className="flex items-center gap-3 p-3 rounded-xl border border-dark-border bg-dark-surface2 cursor-pointer hover:border-brand-accent/40 transition-colors">
-              <input
-                type="checkbox"
-                checked={passadoPelaImobiliaria}
-                onChange={e => setPassadoPelaImobiliaria(e.target.checked)}
-                className="w-5 h-5 rounded accent-brand-accent"
-              />
-              <span className="text-sm text-dark-text">Passado pela imobiliária?</span>
-            </label>
-          )}
-
-          {error && (
-            <p className="text-sm text-status-danger bg-status-danger/10 border border-status-danger/20 rounded-lg px-3 py-2">
-              {error}
-            </p>
-          )}
-        </div>
-
-        <div className="modal-shell-footer flex gap-3 px-6 pb-5 pt-4 border-t border-dark-border/60">
-          <button onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
-          <button onClick={handleFinalizar} disabled={loading || !status} className="btn-primary flex-1">
-            {loading ? 'Salvando...' : status === 'aprovado' ? 'Avançar' : 'Finalizar Ficha'}
-          </button>
-        </div>
+        </footer>
       </div>
-    </div>
+    </ModalFrame>
   )
 }
-
-

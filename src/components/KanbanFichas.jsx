@@ -5,7 +5,6 @@ import {
   useDraggable, useDroppable,
 } from '@dnd-kit/core'
 import { fetchFichasKanban, assumirFicha, moverFichaStatusComRawData, moverFichaStatus, normalizeSearchText } from '../lib/fichas'
-import { toNumber } from '../lib/apolices'
 import { useImobiliaria } from '../hooks/useImobiliaria'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -20,8 +19,8 @@ import {
   ChevronsLeft, ArrowRight, CheckCircle, Clock,
 } from 'lucide-react'
 import SeguradoraBadge from './SeguradoraBadge'
-import SeguradoraSelect from './SeguradoraSelect'
 import { Avatar } from './ui'
+import { ModalFrame } from './ui/ModalFrame'
 import { KanbanSkeleton } from './Skeleton'
 import { DatePicker } from './ui/DatePicker'
 import { AVATAR_COLORS, PRODUTO_COLORS } from '../design-system/tokens'
@@ -30,18 +29,16 @@ import { normalizeDisplayText } from '../lib/text'
 // -- Colunas -------------------------------------------------------------------
 
 const COLUMNS = [
-  { id: 'pendente',   label: 'Pendentes',     color: '#4c67b0' },
-  { id: 'assumidas',  label: 'Assumidas',     color: '#000079' },
-  { id: 'minhas',     label: 'Minhas Fichas', color: '#a2d6da' },
-  { id: 'em_analise', label: 'Em Análise',    color: '#4b6cc2' },
-  { id: 'aprovado',   label: 'Aprovadas',     color: '#0f766e' },
-  { id: 'recusado',   label: 'Recusadas',     color: '#8b1e4e' },
-  { id: 'cancelado',  label: 'Canceladas',    color: '#6B7280' },
-  { id: 'emitido',    label: 'Emitidas',      color: '#2247aa' },
-  { id: 'expirada',   label: 'Expiradas',     color: '#6B7280' },
+  { id: 'pendente',   label: 'Pendentes',     hint: 'Aguardando responsável', color: '#4c67b0' },
+  { id: 'assumidas',  label: 'Assumidas',     hint: 'Com outros analistas', color: '#000079' },
+  { id: 'minhas',     label: 'Minhas fichas', hint: 'Sua fila de trabalho', color: '#168a92' },
+  { id: 'em_analise', label: 'Em análise',    hint: 'Na seguradora', color: '#4b6cc2' },
+  { id: 'aprovado',   label: 'Aprovadas',     hint: 'Prontas para emissão', color: '#0f766e' },
+  { id: 'recusado',   label: 'Recusadas',     hint: 'Sem aprovação', color: '#8b1e4e' },
+  { id: 'cancelado',  label: 'Canceladas',    hint: 'Atendimentos encerrados', color: '#6B7280' },
+  { id: 'emitido',    label: 'Emitidas',      hint: 'Apólices concluídas', color: '#2247aa' },
+  { id: 'expirada',   label: 'Expiradas',     hint: 'Prazo encerrado', color: '#6B7280' },
 ]
-
-const LOWERED_CARD_COLUMNS = new Set(['aprovado', 'recusado', 'cancelado', 'emitido'])
 
 const COL_TO_STATUS = {
   pendente: 'pendente', assumidas: 'em_cotacao', minhas: 'em_cotacao',
@@ -202,12 +199,12 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay, isNew
 
   return (
     <div
-      className={`kanban-card${isNew ? ' animate-card-new' : ''}${isDragOverlay ? ' kanban-card-dragging' : ''}${retornoPendente ? ' kanban-card-retorno-pendente' : ''}`}
+      className={`kanban-card ficha-kanban-card${isNew ? ' animate-card-new' : ''}${isDragOverlay ? ' kanban-card-dragging' : ''}${retornoPendente ? ' kanban-card-retorno-pendente' : ''}`}
       style={cardStyle}
     >
       <div className="kanban-card-body" style={{ borderColor: `${prodColor}22` }}>
         {/* Linha topo: produto + tempo */}
-        <div className="flex items-center justify-between gap-1 mb-1.5">
+        <div className="ficha-card-topline">
           <span
             className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-[4px] rounded-full uppercase tracking-wide select-none"
             style={{ background: prodColor + '14', color: prodColor, border: `1px solid ${prodColor}26` }}
@@ -221,7 +218,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay, isNew
         </div>
 
         {/* Nome */}
-        <p className="text-[12.5px] font-semibold text-dark-text leading-snug truncate mb-0.5">
+        <p className="ficha-card-title">
           {nomePrincipal(ficha)}
         </p>
 
@@ -246,7 +243,7 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay, isNew
         </div>
 
         {/* Rodapé: orçamentista + ações */}
-        <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-dark-border/40 mt-auto">
+        <div className="ficha-card-owner-row">
           {nome ? (
             <div className="flex items-center gap-1.5 min-w-0">
               <Avatar name={nome} src={ficha.profiles?.avatar_url || ''} size="sm" />
@@ -268,13 +265,13 @@ function FichaCard({ ficha, userId, onAssumir, onFinalizar, isDragOverlay, isNew
                 Assumir
               </button>
             )}
-            {ficha.status === 'em_cotacao' && ficha.orcamentista_id === userId && (
+            {['em_cotacao', 'em_analise'].includes(ficha.status) && ficha.orcamentista_id === userId && (
               <button
                 onPointerDown={e => e.stopPropagation()}
                 onClick={e => { e.stopPropagation(); onFinalizar?.(ficha, null) }}
                 className="kanban-action-btn kanban-action-finish"
               >
-                Finalizar
+                Concluir
               </button>
             )}
           </div>
@@ -340,7 +337,7 @@ function DroppableColumn({
   collapsed, onToggleCollapse, newIds, colIndex, resolverNome, resolveImobiliariaInfo,
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: column.id })
-  const bodyTopPadding = LOWERED_CARD_COLUMNS.has(column.id) ? 38 : 16
+  const bodyTopPadding = 12
 
   const animStyle = {
     animationDelay: `${colIndex * 28}ms`,
@@ -392,7 +389,7 @@ function DroppableColumn({
     <div className="kanban-col animate-fade-in flex flex-col h-full" style={animStyle}>
       {/* Header */}
       <div
-        className="kanban-col-header flex flex-col gap-3"
+        className="kanban-col-header ficha-kanban-col-header"
         style={{
           background: `linear-gradient(180deg, ${column.color}16, ${column.color}08)`,
           borderColor: `${column.color}42`,
@@ -408,10 +405,11 @@ function DroppableColumn({
                 className="w-2 h-2 rounded-full flex-shrink-0"
                 style={{ background: column.color, boxShadow: `0 0 6px ${column.color}90` }}
               />
-              <span className="text-[11px] font-bold tracking-wide truncate" style={{ color: column.color }}>
+              <span className="ficha-kanban-col-title" style={{ color: column.color }}>
                 {column.label}
               </span>
             </div>
+            <p className="ficha-kanban-col-hint">{column.hint}</p>
           </div>
           <span
             className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0"
@@ -420,7 +418,7 @@ function DroppableColumn({
             {fichas.length}
           </span>
         </div>
-        <div className="flex items-center justify-end">
+        <div className="ficha-kanban-col-tools">
           <button
             onClick={onToggleCollapse}
             title="Colapsar coluna"
@@ -454,7 +452,7 @@ function DroppableColumn({
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="kanban-empty-icon">
               <rect x="3" y="3" width="18" height="18" rx="3" strokeDasharray="4 2"/>
             </svg>
-            <span className="kanban-empty-text">Vazia</span>
+            <span className="kanban-empty-text">Solte uma ficha aqui</span>
           </div>
         ) : fichas.map(f => (
           <MemoDraggableCard
@@ -476,14 +474,17 @@ function DroppableColumn({
 
 // -- ModalConfirmarRecusado ----------------------------------------------------
 
-function ModalConfirmarRecusado({ onConfirmar, salvando }) {
+function ModalConfirmarRecusado({ onConfirmar, onCancelar, salvando }) {
   return (
-    <div className="glass-panel rounded-2xl animate-fade-in">
-      <div className="px-6 py-5 space-y-4">
+    <div className="glass-modal animate-fade-in">
+      <div className="modal-shell-body px-6 py-5 space-y-4">
         <p className="font-semibold text-dark-text text-sm">Confirmar Recusa</p>
         <p className="text-xs text-dark-muted">Esta a??o finaliza a ficha como recusada e remove qualquer marca de cobran?a enviada.</p>
       </div>
-      <div className="flex justify-end px-6 pb-5">
+      <div className="modal-shell-footer flex justify-end gap-3 border-t border-dark-border">
+        <button onClick={onCancelar} disabled={salvando} className="btn-secondary text-sm">
+          Cancelar
+        </button>
         <button
           onClick={onConfirmar}
           disabled={salvando}
@@ -503,11 +504,11 @@ function ModalConfirmarCancelado({ onConfirmar, onCancelar, salvando }) {
   const motivoLimpo = motivo.trim()
 
   return (
-    <div className="glass-panel rounded-2xl overflow-hidden animate-fade-in">
-      <div className="px-6 py-4 border-b border-dark-border">
+    <div className="glass-modal animate-fade-in">
+      <div className="modal-shell-header px-6 py-4 border-b border-dark-border">
         <p className="font-semibold text-dark-text">Confirmar Cancelamento</p>
       </div>
-      <div className="px-6 py-5 space-y-4">
+      <div className="modal-shell-body px-6 py-5 space-y-4">
         <div>
           <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
             Motivo do cancelamento <span className="text-status-danger">*</span>
@@ -521,7 +522,7 @@ function ModalConfirmarCancelado({ onConfirmar, onCancelar, salvando }) {
           />
         </div>
       </div>
-      <div className="flex items-center justify-end gap-3 px-6 pb-5">
+      <div className="modal-shell-footer flex items-center justify-end gap-3 border-t border-dark-border">
         <button onClick={onCancelar} disabled={salvando} className="btn-secondary text-sm">
           Cancelar
         </button>
@@ -531,82 +532,6 @@ function ModalConfirmarCancelado({ onConfirmar, onCancelar, salvando }) {
           className="btn-primary text-sm"
         >
           {salvando ? 'Salvando...' : 'Confirmar'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// -- ModalConfirmarAprovado ----------------------------------------------------
-
-function ModalConfirmarAprovado({ produto, onConfirmar, onCancelar, salvando }) {
-  const [seguradora,      setSeguradora]      = useState('')
-  const [valorParcela,    setValorParcela]    = useState('')
-  const [retornoEnviado,  setRetornoEnviado]  = useState(null)
-  const [passadoPelaImobiliaria, setPassadoPelaImobiliaria] = useState(false)
-  const valido = seguradora && valorParcela && retornoEnviado !== null
-
-  return (
-    <div className="glass-panel rounded-2xl overflow-hidden animate-fade-in">
-      <div className="px-6 py-4 border-b border-dark-border">
-        <p className="font-semibold text-dark-text">Confirmar Aprovação</p>
-      </div>
-      <div className="px-6 py-5 space-y-4">
-        <div>
-          <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
-            Seguradora <span className="text-status-danger">*</span>
-          </label>
-          <SeguradoraSelect value={seguradora} onChange={setSeguradora} produto={produto} required />
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1">
-            Valor Parcela (R$) <span className="text-status-danger">*</span>
-          </label>
-          <input
-            type="text" inputMode="decimal"
-            value={valorParcela} onChange={e => setValorParcela(e.target.value)}
-            placeholder="0,00" className="input text-sm"
-          />
-        </div>
-
-        <div>
-          <label className="text-xs font-semibold text-dark-muted uppercase tracking-wider block mb-1.5">
-            Retorno enviado? <span className="text-status-danger">*</span>
-          </label>
-          <div className="flex gap-3">
-            {[{ v: true, l: 'Sim', cls: 'border-status-success text-status-success bg-status-success/20' },
-              { v: false, l: 'Não', cls: 'border-status-danger text-status-danger bg-status-danger/20' }].map(({ v, l, cls }) => (
-              <button key={l} type="button" onClick={() => setRetornoEnviado(v)}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
-                  retornoEnviado === v ? cls : 'border-dark-border text-dark-muted hover:border-dark-text'
-                }`}>{l}</button>
-            ))}
-          </div>
-        </div>
-
-        <label className="flex items-center gap-3 p-3 rounded-xl border border-dark-border bg-dark-surface2 cursor-pointer hover:border-brand-accent/40 transition-colors">
-          <input
-            type="checkbox"
-            checked={passadoPelaImobiliaria}
-            onChange={e => setPassadoPelaImobiliaria(e.target.checked)}
-            className="w-5 h-5 rounded accent-brand-accent"
-          />
-          <span className="text-sm text-dark-text">Passado pela imobiliária?</span>
-        </label>
-      </div>
-      <div className="flex justify-end gap-3 px-6 pb-5">
-        <button onClick={onCancelar} className="btn-secondary text-sm">Cancelar</button>
-          <button
-            onClick={() => valido && onConfirmar({
-              seguradora,
-            valorParcela: toNumber(valorParcela),
-            retornoEnviado,
-            passadoPelaImobiliaria,
-          })}
-          disabled={!valido || salvando}
-          className="btn-primary text-sm"
-        >
-          {salvando ? 'Salvando...' : 'Avançar'}
         </button>
       </div>
     </div>
@@ -657,8 +582,6 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   const [salvandoRecusado, setSalvandoRecusado] = useState(false)
   const [pendingCancelado, setPendingCancelado] = useState(null)
   const [salvandoCancelado, setSalvandoCancelado] = useState(false)
-  const [pendingAprovado,  setPendingAprovado]  = useState(null)
-  const [salvandoAprovado, setSalvandoAprovado] = useState(false)
   const sortFeedbackTimerRef = useRef(null)
 
   useEffect(() => {
@@ -844,47 +767,6 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
     setPendingCancelado(null)
   }
 
-  async function handleConfirmarAprovado({ seguradora, valorParcela, retornoEnviado, passadoPelaImobiliaria }) {
-    if (!pendingAprovado) return
-    setSalvandoAprovado(true)
-    const err = await moverFichaStatusComRawData(pendingAprovado.fichaId, 'aprovado', {
-      userId: user?.id,
-      rawDataPatch: { passado_pela_imobiliaria: passadoPelaImobiliaria },
-    })
-    if (!err) {
-      const patch = {
-        seguradora,
-        valor_parcela: valorParcela,
-        retorno_enviado: retornoEnviado,
-        finalizada_em: new Date().toISOString(),
-        raw_data: {
-          ...(pendingAprovado.fichaOriginal?.raw_data || {}),
-          passado_pela_imobiliaria: passadoPelaImobiliaria,
-        },
-      }
-      setFichas(prev => prev.map(f => (
-        f.id === pendingAprovado.fichaId
-          ? { ...f, status: 'aprovado', ...patch }
-          : f
-      )))
-      await supabase.from('fichas').update(patch).eq('id', pendingAprovado.fichaId)
-      markJustMoved(pendingAprovado.fichaId)
-      toast({ type: 'success', title: 'Ficha aprovada!' })
-      setPendingAprovado(null)
-      load()
-    } else {
-      setFichas(prev => prev.map(f => f.id === pendingAprovado.fichaId ? pendingAprovado.fichaOriginal : f))
-      toast({ type: 'error', title: 'Erro ao aprovar ficha' })
-    }
-    setSalvandoAprovado(false)
-  }
-
-  function handleCancelarAprovado() {
-    if (!pendingAprovado) return
-    setFichas(prev => prev.map(f => f.id === pendingAprovado.fichaId ? pendingAprovado.fichaOriginal : f))
-    setPendingAprovado(null)
-  }
-
   function handleDetalhe(fichaId) {
     navigate(`/fichas/${fichaId}`, {
       state: {
@@ -930,9 +812,9 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
       return
     }
 
-    // Drag para aprovado → pede seguradora, parcela, orçamento
+    // Aprovação usa o mesmo fluxo guiado do botão Concluir.
     if (targetCol === 'aprovado') {
-      setPendingAprovado({ fichaId, fichaOriginal: ficha })
+      handleFinalizar(ficha, 'aprovado')
       return
     }
 
@@ -1058,7 +940,7 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
   }
 
   return (
-    <div className={`flex min-h-0 flex-1 flex-col gap-2.5 ${sortingFeedback ? 'kanban-sorting' : ''}`}>
+    <div className={`fichas-kanban-workspace flex min-h-0 flex-1 flex-col gap-2.5 ${sortingFeedback ? 'kanban-sorting' : ''}`}>
       {sortingFeedback && (
         <div className="flex items-center justify-between rounded-2xl border border-brand-accent/20 bg-brand-accent/5 px-4 py-2 text-xs text-status-info animate-fade-in">
           <span className="inline-flex items-center gap-2 font-medium">
@@ -1220,37 +1102,32 @@ export default function KanbanFichas({ produto, externalDateFrom, externalDateTo
         />
       )}
       {pendingRecusado && (
-        <div className="fixed inset-0 z-[390] flex items-center justify-center p-4">
-          <div className="modal-backdrop" onClick={() => setPendingRecusado(null)} />
-          <div className="relative z-10 w-full max-w-md">
-            <ModalConfirmarRecusado onConfirmar={handleConfirmarRecusado} salvando={salvandoRecusado} />
-          </div>
-        </div>
+        <ModalFrame
+          onClose={() => setPendingRecusado(null)}
+          size="sm"
+          closeOnBackdrop={!salvandoRecusado}
+          closeOnEscape={!salvandoRecusado}
+          surfaceClassName="glass-modal ficha-action-modal"
+          ariaLabel="Confirmar ficha recusada"
+        >
+          <ModalConfirmarRecusado onConfirmar={handleConfirmarRecusado} onCancelar={() => setPendingRecusado(null)} salvando={salvandoRecusado} />
+        </ModalFrame>
       )}
       {pendingCancelado && (
-        <div className="fixed inset-0 z-[390] flex items-center justify-center p-4">
-          <div className="modal-backdrop" onClick={handleCancelarCancelado} />
-          <div className="relative z-10 w-full max-w-lg">
-            <ModalConfirmarCancelado
-              onConfirmar={handleConfirmarCancelado}
-              onCancelar={handleCancelarCancelado}
-              salvando={salvandoCancelado}
-            />
-          </div>
-        </div>
-      )}
-      {pendingAprovado && (
-        <div className="fixed inset-0 z-[390] flex items-center justify-center p-4">
-          <div className="modal-backdrop" onClick={handleCancelarAprovado} />
-          <div className="relative z-10 w-full max-w-lg">
-            <ModalConfirmarAprovado
-              produto={pendingAprovado.fichaOriginal?.produto}
-              onConfirmar={handleConfirmarAprovado}
-              onCancelar={handleCancelarAprovado}
-              salvando={salvandoAprovado}
-            />
-          </div>
-        </div>
+        <ModalFrame
+          onClose={handleCancelarCancelado}
+          size="md"
+          closeOnBackdrop={!salvandoCancelado}
+          closeOnEscape={!salvandoCancelado}
+          surfaceClassName="glass-modal ficha-action-modal"
+          ariaLabel="Cancelar ficha"
+        >
+          <ModalConfirmarCancelado
+            onConfirmar={handleConfirmarCancelado}
+            onCancelar={handleCancelarCancelado}
+            salvando={salvandoCancelado}
+          />
+        </ModalFrame>
       )}
     </div>
   )

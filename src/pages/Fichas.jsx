@@ -763,7 +763,7 @@ function TabelaAberta({ fichas, user, navigate, onDetalhe, onAssumir, onFinaliza
           const si     = STATUS_LABELS[f.status] ?? { label: f.status, color: '' }
           const isMe   = f.orcamentista_id === user?.id
           const canAss = !f.assumida && f.status === 'pendente'
-          const canFin = isMe && f.status === 'em_cotacao'
+          const canFin = isMe && ['em_cotacao', 'em_analise'].includes(f.status)
           const rd     = f.raw_data || {}
           const nome   = f.produto === 'pessoa_juridica'
             ? (f.nome_empresa || f.nome_interessado || rd.nome_empresa || rd.razao_social || rd.empresa || rd.nome || '')
@@ -1138,9 +1138,6 @@ export default function Fichas() {
 
   // -- View: Visão Geral (sem produto) --
   if (!produto) {
-    if (criar) return (
-      <ModalFicha ficha={null} onClose={() => setCriar(false)} onSuccess={() => { setCriar(false); fetchContagemProdutos().then(setContagem) }} />
-    )
     return (
       <>
         <VisaoGeral
@@ -1150,6 +1147,9 @@ export default function Fichas() {
           onRelatorio={() => setRelatorio(true)}
           minhasFichasCount={minhasFichasCount}
         />
+        {criar && (
+          <ModalFicha ficha={null} onClose={() => setCriar(false)} onSuccess={() => { setCriar(false); fetchContagemProdutos().then(setContagem) }} />
+        )}
         {relatorio && <RelatorioMensal onClose={() => setRelatorio(false)} />}
       </>
     )
@@ -1224,12 +1224,8 @@ export default function Fichas() {
         <ModalFinalizar ficha={finalizar} onClose={() => setFinalizar(null)} onSuccess={() => { setFinalizar(null); refresh() }} />
       )}
 
-      {/* Page-replacing areas for create/edit */}
-      {criar ? (
-        <ModalFicha ficha={null} onClose={() => setCriar(false)} onSuccess={onFichaSuccess} />
-      ) : editar ? (
-        <ModalFicha ficha={editar} onClose={() => setEditar(null)} onSuccess={onFichaSuccess} />
-      ) : view === 'kanban' ? (
+      {/* Conteúdo permanece montado para contextualizar os modais */}
+      {view === 'kanban' ? (
         <KanbanFichas
           produto={produto}
           externalDateFrom={dateFrom}
@@ -1387,6 +1383,12 @@ export default function Fichas() {
         </>
       )}
 
+      {criar && (
+        <ModalFicha ficha={null} onClose={() => setCriar(false)} onSuccess={onFichaSuccess} />
+      )}
+      {editar && (
+        <ModalFicha ficha={editar} onClose={() => setEditar(null)} onSuccess={onFichaSuccess} />
+      )}
       {relatorio && <RelatorioMensal onClose={() => setRelatorio(false)} />}
     </PageShell>
   )

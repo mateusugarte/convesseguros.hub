@@ -44,6 +44,18 @@ Hub central de fichas: visão lista/kanban com filtros por produto, status, imob
   realtime) como confirmação visual de que o move funcionou.
 - O overlay de drag usa `KANBAN_DROP_ANIMATION` (`lib/kanbanDnd.js`) para "pousar" suavemente
   na coluna de destino em vez de sumir instantaneamente.
+- Arrastar para **Aprovadas** abre o mesmo `ModalFinalizar` usado pela ação **Concluir** do
+  card. Não existe mais um segundo formulário de aprovação com regras diferentes.
+
+## Fluxo de conclusão
+- `ModalFinalizar` é um fluxo guiado em 2 etapas: primeiro o resultado, depois somente os
+  campos necessários para aquele resultado. O rodapé é fixo, portanto a ação final não some
+  quando "Aprovado" revela Seguradora, Valor da parcela e os controles de retorno.
+- Aprovação exige Seguradora e Valor da parcela. O botão final é explicitamente
+  **Concluir aprovação** e grava `valor_parcela` junto com o restante da finalização.
+- Fichas do próprio usuário em `em_cotacao` ou `em_analise` podem ser concluídas pelo card,
+  pela lista e pela tela de detalhe.
+- A camada visual compartilhada dos boards fica em `styles/kanban-ui.css`.
 
 ## Busca no Kanban
 - Barra de busca simples acima do card "Recorte de trabalho" (filtro de período/mês),

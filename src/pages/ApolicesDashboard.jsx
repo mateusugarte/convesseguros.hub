@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Select } from '../components/ui/Select'
-import { PageHeader, MetricCard, DataCard } from '../components/ui'
+import { PageHeader, MetricCard, DataCard, Modal } from '../components/ui'
+import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
 import {
   fetchKPIsApolices, fetchApolicesPorDia,
   fetchTopImobiliariasApolices, fetchProducaoPorSeguradora,
@@ -16,7 +17,7 @@ import {
 } from 'recharts'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { TrendingUp, FileCheck, LayoutGrid, List } from 'lucide-react'
+import { TrendingUp, FileCheck, LayoutGrid, List, ArrowRight, Trophy, Building2 } from 'lucide-react'
 import { BRAND, AVATAR_COLORS, PALETTE } from '../design-system/tokens'
 
 const CHART_COLORS = {
@@ -85,6 +86,8 @@ const SEG_COLORS = {
   'Outras': '#6B7280',
 }
 
+const RANK_COLORS = [BRAND.primary, '#2247aa', '#4b6cc2', '#7fbec4', '#a2d6da']
+
 function DarkTip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
@@ -151,7 +154,7 @@ const FILTRO_SEG = [
 export default function ApolicesDashboard() {
   const navigate = useNavigate()
   const { theme } = useTheme()
-  const { resolverNome } = useImobiliaria()
+  const { resolverNome, resolverImobiliariaInfo } = useImobiliaria()
   const agora = new Date()
 
   const [ano, setAno] = useState(() => {
@@ -167,6 +170,7 @@ export default function ApolicesDashboard() {
   const [filtroSeg, setFiltroSeg] = useState('mes')
   const [segLogos, setSegLogos] = useState({})
   const [loading, setLoading] = useState(true)
+  const [rankingOpen, setRankingOpen] = useState(false)
 
   useEffect(() => {
     try {
@@ -177,6 +181,28 @@ export default function ApolicesDashboard() {
 
   const [inicioMes, fimMes] = getMonthRange(ano, mes)
   const mesLabel = `${MESES_FULL[mes - 1]} ${ano}`
+
+  const rankingImobiliarias = useMemo(() => {
+    const agrupadas = new Map()
+
+    topImob.forEach((item) => {
+      const nome = resolverNome(item.nome) || item.nome
+      const key = nome.trim().toLocaleLowerCase('pt-BR')
+      const atual = agrupadas.get(key)
+      if (atual) {
+        atual.total += item.total
+      } else {
+        agrupadas.set(key, { nome, total: item.total })
+      }
+    })
+
+    return [...agrupadas.values()].sort((a, b) => (
+      b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR')
+    ))
+  }, [topImob, resolverNome])
+
+  const topCincoImobiliarias = rankingImobiliarias.slice(0, 5)
+  const totalApolicesRanking = rankingImobiliarias.reduce((total, item) => total + item.total, 0)
 
   const getRangeSeguradora = useCallback(() => {
     if (filtroSeg === 'mes') return [inicioMes, fimMes]
@@ -399,51 +425,136 @@ export default function ApolicesDashboard() {
         </DataCard>
       </div>
 
-      <DataCard title={`Top 5 Imobiliárias — ${mesLabel}`} subtitle="Ranking por volume emitido no período.">
-        {topImob.length === 0 ? (
-          <p className="text-sm text-dark-muted">Sem dados para o período</p>
+      <DataCard
+        title={`Top Imobiliárias — ${mesLabel}`}
+        subtitle="As parceiras com maior volume de apólices emitidas no mês."
+        actions={rankingImobiliarias.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => setRankingOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl border border-brand-accent/25 bg-brand-accent/10 px-3 py-2 text-xs font-semibold text-status-info transition-all hover:border-brand-accent/45 hover:bg-brand-accent/15"
+          >
+            Ver mais ({rankingImobiliarias.length})
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
+      >
+        {rankingImobiliarias.length === 0 ? (
+          <div className="flex min-h-32 flex-col items-center justify-center gap-2 text-dark-muted">
+            <Building2 className="h-8 w-8 opacity-30" />
+            <p className="text-sm">Sem imobiliárias com apólices no período</p>
+          </div>
         ) : (() => {
-          const maxTotal = Math.max(...topImob.map(t => t.total), 1)
-          const RANK_COLORS = [BRAND.primary, '#2247aa', '#4b6cc2', '#7fbec4', '#a2d6da']
+          const maxTotal = Math.max(...topCincoImobiliarias.map(t => t.total), 1)
           return (
             <div className="space-y-3">
-              {topImob.map((item, index) => {
-                const nome = resolverNome(item.nome) || item.nome
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-brand-accent/15 bg-gradient-to-r from-brand-accent/10 to-transparent px-4 py-3">
+                <div className="flex items-center gap-2 text-xs text-dark-muted">
+                  <Trophy className="h-4 w-4 text-brand-primary" />
+                  <span>
+                    <strong className="text-dark-text">{totalApolicesRanking}</strong> apólices entre{' '}
+                    <strong className="text-dark-text">{rankingImobiliarias.length}</strong> imobiliárias
+                  </span>
+                </div>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Top 5 do mês</span>
+              </div>
+
+              {topCincoImobiliarias.map((item, index) => {
+                const meta = resolverImobiliariaInfo(item.nome)
                 const pct = Math.round((item.total / maxTotal) * 100)
                 return (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => navigate('/apolices/lista')}
-                    className="w-full rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-brand-accent/30 hover:shadow-sm"
+                  <div
+                    key={item.nome}
+                    className="group relative overflow-hidden rounded-2xl border border-dark-border/60 bg-dark-surface2/25 px-4 py-3.5 transition-all hover:-translate-y-0.5 hover:border-brand-accent/30 hover:shadow-sm"
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black text-white flex-shrink-0"
+                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-xs font-black text-white shadow-sm"
                         style={{ background: RANK_COLORS[index] ?? BRAND.primary }}
+                        aria-label={`${index + 1}º lugar`}
                       >
-                        {index + 1}
+                        {index === 0 ? <Trophy className="h-4 w-4" /> : index + 1}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <p className="text-sm font-semibold text-dark-text truncate">{nome}</p>
-                          <span className="text-sm font-bold text-dark-text flex-shrink-0">{item.total}</span>
-                        </div>
-                        <div className="h-1.5 rounded-full bg-dark-border/40">
-                          <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{ width: `${pct}%`, background: RANK_COLORS[index] ?? BRAND.primary }}
-                          />
-                        </div>
+
+                      <ImobiliariaIdentity
+                        nome={item.nome}
+                        imagemUrl={meta?.imagem_url}
+                        imagemPath={meta?.imagem_path}
+                        size="md"
+                        className="min-w-0 flex-1"
+                      />
+
+                      <div className="flex-shrink-0 text-right">
+                        <p className="text-xl font-black leading-none text-dark-text">{item.total}</p>
+                        <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">
+                          {item.total === 1 ? 'apólice' : 'apólices'}
+                        </p>
                       </div>
                     </div>
-                  </button>
+
+                    <div className="ml-12 mt-3 h-1.5 overflow-hidden rounded-full bg-dark-border/35">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${pct}%`, background: RANK_COLORS[index] ?? BRAND.primary }}
+                      />
+                    </div>
+                  </div>
                 )
               })}
             </div>
           )
         })()}
       </DataCard>
+
+      <Modal
+        isOpen={rankingOpen}
+        onClose={() => setRankingOpen(false)}
+        title={`Todas as imobiliárias — ${mesLabel}`}
+        subtitle="Lista completa das imobiliárias que possuem apólices emitidas no mês selecionado."
+        maxWidth="lg"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-dark-border/60 bg-dark-surface2/30 p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Imobiliárias</p>
+              <p className="mt-1 text-2xl font-black text-dark-text">{rankingImobiliarias.length}</p>
+            </div>
+            <div className="rounded-2xl border border-brand-accent/20 bg-brand-accent/10 p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Apólices no mês</p>
+              <p className="mt-1 text-2xl font-black text-dark-text">{totalApolicesRanking}</p>
+            </div>
+          </div>
+
+          <div className="max-h-[58vh] space-y-2 overflow-y-auto pr-1">
+            {rankingImobiliarias.map((item, index) => {
+              const meta = resolverImobiliariaInfo(item.nome)
+              return (
+                <div
+                  key={item.nome}
+                  className="flex items-center gap-3 rounded-2xl border border-dark-border/60 bg-dark-surface2/20 px-3.5 py-3"
+                >
+                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-dark-surface text-xs font-black text-dark-muted">
+                    {index + 1}
+                  </span>
+                  <ImobiliariaIdentity
+                    nome={item.nome}
+                    imagemUrl={meta?.imagem_url}
+                    imagemPath={meta?.imagem_path}
+                    size="md"
+                    className="min-w-0 flex-1"
+                  />
+                  <div className="flex-shrink-0 rounded-xl border border-brand-accent/20 bg-brand-accent/10 px-3 py-2 text-right">
+                    <p className="text-base font-black leading-none text-dark-text">{item.total}</p>
+                    <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-dark-muted">
+                      {item.total === 1 ? 'apólice' : 'apólices'}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

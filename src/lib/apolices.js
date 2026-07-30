@@ -160,7 +160,7 @@ export async function fetchApolicesPorDia(inicioMes, fimMes) {
   return resultado
 }
 
-export async function fetchTopImobiliariasApolices(inicioMes, fimMes, limite = 5) {
+export async function fetchTopImobiliariasApolices(inicioMes, fimMes, limite = null) {
   const { data } = await supabase
     .from('apolices')
     .select('imobiliaria')
@@ -172,8 +172,11 @@ export async function fetchTopImobiliariasApolices(inicioMes, fimMes, limite = 5
   if (!data) return []
   const cnt = {}
   data.forEach(a => { cnt[a.imobiliaria] = (cnt[a.imobiliaria] || 0) + 1 })
-  return Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, limite)
+  const ranking = Object.entries(cnt)
+    .sort((a, b) => b[1] - a[1])
     .map(([nome, total]) => ({ nome, total }))
+
+  return Number.isFinite(limite) ? ranking.slice(0, Math.max(0, limite)) : ranking
 }
 
 export async function fetchProducaoPorSeguradora(inicioMes, fimMes) {
@@ -636,4 +639,3 @@ export async function moverStatusApolice(id, novoStatus, dadosExtras = {}) {
   const { error } = await supabase.from('apolices').update(update).eq('id', id)
   return error
 }
-

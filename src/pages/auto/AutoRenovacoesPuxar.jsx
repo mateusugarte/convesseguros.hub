@@ -106,6 +106,12 @@ export default function AutoRenovacoesPuxar() {
   async function refetchListaDoMes() {
     await qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
     await qc.invalidateQueries({ queryKey: ['auto-renovacoes-todas'] })
+    // Excluir uma renovacao ja cotada arrasta a cotacao/emissao geradas por
+    // ela: as telas de cotacoes e o Kanban precisam recarregar tambem.
+    await qc.invalidateQueries({ queryKey: ['auto-renovacoes-pendentes'] })
+    await qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
+    await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
+    await qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
   }
 
   const { mutateAsync: puxarDoSistema, isPending: puxandoSistema } = useMutation({

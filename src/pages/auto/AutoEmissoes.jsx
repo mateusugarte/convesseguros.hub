@@ -1645,6 +1645,12 @@ export default function AutoEmissoes() {
       qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
       qc.invalidateQueries({ queryKey: ['auto-apolices'] })
       qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
+      // A coluna virtual "Renovacoes" vem de uma query propria: sem invalidar
+      // aqui, o card excluido continuava visivel ate o proximo reload.
+      qc.invalidateQueries({ queryKey: ['auto-renovacoes-pendentes'] })
+      qc.invalidateQueries({ queryKey: ['auto-renovacoes-todas'] })
+      qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
+      qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
       qc.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] })
       setDetalhe(null)
       setEditando(null)

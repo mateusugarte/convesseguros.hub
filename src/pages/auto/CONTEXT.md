@@ -87,6 +87,20 @@ classificar cards.
   já existente; o card desaparece daqui e a emissão real aparece em "Cotações
   pendentes" via o trigger de banco que já existia). "Cancelar" reaproveita
   `cancelarRenovacao`.
+- Exclusão no Auto é sempre **de grupo**: renovação, cotação, emissão (card do
+  Kanban) e apólice formam um único registro lógico e saem juntas. A ordem dos
+  DELETEs é montada por `planejarExclusaoGrupoAuto` (`src/lib/autoExclusao.js`,
+  função pura e testada) e executada por `deletarCotacaoAuto` /
+  `excluirRenovacao` / `deletarEmissaoAuto` (`src/lib/auto.js`). Motivo: as FKs
+  entre essas tabelas não têm CASCADE e `renovacoes_auto.cotacao_id` é
+  `ON DELETE SET NULL` — apagando só uma ponta, a outra sobrevivia (apagar a
+  cotação apenas desvinculava a renovação, que reaparecia na coluna
+  "Renovações"; apagar a renovação deixava cotação/emissão órfãs). Ao excluir,
+  invalidar também `['auto-renovacoes-pendentes']`, `['auto-emissoes']` e
+  `['auto-cotacoes']`, porque o grupo cruza várias queries.
+  Duas travas propositais: renovação cuja cotação já virou apólice emitida não
+  é excluída (mensagem pede para excluir a apólice antes) e grupo com sinistro
+  registrado é bloqueado com mensagem legível em vez de erro cru de FK.
 - `/auto/renovacoes/puxar` (`AutoRenovacoesPuxar.jsx`) é a área dedicada para
   organizar as renovações de um mês: puxar do sistema, puxar por planilha e
   criar manualmente — os 3 blocos que antes ficavam num painel inline em

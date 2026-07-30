@@ -1,5 +1,48 @@
 # CURRENT TASK
 
+## AUTO: excluir cotação/renovação não excluía de verdade (2026-07-30, Claude — CONCLUÍDA, sem smoke test ao vivo)
+
+Usuário reportou que, no setor AUTO, ao excluir cotações e renovações "elas não estão sendo excluídas de verdade". `superpowers:systematic-debugging` — causa raiz confirmada com evidência direta do banco de produção (script temporário somente-leitura com `service_role`, removido depois; nenhuma escrita feita).
+
+**Causa raiz: eram DOIS bugs simétricos, ambos de FK sem CASCADE.** Renovação, cotação, emissão (card do Kanban) e apólice são um único registro lógico, mas cada botão de excluir só apagava a sua ponta:
+
+1. **Excluir cotação → a renovação voltava.** `renovacoes_auto.cotacao_id` é `ON DELETE SET NULL` (`supabase/55_auto_renovacao_cotacao_tags.sql:11`). `deletarCotacaoAuto` apagava cotação/emissão/apólice, e o Postgres apenas zerava `cotacao_id` da renovação — que, com `cotacao_id IS NULL`, reaparecia na hora na coluna virtual "Renovações" do próprio Kanban (`getRenovacoesPendentesSemCotacao`) e em `/auto/renovacoes`, como "não cotada". Da tela, é idêntico a "não excluiu".
+2. **Excluir renovação → a cotação ficava órfã.** `excluirRenovacao` apagava só a linha de `renovacoes_auto`; a cotação e o card de emissão gerados por ela continuavam vivos em `/auto/cotacoes` e no Kanban. **Evidência no banco de produção:** a cotação `070755b0` (KELLY CRISITNA ACACIO VICENTE, `tipo=renovacao`) existe sem nenhuma renovação apontando para ela — órfã deixada por uma exclusão anterior; logo depois há duas renovações manuais duplicadas da mesma cliente, coerentes com o usuário tentando recriar o que "não sumia".
+3. **Bug latente da mesma família, corrigido junto:** o trigger `tg_apolice_to_renovacao` cria uma renovação para toda apólice inserida, e `renovacoes_auto.apolice_id` **não** tem cascade. Excluir uma cotação/emissão que já virou apólice batia em erro 23503 (`renovacoes_auto_apolice_id_fkey`) — falha visível, mesma classe de sintoma. `endossos_auto.cotacao_id`/`.apolice_id` tinham o mesmo problema.
+
+**Correção:** nova função pura `planejarExclusaoGrupoAuto` (`src/lib/autoExclusao.js`) monta a ordem correta dos DELETEs do grupo (dependentes da apólice → apólice → emissão → dependentes da cotação → cotação), e `deletarCotacaoAuto`, `excluirRenovacao` e `deletarEmissaoAuto` (`src/lib/auto.js`) passaram a executar esse plano em vez de apagar só a própria tabela. A renovação vinculada é apagada **antes** da cotação — se fosse depois, o `ON DELETE SET NULL` já teria desvinculado e ela sobreviveria. Duas travas propositais: renovação cuja cotação já virou apólice emitida **não** é excluída (erro pedindo para excluir a apólice antes — a apólice é registro real da carteira) e grupo com sinistro registrado é bloqueado com mensagem legível em vez de erro cru de FK. Renovação avulsa (manual/planilha/carteira, sem cotação) continua removendo só a própria linha, sem tocar na apólice que ela referencia.
+
+**Cache do React Query:** `AutoEmissoes.jsx` invalidava `['auto-renovacoes']` mas não `['auto-renovacoes-pendentes']` — a coluna "Renovações" do Kanban tem query própria e não recarregava após excluir. Corrigido nas 3 telas (`AutoEmissoes.jsx`, `AutoRenovacoes.jsx`, `AutoRenovacoesPuxar.jsx`), que agora invalidam também emissões/cotações, já que a exclusão cruza os dois lados.
+
+`npm test` (150/150, 8 testes novos em `src/lib/autoExclusao.test.mjs` escritos antes do fix) e `npm run build` verdes. Dry-run do planejador contra os dados reais de produção confirmou os 3 cenários (excluir cotação, excluir renovação já cotada, excluir renovação avulsa). Nenhuma migration, nenhuma mudança de schema/RLS — só lógica de app.
+
+**Smoke test pendente (sem login real nesta rodada):** excluir uma cotação de renovação no Kanban e confirmar que ela **não** reaparece na coluna "Renovações"; excluir uma renovação já cotada em `/auto/renovacoes` e confirmar que a cotação some também de `/auto/cotacoes` e do Kanban; excluir uma renovação avulsa e confirmar que só ela some.
+
+**Dados órfãos existentes:** a cotação `070755b0` (KELLY CRISITNA) segue no banco sem renovação, e há 2 renovações manuais duplicadas da mesma cliente (`535d20d1` e `ede12cc0`, uma com vigência 2026-08-01 e outra 2025-08-01). Não apaguei nada — com a correção, dá para excluir pela própria UI; a decisão de qual manter é do usuário.
+
+**Risco remanescente:** a exclusão são vários DELETEs sequenciais via PostgREST, sem transação — se a conexão cair no meio, o grupo pode ficar parcialmente apagado (o passo seguinte é seguro de repetir; basta excluir de novo). Uma versão transacional exigiria uma função RPC no Postgres, o que entra na regra de "banco → parar e aprovar" do `CLAUDE.md` e não foi feito.
+
+---
+
+## Auditoria de segurança completa do sistema (2026-07-30, Claude — LAUDO ENTREGUE, nenhuma correção aplicada, aguardando aprovação)
+
+Usuário pediu para ler as skills de segurança (`security-review`, `database-sentinel-main`) e fazer uma análise COMPLETA do sistema para "deixar a segurança boa". Escopo auditado: banco (Supabase/PostgREST, RLS de 67 arquivos em `supabase/`, Storage), autenticação, os 3 endpoints `api/`, todo o `src/`, build/deploy (Dockerfile, nginx.conf, vercel.json), `painel-agentes/`, `scripts/`, gestão de secrets e histórico do git.
+
+**Laudo completo em `artifacts/security_audit_2026-07-30.md`** (com o SQL de correção de cada item). Placar: 3 CRÍTICOS, 3 ALTOS, 5 MÉDIOS, 8 controles aprovados. Nota 25/100.
+
+Os 3 críticos:
+1. **Escalada de privilégio de qualquer visitante da internet até admin total.** `profiles_update_own` (`supabase/03_rls.sql:61`) não restringe colunas — RLS do Postgres não tem granularidade de coluna, e não existe nenhum trigger/GRANT protegendo `is_admin`. Como `src/pages/Login.jsx` tem cadastro público aberto, qualquer pessoa cria conta e faz um `PATCH /rest/v1/profiles {"is_admin":true}` direto no PostgREST, pulando o endpoint `api/update-user-profile` que o projeto criou justamente para gatear isso. Destrava todas as fichas (CPF/CNPJ), financeiro, comercial, e os 3 endpoints com `service_role` — inclusive trocar a senha de qualquer usuário via `api/create-user.js:108`.
+2. **RCE na máquina do dev via `painel-agentes/server.js`.** Servidor WebSocket sem autenticação, sem validação de `Origin` (a lib `ws` não valida por padrão e navegador não aplica same-origin a WS), com bind em `0.0.0.0`, que injeta qualquer mensagem recebida como prompt de `claude --print --dangerously-skip-permissions` com `cwd` na raiz do repo. Qualquer site visitado pelo dev com o painel ligado consegue CSWSH → shell → ler `n8n/wf_update.json` (que tem a chave `service_role` em texto puro) → comprometimento total do banco.
+3. **7 tabelas `*_backup_20260727` sem RLS** (`supabase/57_zerar_dados_auto.sql:30-45`) — `CREATE TABLE AS TABLE` não herda RLS nem policies. Padrão da CVE-2025-48757. Confirmei ao vivo que as tabelas existem em produção (a 57 rodou) mas estão vazias — risco estrutural latente, sem vazamento ativo hoje.
+
+**Verificação ao vivo feita:** probe somente-leitura com a chave `anon` pública, sem login, sem escrita. Confirmou que a RLS de `fichas`/`profiles`/`apolices`/`clientes_auto` está ativa e efetiva (0 linhas para anon) e que as 7 tabelas de backup existem. Confirmei também por `git log --all -S` que a chave `service_role` **nunca** foi commitada em nenhum commit — o `.gitignore` está correto.
+
+**Nada foi corrigido.** Regra do `CLAUDE.md` ("banco, auth, RLS ou dados pessoais → parar, apresentar plano e aguardar aprovação"): plano de 10 passos no fim do laudo, aguardando decisão do usuário.
+
+**Pendências que exigem o painel do Supabase (não auditáveis por código):** o bucket `documentos` é público? (se for, os PDFs com CPF são legíveis sem login — viraria CRÍTICO); JWT expiry ≤3600s e refresh token rotation; confirmação da RLS das tabelas de backup via `pg_class.relrowsecurity`.
+
+---
+
 ## Performance: carga global do módulo Comercial rodava em toda página, para todo usuário (2026-07-29, Claude — CONCLUÍDA, sem smoke test ao vivo)
 
 Usuário reportou o sistema "um pouco lento" e pediu foco em responsividade/velocidade "em tudo", sem mexer em nada visível ou funcional.

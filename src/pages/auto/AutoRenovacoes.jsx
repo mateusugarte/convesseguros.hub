@@ -140,6 +140,11 @@ export default function AutoRenovacoes() {
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
       await qc.invalidateQueries({ queryKey: ['auto-renovacoes-todas'] })
+      // A exclusão arrasta a cotação/emissão geradas pela renovação.
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes-pendentes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
       toast({ type: 'success', title: 'Renovação excluída' })
     },
     onError: err => toast({ type: 'error', title: 'Erro ao excluir renovação', message: err?.message || 'Tente novamente.' }),

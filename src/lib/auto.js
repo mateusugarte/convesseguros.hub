@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { limparNomeSegurado, normalizeCompareText, somarUmAno } from './autoHistoricoImport.js'
 import { calcularValorComissaoAuto, subtrairDiasUteis } from './autoCalc.js'
+import { planejarExclusaoGrupoAuto } from './autoExclusao.js'
 
 export { calcularValorComissaoAuto }
 
@@ -504,36 +505,70 @@ export async function atualizarStatusCotacao(id, status) {
   if (error) throw error
 }
 
-export async function deletarCotacaoAuto(id) {
-  // A cotação pode estar referenciada por emissoes_auto e apolices_auto.
-  // Remove dependências primeiro para evitar erro de FK ao excluir.
-  const { data: emissoes, error: emissoesError } = await supabase
-    .from('emissoes_auto')
-    .select('id')
-    .eq('cotacao_id', id)
-  if (emissoesError) throw emissoesError
+async function selecionarPorIds(tabela, colunas, coluna, ids) {
+  if (!ids.length) return []
+  const { data, error } = await supabase.from(tabela).select(colunas).in(coluna, ids)
+  if (error) throw error
+  return data ?? []
+}
 
-  const emissaoIds = (emissoes ?? []).map(item => item.id).filter(Boolean)
-
-  if (emissaoIds.length) {
-    const { error: apolicesError } = await supabase
-      .from('apolices_auto')
-      .delete()
-      .in('emissao_id', emissaoIds)
-    if (apolicesError) throw apolicesError
-
-    const { error: emissoesDeleteError } = await supabase
-      .from('emissoes_auto')
-      .delete()
-      .in('id', emissaoIds)
-    if (emissoesDeleteError) throw emissoesDeleteError
+// Le todas as linhas ligadas ao grupo (cotacao, emissao avulsa e/ou renovacao)
+// para alimentar o planejador de exclusao. Ver src/lib/autoExclusao.js.
+async function coletarGrupoAuto({ cotacaoIds = [], renovacaoIds = [], emissaoIds = [] }) {
+  const grupo = {
+    cotacaoIds,
+    renovacaoIds,
+    emissoes: await selecionarPorIds('emissoes_auto', 'id, cotacao_id', 'id', emissaoIds),
+    apolices: [],
+    renovacoes: await selecionarPorIds('renovacoes_auto', 'id, cotacao_id, apolice_id', 'id', renovacaoIds),
+    endossos: [],
+    sinistros: [],
   }
 
-  const { error } = await supabase
-    .from('cotacoes_auto')
-    .delete()
-    .eq('id', id)
-  if (error) throw error
+  const emissoesDaCotacao = await selecionarPorIds('emissoes_auto', 'id, cotacao_id', 'cotacao_id', cotacaoIds)
+  const jaListadas = new Set(grupo.emissoes.map(item => item.id))
+  grupo.emissoes.push(...emissoesDaCotacao.filter(item => !jaListadas.has(item.id)))
+
+  const todosEmissaoIds = grupo.emissoes.map(item => item.id).filter(Boolean)
+  grupo.apolices = await selecionarPorIds('apolices_auto', 'id, emissao_id', 'emissao_id', todosEmissaoIds)
+  const apoliceIds = grupo.apolices.map(item => item.id).filter(Boolean)
+
+  // Renovacoes ligadas a cotacao (FK ON DELETE SET NULL) e as criadas pelo
+  // trigger tg_apolice_to_renovacao a partir das apolices do grupo.
+  const vinculadas = [
+    ...await selecionarPorIds('renovacoes_auto', 'id, cotacao_id, apolice_id', 'cotacao_id', cotacaoIds),
+    ...await selecionarPorIds('renovacoes_auto', 'id, cotacao_id, apolice_id', 'apolice_id', apoliceIds),
+  ]
+  const renovacoesListadas = new Set(grupo.renovacoes.map(item => item.id))
+  grupo.renovacoes.push(...vinculadas.filter(item => !renovacoesListadas.has(item.id)))
+
+  grupo.sinistros = await selecionarPorIds('sinistros_auto', 'id, apolice_id', 'apolice_id', apoliceIds)
+  grupo.endossos = [
+    ...await selecionarPorIds('endossos_auto', 'id, cotacao_id, apolice_id', 'cotacao_id', cotacaoIds),
+    ...await selecionarPorIds('endossos_auto', 'id, cotacao_id, apolice_id', 'apolice_id', apoliceIds),
+  ]
+
+  return grupo
+}
+
+async function executarExclusaoGrupoAuto({ cotacaoIds = [], renovacaoIds = [], emissaoIds = [] }) {
+  const grupo = await coletarGrupoAuto({ cotacaoIds, renovacaoIds, emissaoIds })
+  const { bloqueio, passos } = planejarExclusaoGrupoAuto(grupo)
+  if (bloqueio) throw new Error(bloqueio)
+
+  for (const { tabela, coluna, ids } of passos) {
+    const { error } = await supabase.from(tabela).delete().in(coluna, ids)
+    if (error) throw error
+  }
+}
+
+// Exclui a cotacao e TODO o grupo derivado dela: emissao (card do Kanban),
+// apolice, endosso e a linha de renovacoes_auto que a originou. Sem apagar a
+// renovacao junto, a FK ON DELETE SET NULL apenas zerava cotacao_id e o
+// registro reaparecia como "nao cotada" — parecendo nao ter sido excluido.
+export async function deletarCotacaoAuto(id) {
+  if (!id) return
+  await executarExclusaoGrupoAuto({ cotacaoIds: [id] })
 }
 
 // Emissoes
@@ -769,18 +804,12 @@ export async function atualizarEmissaoAutoCompleta(payload) {
   }
 }
 
+// Emissao avulsa (card manual, sem cotacao). Passa pelo mesmo planejador para
+// que a apolice e a renovacao criada pelo trigger tg_apolice_to_renovacao
+// saiam junto — antes o delete da apolice batia na FK e o card continuava la.
 export async function deletarEmissaoAuto(id) {
-  const { error: apolicesError } = await supabase
-    .from('apolices_auto')
-    .delete()
-    .eq('emissao_id', id)
-  if (apolicesError) throw apolicesError
-
-  const { error } = await supabase
-    .from('emissoes_auto')
-    .delete()
-    .eq('id', id)
-  if (error) throw error
+  if (!id) return
+  await executarExclusaoGrupoAuto({ emissaoIds: [id] })
 }
 
 // Apolices
@@ -1059,14 +1088,41 @@ export async function cancelarRenovacao(id, motivo) {
 }
 
 // Exclusao definitiva (diferente de cancelarRenovacao, que so marca
-// status_renovacao='nao_renovada' e mantem a linha). Nao mexe em
-// apolices_auto/cotacoes_auto — so remove o registro de renovacoes_auto.
+// status_renovacao='nao_renovada' e mantem a linha).
+//
+// Quando a renovacao ja foi cotada, a cotacao e o card de emissao gerados por
+// ela saem junto: antes ficavam orfaos em /auto/cotacoes e no Kanban, dando a
+// impressao de que a renovacao nao tinha sido excluida. Se a cotacao ja virou
+// apolice emitida, a exclusao e barrada — a apolice e um registro real da
+// carteira e precisa ser removida explicitamente antes.
 export async function excluirRenovacao(id) {
-  const { error } = await supabase
+  if (!id) return
+
+  const { data: renovacao, error: renovacaoError } = await supabase
     .from('renovacoes_auto')
-    .delete()
+    .select('id, cotacao_id')
     .eq('id', id)
-  if (error) throw error
+    .maybeSingle()
+  if (renovacaoError) throw renovacaoError
+  if (!renovacao) return
+
+  if (renovacao.cotacao_id) {
+    const { data: emissoes, error: emissoesError } = await supabase
+      .from('emissoes_auto')
+      .select('id, apolices_auto(id)')
+      .eq('cotacao_id', renovacao.cotacao_id)
+    if (emissoesError) throw emissoesError
+
+    const temApolice = (emissoes ?? []).some(item => (item.apolices_auto ?? []).length)
+    if (temApolice) {
+      throw new Error('Esta renovacao ja virou apolice emitida. Exclua a apolice antes de excluir a renovacao.')
+    }
+
+    await executarExclusaoGrupoAuto({ cotacaoIds: [renovacao.cotacao_id], renovacaoIds: [id] })
+    return
+  }
+
+  await executarExclusaoGrupoAuto({ renovacaoIds: [id] })
 }
 
 export async function criarCotacaoEndosso({

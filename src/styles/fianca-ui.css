@@ -521,11 +521,60 @@ html[data-workspace='fianca'] .glass-modal aside .text-dark-muted { color: rgba(
   --apolice-teal: #0f9f92;
 }
 
-.fianca-page-scope .apolice-detail-page .ops-page-header.apolice-hero {
-  border-color: rgba(135, 161, 255, .2);
-  border-radius: 23px;
-  background: linear-gradient(118deg, rgba(15, 24, 76, .995), rgba(39, 53, 143, .98) 54%, rgba(20, 102, 119, .95));
-  box-shadow: 0 24px 64px rgba(18, 30, 91, .2), inset 0 1px 0 rgba(255, 255, 255, .13);
+.fianca-page-scope .apolice-detail-page .ops-page-header.apolice-hero,
+html[data-workspace='fianca'] .apolice-detail-page .ops-page-header.apolice-hero {
+  border-color: rgba(142, 170, 255, .3) !important;
+  border-radius: 25px;
+  background:
+    radial-gradient(circle at 86% 5%, rgba(84, 210, 229, .22), transparent 24rem),
+    linear-gradient(118deg, #10194f 0%, #293b9d 53%, #126b83 100%) !important;
+  box-shadow: 0 26px 68px rgba(18, 30, 91, .27), inset 0 1px 0 rgba(255, 255, 255, .16) !important;
+}
+
+.apolice-detail-page .apolice-hero-actions {
+  justify-content: flex-end;
+  max-width: 34rem;
+}
+
+.apolice-detail-page .apolice-hero-button {
+  min-height: 38px;
+  border-radius: 12px;
+  font-weight: 700;
+  box-shadow: 0 7px 18px rgba(5, 12, 48, .1);
+  transition: transform .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.apolice-detail-page .apolice-hero-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(5, 12, 48, .18);
+}
+
+.fianca-page-scope .apolice-detail-page .apolice-hero-button.is-primary {
+  border: 1px solid rgba(255, 255, 255, .8);
+  background: #fff;
+  color: #263ca9;
+}
+
+.fianca-page-scope .apolice-detail-page .apolice-hero-button.is-finish {
+  border-color: rgba(126, 237, 219, .42);
+  background: rgba(67, 211, 190, .13);
+  color: #c6fff5;
+}
+
+.fianca-page-scope .apolice-detail-page .apolice-hero-button.is-danger {
+  border-color: rgba(255, 170, 180, .3);
+  background: rgba(180, 32, 55, .13);
+  color: #ffd1d7;
+}
+
+.fianca-page-scope .apolice-detail-page .apolice-hero .ops-metric-card {
+  transition: transform .2s ease, background .2s ease, border-color .2s ease;
+}
+
+.fianca-page-scope .apolice-detail-page .apolice-hero .ops-metric-card:hover {
+  border-color: rgba(255, 255, 255, .22);
+  background: rgba(255, 255, 255, .105);
+  transform: translateY(-2px);
 }
 
 .fianca-page-scope .apolice-detail-page .ops-data-card {
@@ -536,7 +585,17 @@ html[data-workspace='fianca'] .glass-modal aside .text-dark-muted { color: rgba(
 }
 
 .fianca-page-scope .apolice-detail-page .ops-data-card > header {
-  background: linear-gradient(180deg, rgb(var(--color-surface) / .94), rgb(var(--color-surface2) / .42));
+  position: relative;
+  background: linear-gradient(100deg, rgba(79, 109, 245, .085), rgba(15, 159, 146, .035) 58%, rgb(var(--color-surface2) / .3));
+}
+
+.fianca-page-scope .apolice-detail-page .ops-data-card > header::before {
+  position: absolute;
+  width: 3px;
+  inset: .8rem auto .8rem 0;
+  border-radius: 0 99px 99px 0;
+  background: linear-gradient(180deg, var(--apolice-accent), var(--apolice-teal));
+  content: '';
 }
 
 .apolice-financial-strip {
@@ -548,6 +607,13 @@ html[data-workspace='fianca'] .glass-modal aside .text-dark-muted { color: rgba(
   border-radius: 19px;
   background: var(--fianca-surface);
   box-shadow: var(--fianca-shadow);
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+.apolice-financial-strip:hover {
+  border-color: rgba(79, 109, 245, .24);
+  box-shadow: 0 16px 38px rgba(25, 39, 112, .1);
+  transform: translateY(-1px);
 }
 
 .apolice-financial-intro,
@@ -833,6 +899,9 @@ html.dark .apolice-financial-item.is-primary strong { color: #8da0ff; }
   .apolice-financial-intro,
   .apolice-financial-item { padding: .8rem; }
   .apolice-financial-item strong { font-size: .8rem; }
+  .apolice-detail-page .apolice-hero-actions { max-width: none; justify-content: stretch; }
+  .apolice-detail-page .apolice-hero-button { justify-content: center; }
+  .apolice-detail-page .apolice-hero-button.is-primary { order: -1; flex-basis: 100%; }
   .apolice-form-card > div:last-child { grid-template-columns: minmax(0, 1fr); }
   .apolice-form-card .col-span-2 { grid-column: auto; }
   html[data-workspace='fianca'] .glass-modal,

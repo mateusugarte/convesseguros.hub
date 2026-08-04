@@ -1,5 +1,19 @@
 # CURRENT TASK
 
+## Apolices: correcao do header e refinamento visual do detalhe (2026-08-04, Codex — CONCLUIDA)
+
+Objetivo: corrigir o masthead branco dentro da apolice para o azul/indigo do workspace de Fianca e elevar a hierarquia visual, a legibilidade das acoes, os cards e a responsividade de `ApoliceDetalhe`, sem alterar banco, rotas ou regras de negocio.
+
+Arquivos em uso: `src/pages/ApoliceDetalhe.jsx`, `src/styles/fianca-ui.css`, `src/pages/ApoliceDetalhe/CONTEXT.md`.
+
+Entrega: masthead protegido contra a regra legada branca por seletor explicito do workspace e `background` azul/indigo com prioridade; acoes com hierarquia visual, metricas com interacao sutil, cabecalhos de cards com marcador e resumo financeiro refinado. Mobile prioriza o botao Salvar e redistribui as demais acoes.
+
+Validacao: `git diff --check` passou. `npm run build` e `npm run check:page-contexts` nao puderam ser executados porque `node`/`npm` nao estao instalados ou expostos no ambiente desta rodada. Nenhuma alteracao de banco, rotas, queries ou regra de negocio.
+
+Risco remanescente: smoke test visual autenticado ainda recomendado em desktop e mobile para confirmar o resultado com dados reais.
+
+---
+
 ## AUTO: excluir cotação/renovação não excluía de verdade (2026-07-30, Claude — CONCLUÍDA, sem smoke test ao vivo)
 
 Usuário reportou que, no setor AUTO, ao excluir cotações e renovações "elas não estão sendo excluídas de verdade". `superpowers:systematic-debugging` — causa raiz confirmada com evidência direta do banco de produção (script temporário somente-leitura com `service_role`, removido depois; nenhuma escrita feita).

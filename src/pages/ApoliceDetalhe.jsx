@@ -602,17 +602,17 @@ export default function ApoliceDetalhe() {
         className="apolice-hero"
         description={`${numeroApolice ? `Apólice ${numeroApolice}` : 'Emissão em andamento'} · ${resolverNome(fichaImobiliaria || apolice.imobiliaria) || 'imobiliária não informada'}. Edite os dados, confira o financeiro e gerencie os documentos no mesmo fluxo.`}
         actions={(
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="apolice-hero-actions flex flex-wrap items-center gap-2">
             <button
               onClick={voltar}
-              className="flex items-center gap-1.5 rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted transition-colors hover:border-brand-accent/50 hover:text-dark-text"
+              className="apolice-hero-button is-back flex items-center gap-1.5 rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted transition-colors hover:border-brand-accent/50 hover:text-dark-text"
             >
               <ArrowLeft className="h-3.5 w-3.5" /> {returnLabel}
             </button>
             <button
               onClick={() => salvar()}
               disabled={salvando}
-              className="flex items-center gap-1.5 rounded-2xl bg-brand-primary px-3 py-2 text-xs font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
+              className="apolice-hero-button is-primary flex items-center gap-1.5 rounded-2xl bg-brand-primary px-3 py-2 text-xs font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
             >
               <Save className="h-3.5 w-3.5" /> {salvando ? 'Salvando...' : 'Salvar'}
             </button>
@@ -620,7 +620,7 @@ export default function ApoliceDetalhe() {
               <button
                 onClick={finalizarEmissao}
                 disabled={salvando}
-                className="flex items-center gap-1.5 rounded-2xl border border-brand-primary/30 px-3 py-2 text-xs text-brand-primary transition-colors hover:bg-brand-primary/10 disabled:opacity-50"
+                className="apolice-hero-button is-finish flex items-center gap-1.5 rounded-2xl border border-brand-primary/30 px-3 py-2 text-xs text-brand-primary transition-colors hover:bg-brand-primary/10 disabled:opacity-50"
               >
                 <Check className="h-3.5 w-3.5" /> {salvando ? 'Finalizando...' : 'Finalizar emissão de apólice'}
               </button>
@@ -628,7 +628,7 @@ export default function ApoliceDetalhe() {
             {!confirm ? (
               <button
                 onClick={() => setConfirm(true)}
-                className="flex items-center gap-1.5 rounded-2xl border border-status-danger/30 px-3 py-2 text-xs text-status-danger transition-colors hover:bg-status-danger/10"
+                className="apolice-hero-button is-danger flex items-center gap-1.5 rounded-2xl border border-status-danger/30 px-3 py-2 text-xs text-status-danger transition-colors hover:bg-status-danger/10"
               >
                 <Trash2 className="h-3.5 w-3.5" /> Excluir
               </button>

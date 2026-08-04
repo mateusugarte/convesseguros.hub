@@ -515,6 +515,201 @@ html[data-workspace='fianca'] .glass-modal aside::after {
 html[data-workspace='fianca'] .glass-modal aside .text-dark-text { color: #fff !important; }
 html[data-workspace='fianca'] .glass-modal aside .text-dark-muted { color: rgba(223, 234, 255, .7) !important; }
 
+/* Policy detail: same visual grammar used by the new Fiança records */
+.fianca-page-scope .apolice-detail-page {
+  --apolice-accent: #4f6df5;
+  --apolice-teal: #0f9f92;
+}
+
+.fianca-page-scope .apolice-detail-page .ops-page-header.apolice-hero {
+  border-color: rgba(135, 161, 255, .2);
+  border-radius: 23px;
+  background: linear-gradient(118deg, rgba(15, 24, 76, .995), rgba(39, 53, 143, .98) 54%, rgba(20, 102, 119, .95));
+  box-shadow: 0 24px 64px rgba(18, 30, 91, .2), inset 0 1px 0 rgba(255, 255, 255, .13);
+}
+
+.fianca-page-scope .apolice-detail-page .ops-data-card {
+  border-color: var(--fianca-border);
+  border-radius: 19px;
+  background: var(--fianca-surface);
+  box-shadow: var(--fianca-shadow);
+}
+
+.fianca-page-scope .apolice-detail-page .ops-data-card > header {
+  background: linear-gradient(180deg, rgb(var(--color-surface) / .94), rgb(var(--color-surface2) / .42));
+}
+
+.apolice-financial-strip {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.2fr) repeat(4, minmax(130px, 1fr));
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--fianca-border);
+  border-radius: 19px;
+  background: var(--fianca-surface);
+  box-shadow: var(--fianca-shadow);
+}
+
+.apolice-financial-intro,
+.apolice-financial-item {
+  min-width: 0;
+  padding: .95rem 1rem;
+}
+
+.apolice-financial-intro {
+  display: flex;
+  align-items: center;
+  gap: .72rem;
+  background: linear-gradient(125deg, rgba(79, 109, 245, .12), rgba(15, 159, 146, .06));
+}
+
+.apolice-financial-intro > span {
+  display: grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  flex: none;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #4f6df5, #3447bd);
+  color: #fff;
+  box-shadow: 0 9px 20px rgba(53, 70, 200, .2);
+}
+
+.apolice-financial-intro svg { width: 1rem; height: 1rem; }
+.apolice-financial-intro div,
+.apolice-financial-item { display: grid; align-content: center; }
+.apolice-financial-intro small,
+.apolice-financial-item small {
+  color: var(--fianca-muted);
+  font-size: .54rem;
+  font-weight: 760;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.apolice-financial-intro strong { margin-top: .18rem; color: var(--fianca-ink); font-size: .72rem; }
+.apolice-financial-item { border-left: 1px solid var(--fianca-border); }
+.apolice-financial-item strong {
+  overflow: hidden;
+  margin-top: .28rem;
+  color: var(--fianca-ink);
+  font-size: .9rem;
+  font-weight: 760;
+  letter-spacing: -.025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.apolice-financial-item.is-primary strong { color: #3e58d9; }
+
+.fianca-page-scope .apolice-brand-tile {
+  min-height: 132px;
+  padding: 1rem;
+  border: 1px solid var(--fianca-border);
+  border-radius: 15px;
+  background: linear-gradient(135deg, rgba(79, 109, 245, .055), rgb(var(--color-surface2) / .44));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .58);
+}
+
+.fianca-page-scope .apolice-edit-field {
+  margin-inline: -.35rem;
+  border-radius: 13px;
+}
+
+.fianca-page-scope .apolice-edit-field:hover {
+  border-color: rgba(79, 109, 245, .14);
+  background: rgba(79, 109, 245, .025);
+}
+
+.fianca-page-scope .apolice-detail-page .input,
+.fianca-page-scope .apolice-detail-page .select,
+.fianca-page-scope .apolice-detail-page .dp-trigger {
+  min-height: 44px;
+  border-radius: 11px;
+  border-color: var(--fianca-border);
+  background: rgb(var(--color-surface) / .86);
+  box-shadow: none;
+}
+
+.fianca-page-scope .apolice-detail-page .input:focus,
+.fianca-page-scope .apolice-detail-page .select:focus,
+.fianca-page-scope .apolice-detail-page .dp-trigger:focus-within {
+  border-color: rgba(79, 109, 245, .46);
+  box-shadow: 0 0 0 4px rgba(79, 109, 245, .08);
+}
+
+.fianca-page-scope .apolice-upload-card {
+  background: linear-gradient(145deg, rgb(var(--color-surface) / .94), rgba(79, 109, 245, .045));
+}
+
+.fianca-page-scope .apolice-payment-card {
+  border-color: rgba(15, 159, 146, .18);
+}
+
+/* Finance belongs to the same Fiança workspace, not a separate green product */
+.fianca-page-scope .financeiro-hub {
+  --rf-accent: 79 109 245;
+  --rf-accent-strong: 53 70 200;
+  --rf-secondary: 15 159 146;
+}
+
+.fianca-page-scope .financeiro-hub .financeiro-nav {
+  border-color: var(--fianca-border);
+  border-radius: 19px;
+  background: var(--fianca-surface);
+  box-shadow: var(--fianca-shadow);
+}
+
+.fianca-page-scope .financeiro-hub .financeiro-hero,
+.fianca-page-scope .financeiro-hub > .financeiro-page > .ops-page-header {
+  border-color: rgba(135, 161, 255, .2) !important;
+  border-radius: 23px !important;
+  background: linear-gradient(118deg, rgba(15, 24, 76, .995), rgba(39, 53, 143, .98) 54%, rgba(20, 102, 119, .95)) !important;
+  box-shadow: 0 24px 64px rgba(18, 30, 91, .2), inset 0 1px 0 rgba(255, 255, 255, .13) !important;
+}
+
+.fianca-page-scope .financeiro-hub .financeiro-hero .ops-page-header {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.fianca-page-scope .financeiro-hub .ops-page-header h1 { color: #fff !important; }
+.fianca-page-scope .financeiro-hub .ops-page-header p,
+.fianca-page-scope .financeiro-hub .ops-page-header .text-dark-muted { color: rgba(226, 235, 255, .72) !important; }
+
+.fianca-page-scope .financeiro-hub .ops-page-header .ops-metric-card {
+  border-color: rgba(255, 255, 255, .12) !important;
+  background: rgba(255, 255, 255, .075) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .075) !important;
+  backdrop-filter: blur(13px);
+}
+
+.fianca-page-scope .financeiro-hub .ops-page-header .metric-label,
+.fianca-page-scope .financeiro-hub .ops-page-header .metric-sub { color: rgba(222, 232, 255, .65) !important; }
+.fianca-page-scope .financeiro-hub .ops-page-header .stat-number { color: #fff !important; }
+.fianca-page-scope .financeiro-hub .ops-page-header .ops-metric-card > div > div:last-child {
+  border-color: rgba(255, 255, 255, .14);
+  background: rgba(255, 255, 255, .08);
+}
+
+.fianca-page-scope .financeiro-hub .ops-data-card {
+  border-color: var(--fianca-border) !important;
+  border-radius: 19px !important;
+  background: var(--fianca-surface) !important;
+  box-shadow: var(--fianca-shadow) !important;
+}
+
+.fianca-page-scope .financeiro-hub .ops-data-card > header {
+  background: linear-gradient(180deg, rgb(var(--color-surface) / .94), rgb(var(--color-surface2) / .42)) !important;
+}
+
+.fianca-page-scope .financeiro-hub .ops-metric-card,
+.fianca-page-scope .financeiro-hub .finance-kpi-card {
+  border-color: var(--fianca-border) !important;
+  border-radius: 17px !important;
+  background: linear-gradient(145deg, rgb(var(--color-surface)), rgb(var(--color-surface2) / .65)) !important;
+  box-shadow: var(--fianca-shadow) !important;
+}
+
 /* Dark mode */
 html.dark .fianca-workspace-bar {
   border-color: rgba(144, 165, 219, .16);
@@ -545,6 +740,19 @@ html.dark[data-workspace='fianca'] [role='dialog'] > [class*='max-w-'] {
   background: rgba(8, 14, 29, .98) !important;
 }
 
+html.dark .apolice-financial-strip,
+html.dark .fianca-page-scope .apolice-brand-tile {
+  border-color: rgba(145, 165, 211, .14);
+  background: rgba(11, 18, 36, .86);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .15);
+}
+
+html.dark .apolice-financial-intro {
+  background: linear-gradient(125deg, rgba(79, 109, 245, .15), rgba(15, 159, 146, .07));
+}
+
+html.dark .apolice-financial-item.is-primary strong { color: #8da0ff; }
+
 /* Motion and responsive behavior */
 .fianca-enter { animation: fianca-enter .48s cubic-bezier(.16, 1, .3, 1) both; }
 .fianca-page-scope > * { animation: fianca-enter .5s cubic-bezier(.16, 1, .3, 1) both; }
@@ -554,6 +762,13 @@ html.dark[data-workspace='fianca'] [role='dialog'] > [class*='max-w-'] {
 @keyframes fianca-modal-in { from { opacity: 0; transform: translateY(26px) scale(.965); filter: blur(5px); } to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
 @keyframes fianca-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fianca-shimmer { to { background-position: -220% 0; } }
+
+@media (max-width: 1180px) {
+  .apolice-financial-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .apolice-financial-intro { grid-column: 1 / -1; }
+  .apolice-financial-item:nth-child(even) { border-left: 0; }
+  .apolice-financial-item { border-top: 1px solid var(--fianca-border); }
+}
 
 @media (max-width: 1380px) {
   .fianca-workspace-identity { min-width: auto; }
@@ -614,6 +829,12 @@ html.dark[data-workspace='fianca'] [role='dialog'] > [class*='max-w-'] {
   .fianca-page-scope .ops-data-card > div:last-child { padding: .88rem; }
   .fianca-page-scope table { min-width: 700px; }
   .fianca-page-scope .kanban-col { width: min(84vw, 292px); }
+  .apolice-financial-strip { border-radius: 16px; }
+  .apolice-financial-intro,
+  .apolice-financial-item { padding: .8rem; }
+  .apolice-financial-item strong { font-size: .8rem; }
+  .apolice-form-card > div:last-child { grid-template-columns: minmax(0, 1fr); }
+  .apolice-form-card .col-span-2 { grid-column: auto; }
   html[data-workspace='fianca'] .glass-modal,
   html[data-workspace='fianca'] [role='dialog'] > [class*='max-w-'] { border-radius: 18px !important; }
   html[data-workspace='fianca'] .glass-modal > .grid { grid-template-columns: 1fr !important; }

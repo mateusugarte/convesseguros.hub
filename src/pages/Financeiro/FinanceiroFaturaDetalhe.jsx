@@ -55,7 +55,12 @@ export default function FinanceiroFaturaDetalhe() {
 
   function abrirApolice(id) {
     sessionStorage.setItem(SCROLL_KEY, String(window.scrollY))
-    navigate(`/apolices/${id}`)
+    navigate(`/apolices/${id}`, {
+      state: {
+        returnTo: `/financeiro/faturas/${encodeURIComponent(imobiliaria)}/${mes}`,
+        returnLabel: 'Voltar para a fatura',
+      },
+    })
   }
 
   return (

@@ -54,7 +54,12 @@ export default function FinanceiroProducaoApolices() {
 
   function abrirApolice(a) {
     sessionStorage.setItem(scrollKey, String(window.scrollY))
-    navigate(`/apolices/${a.id}`)
+    navigate(`/apolices/${a.id}`, {
+      state: {
+        returnTo: `/financeiro/producao/${encodeURIComponent(selecionada)}/apolices${voltarQuery ? `?${voltarQuery}` : ''}`,
+        returnLabel: 'Voltar para as apólices',
+      },
+    })
   }
 
   const meta = resolveImobiliaria(catalogo, selecionada)

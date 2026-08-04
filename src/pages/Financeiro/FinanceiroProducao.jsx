@@ -244,7 +244,12 @@ export default function FinanceiroProducao() {
         ) : (
           <ApolicesListView
             apolices={rows}
-            onRowClick={a => { navigate(`/apolices/${a.id}`) }}
+            onRowClick={a => navigate(`/apolices/${a.id}`, {
+              state: {
+                returnTo: `/financeiro/producao/${encodeURIComponent(selecionada)}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`,
+                returnLabel: 'Voltar para a produção',
+              },
+            })}
             showEmissao
             showComissaoMensal
             showVigencia

@@ -168,7 +168,12 @@ export default function FinanceiroFaturaImobiliaria() {
 
   function abrirApolice(a) {
     sessionStorage.setItem(SCROLL_KEY, String(window.scrollY))
-    navigate(`/apolices/${a.id}`)
+    navigate(`/apolices/${a.id}`, {
+      state: {
+        returnTo: `/financeiro/faturas/${encodeURIComponent(selecionada)}?mes=${mesRef}`,
+        returnLabel: 'Voltar para a fatura',
+      },
+    })
   }
 
   return (

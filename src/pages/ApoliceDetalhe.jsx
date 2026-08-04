@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { fetchApoliceDetalhe, atualizarApolice, excluirApolice, STATUS_EMISSAO_LABELS, FORMA_PAGAMENTO_LABELS, calculatePremioTotal, calculateValorComissao, formatMoneyBR, toNumber } from '../lib/apolices'
 import { editarFicha } from '../lib/fichas'
 import { PRODUTO_LABELS, STATUS_LABELS } from '../lib/fichas'
@@ -9,7 +9,7 @@ import { useToast } from '../contexts/ToastContext'
 import { useAuth } from '../contexts/AuthContext'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ArrowLeft, Save, Trash2, Clock3, ShieldCheck, CalendarDays, Pencil, Check } from 'lucide-react'
+import { ArrowLeft, Save, Trash2, Clock3, ShieldCheck, CalendarDays, Pencil, Check, WalletCards } from 'lucide-react'
 import SeguradoraSelect from '../components/SeguradoraSelect'
 import SeguradoraBadge from '../components/SeguradoraBadge'
 import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
@@ -144,6 +144,7 @@ function Timeline({ apolice }) {
 export default function ApoliceDetalhe() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const toast = useToast()
   const { user } = useAuth()
   const { resolverNome, resolverImobiliariaInfo } = useImobiliaria()
@@ -580,21 +581,33 @@ export default function ApoliceDetalhe() {
   const nomePrincipal = normalizeDisplayText(ficha?.nome_empresa || ficha?.nome_interessado || apolice.nome_interessado) || 'Apólice'
   const valorAluguelFicha = extracaoExtras?.valor_aluguel ?? apolice.valor_aluguel ?? ficha?.valor_aluguel
   const imobInfo = resolverImobiliariaInfo(fichaImobiliaria || apolice.imobiliaria)
+  const returnTo = location.state?.returnTo || '/apolices/lista'
+  const returnState = location.state?.returnState || undefined
+  const returnLabel = location.state?.returnLabel || 'Voltar'
+
+  function voltar() {
+    if (location.state?.returnTo) {
+      navigate(returnTo, { state: returnState })
+      return
+    }
+    if (window.history.length > 1) navigate(-1)
+    else navigate(returnTo)
+  }
 
   return (
     <div className="apolice-detail-page space-y-5 pb-8 animate-fade-in">
       <PageHeader
-        eyebrow="Apólices"
+        eyebrow="Apólice individual"
         title={nomePrincipal}
         className="apolice-hero"
-        description="Detalhe completo da apólice com edição de dados operacionais, vigência, pagamento, documentos e histórico."
+        description={`${numeroApolice ? `Apólice ${numeroApolice}` : 'Emissão em andamento'} · ${resolverNome(fichaImobiliaria || apolice.imobiliaria) || 'imobiliária não informada'}. Edite os dados, confira o financeiro e gerencie os documentos no mesmo fluxo.`}
         actions={(
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/apolices/lista')}
+              onClick={voltar}
               className="flex items-center gap-1.5 rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted transition-colors hover:border-brand-accent/50 hover:text-dark-text"
             >
-              <ArrowLeft className="h-3.5 w-3.5" /> Voltar
+              <ArrowLeft className="h-3.5 w-3.5" /> {returnLabel}
             </button>
             <button
               onClick={() => salvar()}
@@ -649,9 +662,35 @@ export default function ApoliceDetalhe() {
         )}
       />
 
-      <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
+      <section className="apolice-financial-strip" aria-label="Resumo financeiro da apólice">
+        <div className="apolice-financial-intro">
+          <span><WalletCards /></span>
+          <div>
+            <small>Resumo financeiro</small>
+            <strong>Valores da emissão</strong>
+          </div>
+        </div>
+        <div className="apolice-financial-item">
+          <small>Prêmio líquido</small>
+          <strong>{premioLiquidoNum > 0 ? formatMoneyBR(premioLiquidoNum) : '—'}</strong>
+        </div>
+        <div className="apolice-financial-item is-primary">
+          <small>Prêmio total</small>
+          <strong>{premioTotal > 0 ? formatMoneyBR(premioTotal) : '—'}</strong>
+        </div>
+        <div className="apolice-financial-item">
+          <small>Comissão prevista</small>
+          <strong>{valorComissao > 0 ? formatMoneyBR(valorComissao) : '—'}</strong>
+        </div>
+        <div className="apolice-financial-item">
+          <small>Pagamento</small>
+          <strong>{FORMA_PAGAMENTO_LABELS[formaPagamento] || (qtdParcelas ? `${qtdParcelas}x` : '—')}</strong>
+        </div>
+      </section>
+
+      <div className="apolice-detail-grid grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
         <div className="space-y-5">
-          <DataCard title="Contexto da Apólice" subtitle="Marcas e vínculo operacional desta emissão." bodyClassName="grid gap-4 lg:grid-cols-2">
+          <DataCard title="Contexto da Apólice" subtitle="Marcas e vínculo operacional desta emissão." className="apolice-context-card" bodyClassName="grid gap-4 lg:grid-cols-2">
             <div className="apolice-brand-tile">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora vinculada</p>
               <div className="mt-4 flex items-center justify-between gap-4">
@@ -673,7 +712,7 @@ export default function ApoliceDetalhe() {
               </div>
             </div>
           </DataCard>
-          <DataCard title="Dados da Ficha" subtitle={ficha ? 'Base de origem da apólice.' : 'Dados preservados diretamente na apólice.'} bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
+          <DataCard title="Dados da Ficha" subtitle={ficha ? 'Base de origem da apólice.' : 'Dados preservados diretamente na apólice.'} className="apolice-form-card" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
               {!ficha && (
                 <div className="col-span-2">
                   <span className="inline-flex items-center rounded-full bg-status-warning/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-status-warning">
@@ -744,7 +783,7 @@ export default function ApoliceDetalhe() {
               )}
             </DataCard>
 
-          <DataCard title="Dados do Proprietário" subtitle="Campos que podem ser editados nesta tela." bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
+          <DataCard title="Dados do Proprietário" subtitle="Campos que podem ser editados nesta tela." className="apolice-form-card" bodyClassName="grid grid-cols-2 gap-x-6 gap-y-4">
             <EditField label="Nome" value={proprietarioNome} onChange={setProprietarioNome} placeholder="Nome do proprietário" />
             <EditField label="Celular" value={proprietarioCel} onChange={setProprietarioCel} placeholder="(11) 99999-9999" />
             <EditField label="Email" type="email" value={proprietarioEmail} onChange={setProprietarioEmail} placeholder="proprietario@email.com" />
@@ -754,8 +793,8 @@ export default function ApoliceDetalhe() {
           </DataCard>
         </div>
 
-        <div className="space-y-5">
-          <DataCard title="Dados da Apólice" bodyClassName="space-y-4">
+        <div className="apolice-detail-rail space-y-5">
+          <DataCard title="Dados da Apólice" subtitle="Identificação e etapa atual da emissão." className="apolice-form-card" bodyClassName="space-y-4">
             <EditField label="Número da Apólice" value={numeroApolice} onChange={setNumeroApolice} placeholder="000000000" required />
             <EditField label="Número da Proposta" value={numeroProposta} onChange={setNumeroProposta} placeholder="Opcional" />
             <EditField label="Data de Emissão" type="date" value={dataEmissao} onChange={setDataEmissao} />
@@ -771,7 +810,7 @@ export default function ApoliceDetalhe() {
             />
           </DataCard>
 
-          <DataCard title="Fazer upload da apólice" subtitle="Use o PDF para acionar a automação desta emissão." bodyClassName="space-y-3">
+          <DataCard title="Documento da apólice" subtitle="Envie o PDF para anexar e preencher os campos automaticamente." className="apolice-upload-card" bodyClassName="space-y-3">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <p className="text-xs text-dark-muted">
                 Envie a apólice em PDF e preencha os dados usando a seguradora selecionada.
@@ -939,7 +978,7 @@ export default function ApoliceDetalhe() {
             )}
           </DataCard>
 
-          <DataCard title="Vigência e Pagamento" bodyClassName="space-y-4">
+          <DataCard title="Vigência e Pagamento" subtitle="Condições que alimentam a produção e o financeiro." className="apolice-payment-card" bodyClassName="space-y-4">
             <EditField label="Início da Vigência" type="date" value={inicioVigencia} onChange={setInicioVigencia} required />
             <EditField label="Fim da Vigência" type="date" value={fimVigencia} onChange={setFimVigencia} required />
             <div>
@@ -951,14 +990,6 @@ export default function ApoliceDetalhe() {
             <EditField label="Prêmio Líquido (R$)" type="text" inputMode="decimal" value={premioLiquido} onChange={setPremioLiquido} placeholder="0,00" required />
             <EditField label="% Comissão" type="text" inputMode="decimal" value={pctComissao} onChange={setPctComissao} placeholder="Ex: 10,00" required />
             <EditField label="% Desconto" type="text" inputMode="decimal" value={pctDesconto} onChange={setPctDesconto} placeholder="Ex: 5,00" required />
-            <div className="apolice-total-box text-sm text-dark-text">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Valor total do seguro</p>
-              <p className="mt-1 font-semibold">{premioTotal != null ? formatMoneyBR(premioTotal) : '—'}</p>
-            </div>
-            <div className="apolice-total-box text-sm text-dark-text">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-dark-muted">Comissão calculada</p>
-              <p className="mt-1 font-semibold">{valorComissao != null ? formatMoneyBR(valorComissao) : '—'}</p>
-            </div>
             <SelectField
               label="Forma de Pagamento"
               value={formaPagamento}

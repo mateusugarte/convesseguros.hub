@@ -1,5 +1,31 @@
 # CURRENT TASK
 
+## Verificar fichas: conciliacao entre a planilha de respostas do Forms e o sistema (2026-08-05, Claude — CONCLUIDA, pendente instalacao do Apps Script e das env vars)
+
+Objetivo: botao "Verificar fichas" em `/fichas` que le a planilha de respostas do Google Forms (ultimos 30 dias) e aponta quais respostas nunca viraram ficha no Supabase, com importacao de 1 clique pelo webhook oficial do n8n.
+
+Motivacao: o fluxo Forms -> Apps Script (`onFormSubmit`) -> webhook n8n -> `INSERT fichas` perde a ficha quando o Apps Script falha (o usuario reportou `Error code INTERNAL` na execucao do envio). A resposta fica na planilha e nunca chega ao sistema, sem nenhum alarme.
+
+Decisoes do usuario: leitura via Apps Script Web App (sem credencial Google nova); botao na pagina Fichas; resultado lista as divergencias com importacao manual de 1 clique.
+
+Arquivos criados: `apps-script/verificar-fichas.gs`, `src/lib/fichasConciliacao.js`, `src/lib/fichasConciliacao.test.mjs`, `src/lib/fichasVerificacao.js`, `api/verificar-fichas.js`, `src/components/ModalVerificarFichas.jsx`, `docs/VERIFICAR_FICHAS.md`. Alterados: `src/pages/Fichas.jsx` (botao nas duas visoes + estado do modal), `src/pages/Fichas/CONTEXT.md`, `package.json` (suite de testes).
+
+**Como a comparacao decide.** Chave primaria e CPF so digitos; fallback e nome normalizado + 8 ultimos digitos do celular quando a resposta nao tem CPF. Cada ficha so pode satisfazer UMA linha da planilha ("claim") — sem isso, duas respostas do mesmo CPF no mes casariam com a mesma ficha e uma ausencia real passaria como "tudo certo". Ficha do mesmo CPF fora da janela de 2 dias vira **incerta** (revisao humana), nunca faltante: reimportar geraria duplicata. A busca de fichas recua 15 dias alem da janela pedida pelo mesmo motivo.
+
+**Importacao pelo caminho oficial.** A tela manda apenas `{fonte, linha}`; o servidor rele a planilha, reconfere que a linha ainda e faltante e reenvia pelo webhook do n8n. Tres consequencias: a normalizacao de imobiliaria continua sendo a do Code Node (sem segunda implementacao para manter), o conteudo importado e obrigatoriamente o que esta na planilha (nao ha caminho para gravar payload adulterado pelo cliente) e a reconferencia evita duplicar se outra pessoa importou no meio.
+
+**Nota sobre o regex de acentos.** `normalizarTexto` usa `[̀-ͯ]` escapado de proposito. A versao com os caracteres combinantes literais funciona, mas e exatamente a forma que se corrompeu no Code Node `Normalizar Seguro Auto` do n8n (entrada de 2026-08-04), onde `̀` virou `?` e o range passou a apagar todas as letras.
+
+Validacao: `npm test` verde com 216/216 (18 testes novos). `@babel/parser` passou nos 6 arquivos JS/JSX novos e alterados; `node --check` passou no `.gs`. `npm run check:page-contexts` acusa so a pendencia pre-existente de `GestaoComercial.jsx`. `npm run build` continua bloqueado nesta maquina: o `node_modules` tem binarios de Windows (`@esbuild/win32-x64` no lugar de `darwin-arm64`, `.bin/vite` sem permissao de execucao) — mesmo bloqueio ja registrado nas entradas anteriores, nao reinstalei para nao alterar o ambiente.
+
+**PENDENTE PARA FUNCIONAR EM PRODUCAO** (passo a passo em `docs/VERIFICAR_FICHAS.md`): publicar o Apps Script como App da Web ("Executar como: Eu", "Quem pode acessar: Qualquer pessoa") com a propriedade `CONVES_TOKEN`, e cadastrar `FICHAS_SHEET_URL`, `FICHAS_SHEET_TOKEN` e `FICHAS_WEBHOOK_URL` na Vercel. Sem isso a rota responde 503 com instrucao e a tela nao quebra.
+
+Riscos remanescentes: e diagnostico sob demanda, nao alarme — ninguem e avisado sem clicar no botao; nao conserta a causa do `INTERNAL` no `onFormSubmit`, so reduz o dano; renomear pergunta no Forms continua exigindo atualizar o Code Node do n8n, senao a ficha entra com campos nulos.
+
+Responsavel: Claude. Proximo passo: instalar o Apps Script, configurar as env vars e rodar a primeira verificacao — a ficha orfa da **Neusa Aparecida de Araujo Machado** (CPF 06693260896, cliente Auto criado em 31/07 sem cotacao, cujo payload do Forms era irrecuperavel pelo n8n) e justamente o tipo de caso que esta ferramenta recupera a partir da planilha.
+
+---
+
 ## Configuracao de leitura de PDF por seguradora (cotacoes e apolices Auto) (2026-08-04, Claude — CONCLUIDA, migration 62 pendente)
 
 Objetivo: fazer a leitura do PDF dentro do proprio sistema. Em Configuracoes, dois botoes ("Configurar cotacoes Auto" e "Configurar apolices Auto") abrem uma grade com o card de cada seguradora cadastrada (logo + status verde/amarelo/vermelho conforme o mapeamento). Ao clicar no card, o usuario sobe um PDF de amostra, clica em "Mapear", o sistema localiza sozinho cada informacao que o sistema pede hoje, o usuario confirma campo a campo (correto / incorreto, com candidatos alternativos), visualiza o PDF na propria tela e marca a configuracao como concluida.

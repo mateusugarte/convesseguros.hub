@@ -61,6 +61,27 @@ Hub central de fichas: visão lista/kanban com filtros por produto, status, imob
   pela lista e pela tela de detalhe.
 - A camada visual compartilhada dos boards fica em `styles/kanban-ui.css`.
 
+## Verificar fichas (conciliação com a planilha do Forms)
+- Botão **Verificar fichas** no header, tanto na visão geral (`/fichas`) quanto na visão de
+  produto. Abre `components/ModalVerificarFichas.jsx`.
+- **Por que existe:** a entrada é Forms → Apps Script (`onFormSubmit`) → webhook n8n →
+  `INSERT fichas`. Quando o Apps Script falha (o caso relatado foi `Error code INTERNAL`),
+  a resposta fica só na planilha e nada avisa. O botão compara os dois lados.
+- Caminho: `lib/fichasVerificacao.js` → `POST /api/verificar-fichas` → Apps Script Web App
+  (`apps-script/verificar-fichas.gs`) + `SELECT` em `fichas`. A comparação em si é pura e
+  fica em `lib/fichasConciliacao.js` (testada em `lib/fichasConciliacao.test.mjs`).
+- **Regra de matching:** CPF só dígitos; fallback nome normalizado + 8 últimos dígitos do
+  celular quando a resposta não tem CPF. Cada ficha só pode satisfazer UMA linha da planilha
+  ("claim") — sem isso, duas respostas do mesmo CPF no mês casariam com a mesma ficha e uma
+  ausência passaria batida. Ficha do mesmo CPF fora da janela de 2 dias vira **incerta**
+  (revisão humana), nunca faltante — evita reimportar e duplicar.
+- A importação manda só `{fonte, linha}`; o servidor relê a planilha e reenvia pelo webhook
+  oficial do n8n. Assim a normalização de imobiliária continua sendo a do n8n, sem segunda
+  implementação, e não existe caminho para gravar ficha com payload adulterado pelo cliente.
+- Configuração fica em variáveis de ambiente na Vercel (`FICHAS_SHEET_URL`,
+  `FICHAS_SHEET_TOKEN`, `FICHAS_WEBHOOK_URL`, ou `FICHAS_SHEETS` para vários formulários).
+  Sem elas, a rota responde 503 com instrução — a tela não quebra.
+
 ## Busca no Kanban
 - Barra de busca simples acima do card "Recorte de trabalho" (filtro de período/mês),
   visível só na view Kanban (`PageShell` prop `topBar`). Filtra client-side (sem nova query)

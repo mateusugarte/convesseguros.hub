@@ -28,6 +28,7 @@ import ModalFinalizar from '../components/ModalFinalizar'
 import ModalFicha from '../components/ModalFicha'
 import KanbanFichas from '../components/KanbanFichas'
 import RelatorioMensal from '../components/RelatorioMensal'
+import ModalVerificarFichas from '../components/ModalVerificarFichas'
 import FichaStatusBadge from '../components/FichaStatusBadge'
 import { AVATAR_COLORS, BRAND, PRODUTO_COLORS, STATUS_CHART_COLORS as TOKEN_STATUS_CHART_COLORS } from '../design-system/tokens'
 import {
@@ -35,6 +36,7 @@ import {
   ChevronRight, Search, Download, Plus,
   FileText, Clock, CheckCircle2, XCircle,
   AlignJustify, Pencil, TrendingUp, TrendingDown, BarChart2, UserSquare2, AlertCircle,
+  ShieldCheck,
 } from 'lucide-react'
 
 // -- Chart theme constants -----------------------------------------------------
@@ -338,7 +340,7 @@ function DarkTip({ active, payload, label }) {
 
 // -- Visão Geral ---------------------------------------------------------------
 
-function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFichasCount }) {
+function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, onVerificar, minhasFichasCount }) {
   const { theme }                  = useTheme()
   const [kpis, setKpis]           = useState(null)
   const [statusDist, setStatusDist] = useState([])
@@ -410,6 +412,13 @@ function VisaoGeral({ contagem, onSelectProduto, onCriar, onRelatorio, minhasFic
                 </span>
               )}
             </Link>
+            <button
+              onClick={onVerificar}
+              title="Compara a planilha de respostas do Forms com as fichas do sistema"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" /> Verificar fichas
+            </button>
             <button
               onClick={onRelatorio}
               className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
@@ -863,7 +872,7 @@ function TabelaPassadas({ fichas, user, navigate, onEditar, resolverNome }) {
 
 // -- PageShell -----------------------------------------------------------------
 
-function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, onRelatorio, viewToggle, selectorSlot, topBar, children }) {
+function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, onRelatorio, onVerificar, viewToggle, selectorSlot, topBar, children }) {
   return (
     <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-5 animate-fade-in">
       <PageHeader
@@ -880,6 +889,13 @@ function PageShell({ prodInfo, mesLabel, anoLabel, onHome, onProduto, onCreate, 
               Visão geral
             </button>
             {viewToggle}
+            <button
+              onClick={onVerificar}
+              title="Compara a planilha de respostas do Forms com as fichas do sistema"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" /> Verificar fichas
+            </button>
             <button
               onClick={onRelatorio}
               className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-dark-border text-xs text-dark-muted hover:text-dark-text hover:border-brand-accent/50 transition-colors"
@@ -966,6 +982,7 @@ export default function Fichas() {
   const [criar,            setCriar]            = useState(false)
   const [editar,           setEditar]           = useState(null)
   const [relatorio,        setRelatorio]        = useState(false)
+  const [verificar,        setVerificar]        = useState(false)
   const [minhasFichasCount, setMinhasFichasCount] = useState(0)
 
   // Restaurar Kanban ao voltar de /fichas/:id
@@ -1145,12 +1162,19 @@ export default function Fichas() {
           onSelectProduto={changeProduto}
           onCriar={() => setCriar(true)}
           onRelatorio={() => setRelatorio(true)}
+          onVerificar={() => setVerificar(true)}
           minhasFichasCount={minhasFichasCount}
         />
         {criar && (
           <ModalFicha ficha={null} onClose={() => setCriar(false)} onSuccess={() => { setCriar(false); fetchContagemProdutos().then(setContagem) }} />
         )}
         {relatorio && <RelatorioMensal onClose={() => setRelatorio(false)} />}
+        {verificar && (
+          <ModalVerificarFichas
+            onClose={() => setVerificar(false)}
+            onImportou={() => fetchContagemProdutos().then(setContagem)}
+          />
+        )}
       </>
     )
   }
@@ -1212,6 +1236,7 @@ export default function Fichas() {
       onProduto={() => { setProduto('todos'); setView('kanban'); navigate('/fichas/todos') }}
       onCreate={() => setCriar(true)}
       onRelatorio={() => setRelatorio(true)}
+      onVerificar={() => setVerificar(true)}
       viewToggle={<ViewToggle view={view} onChange={setView} />}
       selectorSlot={selectorSlot}
       topBar={view === 'kanban' ? kanbanSearchBar : null}
@@ -1390,6 +1415,9 @@ export default function Fichas() {
         <ModalFicha ficha={editar} onClose={() => setEditar(null)} onSuccess={onFichaSuccess} />
       )}
       {relatorio && <RelatorioMensal onClose={() => setRelatorio(false)} />}
+      {verificar && (
+        <ModalVerificarFichas onClose={() => setVerificar(false)} onImportou={refresh} />
+      )}
     </PageShell>
   )
 }

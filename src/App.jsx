@@ -65,6 +65,8 @@ const Vendas             = lazy(() => import('./pages/comercial/Vendas'))
 const Calendario         = lazy(() => import('./pages/comercial/Calendario'))
 const Jornadas           = lazy(() => import('./pages/comercial/Jornadas'))
 const Configuracoes      = lazy(() => import('./pages/Configuracoes'))
+const AutoPdfConfigLista       = lazy(() => import('./pages/config/AutoPdfConfigLista'))
+const AutoPdfConfigSeguradora  = lazy(() => import('./pages/config/AutoPdfConfigSeguradora'))
 
 // Treinamentos
 const TreinamentosDashboard = lazy(() => import('./pages/treinamentos/TreinamentosDashboard'))
@@ -147,6 +149,11 @@ function AppRoutes() {
           <Route path="comercial/calendario" element={<Calendario />} />
           <Route path="comercial/jornadas"   element={<Jornadas />} />
           <Route path="configuracoes"        element={<Configuracoes />} />
+          {/* Configuracao da leitura de PDF por seguradora (setor Auto) */}
+          <Route path="configuracoes/auto/cotacoes"                element={<AutoPdfConfigLista tipo="cotacao" />} />
+          <Route path="configuracoes/auto/cotacoes/:seguradoraId"  element={<AutoPdfConfigSeguradora tipo="cotacao" />} />
+          <Route path="configuracoes/auto/apolices"                element={<AutoPdfConfigLista tipo="apolice" />} />
+          <Route path="configuracoes/auto/apolices/:seguradoraId"  element={<AutoPdfConfigSeguradora tipo="apolice" />} />
           {/* Treinamentos */}
           <Route path="treinamentos"                    element={<TreinamentosDashboard />} />
           <Route path="treinamentos/setores/:setorId"   element={<TreinamentosSetor />} />

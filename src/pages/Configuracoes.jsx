@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { PageHeader, DataCard } from '../components/ui'
 import { Avatar } from '../components/ui/Avatar'
 import { useTheme } from '../contexts/ThemeContext'
@@ -18,7 +19,27 @@ import {
   Users2,
   UserPlus,
   BadgeCheck,
+  ChevronRight,
+  FileSearch,
+  FileSignature,
 } from 'lucide-react'
+
+// Cada atalho abre a grade de seguradoras daquele fluxo, onde o mapeamento do
+// PDF e configurado seguradora a seguradora.
+const AUTO_PDF_ATALHOS = [
+  {
+    to: '/configuracoes/auto/cotacoes',
+    icon: FileSearch,
+    title: 'Configurar cotacoes Auto',
+    description: 'Leitura do orcamento da seguradora para montar o comparativo da cotacao.',
+  },
+  {
+    to: '/configuracoes/auto/apolices',
+    icon: FileSignature,
+    title: 'Configurar apolices Auto',
+    description: 'Leitura da proposta / apolice emitida para preencher a emissao e a apolice.',
+  },
+]
 
 const options = [
   {
@@ -391,6 +412,30 @@ export default function Configuracoes() {
           </div>
         </div>
       )}
+
+      <DataCard
+        title="Automacoes de PDF do setor Auto"
+        subtitle="Configure, por seguradora, de onde o sistema le cada informacao do PDF"
+      >
+        <div className="grid gap-3 md:grid-cols-2">
+          {AUTO_PDF_ATALHOS.map(atalho => (
+            <Link
+              key={atalho.to}
+              to={atalho.to}
+              className="group flex items-start gap-3 rounded-2xl border border-dark-border p-4 transition-all hover:-translate-y-0.5 hover:border-status-info/50 hover:bg-status-info/5"
+            >
+              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-status-info/15 text-status-info">
+                <atalho.icon className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-dark-text">{atalho.title}</p>
+                <p className="mt-1 text-sm text-dark-muted">{atalho.description}</p>
+              </div>
+              <ChevronRight className="ml-auto h-4 w-4 flex-shrink-0 text-dark-muted transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          ))}
+        </div>
+      </DataCard>
 
       <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
         <div className="space-y-4">

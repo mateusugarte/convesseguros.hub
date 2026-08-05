@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { CalendarClock, CheckCircle2, Clock, ExternalLink, PencilLine, RefreshCw, Send, Trash2, XCircle } from 'lucide-react'
+import { CalendarClock, CheckCircle2, Clock, ExternalLink, PencilLine, RefreshCw, Search, Send, Trash2, X, XCircle } from 'lucide-react'
 import {
   atualizarStatusRenovacao,
   cancelarRenovacao,
@@ -64,6 +64,29 @@ function formatarData(str) {
   return new Date(`${str}T12:00:00`).toLocaleDateString('pt-BR')
 }
 
+function normalizeSearch(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
+
+function renovacaoMatches(item, query) {
+  if (!query) return true
+  const apolice = item.apolices_auto || {}
+  const cliente = item.clientes_auto || {}
+  return normalizeSearch([
+    cliente.nome_completo,
+    cliente.celular,
+    cliente.telefone,
+    cliente.email,
+    apolice.nome_cliente,
+    apolice.numero_apolice,
+    apolice.modelo_veiculo,
+    apolice.placa,
+    item.nome_segurado_anterior,
+    item.seguradora,
+    item.identificacao_veiculo,
+  ].filter(Boolean).join(' ')).includes(normalizeSearch(query))
+}
+
 
 export default function AutoRenovacoes() {
   const navigate = useNavigate()
@@ -73,8 +96,9 @@ export default function AutoRenovacoes() {
   // O banner do Dashboard e o botao "Puxar renovacoes" navegam levando o mes
   // como query param, para a lista abrir no mesmo recorte.
   const [mesRef, setMesRef] = useState(() => searchParams.get('mes') || currentMonthRef())
-  const [periodo, setPeriodo] = useState('mes_atual')
-  const [acompanharFiltro, setAcompanharFiltro] = useState('todas')
+  const [periodo, setPeriodo] = useState(() => localStorage.getItem('auto-renovacoes-periodo') || 'mes_atual')
+  const [acompanharFiltro, setAcompanharFiltro] = useState(() => localStorage.getItem('auto-renovacoes-status') || 'todas')
+  const [busca, setBusca] = useState('')
   const mesSeguinteRef = useMemo(() => shiftMonth(mesRef, 1), [mesRef])
 
   // Mantem a URL em sincronia com o mes da lista, para que recarregar ou
@@ -87,6 +111,11 @@ export default function AutoRenovacoes() {
     next.set('mes', mesRef)
     setSearchParams(next, { replace: true })
   }, [mesRef, searchParams, setSearchParams])
+
+  useEffect(() => {
+    localStorage.setItem('auto-renovacoes-periodo', periodo)
+    localStorage.setItem('auto-renovacoes-status', acompanharFiltro)
+  }, [periodo, acompanharFiltro])
 
   const { data: renovacoes = [], isLoading, isError: isErrorRenovacoes, error: errorRenovacoes } = useQuery({
     queryKey: ['auto-renovacoes', periodo, mesRef],
@@ -189,9 +218,16 @@ export default function AutoRenovacoes() {
   }, [todasRenovacoes])
 
   const acompanharLista = useMemo(() => {
-    if (acompanharFiltro === 'todas') return todasRenovacoes
-    return todasRenovacoes.filter(item => getRenewalQuoteStatus(item) === acompanharFiltro)
-  }, [todasRenovacoes, acompanharFiltro])
+    const filtered = acompanharFiltro === 'todas'
+      ? todasRenovacoes
+      : todasRenovacoes.filter(item => getRenewalQuoteStatus(item) === acompanharFiltro)
+    return filtered.filter(item => renovacaoMatches(item, busca))
+  }, [todasRenovacoes, acompanharFiltro, busca])
+
+  const renovacoesFiltradas = useMemo(
+    () => renovacoes.filter(item => renovacaoMatches(item, busca)),
+    [renovacoes, busca],
+  )
 
   return (
     <div className="auto-page space-y-6 animate-fade-in">
@@ -262,20 +298,32 @@ export default function AutoRenovacoes() {
       </DataCard>
 
       <FilterBar>
-        <div className="flex flex-wrap items-center gap-2">
-          {PERIODOS.map(item => (
-            <button
-              key={item.value}
-              onClick={() => setPeriodo(item.value)}
-              className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-all ${
-                periodo === item.value
-                  ? 'border-brand-accent bg-brand-accent/10 text-status-info'
-                  : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
+        <div className="flex w-full flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            {PERIODOS.map(item => (
+              <button
+                key={item.value}
+                onClick={() => setPeriodo(item.value)}
+                className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-all ${
+                  periodo === item.value
+                    ? 'border-brand-accent bg-brand-accent/10 text-status-info'
+                    : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <label className="auto-renewal-search">
+            <Search aria-hidden="true" />
+            <input
+              value={busca}
+              onChange={event => setBusca(event.target.value)}
+              placeholder="Cliente, apólice, placa, veículo ou seguradora"
+              aria-label="Buscar renovações"
+            />
+            {busca && <button type="button" onClick={() => setBusca('')} aria-label="Limpar busca"><X aria-hidden="true" /></button>}
+          </label>
         </div>
       </FilterBar>
 
@@ -284,11 +332,11 @@ export default function AutoRenovacoes() {
           <div className="py-12 text-center text-sm text-dark-muted">Carregando renovações...</div>
         ) : isErrorRenovacoes ? (
           <EmptyState icon={<XCircle className="w-6 h-6" />} title="Erro ao carregar renovações" description={errorRenovacoes?.message || 'Tente recarregar a página.'} />
-        ) : renovacoes.length === 0 ? (
+        ) : renovacoesFiltradas.length === 0 ? (
           <EmptyState icon={<RefreshCw className="w-6 h-6" />} title="Nenhuma renovação no recorte" description="Quando houver itens no período selecionado, eles aparecerão aqui." />
         ) : (
           <div className="space-y-3">
-            {renovacoes.map(item => {
+            {renovacoesFiltradas.map(item => {
               const apolice = item.apolices_auto || {}
               const renovacaoInfo = RENOVACAO_STATUS[item.status_renovacao || 'pendente'] || RENOVACAO_STATUS.pendente
               const dias = diasParaVencer(item.vigencia_fim)

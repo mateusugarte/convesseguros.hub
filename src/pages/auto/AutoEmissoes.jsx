@@ -11,6 +11,7 @@ import {
   salvarResultadoCotacao,
 } from '../../lib/auto'
 import { PageHeader, MetricCard, DataCard, DatePicker, FilterBar, EmptyState } from '../../components/ui'
+import { AutoPdfAutomation } from '../../components/auto'
 import SeguradoraBadge from '../../components/SeguradoraBadge'
 import SeguradoraSelect from '../../components/SeguradoraSelect'
 import { useToast } from '../../contexts/ToastContext'
@@ -22,6 +23,7 @@ import {
 import { uploadDocumento } from '../../lib/documentos'
 import { toNumber } from '../../lib/apolices'
 import { limparNomeSegurado, parseAutoHistoricoPlanilha, somarUmAno } from '../../lib/autoHistoricoImport.js'
+import { parseOrcamentoAuto, parsePropostaAuto } from '../../lib/autoPdfParser.js'
 
 const COLUNAS = [
   { id: 'pendentes', label: 'Cotacoes pendentes', hint: 'entradas novas do n8n e itens sem andamento', tone: 'warning' },
@@ -1084,6 +1086,11 @@ function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
 function ModalResultado({ emissao, onClose, onSave, isSaving }) {
   const [resultado, setResultado] = useState('aprovada')
   const [seguradoras, setSeguradoras] = useState(() => getSeguradorasResultadoInicial(emissao))
+  const [pdfFile, setPdfFile] = useState(null)
+  const [pdfStatus, setPdfStatus] = useState('idle')
+  const [pdfResult, setPdfResult] = useState(null)
+  const [pdfError, setPdfError] = useState('')
+  const [pdfApplied, setPdfApplied] = useState(false)
 
   const c = emissao.cotacoes_auto || {}
   const nome = nomeEmissao(emissao)
@@ -1106,6 +1113,45 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
 
   function removeSeg(idx) {
     setSeguradoras(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  async function handlePdf(file) {
+    setPdfFile(file)
+    setPdfResult(null)
+    setPdfError('')
+    setPdfApplied(false)
+    if (!file) {
+      setPdfStatus('idle')
+      return
+    }
+    const isPdf = file.type === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf')
+    if (!isPdf) {
+      setPdfStatus('attached')
+      return
+    }
+    setPdfStatus('reading')
+    try {
+      const parsed = await parseOrcamentoAuto(file)
+      setPdfResult(parsed)
+      setPdfStatus('ready')
+    } catch (error) {
+      setPdfError(error?.message || 'O conteúdo do documento não pôde ser extraído.')
+      setPdfStatus('error')
+    }
+  }
+
+  function applyPdf() {
+    const imported = pdfResult?.seguradora_cotada
+    if (!imported) return
+    const next = { ...NOVA_SEGURADORA, ...imported }
+    setSeguradoras(current => {
+      const matchingIndex = current.findIndex(item => item.nome && item.nome === next.nome)
+      if (matchingIndex >= 0) return current.map((item, index) => index === matchingIndex ? { ...item, ...next } : item)
+      const emptyIndex = current.findIndex(item => !item.nome)
+      if (emptyIndex >= 0) return current.map((item, index) => index === emptyIndex ? next : item)
+      return [...current, next]
+    })
+    setPdfApplied(true)
   }
 
   function handleSave() {
@@ -1169,6 +1215,18 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
 
         {resultado === 'aprovada' && (
           <div className="space-y-3">
+            <AutoPdfAutomation
+              mode="orcamento"
+              file={pdfFile}
+              status={pdfStatus}
+              result={pdfResult}
+              error={pdfError}
+              applied={pdfApplied}
+              onFile={handlePdf}
+              onApply={applyPdf}
+              onClear={() => { setPdfFile(null); setPdfStatus('idle'); setPdfResult(null); setPdfError(''); setPdfApplied(false) }}
+              compact
+            />
             <p className="text-xs text-dark-muted">
               Adicione ao menos uma seguradora com o resultado da cotacao.
             </p>
@@ -1368,7 +1426,17 @@ export default function AutoEmissoes() {
   const [manualStage, setManualStage] = useState('proposta_transmitida')
   const [manualForm, setManualForm] = useState(FORM_MANUAL_VAZIO)
   const [manualDocumento, setManualDocumento] = useState(null)
+  const [manualPdfStatus, setManualPdfStatus] = useState('idle')
+  const [manualPdfResult, setManualPdfResult] = useState(null)
+  const [manualPdfError, setManualPdfError] = useState('')
+  const [manualPdfApplied, setManualPdfApplied] = useState(false)
   const manualFileRef = useRef(null)
+  const [emissaoDocumento, setEmissaoDocumento] = useState(null)
+  const [emissaoPdfStatus, setEmissaoPdfStatus] = useState('idle')
+  const [emissaoPdfResult, setEmissaoPdfResult] = useState(null)
+  const [emissaoPdfError, setEmissaoPdfError] = useState('')
+  const [emissaoPdfApplied, setEmissaoPdfApplied] = useState(false)
+  const emissaoFileRef = useRef(null)
   const importFileRef = useRef(null)
   const importHistoricoFileRef = useRef(null)
   const kanbanScrollRef = useRef(null)
@@ -1378,6 +1446,7 @@ export default function AutoEmissoes() {
   const [periodo, setPeriodo] = useState(periodoInicial)
   const [filtroInicio, setFiltroInicio] = useState(initialRange.inicio)
   const [filtroFim, setFiltroFim] = useState(initialRange.fim)
+  const [buscaPipeline, setBuscaPipeline] = useState('')
   const [importResumo, setImportResumo] = useState(null)
   const [importHistoricoResumo, setImportHistoricoResumo] = useState(null)
   const [mesAnoEmissoes, setMesAnoEmissoes] = useState(() => {
@@ -1435,15 +1504,52 @@ export default function AutoEmissoes() {
     queryFn: () => getRenovacoesPendentesSemCotacao(),
   })
 
+  const termoPipeline = buscaPipeline.trim().toLocaleLowerCase('pt-BR')
+  const matchesPipelineSearch = useCallback((item) => {
+    if (!termoPipeline) return true
+    const cotacao = item?.cotacoes_auto || item?.cotacao || {}
+    const cliente = item?.clientes_auto || item?.cliente || cotacao?.clientes_auto || {}
+    const apolice = getApoliceVinculada(item) || item?.apolices_auto || {}
+    return [
+      nomeEmissao(item),
+      cpfEmissao(item),
+      celularEmissao(item),
+      item?.nome_cliente,
+      item?.cpf_cliente,
+      item?.modelo_veiculo,
+      item?.placa,
+      item?.numero_apolice,
+      item?.responsavel,
+      item?.seguradora,
+      cotacao?.nome_cliente,
+      cotacao?.cpf_cliente,
+      cotacao?.modelo_veiculo,
+      cotacao?.placa,
+      cliente?.nome_completo,
+      cliente?.cpf,
+      apolice?.numero_apolice,
+      apolice?.seguradora,
+    ].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR').includes(termoPipeline)
+  }, [termoPipeline])
+
+  const emissoesPipeline = useMemo(
+    () => emissoes.filter(matchesPipelineSearch),
+    [emissoes, matchesPipelineSearch],
+  )
+  const renovacoesPipeline = useMemo(
+    () => renovacoesPendentes.filter(matchesPipelineSearch),
+    [renovacoesPendentes, matchesPipelineSearch],
+  )
+
   const kanbanCounts = useMemo(() => {
     const counts = new Map(KANBAN_STAGES.map(stage => [stage.id, 0]))
-    counts.set('renovacoes', renovacoesPendentes.length)
-    emissoes.forEach(item => {
+    counts.set('renovacoes', renovacoesPipeline.length)
+    emissoesPipeline.forEach(item => {
       const stage = getEmissaoColuna(item)
       counts.set(stage, (counts.get(stage) || 0) + 1)
     })
     return counts
-  }, [emissoes, renovacoesPendentes.length])
+  }, [emissoesPipeline, renovacoesPipeline.length])
 
   const updateKanbanNavigation = useCallback(() => {
     const container = kanbanScrollRef.current
@@ -1718,6 +1824,63 @@ export default function AutoEmissoes() {
     })
   }
 
+  async function handleEmissaoPdf(file) {
+    setEmissaoDocumento(file)
+    setEmissaoPdfResult(null)
+    setEmissaoPdfError('')
+    setEmissaoPdfApplied(false)
+    if (!file) {
+      setEmissaoPdfStatus('idle')
+      return
+    }
+    const isPdf = file.type === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf')
+    if (!isPdf) {
+      setEmissaoPdfStatus('attached')
+      return
+    }
+    setEmissaoPdfStatus('reading')
+    try {
+      setEmissaoPdfResult(await parsePropostaAuto(file))
+      setEmissaoPdfStatus('ready')
+    } catch (error) {
+      setEmissaoPdfError(error?.message || 'O conteúdo do documento não pôde ser extraído.')
+      setEmissaoPdfStatus('error')
+    }
+  }
+
+  async function handleManualPdf(file) {
+    setManualDocumento(file)
+    setManualPdfResult(null)
+    setManualPdfError('')
+    setManualPdfApplied(false)
+    if (!file) {
+      setManualPdfStatus('idle')
+      return
+    }
+    const isPdf = file.type === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf')
+    if (!isPdf) {
+      setManualPdfStatus('attached')
+      return
+    }
+    setManualPdfStatus('reading')
+    try {
+      setManualPdfResult(await parsePropostaAuto(file))
+      setManualPdfStatus('ready')
+    } catch (error) {
+      setManualPdfError(error?.message || 'O conteúdo do documento não pôde ser extraído.')
+      setManualPdfStatus('error')
+    }
+  }
+
+  function applyPdfFields(result, setter, emptyForm, setApplied) {
+    if (!result?.campos) return
+    setter(current => Object.entries(result.campos).reduce((next, [field, value]) => {
+      if (Object.prototype.hasOwnProperty.call(emptyForm, field) && value !== null && value !== '') next[field] = value
+      return next
+    }, { ...current }))
+    setApplied(true)
+  }
+
 
   async function handleImportPlanilha(event) {
     const file = event.target.files?.[0]
@@ -1860,10 +2023,23 @@ export default function AutoEmissoes() {
   useEffect(() => {
     if (!modalEmissao) {
       setForm(FORM_EMISSAO_VAZIO)
+      setEmissaoDocumento(null)
+      setEmissaoPdfStatus('idle')
+      setEmissaoPdfResult(null)
+      setEmissaoPdfError('')
+      setEmissaoPdfApplied(false)
       return
     }
     setForm({ ...getFormEmissaoInicial(modalEmissao), coluna: manualStage })
   }, [modalEmissao])
+
+  useEffect(() => {
+    if (manualOpen) return
+    setManualPdfStatus('idle')
+    setManualPdfResult(null)
+    setManualPdfError('')
+    setManualPdfApplied(false)
+  }, [manualOpen])
 
   const premioLiquido = toNumber(form.premio_liquido) || 0
   const pctComissao = toNumber(form.pct_comissao) || 0
@@ -1897,13 +2073,13 @@ export default function AutoEmissoes() {
       cliente_id: modalEmissao.cliente_id,
       tipo: modalEmissao.cotacoes_auto?.tipo || modalEmissao.tipo || 'novo',
       data_emissao: form.data_emissao || null,
-      nome_cliente: modalEmissao.cotacoes_auto?.nome_cliente || modalEmissao.nome_cliente || null,
-      cpf_cliente: modalEmissao.cotacoes_auto?.cpf_cliente || modalEmissao.cpf_cliente || null,
-      celular_cliente: modalEmissao.cotacoes_auto?.celular_cliente || modalEmissao.celular_cliente || null,
-      condutor_nome: modalEmissao.cotacoes_auto?.condutor_nome || modalEmissao.condutor_nome || null,
-      condutor_cpf: modalEmissao.cotacoes_auto?.condutor_cpf || modalEmissao.condutor_cpf || null,
-      modelo_veiculo: modalEmissao.cotacoes_auto?.modelo_veiculo || modalEmissao.modelo_veiculo || null,
-      placa: modalEmissao.cotacoes_auto?.placa || modalEmissao.placa || null,
+      nome_cliente: form.nome_cliente || modalEmissao.cotacoes_auto?.nome_cliente || modalEmissao.nome_cliente || null,
+      cpf_cliente: form.cpf_cliente || modalEmissao.cotacoes_auto?.cpf_cliente || modalEmissao.cpf_cliente || null,
+      celular_cliente: form.celular_cliente || modalEmissao.cotacoes_auto?.celular_cliente || modalEmissao.celular_cliente || null,
+      condutor_nome: form.condutor_nome || modalEmissao.cotacoes_auto?.condutor_nome || modalEmissao.condutor_nome || null,
+      condutor_cpf: form.condutor_cpf || modalEmissao.cotacoes_auto?.condutor_cpf || modalEmissao.condutor_cpf || null,
+      modelo_veiculo: form.modelo_veiculo || modalEmissao.cotacoes_auto?.modelo_veiculo || modalEmissao.modelo_veiculo || null,
+      placa: form.placa || modalEmissao.cotacoes_auto?.placa || modalEmissao.placa || null,
       seguradora: form.seguradora,
       numero_apolice: form.numero_apolice,
       vigencia_inicio: form.vigencia_inicio,
@@ -2218,6 +2394,21 @@ export default function AutoEmissoes() {
                 </div>
               </div>
               <div className="auto-pipeline-command-actions">
+                <label className="auto-pipeline-search">
+                  <Search aria-hidden="true" />
+                  <input
+                    type="search"
+                    value={buscaPipeline}
+                    onChange={event => setBuscaPipeline(event.target.value)}
+                    placeholder="Cliente, CPF, placa, seguradora..."
+                    aria-label="Pesquisar em toda a Pipeline"
+                  />
+                  {buscaPipeline && (
+                    <button type="button" onClick={() => setBuscaPipeline('')} aria-label="Limpar pesquisa">
+                      <X aria-hidden="true" />
+                    </button>
+                  )}
+                </label>
                 <div className="auto-density-row" role="group" aria-label="Densidade dos cards do Pipeline">
                   <span>Visualização</span>
                   <div>
@@ -2232,6 +2423,15 @@ export default function AutoEmissoes() {
                 </div>
               </div>
             </div>
+            {termoPipeline && (
+              <div className="auto-pipeline-search-summary" role="status">
+                <Search aria-hidden="true" />
+                <span>
+                  <strong>{emissoesPipeline.length + renovacoesPipeline.length}</strong> resultado(s) para “{buscaPipeline.trim()}” em todas as etapas
+                </span>
+                <button type="button" onClick={() => setBuscaPipeline('')}>Mostrar tudo</button>
+              </div>
+            )}
             <div className="auto-pipeline-stage-track">
               {KANBAN_STAGES.map((stage, index) => (
                 <button
@@ -2264,7 +2464,7 @@ export default function AutoEmissoes() {
             >
             <DataCard
               title={<span className="auto-kanban-column-title"><span>01</span>Renovações</span>}
-              subtitle={`${renovacoesPendentes.length} item(ns)`}
+              subtitle={`${renovacoesPipeline.length} item(ns)`}
               className="auto-kanban-column auto-kanban-column-renewals w-[300px] shrink-0 snap-start"
               bodyClassName="pt-4"
             >
@@ -2276,15 +2476,17 @@ export default function AutoEmissoes() {
                     description={errorRenovacoesPendentes?.message || 'Tente recarregar a página.'}
                     className="py-8"
                   />
-                ) : renovacoesPendentes.length === 0 ? (
+                ) : renovacoesPipeline.length === 0 ? (
                   <EmptyState
                     icon={<RefreshCw className="w-6 h-6" />}
-                    title="Sem renovações pendentes"
-                    description="Renovações criadas em /auto/renovacoes aparecem aqui até a cotação ser iniciada."
+                    title={termoPipeline ? 'Nenhuma renovação encontrada' : 'Sem renovações pendentes'}
+                    description={termoPipeline
+                      ? 'A busca continua ativa nas outras etapas da Pipeline.'
+                      : 'Renovações criadas em /auto/renovacoes aparecem aqui até a cotação ser iniciada.'}
                     className="py-8"
                   />
                 ) : (
-                  renovacoesPendentes.map(item => (
+                  renovacoesPipeline.map(item => (
                     <CardRenovacaoPendente
                       key={item.id}
                       renovacao={item}
@@ -2298,7 +2500,7 @@ export default function AutoEmissoes() {
               </div>
             </DataCard>
             {COLUNAS.map(coluna => {
-              const cards = emissoes.filter(item => getEmissaoColuna(item) === coluna.id)
+              const cards = emissoesPipeline.filter(item => getEmissaoColuna(item) === coluna.id)
               return (
                 <DataCard
                   key={coluna.id}
@@ -2316,10 +2518,12 @@ export default function AutoEmissoes() {
                     {cards.length === 0 ? (
                       <EmptyState
                         icon={<Car className="w-6 h-6" />}
-                        title={coluna.id === 'pendentes' ? 'Sem pendencias' : 'Coluna vazia'}
-                        description={coluna.id === 'pendentes'
-                          ? 'As cotacoes criadas pelo formulario aparecem aqui primeiro.'
-                          : 'Arraste um card para avancar no fluxo.'}
+                        title={termoPipeline ? 'Nenhum resultado nesta etapa' : (coluna.id === 'pendentes' ? 'Sem pendências' : 'Coluna vazia')}
+                        description={termoPipeline
+                          ? 'O filtro está sendo aplicado simultaneamente em todo o quadro.'
+                          : (coluna.id === 'pendentes'
+                            ? 'As cotações criadas pelo formulário aparecem aqui primeiro.'
+                            : 'Arraste um card para avançar no fluxo.')}
                         className="py-8"
                       />
                     ) : (
@@ -2617,20 +2821,19 @@ export default function AutoEmissoes() {
                       </button>
                     </div>
                     {form.coluna === 'apolice_emitida' && (
-                      <div className="mt-4 grid gap-4 md:grid-cols-2">
-                        <div>
-                          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Anexar documento</label>
-                          <input
-                            ref={emissaoFileRef}
-                            type="file"
-                            accept="application/pdf,.pdf,.png,.jpg,.jpeg"
-                            onChange={e => setEmissaoDocumento(e.target.files?.[0] || null)}
-                            className="w-full rounded-2xl border border-dark-border bg-dark-surface/90 px-3 py-2 text-sm text-dark-text outline-none"
-                          />
-                        </div>
-                        <div className="rounded-2xl border border-status-success/20 bg-status-success/10 px-3 py-2 text-sm text-status-success">
-                          A apólice será criada junto com a transmissão final.
-                        </div>
+                      <div className="mt-4">
+                        <AutoPdfAutomation
+                          mode="proposta"
+                          file={emissaoDocumento}
+                          status={emissaoPdfStatus}
+                          result={emissaoPdfResult}
+                          error={emissaoPdfError}
+                          applied={emissaoPdfApplied}
+                          onFile={handleEmissaoPdf}
+                          onApply={() => applyPdfFields(emissaoPdfResult, setForm, FORM_EMISSAO_VAZIO, setEmissaoPdfApplied)}
+                          onClear={() => { setEmissaoDocumento(null); setEmissaoPdfStatus('idle'); setEmissaoPdfResult(null); setEmissaoPdfError(''); setEmissaoPdfApplied(false) }}
+                          inputRef={emissaoFileRef}
+                        />
                       </div>
                     )}
                   </div>
@@ -2949,20 +3152,19 @@ export default function AutoEmissoes() {
                       </button>
                     </div>
                     {manualForm.coluna === 'apolice_emitida' && (
-                      <div className="mt-4 grid gap-4 md:grid-cols-2">
-                        <div>
-                          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Anexar documento</label>
-                          <input
-                            ref={manualFileRef}
-                            type="file"
-                            accept="application/pdf,.pdf,.png,.jpg,.jpeg"
-                            onChange={e => setManualDocumento(e.target.files?.[0] || null)}
-                            className="w-full rounded-2xl border border-dark-border bg-dark-surface/90 px-3 py-2 text-sm text-dark-text outline-none"
-                          />
-                        </div>
-                        <div className="rounded-2xl border border-status-success/20 bg-status-success/10 px-3 py-2 text-sm text-status-success">
-                          A apólice será criada junto com o cadastro.
-                        </div>
+                      <div className="mt-4">
+                        <AutoPdfAutomation
+                          mode="proposta"
+                          file={manualDocumento}
+                          status={manualPdfStatus}
+                          result={manualPdfResult}
+                          error={manualPdfError}
+                          applied={manualPdfApplied}
+                          onFile={handleManualPdf}
+                          onApply={() => applyPdfFields(manualPdfResult, setManualForm, FORM_MANUAL_VAZIO, setManualPdfApplied)}
+                          onClear={() => { setManualDocumento(null); setManualPdfStatus('idle'); setManualPdfResult(null); setManualPdfError(''); setManualPdfApplied(false) }}
+                          inputRef={manualFileRef}
+                        />
                       </div>
                     )}
                   </div>

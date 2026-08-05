@@ -4,6 +4,8 @@
 .env.production
 .env.*.local
 *.env
+# Backups de .env (ex.: .env.local.bak-20260804213229) — as regras acima não pegam
+.env*.bak*
 
 # Dependências
 node_modules/

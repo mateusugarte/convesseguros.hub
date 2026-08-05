@@ -13,3 +13,5 @@ export {
   AutoTabs,
   AutoTypeBadge,
 } from './AutoVisual'
+
+export { default as AutoPdfAutomation } from './AutoPdfAutomation'

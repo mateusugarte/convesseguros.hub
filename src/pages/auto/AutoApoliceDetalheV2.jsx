@@ -7,7 +7,10 @@ import {
   Car,
   Clock3,
   CreditCard,
+  Copy,
   FileText,
+  Mail,
+  Phone,
   Save,
   ShieldCheck,
   UserRound,
@@ -17,6 +20,7 @@ import SeguradoraBadge from '../../components/SeguradoraBadge'
 import {
   AutoBadge,
   AutoInfoGrid,
+  AutoInlineAlert,
   AutoListRow,
   AutoLoading,
   AutoMoneyDelta,
@@ -107,6 +111,8 @@ export default function AutoApoliceDetalheV2() {
   const qc = useQueryClient()
   const [tab, setTab] = useState('resumo')
   const [form, setForm] = useState(null)
+  const [saveError, setSaveError] = useState('')
+  const [copied, setCopied] = useState('')
 
   const { data: apolice, isLoading } = useQuery({
     queryKey: ['auto-apolice-detalhe', id],
@@ -136,11 +142,13 @@ export default function AutoApoliceDetalheV2() {
       return atualizarApoliceAutoSemEmissao(apolice.id, form)
     },
     onSuccess: async () => {
+      setSaveError('')
       await qc.invalidateQueries({ queryKey: ['auto-apolice-detalhe', id] })
       await qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
       await qc.invalidateQueries({ queryKey: ['auto-clientes-carteira'] })
       await qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
     },
+    onError: error => setSaveError(error?.message || 'Não foi possível salvar as alterações.'),
   })
 
   const statusAtual = useMemo(() => {
@@ -148,7 +156,15 @@ export default function AutoApoliceDetalheV2() {
     const emissao = apolice.emissoes_auto || {}
     if (emissao.resultado === 'recusada') return 'Recusada'
     if (emissao.resultado === 'aprovada') return 'Aprovada'
-    return emissao.coluna || 'apolice_emitida'
+    const labels = {
+      pendentes: 'Pendente',
+      cotacao_feita: 'Cotação feita',
+      negociando: 'Em negociação',
+      aguardando_vistoria: 'Aguardando vistoria',
+      proposta_transmitida: 'Proposta transmitida',
+      apolice_emitida: 'Apólice emitida',
+    }
+    return labels[emissao.coluna] || 'Apólice emitida'
   }, [apolice])
 
   const dirty = useMemo(() => (
@@ -158,6 +174,37 @@ export default function AutoApoliceDetalheV2() {
   const valorComissao = useMemo(() => (
     calcularValorComissaoAuto(form?.premio_liquido, form?.pct_comissao)
   ), [form?.premio_liquido, form?.pct_comissao])
+
+  useEffect(() => {
+    if (!dirty) return undefined
+    const beforeUnload = event => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    const saveShortcut = event => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault()
+        if (!salvar.isPending) salvar.mutate()
+      }
+    }
+    window.addEventListener('beforeunload', beforeUnload)
+    window.addEventListener('keydown', saveShortcut)
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnload)
+      window.removeEventListener('keydown', saveShortcut)
+    }
+  }, [dirty, salvar])
+
+  const copyValue = async (label, value) => {
+    if (!value) return
+    try {
+      await navigator.clipboard.writeText(String(value))
+      setCopied(label)
+      window.setTimeout(() => setCopied(''), 1800)
+    } catch {
+      setSaveError('Não foi possível copiar o dado automaticamente.')
+    }
+  }
 
   if (isLoading || !form) {
     return (
@@ -187,6 +234,7 @@ export default function AutoApoliceDetalheV2() {
             <AutoTypeBadge type={tipoReal} />
             <AutoBadge tone={statusAtual === 'Recusada' ? 'danger' : 'success'}>{statusAtual}</AutoBadge>
             {dirty && <AutoBadge tone="warning">Alterações pendentes</AutoBadge>}
+            {copied && <AutoBadge tone="success">{copied} copiado</AutoBadge>}
           </>
         )}
       />
@@ -226,6 +274,14 @@ export default function AutoApoliceDetalheV2() {
 
       <AutoTabs items={TABS} value={tab} onChange={setTab} ariaLabel="Áreas da apólice" />
 
+      {saveError && (
+        <AutoInlineAlert
+          tone="danger"
+          title="Não foi possível concluir a ação"
+          description={saveError}
+        />
+      )}
+
       {tab === 'resumo' && (
         <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
           <AutoPanel title="Resumo da apólice">
@@ -264,6 +320,35 @@ export default function AutoApoliceDetalheV2() {
                 { label: 'Parcelamento', value: form.parcelamento },
               ]}
             />
+          </AutoPanel>
+
+          <AutoPanel className="xl:col-span-2" title="Ações rápidas" description="Contato e dados essenciais sem interromper a consulta.">
+            <div className="auto-quote-quick-actions auto-policy-quick-actions">
+              <a
+                href={form.celular_cliente ? `tel:${String(form.celular_cliente).replace(/\D/g, '')}` : undefined}
+                aria-disabled={!form.celular_cliente}
+                className={!form.celular_cliente ? 'is-disabled' : ''}
+              >
+                <Phone aria-hidden="true" />
+                <span><strong>Ligar para o segurado</strong><small>{form.celular_cliente || 'Celular pendente'}</small></span>
+              </a>
+              <a
+                href={form.email_cliente ? `mailto:${form.email_cliente}` : undefined}
+                aria-disabled={!form.email_cliente}
+                className={!form.email_cliente ? 'is-disabled' : ''}
+              >
+                <Mail aria-hidden="true" />
+                <span><strong>Enviar e-mail</strong><small>{form.email_cliente || 'E-mail pendente'}</small></span>
+              </a>
+              <button type="button" onClick={() => copyValue('Apólice', form.numero_apolice)} disabled={!form.numero_apolice}>
+                <Copy aria-hidden="true" />
+                <span><strong>Copiar nº da apólice</strong><small>{form.numero_apolice || 'Número pendente'}</small></span>
+              </button>
+              <button type="button" onClick={() => copyValue('Placa', form.placa)} disabled={!form.placa}>
+                <Copy aria-hidden="true" />
+                <span><strong>Copiar placa</strong><small>{form.placa || 'Placa pendente'}</small></span>
+              </button>
+            </div>
           </AutoPanel>
         </div>
       )}
@@ -400,11 +485,11 @@ export default function AutoApoliceDetalheV2() {
         <button
           type="button"
           onClick={() => salvar.mutate()}
-          disabled={salvar.isPending}
+          disabled={!dirty || salvar.isPending}
           className="btn-primary inline-flex items-center gap-2 disabled:opacity-60"
         >
           <Save className="h-4 w-4" aria-hidden="true" />
-          {salvar.isPending ? 'Salvando...' : 'Salvar alterações'}
+          {salvar.isPending ? 'Salvando...' : dirty ? 'Salvar alterações' : 'Tudo salvo'}
         </button>
       </AutoStickyActions>
     </div>

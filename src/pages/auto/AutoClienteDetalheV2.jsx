@@ -5,8 +5,11 @@ import {
   Activity,
   Car,
   ClipboardList,
+  Copy,
   DollarSign,
   FileText,
+  Mail,
+  Phone,
   RefreshCw,
   ShieldCheck,
   UserRound,
@@ -45,8 +48,9 @@ export default function AutoClienteDetalheV2() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [tab, setTab] = useState('visao-geral')
+  const [copied, setCopied] = useState('')
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['auto-cliente-detalhe', id],
     queryFn: () => getClienteAutoDetalhe(decodeURIComponent(id || '')),
     enabled: Boolean(id),
@@ -73,11 +77,11 @@ export default function AutoClienteDetalheV2() {
     )
   }
 
-  if (!data) {
+  if (isError || !data) {
     return (
       <EmptyState
-        title="Cliente não encontrado"
-        description="O perfil pode ter sido removido ou ainda não possui vínculos suficientes."
+        title={isError ? 'Não foi possível carregar o cliente' : 'Cliente não encontrado'}
+        description={isError ? (error?.message || 'Tente novamente em alguns instantes.') : 'O perfil pode ter sido removido ou ainda não possui vínculos suficientes.'}
       />
     )
   }
@@ -94,9 +98,21 @@ export default function AutoClienteDetalheV2() {
     clienteDesde,
   } = data
   const clienteStatus = getClienteStatusAuto(apolices)
+  const clientePhone = cliente?.celular || cliente?.telefone || ''
+
+  async function copyValue(label, value) {
+    if (!value) return
+    try {
+      await navigator.clipboard.writeText(String(value))
+      setCopied(label)
+      window.setTimeout(() => setCopied(''), 1800)
+    } catch {
+      setCopied('')
+    }
+  }
 
   return (
-    <div className="auto-page auto-v2-page">
+    <div className="auto-page auto-v2-page auto-client-workspace">
       <AutoPageHeader
         context="Cliente Auto"
         title={cliente?.nome_completo || 'Cliente Auto'}
@@ -109,17 +125,28 @@ export default function AutoClienteDetalheV2() {
               {clienteStatus === 'ativo' ? 'Cliente ativo' : 'Cliente inativo'}
             </AutoBadge>
             <AutoBadge tone="info">Cliente desde {formatMonthYearBR(clienteDesde)}</AutoBadge>
+            {copied && <AutoBadge tone="success">{copied} copiado</AutoBadge>}
           </>
         )}
         actions={(
-          <button
-            type="button"
-            onClick={() => navigate('/auto/cotacoes?tab=novo')}
-            className="btn-primary inline-flex items-center gap-2"
-          >
-            <FileText className="h-4 w-4" aria-hidden="true" />
-            Nova cotação
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => navigate('/auto/cotacoes?modo=renovacao')}
+              className="btn-secondary inline-flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              Renovar
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/auto/cotacoes?modo=novo')}
+              className="btn-primary inline-flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" aria-hidden="true" />
+              Nova cotação
+            </button>
+          </>
         )}
       />
 
@@ -195,6 +222,39 @@ export default function AutoClienteDetalheV2() {
                   ? () => navigate(`/auto/apolices/${destaque.emRenovacao.apolices_auto.id}`)
                   : undefined}
               />
+            </div>
+          </AutoPanel>
+
+          <AutoPanel
+            className="xl:col-span-2"
+            title="Ações de relacionamento"
+            description="Contate o cliente ou reutilize os dados principais sem interromper a análise."
+          >
+            <div className="auto-quote-quick-actions auto-client-quick-actions">
+              <a
+                href={clientePhone ? `tel:${String(clientePhone).replace(/\D/g, '')}` : undefined}
+                aria-disabled={!clientePhone}
+                className={!clientePhone ? 'is-disabled' : ''}
+              >
+                <Phone aria-hidden="true" />
+                <span><strong>Ligar para o cliente</strong><small>{clientePhone || 'Telefone pendente'}</small></span>
+              </a>
+              <a
+                href={cliente?.email ? `mailto:${cliente.email}` : undefined}
+                aria-disabled={!cliente?.email}
+                className={!cliente?.email ? 'is-disabled' : ''}
+              >
+                <Mail aria-hidden="true" />
+                <span><strong>Enviar e-mail</strong><small>{cliente?.email || 'E-mail pendente'}</small></span>
+              </a>
+              <button type="button" onClick={() => copyValue('CPF', cliente?.cpf)} disabled={!cliente?.cpf}>
+                <Copy aria-hidden="true" />
+                <span><strong>Copiar CPF</strong><small>{cliente?.cpf || 'CPF pendente'}</small></span>
+              </button>
+              <button type="button" onClick={() => setTab('apolices')} disabled={apolices.length === 0}>
+                <ShieldCheck aria-hidden="true" />
+                <span><strong>Ver todas as apólices</strong><small>{apolices.length} registro(s) vinculados</small></span>
+              </button>
             </div>
           </AutoPanel>
 

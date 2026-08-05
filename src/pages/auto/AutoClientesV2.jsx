@@ -29,6 +29,24 @@ import { atualizarApoliceAuto, getAutoCarteiraClientes } from '../../lib/auto'
 import { formatDateBR, formatMonthYearBR, getClienteStatusAuto } from './autoShared'
 
 const PAGE_SIZE = 50
+const CLIENT_FILTERS_KEY = 'auto-clientes-workspace-filters-v1'
+
+function readClientFilters() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CLIENT_FILTERS_KEY) || '{}')
+    return {
+      search: typeof saved.search === 'string' ? saved.search : '',
+      seguradora: typeof saved.seguradora === 'string' ? saved.seguradora : '',
+      inicio: typeof saved.inicio === 'string' ? saved.inicio : '',
+      fim: typeof saved.fim === 'string' ? saved.fim : '',
+      letra: typeof saved.letra === 'string' ? saved.letra : '',
+      sort: ['nome', 'recente', 'quantidade', 'antigo'].includes(saved.sort) ? saved.sort : 'nome',
+      status: ['todos', 'ativo', 'inativo'].includes(saved.status) ? saved.status : 'todos',
+    }
+  } catch {
+    return { search: '', seguradora: '', inicio: '', fim: '', letra: '', sort: 'nome', status: 'todos' }
+  }
+}
 
 function clientKey(item) {
   return item.cliente_id || item.cpf_cliente || item.nome_cliente || item.emissoes_auto?.cliente_id || item.id
@@ -127,24 +145,46 @@ function LetterFilter({ value, onChange, availableLetters }) {
 export default function AutoClientesV2() {
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const [search, setSearch] = useState('')
-  const [seguradora, setSeguradora] = useState('')
-  const [inicio, setInicio] = useState('')
-  const [fim, setFim] = useState('')
-  const [letraFiltro, setLetraFiltro] = useState('')
-  const [sortBy, setSortBy] = useState('nome')
+  const savedFilters = useMemo(readClientFilters, [])
+  const [search, setSearch] = useState(savedFilters.search)
+  const [debouncedSearch, setDebouncedSearch] = useState(savedFilters.search)
+  const [seguradora, setSeguradora] = useState(savedFilters.seguradora)
+  const [inicio, setInicio] = useState(savedFilters.inicio)
+  const [fim, setFim] = useState(savedFilters.fim)
+  const [letraFiltro, setLetraFiltro] = useState(savedFilters.letra)
+  const [sortBy, setSortBy] = useState(savedFilters.sort)
+  const [statusFilter, setStatusFilter] = useState(savedFilters.status)
   const [page, setPage] = useState(1)
   const [expandedKey, setExpandedKey] = useState(null)
 
-  const { data: apolices = [], isLoading } = useQuery({
-    queryKey: ['auto-clientes-carteira', search, seguradora, inicio, fim],
+  const { data: apolices = [], isLoading, isError, error } = useQuery({
+    queryKey: ['auto-clientes-carteira', debouncedSearch, seguradora, inicio, fim],
     queryFn: () => getAutoCarteiraClientes({
-      search,
+      search: debouncedSearch,
       seguradora: seguradora || undefined,
       inicio: inicio || undefined,
       fim: fim || undefined,
     }),
   })
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search), 280)
+    return () => window.clearTimeout(timer)
+  }, [search])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLIENT_FILTERS_KEY, JSON.stringify({
+        search,
+        seguradora,
+        inicio,
+        fim,
+        letra: letraFiltro,
+        sort: sortBy,
+        status: statusFilter,
+      }))
+    } catch {}
+  }, [search, seguradora, inicio, fim, letraFiltro, sortBy, statusFilter])
 
   const { mutateAsync: salvarNumero, isPending, variables } = useMutation({
     mutationFn: ({ id, numero }) => atualizarApoliceAuto(id, { numero_apolice: numero.trim() || null }),
@@ -201,9 +241,12 @@ export default function AutoClientesV2() {
   ), [grouped])
 
   const sortedGrouped = useMemo(() => {
-    const filtered = letraFiltro
+    let filtered = letraFiltro
       ? grouped.filter(group => firstLetterOf(group.name) === letraFiltro)
       : [...grouped]
+    if (statusFilter !== 'todos') {
+      filtered = filtered.filter(group => group.status === statusFilter)
+    }
     filtered.sort((a, b) => {
       if (sortBy === 'quantidade') return b.items.length - a.items.length
       if (sortBy === 'antigo') return (a.clienteDesde || '9999-99-99').localeCompare(b.clienteDesde || '9999-99-99')
@@ -211,7 +254,7 @@ export default function AutoClientesV2() {
       return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
     })
     return filtered
-  }, [grouped, letraFiltro, sortBy])
+  }, [grouped, letraFiltro, sortBy, statusFilter])
 
   const totalPages = Math.max(1, Math.ceil(sortedGrouped.length / PAGE_SIZE))
   const paginated = useMemo(() => {
@@ -222,16 +265,28 @@ export default function AutoClientesV2() {
   useEffect(() => {
     setPage(1)
     setExpandedKey(null)
-  }, [search, seguradora, inicio, fim, letraFiltro, sortBy])
+  }, [search, seguradora, inicio, fim, letraFiltro, sortBy, statusFilter])
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages)
   }, [page, totalPages])
 
   const savingId = isPending ? variables?.id : null
+  const hasActiveFilters = Boolean(search || seguradora || inicio || fim || letraFiltro || sortBy !== 'nome' || statusFilter !== 'todos')
+
+  function resetFilters() {
+    setSearch('')
+    setDebouncedSearch('')
+    setSeguradora('')
+    setInicio('')
+    setFim('')
+    setLetraFiltro('')
+    setSortBy('nome')
+    setStatusFilter('todos')
+  }
 
   return (
-    <div className="auto-page auto-v2-page">
+    <div className="auto-page auto-v2-page auto-clients-workspace">
       <AutoPageHeader
         context="Carteira Auto"
         title="Clientes"
@@ -239,7 +294,7 @@ export default function AutoClientesV2() {
         actions={(
           <button
             type="button"
-            onClick={() => navigate('/auto/cotacoes?tab=novo')}
+            onClick={() => navigate('/auto/cotacoes?modo=novo')}
             className="btn-primary inline-flex items-center gap-2"
           >
             <FileText className="h-4 w-4" aria-hidden="true" />
@@ -257,8 +312,12 @@ export default function AutoClientesV2() {
         ]}
       />
 
-      <AutoPanel title="Buscar e filtrar" description={`${sortedGrouped.length} cliente(s) no recorte atual.`}>
-        <div className="grid gap-3 lg:grid-cols-[minmax(260px,1.2fr)_minmax(190px,0.8fr)_160px_160px_210px]">
+      <AutoPanel
+        title="Buscar e filtrar"
+        description={`${sortedGrouped.length} cliente(s) no recorte atual. Os filtros ficam salvos neste dispositivo.`}
+        actions={hasActiveFilters ? <button type="button" onClick={resetFilters} className="auto-filter-reset">Limpar filtros</button> : null}
+      >
+        <div className="grid gap-3 lg:grid-cols-[minmax(240px,1.2fr)_minmax(170px,0.8fr)_145px_145px_170px_190px]">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-muted" />
             <input
@@ -274,6 +333,11 @@ export default function AutoClientesV2() {
           </select>
           <input type="date" value={inicio} onChange={event => setInicio(event.target.value)} className="input" aria-label="Data inicial" />
           <input type="date" value={fim} onChange={event => setFim(event.target.value)} className="input" aria-label="Data final" />
+          <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)} className="select">
+            <option value="todos">Todos os clientes</option>
+            <option value="ativo">Somente ativos</option>
+            <option value="inativo">Somente inativos</option>
+          </select>
           <select value={sortBy} onChange={event => setSortBy(event.target.value)} className="select">
             <option value="nome">Ordem alfabética</option>
             <option value="recente">Mais recentes</option>
@@ -293,6 +357,12 @@ export default function AutoClientesV2() {
       >
         {isLoading ? (
           <AutoLoading label="Carregando carteira..." />
+        ) : isError ? (
+          <EmptyState
+            icon={<Car className="h-5 w-5" />}
+            title="Não foi possível carregar a carteira"
+            description={error?.message || 'Tente novamente em alguns instantes.'}
+          />
         ) : sortedGrouped.length === 0 ? (
           <EmptyState
             icon={<Car className="h-5 w-5" />}

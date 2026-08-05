@@ -1,12 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, BadgeDollarSign, CalendarDays, Car, Check, Pencil, ShieldCheck, UserRound, X, Mail, Heart, Phone } from 'lucide-react'
-import { DataCard, EmptyState, MetricCard, PageHeader } from '../../components/ui'
+import { Activity, BadgeDollarSign, CalendarDays, Car, Check, ClipboardCheck, Copy, FileSearch, Gauge, Pencil, ShieldCheck, UserRound, X, Mail, Heart, Phone, Trash2 } from 'lucide-react'
+import { DataCard, EmptyState } from '../../components/ui'
+import {
+  AutoBadge,
+  AutoInfoGrid,
+  AutoLoading,
+  AutoPageHeader,
+  AutoPdfAutomation,
+  AutoStatStrip,
+  AutoTabs,
+  AutoTypeBadge,
+} from '../../components/auto'
 import SeguradoraSelect from '../../components/SeguradoraSelect'
 import { calcularValorComissaoAuto, deletarCotacaoAuto, getCotacaoAutoPorId, atualizarCotacaoAuto } from '../../lib/auto'
 import { COTACAO_STATUS, formatDateTimeBR, formatMoney, toneClasses } from './autoShared'
 import { formatDecimalBRInput, parseDecimalBR } from '../../lib/numberInput'
+import { parseOrcamentoAuto } from '../../lib/autoPdfParser.js'
 
 function QuoteStatusBadge({ status }) {
   const meta = COTACAO_STATUS[status] || COTACAO_STATUS.aberta
@@ -45,7 +56,7 @@ function DetailField({ label, value, onSave, type = 'text', rows, placeholder, r
 
   if (readOnly) {
     return (
-      <div className="rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-4">
+      <div className="auto-quote-field is-readonly">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{label}</p>
         <p className="mt-2 text-sm text-dark-text">{value || '—'}</p>
       </div>
@@ -53,7 +64,7 @@ function DetailField({ label, value, onSave, type = 'text', rows, placeholder, r
   }
 
   return (
-    <div className="group rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-4">
+    <div className="auto-quote-field group">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{label}</p>
       {editing ? (
         <div className="mt-2 flex items-start gap-2">
@@ -112,7 +123,7 @@ function DetailSelect({ label, value, onSave, options }) {
   const [editing, setEditing] = useState(false)
 
   return (
-    <div className="group rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-4">
+    <div className="auto-quote-field group">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{label}</p>
       {editing ? (
         <div className="mt-2 flex items-center gap-2">
@@ -163,6 +174,14 @@ const STATUS_OPTIONS = [
 const TIPO_OPTIONS = [
   { value: 'novo', label: 'Seguro novo' },
   { value: 'renovacao', label: 'Renovacao' },
+]
+
+const DETAIL_TABS = [
+  { value: 'resumo', label: 'Resumo', icon: Gauge },
+  { value: 'segurado', label: 'Segurado', icon: UserRound },
+  { value: 'risco', label: 'Veículo e risco', icon: Car },
+  { value: 'seguradoras', label: 'Seguradoras', icon: ShieldCheck },
+  { value: 'operacao', label: 'Operação', icon: Activity },
 ]
 
 function SummaryGrid({ cotacao }) {
@@ -245,6 +264,13 @@ export default function AutoCotacaoDetalhe() {
   const qc = useQueryClient()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [actionError, setActionError] = useState(null)
+  const [tab, setTab] = useState('resumo')
+  const [copied, setCopied] = useState('')
+  const [pdfFile, setPdfFile] = useState(null)
+  const [pdfStatus, setPdfStatus] = useState('idle')
+  const [pdfResult, setPdfResult] = useState(null)
+  const [pdfError, setPdfError] = useState('')
+  const [pdfApplied, setPdfApplied] = useState(false)
 
   const { data: cotacao, isLoading } = useQuery({
     queryKey: ['auto-cotacao', id],
@@ -288,6 +314,58 @@ export default function AutoCotacaoDetalhe() {
     },
   })
 
+  const { mutateAsync: aplicarPdf } = useMutation({
+    mutationFn: async () => {
+      const campos = pdfResult?.campos || {}
+      const cotada = pdfResult?.seguradora_cotada || {}
+      const patch = Object.entries(campos).reduce((next, [field, value]) => {
+        if (value !== null && value !== '') next[field] = value
+        return next
+      }, {})
+      if (Object.values(cotada).some(value => value !== null && value !== '')) {
+        patch.seguradora_preferencial = {
+          ...(cotacao?.seguradora_preferencial || {}),
+          ...cotada,
+          premio_total: cotada.valor_total || cotacao?.seguradora_preferencial?.premio_total || null,
+        }
+      }
+      return atualizarCotacaoAuto(id, patch)
+    },
+    onSuccess: async () => {
+      setPdfApplied(true)
+      setActionError(null)
+      await qc.invalidateQueries({ queryKey: ['auto-cotacao', id] })
+      await qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
+      await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
+    },
+    onError: error => setActionError(error?.message || 'Erro ao aplicar os dados do PDF.'),
+  })
+
+  async function handlePdf(file) {
+    setPdfFile(file)
+    setPdfResult(null)
+    setPdfError('')
+    setPdfApplied(false)
+    if (!file) {
+      setPdfStatus('idle')
+      return
+    }
+    const isPdf = file.type === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf')
+    if (!isPdf) {
+      setPdfStatus('attached')
+      return
+    }
+    setPdfStatus('reading')
+    try {
+      setPdfResult(await parseOrcamentoAuto(file))
+      setPdfStatus('ready')
+    } catch (error) {
+      setPdfError(error?.message || 'O conteúdo do orçamento não pôde ser extraído.')
+      setPdfStatus('error')
+    }
+  }
+
   const { mutateAsync: excluir, isPending: deleting } = useMutation({
     mutationFn: () => deletarCotacaoAuto(id),
     onSuccess: async () => {
@@ -309,20 +387,26 @@ export default function AutoCotacaoDetalhe() {
   const backTo = location.state?.from || '/auto/cotacoes'
 
   const metrics = useMemo(() => [
-    { key: 'status', label: 'Status', value: cotacao?.status ? (COTACAO_STATUS[cotacao.status]?.label || cotacao.status) : '—', tone: 'accent' },
-    { key: 'tipo', label: 'Tipo', value: cotacao?.tipo === 'renovacao' ? 'Renovacao' : 'Seguro novo', tone: 'secondary' },
-    { key: 'cliente', label: 'Cliente', value: cotacao?.nome_cliente || cotacao?.cpf_cliente || 'Sem nome', tone: 'success' },
-    { key: 'celular', label: 'Celular', value: cotacao?.celular_cliente || '—', tone: 'warning' },
+    { key: 'status', label: 'Status comercial', value: cotacao?.status ? (COTACAO_STATUS[cotacao.status]?.label || cotacao.status) : '—', hint: 'situação atual', tone: cotacao?.status === 'convertida' ? 'success' : cotacao?.status === 'perdida' ? 'danger' : 'warning', icon: Gauge },
+    { key: 'tipo', label: 'Modalidade', value: cotacao?.tipo === 'renovacao' ? 'Renovação' : cotacao?.tipo === 'endosso' ? 'Endosso' : 'Seguro novo', hint: 'tipo de oportunidade', tone: cotacao?.tipo === 'renovacao' ? 'renewal' : 'new', icon: FileSearch },
+    { key: 'veiculo', label: 'Veículo', value: cotacao?.modelo_veiculo || 'Não informado', hint: cotacao?.placa || 'placa pendente', tone: 'info', icon: Car },
+    { key: 'seguradora', label: 'Melhor opção', value: cotacao?.seguradora_mais_barata?.nome || cotacao?.seguradora_preferencial?.nome || 'Em análise', hint: 'seguradora em destaque', tone: 'success', icon: ShieldCheck },
   ], [cotacao])
 
+  const copyValue = useCallback(async (label, value) => {
+    if (!value) return
+    try {
+      await navigator.clipboard.writeText(String(value))
+      setCopied(label)
+      window.setTimeout(() => setCopied(''), 1800)
+    } catch {
+      setActionError('Não foi possível copiar o dado automaticamente.')
+    }
+  }, [])
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center gap-2 text-sm text-dark-muted">
-        <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
-        Carregando cotacao...
+      <div className="auto-page auto-v2-page">
+        <AutoLoading label="Carregando cotação..." />
       </div>
     )
   }
@@ -342,34 +426,51 @@ export default function AutoCotacaoDetalhe() {
   }
 
   return (
-    <div className="auto-page space-y-6 animate-fade-in">
-      <div className="flex justify-start">
-        <button onClick={() => navigate(backTo)} className="btn-secondary">
-          <ArrowLeft className="h-4 w-4" />
-          Voltar
-        </button>
-      </div>
-
-      <PageHeader
-        eyebrow="Seguro Auto"
+    <div className="auto-page auto-v2-page auto-quote-workspace">
+      <AutoPageHeader
+        context="Workspace de cotação"
         title={cotacao.nome_cliente || cotacao.cpf_cliente || 'Cotacao sem identificacao'}
-        description="Area dedicada da cotacao, com leitura completa dos dados, edicao direta e apoio ao fluxo operacional."
+        description={`${cotacao.modelo_veiculo || 'Veículo não informado'} · ${cotacao.placa || 'placa pendente'}`}
+        onBack={() => navigate(backTo)}
+        backLabel="Cotações"
+        meta={(
+          <>
+            <AutoTypeBadge type={cotacao.tipo} />
+            <AutoBadge tone={cotacao.status === 'convertida' ? 'success' : cotacao.status === 'perdida' ? 'danger' : 'warning'}>
+              {COTACAO_STATUS[cotacao.status]?.label || cotacao.status || 'Pendente'}
+            </AutoBadge>
+            {copied && <AutoBadge tone="success">{copied} copiado</AutoBadge>}
+          </>
+        )}
         actions={(
           <>
+            {cotacao.status !== 'convertida' && (
+              <button
+                type="button"
+                onClick={() => { void salvarCampo({ field: 'status', value: 'convertida' }).catch(() => {}) }}
+                className="btn-primary inline-flex items-center gap-2"
+              >
+                <ClipboardCheck className="h-4 w-4" />
+                Marcar convertida
+              </button>
+            )}
             <button
+              type="button"
               onClick={() => setConfirmDelete(true)}
-              className="rounded-2xl border border-status-danger/30 px-3 py-2 text-sm font-medium text-status-danger transition-colors hover:bg-status-danger/10"
+              className="auto-danger-action"
             >
-              Excluir
+              <Trash2 className="h-4 w-4" />
+              <span>Excluir</span>
             </button>
           </>
         )}
-        stats={metrics.map(({ key, label, value, tone }) => (
-          <MetricCard key={key} label={label} value={value} tone={tone} />
-        ))}
       />
 
-      <SummaryGrid cotacao={cotacao} />
+      <AutoStatStrip items={metrics} />
+
+      <AutoTabs items={DETAIL_TABS} value={tab} onChange={setTab} ariaLabel="Áreas da cotação" />
+
+      {tab === 'resumo' && <SummaryGrid cotacao={cotacao} />}
 
       {actionError && (
         <div className="rounded-2xl border border-status-danger/30 bg-status-danger/10 px-4 py-3 text-sm text-status-danger">
@@ -377,9 +478,23 @@ export default function AutoCotacaoDetalhe() {
         </div>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-[1.65fr_0.95fr]">
-        <div className="space-y-4">
-          <DataCard title="Identificação" subtitle="Nome do segurado e dados do lead">
+      <div className={tab === 'resumo' ? 'grid gap-4 xl:grid-cols-[1.65fr_0.95fr]' : 'grid gap-4 xl:grid-cols-2'}>
+        <div className={tab === 'resumo' ? 'space-y-4' : 'contents'}>
+          <DataCard className={tab === 'resumo' ? '' : 'hidden'} title="Visão consolidada" subtitle="Os dados decisivos da oportunidade em um único bloco">
+            <AutoInfoGrid
+              items={[
+                { label: 'Segurado', value: cotacao.nome_cliente },
+                { label: 'CPF', value: cotacao.cpf_cliente },
+                { label: 'Condutor', value: cotacao.condutor_nome || cotacao.nome_cliente },
+                { label: 'Vigência', value: cotacao.vigencia_inicio && cotacao.vigencia_fim ? `${cotacao.vigencia_inicio} — ${cotacao.vigencia_fim}` : 'Pendente' },
+                { label: 'Veículo', value: cotacao.modelo_veiculo },
+                { label: 'Placa', value: cotacao.placa },
+                { label: 'Preferencial', value: cotacao.seguradora_preferencial?.nome },
+                { label: 'Mais econômica', value: cotacao.seguradora_mais_barata?.nome },
+              ]}
+            />
+          </DataCard>
+          <DataCard className={tab === 'segurado' ? '' : 'hidden'} title="Identificação" subtitle="Nome do segurado e dados do lead">
             <div className="grid gap-3 md:grid-cols-2">
               <DetailField label={<span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5" /> Nome do segurado</span>} value={cotacao.nome_cliente} onSave={value => salvarCampo({ field: 'nome_cliente', value })} />
               <DetailField label={<span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5" /> CPF do segurado</span>} value={cotacao.cpf_cliente} onSave={value => salvarCampo({ field: 'cpf_cliente', value })} />
@@ -390,7 +505,7 @@ export default function AutoCotacaoDetalhe() {
             </div>
           </DataCard>
 
-          <DataCard title="Condutor" subtitle="Dados do condutor principal">
+          <DataCard className={tab === 'segurado' ? '' : 'hidden'} title="Condutor" subtitle="Dados do condutor principal">
             <div className="grid gap-3 md:grid-cols-2">
               <DetailField label={<span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5" /> Nome do condutor</span>} value={cotacao.condutor_nome} onSave={value => salvarCampo({ field: 'condutor_nome', value })} />
               <DetailField label={<span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5" /> CPF do condutor</span>} value={cotacao.condutor_cpf} onSave={value => salvarCampo({ field: 'condutor_cpf', value })} />
@@ -398,7 +513,7 @@ export default function AutoCotacaoDetalhe() {
             </div>
           </DataCard>
 
-          <DataCard title="Veiculo e risco" subtitle="Informacoes usadas na cotacao">
+          <DataCard className={tab === 'risco' ? 'xl:col-span-2' : 'hidden'} title="Veículo e risco" subtitle="Informações usadas na análise e precificação">
             <div className="grid gap-3 md:grid-cols-2">
               <DetailField label={<span className="inline-flex items-center gap-1.5"><Car className="h-3.5 w-3.5" /> Modelo do veiculo</span>} value={cotacao.modelo_veiculo} onSave={value => salvarCampo({ field: 'modelo_veiculo', value })} />
               <DetailField label={<span className="inline-flex items-center gap-1.5"><Car className="h-3.5 w-3.5" /> Placa</span>} value={cotacao.placa} onSave={value => salvarCampo({ field: 'placa', value })} />
@@ -415,7 +530,20 @@ export default function AutoCotacaoDetalhe() {
             </div>
           </DataCard>
 
-          <DataCard title="Seguradoras" subtitle="Selecione seguradoras cadastradas e ajuste os valores da cotacao">
+          <DataCard className={tab === 'seguradoras' ? 'xl:col-span-2' : 'hidden'} title="Seguradoras" subtitle="Compare propostas e ajuste os valores da cotação">
+            <div className="mb-4">
+              <AutoPdfAutomation
+                mode="orcamento"
+                file={pdfFile}
+                status={pdfStatus}
+                result={pdfResult}
+                error={pdfError}
+                applied={pdfApplied}
+                onFile={handlePdf}
+                onApply={() => { void aplicarPdf().catch(() => {}) }}
+                onClear={() => { setPdfFile(null); setPdfStatus('idle'); setPdfResult(null); setPdfError(''); setPdfApplied(false) }}
+              />
+            </div>
             <div className="grid gap-4 lg:grid-cols-2">
               {[
                 { key: 'seguradora_preferencial', title: 'Seguradora preferencial' },
@@ -519,8 +647,8 @@ export default function AutoCotacaoDetalhe() {
           </DataCard>
         </div>
 
-        <div className="space-y-4">
-          <DataCard title="Informacoes" subtitle="Dados tecnicos e operacionais">
+        <div className={tab === 'resumo' ? 'space-y-4' : 'contents'}>
+          <DataCard className={tab === 'operacao' ? '' : 'hidden'} title="Informações" subtitle="Dados técnicos e operacionais">
             <div className="grid gap-3">
               <DetailField label={<span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> ID</span>} value={cotacao.id} readOnly />
               <DetailSelect label={<span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Status</span>} value={cotacao.status} onSave={value => salvarCampo({ field: 'status', value })} options={STATUS_OPTIONS} />
@@ -532,20 +660,40 @@ export default function AutoCotacaoDetalhe() {
             </div>
           </DataCard>
 
-          <DataCard title="Resumo rapido" subtitle="Leitura operacional da cotacao">
-            <div className="space-y-3 text-sm text-dark-muted">
-              <p><span className="font-medium text-dark-text">Cliente:</span> {cotacao.nome_cliente || '—'}</p>
-              <p><span className="font-medium text-dark-text">Celular:</span> {cotacao.celular_cliente || '—'}</p>
-              <p><span className="font-medium text-dark-text">Veiculo:</span> {cotacao.modelo_veiculo || '—'}</p>
-              <p><span className="font-medium text-dark-text">Placa:</span> {cotacao.placa || '—'}</p>
-              <p><span className="font-medium text-dark-text">Seguradora preferencial:</span> {cotacao.seguradora_preferencial?.nome || '—'}</p>
-              <p><span className="font-medium text-dark-text">Seguradora mais barata:</span> {cotacao.seguradora_mais_barata?.nome || '—'}</p>
+          <DataCard className={tab === 'resumo' ? '' : 'hidden'} title="Ações rápidas" subtitle="Contate ou reutilize os dados sem sair da cotação">
+            <div className="auto-quote-quick-actions">
+              <a
+                href={cotacao.celular_cliente ? `tel:${String(cotacao.celular_cliente).replace(/\D/g, '')}` : undefined}
+                aria-disabled={!cotacao.celular_cliente}
+                className={!cotacao.celular_cliente ? 'is-disabled' : ''}
+              >
+                <Phone aria-hidden="true" />
+                <span><strong>Ligar para o cliente</strong><small>{cotacao.celular_cliente || 'Celular pendente'}</small></span>
+              </a>
+              <a
+                href={cotacao.email_cliente ? `mailto:${cotacao.email_cliente}` : undefined}
+                aria-disabled={!cotacao.email_cliente}
+                className={!cotacao.email_cliente ? 'is-disabled' : ''}
+              >
+                <Mail aria-hidden="true" />
+                <span><strong>Enviar e-mail</strong><small>{cotacao.email_cliente || 'E-mail pendente'}</small></span>
+              </a>
+              <button type="button" onClick={() => copyValue('CPF', cotacao.cpf_cliente)} disabled={!cotacao.cpf_cliente}>
+                <Copy aria-hidden="true" />
+                <span><strong>Copiar CPF</strong><small>{cotacao.cpf_cliente || 'CPF pendente'}</small></span>
+              </button>
+              <button type="button" onClick={() => copyValue('Placa', cotacao.placa)} disabled={!cotacao.placa}>
+                <Copy aria-hidden="true" />
+                <span><strong>Copiar placa</strong><small>{cotacao.placa || 'Placa pendente'}</small></span>
+              </button>
             </div>
           </DataCard>
 
-          <HistoricoCotacao cotacao={cotacao} />
+          <div className={tab === 'operacao' ? '' : 'hidden'}>
+            <HistoricoCotacao cotacao={cotacao} />
+          </div>
 
-          <DataCard title="Situacao atual" subtitle="Leitura visual do andamento">
+          <DataCard className={tab === 'resumo' ? '' : 'hidden'} title="Próxima decisão" subtitle="Atualize o andamento com um clique">
             <div className="space-y-3">
               <QuoteStatusBadge status={cotacao.status} />
               <p className="text-sm text-dark-muted">
@@ -555,6 +703,18 @@ export default function AutoCotacaoDetalhe() {
                     ? 'Cotacao marcada como convertida.'
                     : 'Cotacao marcada como perdida.'}
               </p>
+              <div className="auto-quote-status-actions">
+                {STATUS_OPTIONS.map(option => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => { void salvarCampo({ field: 'status', value: option.value }).catch(() => {}) }}
+                    className={cotacao.status === option.value ? 'is-active' : ''}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </DataCard>
         </div>

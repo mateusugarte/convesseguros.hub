@@ -46,7 +46,8 @@ classificar cards.
 ## Status
 
 - ready (fluxo completo cotacao -> emissao -> apolice -> renovacao em producao);
-  Sinistros ainda e area reservada (`in_progress`).
+  Sinistros possui pre-atendimento, checklist e dossie local, mas ainda nao um
+  cadastro persistido no backend (`in_progress`).
 
 ## Users
 
@@ -123,6 +124,20 @@ classificar cards.
 - O contêiner do quadro acompanha a coluna visível, suporta `ArrowLeft`/`ArrowRight` pelo teclado e mantém o drag-and-drop HTML existente sem mudar os fluxos especiais de `cotacao_feita`, `proposta_transmitida` e `apolice_emitida`.
 - `auto-ui.css` concentra o novo acabamento de toolbar, etapas, setas laterais, colunas, cartões, estados vazios, densidades, tema escuro e breakpoints móveis.
 - O filtro personalizado da Pipeline usa `DatePicker`; o componente compartilhado recebeu rótulos completos dos dias, estados semânticos, atalhos e acessibilidade. Inputs `date`/`month` dentro de `.auto-page` também seguem a identidade visual AUTO.
+
+## Modo comando e detalhes acionáveis (2026-08-04)
+
+- A Pipeline possui busca transversal em todas as colunas por cliente, CPF, telefone, veículo, placa, seguradora, responsável e número de apólice. A busca filtra cards, renovações e contadores sem alterar a consulta ou a regra de período.
+- `AutoCotacaoDetalhe` usa o design Auto V2 e organiza os dados em Resumo, Segurado, Veículo e risco, Seguradoras e Operação. Campos continuam com salvamento inline; status, contato e cópia de CPF/placa viraram ações diretas.
+- `AutoApoliceDetalheV2` protege alterações pendentes ao fechar a página, aceita `Ctrl/Cmd + S`, mostra erro de salvamento e oferece ações rápidas para contato e cópia de apólice/placa.
+- O acabamento complementar está em `auto-ui.css`, mantendo dark mode, responsividade e redução de movimento.
+- `AutoCotacoes` usa `?modo=lista|novo|renovacao|endosso` como estado navegável, ainda aceita `?tab=` por compatibilidade e salva busca/filtros no `localStorage` (`auto-cotacoes-workspace-filters-v1`).
+- `AutoClientesV2` salva filtros em `auto-clientes-workspace-filters-v1`, aplica debounce de 280 ms na busca remota e permite recorte por cliente ativo/inativo.
+- `AutoClienteDetalheV2` concentra ações de relacionamento (telefone, e-mail, CPF, apólices) e diferencia os atalhos de nova cotação e renovação.
+- `AutoPdfAutomation` apresenta upload, extracao, revisao e aplicacao dos PDFs sem bloquear a edicao manual. Orcamentos entram no comparativo e no detalhe da cotacao; propostas/apolices entram nos formularios de emissao. Imagens continuam como anexo, sem extracao.
+- `autoPdfParser.js` detecta a seguradora e normaliza dados comuns do segurado, condutor, veiculo, vigencia, premios, comissao e pagamento. A configuracao/mapeamento por seguradora e tratada separadamente pela tarefa ativa registrada em `docs/CURRENT_TASK.md`.
+- `AutoRenovacoes` pesquisa simultaneamente cliente, contato, apolice, veiculo, placa e seguradora; periodo e filtro de acompanhamento ficam no `localStorage`.
+- `AutoSinistrosV2` salva checklist e dossie no dispositivo e gera um resumo copiavel. Esses dados ainda nao sao enviados ao Supabase.
 
 ## Handoff Checklist
 

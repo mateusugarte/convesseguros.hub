@@ -24,8 +24,8 @@ import ModalFinalizar from '../components/ModalFinalizar'
 import { DashboardSkeleton } from '../components/Skeleton'
 import ImobiliariaIdentity from '../components/ImobiliariaIdentity'
 import {
-  Activity, AlertTriangle, ArrowRight, BarChart3, BellRing, CheckCircle2,
-  CircleAlert, Clock3, Crown, ExternalLink, RefreshCw, Search, ShieldCheck, Sparkles,
+  Activity, AlertTriangle, ArrowRight, BarChart3, BellRing, Car, CheckCircle2,
+  CircleAlert, ClipboardList, Clock3, Crown, ExternalLink, FileCheck2, FileText, RefreshCw, Search, ShieldCheck, Sparkles,
   Target, TrendingUp, Users, Zap,
 } from 'lucide-react'
 import { DataCard, EmptyState, MetricCard, Button, PortalSelect } from '../components/ui'
@@ -497,6 +497,43 @@ export default function Dashboard() {
               <MetricCard label="Emitidas" value={emitted} hint="status emitido" tone="success" icon={<CheckCircle2 className="w-5 h-5" />} />
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="hub-launchpad" aria-label="Atalhos para áreas operacionais">
+        <header>
+          <div>
+            <span><Zap aria-hidden="true" /> Navegação inteligente</span>
+            <h2>Entre direto onde o trabalho acontece</h2>
+          </div>
+          <small>Um clique para cada mesa operacional</small>
+        </header>
+        <div>
+          <button type="button" onClick={() => navigate('/fichas')}>
+            <span className="is-blue"><FileText /></span>
+            <div><strong>Fichas</strong><small>Triagem e análise</small></div>
+            <b>{kpis?.emAberto ?? 0}</b><ArrowRight />
+          </button>
+          <button type="button" onClick={() => navigate('/minhas-fichas')}>
+            <span className="is-violet"><ClipboardList /></span>
+            <div><strong>Minha carteira</strong><small>Prioridades pessoais</small></div>
+            <b>{mine.length}</b><ArrowRight />
+          </button>
+          <button type="button" onClick={() => navigate('/apolices/gestao')}>
+            <span className="is-teal"><FileCheck2 /></span>
+            <div><strong>Apólices</strong><small>Gestão de emissões</small></div>
+            <b>{emitted}</b><ArrowRight />
+          </button>
+          <button type="button" onClick={() => navigate('/auto/gestao')}>
+            <span className="is-cyan"><Car /></span>
+            <div><strong>Pipeline Auto</strong><small>Cotação até emissão</small></div>
+            <b>Auto</b><ArrowRight />
+          </button>
+          <button type="button" onClick={() => navigate('/comercial/pipeline')}>
+            <span className="is-amber"><TrendingUp /></span>
+            <div><strong>Pipeline CRM</strong><small>Leads e oportunidades</small></div>
+            <b>CRM</b><ArrowRight />
+          </button>
         </div>
       </section>
 
@@ -1107,5 +1144,4 @@ export default function Dashboard() {
     </div>
   )
 }
-
 

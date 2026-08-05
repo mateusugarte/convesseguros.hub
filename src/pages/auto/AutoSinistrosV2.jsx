@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import {
   Camera,
   Check,
+  CheckCircle2,
   ClipboardCheck,
+  Copy,
   FileText,
   MapPin,
   RefreshCw,
@@ -24,6 +26,16 @@ const CHECKLIST = [
 ]
 
 const STORAGE_KEY = 'auto-sinistro-preparo'
+const DOSSIER_STORAGE_KEY = 'auto-sinistro-dossie'
+const DOSSIER_EMPTY = {
+  segurado: '',
+  apolice: '',
+  seguradora: '',
+  data_ocorrencia: '',
+  local: '',
+  protocolo: '',
+  relato: '',
+}
 
 export default function AutoSinistrosV2() {
   const navigate = useNavigate()
@@ -35,10 +47,22 @@ export default function AutoSinistrosV2() {
       return []
     }
   })
+  const [dossie, setDossie] = useState(() => {
+    try {
+      return { ...DOSSIER_EMPTY, ...JSON.parse(localStorage.getItem(DOSSIER_STORAGE_KEY) || '{}') }
+    } catch {
+      return DOSSIER_EMPTY
+    }
+  })
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(concluidos))
   }, [concluidos])
+
+  useEffect(() => {
+    localStorage.setItem(DOSSIER_STORAGE_KEY, JSON.stringify(dossie))
+  }, [dossie])
 
   const progresso = useMemo(
     () => Math.round((concluidos.length / CHECKLIST.length) * 100),
@@ -55,6 +79,35 @@ export default function AutoSinistrosV2() {
     setConcluidos([])
   }
 
+  function updateDossie(field, value) {
+    setDossie(current => ({ ...current, [field]: value }))
+  }
+
+  async function copiarResumo() {
+    const resumo = [
+      'PRÉ-ATENDIMENTO DE SINISTRO AUTO',
+      `Segurado: ${dossie.segurado || 'não informado'}`,
+      `Apólice: ${dossie.apolice || 'não informada'}`,
+      `Seguradora: ${dossie.seguradora || 'não informada'}`,
+      `Ocorrência: ${dossie.data_ocorrencia || 'data não informada'} · ${dossie.local || 'local não informado'}`,
+      `Protocolo: ${dossie.protocolo || 'pendente'}`,
+      `Relato: ${dossie.relato || 'não informado'}`,
+      `Checklist: ${concluidos.length}/${CHECKLIST.length} etapas concluídas`,
+    ].join('\n')
+    try {
+      await navigator.clipboard.writeText(resumo)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1800)
+    } catch {
+      setCopied(false)
+    }
+  }
+
+  const dossiePreenchido = useMemo(
+    () => Object.values(dossie).filter(Boolean).length,
+    [dossie],
+  )
+
   return (
     <div className="auto-page auto-v2-page auto-claims-page">
       <AutoPageHeader
@@ -65,6 +118,7 @@ export default function AutoSinistrosV2() {
           <>
             <AutoBadge tone="success" icon={ClipboardCheck}>Pré-atendimento disponível</AutoBadge>
             <AutoBadge>Checklist salvo neste dispositivo</AutoBadge>
+            {copied && <AutoBadge tone="success" icon={CheckCircle2}>Resumo copiado</AutoBadge>}
           </>
         )}
         actions={(
@@ -81,6 +135,31 @@ export default function AutoSinistrosV2() {
         title="Em caso de vítimas ou risco imediato, priorize a emergência"
         description="Esta central organiza informações, mas não substitui polícia, bombeiros, atendimento médico ou o canal oficial da seguradora."
       />
+
+      <AutoPanel
+        title="Dossiê rápido da ocorrência"
+        description="Registre o essencial uma vez, copie o resumo e use-o no contato com cliente e seguradora. O rascunho fica salvo neste dispositivo."
+        actions={(
+          <button type="button" onClick={copiarResumo} className="btn-primary inline-flex items-center gap-2" disabled={dossiePreenchido === 0}>
+            <Copy className="h-4 w-4" aria-hidden="true" />
+            {copied ? 'Resumo copiado' : 'Copiar resumo'}
+          </button>
+        )}
+      >
+        <div className="auto-claims-dossier">
+          <label><span>Segurado</span><input value={dossie.segurado} onChange={event => updateDossie('segurado', event.target.value)} placeholder="Nome do segurado" /></label>
+          <label><span>Nº da apólice</span><input value={dossie.apolice} onChange={event => updateDossie('apolice', event.target.value)} placeholder="Número do documento" /></label>
+          <label><span>Seguradora</span><input value={dossie.seguradora} onChange={event => updateDossie('seguradora', event.target.value)} placeholder="Seguradora responsável" /></label>
+          <label><span>Data da ocorrência</span><input type="date" value={dossie.data_ocorrencia} onChange={event => updateDossie('data_ocorrencia', event.target.value)} /></label>
+          <label className="is-wide"><span>Local da ocorrência</span><input value={dossie.local} onChange={event => updateDossie('local', event.target.value)} placeholder="Endereço e referência" /></label>
+          <label><span>Protocolo</span><input value={dossie.protocolo} onChange={event => updateDossie('protocolo', event.target.value)} placeholder="Preencha após o acionamento" /></label>
+          <label className="is-full"><span>Relato resumido</span><textarea rows="3" value={dossie.relato} onChange={event => updateDossie('relato', event.target.value)} placeholder="O que aconteceu, envolvidos e danos percebidos" /></label>
+        </div>
+        <div className="auto-claims-dossier-foot">
+          <span><CheckCircle2 aria-hidden="true" />{dossiePreenchido} de {Object.keys(DOSSIER_EMPTY).length} informações registradas</span>
+          {dossiePreenchido > 0 && <button type="button" onClick={() => setDossie(DOSSIER_EMPTY)}>Limpar dossiê</button>}
+        </div>
+      </AutoPanel>
 
       <div className="auto-claims-grid">
         <AutoPanel

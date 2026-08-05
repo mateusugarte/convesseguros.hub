@@ -1,5 +1,101 @@
 # CURRENT TASK
 
+## Configuracao de leitura de PDF por seguradora (cotacoes e apolices Auto) (2026-08-04, Claude — CONCLUIDA, migration 62 pendente)
+
+Objetivo: fazer a leitura do PDF dentro do proprio sistema. Em Configuracoes, dois botoes ("Configurar cotacoes Auto" e "Configurar apolices Auto") abrem uma grade com o card de cada seguradora cadastrada (logo + status verde/amarelo/vermelho conforme o mapeamento). Ao clicar no card, o usuario sobe um PDF de amostra, clica em "Mapear", o sistema localiza sozinho cada informacao que o sistema pede hoje, o usuario confirma campo a campo (correto / incorreto, com candidatos alternativos), visualiza o PDF na propria tela e marca a configuracao como concluida.
+
+Arquivos criados: `supabase/62_auto_pdf_mapeamentos.sql`, `src/lib/autoPdfCampos.js`, `src/lib/autoPdfMapeamento.js`, `src/lib/autoPdfMapeamento.test.mjs`, `src/lib/autoPdfConfig.js`, `src/pages/config/AutoPdfConfigLista.jsx`, `src/pages/config/AutoPdfConfigSeguradora.jsx`, `src/pages/config/CONTEXT.md`. Arquivos alterados: `src/lib/autoPdfParser.js` (aceita o mapeamento salvo e o sobrepoe ao generico), `src/pages/Configuracoes.jsx` (os dois botoes), `src/App.jsx` (4 rotas novas), `package.json` (testes novos na suite).
+
+**Como o mapeamento funciona.** A ancora guardada e o *rotulo do PDF* ("PREMIO LIQUIDO"), nao uma coordenada — layout reformulado nao invalida a configuracao inteira. Quando o valor aparece sem rotulo, guarda-se tipo + ocorrencia (o 2o CPF do documento, por exemplo). A dobra de acentos preserva o comprimento da string de proposito: `normalize('NFD')` deslocaria os indices e desalinharia a busca da ancora com o texto de onde os valores sao lidos. O motor gera as ultimas 1..5 palavras antes dos dois-pontos como variantes de rotulo e deixa a pontuacao escolher, em vez de adivinhar onde o rotulo comeca; o bonus por especificidade e o que separa "CPF DO CONDUTOR" de "CPF" (sem ele, o CPF do segurado venceria por posicao e o condutor herdaria o documento errado).
+
+**Uso em producao:** `lerPdfAuto(file, tipo)` (`src/lib/autoPdfConfig.js`) e o ponto unico — le o texto, detecta a seguradora pelo proprio PDF, busca o mapeamento concluido dela e chama o parser. Sem mapeamento, o parser generico continua respondendo sozinho; a automacao nunca fica bloqueada por falta de configuracao.
+
+**Amostra:** bucket privado `entidade-documentos`, prefixo `seguradora/<id>/auto-pdf/<tipo>/`, URL assinada de 1h no visualizador. O texto extraido fica em `auto_pdf_mapeamentos.amostra_texto` para reabrir a tela sem novo upload.
+
+Validacao: `npm test` verde com 198/198 (27 testes novos em `src/lib/autoPdfMapeamento.test.mjs`). `npm run check:page-contexts` acusa apenas a pendencia pre-existente de `GestaoComercial.jsx`. `npm run build` continua bloqueado nesta maquina pela dependencia opcional `@rollup/rollup-darwin-arm64` ausente em `node_modules` (mesmo bloqueio ja registrado por Codex; nao reinstalei para nao alterar dependencias) — no lugar, todos os arquivos novos/alterados passaram no parser JSX/ESM.
+
+**PENDENTE DE APROVACAO E EXECUCAO:** `supabase/62_auto_pdf_mapeamentos.sql` cria a tabela `auto_pdf_mapeamentos` com RLS `FOR ALL TO authenticated` (mesmo padrao das demais tabelas de cadastro do projeto). Nada foi executado no banco. Enquanto a migration nao rodar, as telas de configuracao abrem mas nao salvam.
+
+Responsavel: Claude. Proximo passo: aprovar/rodar a migration 62, mapear a primeira seguradora com um PDF real e ligar `lerPdfAuto` nas telas de cotacao/emissao (arquivos hoje em edicao concorrente pelo Codex, por isso nao foram tocados).
+
+---
+
+## Redesign operacional Auto — fase 3 + automacoes PDF (2026-08-04, Codex — CONCLUIDA)
+
+Objetivo: elevar Renovações, Emissões e Sinistros ao modo comando e criar a experiência visual das novas automações de PDF para cotação e apólice, com fluxo guiado de upload, extração, revisão e confirmação. Preservar parser, banco, rotas e regras existentes.
+
+Arquivos alterados nesta fase: `src/components/auto/AutoPdfAutomation.jsx`, `src/components/auto/index.js`, `src/pages/auto/AutoCotacaoDetalhe.jsx`, `src/pages/auto/AutoEmissoes.jsx`, `src/pages/auto/AutoRenovacoes.jsx`, `src/pages/auto/AutoSinistrosV2.jsx`, `src/lib/autoPdfParser.js`, `src/styles/auto-ui.css`, `src/pages/auto/CONTEXT.md` e `artifacts/operational_design_revolution_2026-08-04.md`.
+
+Entrega: componente visual reutilizavel `Auto PDF Intelligence`, com etapas enviar/extrair/revisar, progresso, preview dos campos, alertas e confirmacao assistida; leitura de orcamento integrada ao resultado da cotacao e ao workspace de seguradoras; leitura de proposta/apolice integrada aos dois formularios de emissao, preservando anexos de imagem e mantendo campos editaveis. O payload da emissao agora respeita os valores revisados no formulario. Renovações ganhou busca transversal e filtros persistentes; Sinistros ganhou dossie local persistente com protocolo, relato e resumo copiavel. Corrigida tambem a extracao de numero em documentos com rotulo simples `Apolice N` / `Proposta N`.
+
+Validacao: 171/171 testes passaram, incluindo 21 testes do parser PDF; parsers JSX passaram nos cinco arquivos desta fase; parser CSS e `git diff --check` passaram. O build continua bloqueado apenas pela dependencia opcional ausente `@rollup/rollup-darwin-arm64`, ja registrada anteriormente e nao reinstalada para preservar o ambiente. `check:page-contexts` continua acusando somente a pendencia pre-existente de `src/pages/comercial/GestaoComercial.jsx`.
+
+Responsável: Codex (Agente de Melhorias, com revisão de performance). Proximo passo recomendado: smoke test autenticado com PDFs reais de duas ou tres seguradoras e conexao da configuracao por seguradora que esta sendo implementada na tarefa paralela acima.
+
+---
+
+## Redesign operacional Auto — fase 2: cotacoes e relacionamento (2026-08-04, Codex — CONCLUIDA)
+
+Objetivo: estender o modo comando para as listas de cotacoes e clientes e para o detalhe do cliente Auto, com priorizacao visual, filtros persistentes, acoes contextuais e continuidade entre registros, sem alterar banco, rotas ou regras de negocio.
+
+Arquivos alterados: `src/pages/auto/AutoCotacoes.jsx`, `src/pages/auto/AutoClientesV2.jsx`, `src/pages/auto/AutoClienteDetalheV2.jsx`, `src/styles/auto-ui.css`, `src/pages/auto/CONTEXT.md` e `artifacts/operational_design_revolution_2026-08-04.md`.
+
+Entrega: central de cotacoes em Auto V2 com conversao e filas acionaveis, filtros persistentes e navegacao por URL; carteira com busca debounced, filtro de situacao e preferencias salvas; perfil do cliente com acoes de relacionamento e continuidade para cotacao/renovacao/apolices. Corrigidos tambem atalhos com parametro e rota incorretos e estados de erro que antes pareciam listas vazias.
+
+Validacao: JSX dos tres arquivos e CSS passaram nos parsers; `git diff --check` passou; suite relacionada verde com 150/150 testes. Nenhuma mudanca em banco, Supabase, RLS, rotas declaradas ou regras de negocio.
+
+Responsavel: Codex (Agente de Melhorias, com revisao de performance). Proximo passo recomendado: fase 3 em Renovacoes, Emissoes/modais e Sinistros, com filtros salvos e formularios progressivos.
+
+---
+
+## Redesign operacional: Pipeline Auto, detalhes de cotacoes/apolices e dashboards (2026-08-04, Codex — CONCLUIDA)
+
+Objetivo: elevar a qualidade visual e a produtividade do sistema, com foco inicial na Pipeline Auto, nas telas internas de cotacoes e apolices, no Dashboard Auto e no dashboard principal. O trabalho preserva banco, rotas e regras de negocio; prioriza hierarquia de informacao, acoes mais rapidas, reducao de cliques, responsividade e consistencia do design system.
+
+Arquivos alterados: `src/pages/auto/AutoEmissoes.jsx`, `src/pages/auto/AutoCotacaoDetalhe.jsx`, `src/pages/auto/AutoApoliceDetalheV2.jsx`, `src/pages/Dashboard.jsx`, `src/styles/auto-ui.css`, `src/styles/fianca-ui.css`, os CONTEXTs correspondentes e `artifacts/operational_design_revolution_2026-08-04.md`.
+
+Entrega: Pipeline com busca transversal e contadores filtrados; cotacao convertida em workspace Auto V2 com cinco abas, resumo consolidado, acoes de contato/copia e status em um clique; apolice com acoes rapidas, status legiveis, erro de salvamento, protecao de alteracoes pendentes e atalho `Ctrl/Cmd + S`; dashboard principal com launchpad para as cinco mesas operacionais. O Dashboard Auto ja estava no padrao de central de comando e foi preservado para evitar retrabalho sem ganho.
+
+Validacao: parser JSX passou nos quatro arquivos alterados, parser CSS passou nos dois stylesheets e `git diff --check` passou. Suite relacionada passou com 150/150 testes. A suite completa tem uma falha pre-existente no arquivo nao rastreado `src/lib/autoPdfParser.test.mjs` (`parsePropostaAutoText` nao extrai numero esperado), fora deste redesign. O build chegou ao Vite, mas ficou bloqueado porque a dependencia opcional `@rollup/rollup-darwin-arm64` esta ausente em `node_modules`; nao foi reinstalada para nao alterar dependencias do usuario. `check:page-contexts` continua acusando apenas a pendencia pre-existente de `src/pages/comercial/GestaoComercial.jsx`.
+
+Responsavel: Codex (Agente de Melhorias, com revisao de performance). Proximo passo recomendado: smoke test autenticado em desktop/mobile e fase 2 em clientes/modais de emissao, filtros salvos e command palette contextual.
+
+---
+
+## AUTO: execucao do formulario de recebimento falhou sem criar a cotacao (2026-08-04, Claude — CONCLUIDA)
+
+Objetivo: ler a execucao que falhou no n8n (webhook `CONVES RECEBIMENTO AUTO`), corrigir a causa para as proximas passarem e inserir no sistema a cotacao que nao foi criada.
+
+**A instancia do n8n mudou de host.** O `.env.local` apontava para `aula-n8n.riftvt.easypanel.host`, que esta morto (DNS resolve, mas 443/80/5678/8080 dao timeout). O host atual, informado pelo usuario, e `aula-n8n.orq60x.easypanel.host`. `N8N_URL` foi atualizado e o usuario gerou uma `N8N_API_KEY` nova (a antiga era da instancia anterior). Backup do arquivo em `.env.local.bak-<timestamp>`.
+
+**O workflow em producao era diferente do JSON versionado.** `n8n/workflow_conves_recebimento_auto.json` descrevia um fluxo com nos `httpRequest` e upsert (`on_conflict=cpf`); producao usa nos `n8n-nodes-base.supabase` com o padrao update-entao-create: Normalizar -> Atualizar Cliente Auto -> Cliente Foi Atualizado? (IF) -> [true] Preparar Cotacao / [false] Criar Cliente Auto -> Preparar Cotacao -> Criar Cotacao -> Responder OK. Toda a analise inicial feita sobre o arquivo local era sobre um fluxo que nao existe mais.
+
+**Execucao 851 (04/08 16:44 BRT, cliente Matheus Favaretto Ramos Campagnoli) — dois bugs:**
+
+1. **Regexes corrompidas no Code Node `Normalizar Seguro Auto` (causa da corrupcao de dados).** Tres escapes foram perdidos em alguma edicao: `[\u0300-\u036f]` virou `[?-ͯ]`, `/\s+/` virou `/s+/` e `/\D/` virou `/D/`. O primeiro e fatal: `?` e 0x3F e o range 0x3F-0x36F cobre todas as letras, entao `normalizeKey` apagava cada letra e **toda** chave normalizava para string vazia. `buildIndex` gravava tudo em `index[""]`, sobrescrevendo ate sobrar a ultima chave do payload — `formulario`. Resultado: 22 dos 23 campos saiam com o valor `"Seguro Auto"`. O unico campo correto foi `jovens_18_26`, porque digitos (0x30-0x39) ficam abaixo de 0x3F e sobreviviam, fazendo `'18 26'` casar com o alias `'Jovens 18 a 26'`.
+2. **Referencia errada no no `Criar Cliente Auto` (causa da falha visivel).** Os campos usavam `{{ $json.cliente.* }}`, mas o input desse no vem do IF, ou seja, do resultado do UPDATE — que nao retorna linha quando o cliente ainda nao existe. `$json.cliente` era `undefined`, `nome_completo` virava nulo e o Postgres rejeitava com `null value in column "nome_completo" of relation "clientes_auto" violates not-null constraint` (HTTP 400).
+
+**Correcoes publicadas em producao** (workflow `EuESfEBc8UkN16ET`, backup do estado anterior em `n8n/backup_wf_AUTO_<timestamp>.json`):
+- `Normalizar Seguro Auto`: substituido pelo normalizador de `n8n/code_recebimento_auto.js` — chaves normalizadas sem acento/caixa/pontuacao, fallback por palavras-chave com termos proibidos para nao misturar segurado e condutor, aliases alinhados aos rotulos reais do Forms (que trazem `:` e espacos no fim), erro de CPF agora lista as chaves recebidas, e novo campo `campos_nao_mapeados`.
+- `Criar Cliente Auto`: campos passaram a referenciar `$('Normalizar Seguro Auto').first().json.cliente.*` em vez de `$json.cliente.*`.
+- `retryOnFail` 3x/2s nos tres nos Supabase.
+- `settings.binaryMode` ("separate") foi perdido no PUT porque a API publica rejeita a propriedade; o workflow nao trata binarios.
+
+**Validacao:** o payload original da execucao 851 foi reenviado pelo webhook de producao. Execucao 855 = `success`, resposta `{"ok":true,"cotacao_id":"69e6bf74-..."}`. No banco: cliente `e5a040f4` com nome/CPF/telefone/celular/email/estado civil/profissao corretos, cotacao `69e6bf74` com veiculo (Corsa Classic 2008, placa EAJ0B74), CEP de pernoite, uso, tres garagens, kit gas, blindagem e isencao preenchidos, e o card `a157707a` criado em `emissoes_auto` pelo trigger. Antes disso, 4 cenarios sinteticos (rotulos originais, rotulos variantes, payload sem CPF, payload aninhado em `.body` com condutor diferente do segurado) rodaram contra o codigo, sem vazamento entre segurado e condutor. Node do PATH nao existe nesta maquina; usado o binario embarcado do ChatGPT.app.
+
+Nenhuma alteracao de schema, RLS ou regra de negocio. As escritas no Supabase foram feitas pelo proprio workflow, nao por script.
+
+**Pendencias:**
+- Cliente orfao **Neusa Aparecida de Araujo Machado** (CPF 06693260896, criado 31/07 13:52 UTC) continua sem cotacao. A execucao que o gerou nao existe mais nesta instancia (so 851 e 855 constam), entao o payload do Forms dela nao e recuperavel pelo n8n — teria de vir da planilha de respostas do Google Forms.
+- Dois campos do Forms nao tem coluna em `cotacoes_auto` e sao descartados: `Tipo de residencia:` e `Veiculo tem passagem por leilao:`. Passagem por leilao afeta aceitacao e preco; vale decidir se entra no schema.
+- O Forms de AUTO nao pergunta condutor principal, entao `condutor_nome`, `condutor_cpf` e `estado_civil_condutor` ficam sempre nulos. O normalizador ja suporta esses campos se forem adicionados ao formulario.
+- `Cep de pernoite` recebe endereco por extenso, nao CEP.
+- `n8n/workflow_conves_recebimento_auto.json` continua desatualizado em relacao a producao. A fonte de verdade agora e o backup em `n8n/backup_wf_AUTO_<timestamp>.json` mais o estado no servidor.
+
+Risco remanescente: o fluxo continua nao-transacional — o cliente e criado antes da cotacao, entao uma falha na cotacao deixa cliente orfao (foi o que aconteceu com a Neusa). Tornar atomico exigiria uma funcao RPC no Postgres, o que cai na regra de "banco -> parar e aprovar" do CLAUDE.md e nao foi feito.
+
+---
+
 ## Apolices: correcao do header e refinamento visual do detalhe (2026-08-04, Codex — CONCLUIDA)
 
 Objetivo: corrigir o masthead branco dentro da apolice para o azul/indigo do workspace de Fianca e elevar a hierarquia visual, a legibilidade das acoes, os cards e a responsividade de `ApoliceDetalhe`, sem alterar banco, rotas ou regras de negocio.

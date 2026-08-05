@@ -10,8 +10,9 @@ import {
   YAxis,
 } from 'recharts'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { AlertCircle, BadgeDollarSign, CalendarDays, Car, CircleCheckBig, Mail, Phone, RefreshCw, Search, ShieldHalf, Sparkles, TrendingUp, UserRound } from 'lucide-react'
-import { PageHeader, MetricCard, DataCard, EmptyState } from '../../components/ui'
+import { AlertCircle, ArrowRight, BadgeDollarSign, CalendarDays, Car, CircleCheckBig, FilePlus2, ListFilter, Mail, Phone, RefreshCw, Search, ShieldHalf, Sparkles, TrendingUp, UserRound, Wrench } from 'lucide-react'
+import { DataCard, EmptyState } from '../../components/ui'
+import { AutoBadge, AutoPageHeader, AutoStatStrip, AutoTabs, AutoTypeBadge } from '../../components/auto'
 import SeguradoraBadge from '../../components/SeguradoraBadge'
 import SeguradoraSelect from '../../components/SeguradoraSelect'
 import {
@@ -26,14 +27,29 @@ import {
   iniciarCotacaoRenovacao,
   iniciarCotacaoRenovacaoPorApolice,
 } from '../../lib/auto'
-import { COTACAO_STATUS, diasParaVencer, formatDateTimeBR, formatDiasParaVencer, toneClasses } from './autoShared'
-
+import { COTACAO_STATUS, diasParaVencer, formatDateTimeBR, formatDiasParaVencer } from './autoShared'
 const LISTA_TABS = [
-  { value: 'lista', label: 'Lista' },
-  { value: 'novo', label: 'Novo seguro' },
-  { value: 'renovacao', label: 'Renovacao' },
-  { value: 'endosso', label: 'Endosso' },
+  { value: 'lista', label: 'Caixa de trabalho', icon: ListFilter },
+  { value: 'novo', label: 'Novo seguro', icon: FilePlus2 },
+  { value: 'renovacao', label: 'Renovação', icon: RefreshCw },
+  { value: 'endosso', label: 'Endosso', icon: Wrench },
 ]
+
+const COTACOES_FILTERS_KEY = 'auto-cotacoes-workspace-filters-v1'
+
+function readSavedFilters() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(COTACOES_FILTERS_KEY) || '{}')
+    return {
+      status: STATUS_FILTROS.some(item => item.value === saved.status) ? saved.status : 'todas',
+      tipo: ['todos', 'novo', 'renovacao', 'endosso'].includes(saved.tipo) ? saved.tipo : 'todos',
+      periodo: PERIODO_FILTROS.some(item => item.value === saved.periodo) ? saved.periodo : '90d',
+      busca: typeof saved.busca === 'string' ? saved.busca : '',
+    }
+  } catch {
+    return { status: 'todas', tipo: 'todos', periodo: '90d', busca: '' }
+  }
+}
 
 const STATUS_FILTROS = [
   { value: 'todas', label: 'Todas' },
@@ -77,7 +93,7 @@ const RENOVACAO_NOVO_CLIENTE_VAZIO = {
 
 function QuoteStatusBadge({ status }) {
   const meta = COTACAO_STATUS[status] || COTACAO_STATUS.aberta
-  return <span className={`badge ${toneClasses(meta.tone)}`}>{meta.label}</span>
+  return <AutoBadge tone={meta.tone}>{meta.label}</AutoBadge>
 }
 
 function Field({ label, value, onChange, type = 'text', placeholder, children, inputMode }) {
@@ -134,13 +150,15 @@ function ChartTip({ active, payload, label }) {
 
 export default function AutoCotacoes() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const modoInicial = LISTA_TABS.some(item => item.value === searchParams.get('modo')) ? searchParams.get('modo') : 'lista'
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedMode = searchParams.get('modo') || searchParams.get('tab')
+  const modoInicial = LISTA_TABS.some(item => item.value === requestedMode) ? requestedMode : 'lista'
+  const filtrosIniciais = useMemo(readSavedFilters, [])
   const [tab, setTab] = useState(modoInicial)
-  const [filtroStatus, setFiltroStatus] = useState('todas')
-  const [filtroTipo, setFiltroTipo] = useState('todos')
-  const [filtroPeriodo, setFiltroPeriodo] = useState('90d')
-  const [searchLista, setSearchLista] = useState('')
+  const [filtroStatus, setFiltroStatus] = useState(filtrosIniciais.status)
+  const [filtroTipo, setFiltroTipo] = useState(filtrosIniciais.tipo)
+  const [filtroPeriodo, setFiltroPeriodo] = useState(filtrosIniciais.periodo)
+  const [searchLista, setSearchLista] = useState(filtrosIniciais.busca)
   const [novo, setNovo] = useState(NOVO_VAZIO)
   const [searchRenovacao, setSearchRenovacao] = useState('')
   const [renovacaoSelecionadaId, setRenovacaoSelecionadaId] = useState(null)
@@ -157,14 +175,37 @@ export default function AutoCotacoes() {
   const qc = useQueryClient()
 
   useEffect(() => {
-    const modo = searchParams.get('modo')
+    const modo = searchParams.get('modo') || searchParams.get('tab')
     if (LISTA_TABS.some(item => item.value === modo)) {
       setTab(modo)
       setErro(null)
     }
   }, [searchParams])
 
-  const { data: cotacoes = [], isLoading: loadingLista } = useQuery({
+  useEffect(() => {
+    try {
+      localStorage.setItem(COTACOES_FILTERS_KEY, JSON.stringify({
+        status: filtroStatus,
+        tipo: filtroTipo,
+        periodo: filtroPeriodo,
+        busca: searchLista,
+      }))
+    } catch {}
+  }, [filtroStatus, filtroTipo, filtroPeriodo, searchLista])
+
+  function selectTab(value) {
+    setTab(value)
+    setErro(null)
+    setSearchParams(value === 'lista' ? {} : { modo: value }, { replace: true })
+  }
+
+  function resetListFilters() {
+    setFiltroStatus('todas')
+    setFiltroTipo('todos')
+    setFiltroPeriodo('90d')
+    setSearchLista('')
+  }
+  const { data: cotacoes = [], isLoading: loadingLista, isError: listaComErro, error: erroLista } = useQuery({
     queryKey: ['auto-cotacoes-todas'],
     queryFn: () => getCotacoesAuto({}),
   })
@@ -210,7 +251,7 @@ export default function AutoCotacoes() {
       setErro(null)
       setNovo(NOVO_VAZIO)
       await invalidar()
-      setTab('lista')
+      selectTab('lista')
     },
     onError: err => setErro(err?.message || 'Erro ao salvar cotacao.'),
   })
@@ -370,118 +411,74 @@ export default function AutoCotacoes() {
   const taxa = cotacoesMes.length > 0 ? Math.round((convertidas / cotacoesMes.length) * 100) : 0
 
   const metrics = [
-    { key: 'total', label: 'Cotacoes no periodo', value: resumo?.total ?? 0, icon: BadgeDollarSign, tone: 'accent' },
-    { key: 'mes', label: 'Cotacoes no mes', value: resumo?.mesAtual ?? 0, icon: Sparkles, tone: 'warning' },
-    { key: 'convertidas', label: 'Convertidas', value: resumo?.convertidas ?? 0, icon: CircleCheckBig, tone: 'success' },
-    { key: 'taxa', label: 'Taxa de conversao', value: `${taxa}%`, icon: TrendingUp, tone: 'secondary' },
+    { key: 'total', label: 'Cotações no período', value: resumo?.total ?? 0, hint: 'volume analisado', icon: BadgeDollarSign, tone: 'info' },
+    { key: 'mes', label: 'Cotações no mês', value: resumo?.mesAtual ?? 0, hint: 'ritmo atual', icon: Sparkles, tone: 'warning' },
+    { key: 'convertidas', label: 'Convertidas', value: resumo?.convertidas ?? 0, hint: 'negócios ganhos', icon: CircleCheckBig, tone: 'success' },
+    { key: 'taxa', label: 'Taxa de conversão', value: `${taxa}%`, hint: 'eficiência comercial', icon: TrendingUp, tone: 'renewal' },
   ]
-
-  const resumoLateral = useMemo(() => [
-    {
-      label: 'Mais recente',
-      value: cotacoesOrdenadas[0]?.nome_cliente || cotacoesOrdenadas[0]?.cpf_cliente || 'Sem identificacao',
-      hint: formatDateTimeBR(cotacoesOrdenadas[0]?.updated_at || cotacoesOrdenadas[0]?.created_at),
-    },
-    {
-      label: 'Atualizacao',
-      value: cotacoesOrdenadas.find(item => item.updated_at && item.updated_at !== item.created_at)
-        ? 'Ha registros editados'
-        : 'Somente criacoes',
-      hint: 'ordenacao usa updated_at quando existir',
-    },
-    {
-      label: 'Pendentes',
-      value: `${resumo?.pendentes ?? 0} cotações`,
-      hint: 'aguardando tratativa',
-    },
-    {
-      label: 'Convertidas',
-      value: `${resumo?.convertidas ?? 0}`,
-      hint: 'status convertido',
-    },
-    {
-      label: 'Perdidas',
-      value: `${resumo?.perdidas ?? 0}`,
-      hint: 'status perdido',
-    },
-  ], [cotacoesOrdenadas, resumo])
 
   const tabs = LISTA_TABS.map(item => ({
     ...item,
-    count: item.value === 'lista' ? cotacoes.length : 0,
+    ...(item.value === 'lista' ? { count: cotacoes.length } : {}),
   }))
-
   const resumoAtivo = resumo?.taxaConversao ? Math.round((resumo.taxaConversao ?? 0) * 100) : taxa
+  const hasActiveFilters = filtroStatus !== 'todas' || filtroTipo !== 'todos' || filtroPeriodo !== '90d' || Boolean(searchLista.trim())
 
   return (
-    <div className="auto-page space-y-6 animate-fade-in">
-      <PageHeader
-        eyebrow="Seguro Auto"
-        title="Cotacoes"
-        description="Area central com a lista completa das cotacoes, atualizada do mais recente para o mais antigo, com acesso rapido aos detalhes e edicao."
-        actions={(
+    <div className="auto-page auto-v2-page auto-quotes-workspace">
+      <AutoPageHeader
+        context="Central comercial Auto"
+        title="Cotações"
+        description="Crie, priorize e acompanhe oportunidades do primeiro contato à conversão."
+        meta={(
           <>
-            <Link to="/auto/dashboard" className="btn-secondary">Dashboard</Link>
-            <Link to="/auto/emissoes" className="btn-primary">Ver emissões</Link>
+            <AutoBadge tone="info">{cotacoesFiltradas.length} visíveis</AutoBadge>
+            <AutoBadge tone={Number(resumo?.pendentes) > 0 ? 'warning' : 'success'}>{resumo?.pendentes ?? 0} pendentes</AutoBadge>
           </>
         )}
-        stats={metrics.map(({ key, label, value, icon: Icon, tone }) => (
-          <MetricCard key={key} label={label} value={value} icon={<Icon className="h-4 w-4" />} tone={tone} />
-        ))}
+        actions={(
+          <>
+            <Link to="/auto" className="btn-secondary">Dashboard Auto</Link>
+            <button type="button" onClick={() => selectTab('novo')} className="btn-primary inline-flex items-center gap-2">
+              <FilePlus2 className="h-4 w-4" />
+              Nova cotação
+            </button>
+          </>
+        )}
       />
 
-      <DataCard className="overflow-hidden border-brand-accent/12" bodyClassName="p-0">
-        <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="relative overflow-hidden bg-gradient-to-br from-brand-accent/10 via-transparent to-brand-secondary/8 p-6 md:p-8">
-            <div className="absolute -right-10 top-0 h-32 w-32 rounded-full bg-brand-accent/10 blur-3xl" />
-            <div className="absolute -bottom-6 left-1/3 h-28 w-28 rounded-full bg-brand-secondary/10 blur-3xl" />
-            <div className="relative z-[1] max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-dark-surface/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-status-info">
-                <Sparkles className="h-3.5 w-3.5" />
-                Cotações em ordem cronológica
-              </div>
-              <h2 className="mt-4 text-2xl font-semibold text-dark-text md:text-3xl">
-                Veja todo o historico do modulo em uma unica tela.
-              </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-dark-muted">
-                A lista prioriza a informacao mais recente, mostra quando cada registro foi criado ou atualizado e abre o detalhe completo com um clique.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                <span className="badge badge-info">{cotacoes.length} registros</span>
-                <span className="badge badge-success">{resumoAtivo}% conversao</span>
-                <span className="badge badge-muted">{cotacoesOrdenadas.length ? 'Mais recente no topo' : 'Sem registros ainda'}</span>
-              </div>
-            </div>
+      <AutoStatStrip items={metrics} />
+      <section className="auto-quotes-command-deck" aria-label="Prioridades das cotações">
+        <article className="auto-quotes-conversion">
+          <div>
+            <span>Eficiência do funil</span>
+            <h2>Conversão ativa</h2>
+            <p>Resultado das oportunidades trabalhadas no período atual.</p>
+            <button type="button" onClick={() => { selectTab('lista'); setFiltroStatus('convertida') }}>
+              Ver convertidas <ArrowRight aria-hidden="true" />
+            </button>
           </div>
-
-          <div className="grid gap-3 bg-dark-surface2/45 p-6 md:p-8 sm:grid-cols-2 lg:grid-cols-1">
-            {resumoLateral.map(item => (
-              <div key={item.label} className="rounded-3xl border border-dark-border/70 bg-dark-surface/75 p-4 shadow-sm">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">{item.label}</p>
-                <p className="mt-2 text-sm font-semibold text-dark-text">{item.value}</p>
-                <p className="mt-2 text-xs text-dark-muted">{item.hint}</p>
-              </div>
-            ))}
+          <div className="auto-quotes-conversion-orbit" style={{ '--quote-conversion': `${Math.min(resumoAtivo, 100) * 3.6}deg` }}>
+            <div><strong>{resumoAtivo}%</strong><small>conversão</small></div>
           </div>
-        </div>
-      </DataCard>
+        </article>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {tabs.map(item => (
-          <button
-            key={item.value}
-            onClick={() => { setTab(item.value); setErro(null) }}
-            className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-colors ${
-              tab === item.value
-                ? 'border-brand-accent bg-brand-accent/10 text-status-info'
-                : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
+        <article className="auto-quotes-priority">
+          <header><div><span>Caixa de trabalho</span><h2>Onde agir primeiro</h2></div><small>filtros em um clique</small></header>
+          <div>
+            <button type="button" onClick={() => { selectTab('lista'); setFiltroStatus('pendente') }}>
+              <span className="is-amber"><RefreshCw /></span><div><strong>Pendentes</strong><small>Aguardando tratativa</small></div><b>{resumo?.pendentes ?? 0}</b><ArrowRight />
+            </button>
+            <button type="button" onClick={() => { selectTab('lista'); setFiltroStatus('convertida') }}>
+              <span className="is-green"><CircleCheckBig /></span><div><strong>Convertidas</strong><small>Negócios ganhos</small></div><b>{resumo?.convertidas ?? 0}</b><ArrowRight />
+            </button>
+            <button type="button" onClick={() => { selectTab('lista'); setFiltroStatus('perdida') }}>
+              <span className="is-coral"><AlertCircle /></span><div><strong>Perdidas</strong><small>Revisar motivos</small></div><b>{resumo?.perdidas ?? 0}</b><ArrowRight />
+            </button>
+          </div>
+        </article>
+      </section>
+      <AutoTabs items={tabs} value={tab} onChange={selectTab} ariaLabel="Áreas de cotações" />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="space-y-4">
           {erro && (
@@ -496,9 +493,16 @@ export default function AutoCotacoes() {
               title="Todas as cotacoes"
               subtitle="Organizadas da mais recente para a mais antiga, com os dados principais e o ultimo momento de atualizacao."
               actions={(
-                <span className="badge badge-muted">
-                  {cotacoesFiltradas.length} resultado{cotacoesFiltradas.length !== 1 ? 's' : ''}
-                </span>
+                <div className="flex items-center gap-2">
+                  {hasActiveFilters && (
+                    <button type="button" onClick={resetListFilters} className="auto-filter-reset">
+                      Limpar filtros
+                    </button>
+                  )}
+                  <AutoBadge tone={hasActiveFilters ? 'info' : 'neutral'}>
+                    {cotacoesFiltradas.length} resultado{cotacoesFiltradas.length !== 1 ? 's' : ''}
+                  </AutoBadge>
+                </div>
               )}
               bodyClassName="p-0"
             >
@@ -549,6 +553,7 @@ export default function AutoCotacoes() {
                     { value: 'todos', label: 'Todos os tipos' },
                     { value: 'novo', label: 'Seguro novo' },
                     { value: 'renovacao', label: 'Renovacao' },
+                    { value: 'endosso', label: 'Endosso' },
                   ].map(item => (
                     <button
                       key={item.value}
@@ -567,6 +572,14 @@ export default function AutoCotacoes() {
 
               {loadingLista ? (
                 <div className="px-5 py-10 text-center text-sm text-dark-muted">Carregando cotacoes...</div>
+              ) : listaComErro ? (
+                <div className="px-5 py-8">
+                  <EmptyState
+                    icon={<AlertCircle className="h-5 w-5" />}
+                    title="Não foi possível carregar as cotações"
+                    description={erroLista?.message || 'Tente novamente em alguns instantes.'}
+                  />
+                </div>
               ) : cotacoesFiltradas.length === 0 ? (
                 <div className="px-5 py-8">
                   <EmptyState
@@ -592,9 +605,7 @@ export default function AutoCotacoes() {
                                 {item.nome_cliente || item.cpf_cliente || 'Sem identificacao'}
                               </p>
                               <QuoteStatusBadge status={item.status} />
-                              <span className={`badge ${item.tipo === 'novo' ? 'badge-info' : 'badge-muted'}`}>
-                                {item.tipo === 'novo' ? 'Seguro novo' : 'Renovacao'}
-                              </span>
+                              <AutoTypeBadge type={item.tipo} />
                             </div>
 
                             <div className="grid gap-2 text-xs text-dark-muted md:grid-cols-2 xl:grid-cols-4">
@@ -665,7 +676,7 @@ export default function AutoCotacoes() {
                 >
                   {salvandoNovo ? 'Salvando...' : 'Salvar cotacao'}
                 </button>
-                <button type="button" onClick={() => setTab('lista')} className="btn-secondary">
+                <button type="button" onClick={() => selectTab('lista')} className="btn-secondary">
                   Voltar para lista
                 </button>
               </div>
@@ -876,7 +887,7 @@ export default function AutoCotacoes() {
                 >
                   {iniciandoRenovacao ? 'Criando cotacao...' : 'Criar/abrir cotacao de renovacao'}
                 </button>
-                <button type="button" onClick={() => setTab('lista')} className="btn-secondary">
+                <button type="button" onClick={() => selectTab('lista')} className="btn-secondary">
                   Voltar para lista
                 </button>
               </div>
@@ -941,9 +952,7 @@ export default function AutoCotacoes() {
                       </div>
                       <div className="flex items-center gap-2">
                         <QuoteStatusBadge status={item.status} />
-                        <span className={`badge ${item.tipo === 'novo' ? 'badge-info' : 'badge-muted'}`}>
-                          {item.tipo === 'novo' ? 'Seguro novo' : 'Renovacao'}
-                        </span>
+                        <AutoTypeBadge type={item.tipo} />
                       </div>
                     </div>
                   </Link>
@@ -971,7 +980,7 @@ export default function AutoCotacoes() {
         title="Acesso completo"
         subtitle="Abrir a lista principal a qualquer momento."
         actions={(
-          <button onClick={() => setTab('lista')} className="btn-primary text-sm">
+          <button onClick={() => selectTab('lista')} className="btn-primary text-sm">
             Ir para lista
           </button>
         )}

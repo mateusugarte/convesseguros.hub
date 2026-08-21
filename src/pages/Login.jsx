@@ -72,9 +72,9 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="grid w-full max-w-5xl gap-6 xl:grid-cols-[1.15fr_.85fr]">
-        <section className="dashboard-hero flex flex-col justify-between p-8">
+    <div className="login-page flex min-h-screen items-center justify-center px-4 py-10">
+      <div className="login-shell grid w-full max-w-5xl gap-6 xl:grid-cols-[1.15fr_.85fr]">
+        <section className="login-intro dashboard-hero flex flex-col justify-between p-8">
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-status-info/20 bg-status-info/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-status-info">
               <Sparkles className="h-3.5 w-3.5" />
@@ -82,14 +82,14 @@ export default function Login() {
             </div>
             <h1 className="title-display text-dark-text">Acesso operacional</h1>
             <p className="max-w-xl text-sm leading-relaxed text-dark-muted">
-              Entre para usar a mesa operacional, o CRM comercial e o modulo Seguro Auto com o shell premium já padronizado no sistema.
+              Entre para usar a mesa operacional, o CRM comercial e o módulo Seguro Auto em um único sistema.
             </p>
           </div>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             <div className="dashboard-hero-chip rounded-2xl p-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Mesa</p>
-              <p className="mt-1 text-sm font-semibold text-dark-text">Fichas e ap�lices</p>
+              <p className="mt-1 text-sm font-semibold text-dark-text">Fichas e apólices</p>
             </div>
             <div className="dashboard-hero-chip rounded-2xl p-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comercial</p>
@@ -97,12 +97,12 @@ export default function Login() {
             </div>
             <div className="dashboard-hero-chip rounded-2xl p-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Auto</p>
-              <p className="mt-1 text-sm font-semibold text-dark-text">Renovacoes e emissoes</p>
+              <p className="mt-1 text-sm font-semibold text-dark-text">Renovações e emissões</p>
             </div>
           </div>
         </section>
 
-        <section className="glass-modal p-8">
+        <section className="login-card glass-modal p-8">
           <div className="mb-6">
             <p className="eyebrow">Login</p>
             <h2 className="title-section mt-2">Entrar no sistema</h2>

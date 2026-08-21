@@ -315,3 +315,67 @@ html.dark .modal-surface .modal-shell-footer {
   from { opacity: 0; transform: translateY(34px); }
   to { opacity: 1; transform: none; }
 }
+
+/* Modal V2 — clearer hierarchy, calmer backdrop and safer responsive actions. */
+.modal-backdrop-soft {
+  background:
+    radial-gradient(circle at 16% 10%, rgb(var(--brand-primary-rgb) / .12), transparent 26rem),
+    rgba(219, 227, 241, .74) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(120%) !important;
+  backdrop-filter: blur(14px) saturate(120%) !important;
+}
+
+.modal-surface {
+  border-radius: clamp(17px, 1.8vw, 22px);
+  box-shadow:
+    0 28px 78px rgba(19, 31, 79, .2),
+    0 7px 22px rgba(19, 31, 79, .08),
+    inset 0 1px 0 rgba(255, 255, 255, .82);
+}
+
+.modal-surface .modal-shell-header {
+  min-height: 64px;
+  padding: 16px 20px;
+  background:
+    linear-gradient(120deg, rgb(var(--brand-primary-rgb) / .085), rgb(var(--brand-secondary-rgb) / .035) 48%, transparent),
+    rgb(var(--color-surface) / .97);
+}
+
+.modal-surface .modal-shell-header h2,
+.modal-surface .modal-shell-header h3 {
+  letter-spacing: -.025em;
+}
+
+.modal-surface .modal-shell-footer {
+  padding: 13px 20px;
+  background: rgb(var(--color-surface) / .98);
+  box-shadow: 0 -8px 24px rgba(19, 31, 79, .04);
+}
+
+.modal-surface :where(input, textarea, select):focus-visible {
+  outline: none;
+  border-color: rgb(var(--brand-primary-rgb) / .5) !important;
+  box-shadow: 0 0 0 4px rgb(var(--brand-primary-rgb) / .09) !important;
+}
+
+html.dark .modal-backdrop-soft {
+  background:
+    radial-gradient(circle at 16% 10%, rgb(var(--brand-primary-rgb) / .16), transparent 26rem),
+    rgba(4, 9, 22, .72) !important;
+}
+
+@media (max-width: 640px) {
+  .modal-surface,
+  .modal-surface-sm,
+  .modal-surface-md,
+  .modal-surface-lg,
+  .modal-surface-xl,
+  .modal-surface-wide {
+    border-radius: 20px 20px 10px 10px;
+  }
+
+  .modal-surface .modal-shell-header {
+    min-height: 58px;
+    padding: 13px 15px;
+  }
+}

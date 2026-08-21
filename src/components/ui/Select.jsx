@@ -104,13 +104,22 @@ export function Select({
     if (!open) return
 
     function handler(e) {
+      if (e.key === 'Escape') {
+        setOpen(false)
+        wrapRef.current?.querySelector('button')?.focus()
+        return
+      }
       if (!wrapRef.current?.contains(e.target) && !dropRef.current?.contains(e.target)) {
         setOpen(false)
       }
     }
 
     document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    document.addEventListener('keydown', handler)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      document.removeEventListener('keydown', handler)
+    }
   }, [open])
 
   function select(val) {
@@ -119,53 +128,21 @@ export function Select({
   }
 
   return (
-    <div ref={wrapRef} className={`relative ${className}`}>
+    <div ref={wrapRef} className={`system-select relative ${className}`}>
       {name && <input type="hidden" name={name} value={value ?? ''} />}
 
       <button
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setOpen(o => !o)}
-        className="select w-full flex items-center justify-between gap-2 text-left"
-        style={{
-          opacity: disabled ? 0.45 : 1,
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          transition: 'border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease',
-          ...(open ? {
-            borderColor: 'rgb(var(--brand-primary-rgb) / 0.52)',
-            boxShadow: '0 0 0 3px rgb(var(--brand-primary-rgb) / 0.14)',
-            background: 'var(--glass-bg-active)',
-          } : {}),
-        }}
-        onMouseEnter={e => {
-          if (!open && !disabled) {
-            e.currentTarget.style.borderColor = 'rgb(var(--brand-primary-rgb) / 0.32)'
-            e.currentTarget.style.background = 'var(--glass-bg-hover)'
-          }
-        }}
-        onMouseLeave={e => {
-          if (!open) {
-            e.currentTarget.style.borderColor = ''
-            e.currentTarget.style.background = ''
-          }
-        }}
+        className={`select system-select-trigger w-full flex items-center justify-between gap-2 text-left ${open ? 'is-open' : ''}`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
       >
-        <span
-          className="flex-1 truncate text-sm leading-none"
-          style={{
-            color: selected ? 'var(--glass-text-primary)' : 'var(--glass-text-muted)',
-          }}
-        >
+        <span className={`system-select-value flex-1 truncate text-sm leading-none ${selected ? 'has-value' : ''}`}>
           {selected ? selected.label : placeholder}
         </span>
-        <ChevronDown
-          className="w-4 h-4 flex-shrink-0"
-          style={{
-            color: 'var(--glass-text-muted)',
-            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.2s var(--ease-smooth)',
-          }}
-        />
+        <ChevronDown className="system-select-chevron w-4 h-4 flex-shrink-0" />
       </button>
 
       {open && pos && createPortal(
@@ -179,104 +156,31 @@ export function Select({
             ...(pos.top !== 'auto' ? { top: pos.top } : { bottom: pos.bottom }),
           }}
         >
-          <div
-            className="select-dropdown-panel"
-            style={{
-              background: 'rgba(248, 250, 252, 0.98)',
-              backdropFilter: 'var(--glass-blur-strong)',
-              WebkitBackdropFilter: 'var(--glass-blur-strong)',
-              border: '1px solid rgba(15, 23, 42, 0.14)',
-              borderRadius: 14,
-              boxShadow: '0 18px 48px rgba(15, 23, 42, 0.22)',
-              overflow: 'hidden',
-            }}
-          >
+          <div className="select-dropdown-panel">
             {label && (
-              <div
-                style={{
-                  padding: '9px 12px 7px',
-                  borderBottom: '1px solid var(--glass-border)',
-                  background: 'var(--glass-bg)',
-                }}
-              >
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 10,
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    color: 'var(--glass-text-muted)',
-                    fontFamily: 'var(--font-heading)',
-                  }}
-                >
-                  {label}
-                </p>
+              <div className="select-dropdown-heading">
+                <p>{label}</p>
               </div>
             )}
 
             {showSearch && (
-              <div
-                style={{
-                  padding: '8px 8px 6px',
-                  borderBottom: '1px solid var(--glass-border)',
-                }}
-              >
-                <div style={{ position: 'relative' }}>
-                  <Search
-                    style={{
-                      position: 'absolute',
-                      left: 9,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      width: 13,
-                      height: 13,
-                      color: 'var(--glass-text-muted)',
-                      pointerEvents: 'none',
-                    }}
-                  />
+              <div className="select-dropdown-search-wrap">
+                <div className="select-dropdown-search">
+                  <Search />
                   <input
                     ref={searchRef}
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="Buscar..."
                     onKeyDown={e => e.key === 'Escape' && setOpen(false)}
-                    style={{
-                      width: '100%',
-                      paddingLeft: 30,
-                      paddingRight: 8,
-                      paddingTop: 6,
-                      paddingBottom: 6,
-                      fontSize: 12,
-                      lineHeight: '1.4',
-                      background: 'var(--glass-bg)',
-                      border: '1px solid var(--glass-border)',
-                      borderRadius: 7,
-                      color: 'var(--glass-text-primary)',
-                      outline: 'none',
-                      transition: 'border-color 0.15s ease',
-                    }}
-                    onFocus={e => { e.target.style.borderColor = 'rgba(74,144,217,0.55)' }}
-                    onBlur={e => { e.target.style.borderColor = 'var(--glass-border)' }}
                   />
                 </div>
               </div>
             )}
 
-            <div
-              ref={listRef}
-              style={{ overflowY: 'auto', maxHeight: 256, padding: '4px' }}
-            >
+            <div ref={listRef} className="select-dropdown-list" role="listbox">
               {filtered.length === 0 ? (
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 12,
-                    color: 'var(--glass-text-muted)',
-                    textAlign: 'center',
-                    padding: '16px 12px',
-                  }}
-                >
+                <p className="select-dropdown-empty">
                   {search ? 'Nenhum resultado' : 'Sem opcoes'}
                 </p>
               ) : (
@@ -302,83 +206,23 @@ export function Select({
 }
 
 function SelectOption({ opt, isSelected, onSelect }) {
-  const [hovered, setHovered] = useState(false)
-
   return (
     <button
       type="button"
       onClick={() => onSelect(opt.value)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '7px 10px',
-        borderRadius: 8,
-        border: 'none',
-        cursor: 'pointer',
-        textAlign: 'left',
-        transition: 'background 0.1s ease',
-        background: isSelected
-          ? 'rgba(74,144,217,0.14)'
-          : hovered
-            ? 'var(--glass-bg-hover)'
-            : 'transparent',
-        position: 'relative',
-      }}
+      className={`select-dropdown-option ${isSelected ? 'is-selected' : ''}`}
+      role="option"
+      aria-selected={isSelected}
     >
-      <span
-        style={{
-          width: 16,
-          height: 16,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}
-      >
-        {isSelected && (
-          <Check
-            style={{
-              width: 13,
-              height: 13,
-              color: 'rgb(74,144,217)',
-              strokeWidth: 2.5,
-            }}
-          />
-        )}
+      <span className="select-dropdown-check">
+        {isSelected && <Check />}
       </span>
 
-      <span
-        style={{
-          flex: 1,
-          fontSize: 13,
-          fontWeight: isSelected ? 500 : 400,
-          color: isSelected ? 'rgb(74,144,217)' : 'var(--glass-text-primary)',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          lineHeight: '1.4',
-        }}
-      >
+      <span className="select-dropdown-option-label">
         {opt.label}
       </span>
 
-      {isSelected && (
-        <span
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: '20%',
-            bottom: '20%',
-            width: 2,
-            borderRadius: 2,
-            background: 'rgb(74,144,217)',
-          }}
-        />
-      )}
+      {isSelected && <span className="select-dropdown-indicator" />}
     </button>
   )
 }

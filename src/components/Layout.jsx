@@ -172,12 +172,23 @@ export default function Layout() {
   const isFiancaRoute = isFiancaPath(location.pathname)
   const isDashboardRoute = location.pathname === '/'
   const isJornadasRoute = location.pathname.startsWith('/comercial/jornadas')
-  const shellClassName = isCommercialRoute ? 'crm-shell' : 'ops-shell'
-  const workspaceLabel = isCommercialRoute ? 'CRM comercial' : 'Core ops'
-  const workspaceTitle = isCommercialRoute ? 'Painel comercial em operação.' : 'Central operacional premium.'
+  const shellClassName = isCommercialRoute ? 'crm-shell' : isAutoRoute ? 'auto-shell' : 'ops-shell'
+  const workspaceLabel = isCommercialRoute ? 'CRM comercial' : isAutoRoute ? 'Operação Auto' : 'Core ops'
+  const workspaceTitle = isCommercialRoute
+    ? 'Painel comercial em operação.'
+    : isAutoRoute
+      ? 'Mesa de seguros em movimento.'
+      : 'Central operacional premium.'
   const workspaceLead = isCommercialRoute
     ? 'Leads, vendas e jornadas no mesmo workspace.'
-    : 'Fichas, apólices e operação em uma única mesa de controle.'
+    : isAutoRoute
+      ? 'Cotações, renovações e emissões no mesmo fluxo.'
+      : 'Fichas, apólices e operação em uma única mesa de controle.'
+  const workspaceCounter = isAutoRoute
+    ? '8 etapas'
+    : isCommercialRoute
+      ? 'CRM ativo'
+      : `${abertasCount} em cotação`
 
   const profileAreas = Array.isArray(profile?.areas_atuacao) ? profile.areas_atuacao : []
   const hasArea = area => profileAreas.includes(area)
@@ -385,7 +396,7 @@ export default function Layout() {
   }
 
   const shellGridStyle = !isMobile
-    ? { gridTemplateColumns: sidebarOpen ? '306px minmax(0, 1fr)' : '86px minmax(0, 1fr)' }
+    ? { gridTemplateColumns: sidebarOpen ? '292px minmax(0, 1fr)' : '78px minmax(0, 1fr)' }
     : undefined
 
   return (
@@ -396,13 +407,21 @@ export default function Layout() {
       {isMobile && sidebarOpen && (
           <div
             className="shell-sidebar-scrim fixed inset-0 z-[300]"
-            style={{
-              background: 'rgba(248, 250, 255, 0.97)',
-              backdropFilter: 'blur(96px) saturate(110%)',
-              WebkitBackdropFilter: 'blur(96px) saturate(110%)',
-            }}
             onClick={() => setSidebarOpen(false)}
           />
+      )}
+
+      {isMobile && !sidebarOpen && (
+        <button
+          type="button"
+          className="shell-mobile-menu"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Abrir navegação principal"
+          aria-expanded="false"
+        >
+          <Menu aria-hidden="true" />
+          <span>Menu</span>
+        </button>
       )}
 
       <aside
@@ -454,13 +473,13 @@ export default function Layout() {
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-dark-muted mb-1">{workspaceLabel}</p>
                   <p className="text-sm font-semibold text-dark-text leading-tight">{workspaceTitle}</p>
                 </div>
-                <span className="badge badge-info shrink-0">Live</span>
+                <span className="badge badge-info shrink-0">Ativo</span>
               </div>
               <div className="mt-3 flex items-center gap-2 text-[11px] text-dark-muted">
                 <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'rgb(var(--brand-primary-rgb))' }} />
                 <span className="truncate">{workspaceLead}</span>
                 <span className="ml-auto shrink-0 rounded-full border border-dark-border/70 px-2 py-0.5 text-[10px] font-semibold text-dark-muted">
-                  {abertasCount} em cotação
+                  {workspaceCounter}
                 </span>
               </div>
             </div>
@@ -604,7 +623,7 @@ export default function Layout() {
                     )}
                   </button>
                 </div>
-              {abertasCount > 0 && (
+              {isFiancaRoute && abertasCount > 0 && (
                 <p className="text-[10px] mt-0.5">
                   <span
                     className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-white font-semibold"
@@ -630,7 +649,7 @@ export default function Layout() {
 
       </aside>
 
-      <div className="flex h-full min-w-0 min-h-0 w-full flex-1 flex-col overflow-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
+      <div className="shell-main flex h-full min-w-0 min-h-0 w-full flex-1 flex-col overflow-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
         {!hideWorkspaceTopbar && isDashboardRoute && !isFiancaRoute && (
           <header className="shell-topbar sticky top-3 z-[300] h-16 flex items-center justify-between px-5 flex-shrink-0 topbar-glass rounded-[28px]" style={shellTopbarStyle}>
           <div className="flex items-center gap-3">
@@ -705,7 +724,7 @@ export default function Layout() {
                   >
                     <div className="px-4 py-3 border-b border-dark-border">
                       <p className="text-xs font-semibold text-dark-text truncate">{profile?.nome}</p>
-                      {abertasCount > 0 && (
+                      {isFiancaRoute && abertasCount > 0 && (
                         <p className="text-[10px] text-status-warning mt-0.5">{abertasCount} fichas em aberto</p>
                       )}
                     </div>

@@ -229,3 +229,300 @@ html.dark .auto-sheet-wrap{box-shadow:inset 0 1px 0 rgba(255,255,255,.025)}html.
 /* Policy intake: spreadsheet review before records reach the portfolio. */
 .policy-import-workspace{overflow:hidden;border:1px solid rgba(53,99,233,.22);border-radius:20px;background:rgb(var(--color-surface));box-shadow:0 18px 48px rgba(18,42,96,.09)}.policy-import-header{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:.7rem;padding:.85rem 1rem;border-bottom:1px solid var(--auto-border);background:linear-gradient(135deg,rgba(53,99,233,.11),rgba(14,165,164,.055),rgb(var(--color-surface)))}.policy-import-header>span{display:grid;width:2.45rem;height:2.45rem;place-items:center;border-radius:13px;background:linear-gradient(135deg,#3563e9,#0ea5a4);color:white;box-shadow:0 9px 22px rgba(53,99,233,.2)}.policy-import-header svg{width:1rem;height:1rem}.policy-import-header>div{display:grid}.policy-import-header small{color:var(--auto-blue);font-size:.44rem;font-weight:820;letter-spacing:.1em;text-transform:uppercase}.policy-import-header strong{margin-top:.08rem;color:var(--auto-ink);font-size:.72rem}.policy-import-header p{margin:.14rem 0 0;color:var(--auto-muted);font-size:.49rem}.policy-import-header>button{display:grid;width:1.8rem;height:1.8rem;place-items:center;border-radius:9px;color:var(--auto-muted)}.policy-import-header>button:hover{background:rgba(53,99,233,.08);color:var(--auto-blue)}.policy-import-commandbar{display:flex;align-items:center;gap:.4rem;padding:.65rem .75rem;border-bottom:1px solid var(--auto-border);background:rgb(var(--color-surface2)/.35)}.policy-import-commandbar>button{display:inline-flex;min-height:34px;align-items:center;gap:.3rem;padding:.4rem .55rem;border:1px solid var(--auto-border-strong);border-radius:9px;background:rgb(var(--color-surface));color:var(--auto-muted);font-size:.49rem;font-weight:730}.policy-import-commandbar>button:hover{border-color:rgba(53,99,233,.34);color:var(--auto-blue)}.policy-import-commandbar>button.is-primary{border-color:rgba(53,99,233,.25);background:rgba(53,99,233,.08);color:var(--auto-blue)}.policy-import-commandbar>button.is-save{margin-left:auto;border:0;background:linear-gradient(135deg,#3563e9,#254dcc);color:white;box-shadow:0 6px 15px rgba(53,99,233,.18)}.policy-import-commandbar>button:disabled{cursor:not-allowed;opacity:.45}.policy-import-commandbar svg{width:.68rem;height:.68rem}.policy-import-commandbar>span{display:inline-flex;align-items:center;gap:.3rem;color:var(--auto-muted);font-size:.45rem}.policy-import-readiness{display:flex;align-items:center;gap:.55rem;padding:.42rem .75rem;border-bottom:1px solid var(--auto-border);background:rgba(53,99,233,.025);color:var(--auto-muted);font-size:.45rem}.policy-import-readiness span{display:inline-flex;align-items:center;gap:.28rem}.policy-import-readiness .is-ready{color:var(--auto-green);font-weight:760}.policy-import-readiness .is-warning{color:#d97706;font-weight:760}.policy-import-readiness svg{width:.65rem;height:.65rem}.policy-import-workspace .ops-sheet-wrap{max-height:58vh;border-radius:0;box-shadow:none}.ops-sheet.is-policy-import{min-width:2850px}.policy-import-result{display:flex;align-items:flex-start;gap:.55rem;padding:.7rem .8rem;border-top:1px solid rgba(16,185,129,.2);background:rgba(16,185,129,.06);color:var(--auto-green)}.policy-import-result>svg{width:.85rem;height:.85rem;flex:0 0 auto}.policy-import-result>div{display:grid}.policy-import-result strong{font-size:.56rem}.policy-import-result span,.policy-import-result small{margin-top:.12rem;font-size:.46rem}.policy-import-result small{color:var(--auto-muted)}
 @media(max-width:900px){.policy-import-commandbar{flex-wrap:wrap}.policy-import-commandbar>span{width:100%}.policy-import-commandbar>button.is-save{margin-left:0}.policy-import-readiness{align-items:flex-start;flex-wrap:wrap}}
+
+/* AUTO V3 — productivity-first visual hierarchy. */
+.auto-page,
+.auto-v2-page {
+  --auto-radius-panel: 18px;
+  --auto-radius-control: 10px;
+  --auto-focus: 0 0 0 4px rgba(53, 99, 233, .1);
+}
+
+.auto-workspace-bar {
+  min-height: 58px;
+  margin-bottom: 14px;
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(13, 31, 76, .075), inset 0 1px 0 rgba(255, 255, 255, .72);
+}
+
+.auto-workspace-bar nav a > span {
+  min-height: 39px;
+  border-radius: 10px;
+  font-size: .7rem;
+}
+
+.auto-workspace-bar nav a > span.is-active {
+  border-color: rgba(53, 99, 233, .2);
+  background: linear-gradient(135deg, rgba(53, 99, 233, .12), rgba(14, 165, 164, .055));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .45), 0 6px 16px rgba(53, 99, 233, .08);
+}
+
+.auto-v2-header,
+.auto-page .ops-page-header {
+  border-radius: 20px;
+  box-shadow: 0 18px 46px rgba(20, 43, 104, .16), inset 0 1px 0 rgba(255, 255, 255, .13);
+}
+
+.auto-v2-panel,
+.auto-page .ops-data-card,
+.auto-page .ops-filter-bar,
+.auto-page > .card,
+.ops-sheet-workspace,
+.policy-import-workspace {
+  border-radius: var(--auto-radius-panel);
+  box-shadow: 0 10px 30px rgba(18, 42, 96, .055);
+}
+
+.auto-v2-panel:hover,
+.auto-page .ops-data-card:hover,
+.auto-v2-action-card:hover {
+  transform: translateY(-1px);
+}
+
+.auto-v2-panel,
+.auto-page .ops-data-card,
+.auto-v2-action-card {
+  transition: border-color 170ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.auto-page :where(.input, .select) {
+  min-height: 40px;
+  border-color: var(--auto-border-strong);
+  border-radius: var(--auto-radius-control) !important;
+  background: rgb(var(--color-surface) / .88);
+}
+
+.auto-page :where(.input, .select):focus,
+.auto-page :where(.input, .select):focus-visible {
+  border-color: rgba(53, 99, 233, .5);
+  outline: none;
+  box-shadow: var(--auto-focus);
+}
+
+.auto-page :where(.btn-primary, .btn-secondary, .btn-ghost) {
+  min-height: 39px;
+  border-radius: var(--auto-radius-control);
+}
+
+.auto-operation-summary {
+  border-radius: var(--auto-radius-panel);
+  box-shadow: 0 9px 26px rgba(18, 42, 96, .05);
+}
+
+.auto-operation-summary > div {
+  min-height: 78px;
+}
+
+.ops-sheet-workspace {
+  border-color: rgba(53, 99, 233, .14);
+  box-shadow: 0 16px 44px rgba(18, 42, 96, .075);
+}
+
+.ops-sheet-toolbar {
+  min-height: 58px;
+  padding: 9px 10px;
+  background: linear-gradient(180deg, rgb(var(--color-surface)), rgb(var(--color-surface2) / .55));
+}
+
+.ops-sheet-toolbar > button,
+.ops-sheet-toolbar > select,
+.ops-sheet-search {
+  min-height: 38px;
+  border-radius: 10px;
+}
+
+.ops-sheet-toolbar > button:focus-visible,
+.ops-sheet-toolbar > select:focus-visible,
+.ops-sheet-search:focus-within {
+  border-color: rgba(53, 99, 233, .5);
+  outline: none;
+  box-shadow: var(--auto-focus);
+}
+
+.ops-sheet-help {
+  min-height: 34px;
+  padding-inline: 10px;
+  background: linear-gradient(90deg, rgba(53, 99, 233, .04), rgba(14, 165, 164, .025));
+}
+
+.ops-sheet-help span {
+  border-color: rgba(53, 99, 233, .14);
+  background: rgb(var(--color-surface) / .62);
+}
+
+.ops-sheet-wrap {
+  background:
+    linear-gradient(90deg, rgba(53, 99, 233, .025) 1px, transparent 1px),
+    rgb(var(--color-surface));
+  background-size: 42px 100%, auto;
+}
+
+.ops-sheet thead th {
+  height: 40px;
+  border-bottom-color: rgba(53, 99, 233, .25);
+  background: linear-gradient(180deg, rgba(53, 99, 233, .13), rgb(var(--color-surface2) / .98));
+}
+
+.ops-sheet thead th > button {
+  padding-inline: .58rem;
+  font-size: .47rem;
+}
+
+.ops-sheet tbody td,
+.ops-sheet tbody th {
+  transition: background 120ms ease, box-shadow 120ms ease;
+}
+
+.ops-sheet tbody tr:hover > td,
+.ops-sheet tbody tr:hover > th {
+  background: rgba(53, 99, 233, .07);
+}
+
+.ops-sheet input:focus,
+.ops-sheet select:focus,
+.ops-sheet textarea:focus {
+  border-color: #3563e9;
+  box-shadow: inset 0 0 0 1px #3563e9, 0 0 0 3px rgba(53, 99, 233, .08);
+}
+
+.ops-sheet-statusbar {
+  min-height: 37px;
+  padding-inline: 10px;
+  border-top-color: rgba(53, 99, 233, .16);
+  background: rgb(var(--color-surface) / .97);
+}
+
+/* Renewal state language: emitted, cancelled, sent and awaiting response. */
+.ops-sheet tbody tr.is-renewal-status-renovada > * {
+  background: rgba(16, 185, 129, .075);
+}
+
+.ops-sheet tbody tr.is-renewal-status-renovada > .ops-sheet-row-number {
+  background: rgba(16, 185, 129, .14) !important;
+  color: #087654 !important;
+  box-shadow: inset 3px 0 0 #10b981;
+}
+
+.ops-sheet tbody tr.is-renewal-status-nao_renovada > *,
+.ops-sheet tbody tr.is-renewal-status-outra_corretora > * {
+  background: rgba(239, 68, 68, .06);
+}
+
+.ops-sheet tbody tr.is-renewal-status-nao_renovada > .ops-sheet-row-number,
+.ops-sheet tbody tr.is-renewal-status-outra_corretora > .ops-sheet-row-number {
+  background: rgba(239, 68, 68, .12) !important;
+  color: #c52c3b !important;
+  box-shadow: inset 3px 0 0 #ef4444;
+}
+
+.ops-sheet tbody tr.is-renewal-status-enviada > * {
+  background: rgba(53, 99, 233, .07);
+}
+
+.ops-sheet tbody tr.is-renewal-status-enviada > .ops-sheet-row-number {
+  background: rgba(53, 99, 233, .14) !important;
+  color: #2852cc !important;
+  box-shadow: inset 3px 0 0 #3563e9;
+}
+
+.ops-sheet tbody tr.is-renewal-status-negociando > * {
+  background: rgba(245, 158, 11, .075);
+}
+
+.ops-sheet tbody tr.is-renewal-status-negociando > .ops-sheet-row-number {
+  background: rgba(245, 158, 11, .15) !important;
+  color: #b66a06 !important;
+  box-shadow: inset 3px 0 0 #f59e0b;
+}
+
+.ops-sheet tbody tr[class*='is-renewal-status-']:hover > * {
+  background: color-mix(in srgb, currentColor 2%, rgb(var(--color-surface)) 98%);
+}
+
+.ops-sheet tbody tr.is-active-row > td,
+.ops-sheet tbody tr.is-active-row > th {
+  box-shadow: inset 0 0 0 1px rgba(53, 99, 233, .22);
+}
+
+.ops-sheet tbody tr.is-renewal-status-renovada select { color: #087654; font-weight: 760; }
+.ops-sheet tbody tr.is-renewal-status-nao_renovada select,
+.ops-sheet tbody tr.is-renewal-status-outra_corretora select { color: #c52c3b; font-weight: 760; }
+.ops-sheet tbody tr.is-renewal-status-enviada select { color: #2852cc; font-weight: 760; }
+.ops-sheet tbody tr.is-renewal-status-negociando select { color: #b66a06; font-weight: 760; }
+
+.renewal-status-legend {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  overflow-x: auto;
+  padding: 7px 11px;
+  border-bottom: 1px solid var(--auto-border);
+  background: rgb(var(--color-surface2) / .28);
+}
+
+.renewal-status-legend span {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  color: var(--auto-muted);
+  font-size: .46rem;
+  font-weight: 720;
+  white-space: nowrap;
+}
+
+.renewal-status-legend span::before {
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  background: var(--legend-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--legend-color) 13%, transparent);
+  content: '';
+}
+
+.renewal-status-legend .is-emitted { --legend-color: #10b981; }
+.renewal-status-legend .is-cancelled { --legend-color: #ef4444; }
+.renewal-status-legend .is-sent { --legend-color: #3563e9; }
+.renewal-status-legend .is-waiting { --legend-color: #f59e0b; }
+
+.renewal-insured-backdrop,
+.auto-page .modal-backdrop {
+  background: rgba(5, 11, 29, .6) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(115%);
+  backdrop-filter: blur(10px) saturate(115%);
+}
+
+.renewal-insured-modal,
+.auto-command-modal,
+.auto-page .glass-modal {
+  border-radius: 20px !important;
+  box-shadow: 0 30px 88px rgba(3, 9, 27, .3), 0 8px 26px rgba(3, 9, 27, .14) !important;
+}
+
+html.dark .ops-sheet tbody tr.is-renewal-status-renovada > * { background: rgba(16, 185, 129, .1); }
+html.dark .ops-sheet tbody tr.is-renewal-status-nao_renovada > *,
+html.dark .ops-sheet tbody tr.is-renewal-status-outra_corretora > * { background: rgba(239, 68, 68, .09); }
+html.dark .ops-sheet tbody tr.is-renewal-status-enviada > * { background: rgba(53, 99, 233, .12); }
+html.dark .ops-sheet tbody tr.is-renewal-status-negociando > * { background: rgba(245, 158, 11, .1); }
+
+@media(max-width:1023px) {
+  .auto-workspace-bar { top: 0; }
+  .auto-v2-header-main,
+  .auto-page .ops-page-header > .relative:first-child { gap: 1rem; }
+}
+
+@media(max-width:720px) {
+  .auto-workspace-bar { border-radius: 14px; }
+  .auto-v2-header,
+  .auto-page .ops-page-header,
+  .auto-v2-panel,
+  .auto-page .ops-data-card,
+  .ops-sheet-workspace,
+  .policy-import-workspace { border-radius: 15px; }
+  .auto-operation-summary { border-radius: 15px; }
+  .ops-sheet-toolbar { padding: 8px; }
+  .ops-sheet-toolbar > button,
+  .ops-sheet-toolbar > select { min-height: 42px; }
+  .ops-sheet-statusbar { overflow-x: auto; }
+  .ops-sheet-statusbar .is-save-status { margin-left: 0; }
+}

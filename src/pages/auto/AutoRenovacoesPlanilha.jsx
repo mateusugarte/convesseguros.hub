@@ -12,8 +12,8 @@ import RenewalInsuredEditor from '../../components/auto/RenewalInsuredEditor'
 const STATUS_OPTIONS = [
   { value: 'pendente', label: 'Pendente' }, { value: 'em_andamento', label: 'Cotando' },
   { value: 'cotada', label: 'Cotada' }, { value: 'enviada', label: 'Enviada' },
-  { value: 'negociando', label: 'Negociando' }, { value: 'outra_corretora', label: 'Outra corretora' },
-  { value: 'renovada', label: 'Renovada' }, { value: 'nao_renovada', label: 'Cancelada' },
+  { value: 'negociando', label: 'Aguardando retorno' }, { value: 'outra_corretora', label: 'Outra corretora' },
+  { value: 'renovada', label: 'Emitida / renovada' }, { value: 'nao_renovada', label: 'Cancelada' },
 ]
 
 function currentMonthRef() {
@@ -164,7 +164,8 @@ export default function AutoRenovacoesPlanilha() {
     <section className="ops-sheet-workspace" aria-label="Planilha operacional de renovações">
       <header className="ops-sheet-toolbar"><div className="ops-sheet-title"><span><RefreshCw /></span><div><strong>Renovações de {monthLabel(mesRef)}</strong><small>{filteredRows.length} de {rows.length} linhas · salvamento automático</small></div></div><label className="ops-sheet-search"><Search /><input value={busca} onChange={event => setBusca(event.target.value)} placeholder="Cliente, veículo, placa, seguradora ou nota" /></label><select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="todos">Todos os status</option>{STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select><button className={followupFilter ? 'is-active' : ''} onClick={() => setFollowupFilter(value => !value)}><Filter />Follow-ups vencidos</button><button onClick={() => exportCsv(filteredRows)}><Download />Exportar Excel/CSV</button></header>
       <div className="ops-sheet-help"><span>Clique e edite</span><span>Cole também na Data de vencimento</span><span>Datas 31/08/2026 são reconhecidas</span><span>Enter/↑/↓ navegam</span><span>Ordene pelo cabeçalho</span></div>
-      {isLoading ? <div className="ops-sheet-loading">Carregando renovações…</div> : isError ? <EmptyState icon={<XCircle />} title="Erro ao carregar renovações" description={error?.message || 'Tente recarregar a página.'} /> : <OperationalSpreadsheet rows={filteredRows} columns={columns} onCommit={saveCell} onBulkCommit={bulkSave} sort={sort} onSort={handleSort} emptyMessage="Nenhuma renovação corresponde aos filtros." />}
+      <div className="renewal-status-legend" aria-label="Cores dos status"><span className="is-emitted">Emitida / renovada</span><span className="is-cancelled">Cancelada</span><span className="is-sent">Enviada</span><span className="is-waiting">Aguardando retorno</span></div>
+      {isLoading ? <div className="ops-sheet-loading">Carregando renovações…</div> : isError ? <EmptyState icon={<XCircle />} title="Erro ao carregar renovações" description={error?.message || 'Tente recarregar a página.'} /> : <OperationalSpreadsheet rows={filteredRows} columns={columns} getRowClassName={row => `is-renewal-status-${renewalStatusValue(row)}`} onCommit={saveCell} onBulkCommit={bulkSave} sort={sort} onSort={handleSort} emptyMessage="Nenhuma renovação corresponde aos filtros." />}
     </section>
     {editingInsured && <RenewalInsuredEditor initialName={customerName(editingInsured)} initialClientId={editingInsured.cliente_id || ''} onClose={() => setEditingInsured(null)} onSave={fields => { saveMutation.mutate({ id: editingInsured.id, campos: { cliente_id: fields.cliente_id, nome_segurado_anterior: fields.nome_segurado_anterior } }); setEditingInsured(null) }} />}
   </div>

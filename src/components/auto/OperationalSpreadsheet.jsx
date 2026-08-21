@@ -107,6 +107,7 @@ export default function OperationalSpreadsheet({
   rows,
   columns,
   getRowId = row => row.id,
+  getRowClassName = () => '',
   onCommit,
   onBulkCommit,
   sort,
@@ -166,7 +167,10 @@ export default function OperationalSpreadsheet({
           {rows.length === 0 ? (
             <tr><td className="ops-sheet-empty" colSpan={columns.length + 1}>{emptyMessage}</td></tr>
           ) : rows.map((row, rowIndex) => (
-            <tr key={getRowId(row)} className={activeCell?.row === rowIndex ? 'is-active-row' : ''}>
+            <tr
+              key={getRowId(row)}
+              className={[getRowClassName(row, rowIndex), activeCell?.row === rowIndex ? 'is-active-row' : ''].filter(Boolean).join(' ')}
+            >
               <th className="ops-sheet-row-number" scope="row" onClick={() => setActiveCell({ row: rowIndex, column: null })}>{rowIndex + 1}</th>
               {columns.map((column, columnIndex) => (
                 <td key={column.key || column.field} style={column.sticky ? { left: 42 } : undefined} className={`${column.sticky ? 'is-sticky' : ''} ${activeCell?.row === rowIndex && activeCell?.column === columnIndex ? 'is-active-cell' : ''} ${column.className || ''}`}>

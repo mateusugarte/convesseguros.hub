@@ -4,6 +4,7 @@ import {
   classificarRenovacoesPipeline,
   parseRenovacoesPaste,
   renewalStatusFields,
+  renewalStatusValue,
   scoreCotacaoSuggestion,
 } from './autoOperational.js'
 
@@ -42,6 +43,8 @@ test('preserva os status operacionais e comissoes usados em agosto de 2026', () 
 
 test('mapeia status da planilha para os campos persistidos', () => {
   assert.deepEqual(renewalStatusFields('renovada'), { status_operacional: 'renovado', status_cotacao: 'cotada_enviada', status_renovacao: 'renovada' })
+  assert.deepEqual(renewalStatusFields('cotada'), { status_operacional: 'cotado', status_cotacao: 'cotada_nao_enviada', status_renovacao: 'pendente' })
+  assert.equal(renewalStatusValue({ status_operacional: 'cotado' }), 'cotada')
 })
 
 test('prioriza sugestao exata e proxima da data informada', () => {

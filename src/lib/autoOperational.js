@@ -53,6 +53,7 @@ export function classificarRenovacoesPipeline(items = [], today = new Date().toI
 export function renewalStatusFields(value) {
   switch (value) {
     case 'em_andamento': return { status_operacional: 'cotando', status_cotacao: 'cotada_nao_enviada', status_renovacao: 'pendente' }
+    case 'cotada': return { status_operacional: 'cotado', status_cotacao: 'cotada_nao_enviada', status_renovacao: 'pendente' }
     case 'enviada': return { status_operacional: 'enviado', status_cotacao: 'cotada_enviada', status_renovacao: 'pendente' }
     case 'negociando': return { status_operacional: 'negociando', status_cotacao: 'cotada_enviada', status_renovacao: 'pendente' }
     case 'outra_corretora': return { status_operacional: 'outra_corretora', status_cotacao: 'cotada_enviada', status_renovacao: 'nao_renovada' }
@@ -70,6 +71,7 @@ export function renewalStatusValue(item = {}) {
   if (operational === 'negociando') return 'negociando'
   if (operational === 'enviado') return 'enviada'
   if (operational === 'cotando') return 'em_andamento'
+  if (operational === 'cotado') return 'cotada'
   if (item.status_renovacao === 'renovada') return 'renovada'
   if (item.status_renovacao === 'nao_renovada') return 'nao_renovada'
   if (item.status_cotacao === 'cotada_enviada') return 'enviada'

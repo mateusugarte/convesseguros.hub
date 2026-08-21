@@ -1190,6 +1190,60 @@ export async function atualizarStatusRenovacao(id, campos) {
   if (error) throw error
 }
 
+// Conclui a etapa de cotacao da renovacao e move o mesmo negocio para
+// "Cotacoes feitas" na Pipeline. A emissao criada junto da cotacao recebe um
+// resultado neutro (cotada): aprovada/recusada continuam sendo decisoes
+// posteriores da negociacao.
+export async function marcarRenovacaoCotada(renovacaoId) {
+  const { cotacaoId } = await iniciarCotacaoRenovacao(renovacaoId)
+  const { data, error } = await supabase.rpc('marcar_renovacao_auto_cotada', {
+    p_renovacao_id: renovacaoId,
+    p_cotacao_id: cotacaoId,
+  })
+  if (error) throw error
+  return { cotacaoId, emissaoId: data?.emissao_id || null }
+}
+
+export async function atualizarRenovacoesEmLote(changes = []) {
+  await Promise.all(changes.map(({ id, campos }) => atualizarStatusRenovacao(id, campos)))
+}
+
+// Patch estreito para a planilha de emissoes. Diferente do formulario
+// completo, uma edicao de celula nunca apaga os demais campos da linha.
+export async function atualizarEmissaoPlanilhaAuto(id, campos, linhaAtual = {}) {
+  const allowed = new Set([
+    'data_transmissao', 'vigencia_inicio', 'vigencia_fim', 'nome_cliente',
+    'modelo_veiculo', 'placa', 'parcelamento', 'seguradora', 'premio_liquido',
+    'pct_comissao', 'valor_repasse', 'responsavel', 'tipo', 'emissor', 'coluna',
+  ])
+  const patch = Object.fromEntries(Object.entries(campos).filter(([key]) => allowed.has(key)))
+  if (!Object.keys(patch).length) return linhaAtual
+
+  for (const field of ['premio_liquido', 'pct_comissao', 'valor_repasse']) {
+    if (Object.prototype.hasOwnProperty.call(patch, field)) patch[field] = toFloatOrNull(patch[field])
+  }
+  if ('premio_liquido' in patch || 'pct_comissao' in patch) {
+    const premio = patch.premio_liquido ?? linhaAtual.premio_liquido
+    const percentual = patch.pct_comissao ?? linhaAtual.pct_comissao
+    patch.valor_comissao = calcularValorComissaoAuto(premio || 0, percentual || 0)
+  }
+  if (patch.coluna === 'pendentes') patch.coluna = null
+  patch.updated_at = new Date().toISOString()
+
+  const { data, error } = await supabase.from('emissoes_auto').update(patch).eq('id', id).select().single()
+  if (error) throw error
+
+  const cotacaoId = linhaAtual.cotacao_id || linhaAtual.cotacoes_auto?.id
+  if (cotacaoId) {
+    const cotacaoPatch = pickDefined(patch, ['nome_cliente', 'modelo_veiculo', 'placa', 'vigencia_inicio', 'vigencia_fim', 'tipo'])
+    if (Object.keys(cotacaoPatch).length) {
+      const { error: cotacaoError } = await supabase.from('cotacoes_auto').update(cotacaoPatch).eq('id', cotacaoId)
+      if (cotacaoError) throw cotacaoError
+    }
+  }
+  return data
+}
+
 export async function criarRenovacoesEmLote(mesRef, rows = []) {
   if (!parseMonthRef(mesRef)) throw new Error('Selecione um mes valido.')
   if (!rows.length) throw new Error('Cole ao menos um segurado para criar as renovacoes.')

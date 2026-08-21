@@ -22,6 +22,7 @@ Thumbs.db
 *.csv
 *.sql
 !supabase/63_auto_operacao_planilhas_pipeline.sql
+!supabase/64_auto_renovacoes_negociacao.sql
 
 # Claude Code / Skills locais
 .claude/

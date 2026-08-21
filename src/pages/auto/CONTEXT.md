@@ -3,7 +3,7 @@
 ## Page
 
 - Name: Auto (Dashboard, Cotacoes, Gestao AUTO/Emissoes, Renovacoes, Clientes, Sinistros, Etiquetas)
-- Route: `/auto`, `/auto/cotacoes(/:id)(/consulta)`, `/auto/gestao`, `/auto/emissoes(/:id)`, `/auto/renovacoes`, `/auto/renovacoes/puxar`, `/auto/clientes(/:id)`, `/auto/apolices/:id`, `/auto/sinistros`, `/auto/etiquetas`
+- Route: `/auto`, `/auto/cotacoes(/:id)(/consulta)`, `/auto/gestao`, `/auto/emissoes(/:id)`, `/auto/emissoes/planilha`, `/auto/renovacoes`, `/auto/renovacoes/puxar`, `/auto/clientes(/:id)`, `/auto/apolices/:id`, `/auto/sinistros`, `/auto/etiquetas`
 - Domain: Seguro Auto (cotacao -> emissao -> apolice -> renovacao)
 
 ## Purpose
@@ -20,6 +20,8 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
 
 - `PageHeader`, `MetricCard`, `DataCard`, `FilterBar`, `EmptyState` (`src/components/ui`).
 - `SeguradoraBadge` / `SeguradoraSelect` — logo e selecao de seguradora.
+- `OperationalSpreadsheet` — grade compartilhada com edicao por celula,
+  navegacao por teclado, ordenacao e colagem de blocos do Excel.
 - `autoShared.js` — helpers puros e testados (`diasParaVencer`, `getRenovacaoUrgencia`,
   `getRenewalQuoteStatus`, formatadores de data/mes, mapas de status/tom).
 
@@ -49,6 +51,10 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
 - `salvarPropostaPlanilhaAuto` cria uma proposta transmitida avulsa ou atualiza
   a emissao ja ligada a uma cotacao sugerida; nunca cria uma segunda emissao
   para o mesmo card selecionado.
+- `marcarRenovacaoCotada` cria/reaproveita a cotacao e chama a RPC
+  `marcar_renovacao_auto_cotada`, que move renovacao e emissao para Cotacoes
+  feitas na mesma transacao. `atualizarEmissaoPlanilhaAuto` faz patches
+  estreitos por celula para nao apagar colunas que a grade nao esta editando.
 - Etiquetas: `getAutoTags`/`criarAutoTag`/`atualizarAutoTag`/`excluirAutoTag`
   (predefinidas, tabela `auto_tags`) e `atualizarTagsEmissao` (array `tags` em
   `emissoes_auto`, aplicado manualmente pelo usuario nos cards).
@@ -65,6 +71,15 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   acompanhar renovacoes) e admin (gerenciar etiquetas predefinidas).
 
 ## Notes
+
+- Migration `supabase/64_auto_renovacoes_negociacao.sql` adiciona contadores de
+  contatos/follow-ups/descontos, datas de relacionamento, percentual de
+  desconto, notas e `cotada_em` em `renovacoes_auto`; aceita o resultado neutro
+  `cotada` em `emissoes_auto` e cria a RPC atomica da passagem para Cotacoes
+  feitas. Executar depois da migration 63.
+- `/auto/renovacoes` e uma mesa unica de negociacao, sem a lista duplicada de
+  cards. `/auto/emissoes` e a entrada de Apolices e abre a grade completa em
+  `/auto/emissoes/planilha` pelo botao `VER EMISSOES`.
 
 - Migration `supabase/63_auto_operacao_planilhas_pipeline.sql` e obrigatoria
   antes de publicar este codigo. Ela adiciona os campos das duas grades,

@@ -1,5 +1,21 @@
 # CURRENT TASK
 
+## Mesa operacional AUTO — renovacoes e emissoes em planilha (2026-08-21, Codex — CONCLUIDA; migration 64 pendente)
+
+Objetivo: substituir a organizacao fragmentada das renovacoes por uma mesa unica, realmente operavel como planilha, e separar a consulta/edicao de emissoes da pagina de entrada de Apolices.
+
+Entrega: `/auto/renovacoes` agora e uma grade unica com edicao por celula, navegacao por Enter/setas, colagem de blocos copiados do Excel, ordenacao, busca, filtros, exportacao CSV e resumo grafico compacto. Cada renovacao registra contatos, follow-ups, ultimo/proximo contato, quantidade e percentual de descontos e notas de negociacao. Os atalhos `Contato` e `Follow-up` incrementam os contadores e registram a data. `Cotada` cria/reaproveita a cotacao e usa a RPC transacional `marcar_renovacao_auto_cotada` para mover renovacao e card juntos para `Cotacoes feitas` na Pipeline, com resultado neutro `cotada` (nao confunde com aprovada/recusada).
+
+Em Apolices, o bloco `Ultimas emissoes` foi substituido por `VER EMISSOES`. A rota nova `/auto/emissoes/planilha` concentra filtros por mes/seguradora/tipo/status, ordenacao, edicao direta, colagem em bloco, exportacao, inclusao de linha livre ou vinculada a uma cotacao sugerida e `Ver apolice` por linha. Mudancas simples de status salvam direto; etapas que exigem proposta/apolice/resultado abrem a ficha completa, preservando exatamente as validacoes da Pipeline.
+
+Arquivos principais: `supabase/64_auto_renovacoes_negociacao.sql`, `src/components/auto/OperationalSpreadsheet.jsx`, `src/pages/auto/AutoRenovacoes.jsx`, `src/pages/auto/AutoEmissoesPlanilha.jsx`, `src/pages/auto/AutoEmissoes.jsx`, `src/lib/auto.js`, `src/lib/autoOperational.js`, `src/App.jsx` e `src/styles/auto-ui.css`.
+
+Validacao: 225/225 testes verdes; JSX/ESM alterado passou no `@babel/parser`; `git diff --check` verde. `check:page-contexts` continua acusando somente a pendencia pre-existente de `src/pages/comercial/GestaoComercial.jsx`. `npm run build` permanece bloqueado pelo ambiente local pre-existente (`node_modules/.bin/vite: Permission denied`).
+
+**PENDENTE PARA PRODUCAO:** executar `supabase/64_auto_renovacoes_negociacao.sql` no SQL Editor depois da migration 63. Sem ela, os novos campos de negociacao e a transicao atomica `Cotada` nao existem no Supabase.
+
+---
+
 ## Reformulacao operacional do modulo AUTO (2026-08-20, Codex — CONCLUIDA; migration 63 e importacao n8n pendentes)
 
 Objetivo: corrigir a persistencia das cotacoes de seguro novo e reformular Renovacoes, Pipeline e Apolices/Emissoes com experiencia de planilha, usando apenas as abas de agosto das planilhas `01 COMISSAO - AUTO.xlsx` e `02 RENOVACOES AUTO.xlsx` como referencia de campos e operacao.

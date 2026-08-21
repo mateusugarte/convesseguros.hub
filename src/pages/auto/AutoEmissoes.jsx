@@ -575,6 +575,7 @@ function CardEmissao({ emissao, onDragStart, onClick, tagsPorId }) {
   const tipoMeta = AUTO_TIPO_META[tipo] || AUTO_TIPO_META.novo
   const isRecusada = emissao.resultado === 'recusada'
   const isAprovada = emissao.resultado === 'aprovada'
+  const isCotada = emissao.resultado === 'cotada'
   const nome = nomeEmissao(emissao)
   const apolice = getApoliceVinculada(emissao)
   const veiculo = emissao.modelo_veiculo || apolice?.modelo_veiculo || emissao.cotacoes_auto?.modelo_veiculo || 'Modelo nao informado'
@@ -636,6 +637,7 @@ function CardEmissao({ emissao, onDragStart, onClick, tagsPorId }) {
         <div className="flex shrink-0 flex-col items-end gap-2">
           {isRecusada && <span className="rounded-full bg-red-100 px-2.5 py-1 text-[10px] font-semibold text-red-600">Recusada</span>}
           {isAprovada && <span className="rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success">Aprovada</span>}
+          {isCotada && <span className="rounded-full bg-brand-secondary/10 px-2.5 py-1 text-[10px] font-semibold text-status-info">Cotada</span>}
           {!emissao.resultado && <span className="rounded-full bg-dark-surface px-2.5 py-1 text-[10px] font-semibold text-dark-muted">Em andamento</span>}
         </div>
       </div>
@@ -763,7 +765,7 @@ function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, 
   const tipo = (c.tipo || emissao.tipo) === 'renovacao' ? 'Renovacao' : 'Novo'
   const seguradoras = Array.isArray(emissao.seguradoras_cotadas) ? emissao.seguradoras_cotadas : []
   const seguradoraAtual = emissao.seguradora || apolice?.seguradora || c.seguradora_preferencial?.nome || c.seguradora_mais_barata?.nome || ''
-  const etapaAtual = emissao.resultado ? (emissao.resultado === 'aprovada' ? 'Cotacao aprovada' : 'Cotacao recusada') : 'Aguardando resultado'
+  const etapaAtual = emissao.resultado === 'aprovada' ? 'Cotacao aprovada' : emissao.resultado === 'recusada' ? 'Cotacao recusada' : emissao.resultado === 'cotada' ? 'Cotacao feita' : 'Aguardando resultado'
   const colunaAtual = getColunaMeta(getEmissaoColuna(emissao)).label
 
   return (
@@ -777,7 +779,7 @@ function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, 
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-dark-surface px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">{colunaAtual}</span>
                   <span className={tipo === 'Renovacao' ? 'rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success' : 'rounded-full bg-brand-secondary/10 px-2.5 py-1 text-[10px] font-semibold text-status-info'}>{tipo}</span>
-                  {emissao.resultado && <span className={emissao.resultado === 'aprovada' ? 'rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success' : 'rounded-full bg-red-100 px-2.5 py-1 text-[10px] font-semibold text-red-600'}>{emissao.resultado === 'aprovada' ? 'Aprovada' : 'Recusada'}</span>}
+                  {emissao.resultado && <span className={emissao.resultado === 'aprovada' ? 'rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success' : emissao.resultado === 'recusada' ? 'rounded-full bg-red-100 px-2.5 py-1 text-[10px] font-semibold text-red-600' : 'rounded-full bg-brand-secondary/10 px-2.5 py-1 text-[10px] font-semibold text-status-info'}>{emissao.resultado === 'aprovada' ? 'Aprovada' : emissao.resultado === 'recusada' ? 'Recusada' : 'Cotada'}</span>}
                 </div>
                 <h2 className="mt-4 truncate text-2xl font-semibold text-dark-text">{nome}</h2>
                 <p className="mt-2 text-sm text-dark-muted">{emissao.modelo_veiculo || c.modelo_veiculo || 'Veiculo nao informado'}{(emissao.placa || c.placa) ? ` · Placa ${emissao.placa || c.placa}` : ''}</p>
@@ -2723,75 +2725,16 @@ export default function AutoEmissoes() {
             </div>
           </FilterBar>
 
-          <DataCard
-            title="Ultimas emissoes"
-            subtitle={`${emissoesFiltradas.length} de ${emissoes.length} registro(s) no periodo selecionado`}
-            actions={(
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-dark-muted">Mes/ano:</span>
-                <input type="month" value={mesAnoEmissoes} onChange={e => handleMesAnoEmissoesChange(e.target.value)} className="input" />
+          <DataCard className="overflow-hidden" bodyClassName="p-0">
+            <div className="auto-emissions-launcher">
+              <span><FileText /></span>
+              <div>
+                <small>Mesa de produção</small>
+                <h2>Todas as emissões em uma planilha única</h2>
+                <p>Abra a grade completa para filtrar, ordenar, editar qualquer campo, colar dados do Excel e acessar a apólice de cada cliente.</p>
               </div>
-            )}
-          >
-            <div className="mb-4 flex flex-wrap gap-2">
-              <div className="relative min-w-[220px] flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-muted" />
-                <input
-                  value={buscaEmissoes}
-                  onChange={e => setBuscaEmissoes(e.target.value)}
-                  placeholder="Buscar cliente, veiculo, placa ou apolice..."
-                  className="input pl-10"
-                />
-              </div>
-              <select value={filtroSeguradoraEmissoes} onChange={e => setFiltroSeguradoraEmissoes(e.target.value)} className="select">
-                <option value="todas">Todas seguradoras</option>
-                {seguradorasEmissoesOpcoes.map(nome => <option key={nome} value={nome}>{nome}</option>)}
-              </select>
-              <select value={filtroTipoEmissoes} onChange={e => setFiltroTipoEmissoes(e.target.value)} className="select">
-                <option value="todos">Todos os tipos</option>
-                <option value="novo">Seguro novo</option>
-                <option value="renovacao">Renovacao</option>
-                <option value="endosso">Endosso</option>
-              </select>
-              <select value={filtroStatusEmissoes} onChange={e => setFiltroStatusEmissoes(e.target.value)} className="select">
-                <option value="todos">Todos os status</option>
-                {COLUNAS.map(coluna => <option key={coluna.id} value={coluna.id}>{coluna.label}</option>)}
-              </select>
-              {responsaveisEmissoesOpcoes.length > 0 && (
-                <select value={filtroResponsavelEmissoes} onChange={e => setFiltroResponsavelEmissoes(e.target.value)} className="select">
-                  <option value="todos">Todos responsaveis</option>
-                  {responsaveisEmissoesOpcoes.map(nome => <option key={nome} value={nome}>{nome}</option>)}
-                </select>
-              )}
+              <button className="btn-primary" onClick={() => navigate('/auto/emissoes/planilha')}>VER EMISSÕES <ArrowRight className="h-4 w-4" /></button>
             </div>
-
-            {emissoes.length > 0 && emissoesFiltradas.length === 0 ? (
-              <EmptyState
-                icon={<FileText className="w-6 h-6" />}
-                title="Nenhuma emissao para os filtros aplicados"
-                description="Ajuste a busca, o mes/ano ou os filtros selecionados."
-              />
-            ) : (
-              <PlanilhaEmissoes
-                items={emissoesFiltradas}
-                saving={salvandoLinhaPlanilha}
-                onSave={salvarLinhaPlanilha}
-                onOpen={abrirDetalhe}
-                onEdit={abrirEditor}
-                onMove={(item, coluna) => {
-                  if (coluna === 'cotacao_feita') {
-                    setModalResultado(item)
-                    return
-                  }
-                  if (coluna === 'proposta_transmitida' || coluna === 'apolice_emitida') {
-                    setManualStage(coluna)
-                    setModalEmissao(item)
-                    return
-                  }
-                  mover({ id: item.id, coluna: coluna === 'pendentes' ? null : coluna })
-                }}
-              />
-            )}
           </DataCard>
         </>
       )}

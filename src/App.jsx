@@ -46,6 +46,7 @@ const AutoDashboard  = lazy(() => import('./pages/auto/AutoDashboard'))
 const AutoRenovacoes = lazy(() => import('./pages/auto/AutoRenovacoes'))
 const AutoRenovacoesPuxar = lazy(() => import('./pages/auto/AutoRenovacoesPuxar'))
 const AutoEmissoes   = lazy(() => import('./pages/auto/AutoEmissoes'))
+const AutoEmissoesPlanilha = lazy(() => import('./pages/auto/AutoEmissoesPlanilha'))
 const AutoClientes   = lazy(() => import('./pages/auto/AutoClientesV2'))
 const AutoClienteDetalhe = lazy(() => import('./pages/auto/AutoClienteDetalheV2'))
 const AutoApoliceDetalhe = lazy(() => import('./pages/auto/AutoApoliceDetalheV2'))
@@ -130,6 +131,7 @@ function AppRoutes() {
           <Route path="auto/renovacoes"     element={<AutoRenovacoes />} />
           <Route path="auto/renovacoes/puxar" element={<AutoRenovacoesPuxar />} />
           <Route path="auto/emissoes"       element={<AutoEmissoes />} />
+          <Route path="auto/emissoes/planilha" element={<AutoEmissoesPlanilha />} />
           <Route path="auto/emissoes/:id"   element={<AutoEmissoes />} />
           <Route path="auto/clientes"       element={<AutoClientes />} />
           <Route path="auto/clientes/:id"   element={<AutoClienteDetalhe />} />

@@ -21,7 +21,11 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
 - `PageHeader`, `MetricCard`, `DataCard`, `FilterBar`, `EmptyState` (`src/components/ui`).
 - `SeguradoraBadge` / `SeguradoraSelect` — logo e selecao de seguradora.
 - `OperationalSpreadsheet` — grade compartilhada com edicao por celula,
-  navegacao por teclado, ordenacao e colagem de blocos do Excel.
+  navegacao por teclado, ordenacao, colagem de blocos do Excel, reconhecimento
+  de datas brasileiras/seriais do Excel, linha ativa e densidade ajustavel.
+- `AutoPolicyImportSheet` — revisao em grade de XLSX/CSV ou dados colados antes
+  da subida; cria a emissao em `apolice_emitida`, a apolice e, quando ha CPF,
+  cria ou vincula o cliente correspondente.
 - `autoShared.js` — helpers puros e testados (`diasParaVencer`, `getRenovacaoUrgencia`,
   `getRenewalQuoteStatus`, formatadores de data/mes, mapas de status/tom).
 
@@ -168,6 +172,10 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
 - `AutoPdfAutomation` apresenta upload, extracao, revisao e aplicacao dos PDFs sem bloquear a edicao manual. Orcamentos entram no comparativo e no detalhe da cotacao; propostas/apolices entram nos formularios de emissao. Imagens continuam como anexo, sem extracao.
 - `autoPdfParser.js` detecta a seguradora e normaliza dados comuns do segurado, condutor, veiculo, vigencia, premios, comissao e pagamento. A configuracao/mapeamento por seguradora e tratada separadamente pela tarefa ativa registrada em `docs/CURRENT_TASK.md`.
 - `AutoRenovacoes` pesquisa simultaneamente cliente, contato, apolice, veiculo, placa e seguradora; periodo e filtro de acompanhamento ficam no `localStorage`.
+- Nas planilhas de renovacoes, `vigencia_fim` e exibida explicitamente como
+  "Data de vencimento" e aceita colagem. Na planilha de emissoes, Veiculo e
+  Placa ficam ao final dos dados operacionais; a entrada em lote comeca em
+  Data de transmissao e sempre passa por revisao antes de persistir.
 - `AutoSinistrosV2` salva checklist e dossie no dispositivo e gera um resumo copiavel. Esses dados ainda nao sao enviados ao Supabase.
 
 ## Handoff Checklist

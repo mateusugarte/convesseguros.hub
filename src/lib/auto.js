@@ -1831,95 +1831,138 @@ export async function importarApolicesAutoPlanilha(rows = []) {
   }
 
   for (const [index, row] of rows.entries()) {
+    const linha = row.linha || index + 1
     const nomeCliente = normalizeImportText(row.nome_cliente)
     const seguradora = normalizeImportText(row.seguradora)
     const vigenciaFim = row.vigencia_fim || null
 
     if (!nomeCliente || !vigenciaFim) {
       resultado.ignoradas += 1
-      resultado.erros.push({ linha: row.linha || index + 1, motivo: 'Nome do segurado ou data de vencimento ausente.' })
+      resultado.erros.push({ linha, motivo: 'Nome do segurado ou data de vencimento ausente.' })
       continue
     }
 
-    const premioLiquido = toFloatOrNull(row.premio_liquido) || 0
-    const pctComissao = toFloatOrNull(row.pct_comissao) || 0
-    const valorComissao = calcularValorComissaoAuto(premioLiquido, pctComissao)
-    const statusRenovacao = normalizeStatusRenovacaoAuto(row.status)
-    const observacoes = [
-      row.status ? `Status planilha: ${row.status}` : '',
-      row.limite ? `Limite: ${row.limite}` : '',
-      row.comissao_passada !== null && row.comissao_passada !== undefined && row.comissao_passada !== '' ? `Comissao passada: ${row.comissao_passada}` : '',
-      row.aba ? `Aba: ${row.aba}` : '',
-    ].filter(Boolean).join(' | ')
+    try {
+      const premioLiquido = toFloatOrNull(row.premio_liquido) || 0
+      const pctComissao = toFloatOrNull(row.pct_comissao) || 0
+      const valorComissao = calcularValorComissaoAuto(premioLiquido, pctComissao)
+      const valorRepasse = toFloatOrNull(row.valor_repasse)
+      const numeroApolice = normalizeImportText(row.numero_apolice) || null
+      const cpfCliente = normalizeImportText(row.cpf_cliente) || null
+      const tipo = ['novo', 'renovacao', 'endosso'].includes(row.tipo) ? row.tipo : (row.eh_renovacao === false ? 'novo' : 'renovacao')
+      const clienteId = await resolverClienteAutoId({ ...row, nome_cliente: nomeCliente, cpf_cliente: cpfCliente }, { exigirIdentificacao: false })
+      const statusRenovacao = normalizeStatusRenovacaoAuto(row.status)
+      const observacoes = [
+        row.status ? `Status planilha: ${row.status}` : '',
+        row.limite ? `Limite: ${row.limite}` : '',
+        row.comissao_passada !== null && row.comissao_passada !== undefined && row.comissao_passada !== '' ? `Comissao passada: ${row.comissao_passada}` : '',
+        row.aba ? `Aba: ${row.aba}` : '',
+      ].filter(Boolean).join(' | ')
 
-    const payload = {
-      emissao_id: null,
-      cliente_id: null,
-      seguradora: seguradora || null,
-      numero_apolice: normalizeImportText(row.numero_apolice) || null,
-      vigencia_inicio: row.vigencia_inicio || null,
-      vigencia_fim: vigenciaFim,
-      premio_liquido: premioLiquido,
-      pct_comissao: pctComissao,
-      valor_comissao: valorComissao,
-      forma_pagamento: normalizeImportText(row.forma_pagamento) || observacoes || null,
-      parcelamento: normalizeImportText(row.parcelamento) || null,
-      tipo_producao: row.tipo_producao || 'individual',
-      responsavel: normalizeImportText(row.responsavel) || null,
-      eh_renovacao: true,
-      tem_repasse: false,
-      pct_repasse: null,
-      nome_repasse: null,
-      valor_repasse: null,
-      nome_cliente: nomeCliente,
-      cpf_cliente: normalizeImportText(row.cpf_cliente) || null,
-      celular_cliente: normalizeImportText(row.celular_cliente) || null,
-      condutor_nome: normalizeImportText(row.condutor_nome) || nomeCliente,
-      condutor_cpf: normalizeImportText(row.condutor_cpf) || normalizeImportText(row.cpf_cliente) || null,
-      modelo_veiculo: normalizeImportText(row.modelo_veiculo) || null,
-      placa: normalizeImportText(row.placa) || null,
-      renovacao_premio_liquido_ano_anterior: null,
-      renovacao_comissao_ano_anterior: toFloatOrNull(row.comissao_passada),
-      renovacao_premio_liquido_ano_atual: premioLiquido || null,
-      renovacao_comissao_ano_atual: valorComissao || null,
-      renovacao_diferenca_premio_liquido: null,
-      renovacao_diferenca_comissao: null,
-    }
+      let duplicateQuery = supabase.from('apolices_auto').select('id, emissao_id')
+      if (numeroApolice) duplicateQuery = duplicateQuery.eq('numero_apolice', numeroApolice)
+      else {
+        duplicateQuery = duplicateQuery.eq('nome_cliente', nomeCliente).eq('vigencia_fim', vigenciaFim)
+        if (seguradora) duplicateQuery = duplicateQuery.eq('seguradora', seguradora)
+      }
+      const { data: duplicadas, error: duplicateError } = await duplicateQuery.limit(1)
+      if (duplicateError) throw duplicateError
 
-    const duplicateQuery = supabase
-      .from('apolices_auto')
-      .select('id')
-      .eq('nome_cliente', nomeCliente)
-      .eq('vigencia_fim', vigenciaFim)
-      .limit(1)
+      const existente = duplicadas?.[0] || null
+      const emissaoPayload = {
+        cotacao_id: null,
+        cliente_id: clienteId,
+        tipo,
+        coluna: 'apolice_emitida',
+        data_transmissao: row.data_transmissao || row.data_emissao || null,
+        tipo_producao: row.tipo_producao || 'individual',
+        responsavel: normalizeImportText(row.responsavel) || null,
+        emissor: normalizeImportText(row.emissor) || null,
+        nome_cliente: nomeCliente,
+        cpf_cliente: cpfCliente,
+        celular_cliente: normalizeImportText(row.celular_cliente) || null,
+        condutor_nome: normalizeImportText(row.condutor_nome) || nomeCliente,
+        condutor_cpf: normalizeImportText(row.condutor_cpf) || cpfCliente,
+        modelo_veiculo: normalizeImportText(row.modelo_veiculo) || null,
+        placa: normalizeImportText(row.placa) || null,
+        seguradora: seguradora || null,
+        numero_apolice: numeroApolice,
+        vigencia_inicio: row.vigencia_inicio || null,
+        vigencia_fim: vigenciaFim,
+        premio_liquido: premioLiquido,
+        pct_comissao: pctComissao,
+        valor_comissao: valorComissao,
+        forma_pagamento: normalizeImportText(row.forma_pagamento) || observacoes || null,
+        parcelamento: normalizeImportText(row.parcelamento) || null,
+        tem_repasse: valorRepasse !== null && valorRepasse !== 0,
+        valor_repasse: valorRepasse,
+        updated_at: new Date().toISOString(),
+      }
 
-    const { data: duplicadas, error: duplicateError } = seguradora
-      ? await duplicateQuery.eq('seguradora', seguradora)
-      : await duplicateQuery
-    if (duplicateError) throw duplicateError
+      let emissaoId = existente?.emissao_id || null
+      if (emissaoId) {
+        const { error } = await supabase.from('emissoes_auto').update(emissaoPayload).eq('id', emissaoId)
+        if (error) throw error
+      } else {
+        const { data, error } = await supabase.from('emissoes_auto').insert({ ...emissaoPayload, created_at: new Date().toISOString() }).select('id').single()
+        if (error) throw error
+        emissaoId = data.id
+      }
 
-    let apoliceId = duplicadas?.[0]?.id || null
-    if (apoliceId) {
-      const { error } = await escreverApoliceAutoComFallback(payload, body => (
-        supabase.from('apolices_auto').update(body).eq('id', apoliceId)
-      ))
-      if (error) throw error
-      resultado.atualizadas += 1
-    } else {
-      const { data, error } = await escreverApoliceAutoComFallback(payload, body => (
-        supabase.from('apolices_auto').insert(body).select('id').single()
-      ))
-      if (error) throw error
-      apoliceId = data?.id || null
-      resultado.importadas += 1
-    }
+      const apolicePayload = {
+        emissao_id: emissaoId,
+        cliente_id: clienteId,
+        seguradora: seguradora || null,
+        numero_apolice: numeroApolice,
+        data_emissao: row.data_emissao || row.data_transmissao || null,
+        vigencia_inicio: row.vigencia_inicio || null,
+        vigencia_fim: vigenciaFim,
+        premio_liquido: premioLiquido,
+        pct_comissao: pctComissao,
+        valor_comissao: valorComissao,
+        forma_pagamento: normalizeImportText(row.forma_pagamento) || observacoes || null,
+        parcelamento: normalizeImportText(row.parcelamento) || null,
+        tipo_producao: row.tipo_producao || 'individual',
+        responsavel: normalizeImportText(row.responsavel) || null,
+        eh_renovacao: tipo === 'renovacao',
+        tem_repasse: valorRepasse !== null && valorRepasse !== 0,
+        pct_repasse: null,
+        nome_repasse: null,
+        valor_repasse: valorRepasse,
+        nome_cliente: nomeCliente,
+        cpf_cliente: cpfCliente,
+        celular_cliente: normalizeImportText(row.celular_cliente) || null,
+        condutor_nome: normalizeImportText(row.condutor_nome) || nomeCliente,
+        condutor_cpf: normalizeImportText(row.condutor_cpf) || cpfCliente,
+        modelo_veiculo: normalizeImportText(row.modelo_veiculo) || null,
+        placa: normalizeImportText(row.placa) || null,
+        renovacao_premio_liquido_ano_anterior: null,
+        renovacao_comissao_ano_anterior: toFloatOrNull(row.comissao_passada),
+        renovacao_premio_liquido_ano_atual: premioLiquido || null,
+        renovacao_comissao_ano_atual: valorComissao || null,
+        renovacao_diferenca_premio_liquido: null,
+        renovacao_diferenca_comissao: null,
+      }
 
-    if (apoliceId) {
-      const { error: renovacaoError } = await supabase
-        .from('renovacoes_auto')
-        .update(statusRenovacao)
-        .eq('apolice_id', apoliceId)
-      if (renovacaoError) throw renovacaoError
+      let apoliceId = existente?.id || null
+      if (apoliceId) {
+        const { error } = await escreverApoliceAutoComFallback(apolicePayload, body => supabase.from('apolices_auto').update(body).eq('id', apoliceId))
+        if (error) throw error
+        resultado.atualizadas += 1
+      } else {
+        const { data, error } = await escreverApoliceAutoComFallback(apolicePayload, body => supabase.from('apolices_auto').insert(body).select('id').single())
+        if (error) throw error
+        apoliceId = data?.id || null
+        resultado.importadas += 1
+      }
+
+      if (apoliceId) {
+        const { error: renovacaoError } = await supabase.from('renovacoes_auto').update(statusRenovacao).eq('apolice_id', apoliceId)
+        if (renovacaoError) throw renovacaoError
+      }
+    } catch (error) {
+      resultado.ignoradas += 1
+      resultado.erros.push({ linha, motivo: error?.message || 'Não foi possível importar a linha.' })
     }
   }
 

@@ -29,7 +29,7 @@ function customerName(row) { return row.clientes_auto?.nome_completo || row.nome
 function vehicleName(row) { return row.identificacao_veiculo || [row.apolices_auto?.modelo_veiculo, row.apolices_auto?.placa].filter(Boolean).join(' · ') || '' }
 
 function exportCsv(rows) {
-  const headers = ['Data', 'Cia', 'Segurado', 'Veículo', 'Status', 'Limite', 'Contatos', 'Follow-ups', 'Último contato', 'Próximo follow-up', 'Descontos', 'Desconto %', 'Comissão', 'Comissão passada', 'Notas']
+  const headers = ['Data de vencimento', 'Cia', 'Segurado', 'Veículo', 'Status', 'Limite', 'Contatos', 'Follow-ups', 'Último contato', 'Próximo follow-up', 'Descontos', 'Desconto %', 'Comissão', 'Comissão passada', 'Notas']
   const values = rows.map(row => [row.vigencia_fim, row.seguradora, customerName(row), vehicleName(row), renewalStatusValue(row), row.data_limite_envio, row.contatos_realizados, row.followups_realizados, row.ultimo_contato_em, row.proximo_followup_em, row.descontos_realizados, row.desconto_percentual, row.pct_comissao_atual, row.pct_comissao_anterior, row.notas_negociacao])
   const escape = value => `"${String(value ?? '').replace(/"/g, '""')}"`
   const blob = new Blob([[headers, ...values].map(line => line.map(escape).join(';')).join('\n')], { type: 'text/csv;charset=utf-8' })
@@ -134,9 +134,9 @@ export default function AutoRenovacoesPlanilha() {
   const quickContact = (row, followup = false) => saveMutation.mutate({ id: row.id, campos: followup ? { followups_realizados: Number(row.followups_realizados || 0) + 1, ultimo_contato_em: today } : { contatos_realizados: Number(row.contatos_realizados || 0) + 1, ultimo_contato_em: today } })
 
   const columns = useMemo(() => [
-    { field: 'vigencia_fim', label: 'Data', type: 'date', editable: true, sortable: true, width: 118 },
+    { field: 'vigencia_fim', label: 'Data de vencimento', type: 'date', editable: true, sortable: true, width: 145 },
     { field: 'seguradora', label: 'Cia', editable: true, sortable: true, width: 132 },
-    { field: 'nome', label: 'Segurado', sortable: true, width: 230, render: row => <button className="ops-sheet-primary-link ops-sheet-insured-link" onClick={() => setEditingInsured(row)} title="Editar nome ou vincular cliente"><UserRound /> <span>{customerName(row) || 'Sem nome'}</span></button> },
+    { field: 'nome', label: 'Segurado', sortable: true, sticky: true, width: 230, render: row => <button className="ops-sheet-primary-link ops-sheet-insured-link" onClick={() => setEditingInsured(row)} title="Editar nome ou vincular cliente"><UserRound /> <span>{customerName(row) || 'Sem nome'}</span></button> },
     { field: 'identificacao_veiculo', label: 'Veículo', editable: true, width: 190, getValue: vehicleName },
     { field: 'status', label: 'Status', type: 'select', editable: true, width: 145, options: STATUS_OPTIONS, getValue: renewalStatusValue },
     { field: 'data_limite_envio', label: 'Limite', type: 'date', editable: true, sortable: true, width: 118 },
@@ -163,7 +163,7 @@ export default function AutoRenovacoesPlanilha() {
     </section>
     <section className="ops-sheet-workspace" aria-label="Planilha operacional de renovações">
       <header className="ops-sheet-toolbar"><div className="ops-sheet-title"><span><RefreshCw /></span><div><strong>Renovações de {monthLabel(mesRef)}</strong><small>{filteredRows.length} de {rows.length} linhas · salvamento automático</small></div></div><label className="ops-sheet-search"><Search /><input value={busca} onChange={event => setBusca(event.target.value)} placeholder="Cliente, veículo, placa, seguradora ou nota" /></label><select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="todos">Todos os status</option>{STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select><button className={followupFilter ? 'is-active' : ''} onClick={() => setFollowupFilter(value => !value)}><Filter />Follow-ups vencidos</button><button onClick={() => exportCsv(filteredRows)}><Download />Exportar Excel/CSV</button></header>
-      <div className="ops-sheet-help"><span>Clique e edite</span><span>Enter/↑/↓ navegam</span><span>Cole várias células do Excel</span><span>Ordene pelo cabeçalho</span></div>
+      <div className="ops-sheet-help"><span>Clique e edite</span><span>Cole também na Data de vencimento</span><span>Datas 31/08/2026 são reconhecidas</span><span>Enter/↑/↓ navegam</span><span>Ordene pelo cabeçalho</span></div>
       {isLoading ? <div className="ops-sheet-loading">Carregando renovações…</div> : isError ? <EmptyState icon={<XCircle />} title="Erro ao carregar renovações" description={error?.message || 'Tente recarregar a página.'} /> : <OperationalSpreadsheet rows={filteredRows} columns={columns} onCommit={saveCell} onBulkCommit={bulkSave} sort={sort} onSort={handleSort} emptyMessage="Nenhuma renovação corresponde aos filtros." />}
     </section>
     {editingInsured && <RenewalInsuredEditor initialName={customerName(editingInsured)} initialClientId={editingInsured.cliente_id || ''} onClose={() => setEditingInsured(null)} onSave={fields => { saveMutation.mutate({ id: editingInsured.id, campos: { cliente_id: fields.cliente_id, nome_segurado_anterior: fields.nome_segurado_anterior } }); setEditingInsured(null) }} />}

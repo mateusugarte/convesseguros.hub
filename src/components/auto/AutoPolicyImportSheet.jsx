@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx'
 import { Car, Check, CheckCircle2, ClipboardPaste, Download, FileUp, Plus, Trash2, Upload, UserCheck, UserPlus, X } from 'lucide-react'
 import { calcularValorComissaoAuto, getClientesAutoComVeiculos, importarApolicesAutoPlanilha } from '../../lib/auto'
 import { normalizePolicyImportIdentity, policyClientCandidates, policyVehicleCandidates, suggestPolicyVehicle } from '../../lib/autoPolicyImport'
+import { normalizeSpreadsheetNumber } from '../../lib/spreadsheetPaste'
 import { useToast } from '../../contexts/ToastContext'
 import OperationalSpreadsheet from './OperationalSpreadsheet'
 
@@ -19,6 +20,7 @@ const FIELD_ALIASES = {
   forma_pagamento: ['forma de pagamento', 'pagamento'],
   premio_liquido: ['premio liquido', 'premio'],
   pct_comissao: ['comissao percentual', 'percentual de comissao', 'comissao'],
+  valor_comissao: ['valor da comissao', 'valor comissao', 'comissao em reais'],
   valor_repasse: ['valor repasse', 'repasse', 'repasse comissao'],
   responsavel: ['responsavel', 'corretor'],
   emissor: ['emissor', 'operador'],
@@ -54,7 +56,7 @@ function plusOneYear(value) {
 function blankRow(index = 0, values = {}) {
   return normalizePolicyImportIdentity({
     _id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
-    data_transmissao: '', vigencia_inicio: '', vigencia_fim: '', nome_cliente: '', celular_cliente: '', numero_apolice: '', seguradora: '', parcelamento: '', forma_pagamento: '', premio_liquido: '', pct_comissao: '', valor_repasse: '', responsavel: '', emissor: '', tipo: 'novo', status: '', modelo_veiculo: '', placa: '',
+    data_transmissao: '', vigencia_inicio: '', vigencia_fim: '', nome_cliente: '', celular_cliente: '', numero_apolice: '', seguradora: '', parcelamento: '', forma_pagamento: '', premio_liquido: '', pct_comissao: '', valor_comissao: '', valor_repasse: '', responsavel: '', emissor: '', tipo: 'novo', status: '', modelo_veiculo: '', placa: '',
     cliente_id: '', vinculo_cliente: '', cliente_confirmado: false, veiculo_confirmado: false, outro_veiculo: false,
     ...values,
   })
@@ -88,7 +90,9 @@ function parseWorkbook(workbook) {
       const row = { aba: sheetName, linha: headerIndex + index + 2 }
       mapping.forEach((field, column) => {
         if (!field || row[field]) return
-        row[field] = ['data_transmissao', 'vigencia_inicio'].includes(field) ? dateToIso(values[column]) : String(values[column] ?? '').trim()
+        if (['data_transmissao', 'vigencia_inicio'].includes(field)) row[field] = dateToIso(values[column])
+        else if (['premio_liquido', 'pct_comissao', 'valor_comissao', 'valor_repasse'].includes(field)) row[field] = normalizeSpreadsheetNumber(values[column])
+        else row[field] = String(values[column] ?? '').trim()
       })
       if (!row.nome_cliente && !row.numero_apolice) return
       if (!row.vigencia_fim && row.vigencia_inicio) row.vigencia_fim = plusOneYear(row.vigencia_inicio)
@@ -111,7 +115,7 @@ function downloadTemplate() {
 }
 
 function hasPolicyRowData(row) {
-  return ['data_transmissao', 'vigencia_inicio', 'nome_cliente', 'celular_cliente', 'numero_apolice', 'seguradora', 'parcelamento', 'forma_pagamento', 'premio_liquido', 'pct_comissao', 'valor_repasse', 'responsavel', 'emissor', 'status', 'modelo_veiculo', 'placa']
+  return ['data_transmissao', 'vigencia_inicio', 'nome_cliente', 'celular_cliente', 'numero_apolice', 'seguradora', 'parcelamento', 'forma_pagamento', 'premio_liquido', 'pct_comissao', 'valor_comissao', 'valor_repasse', 'responsavel', 'emissor', 'status', 'modelo_veiculo', 'placa']
     .some(field => String(row[field] || '').trim())
 }
 
@@ -231,7 +235,7 @@ export default function AutoPolicyImportSheet({ onClose }) {
     { field: 'seguradora', label: 'SEGURADORA', editable: true, width: 135 },
     { field: 'premio_liquido', label: 'PRÊMIO LÍQUIDO', type: 'number', step: '0.01', editable: true, width: 125, parse: value => value === '' ? null : Number(value) },
     { field: 'pct_comissao', label: '% COMISSÃO', type: 'number', step: '0.01', editable: true, width: 105, parse: value => value === '' ? null : Number(value) },
-    { key: 'valor_comissao', label: 'VALOR DA COMISSÃO', width: 145, consumePaste: true, format: value => value, getValue: row => calcularValorComissaoAuto(row.premio_liquido || 0, row.pct_comissao || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) },
+    { field: 'valor_comissao', label: 'VALOR DA COMISSÃO', type: 'number', step: '0.01', editable: true, width: 145, placeholder: calcularValorComissaoAuto(0, 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), parse: value => value === '' ? null : Number(value) },
     { field: 'valor_repasse', label: 'REPASSE COMISSÃO', type: 'number', step: '0.01', editable: true, width: 135, parse: value => value === '' ? null : Number(value) },
     { field: 'responsavel', label: 'CORRETOR', editable: true, width: 120 },
     { field: 'tipo', label: 'O QUE É', type: 'select', editable: true, width: 120, options: TYPES, parse: value => { const type = normalize(value); return type.includes('renov') ? 'renovacao' : type.includes('endos') ? 'endosso' : 'novo' } },
@@ -257,7 +261,12 @@ export default function AutoPolicyImportSheet({ onClose }) {
       <button className="is-save" disabled={!validRows.length || incompleteRows.length > 0 || pendingReviewRows.length > 0 || importMutation.isPending} onClick={() => importMutation.mutate()}>{importMutation.isPending ? 'Subindo…' : pendingReviewRows.length ? `Revisar ${pendingReviewRows.length} vínculo(s)` : `Subir ${validRows.length || ''} apólice(s)`}</button>
     </div>
     <div className="policy-import-readiness"><span className="is-ready"><CheckCircle2 />{validRows.length} prontas</span><span className={incompleteRows.length ? 'is-warning' : ''}>{incompleteRows.length} incompletas</span><span className={pendingReviewRows.length ? 'is-warning' : ''}>{pendingReviewRows.length} aguardando confirmação</span><span>`SEGURADO --- VEÍCULO` é separado automaticamente · o vencimento é calculado um ano após a Vigência</span></div>
-    <OperationalSpreadsheet rows={rows} columns={columns} getRowId={row => row._id} onCommit={commitCell} onBulkCommit={bulkCommit} className="is-policy-import" statusLabel={`${validRows.length} apólice(s) pronta(s) para subir`} />
+    <OperationalSpreadsheet rows={rows} columns={columns} getRowId={row => row._id} getRowClassName={row => {
+      if (!hasPolicyRowData(row)) return 'is-sheet-row-empty'
+      if (!row.nome_cliente?.trim() || !row.modelo_veiculo?.trim() || !row.vigencia_inicio) return 'is-sheet-row-error'
+      if (!row.cliente_confirmado || !row.veiculo_confirmado) return 'is-sheet-row-review'
+      return 'is-sheet-row-ready'
+    }} onCommit={commitCell} onBulkCommit={bulkCommit} className="is-policy-import" statusLabel={`${validRows.length} apólice(s) pronta(s) para subir`} />
     {summary && <div className="policy-import-result"><CheckCircle2 /><div><strong>Importação processada</strong><span>{summary.importadas} novas · {summary.atualizadas} atualizadas · {summary.ignoradas} ignoradas</span>{summary.erros.length > 0 && <small>{summary.erros.slice(0, 4).map(error => `Linha ${error.linha}: ${error.motivo}`).join(' · ')}</small>}</div></div>}
   </section>
 }

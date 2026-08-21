@@ -1910,7 +1910,8 @@ export async function importarApolicesAutoPlanilha(rows = []) {
     try {
       const premioLiquido = toFloatOrNull(row.premio_liquido) || 0
       const pctComissao = toFloatOrNull(row.pct_comissao) || 0
-      const valorComissao = calcularValorComissaoAuto(premioLiquido, pctComissao)
+      const valorComissaoInformado = toFloatOrNull(row.valor_comissao)
+      const valorComissao = valorComissaoInformado ?? calcularValorComissaoAuto(premioLiquido, pctComissao)
       const valorRepasse = toFloatOrNull(row.valor_repasse)
       const numeroApolice = normalizeImportText(row.numero_apolice) || null
       const cpfCliente = normalizeImportText(row.cpf_cliente) || null

@@ -1,37 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowDown, ArrowUp, ChevronsUpDown, Rows3 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronsUpDown, Maximize2, Minimize2, Rows3 } from 'lucide-react'
+import { normalizeSpreadsheetDate, normalizeSpreadsheetNumber } from '../../lib/spreadsheetPaste'
 
 function comparable(value) {
   return value === null || value === undefined ? '' : String(value)
 }
 
-function normalizePastedDate(value) {
-  const raw = String(value || '').trim()
-  if (!raw) return ''
-  const brazilian = raw.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2}|\d{4})$/)
-  if (brazilian) {
-    const year = brazilian[3].length === 2 ? `20${brazilian[3]}` : brazilian[3]
-    return `${year}-${brazilian[2].padStart(2, '0')}-${brazilian[1].padStart(2, '0')}`
+function spreadsheetColumnName(index) {
+  let value = Number(index) + 1
+  let result = ''
+  while (value > 0) {
+    value -= 1
+    result = String.fromCharCode(65 + (value % 26)) + result
+    value = Math.floor(value / 26)
   }
-  if (/^\d{5}$/.test(raw)) {
-    const excelEpoch = Date.UTC(1899, 11, 30)
-    return new Date(excelEpoch + Number(raw) * 86400000).toISOString().slice(0, 10)
-  }
-  return raw
-}
-
-function normalizePastedNumber(value) {
-  const raw = String(value || '').trim().replace(/\s/g, '')
-  if (!raw) return ''
-  if (raw.includes(',')) return raw.replace(/\./g, '').replace(',', '.').replace('%', '')
-  return raw.replace('%', '')
+  return result
 }
 
 function parsePastedValue(column, value) {
   let normalized = value
   if (column.parsePaste) return column.parsePaste(value)
-  if (column.type === 'date') normalized = normalizePastedDate(value)
-  if (column.type === 'number') normalized = normalizePastedNumber(value)
+  if (column.type === 'date') normalized = normalizeSpreadsheetDate(value)
+  if (column.type === 'number') normalized = normalizeSpreadsheetNumber(value)
   return column.parse ? column.parse(normalized) : normalized
 }
 
@@ -65,6 +55,10 @@ function SpreadsheetCell({ row, rowIndex, column, columnIndex, onCommit, onPaste
       event.preventDefault()
       commit()
       focusCell(event.currentTarget, rowIndex + 1, columnIndex)
+    } else if (event.key === 'Escape') {
+      event.preventDefault()
+      setDraft(comparable(rawValue))
+      event.currentTarget.blur()
     }
   }
 
@@ -85,7 +79,7 @@ function SpreadsheetCell({ row, rowIndex, column, columnIndex, onCommit, onPaste
     'aria-label': `${column.label} da linha ${rowIndex + 1}`,
     onChange: event => setDraft(event.target.value),
     onBlur: commit,
-    onFocus: () => onActivate(rowIndex, columnIndex),
+    onFocus: event => { onActivate(rowIndex, columnIndex); event.currentTarget.select?.() },
     onKeyDown: handleKeyDown,
     onPaste: handlePaste,
   }
@@ -119,6 +113,21 @@ export default function OperationalSpreadsheet({
   const wrapRef = useRef(null)
   const [activeCell, setActiveCell] = useState(null)
   const [density, setDensity] = useState('compact')
+  const [expanded, setExpanded] = useState(false)
+
+  useEffect(() => {
+    if (!expanded) return undefined
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const closeOnEscape = event => {
+      if (event.key === 'Escape' && !event.target?.matches?.('input, select, textarea')) setExpanded(false)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [expanded])
 
   const pasteMatrix = (startRow, startColumn, text) => {
     const matrix = text.replace(/\r/g, '').split('\n').filter((line, index, all) => line || index < all.length - 1).map(line => line.split('\t'))
@@ -146,15 +155,15 @@ export default function OperationalSpreadsheet({
   }
 
   return (
-    <div ref={wrapRef} className={`ops-sheet-wrap is-${density} ${className}`}>
-      <table className="ops-sheet" role="grid">
+    <div ref={wrapRef} className={`ops-sheet-wrap is-${density} ${expanded ? 'is-expanded' : ''} ${className}`}>
+      <table className={`ops-sheet ${className}`} role="grid">
         <thead>
           <tr>
-            <th className="ops-sheet-row-number" aria-label="Número da linha">#</th>
-            {columns.map(column => (
+            <th className="ops-sheet-row-number ops-sheet-corner" aria-label="Número da linha">#</th>
+            {columns.map((column, columnIndex) => (
               <th key={column.key || column.field} style={{ width: column.width, minWidth: column.width, ...(column.sticky ? { left: 42 } : {}) }} className={column.sticky ? 'is-sticky' : ''}>
                 <button type="button" disabled={!column.sortable || !onSort} onClick={() => onSort?.(column.field)}>
-                  <span>{column.label}</span>
+                  <span><small>{spreadsheetColumnName(columnIndex)}</small>{column.label}</span>
                   {column.sortable && (sort?.field === column.field
                     ? (sort.direction === 'asc' ? <ArrowUp /> : <ArrowDown />)
                     : <ChevronsUpDown />)}
@@ -173,7 +182,13 @@ export default function OperationalSpreadsheet({
             >
               <th className="ops-sheet-row-number" scope="row" onClick={() => setActiveCell({ row: rowIndex, column: null })}>{rowIndex + 1}</th>
               {columns.map((column, columnIndex) => (
-                <td key={column.key || column.field} style={column.sticky ? { left: 42 } : undefined} className={`${column.sticky ? 'is-sticky' : ''} ${activeCell?.row === rowIndex && activeCell?.column === columnIndex ? 'is-active-cell' : ''} ${column.className || ''}`}>
+                <td
+                  key={column.key || column.field}
+                  data-column-type={column.type || (column.editable ? 'text' : 'display')}
+                  style={column.sticky ? { left: 42 } : undefined}
+                  className={`${column.sticky ? 'is-sticky' : ''} ${column.editable ? 'is-editable' : 'is-readonly'} ${activeCell?.row === rowIndex && activeCell?.column === columnIndex ? 'is-active-cell' : ''} ${column.className || ''}`}
+                  onMouseDown={() => setActiveCell({ row: rowIndex, column: columnIndex })}
+                >
                   <SpreadsheetCell
                     row={row}
                     rowIndex={rowIndex}
@@ -190,13 +205,14 @@ export default function OperationalSpreadsheet({
         </tbody>
       </table>
       <footer className="ops-sheet-statusbar">
-        <span><Rows3 />{rows.length} linha(s) · {columns.length} coluna(s) · {rows.length * columns.length} células visíveis</span>
-        {activeCell && <span>Linha {activeCell.row + 1}{activeCell.column !== null ? ` · ${columns[activeCell.column]?.label}` : ''}</span>}
+        <span className="ops-sheet-count"><Rows3 />{rows.length} linhas <i /> {columns.length} colunas</span>
+        {activeCell && <span className="ops-sheet-selection"><b>{activeCell.column === null ? activeCell.row + 1 : `${spreadsheetColumnName(activeCell.column)}${activeCell.row + 1}`}</b>{activeCell.column !== null ? columns[activeCell.column]?.label : 'Linha selecionada'}</span>}
         <span className="is-save-status">{statusLabel}</span>
         <div role="group" aria-label="Densidade da planilha">
           <button className={density === 'compact' ? 'is-active' : ''} onClick={() => setDensity('compact')}>Compacta</button>
           <button className={density === 'comfortable' ? 'is-active' : ''} onClick={() => setDensity('comfortable')}>Confortável</button>
         </div>
+        <button className="ops-sheet-expand" onClick={() => setExpanded(value => !value)} title={expanded ? 'Sair da tela cheia' : 'Usar planilha em tela cheia'}>{expanded ? <Minimize2 /> : <Maximize2 />}<span>{expanded ? 'Fechar tela cheia' : 'Tela cheia'}</span></button>
       </footer>
     </div>
   )

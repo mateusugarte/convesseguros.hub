@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
-import { CheckCircle2, ClipboardPaste, Download, FileUp, Plus, Trash2, Upload, X } from 'lucide-react'
-import { calcularValorComissaoAuto, importarApolicesAutoPlanilha } from '../../lib/auto'
+import { Car, Check, CheckCircle2, ClipboardPaste, Download, FileUp, Plus, Trash2, Upload, UserCheck, UserPlus, X } from 'lucide-react'
+import { calcularValorComissaoAuto, getClientesAutoComVeiculos, importarApolicesAutoPlanilha } from '../../lib/auto'
+import { normalizePolicyImportIdentity, policyClientCandidates, policyVehicleCandidates, suggestPolicyVehicle } from '../../lib/autoPolicyImport'
 import { useToast } from '../../contexts/ToastContext'
 import OperationalSpreadsheet from './OperationalSpreadsheet'
 
@@ -51,11 +52,12 @@ function plusOneYear(value) {
 }
 
 function blankRow(index = 0, values = {}) {
-  return {
+  return normalizePolicyImportIdentity({
     _id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
     data_transmissao: '', vigencia_inicio: '', vigencia_fim: '', nome_cliente: '', celular_cliente: '', numero_apolice: '', seguradora: '', parcelamento: '', forma_pagamento: '', premio_liquido: '', pct_comissao: '', valor_repasse: '', responsavel: '', emissor: '', tipo: 'novo', status: '', modelo_veiculo: '', placa: '',
+    cliente_id: '', vinculo_cliente: '', cliente_confirmado: false, veiculo_confirmado: false, outro_veiculo: false,
     ...values,
-  }
+  })
 }
 
 function blankRows(count = 20) {
@@ -108,6 +110,42 @@ function downloadTemplate() {
   URL.revokeObjectURL(link.href)
 }
 
+function hasPolicyRowData(row) {
+  return ['data_transmissao', 'vigencia_inicio', 'nome_cliente', 'celular_cliente', 'numero_apolice', 'seguradora', 'parcelamento', 'forma_pagamento', 'premio_liquido', 'pct_comissao', 'valor_repasse', 'responsavel', 'emissor', 'status', 'modelo_veiculo', 'placa']
+    .some(field => String(row[field] || '').trim())
+}
+
+function vehicleLabel(vehicle = {}) {
+  return [vehicle.modelo_veiculo, vehicle.placa].filter(Boolean).join(' · ') || 'Veículo não identificado'
+}
+
+function PolicyRelationshipCell({ row, clients, loading, onPatch }) {
+  if (!String(row.nome_cliente || '').trim()) return <span className="policy-link-empty">Preencha o segurado</span>
+
+  const candidates = policyClientCandidates(row.nome_cliente, clients)
+  const selectedClient = clients.find(client => client.id === row.cliente_id) || null
+  const knownVehicles = selectedClient ? policyVehicleCandidates(selectedClient) : []
+  const suggestedVehicle = selectedClient ? suggestPolicyVehicle(row, selectedClient) : null
+
+  if (!row.cliente_confirmado) {
+    if (loading) return <span className="policy-link-empty">Buscando cliente…</span>
+    if (candidates.length) {
+      return <div className="policy-link-cell is-question"><span><UserCheck /><b>Este cliente já existe?</b></span>{candidates.map(client => <button key={client.id} onClick={() => onPatch({ cliente_id: client.id, vinculo_cliente: 'existente', cliente_confirmado: true, veiculo_confirmado: false, outro_veiculo: false })}><strong>{client.nome_completo}</strong><small>{client.celular || client.cpf || 'Cadastro existente'}</small><i>É o mesmo</i></button>)}<button className="is-new" onClick={() => onPatch({ cliente_id: '', vinculo_cliente: 'novo', cliente_confirmado: true, veiculo_confirmado: false, outro_veiculo: true })}><UserPlus />Não é nenhum deles</button></div>
+    }
+    return <div className="policy-link-cell is-question"><span><UserPlus /><b>Nenhum cliente igual encontrado</b></span><button className="is-new" onClick={() => onPatch({ cliente_id: '', vinculo_cliente: 'novo', cliente_confirmado: true, veiculo_confirmado: false, outro_veiculo: true })}>Confirmar novo cliente</button></div>
+  }
+
+  if (row.veiculo_confirmado) {
+    return <div className="policy-link-cell is-confirmed"><span><CheckCircle2 /><b>{row.vinculo_cliente === 'existente' ? selectedClient?.nome_completo || 'Cliente existente' : 'Novo cliente'}</b></span><small><Car />{vehicleLabel(row)}</small><button onClick={() => onPatch({ veiculo_confirmado: false })}>Revisar</button></div>
+  }
+
+  if (suggestedVehicle && !row.outro_veiculo) {
+    return <div className="policy-link-cell is-question"><span><Car /><b>É o mesmo veículo?</b></span><small>{vehicleLabel(suggestedVehicle)}</small><div><button className="is-yes" onClick={() => onPatch({ modelo_veiculo: suggestedVehicle.modelo_veiculo || row.modelo_veiculo, placa: suggestedVehicle.placa || row.placa, veiculo_confirmado: true, outro_veiculo: false })}><Check />Sim, mesmo carro</button><button onClick={() => onPatch({ veiculo_confirmado: false, outro_veiculo: true })}>Não, outro carro</button></div></div>
+  }
+
+  return <div className="policy-link-cell is-question"><span><Car /><b>{knownVehicles.length ? 'Informe o outro veículo' : 'Informe o veículo'}</b></span>{knownVehicles.length > 0 && <small>Já cadastrados: {knownVehicles.slice(0, 2).map(vehicleLabel).join(' · ')}</small>}<button className="is-yes" disabled={!String(row.modelo_veiculo || '').trim()} onClick={() => onPatch({ veiculo_confirmado: true, outro_veiculo: true })}><Check />Confirmar {row.modelo_veiculo || 'veículo'}</button></div>
+}
+
 export default function AutoPolicyImportSheet({ onClose }) {
   const toast = useToast()
   const queryClient = useQueryClient()
@@ -115,11 +153,21 @@ export default function AutoPolicyImportSheet({ onClose }) {
   const [rows, setRows] = useState(() => blankRows())
   const [summary, setSummary] = useState(null)
 
-  const validRows = useMemo(() => rows.filter(row => row.nome_cliente.trim() && row.vigencia_inicio).map(row => ({ ...row, vigencia_fim: row.vigencia_fim || plusOneYear(row.vigencia_inicio) })), [rows])
+  const { data: clients = [], isLoading: clientsLoading } = useQuery({
+    queryKey: ['auto-clientes', 'policy-import-links'],
+    queryFn: getClientesAutoComVeiculos,
+    staleTime: 30_000,
+  })
+
+  const populatedRows = useMemo(() => rows.filter(hasPolicyRowData), [rows])
+  const validRows = useMemo(() => populatedRows
+    .map(normalizePolicyImportIdentity)
+    .filter(row => row.nome_cliente.trim() && row.modelo_veiculo.trim() && row.vigencia_inicio && row.cliente_confirmado && row.veiculo_confirmado)
+    .map(row => ({ ...row, vigencia_fim: row.vigencia_fim || plusOneYear(row.vigencia_inicio) })), [populatedRows])
   const incompleteRows = useMemo(() => rows.filter(row => {
-    const hasUserData = ['data_transmissao', 'vigencia_inicio', 'nome_cliente', 'celular_cliente', 'numero_apolice', 'seguradora', 'parcelamento', 'forma_pagamento', 'premio_liquido', 'pct_comissao', 'valor_repasse', 'responsavel', 'emissor', 'status', 'modelo_veiculo', 'placa'].some(field => String(row[field] || '').trim())
-    return hasUserData && (!row.nome_cliente.trim() || !row.vigencia_inicio)
+    return hasPolicyRowData(row) && (!row.nome_cliente.trim() || !row.modelo_veiculo.trim() || !row.vigencia_inicio)
   }), [rows])
+  const pendingReviewRows = useMemo(() => populatedRows.filter(row => !row.cliente_confirmado || !row.veiculo_confirmado), [populatedRows])
   const importMutation = useMutation({
     mutationFn: () => importarApolicesAutoPlanilha(validRows),
     onSuccess: async result => {
@@ -140,7 +188,10 @@ export default function AutoPolicyImportSheet({ onClose }) {
   const commitCell = (row, column, value) => {
     const fields = { [column.field]: value }
     if (column.field === 'vigencia_inicio' && value && !row.vigencia_fim) fields.vigencia_fim = plusOneYear(value)
-    updateRow(row._id, fields)
+    const next = normalizePolicyImportIdentity({ ...row, ...fields })
+    if (column.field === 'nome_cliente') Object.assign(next, { cliente_id: '', vinculo_cliente: '', cliente_confirmado: false, veiculo_confirmado: false, outro_veiculo: false })
+    if (['modelo_veiculo', 'placa'].includes(column.field)) next.veiculo_confirmado = false
+    updateRow(row._id, next)
   }
   const bulkCommit = changes => {
     const grouped = new Map()
@@ -148,8 +199,10 @@ export default function AutoPolicyImportSheet({ onClose }) {
     setRows(current => current.map(row => {
       const fields = grouped.get(row._id)
       if (!fields) return row
-      const next = { ...row, ...fields }
+      const next = normalizePolicyImportIdentity({ ...row, ...fields })
       if (!next.vigencia_fim && next.vigencia_inicio) next.vigencia_fim = plusOneYear(next.vigencia_inicio)
+      if (fields.nome_cliente !== undefined) Object.assign(next, { cliente_id: '', vinculo_cliente: '', cliente_confirmado: false, veiculo_confirmado: false, outro_veiculo: false })
+      if (fields.modelo_veiculo !== undefined || fields.placa !== undefined) next.veiculo_confirmado = false
       return next
     }))
   }
@@ -186,11 +239,12 @@ export default function AutoPolicyImportSheet({ onClose }) {
     { field: 'status', label: 'STATUS', editable: true, width: 125 },
     { field: 'numero_apolice', label: 'Nº APÓLICE', editable: true, width: 135 },
     { field: 'forma_pagamento', label: 'FORMA DE PAGAMENTO', editable: true, width: 145 },
+    { key: 'vinculo', label: 'CONFIRMAR CLIENTE E VEÍCULO', width: 300, render: row => <PolicyRelationshipCell row={row} clients={clients} loading={clientsLoading} onPatch={fields => updateRow(row._id, fields)} /> },
+    { key: 'remove', label: '', width: 48, render: row => <button className="ops-sheet-icon-button is-danger" title="Remover linha" onClick={() => setRows(current => current.filter(item => item._id !== row._id))}><Trash2 /></button> },
     { field: 'modelo_veiculo', label: 'VEÍCULO', editable: true, width: 175 },
     { field: 'placa', label: 'PLACA', editable: true, width: 95 },
-    { key: 'remove', label: '', width: 48, render: row => <button className="ops-sheet-icon-button is-danger" title="Remover linha" onClick={() => setRows(current => current.filter(item => item._id !== row._id))}><Trash2 /></button> },
     { field: 'celular_cliente', label: 'WHATSAPP', editable: true, width: 130 },
-  ], [])
+  ], [clients, clientsLoading])
 
   return <section className="policy-import-workspace">
     <header className="policy-import-header"><span><FileUp /></span><div><small>Entrada em lote</small><strong>Subir apólices para o AUTO</strong><p>Carregue um arquivo ou cole a partir de Data de transmissão. Revise a grade antes de salvar.</p></div><button onClick={onClose} title="Fechar"><X /></button></header>
@@ -200,9 +254,9 @@ export default function AutoPolicyImportSheet({ onClose }) {
       <button onClick={downloadTemplate}><Download />Baixar modelo</button>
       <button onClick={() => setRows(current => [...current, ...blankRows(20)])}><Plus />Adicionar 20 linhas</button>
       <span><ClipboardPaste />Clique em Data de transmissão e cole o bloco inteiro</span>
-      <button className="is-save" disabled={!validRows.length || importMutation.isPending} onClick={() => importMutation.mutate()}>{importMutation.isPending ? 'Subindo…' : `Subir ${validRows.length || ''} apólice(s)`}</button>
+      <button className="is-save" disabled={!validRows.length || incompleteRows.length > 0 || pendingReviewRows.length > 0 || importMutation.isPending} onClick={() => importMutation.mutate()}>{importMutation.isPending ? 'Subindo…' : pendingReviewRows.length ? `Revisar ${pendingReviewRows.length} vínculo(s)` : `Subir ${validRows.length || ''} apólice(s)`}</button>
     </div>
-    <div className="policy-import-readiness"><span className="is-ready"><CheckCircle2 />{validRows.length} prontas</span><span className={incompleteRows.length ? 'is-warning' : ''}>{incompleteRows.length} incompletas</span><span>O vencimento é calculado automaticamente como um ano após a Vigência · WhatsApp fica na última coluna</span></div>
+    <div className="policy-import-readiness"><span className="is-ready"><CheckCircle2 />{validRows.length} prontas</span><span className={incompleteRows.length ? 'is-warning' : ''}>{incompleteRows.length} incompletas</span><span className={pendingReviewRows.length ? 'is-warning' : ''}>{pendingReviewRows.length} aguardando confirmação</span><span>`SEGURADO --- VEÍCULO` é separado automaticamente · o vencimento é calculado um ano após a Vigência</span></div>
     <OperationalSpreadsheet rows={rows} columns={columns} getRowId={row => row._id} onCommit={commitCell} onBulkCommit={bulkCommit} className="is-policy-import" statusLabel={`${validRows.length} apólice(s) pronta(s) para subir`} />
     {summary && <div className="policy-import-result"><CheckCircle2 /><div><strong>Importação processada</strong><span>{summary.importadas} novas · {summary.atualizadas} atualizadas · {summary.ignoradas} ignoradas</span>{summary.erros.length > 0 && <small>{summary.erros.slice(0, 4).map(error => `Linha ${error.linha}: ${error.motivo}`).join(' · ')}</small>}</div></div>}
   </section>

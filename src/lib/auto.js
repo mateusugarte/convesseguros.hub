@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { limparNomeSegurado, normalizeCompareText, somarUmAno } from './autoHistoricoImport.js'
+import { normalizePolicyImportIdentity } from './autoPolicyImport.js'
 import { calcularValorComissaoAuto, subtrairDiasUteis } from './autoCalc.js'
 import { planejarExclusaoGrupoAuto } from './autoExclusao.js'
 import { renewalStatusFields } from './autoOperational.js'
@@ -1556,6 +1557,35 @@ export async function getClientesAutoParaVinculo() {
   return result
 }
 
+// Base usada pela subida de apolices: o nome permite sugerir o cliente e as
+// apolices anteriores permitem confirmar se o veiculo tambem e o mesmo.
+// Nenhum vinculo e feito automaticamente; a decisao volta na propria linha.
+export async function getClientesAutoComVeiculos() {
+  const clientes = await getClientesAutoParaVinculo()
+  const veiculos = []
+  const pageSize = 1000
+  for (let page = 0; page < 20; page += 1) {
+    const from = page * pageSize
+    const { data, error } = await supabase
+      .from('apolices_auto')
+      .select('id, cliente_id, modelo_veiculo, placa, vigencia_fim')
+      .not('cliente_id', 'is', null)
+      .order('vigencia_fim', { ascending: false, nullsFirst: false })
+      .range(from, from + pageSize - 1)
+    if (error) throw error
+    veiculos.push(...(data ?? []))
+    if ((data ?? []).length < pageSize) break
+  }
+
+  const porCliente = veiculos.reduce((map, veiculo) => {
+    if (!map.has(veiculo.cliente_id)) map.set(veiculo.cliente_id, [])
+    map.get(veiculo.cliente_id).push(veiculo)
+    return map
+  }, new Map())
+
+  return clientes.map(cliente => ({ ...cliente, veiculos: porCliente.get(cliente.id) || [] }))
+}
+
 // Cria uma renovacao pendente direto pelo formulario "Criar manualmente" do
 // painel de Renovacoes, sem depender do puxar automatico (sistema/planilha).
 // cliente_id vem preenchido quando o usuario seleccionou um cliente ja
@@ -1821,6 +1851,35 @@ export async function atualizarApoliceAuto(id, changes) {
   return data
 }
 
+async function resolverClienteImportacaoApolice(row, nomeCliente) {
+  if (row.vinculo_cliente === 'existente' && isUuid(row.cliente_id)) {
+    const { data, error } = await supabase
+      .from('clientes_auto')
+      .select('id')
+      .eq('id', row.cliente_id)
+      .maybeSingle()
+    if (error) throw error
+    if (!data?.id) throw new Error('O cliente confirmado não existe mais. Revise o vínculo da linha.')
+    return data.id
+  }
+
+  if (row.vinculo_cliente !== 'novo') {
+    throw new Error('Confirme se o segurado é um cliente existente ou um novo cliente.')
+  }
+
+  const { data, error } = await supabase
+    .from('clientes_auto')
+    .insert({
+      nome_completo: nomeCliente,
+      cpf: normalizeCpf(row.cpf_cliente) || null,
+      celular: normalizeImportText(row.celular_cliente) || null,
+    })
+    .select('id')
+    .single()
+  if (error) throw error
+  return data.id
+}
+
 export async function importarApolicesAutoPlanilha(rows = []) {
   const resultado = {
     total: rows.length,
@@ -1830,15 +1889,21 @@ export async function importarApolicesAutoPlanilha(rows = []) {
     erros: [],
   }
 
-  for (const [index, row] of rows.entries()) {
+  for (const [index, originalRow] of rows.entries()) {
+    const row = normalizePolicyImportIdentity(originalRow)
     const linha = row.linha || index + 1
     const nomeCliente = normalizeImportText(row.nome_cliente)
     const seguradora = normalizeImportText(row.seguradora)
     const vigenciaFim = row.vigencia_fim || somarUmAno(row.vigencia_inicio) || null
 
-    if (!nomeCliente || !vigenciaFim) {
+    if (!nomeCliente || !vigenciaFim || !normalizeImportText(row.modelo_veiculo)) {
       resultado.ignoradas += 1
-      resultado.erros.push({ linha, motivo: 'Nome do segurado ou vigência ausente.' })
+      resultado.erros.push({ linha, motivo: 'Nome do segurado, veículo ou vigência ausente.' })
+      continue
+    }
+    if (!row.cliente_confirmado || !row.veiculo_confirmado) {
+      resultado.ignoradas += 1
+      resultado.erros.push({ linha, motivo: 'Confirme o cliente e o veículo antes de subir a apólice.' })
       continue
     }
 
@@ -1850,7 +1915,7 @@ export async function importarApolicesAutoPlanilha(rows = []) {
       const numeroApolice = normalizeImportText(row.numero_apolice) || null
       const cpfCliente = normalizeImportText(row.cpf_cliente) || null
       const tipo = ['novo', 'renovacao', 'endosso'].includes(row.tipo) ? row.tipo : (row.eh_renovacao === false ? 'novo' : 'renovacao')
-      const clienteId = await resolverClienteAutoId({ ...row, nome_cliente: nomeCliente, cpf_cliente: cpfCliente }, { exigirIdentificacao: false })
+      const clienteId = await resolverClienteImportacaoApolice(row, nomeCliente)
       const statusRenovacao = normalizeStatusRenovacaoAuto(row.status)
       const observacoes = [
         row.status ? `Status planilha: ${row.status}` : '',

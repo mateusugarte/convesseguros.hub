@@ -526,3 +526,539 @@ html.dark .ops-sheet tbody tr.is-renewal-status-negociando > * { background: rgb
   .ops-sheet-statusbar { overflow-x: auto; }
   .ops-sheet-statusbar .is-save-status { margin-left: 0; }
 }
+
+/* AUTO V4 — legibility pass and truly opaque frozen spreadsheet columns. */
+.auto-page {
+  --auto-muted: color-mix(in srgb, rgb(var(--color-muted)) 72%, rgb(var(--color-text)) 28%);
+}
+
+.auto-page [class*='text-[9px]'],
+.auto-page [class*='text-[10px]'],
+.auto-v2-page [class*='text-[9px]'],
+.auto-v2-page [class*='text-[10px]'] {
+  font-size: .68rem !important;
+  line-height: 1.4 !important;
+}
+
+.auto-page [class*='text-[11px]'],
+.auto-v2-page [class*='text-[11px]'] {
+  font-size: .72rem !important;
+  line-height: 1.42 !important;
+}
+
+.auto-workspace-identity small,
+.auto-workspace-command small {
+  font-size: .62rem;
+}
+
+.auto-workspace-command strong {
+  font-size: .72rem;
+}
+
+.auto-command-modal-head small,
+.auto-command-footer {
+  font-size: .64rem;
+}
+
+.auto-command-quick-grid strong,
+.auto-command-shortcuts strong,
+.auto-command-result-copy strong {
+  font-size: .76rem;
+}
+
+.auto-command-quick-grid small,
+.auto-command-shortcuts small,
+.auto-command-result-copy small {
+  font-size: .66rem;
+}
+
+.auto-performance-copy > span,
+.auto-priority-card > header > div > span,
+.auto-density-row > span {
+  font-size: .68rem;
+}
+
+.auto-performance-copy p {
+  font-size: .75rem;
+}
+
+.auto-priority-list strong {
+  font-size: .73rem;
+}
+
+.auto-priority-list small {
+  font-size: .64rem;
+}
+
+.auto-density-row button,
+.auto-density-row > small {
+  font-size: .66rem;
+}
+
+.auto-kanban-board.is-compact .auto-kanban-card [class*='text-[10px]'] {
+  font-size: .64rem !important;
+}
+
+.auto-kanban-board.is-compact .auto-kanban-card .text-sm {
+  font-size: .76rem;
+}
+
+.renewal-month-overview > div:first-child > span,
+.renewal-status-distribution span,
+.renewal-priority-date small,
+.renewal-priority-person small,
+.renewal-priority-status {
+  font-size: .62rem;
+}
+
+.renewal-priority-date strong,
+.renewal-priority-person strong,
+.renewal-pull-command strong {
+  font-size: .7rem;
+}
+
+.renewal-pull-command small,
+.renewal-saved-preview span {
+  font-size: .61rem;
+}
+
+.renewal-pull-command > button,
+.renewal-saved-preview > button {
+  min-height: 38px;
+  font-size: .64rem;
+}
+
+.renewal-link-status strong,
+.renewal-link-suggestion strong {
+  font-size: .64rem;
+}
+
+.renewal-link-status small,
+.renewal-link-suggestion small {
+  font-size: .56rem;
+}
+
+.renewal-link-status button,
+.renewal-link-suggestion button,
+.renewal-link-search {
+  min-height: 30px;
+  font-size: .56rem;
+}
+
+.policy-import-header small,
+.policy-import-header p,
+.policy-import-commandbar > span,
+.policy-import-readiness,
+.policy-import-result span,
+.policy-import-result small {
+  font-size: .61rem;
+}
+
+.policy-import-header strong {
+  font-size: .8rem;
+}
+
+.policy-import-commandbar > button {
+  min-height: 38px;
+  font-size: .64rem;
+}
+
+.auto-claims-dossier label > span,
+.auto-claims-dossier-foot > span,
+.auto-claims-dossier-foot button {
+  font-size: .62rem;
+}
+
+.auto-claims-dossier input,
+.auto-claims-dossier textarea {
+  font-size: .72rem;
+}
+
+.auto-sheet {
+  font-size: .68rem;
+}
+
+.auto-sheet th {
+  font-size: .57rem;
+}
+
+.auto-sheet-actions button,
+.auto-sheet-save,
+.auto-sheet-link,
+.auto-sheet-ok,
+.auto-type-tag {
+  min-height: 31px;
+  font-size: .59rem;
+}
+
+.auto-workspace-bar nav a > span {
+  gap: .5rem;
+  padding-inline: .72rem;
+  font-size: .75rem;
+  font-weight: 650;
+}
+
+.auto-workspace-bar nav svg {
+  width: .95rem;
+  height: .95rem;
+}
+
+.auto-v2-stat-copy > span,
+.auto-v2-info-grid dt {
+  font-size: .7rem;
+  letter-spacing: .075em;
+}
+
+.auto-v2-stat-copy small,
+.auto-v2-info-grid small {
+  font-size: .74rem;
+  line-height: 1.45;
+}
+
+.auto-v2-action-copy small {
+  font-size: .65rem;
+}
+
+.auto-v2-action-copy strong {
+  font-size: .94rem;
+}
+
+.auto-v2-action-copy > span {
+  margin-top: .24rem;
+  font-size: .74rem;
+}
+
+.auto-v2-panel h2,
+.auto-page .ops-data-card .title-section {
+  font-size: 1rem;
+}
+
+.auto-v2-panel header p,
+.auto-page .ops-data-card header p {
+  font-size: .78rem;
+}
+
+.auto-operation-summary span {
+  font-size: .61rem;
+  letter-spacing: .065em;
+}
+
+.auto-operation-summary strong {
+  font-size: 1.2rem;
+}
+
+.ops-sheet-title {
+  min-width: 245px;
+}
+
+.ops-sheet-title > span {
+  width: 2.2rem;
+  height: 2.2rem;
+}
+
+.ops-sheet-title strong {
+  font-size: .75rem;
+}
+
+.ops-sheet-title small {
+  margin-top: .14rem;
+  font-size: .61rem;
+}
+
+.ops-sheet-toolbar > button,
+.ops-sheet-toolbar > select {
+  min-height: 40px;
+  padding: .48rem .68rem;
+  font-size: .64rem;
+}
+
+.ops-sheet-toolbar > button svg {
+  width: .8rem;
+  height: .8rem;
+}
+
+.ops-sheet-search {
+  min-height: 40px;
+  padding-inline: .68rem;
+}
+
+.ops-sheet-search svg {
+  width: .82rem;
+  height: .82rem;
+}
+
+.ops-sheet-search input {
+  font-size: .66rem;
+}
+
+.ops-sheet-help {
+  gap: .5rem;
+  min-height: 38px;
+}
+
+.ops-sheet-help span {
+  padding: .27rem .5rem;
+  font-size: .56rem;
+  line-height: 1.2;
+}
+
+.renewal-status-legend {
+  min-height: 38px;
+  gap: 14px;
+}
+
+.renewal-status-legend span {
+  font-size: .58rem;
+}
+
+.renewal-status-legend span::before {
+  width: 9px;
+  height: 9px;
+}
+
+.ops-sheet-wrap {
+  min-height: 390px;
+  scrollbar-color: rgba(53, 99, 233, .34) rgb(var(--color-surface2) / .5);
+}
+
+.ops-sheet {
+  font-size: .68rem;
+}
+
+.ops-sheet thead th {
+  height: 43px;
+}
+
+.ops-sheet thead th > button {
+  padding-inline: .65rem;
+  font-size: .56rem;
+  letter-spacing: .06em;
+}
+
+.ops-sheet thead th svg {
+  width: .72rem;
+  height: .72rem;
+}
+
+.ops-sheet tbody td,
+.ops-sheet tbody th {
+  height: 43px;
+}
+
+.ops-sheet input,
+.ops-sheet select,
+.ops-sheet textarea {
+  height: 42px;
+  padding: .5rem .6rem;
+  font-size: .68rem;
+}
+
+.ops-sheet textarea {
+  padding-top: .66rem;
+}
+
+.ops-sheet-row-number {
+  font-size: .58rem !important;
+}
+
+.ops-sheet-primary-link {
+  max-width: none;
+  font-size: .7rem;
+  line-height: 1.3;
+}
+
+.ops-sheet-insured-link {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  gap: .42rem;
+}
+
+.ops-sheet-insured-link svg {
+  width: .85rem;
+  height: .85rem;
+  flex: 0 0 auto;
+  color: var(--auto-blue);
+}
+
+.ops-sheet-actions {
+  gap: .3rem;
+}
+
+.ops-sheet-actions button,
+.ops-sheet-policy,
+.ops-sheet-icon-button,
+.ops-sheet-done {
+  min-height: 30px;
+  padding: .32rem .45rem;
+  font-size: .56rem;
+}
+
+.ops-sheet-actions svg,
+.ops-sheet-policy svg,
+.ops-sheet-icon-button svg,
+.ops-sheet-done svg {
+  width: .72rem;
+  height: .72rem;
+}
+
+.ops-sheet-statusbar {
+  min-height: 40px;
+  gap: .85rem;
+  font-size: .56rem;
+}
+
+.ops-sheet-statusbar svg {
+  width: .74rem;
+  height: .74rem;
+}
+
+.ops-sheet-statusbar button {
+  min-height: 27px;
+  padding: .28rem .42rem;
+  font-size: .52rem;
+}
+
+.ops-sheet-wrap.is-comfortable .ops-sheet tbody td,
+.ops-sheet-wrap.is-comfortable .ops-sheet tbody th {
+  height: 52px;
+}
+
+.ops-sheet-wrap.is-comfortable .ops-sheet input,
+.ops-sheet-wrap.is-comfortable .ops-sheet select,
+.ops-sheet-wrap.is-comfortable .ops-sheet textarea {
+  height: 51px;
+  font-size: .72rem;
+}
+
+/* Frozen insured column: no transparency, no text bleeding underneath. */
+.ops-sheet thead th.is-sticky {
+  z-index: 18;
+  background:
+    linear-gradient(180deg, rgba(53, 99, 233, .14), rgba(53, 99, 233, .075)),
+    rgb(var(--color-surface2)) !important;
+  box-shadow: 1px 0 0 var(--auto-border), 12px 0 18px rgba(18, 42, 96, .11);
+}
+
+.ops-sheet tbody td.is-sticky {
+  z-index: 11;
+  isolation: isolate;
+  background: rgb(var(--color-surface)) !important;
+  box-shadow: 1px 0 0 var(--auto-border), 12px 0 18px rgba(18, 42, 96, .08);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.ops-sheet tbody tr:nth-child(even) > td.is-sticky {
+  background: rgb(var(--color-surface2)) !important;
+}
+
+.ops-sheet tbody tr:hover > td.is-sticky {
+  background:
+    linear-gradient(rgba(53, 99, 233, .075), rgba(53, 99, 233, .075)),
+    rgb(var(--color-surface)) !important;
+}
+
+.ops-sheet tbody tr.is-renewal-status-renovada > td.is-sticky {
+  background:
+    linear-gradient(rgba(16, 185, 129, .11), rgba(16, 185, 129, .11)),
+    rgb(var(--color-surface)) !important;
+}
+
+.ops-sheet tbody tr.is-renewal-status-nao_renovada > td.is-sticky,
+.ops-sheet tbody tr.is-renewal-status-outra_corretora > td.is-sticky {
+  background:
+    linear-gradient(rgba(239, 68, 68, .095), rgba(239, 68, 68, .095)),
+    rgb(var(--color-surface)) !important;
+}
+
+.ops-sheet tbody tr.is-renewal-status-enviada > td.is-sticky {
+  background:
+    linear-gradient(rgba(53, 99, 233, .11), rgba(53, 99, 233, .11)),
+    rgb(var(--color-surface)) !important;
+}
+
+.ops-sheet tbody tr.is-renewal-status-negociando > td.is-sticky {
+  background:
+    linear-gradient(rgba(245, 158, 11, .11), rgba(245, 158, 11, .11)),
+    rgb(var(--color-surface)) !important;
+}
+
+.ops-sheet tbody tr.is-active-row > td.is-sticky {
+  box-shadow:
+    inset 0 0 0 1px rgba(53, 99, 233, .24),
+    1px 0 0 var(--auto-border),
+    12px 0 18px rgba(18, 42, 96, .1);
+}
+
+.renewal-insured-modal strong,
+.renewal-insured-modes strong {
+  font-size: .72rem;
+}
+
+.renewal-insured-modal small,
+.renewal-insured-modes small,
+.renewal-insured-results small {
+  font-size: .6rem;
+}
+
+.renewal-insured-field > span {
+  font-size: .58rem;
+}
+
+.renewal-insured-field input,
+.renewal-insured-search > label,
+.renewal-insured-search > label input {
+  min-height: 44px;
+  font-size: .7rem;
+}
+
+.renewal-insured-results strong {
+  font-size: .68rem;
+}
+
+.renewal-insured-results > button,
+.renewal-insured-results > .is-selected {
+  min-height: 48px;
+}
+
+html.dark .ops-sheet thead th.is-sticky {
+  background:
+    linear-gradient(180deg, rgba(53, 99, 233, .22), rgba(53, 99, 233, .1)),
+    rgb(15 28 53) !important;
+}
+
+html.dark .ops-sheet tbody td.is-sticky {
+  background: rgb(12 21 42) !important;
+  box-shadow: 1px 0 0 var(--auto-border), 14px 0 22px rgba(0, 0, 0, .24);
+}
+
+html.dark .ops-sheet tbody tr:nth-child(even) > td.is-sticky {
+  background: rgb(18 31 57) !important;
+}
+
+html.dark .ops-sheet tbody tr.is-renewal-status-renovada > td.is-sticky {
+  background: linear-gradient(rgba(16, 185, 129, .13), rgba(16, 185, 129, .13)), rgb(12 21 42) !important;
+}
+
+html.dark .ops-sheet tbody tr.is-renewal-status-nao_renovada > td.is-sticky,
+html.dark .ops-sheet tbody tr.is-renewal-status-outra_corretora > td.is-sticky {
+  background: linear-gradient(rgba(239, 68, 68, .12), rgba(239, 68, 68, .12)), rgb(12 21 42) !important;
+}
+
+html.dark .ops-sheet tbody tr.is-renewal-status-enviada > td.is-sticky {
+  background: linear-gradient(rgba(53, 99, 233, .15), rgba(53, 99, 233, .15)), rgb(12 21 42) !important;
+}
+
+html.dark .ops-sheet tbody tr.is-renewal-status-negociando > td.is-sticky {
+  background: linear-gradient(rgba(245, 158, 11, .13), rgba(245, 158, 11, .13)), rgb(12 21 42) !important;
+}
+
+@media(max-width:720px) {
+  .ops-sheet { font-size: .66rem; }
+  .ops-sheet-title { min-width: 0; }
+  .ops-sheet-title strong { font-size: .72rem; }
+  .ops-sheet-toolbar > button,
+  .ops-sheet-toolbar > select { font-size: .62rem; }
+}

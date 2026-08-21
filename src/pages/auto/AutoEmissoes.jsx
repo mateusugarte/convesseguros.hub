@@ -8,7 +8,7 @@ import {
   atualizarEmissaoAutoCompleta, atualizarTagsEmissao, calcularValorComissaoAuto, cancelarRenovacao, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
   emitirApoliceAuto, getApolicesAuto, getAutoTags, getEmissaoAuto, getEmissaoColuna, getEmissoesAuto, getRenovacoesPendentesSemCotacao,
   iniciarCotacaoRenovacao, importarApolicesAutoPlanilha, importarApolicesAutoHistorico, moverEmissaoColuna,
-  salvarResultadoCotacao,
+  salvarPropostaPlanilhaAuto, salvarResultadoCotacao,
 } from '../../lib/auto'
 import { PageHeader, MetricCard, DataCard, DatePicker, FilterBar, EmptyState } from '../../components/ui'
 import { AutoPdfAutomation } from '../../components/auto'
@@ -24,36 +24,17 @@ import { uploadDocumento } from '../../lib/documentos'
 import { toNumber } from '../../lib/apolices'
 import { limparNomeSegurado, parseAutoHistoricoPlanilha, somarUmAno } from '../../lib/autoHistoricoImport.js'
 import { parseOrcamentoAuto, parsePropostaAuto } from '../../lib/autoPdfParser.js'
-
+import { AUTO_PIPELINE_STAGES, AUTO_TIPO_META, classificarRenovacoesPipeline, scoreCotacaoSuggestion } from '../../lib/autoOperational.js'
 const COLUNAS = [
-  { id: 'pendentes', label: 'Cotacoes pendentes', hint: 'entradas novas do n8n e itens sem andamento', tone: 'warning' },
-  { id: 'cotacao_feita', label: 'Cotacao feita', hint: 'resultado registrado da cotacao', tone: 'secondary' },
+  { id: 'pendentes', label: 'Cotações pendentes', hint: 'somente seguros novos ainda não cotados', tone: 'warning' },
+  { id: 'cotacao_feita', label: 'Cotações feitas', hint: 'seguro novo, renovação ou endosso identificados pela etiqueta', tone: 'secondary' },
   { id: 'negociando', label: 'Negociando', hint: 'em tratativa com cliente', tone: 'accent' },
-  { id: 'aguardando_vistoria', label: 'Aguardando vistoria', hint: 'dependem de validacao', tone: 'warning' },
-  { id: 'proposta_transmitida', label: 'Proposta Transmitida', hint: 'proposta enviada para a seguradora', tone: 'success' },
-  { id: 'apolice_emitida', label: 'Apólice Emitida', hint: 'apólice finalizada com documento', tone: 'accent' },
+  { id: 'aguardando_vistoria', label: 'Aguardando vistoria ou rastreador', hint: 'dependem de vistoria ou instalação', tone: 'warning' },
+  { id: 'proposta_transmitida', label: 'Proposta transmitida', hint: 'proposta enviada para a seguradora', tone: 'success' },
+  { id: 'apolice_emitida', label: 'Apólice emitida', hint: 'apólice finalizada com documento', tone: 'accent' },
 ]
 
-const KANBAN_STAGES = [
-  { id: 'renovacoes', label: 'Renovações', shortLabel: 'Renovações', color: '#0ea5a4' },
-  ...COLUNAS.map(coluna => ({
-    ...coluna,
-    shortLabel: coluna.id === 'aguardando_vistoria'
-      ? 'Vistoria'
-      : coluna.id === 'proposta_transmitida'
-        ? 'Proposta'
-        : coluna.id === 'apolice_emitida'
-          ? 'Emitida'
-          : coluna.label,
-    color: coluna.tone === 'warning'
-      ? '#f59e0b'
-      : coluna.tone === 'success'
-        ? '#10b981'
-        : coluna.tone === 'accent'
-          ? '#38bdf8'
-          : '#3563e9',
-  })),
-]
+const KANBAN_STAGES = AUTO_PIPELINE_STAGES
 
 const PERIOD_OPTIONS = [
   { value: 'todos', label: 'Todos' },
@@ -75,6 +56,8 @@ const FORM_EMISSAO_VAZIO = {
   seguradora: '',
   numero_apolice: '',
   data_emissao: '',
+  data_transmissao: '',
+  emissor: '',
   vigencia_inicio: '',
   vigencia_fim: '',
   coluna: 'proposta_transmitida',
@@ -106,6 +89,8 @@ const FORM_MANUAL_VAZIO = {
   seguradora: '',
   numero_apolice: '',
   data_emissao: '',
+  data_transmissao: '',
+  emissor: '',
   vigencia_inicio: '',
   vigencia_fim: '',
   coluna: 'proposta_transmitida',
@@ -165,6 +150,8 @@ const FORM_EDICAO_VAZIO = {
   seguradora: '',
   numero_apolice: '',
   data_emissao: '',
+  data_transmissao: '',
+  emissor: '',
   vigencia_inicio: '',
   vigencia_fim: '',
   coluna: 'proposta_transmitida',
@@ -453,6 +440,8 @@ function getFormEmissaoInicial(emissao) {
     seguradora: seguradoraInicial,
     numero_apolice: emissao?.numero_apolice || c.numero_orcamento || '',
     data_emissao: emissao?.data_emissao || getApoliceVinculada(emissao)?.data_emissao || new Date().toISOString().slice(0, 10),
+    data_transmissao: emissao?.data_transmissao || new Date().toISOString().slice(0, 10),
+    emissor: emissao?.emissor || '',
     vigencia_inicio: emissao?.vigencia_inicio || c.vigencia_inicio || '',
     vigencia_fim: emissao?.vigencia_fim || c.vigencia_fim || '',
     premio_liquido: emissao?.premio_liquido
@@ -526,7 +515,7 @@ function getEditFormInicial(emissao) {
     id: emissao?.id || '',
     cotacao_id: emissao?.cotacao_id || c.id || '',
     apolice_id: apolice?.id || '',
-    tipo: (c.tipo || emissao?.tipo) === 'renovacao' ? 'renovacao' : 'novo',
+    tipo: ['novo', 'renovacao', 'endosso'].includes(c.tipo || emissao?.tipo) ? (c.tipo || emissao?.tipo) : 'novo',
     coluna: getEmissaoColuna(emissao),
     resultado: emissao?.resultado || '',
     nome_cliente: nomeCliente,
@@ -543,6 +532,8 @@ function getEditFormInicial(emissao) {
     modelo_veiculo: emissao?.modelo_veiculo || apolice?.modelo_veiculo || c.modelo_veiculo || '',
     placa: emissao?.placa || apolice?.placa || c.placa || '',
     data_emissao: apolice?.data_emissao || '',
+    data_transmissao: emissao?.data_transmissao || '',
+    emissor: emissao?.emissor || '',
     uso_veiculo: c.uso_veiculo || '',
     cep_pernoite: c.cep_pernoite || '',
     jovens_18_26: Boolean(c.jovens_18_26),
@@ -581,6 +572,7 @@ function CardEmissao({ emissao, onDragStart, onClick, tagsPorId }) {
   const colunaMeta = getColunaMeta(coluna)
   const tipo = emissao.cotacoes_auto?.tipo || emissao.tipo
   const isRenovacao = tipo === 'renovacao'
+  const tipoMeta = AUTO_TIPO_META[tipo] || AUTO_TIPO_META.novo
   const isRecusada = emissao.resultado === 'recusada'
   const isAprovada = emissao.resultado === 'aprovada'
   const nome = nomeEmissao(emissao)
@@ -620,7 +612,7 @@ function CardEmissao({ emissao, onDragStart, onClick, tagsPorId }) {
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-dark-surface px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">{colunaMeta.label}</span>
-            <span className={isRenovacao ? 'rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success' : 'rounded-full bg-brand-secondary/10 px-2.5 py-1 text-[10px] font-semibold text-status-info'}>{isRenovacao ? 'Renovacao' : 'Novo'}</span>
+            <span className={tipoMeta.className}>{tipoMeta.label}</span>
             {typeof prazo === 'number' && <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${prazo < 0 ? 'bg-red-100 text-red-600' : prazo <= 15 ? 'bg-status-warning/10 text-status-warning' : 'bg-dark-surface text-dark-muted'}`}>{prazo < 0 ? `${Math.abs(prazo)} dia(s) vencida` : `${prazo} dia(s) para vencer`}</span>}
           </div>
           <div>
@@ -722,7 +714,7 @@ function CardRenovacaoPendente({ renovacao, onIniciarCotacao, onCancelar, inicia
           disabled={iniciando}
           className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-60"
         >
-          {iniciando ? 'Iniciando...' : 'Iniciar cotação'}
+          {iniciando ? 'Abrindo...' : (renovacao.cotacao_id ? 'Abrir cotação' : 'Iniciar cotação')}
         </button>
         <button
           type="button"
@@ -1400,6 +1392,106 @@ function CampoTexto({ label, campo, value, onChange, type = 'text', placeholder 
   )
 }
 
+const NOVA_LINHA_PLANILHA = {
+  emissao_id: '', cotacao_id: '', data_transmissao: '', vigencia_inicio: '', nome_cliente: '',
+  modelo_veiculo: '', parcelamento: '', seguradora: '', premio_liquido: '', pct_comissao: '',
+  valor_repasse: '', responsavel: '', tipo: 'novo', emissor: '', coluna: 'proposta_transmitida',
+}
+
+function PlanilhaEmissoes({ items, onSave, onOpen, onEdit, onMove, saving }) {
+  const [draft, setDraft] = useState(() => ({ ...NOVA_LINHA_PLANILHA, data_transmissao: new Date().toISOString().slice(0, 10) }))
+  const set = (field, value) => setDraft(current => ({ ...current, [field]: value }))
+  const sugestoes = useMemo(() => {
+    if (draft.emissao_id || draft.nome_cliente.trim().length < 2) return []
+    return items
+      .filter(item => item.cotacao_id || item.cotacoes_auto?.id)
+      .map(item => ({ item, score: scoreCotacaoSuggestion(item, draft.nome_cliente, draft.data_transmissao) }))
+      .filter(entry => entry.score >= 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5)
+      .map(entry => entry.item)
+  }, [draft.data_transmissao, draft.emissao_id, draft.nome_cliente, items])
+
+  const selecionar = item => {
+    const cotacao = item.cotacoes_auto || {}
+    const tipo = cotacao.tipo || item.tipo || 'novo'
+    setDraft(current => ({
+      ...current,
+      emissao_id: item.id,
+      cotacao_id: item.cotacao_id || cotacao.id || '',
+      nome_cliente: nomeEmissao(item),
+      modelo_veiculo: item.modelo_veiculo || cotacao.modelo_veiculo || '',
+      vigencia_inicio: item.vigencia_inicio || cotacao.vigencia_inicio || '',
+      parcelamento: item.parcelamento || '',
+      seguradora: seguradoraEmissao(item) === '-' ? '' : seguradoraEmissao(item),
+      premio_liquido: item.premio_liquido ?? '',
+      pct_comissao: item.pct_comissao ?? '',
+      valor_repasse: item.valor_repasse ?? '',
+      responsavel: item.responsavel || '',
+      emissor: item.emissor || '',
+      tipo,
+    }))
+  }
+
+  const submit = async event => {
+    event.preventDefault()
+    await onSave(draft)
+    setDraft({ ...NOVA_LINHA_PLANILHA, data_transmissao: new Date().toISOString().slice(0, 10) })
+  }
+
+  const valorComissao = calcularValorComissaoAuto(draft.premio_liquido, draft.pct_comissao)
+
+  return (
+    <div className="auto-sheet-wrap">
+      <table className="auto-sheet auto-sheet-emissions">
+        <thead><tr>
+          <th>Transmissão</th><th>Vigência</th><th>Segurado</th><th>Veículo</th><th>Parcelas</th><th>Seguradora</th>
+          <th>Prêmio líquido</th><th>% comissão</th><th>Valor comissão</th><th>Repasse</th><th>Corretor</th><th>O que é</th><th>Emissor</th><th>Status</th><th>Ação</th>
+        </tr></thead>
+        <tbody>
+          <tr className="auto-sheet-new-row">
+            <td><input form="nova-linha-emissao" type="date" value={draft.data_transmissao} onChange={e => set('data_transmissao', e.target.value)} /></td>
+            <td><input form="nova-linha-emissao" type="date" value={draft.vigencia_inicio} onChange={e => set('vigencia_inicio', e.target.value)} /></td>
+            <td className="auto-sheet-suggestion-cell">
+              <input form="nova-linha-emissao" value={draft.nome_cliente} onChange={e => setDraft(current => ({ ...current, nome_cliente: e.target.value, emissao_id: '', cotacao_id: '' }))} placeholder="Digite ou busque cotação" />
+              {sugestoes.length > 0 && <div className="auto-sheet-suggestions">{sugestoes.map(item => {
+                const tipo = item.cotacoes_auto?.tipo || item.tipo || 'novo'
+                return <button type="button" key={item.id} onClick={() => selecionar(item)}><strong>{nomeEmissao(item)}</strong><small>{AUTO_TIPO_META[tipo]?.label || 'Seguro novo'} · {formatDateBR(item.created_at?.slice(0, 10))}</small></button>
+              })}</div>}
+            </td>
+            <td><input form="nova-linha-emissao" value={draft.modelo_veiculo} onChange={e => set('modelo_veiculo', e.target.value)} placeholder="Veículo / placa" /></td>
+            <td><input form="nova-linha-emissao" value={draft.parcelamento} onChange={e => set('parcelamento', e.target.value)} placeholder="Ex. 10x" /></td>
+            <td><input form="nova-linha-emissao" value={draft.seguradora} onChange={e => set('seguradora', e.target.value)} /></td>
+            <td><input form="nova-linha-emissao" type="number" step="0.01" value={draft.premio_liquido} onChange={e => set('premio_liquido', e.target.value)} /></td>
+            <td><input form="nova-linha-emissao" type="number" step="0.01" value={draft.pct_comissao} onChange={e => set('pct_comissao', e.target.value)} /></td>
+            <td><span className="auto-sheet-calculated">{formatMoney(valorComissao)}</span></td>
+            <td><input form="nova-linha-emissao" type="number" step="0.01" value={draft.valor_repasse} onChange={e => set('valor_repasse', e.target.value)} /></td>
+            <td><input form="nova-linha-emissao" value={draft.responsavel} onChange={e => set('responsavel', e.target.value)} /></td>
+            <td><select form="nova-linha-emissao" value={draft.tipo} onChange={e => set('tipo', e.target.value)}><option value="novo">NOVO</option><option value="renovacao">RENOVAÇÃO</option><option value="endosso">ENDOSSO</option></select></td>
+            <td><input form="nova-linha-emissao" value={draft.emissor} onChange={e => set('emissor', e.target.value)} /></td>
+            <td><select form="nova-linha-emissao" value={draft.coluna} onChange={e => set('coluna', e.target.value)}>{COLUNAS.map(coluna => <option key={coluna.id} value={coluna.id}>{coluna.label}</option>)}</select></td>
+            <td><form id="nova-linha-emissao" onSubmit={submit}><button className="auto-sheet-save" disabled={saving || !draft.nome_cliente.trim()}>{saving ? 'Salvando…' : draft.emissao_id ? 'Vincular' : 'Adicionar'}</button></form></td>
+          </tr>
+          {items.map(item => {
+            const tipo = item.cotacoes_auto?.tipo || item.tipo || 'novo'
+            const meta = AUTO_TIPO_META[tipo] || AUTO_TIPO_META.novo
+            return <tr key={item.id}>
+              <td>{item.data_transmissao ? formatDateBR(item.data_transmissao) : formatDateBR(item.created_at?.slice(0, 10))}</td>
+              <td>{item.vigencia_inicio ? formatDateBR(item.vigencia_inicio) : '—'}</td>
+              <td><button className="auto-sheet-link" onClick={() => onOpen(item)}>{nomeEmissao(item)}</button></td>
+              <td>{item.modelo_veiculo || item.cotacoes_auto?.modelo_veiculo || '—'}</td><td>{item.parcelamento || '—'}</td><td>{seguradoraEmissao(item)}</td>
+              <td>{formatMoney(item.premio_liquido)}</td><td>{item.pct_comissao ?? '—'}{item.pct_comissao != null ? '%' : ''}</td><td>{formatMoney(item.valor_comissao)}</td><td>{formatMoney(item.valor_repasse)}</td>
+              <td>{item.responsavel || '—'}</td><td><span className={meta.className}>{meta.label}</span></td><td>{item.emissor || '—'}</td>
+              <td><select value={getEmissaoColuna(item)} onChange={e => onMove(item, e.target.value)}>{COLUNAS.map(coluna => <option key={coluna.id} value={coluna.id}>{coluna.label}</option>)}</select></td>
+              <td className="auto-sheet-actions"><button onClick={() => onEdit(item)}>Editar</button></td>
+            </tr>
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 // ─── Pagina principal ───────────────────────────────────────────────────
 
 export default function AutoEmissoes() {
@@ -1504,6 +1596,16 @@ export default function AutoEmissoes() {
     queryFn: () => getRenovacoesPendentesSemCotacao(),
   })
 
+  const { mutateAsync: salvarLinhaPlanilha, isPending: salvandoLinhaPlanilha } = useMutation({
+    mutationFn: salvarPropostaPlanilhaAuto,
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
+      toast({ type: 'success', title: 'Proposta transmitida', message: 'A linha e o Pipeline foram atualizados juntos.' })
+    },
+    onError: error => toast({ type: 'error', title: 'Erro ao salvar a linha', message: error?.message || 'Confira os campos informados.' }),
+  })
+
   const termoPipeline = buscaPipeline.trim().toLocaleLowerCase('pt-BR')
   const matchesPipelineSearch = useCallback((item) => {
     if (!termoPipeline) return true
@@ -1533,23 +1635,33 @@ export default function AutoEmissoes() {
   }, [termoPipeline])
 
   const emissoesPipeline = useMemo(
-    () => emissoes.filter(matchesPipelineSearch),
+    () => emissoes.filter(item => {
+      if (!matchesPipelineSearch(item)) return false
+      if (getEmissaoColuna(item) !== 'pendentes') return true
+      const tipo = item.cotacoes_auto?.tipo || item.tipo
+      return tipo === 'novo'
+    }),
     [emissoes, matchesPipelineSearch],
   )
   const renovacoesPipeline = useMemo(
     () => renovacoesPendentes.filter(matchesPipelineSearch),
     [renovacoesPendentes, matchesPipelineSearch],
   )
+  const renovacoesPorPrazo = useMemo(
+    () => classificarRenovacoesPipeline(renovacoesPipeline),
+    [renovacoesPipeline],
+  )
 
   const kanbanCounts = useMemo(() => {
     const counts = new Map(KANBAN_STAGES.map(stage => [stage.id, 0]))
-    counts.set('renovacoes', renovacoesPipeline.length)
+    counts.set('renovacoes', renovacoesPorPrazo.futuras.length)
+    counts.set('renovacoes_para_enviar', renovacoesPorPrazo.paraEnviar.length)
     emissoesPipeline.forEach(item => {
       const stage = getEmissaoColuna(item)
       counts.set(stage, (counts.get(stage) || 0) + 1)
     })
     return counts
-  }, [emissoesPipeline, renovacoesPipeline.length])
+  }, [emissoesPipeline, renovacoesPorPrazo])
 
   const updateKanbanNavigation = useCallback(() => {
     const container = kanbanScrollRef.current
@@ -2073,6 +2185,8 @@ export default function AutoEmissoes() {
       cliente_id: modalEmissao.cliente_id,
       tipo: modalEmissao.cotacoes_auto?.tipo || modalEmissao.tipo || 'novo',
       data_emissao: form.data_emissao || null,
+      data_transmissao: form.data_transmissao || null,
+      emissor: form.emissor || null,
       nome_cliente: form.nome_cliente || modalEmissao.cotacoes_auto?.nome_cliente || modalEmissao.nome_cliente || null,
       cpf_cliente: form.cpf_cliente || modalEmissao.cotacoes_auto?.cpf_cliente || modalEmissao.cpf_cliente || null,
       celular_cliente: form.celular_cliente || modalEmissao.cotacoes_auto?.celular_cliente || modalEmissao.celular_cliente || null,
@@ -2121,6 +2235,8 @@ export default function AutoEmissoes() {
       seguradora: manualForm.seguradora,
       numero_apolice: manualForm.numero_apolice,
       data_emissao: manualForm.data_emissao || null,
+      data_transmissao: manualForm.data_transmissao || null,
+      emissor: manualForm.emissor || null,
       vigencia_inicio: manualForm.vigencia_inicio,
       vigencia_fim: manualForm.vigencia_fim,
       premio_liquido: toNumber(manualForm.premio_liquido),
@@ -2170,7 +2286,7 @@ export default function AutoEmissoes() {
 
   const responsaveisEmissoesOpcoes = useMemo(() => {
     const nomes = new Set()
-    emissoes.forEach(item => { const resp = getApoliceVinculada(item)?.responsavel; if (resp) nomes.add(resp) })
+    emissoes.forEach(item => { const resp = item.responsavel || getApoliceVinculada(item)?.responsavel; if (resp) nomes.add(resp) })
     return Array.from(nomes).sort()
   }, [emissoes])
 
@@ -2181,7 +2297,7 @@ export default function AutoEmissoes() {
       const tipoItem = item.cotacoes_auto?.tipo || item.tipo
       if (filtroTipoEmissoes !== 'todos' && tipoItem !== filtroTipoEmissoes) return false
       if (filtroStatusEmissoes !== 'todos' && getEmissaoColuna(item) !== filtroStatusEmissoes) return false
-      if (filtroResponsavelEmissoes !== 'todos' && (getApoliceVinculada(item)?.responsavel || '') !== filtroResponsavelEmissoes) return false
+      if (filtroResponsavelEmissoes !== 'todos' && (item.responsavel || getApoliceVinculada(item)?.responsavel || '') !== filtroResponsavelEmissoes) return false
       if (!termo) return true
       const texto = [
         nomeEmissao(item),
@@ -2282,7 +2398,7 @@ export default function AutoEmissoes() {
             <button onClick={() => navigate('/auto/cotacoes')} className="btn-primary">
               Nova cotacao
             </button>
-            <button onClick={() => { setManualMode('novo'); setManualForm({ ...FORM_MANUAL_VAZIO, data_emissao: new Date().toISOString().slice(0, 10) }); setManualDocumento(null); setManualOpen(true) }} className="btn-primary">
+            <button onClick={() => { const today = new Date().toISOString().slice(0, 10); setManualMode('novo'); setManualForm({ ...FORM_MANUAL_VAZIO, data_emissao: today, data_transmissao: today }); setManualDocumento(null); setManualOpen(true) }} className="btn-primary">
               Nova emissao
             </button>
             <button onClick={() => setShowApolices(true)} className="btn-secondary">
@@ -2462,43 +2578,44 @@ export default function AutoEmissoes() {
               className={`auto-kanban-board is-${kanbanDensity} relative -mx-1 flex gap-4 overflow-x-auto pb-3 pt-1 px-1 snap-x snap-mandatory md:snap-proximity`}
               aria-label="Quadro da Pipeline AUTO. Use as setas do teclado para mudar de coluna."
             >
-            <DataCard
-              title={<span className="auto-kanban-column-title"><span>01</span>Renovações</span>}
-              subtitle={`${renovacoesPipeline.length} item(ns)`}
-              className="auto-kanban-column auto-kanban-column-renewals w-[300px] shrink-0 snap-start"
-              bodyClassName="pt-4"
-            >
-              <div className="auto-kanban-dropzone min-h-[72vh] space-y-3">
-                {isErrorRenovacoesPendentes ? (
-                  <EmptyState
-                    icon={<XCircle className="w-6 h-6" />}
-                    title="Erro ao carregar renovações"
-                    description={errorRenovacoesPendentes?.message || 'Tente recarregar a página.'}
-                    className="py-8"
-                  />
-                ) : renovacoesPipeline.length === 0 ? (
-                  <EmptyState
-                    icon={<RefreshCw className="w-6 h-6" />}
-                    title={termoPipeline ? 'Nenhuma renovação encontrada' : 'Sem renovações pendentes'}
-                    description={termoPipeline
-                      ? 'A busca continua ativa nas outras etapas da Pipeline.'
-                      : 'Renovações criadas em /auto/renovacoes aparecem aqui até a cotação ser iniciada.'}
-                    className="py-8"
-                  />
-                ) : (
-                  renovacoesPipeline.map(item => (
-                    <CardRenovacaoPendente
-                      key={item.id}
-                      renovacao={item}
-                      onIniciarCotacao={handleIniciarCotacaoRenovacao}
-                      onCancelar={handleCancelarRenovacaoPendente}
-                      iniciando={iniciandoCotacaoId === item.id}
-                      cancelando={cancelandoRenovacao}
-                    />
-                  ))
-                )}
-              </div>
-            </DataCard>
+            {[
+              { id: 'renovacoes', items: renovacoesPorPrazo.futuras, empty: 'Sem renovações futuras' },
+              { id: 'renovacoes_para_enviar', items: renovacoesPorPrazo.paraEnviar, empty: 'Nada atrasado para enviar' },
+            ].map(({ id, items, empty }) => {
+              const stage = KANBAN_STAGES.find(item => item.id === id)
+              const stageIndex = KANBAN_STAGES.findIndex(item => item.id === id)
+              return (
+                <DataCard
+                  key={id}
+                  title={<span className="auto-kanban-column-title"><span>{String(stageIndex + 1).padStart(2, '0')}</span>{stage.label}</span>}
+                  subtitle={`${items.length} item(ns)`}
+                  className={`auto-kanban-column auto-kanban-column-renewals w-[300px] shrink-0 snap-start ${id === 'renovacoes_para_enviar' ? 'is-urgent' : ''}`}
+                  bodyClassName="pt-4"
+                >
+                  <div className="auto-kanban-dropzone min-h-[72vh] space-y-3">
+                    {isErrorRenovacoesPendentes ? (
+                      <EmptyState icon={<XCircle className="w-6 h-6" />} title="Erro ao carregar renovações" description={errorRenovacoesPendentes?.message || 'Tente recarregar a página.'} className="py-8" />
+                    ) : items.length === 0 ? (
+                      <EmptyState
+                        icon={<RefreshCw className="w-6 h-6" />}
+                        title={termoPipeline ? 'Nenhuma renovação encontrada' : empty}
+                        description={termoPipeline ? 'A busca continua ativa nas outras etapas.' : (id === 'renovacoes' ? 'Aqui ficam as renovações cuja data de envio ainda está no futuro.' : 'Aqui aparecem as renovações com limite hoje ou vencido e ainda sem cotação.')}
+                        className="py-8"
+                      />
+                    ) : items.map(item => (
+                      <CardRenovacaoPendente
+                        key={item.id}
+                        renovacao={item}
+                        onIniciarCotacao={handleIniciarCotacaoRenovacao}
+                        onCancelar={handleCancelarRenovacaoPendente}
+                        iniciando={iniciandoCotacaoId === item.id}
+                        cancelando={cancelandoRenovacao}
+                      />
+                    ))}
+                  </div>
+                </DataCard>
+              )
+            })}
             {COLUNAS.map(coluna => {
               const cards = emissoesPipeline.filter(item => getEmissaoColuna(item) === coluna.id)
               return (
@@ -2597,7 +2714,7 @@ export default function AutoEmissoes() {
               <button onClick={() => navigate('/auto/gestao')} className="rounded-2xl border border-brand-secondary/30 bg-brand-secondary/10 px-3 py-2 text-xs font-semibold text-status-info">
                 Abrir Pipeline Auto
               </button>
-              <button onClick={() => { setManualMode('novo'); setManualForm({ ...FORM_MANUAL_VAZIO, data_emissao: new Date().toISOString().slice(0, 10) }); setManualDocumento(null); setManualOpen(true) }} className="rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted hover:border-brand-accent/40 hover:text-dark-text">
+              <button onClick={() => { const today = new Date().toISOString().slice(0, 10); setManualMode('novo'); setManualForm({ ...FORM_MANUAL_VAZIO, data_emissao: today, data_transmissao: today }); setManualDocumento(null); setManualOpen(true) }} className="rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted hover:border-brand-accent/40 hover:text-dark-text">
                 Nova emissao
               </button>
               <button onClick={() => setShowApolices(true)} className="rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted hover:border-brand-accent/40 hover:text-dark-text">
@@ -2631,9 +2748,10 @@ export default function AutoEmissoes() {
                 {seguradorasEmissoesOpcoes.map(nome => <option key={nome} value={nome}>{nome}</option>)}
               </select>
               <select value={filtroTipoEmissoes} onChange={e => setFiltroTipoEmissoes(e.target.value)} className="select">
-                <option value="todos">Novo e renovacao</option>
+                <option value="todos">Todos os tipos</option>
                 <option value="novo">Seguro novo</option>
                 <option value="renovacao">Renovacao</option>
+                <option value="endosso">Endosso</option>
               </select>
               <select value={filtroStatusEmissoes} onChange={e => setFiltroStatusEmissoes(e.target.value)} className="select">
                 <option value="todos">Todos os status</option>
@@ -2647,73 +2765,32 @@ export default function AutoEmissoes() {
               )}
             </div>
 
-            {emissoes.length === 0 ? (
-              <EmptyState
-                icon={<FileText className="w-6 h-6" />}
-                title="Nenhuma emissao encontrada"
-                description="Use os atalhos acima para criar uma nova emissao ou abrir as apolices emitidas."
-              />
-            ) : emissoesFiltradas.length === 0 ? (
+            {emissoes.length > 0 && emissoesFiltradas.length === 0 ? (
               <EmptyState
                 icon={<FileText className="w-6 h-6" />}
                 title="Nenhuma emissao para os filtros aplicados"
                 description="Ajuste a busca, o mes/ano ou os filtros selecionados."
               />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-dark-border/60 text-left">
-                      <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Cliente</th>
-                      <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora</th>
-                      <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Tipo</th>
-                      <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Status</th>
-                      <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Apolice</th>
-                      <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Vigencia</th>
-                      <th className="pb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Acao</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-dark-border/40">
-                    {emissoesFiltradas.slice(0, 25).map(item => (
-                      <tr key={item.id} onClick={() => abrirDetalhe(item)} className="cursor-pointer transition-colors hover:bg-brand-accent/5">
-                        <td className="py-3 pr-4 font-medium text-dark-text">{nomeEmissao(item)}</td>
-                        <td className="py-3 pr-4 text-dark-muted">{seguradoraEmissao(item)}</td>
-                        <td className="py-3 pr-4 text-dark-muted">{(item.cotacoes_auto?.tipo || item.tipo) === 'renovacao' ? 'Renovacao' : 'Novo'}</td>
-                        <td className="py-3 pr-4 text-dark-muted">{getColunaMeta(getEmissaoColuna(item)).label}</td>
-                        <td className="py-3 pr-4 text-dark-muted">{item.numero_apolice || '—'}</td>
-                        <td className="py-3 pr-4 text-dark-muted">
-                          {item.vigencia_inicio ? formatDateBR(item.vigencia_inicio) : '—'} — {item.vigencia_fim ? formatDateBR(item.vigencia_fim) : '—'}
-                        </td>
-                        <td className="py-3">
-                          <div className="flex flex-wrap gap-2" onClick={e => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              onClick={() => abrirDetalhe(item)}
-                              className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-3 py-1.5 text-xs font-semibold text-status-info"
-                            >
-                              Abrir
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => abrirEditor(item)}
-                              className="rounded-2xl border border-dark-border px-3 py-1.5 text-xs font-semibold text-dark-text"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleExcluir(item)}
-                              className="rounded-2xl border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600"
-                            >
-                              Excluir
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <PlanilhaEmissoes
+                items={emissoesFiltradas}
+                saving={salvandoLinhaPlanilha}
+                onSave={salvarLinhaPlanilha}
+                onOpen={abrirDetalhe}
+                onEdit={abrirEditor}
+                onMove={(item, coluna) => {
+                  if (coluna === 'cotacao_feita') {
+                    setModalResultado(item)
+                    return
+                  }
+                  if (coluna === 'proposta_transmitida' || coluna === 'apolice_emitida') {
+                    setManualStage(coluna)
+                    setModalEmissao(item)
+                    return
+                  }
+                  mover({ id: item.id, coluna: coluna === 'pendentes' ? null : coluna })
+                }}
+              />
             )}
           </DataCard>
         </>
@@ -2955,6 +3032,10 @@ export default function AutoEmissoes() {
                     {form.tipo_producao === 'individual' && (
                       <CampoTexto label="Responsavel" campo="responsavel" value={form.responsavel} onChange={setField} />
                     )}
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <CampoTexto label="Data de transmissão" campo="data_transmissao" type="date" value={form.data_transmissao} onChange={setField} />
+                    <CampoTexto label="Emissor" campo="emissor" value={form.emissor} onChange={setField} placeholder="Quem transmitiu a proposta" />
                   </div>
 
                   <div className="grid gap-3 rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
@@ -3256,6 +3337,10 @@ export default function AutoEmissoes() {
                         E renovacao?
                       </label>
                     </div>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <CampoTexto label="Data de transmissão" campo="data_transmissao" type="date" value={manualForm.data_transmissao} onChange={setManualField} />
+                    <CampoTexto label="Emissor" campo="emissor" value={manualForm.emissor} onChange={setManualField} placeholder="Quem transmitiu a proposta" />
                   </div>
 
                   {manualForm.eh_renovacao && (

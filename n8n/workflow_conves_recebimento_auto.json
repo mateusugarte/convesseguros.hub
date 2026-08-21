@@ -1,0 +1,136 @@
+{
+  "name": "CONVES RECEBIMENTO AUTO",
+  "nodes": [
+    {
+      "id": "c9e8c6d8-2f62-4b3a-9d4d-0d2ac4b00a01",
+      "name": "Webhook Seguro Auto",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "8b5cd43d-6055-4f24-a2cb-7c7102b68ca3",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "8b5cd43d-6055-4f24-a2cb-7c7102b68ca3"
+    },
+    {
+      "id": "c9e8c6d8-2f62-4b3a-9d4d-0d2ac4b00a02",
+      "name": "Normalizar Seguro Auto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        0
+      ],
+      "parameters": {
+        "jsCode": "/**\n * n8n - Code Node: Normalizar recebimento Seguro Auto\n *\n * Entrada esperada: payload do Google Forms via webhook.\n * Saida: objetos separados para clientes_auto e cotacoes_auto.\n *\n * A busca de campos e tolerante: as chaves do payload sao normalizadas\n * (sem acento, sem pontuacao, minusculas) antes da comparacao, e ha um\n * fallback por palavras-chave. Isso evita o modo de falha silencioso em\n * que uma diferenca de rotulo no Forms (\"E-mail\" vs \"Email (segurado)\")\n * gravava NULL no banco sem nenhum erro.\n */\n\nfunction clean(value) {\n  if (value === undefined || value === null) return null;\n  if (Array.isArray(value)) return value.filter(Boolean).join(', ') || null;\n  const text = String(value).trim();\n  return text ? text : null;\n}\n\nfunction onlyDigits(value) {\n  const text = clean(value);\n  return text ? text.replace(/\\D/g, '') : null;\n}\n\nfunction normKey(key) {\n  return String(key)\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .toLowerCase()\n    .replace(/[^a-z0-9]+/g, ' ')\n    .trim();\n}\n\n// Chaves originais do payload que alguma regra conseguiu consumir.\nconst usados = new Set();\n\n/**\n * Indexa o payload por chave normalizada, preservando a chave original\n * (para o relatorio de campos nao mapeados) e a ordem de insercao.\n */\nfunction buildIndex(body) {\n  const index = new Map();\n  for (const [key, value] of Object.entries(body)) {\n    const norm = normKey(key);\n    if (!index.has(norm)) index.set(norm, { key, value });\n  }\n  return index;\n}\n\n/** Casamento exato sobre a chave normalizada. */\nfunction pick(index, aliases) {\n  for (const alias of aliases) {\n    const entry = index.get(normKey(alias));\n    if (!entry) continue;\n    const value = clean(entry.value);\n    if (value !== null) {\n      usados.add(entry.key);\n      return value;\n    }\n  }\n  return null;\n}\n\n/**\n * Fallback: primeira chave que contenha TODOS os termos exigidos e\n * nenhum dos termos proibidos. Usado quando o rotulo do Forms muda.\n */\nfunction pickLike(index, required, forbidden = []) {\n  for (const [norm, entry] of index) {\n    if (!required.every(term => norm.includes(normKey(term)))) continue;\n    if (forbidden.some(term => norm.includes(normKey(term)))) continue;\n    const text = clean(entry.value);\n    if (text !== null) {\n      usados.add(entry.key);\n      return text;\n    }\n  }\n  return null;\n}\n\n/** Tenta casamento exato e, se falhar, o fallback por palavras-chave. */\nfunction field(index, aliases, required, forbidden = []) {\n  const exact = pick(index, aliases);\n  if (exact !== null) return exact;\n  return required && required.length ? pickLike(index, required, forbidden) : null;\n}\n\nconst item = $input.first();\nconst body = item.json.body || item.json;\nconst index = buildIndex(body);\n\nconst CONDUTOR = ['condutor'];\n\nconst nomeCliente = field(\n  index,\n  ['Nome completo (segurado)', 'Nome completo do segurado', 'Nome completo', 'Segurado', 'Nome'],\n  ['nome'],\n  CONDUTOR,\n);\n\nconst cpfCliente = onlyDigits(field(\n  index,\n  ['CPF (segurado)', 'CPF do segurado', 'CPF'],\n  ['cpf'],\n  CONDUTOR,\n));\n\nif (!cpfCliente) {\n  // Lista as chaves recebidas para que o erro na execucao do n8n seja\n  // diagnosticavel sem precisar reabrir o Forms.\n  throw new Error(\n    'CPF do segurado e obrigatorio para registrar cotacao AUTO. Campos recebidos: '\n    + Object.keys(body).join(' | '),\n  );\n}\n\nconst cliente = {\n  nome_completo: nomeCliente || cpfCliente,\n  cpf: cpfCliente,\n  telefone: field(index, ['Telefone (segurado)', 'Telefone'], ['telefone'], [...CONDUTOR, 'celular']),\n  celular: field(\n    index,\n    ['Celular (segurado)', 'Celular do segurado', 'Celular', 'WhatsApp'],\n    ['celular'],\n    CONDUTOR,\n  ) || pickLike(index, ['whatsapp'], CONDUTOR),\n  email: field(\n    index,\n    ['Email (segurado)', 'E-mail (segurado)', 'Email', 'E-mail'],\n    ['email'],\n    CONDUTOR,\n  ),\n  estado_civil: field(index, ['Estado civil'], ['estado civil'], CONDUTOR),\n  profissao: field(index, ['Profissao', 'Profissão'], ['profissao'], CONDUTOR),\n};\n\nconst cotacao = {\n  tipo: 'novo',\n  origem_lead: field(index, ['Origem do lead', 'Origem', 'Canal', 'Indicação'], ['origem']) || 'forms',\n  nome_cliente: cliente.nome_completo,\n  cpf_cliente: cliente.cpf,\n  celular_cliente: cliente.celular,\n  email_cliente: cliente.email,\n  estado_civil_cliente: cliente.estado_civil,\n  profissao_cliente: cliente.profissao,\n  condutor_nome: field(\n    index,\n    ['Nome completo (condutor principal)', 'Nome completo do condutor principal', 'Condutor principal'],\n    ['nome', 'condutor'],\n  ),\n  condutor_cpf: onlyDigits(field(\n    index,\n    ['CPF (condutor principal)', 'CPF do condutor principal', 'CPF condutor'],\n    ['cpf', 'condutor'],\n  )),\n  estado_civil_condutor: field(\n    index,\n    ['Estado civil do condutor', 'Estado civil do condutor principal'],\n    ['estado civil', 'condutor'],\n  ),\n  cep_pernoite: field(index, ['Cep de pernoite', 'CEP de pernoite', 'CEP pernoite'], ['cep']),\n  uso_veiculo: field(index, ['Uso do veiculo', 'Uso do veículo'], ['uso', 'veiculo']),\n  garagem_residencia: field(index, ['Garagem na residencia', 'Garagem na residência'], ['garagem', 'residencia']),\n  garagem_trabalho: field(index, ['Garagem no trabalho'], ['garagem', 'trabalho']),\n  garagem_estudo: field(index, ['Garagem no estudo'], ['garagem', 'estudo']),\n  jovens_18_26: field(\n    index,\n    [\n      'Existe jovens de 18 a 26 anos que more e use o veiculo',\n      'Existe jovens de 18 a 26 anos que more e use o veículo',\n      'Jovens 18 a 26',\n    ],\n    ['18'],\n  ),\n  modelo_veiculo: field(\n    index,\n    ['Modelo do veiculo (marca/ano)', 'Modelo do veículo (marca/ano)', 'Modelo do veiculo', 'Modelo do veículo'],\n    ['modelo'],\n  ),\n  placa: field(index, ['Placa'], ['placa']),\n  veiculo_financiado: field(index, ['Veiculo financiado', 'Veículo financiado'], ['financiado']),\n  possui_kit_gas: field(index, ['Possui kit gas', 'Possui kit gás'], ['kit gas']),\n  possui_blindagem: field(index, ['Possui blindagem'], ['blindagem']),\n  isento_imposto: field(\n    index,\n    ['E isento de imposto', 'É isento de imposto', 'Isento de imposto'],\n    ['isento'],\n  ),\n  status: 'aberta',\n};\n\n// Chaves do payload que nao foram consumidas por nenhuma regra. Ficam\n// visiveis na execucao para que um campo novo do Forms nao passe despercebido.\n// Campos vazios no Forms nao contam como perda de dado.\nconst campos_nao_mapeados = Object.keys(body)\n  .filter(key => !usados.has(key) && clean(body[key]) !== null);\n\nreturn [{\n  json: {\n    cliente,\n    cotacao,\n    raw_data: body,\n    campos_nao_mapeados,\n    formulario: field(index, ['formulario', 'Formulário'], ['formulario']) || 'Seguro Auto',\n    recebido_em: clean(body.timestamp) || new Date().toISOString(),\n  },\n}];\n"
+      }
+    },
+    {
+      "id": "c9e8c6d8-2f62-4b3a-9d4d-0d2ac4b00a03",
+      "name": "Registrar Cotacao Auto Atomica",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        620,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL + '/rest/v1/rpc/registrar_cotacao_auto_novo' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_cliente: $json.cliente, p_cotacao: { ...$json.cotacao, recebido_em: $json.recebido_em }, p_referencia: [$json.formulario, $json.recebido_em, $json.cliente.cpf, $json.cotacao.nome_cliente].filter(Boolean).join('|'), p_payload: $json.raw_data }) }}",
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "c9e8c6d8-2f62-4b3a-9d4d-0d2ac4b00a06",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        940,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, cotacao: $json } }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Seguro Auto": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Seguro Auto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Seguro Auto": {
+      "main": [
+        [
+          {
+            "node": "Registrar Cotacao Auto Atomica",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Cotacao Auto Atomica": {
+      "main": [
+        [
+          {
+            "node": "Responder OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "active": false
+}

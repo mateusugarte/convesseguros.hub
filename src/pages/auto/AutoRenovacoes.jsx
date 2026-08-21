@@ -13,6 +13,7 @@ import { useToast } from '../../contexts/ToastContext'
 import { PageHeader, MetricCard, FilterBar, DataCard, EmptyState } from '../../components/ui'
 import SeguradoraBadge from '../../components/SeguradoraBadge'
 import ModalEditarRenovacao from './ModalEditarRenovacao'
+import { renewalStatusFields, renewalStatusValue } from '../../lib/autoOperational'
 import {
   RENOVACAO_STATUS,
   monthKey,
@@ -34,12 +35,14 @@ const PERIODOS = [
   { value: '', label: 'Todas' },
 ]
 
-const ACOMPANHAR_FILTROS = [
-  { value: 'todas', label: 'Todas' },
-  { value: 'em_andamento', label: 'Em andamento' },
-  { value: 'aguardando_retorno', label: 'Aguardando retorno' },
-  { value: 'nao_cotada', label: 'Não cotadas' },
-  { value: 'concluida', label: 'Concluídas' },
+const STATUS_PLANILHA = [
+  ['pendente', 'PENDENTE'],
+  ['em_andamento', 'COTANDO'],
+  ['enviada', 'ENVIADO'],
+  ['negociando', 'NEGOCIANDO'],
+  ['outra_corretora', 'OUTRA CORRETORA'],
+  ['renovada', 'RENOVADO'],
+  ['nao_renovada', 'CANCELADO'],
 ]
 
 function currentMonthRef() {
@@ -97,7 +100,6 @@ export default function AutoRenovacoes() {
   // como query param, para a lista abrir no mesmo recorte.
   const [mesRef, setMesRef] = useState(() => searchParams.get('mes') || currentMonthRef())
   const [periodo, setPeriodo] = useState(() => localStorage.getItem('auto-renovacoes-periodo') || 'mes_atual')
-  const [acompanharFiltro, setAcompanharFiltro] = useState(() => localStorage.getItem('auto-renovacoes-status') || 'todas')
   const [busca, setBusca] = useState('')
   const mesSeguinteRef = useMemo(() => shiftMonth(mesRef, 1), [mesRef])
 
@@ -114,15 +116,14 @@ export default function AutoRenovacoes() {
 
   useEffect(() => {
     localStorage.setItem('auto-renovacoes-periodo', periodo)
-    localStorage.setItem('auto-renovacoes-status', acompanharFiltro)
-  }, [periodo, acompanharFiltro])
+  }, [periodo])
 
   const { data: renovacoes = [], isLoading, isError: isErrorRenovacoes, error: errorRenovacoes } = useQuery({
     queryKey: ['auto-renovacoes', periodo, mesRef],
     queryFn: () => getRenovacoesAuto({ periodo, mes: mesRef }),
   })
 
-  const { data: todasRenovacoes = [], isLoading: loadingTodas, isError: isErrorTodas, error: errorTodas } = useQuery({
+  const { data: todasRenovacoes = [] } = useQuery({
     queryKey: ['auto-renovacoes-todas'],
     queryFn: () => getRenovacoesAuto({ periodo: '' }),
   })
@@ -197,6 +198,20 @@ export default function AutoRenovacoes() {
     onError: err => toast({ type: 'error', title: 'Erro ao atualizar renovação', message: err?.message || 'Tente novamente.' }),
   })
 
+  const { mutateAsync: salvarCelulaAsync } = useMutation({
+    mutationFn: ({ id, campos }) => atualizarStatusRenovacao(id, campos),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-renovacoes-todas'] })
+    },
+    onError: err => toast({ type: 'error', title: 'Não foi possível salvar a célula', message: err?.message || 'Tente novamente.' }),
+  })
+
+  const verRenovacoes = () => {
+    setPeriodo('mes_atual')
+    requestAnimationFrame(() => document.getElementById('planilha-renovacoes')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
+
   const metricas = useMemo(() => ({
     total: renovacoes.length,
     enviadas: renovacoes.filter(item => getRenewalQuoteStatus(item) === 'aguardando_retorno').length,
@@ -217,13 +232,6 @@ export default function AutoRenovacoes() {
     }
   }, [todasRenovacoes])
 
-  const acompanharLista = useMemo(() => {
-    const filtered = acompanharFiltro === 'todas'
-      ? todasRenovacoes
-      : todasRenovacoes.filter(item => getRenewalQuoteStatus(item) === acompanharFiltro)
-    return filtered.filter(item => renovacaoMatches(item, busca))
-  }, [todasRenovacoes, acompanharFiltro, busca])
-
   const renovacoesFiltradas = useMemo(
     () => renovacoes.filter(item => renovacaoMatches(item, busca)),
     [renovacoes, busca],
@@ -241,6 +249,7 @@ export default function AutoRenovacoes() {
             <button onClick={() => navigate(`/auto/renovacoes/puxar?mes=${mesRef}`)} className="btn-secondary">
               Puxar renovações
             </button>
+            <button onClick={verRenovacoes} className="btn-primary">VER RENOVAÇÕES</button>
             <button onClick={() => navigate('/auto/emissoes')} className="btn-secondary">Abrir emissões</button>
           </div>
         )}
@@ -505,97 +514,70 @@ export default function AutoRenovacoes() {
         </div>
       </div>
 
-      <DataCard
-        title="Acompanhar renovações"
-        subtitle="Visão completa do status de todas as renovações da carteira"
-        actions={(
-          <div className="flex flex-wrap gap-2">
-            {ACOMPANHAR_FILTROS.map(f => (
-              <button
-                key={f.value}
-                onClick={() => setAcompanharFiltro(f.value)}
-                className={`rounded-2xl border px-3 py-1.5 text-xs font-medium transition-all ${
-                  acompanharFiltro === f.value
-                    ? 'border-brand-accent bg-brand-accent/10 text-status-info'
-                    : 'border-dark-border text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-        )}
-      >
-        {loadingTodas ? (
-          <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
-        ) : isErrorTodas ? (
-          <EmptyState icon={<XCircle className="w-6 h-6" />} title="Erro ao carregar renovações" description={errorTodas?.message || 'Tente recarregar a página.'} />
-        ) : acompanharLista.length === 0 ? (
-          <EmptyState icon={<RefreshCw className="w-6 h-6" />} title="Nenhuma renovação encontrada" description="Nenhuma renovação corresponde ao filtro selecionado." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-dark-border/60 text-left">
-                  <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Cliente</th>
-                  <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora</th>
-                  <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Vencimento</th>
-                  <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Cotação</th>
-                  <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Resultado</th>
-                  <th className="pb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Ação</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-dark-border/40">
-                {acompanharLista.map(item => {
-                  const areaStatusKeyTabela = getRenovacaoAreaStatus(item)
-                  const cotacaoInfo = RENOVACAO_AREA_STATUS_META[areaStatusKeyTabela]
-                  const renovacaoInfo = RENOVACAO_STATUS[item.status_renovacao || 'pendente'] || RENOVACAO_STATUS.pendente
-                  const apoliceId = item.apolices_auto?.id || item.apolice_id
-                  const isCotando = cotandoId === item.id
-                  return (
-                    <tr key={item.id} className="transition-colors hover:bg-brand-accent/5">
-                      <td className="py-3 pr-4 font-medium text-dark-text">
-                        {item.clientes_auto?.nome_completo || item.apolices_auto?.nome_cliente || item.nome_segurado_anterior || '-'}
-                        {item.identificacao_veiculo && (
-                          <p className="mt-0.5 text-xs font-normal text-dark-muted">Veículo: {item.identificacao_veiculo}</p>
-                        )}
-                      </td>
-                      <td className="py-3 pr-4 text-dark-muted">{item.seguradora || '-'}</td>
-                      <td className="py-3 pr-4 text-dark-muted">{formatarData(item.vigencia_fim)}</td>
-                      <td className="py-3 pr-4"><span className={`badge ${toneClasses(cotacaoInfo.tone)}`}>{cotacaoInfo.label}</span></td>
-                      <td className="py-3 pr-4"><span className={`badge ${renovacaoInfo.cls}`}>{renovacaoInfo.label}</span></td>
-                      <td className="py-3">
-                        <div className="flex flex-wrap gap-2">
+      <div id="planilha-renovacoes" className="scroll-mt-5">
+        <DataCard
+          title={`Planilha de renovações — ${formatarMes(mesRef)}`}
+          subtitle="Edite qualquer célula; ao sair dela, a alteração é salva automaticamente. As colunas seguem a planilha operacional de agosto/2026."
+        >
+          {isLoading ? (
+            <div className="py-12 text-center text-sm text-dark-muted">Carregando...</div>
+          ) : isErrorRenovacoes ? (
+            <EmptyState icon={<XCircle className="w-6 h-6" />} title="Erro ao carregar renovações" description={errorRenovacoes?.message || 'Tente recarregar a página.'} />
+          ) : renovacoesFiltradas.length === 0 ? (
+            <EmptyState icon={<RefreshCw className="w-6 h-6" />} title="Nenhuma renovação encontrada" description="Use Puxar renovações para montar a lista deste mês." />
+          ) : (
+            <div className="auto-sheet-wrap">
+              <table className="auto-sheet auto-sheet-renewals">
+                <thead>
+                  <tr>
+                    <th>Data</th><th>Cia</th><th>Segurado</th><th>Veículo</th><th>Status</th>
+                    <th>Limite</th><th>Comissão</th><th>Com. passada</th><th>Sistema</th><th>Ação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {renovacoesFiltradas.map(item => {
+                    const nome = item.clientes_auto?.nome_completo || item.apolices_auto?.nome_cliente || item.nome_segurado_anterior || ''
+                    const veiculo = item.identificacao_veiculo || item.apolices_auto?.modelo_veiculo || ''
+                    const save = (field, initial) => event => {
+                      if (String(event.target.value ?? '') === String(initial ?? '')) return
+                      salvarCelulaAsync({ id: item.id, campos: { [field]: event.target.value || null } })
+                    }
+                    return (
+                      <tr key={item.id}>
+                        <td><input type="date" defaultValue={item.vigencia_fim || ''} onBlur={save('vigencia_fim', item.vigencia_fim)} /></td>
+                        <td><input defaultValue={item.seguradora || ''} onBlur={save('seguradora', item.seguradora)} placeholder="Seguradora" /></td>
+                        <td><input defaultValue={nome} onBlur={save('nome_segurado_anterior', nome)} placeholder="Segurado" /></td>
+                        <td><input defaultValue={veiculo} onBlur={save('identificacao_veiculo', veiculo)} placeholder="Veículo / placa" /></td>
+                        <td>
+                          <select
+                            value={renewalStatusValue(item)}
+                            onChange={event => salvarCelulaAsync({ id: item.id, campos: renewalStatusFields(event.target.value) })}
+                          >
+                            {STATUS_PLANILHA.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                          </select>
+                        </td>
+                        <td><input type="date" defaultValue={item.data_limite_envio || ''} onBlur={save('data_limite_envio', item.data_limite_envio)} /></td>
+                        <td><input type="number" step="0.01" defaultValue={item.pct_comissao_atual ?? ''} onBlur={save('pct_comissao_atual', item.pct_comissao_atual)} placeholder="%" /></td>
+                        <td><input type="number" step="0.01" defaultValue={item.pct_comissao_anterior ?? ''} onBlur={save('pct_comissao_anterior', item.pct_comissao_anterior)} placeholder="%" /></td>
+                        <td><span className="auto-sheet-ok">OK</span></td>
+                        <td className="auto-sheet-actions">
                           {item.cotacao_id ? (
-                            <button onClick={() => navigate(`/auto/cotacoes/${item.cotacao_id}`)} className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-3 py-1.5 text-xs font-semibold text-status-info">
-                              Ver cotação
-                            </button>
+                            <button onClick={() => navigate(`/auto/cotacoes/${item.cotacao_id}`)}>Ver cotação</button>
                           ) : (
-                            <button onClick={() => handleCotar(item.id)} disabled={isCotando} className="rounded-2xl border border-brand-accent/30 bg-brand-accent/10 px-3 py-1.5 text-xs font-semibold text-status-info disabled:opacity-60">
-                              {isCotando ? 'Criando...' : 'Cotar'}
-                            </button>
+                            <button onClick={() => handleCotar(item.id)} disabled={cotandoId === item.id}>{cotandoId === item.id ? 'Criando…' : 'Cotar'}</button>
                           )}
-                          {apoliceId && (
-                            <button onClick={() => navigate(`/auto/apolices/${apoliceId}`)} className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-3 py-1.5 text-xs font-semibold text-status-info">
-                              Abrir apólice
-                            </button>
-                          )}
-                          <button onClick={() => setEditandoRenovacao(item)} className="rounded-2xl border border-dark-border px-3 py-1.5 text-xs font-semibold text-dark-muted hover:border-brand-accent/40 hover:text-dark-text">
-                            Editar
-                          </button>
-                          <button onClick={() => handleExcluir(item.id)} disabled={excluindo} className="rounded-2xl border border-status-danger/30 bg-status-danger/5 px-3 py-1.5 text-xs font-semibold text-status-danger hover:bg-status-danger/10 disabled:opacity-60">
-                            Excluir
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </DataCard>
+                          <button onClick={() => setEditandoRenovacao(item)} aria-label="Editar renovação"><PencilLine className="h-3.5 w-3.5" /></button>
+                          <button className="is-danger" onClick={() => handleExcluir(item.id)} disabled={excluindo} aria-label="Excluir renovação"><Trash2 className="h-3.5 w-3.5" /></button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </DataCard>
+      </div>
 
       {editandoRenovacao && (
         <ModalEditarRenovacao

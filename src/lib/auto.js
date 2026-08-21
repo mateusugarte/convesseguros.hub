@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import { limparNomeSegurado, normalizeCompareText, somarUmAno } from './autoHistoricoImport.js'
 import { calcularValorComissaoAuto, subtrairDiasUteis } from './autoCalc.js'
 import { planejarExclusaoGrupoAuto } from './autoExclusao.js'
+import { renewalStatusFields } from './autoOperational.js'
 
 export { calcularValorComissaoAuto }
 
@@ -102,7 +103,7 @@ const AUTO_RENEWAL_COMPARE_FIELDS = [
 
 const APOLICE_AUTO_COLUMNS = 'id, emissao_id, cliente_id, seguradora, numero_apolice, data_emissao, vigencia_inicio, vigencia_fim, premio_liquido, pct_comissao, valor_comissao, forma_pagamento, parcelamento, tipo_producao, responsavel, eh_renovacao, tem_repasse, pct_repasse, nome_repasse, valor_repasse, nome_cliente, cpf_cliente, celular_cliente, condutor_nome, condutor_cpf, modelo_veiculo, placa, renovacao_premio_liquido_ano_anterior, renovacao_comissao_ano_anterior, renovacao_premio_liquido_ano_atual, renovacao_comissao_ano_atual, renovacao_diferenca_premio_liquido, renovacao_diferenca_comissao, origem_pre_sistema, created_at, updated_at'
 
-const EMISSAO_AUTO_COLUMNS = 'id, cotacao_id, cliente_id, tipo, coluna, nome_cliente, cpf_cliente, celular_cliente, condutor_nome, condutor_cpf, modelo_veiculo, placa, seguradora, numero_apolice, vigencia_inicio, vigencia_fim, premio_liquido, pct_comissao, valor_comissao, forma_pagamento, parcelamento, tem_repasse, pct_repasse, nome_repasse, valor_repasse, resultado, seguradoras_cotadas, renovacao_premio_liquido_ano_anterior, renovacao_comissao_ano_anterior, renovacao_premio_liquido_ano_atual, renovacao_comissao_ano_atual, renovacao_diferenca_premio_liquido, renovacao_diferenca_comissao, created_at, updated_at'
+const EMISSAO_AUTO_COLUMNS = 'id, cotacao_id, cliente_id, tipo, coluna, data_transmissao, tipo_producao, responsavel, emissor, nome_cliente, cpf_cliente, celular_cliente, condutor_nome, condutor_cpf, modelo_veiculo, placa, seguradora, numero_apolice, vigencia_inicio, vigencia_fim, premio_liquido, pct_comissao, valor_comissao, forma_pagamento, parcelamento, tem_repasse, pct_repasse, nome_repasse, valor_repasse, resultado, seguradoras_cotadas, renovacao_premio_liquido_ano_anterior, renovacao_comissao_ano_anterior, renovacao_premio_liquido_ano_atual, renovacao_comissao_ano_atual, renovacao_diferenca_premio_liquido, renovacao_diferenca_comissao, created_at, updated_at'
 
 const COTACAO_AUTO_COLUMNS = 'id, cliente_id, tipo, origem_lead, nome_cliente, cpf_cliente, celular_cliente, email_cliente, estado_civil_cliente, profissao_cliente, condutor_nome, condutor_cpf, estado_civil_condutor, cep_pernoite, uso_veiculo, garagem_residencia, garagem_trabalho, garagem_estudo, jovens_18_26, modelo_veiculo, placa, veiculo_financiado, possui_kit_gas, possui_blindagem, isento_imposto, seguradora_preferencial, seguradora_mais_barata, vigencia_inicio, vigencia_fim, status, created_at, updated_at'
 
@@ -339,7 +340,7 @@ async function concluirCotacaoEVincularRenovacao(cotacaoId) {
 
   const { error: renovacaoError } = await supabase
     .from('renovacoes_auto')
-    .update({ status_renovacao: 'renovada' })
+    .update({ status_renovacao: 'renovada', status_operacional: 'renovado' })
     .eq('cotacao_id', cotacaoId)
   if (renovacaoError) throw renovacaoError
 }
@@ -350,6 +351,7 @@ export function getEmissaoColuna(item) {
   const trimmed = raw.trim()
   if (!trimmed) return 'pendentes'
   if (trimmed === 'pendente') return 'pendentes'
+  if (trimmed === 'emitida') return 'apolice_emitida'
   if (trimmed === 'cotacao_feita' && !item?.resultado) {
     return 'pendentes'
   }
@@ -425,6 +427,32 @@ export async function criarCotacaoAuto(payload) {
     if (!payload.vigencia_fim) {
       throw new Error('Vencimento é obrigatório para criar a cotação de renovação.')
     }
+  }
+
+  // Seguro novo entra por uma RPC transacional: cliente, cotacao e o card
+  // criado pelo trigger sao confirmados juntos. Isso elimina clientes orfaos
+  // quando a segunda gravacao falhava e torna retries seguros.
+  if ((payload.tipo || 'novo') === 'novo') {
+    const referencia = payload.referencia_origem || `app-${crypto.randomUUID()}`
+    const cliente = {
+      nome_completo: payload.nome_cliente || payload.nome_completo || payload.nome || null,
+      cpf: normalizeCpf(payload.cpf_cliente || payload.cpf) || null,
+      telefone: payload.telefone || null,
+      celular: payload.celular_cliente || payload.celular || null,
+      email: payload.email_cliente || payload.email || null,
+      estado_civil: payload.estado_civil_cliente || payload.estado_civil || null,
+      profissao: payload.profissao_cliente || payload.profissao || null,
+    }
+    const { data, error } = await supabase
+      .rpc('registrar_cotacao_auto_novo', {
+        p_cliente: cliente,
+        p_cotacao: { ...payload, recebido_em: payload.recebido_em || new Date().toISOString() },
+        p_referencia: referencia,
+        p_payload: payload.payload_origem || {},
+      })
+      .single()
+    if (error) throw error
+    return data
   }
 
   // Cotacao de renovacao pode ser criada sem CPF: o card "Iniciar cotacao"
@@ -594,14 +622,17 @@ async function sincronizarEmissoesPendentes() {
 
   if (!faltantes.length) return
 
-  const payload = await Promise.all(faltantes.map(async item => ({
+  const payload = faltantes.map(item => ({
     cotacao_id: item.id,
-    cliente_id: await resolverClienteAutoId(item),
+    // A consulta de backfill nao possui CPF/nome suficientes para recriar um
+    // cliente. Usar a FK que ja veio da cotacao evita que um unico legado sem
+    // CPF derrube toda a leitura do Kanban.
+    cliente_id: isUuid(item.cliente_id) ? item.cliente_id : null,
     tipo: item.tipo,
     coluna: null,
     created_at: item.created_at,
     updated_at: item.created_at,
-  })))
+  }))
 
   const { error: insertError } = await supabase
     .from('emissoes_auto')
@@ -670,6 +701,69 @@ export async function moverEmissaoColuna(id, coluna) {
   if (error) throw error
 }
 
+// Salva uma linha da grade de Transmissoes. Selecionar uma cotacao apenas
+// atualiza o card que ela ja possui; digitar uma linha livre cria somente a
+// proposta transmitida (a apolice nasce depois, quando o status virar emitida).
+export async function salvarPropostaPlanilhaAuto(payload) {
+  if (!String(payload.nome_cliente || '').trim()) throw new Error('Informe o segurado.')
+
+  const clienteId = await resolverClienteAutoId(payload, { exigirIdentificacao: false })
+  const premioLiquido = toFloatOrNull(payload.premio_liquido)
+  const pctComissao = toFloatOrNull(payload.pct_comissao)
+  const valorComissao = payload.valor_comissao !== undefined && payload.valor_comissao !== ''
+    ? toFloatOrNull(payload.valor_comissao)
+    : (premioLiquido === null && pctComissao === null ? null : calcularValorComissaoAuto(premioLiquido, pctComissao))
+  const valorRepasse = toFloatOrNull(payload.valor_repasse)
+  const body = {
+    ...(clienteId ? { cliente_id: clienteId } : {}),
+    cotacao_id: payload.cotacao_id || null,
+    tipo: payload.tipo || 'novo',
+    coluna: payload.coluna || 'proposta_transmitida',
+    data_transmissao: payload.data_transmissao || new Date().toISOString().slice(0, 10),
+    nome_cliente: String(payload.nome_cliente).trim(),
+    modelo_veiculo: payload.modelo_veiculo || null,
+    placa: payload.placa || null,
+    vigencia_inicio: payload.vigencia_inicio || null,
+    vigencia_fim: payload.vigencia_fim || null,
+    parcelamento: payload.parcelamento || null,
+    seguradora: payload.seguradora || null,
+    premio_liquido: premioLiquido,
+    pct_comissao: pctComissao,
+    valor_comissao: valorComissao,
+    valor_repasse: valorRepasse,
+    tem_repasse: valorRepasse !== null && valorRepasse !== 0,
+    responsavel: payload.responsavel || null,
+    emissor: payload.emissor || null,
+    updated_at: new Date().toISOString(),
+  }
+
+  let result
+  if (payload.emissao_id) {
+    result = await supabase.from('emissoes_auto').update(body).eq('id', payload.emissao_id).select().single()
+  } else {
+    result = await supabase.from('emissoes_auto').insert({ ...body, created_at: new Date().toISOString() }).select().single()
+  }
+  if (result.error) throw result.error
+
+  if (body.cotacao_id) {
+    const { error: cotacaoError } = await supabase
+      .from('cotacoes_auto')
+      .update({
+        tipo: body.tipo,
+        nome_cliente: body.nome_cliente,
+        modelo_veiculo: body.modelo_veiculo,
+        placa: body.placa,
+        vigencia_inicio: body.vigencia_inicio,
+        vigencia_fim: body.vigencia_fim,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', body.cotacao_id)
+    if (cotacaoError) throw cotacaoError
+  }
+
+  return result.data
+}
+
 export async function salvarResultadoCotacao(id, { resultado, seguradoras_cotadas }) {
   const { error } = await supabase
     .from('emissoes_auto')
@@ -697,6 +791,10 @@ export async function atualizarEmissaoAutoCompleta(payload) {
     cliente_id: clienteId,
     tipo: payload.tipo || 'novo',
     coluna: payload.coluna === 'pendentes' ? null : (payload.coluna || null),
+    data_transmissao: payload.data_transmissao || null,
+    tipo_producao: payload.tipo_producao || null,
+    responsavel: payload.responsavel || null,
+    emissor: payload.emissor || null,
     resultado: payload.resultado || null,
     seguradoras_cotadas: Array.isArray(payload.seguradoras_cotadas) ? payload.seguradoras_cotadas : [],
     nome_cliente: payload.nome_cliente || null,
@@ -831,6 +929,10 @@ export async function emitirApoliceAuto(payload) {
     const emissaoUpdate = {
       coluna: colunaDestino,
       cliente_id: clienteId,
+      data_transmissao: payload.data_transmissao || null,
+      tipo_producao: payload.tipo_producao || null,
+      responsavel: payload.responsavel || null,
+      emissor: payload.emissor || null,
       nome_cliente: payload.nome_cliente || null,
       cpf_cliente: payload.cpf_cliente || null,
       celular_cliente: payload.celular_cliente || null,
@@ -947,6 +1049,10 @@ export async function criarEmissaoManualAuto(payload) {
     cliente_id: clienteId,
     tipo: payload.tipo || 'novo',
     coluna: 'proposta_transmitida',
+    data_transmissao: payload.data_transmissao || payload.data_emissao || null,
+    tipo_producao: payload.tipo_producao || null,
+    responsavel: payload.responsavel || null,
+    emissor: payload.emissor || null,
     nome_cliente: payload.nome_cliente || null,
     cpf_cliente: payload.cpf_cliente || null,
     celular_cliente: payload.celular_cliente || null,
@@ -1049,15 +1155,14 @@ export async function getRenovacoesAuto({ periodo, mes } = {}) {
   return data ?? []
 }
 
-// Renovacoes ainda sem cotacao vinculada (nao cotadas nem canceladas) — usada
-// pela coluna "Renovacoes" do Kanban de Gestao Auto (card leve, antes de
-// existir uma cotacao/emissao de verdade) e pela lista de conferencia da
-// area "Puxar renovacoes".
+// Renovações operacionais ainda não concluídas. Inclui as que já tiveram a
+// cotação iniciada para que permaneçam nas duas primeiras colunas do Pipeline
+// até a cotação ser marcada como feita; isso impede renovação de cair em
+// "Cotações pendentes", etapa reservada a seguro novo.
 export async function getRenovacoesPendentesSemCotacao(mes) {
   let q = supabase
     .from('renovacoes_auto')
     .select(RENOVACAO_LISTA_SELECT)
-    .is('cotacao_id', null)
     .neq('status_renovacao', 'nao_renovada')
     .order('vigencia_fim', { ascending: true })
 
@@ -1068,7 +1173,13 @@ export async function getRenovacoesPendentesSemCotacao(mes) {
 
   const { data, error } = await q
   if (error) throw error
-  return data ?? []
+  return (data ?? []).filter(item => {
+    if (!item.cotacao_id) return true
+    const emissao = Array.isArray(item.cotacoes_auto?.emissoes_auto)
+      ? item.cotacoes_auto.emissoes_auto[0]
+      : item.cotacoes_auto?.emissoes_auto
+    return !emissao?.coluna || emissao.coluna === 'pendente'
+  })
 }
 
 export async function atualizarStatusRenovacao(id, campos) {
@@ -1079,10 +1190,56 @@ export async function atualizarStatusRenovacao(id, campos) {
   if (error) throw error
 }
 
+export async function criarRenovacoesEmLote(mesRef, rows = []) {
+  if (!parseMonthRef(mesRef)) throw new Error('Selecione um mes valido.')
+  if (!rows.length) throw new Error('Cole ao menos um segurado para criar as renovacoes.')
+
+  const { inicio, fim } = getRangeFromMonthRef(mesRef)
+  const { data: existentes, error: existentesError } = await supabase
+    .from('renovacoes_auto')
+    .select('nome_segurado_anterior, identificacao_veiculo')
+    .gte('vigencia_fim', inicio)
+    .lte('vigencia_fim', fim)
+  if (existentesError) throw existentesError
+
+  const chave = item => `${normalizeCompareText(item.nome_segurado_anterior || item.nome_cliente)}|${normalizeCompareText(item.identificacao_veiculo)}`
+  const vistas = new Set((existentes ?? []).map(chave))
+  const payload = []
+
+  for (const row of rows) {
+    const nome = String(row.nome_cliente || '').trim()
+    if (!nome) continue
+    const key = chave({ nome_cliente: nome, identificacao_veiculo: row.identificacao_veiculo })
+    if (vistas.has(key)) continue
+    vistas.add(key)
+    payload.push({
+      cliente_id: null,
+      apolice_id: null,
+      origem: 'manual',
+      nome_segurado_anterior: nome,
+      seguradora: row.seguradora || null,
+      vigencia_fim: row.vigencia_fim,
+      data_limite_envio: row.data_limite_envio || subtrairDiasUteis(row.vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS),
+      identificacao_veiculo: row.identificacao_veiculo || null,
+      pct_comissao_atual: toFloatOrNull(row.pct_comissao_atual),
+      pct_comissao_anterior: toFloatOrNull(row.pct_comissao_anterior),
+      ...renewalStatusFields(row.status),
+    })
+  }
+
+  if (!payload.length) return { criadas: 0, ignoradas: rows.length }
+  const { data, error } = await supabase
+    .from('renovacoes_auto')
+    .insert(payload)
+    .select()
+  if (error) throw error
+  return { criadas: data?.length || payload.length, ignoradas: rows.length - payload.length }
+}
+
 export async function cancelarRenovacao(id, motivo) {
   const { error } = await supabase
     .from('renovacoes_auto')
-    .update({ status_renovacao: 'nao_renovada', motivo_cancelamento: motivo || null })
+    .update({ status_renovacao: 'nao_renovada', status_operacional: 'cancelado', motivo_cancelamento: motivo || null })
     .eq('id', id)
   if (error) throw error
 }
@@ -1423,7 +1580,7 @@ export async function iniciarCotacaoRenovacao(renovacaoId) {
   const { data: renovacao, error: renovacaoError } = await supabase
     .from('renovacoes_auto')
     .select(`
-      id, cliente_id, apolice_id, seguradora, vigencia_fim, cotacao_id, nome_segurado_anterior,
+      id, cliente_id, apolice_id, seguradora, vigencia_fim, cotacao_id, nome_segurado_anterior, identificacao_veiculo,
       clientes_auto(nome_completo, cpf, celular, telefone, email),
       apolices_auto(nome_cliente, cpf_cliente, celular_cliente, condutor_nome, condutor_cpf, modelo_veiculo, placa, vigencia_inicio, vigencia_fim)
     `)
@@ -1458,7 +1615,7 @@ export async function iniciarCotacaoRenovacao(renovacaoId) {
     email_cliente: cliente.email || null,
     condutor_nome: apolice.condutor_nome || null,
     condutor_cpf: apolice.condutor_cpf || null,
-    modelo_veiculo: apolice.modelo_veiculo || null,
+    modelo_veiculo: renovacao.identificacao_veiculo || apolice.modelo_veiculo || null,
     placa: apolice.placa || null,
     vigencia_inicio: apolice.vigencia_inicio || null,
     vigencia_fim: renovacao.vigencia_fim || apolice.vigencia_fim || null,
@@ -1467,7 +1624,7 @@ export async function iniciarCotacaoRenovacao(renovacaoId) {
 
   const { error: linkError } = await supabase
     .from('renovacoes_auto')
-    .update({ cotacao_id: cotacao.id })
+    .update({ cotacao_id: cotacao.id, status_cotacao: 'cotada_nao_enviada', status_operacional: 'cotando' })
     .eq('id', renovacaoId)
   if (linkError) throw linkError
 

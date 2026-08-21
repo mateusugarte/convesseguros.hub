@@ -266,9 +266,17 @@ export function getComissaoAtualAnterior(renovacao) {
     const comissaoAnterior = Number(apolice.renovacao_comissao_ano_anterior) || 0
     const anterior = premioAnterior > 0
       ? Math.round((comissaoAnterior / premioAnterior) * 100 * 100) / 100
-      : null
+      : (typeof renovacao?.pct_comissao_anterior === 'number' ? renovacao.pct_comissao_anterior : null)
     return { atual, anterior }
   }
+  if (typeof renovacao?.pct_comissao_atual === 'number') {
+    return {
+      atual: renovacao.pct_comissao_atual,
+      anterior: typeof renovacao?.pct_comissao_anterior === 'number' ? renovacao.pct_comissao_anterior : null,
+    }
+  }
+  // Compatibilidade com linhas importadas antes da migration 63, quando o
+  // unico campo de percentual era usado como "comissao atual".
   const atualSemApolice = typeof renovacao?.pct_comissao_anterior === 'number' ? renovacao.pct_comissao_anterior : null
   return { atual: atualSemApolice, anterior: null }
 }

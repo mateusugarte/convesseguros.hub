@@ -2,11 +2,12 @@ import { useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
-import { ArrowLeft, CalendarClock, ExternalLink, RefreshCw, Upload, XCircle } from 'lucide-react'
+import { ArrowLeft, CalendarClock, ClipboardPaste, ExternalLink, RefreshCw, Upload, XCircle } from 'lucide-react'
 import {
   atualizarStatusRenovacao,
   buscarClientesAuto,
   criarRenovacaoManual,
+  criarRenovacoesEmLote,
   excluirRenovacao,
   getAutoRenovacaoMesStatus,
   getRenovacoesAuto,
@@ -22,6 +23,7 @@ import { PageHeader, DataCard, EmptyState } from '../../components/ui'
 import SeguradoraBadge from '../../components/SeguradoraBadge'
 import ModalEditarRenovacao from './ModalEditarRenovacao'
 import { isValidIsoDate, subtrairDiasUteis } from './autoShared'
+import { parseRenovacoesPaste } from '../../lib/autoOperational'
 
 const PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS = 7
 
@@ -90,6 +92,7 @@ export default function AutoRenovacoesPuxar() {
   const [searchParams] = useSearchParams()
   const [mesParaPuxar, setMesParaPuxar] = useState(() => searchParams.get('mes') || currentMonthRef())
   const [resumoPuxar, setResumoPuxar] = useState(null)
+  const [textoColado, setTextoColado] = useState('')
   const xlsInputRef = useRef(null)
   const qc = useQueryClient()
 
@@ -132,6 +135,17 @@ export default function AutoRenovacoesPuxar() {
       toast({ type: 'success', title: 'Planilha importada', message: `${resultado.importadas} nova(s), ${resultado.duplicadas} duplicada(s) ignorada(s).` })
     },
     onError: err => toast({ type: 'error', title: 'Erro ao importar planilha', message: err?.message || 'Arquivo inválido.' }),
+  })
+
+  const linhasColadas = parseRenovacoesPaste(textoColado, mesParaPuxar)
+  const { mutateAsync: criarLoteAsync, isPending: criandoLote } = useMutation({
+    mutationFn: () => criarRenovacoesEmLote(mesParaPuxar, linhasColadas),
+    onSuccess: async resultado => {
+      setTextoColado('')
+      await refetchListaDoMes()
+      toast({ type: 'success', title: 'Renovações coladas', message: `${resultado.criadas} criada(s) e ${resultado.ignoradas} repetida(s) ignorada(s).` })
+    },
+    onError: err => toast({ type: 'error', title: 'Erro ao colar renovações', message: err?.message || 'Confira as linhas coladas.' }),
   })
 
   const { mutateAsync: marcarConcluido, isPending: marcandoConcluido } = useMutation({
@@ -258,7 +272,7 @@ export default function AutoRenovacoesPuxar() {
       <PageHeader
         eyebrow="Modulo auto"
         title="Puxar renovações"
-        description={`Organize a carteira de renovações de ${formatarMes(mesParaPuxar)}: puxe do sistema, importe da planilha ou cadastre uma a uma.`}
+        description={`Organize a carteira de renovações de ${formatarMes(mesParaPuxar)}: cole várias linhas, puxe do sistema, importe a planilha ou cadastre manualmente.`}
         actions={(
           <div className="flex flex-wrap items-center gap-2">
             <button onClick={() => navigate('/auto/renovacoes')} className="btn-secondary inline-flex items-center gap-2">
@@ -285,6 +299,33 @@ export default function AutoRenovacoesPuxar() {
           ) : (
             <span className="badge badge-warning">Mês ainda não concluído</span>
           )}
+        </div>
+      </DataCard>
+
+      <DataCard
+        title="Colar várias renovações"
+        subtitle="Copie uma coluna de nomes ou uma grade do Excel. Aceita DATA, CIA, SEGURADO, VEÍCULO, STATUS, LIMITE, COMISSÃO e COM PASSADA."
+      >
+        <textarea
+          value={textoColado}
+          onChange={event => setTextoColado(event.target.value)}
+          rows={7}
+          className="input min-h-[150px] w-full resize-y font-mono text-xs leading-6"
+          placeholder={'Ana Souza\nBruno Lima\n\nou cole células completas copiadas do Excel'}
+        />
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-dark-muted">
+            {linhasColadas.length ? `${linhasColadas.length} linha(s) pronta(s) para ${formatarMes(mesParaPuxar)}.` : 'Cole nomes ou células separadas por tabulação.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => criarLoteAsync()}
+            disabled={criandoLote || !linhasColadas.length}
+            className="btn-primary inline-flex items-center gap-2 disabled:opacity-60"
+          >
+            <ClipboardPaste className="h-4 w-4" />
+            {criandoLote ? 'Criando linhas…' : 'Adicionar linhas ao mês'}
+          </button>
         </div>
       </DataCard>
 

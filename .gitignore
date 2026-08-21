@@ -21,6 +21,7 @@ Thumbs.db
 # Dados sensíveis / importações
 *.csv
 *.sql
+!supabase/63_auto_operacao_planilhas_pipeline.sql
 
 # Claude Code / Skills locais
 .claude/
@@ -28,5 +29,9 @@ skills/
 
 # n8n workflows — contêm service_role key do Supabase
 n8n/
+!n8n/
+n8n/*
+!n8n/workflow_conves_recebimento_auto.json
+!n8n/workflow_conves_recebimento_auto.test.mjs
 
 ConvesSystemBrain/

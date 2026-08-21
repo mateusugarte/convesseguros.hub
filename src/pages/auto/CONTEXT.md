@@ -11,9 +11,10 @@
 Um CONTEXT.md por diretorio cobre todos os arquivos `.jsx` de `src/pages/auto/`
 (ver `scripts/validate-page-contexts.mjs` — a checagem e por pasta, nao por
 arquivo). O modulo cobre todo o funil do seguro Auto: cotacao (seguro novo ou
-renovacao), acompanhamento no kanban de Gestao AUTO, emissao de apolice,
-carteira de renovacoes por vigencia final e etiquetas predefinidas para
-classificar cards.
+renovacao), acompanhamento no kanban de Gestao AUTO, grade de transmissoes e
+emissoes, carteira de renovacoes por vigencia final e etiquetas predefinidas
+para classificar cards. As grades de Renovacoes e Emissoes seguem as planilhas
+operacionais de agosto/2026, acrescidas do campo Veiculo.
 
 ## Components Used
 
@@ -39,6 +40,15 @@ classificar cards.
 - `getEmissoesAuto` faz backfill client-side (`sincronizarEmissoesPendentes`)
   para cotacoes sem `emissoes_auto` correspondente (rede de seguranca; o
   trigger `fn_criar_emissao_auto` ja cria a linha na maioria dos casos).
+- Seguro novo usa a RPC `registrar_cotacao_auto_novo`: cliente, cotacao e card
+  do Pipeline sao gravados na mesma transacao e `referencia_origem` torna os
+  retries idempotentes. O workflow n8n nao faz mais dois requests independentes.
+- `criarRenovacoesEmLote` recebe as linhas produzidas por
+  `parseRenovacoesPaste`: aceita uma coluna de nomes ou celulas copiadas do
+  Excel, ignora duplicatas do mesmo mes e preserva status/comissoes/veiculo.
+- `salvarPropostaPlanilhaAuto` cria uma proposta transmitida avulsa ou atualiza
+  a emissao ja ligada a uma cotacao sugerida; nunca cria uma segunda emissao
+  para o mesmo card selecionado.
 - Etiquetas: `getAutoTags`/`criarAutoTag`/`atualizarAutoTag`/`excluirAutoTag`
   (predefinidas, tabela `auto_tags`) e `atualizarTagsEmissao` (array `tags` em
   `emissoes_auto`, aplicado manualmente pelo usuario nos cards).
@@ -55,6 +65,12 @@ classificar cards.
   acompanhar renovacoes) e admin (gerenciar etiquetas predefinidas).
 
 ## Notes
+
+- Migration `supabase/63_auto_operacao_planilhas_pipeline.sql` e obrigatoria
+  antes de publicar este codigo. Ela adiciona os campos das duas grades,
+  atualiza os triggers com Veiculo, cria a RPC atomica/idempotente do n8n e
+  preserva os status existentes. Depois da migration, reimporte e ative
+  `n8n/workflow_conves_recebimento_auto.json`.
 
 - Migration `supabase/55_auto_renovacao_cotacao_tags.sql` adiciona
   `renovacoes_auto.cotacao_id`, sincroniza o CHECK de `emissoes_auto.coluna`
@@ -74,20 +90,12 @@ classificar cards.
   `isValidIsoDate`/`subtrairDiasUteis` (`src/lib/autoCalc.js`), usada tanto no
   front-end (`AutoRenovacoes.jsx`) quanto no backend (`src/lib/auto.js` e o
   trigger SQL acima). Nao usar dias corridos nem duplicar essa logica.
-- O Kanban de `/auto/gestao` usa uma faixa horizontal com rolagem
-  (`overflow-x-auto` + colunas de largura fixa) em vez de um grid fixo — as 6
-  colunas de `COLUNAS` (`AutoEmissoes.jsx`) sempre ficam na mesma linha, sem
-  nenhuma "cair" para baixo isolada.
-- O Kanban tem uma coluna virtual extra "Renovações" (renderizada antes de
-  `COLUNAS.map`, não faz parte do array `COLUNAS`) — mostra renovações de
-  `renovacoes_auto` ainda sem `cotacao_id`, via `getRenovacoesPendentesSemCotacao`
-  (`src/lib/auto.js`). Sempre visível, ignora o filtro de período do resto do
-  Kanban (decisão deliberada — renovações têm horizonte próprio, não devem
-  sumir só porque o filtro virou "Semana"). Sem drag-and-drop: "mover" um card
-  dessa coluna significa clicar "Iniciar cotação" (chama `iniciarCotacaoRenovacao`
-  já existente; o card desaparece daqui e a emissão real aparece em "Cotações
-  pendentes" via o trigger de banco que já existia). "Cancelar" reaproveita
-  `cancelarRenovacao`.
+- O Kanban de `/auto/gestao` usa uma faixa horizontal com oito etapas na ordem
+  definida por `AUTO_PIPELINE_STAGES`: Renovacoes futuras, Renovacoes para
+  enviar hoje/atrasadas, Cotacoes pendentes (somente seguro novo), Cotacoes
+  feitas, Negociando, Vistoria/rastreador, Proposta transmitida e Apolice
+  emitida. Renovacoes iniciadas permanecem nas duas primeiras etapas ate a
+  cotacao ser feita; seguro novo, renovacao e endosso usam etiquetas distintas.
 - Exclusão no Auto é sempre **de grupo**: renovação, cotação, emissão (card do
   Kanban) e apólice formam um único registro lógico e saem juntas. A ordem dos
   DELETEs é montada por `planejarExclusaoGrupoAuto` (`src/lib/autoExclusao.js`,
@@ -103,8 +111,8 @@ classificar cards.
   é excluída (mensagem pede para excluir a apólice antes) e grupo com sinistro
   registrado é bloqueado com mensagem legível em vez de erro cru de FK.
 - `/auto/renovacoes/puxar` (`AutoRenovacoesPuxar.jsx`) é a área dedicada para
-  organizar as renovações de um mês: puxar do sistema, puxar por planilha e
-  criar manualmente — os 3 blocos que antes ficavam num painel inline em
+  organizar as renovações de um mês: colar varias linhas, puxar do sistema,
+  puxar por planilha e criar manualmente — os blocos que antes ficavam inline em
   `/auto/renovacoes` (removido de lá). Mostra uma lista "Renovações de \<mês\>"
   que se atualiza a cada ação, para o usuário ver o que já foi adicionado sem
   precisar voltar para `/auto/renovacoes`. O botão "Puxar renovações" nessa
@@ -118,9 +126,9 @@ classificar cards.
   dessincronizadas. Só as etiquetas manuais (escolhidas pelo usuario a partir
   de `auto_tags`) sao persistidas em `emissoes_auto.tags`.
 
-## Experiência da Pipeline e calendários (2026-07-29)
+## Experiência da Pipeline e calendários (2026-07-29, atualizada em 2026-08-20)
 
-- `/auto/gestao` mantém as 7 colunas na mesma faixa horizontal, mas não depende mais de scroll manual: `KANBAN_STAGES` alimenta um mapa clicável, contadores e setas que avançam/retornam uma coluna por vez.
+- `/auto/gestao` mantém as 8 colunas na mesma faixa horizontal e não depende de scroll manual: `KANBAN_STAGES` alimenta um mapa clicável, contadores e setas que avançam/retornam uma coluna por vez.
 - O contêiner do quadro acompanha a coluna visível, suporta `ArrowLeft`/`ArrowRight` pelo teclado e mantém o drag-and-drop HTML existente sem mudar os fluxos especiais de `cotacao_feita`, `proposta_transmitida` e `apolice_emitida`.
 - `auto-ui.css` concentra o novo acabamento de toolbar, etapas, setas laterais, colunas, cartões, estados vazios, densidades, tema escuro e breakpoints móveis.
 - O filtro personalizado da Pipeline usa `DatePicker`; o componente compartilhado recebeu rótulos completos dos dias, estados semânticos, atalhos e acessibilidade. Inputs `date`/`month` dentro de `.auto-page` também seguem a identidade visual AUTO.

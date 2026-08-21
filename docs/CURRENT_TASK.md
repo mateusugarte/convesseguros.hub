@@ -1,5 +1,25 @@
 # CURRENT TASK
 
+## Reformulacao operacional do modulo AUTO (2026-08-20, Codex — CONCLUIDA; migration 63 e importacao n8n pendentes)
+
+Objetivo: corrigir a persistencia das cotacoes de seguro novo e reformular Renovacoes, Pipeline e Apolices/Emissoes com experiencia de planilha, usando apenas as abas de agosto das planilhas `01 COMISSAO - AUTO.xlsx` e `02 RENOVACOES AUTO.xlsx` como referencia de campos e operacao.
+
+Escopo aprovado pelo usuario: grade editavel de renovacoes com colagem em massa e veiculo; pipeline em oito etapas (renovacoes futuras, renovacoes para enviar, cotacoes pendentes, cotacoes feitas, negociando, vistoria/rastreador, proposta transmitida e apolice emitida); grade de emissoes baseada na planilha de comissao, com inclusao manual ou selecao/sugestao de cotacao e sincronizacao de status entre telas.
+
+Entrega: a entrada de seguro novo agora usa a RPC transacional e idempotente `registrar_cotacao_auto_novo`, eliminando o estado parcial "cliente salvo, cotacao perdida"; o backfill do Pipeline nao cai mais inteiro por causa de uma cotacao legada sem CPF. O workflow n8n passou de duas gravacoes independentes para uma unica chamada RPC com retry seguro.
+
+Renovacoes recebeu o botao `VER RENOVACOES`, grade editavel com as colunas reais de agosto/2026 (Data, Cia, Segurado, Veiculo, Status, Limite, Comissao, Com. passada e Sistema) e colagem de varias linhas/nomes copiados do Excel. Pipeline agora tem oito etapas, separa data futura de hoje/atrasada, reserva pendencias a seguro novo e diferencia Novo/Renovacao/Endosso. Apolices/Emissoes virou grade de transmissoes com nova linha, Veiculo, sugestao de cotacao por nome+periodo, vinculo ao card existente e mudanca de status usando os mesmos modais/regras do Pipeline.
+
+Arquivos principais: `supabase/63_auto_operacao_planilhas_pipeline.sql`, `n8n/workflow_conves_recebimento_auto.json`, `src/lib/autoOperational.js`, `src/lib/auto.js`, `src/pages/auto/AutoRenovacoes.jsx`, `src/pages/auto/AutoRenovacoesPuxar.jsx`, `src/pages/auto/AutoEmissoes.jsx` e `src/styles/auto-ui.css`.
+
+Validacao: 225/225 testes verdes (inclui parsing da colagem, classificacao das duas colunas de renovacao, sugestao de cotacao e estrutura atomica do n8n); todos os JS/JSX alterados passaram no `@babel/parser`; CSS passou no PostCSS; JSON do workflow passou no `jq`; `git diff --check` verde. `npm run build` continua bloqueado pelo ambiente local pre-existente (`.bin/vite` sem permissao e `@rollup/rollup-darwin-arm64` ausente). `check:page-contexts` continua acusando somente a pendencia pre-existente de `src/pages/comercial/GestaoComercial.jsx`.
+
+**PENDENTE PARA PRODUCAO:** executar primeiro `supabase/63_auto_operacao_planilhas_pipeline.sql` no SQL Editor; depois reimportar/ativar `n8n/workflow_conves_recebimento_auto.json`. A ordem e obrigatoria porque o front e o workflow passam a depender da RPC e das novas colunas. Nenhuma migration nem alteracao no n8n de producao foi executada automaticamente.
+
+Responsavel: Codex. Proximo passo recomendado: aplicar migration 63, importar o workflow e fazer smoke test autenticado com um envio real de seguro novo, uma colagem de renovacoes e uma transmissao vinculada.
+
+---
+
 ## Verificar fichas: conciliacao entre a planilha de respostas do Forms e o sistema (2026-08-05, Claude — CONCLUIDA, pendente instalacao do Apps Script e das env vars)
 
 Objetivo: botao "Verificar fichas" em `/fichas` que le a planilha de respostas do Google Forms (ultimos 30 dias) e aponta quais respostas nunca viraram ficha no Supabase, com importacao de 1 clique pelo webhook oficial do n8n.

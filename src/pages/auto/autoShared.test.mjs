@@ -191,3 +191,8 @@ test('getComissaoAtualAnterior cai para os dados da planilha quando nao ha apoli
   assert.equal(resultado.atual, 18)
   assert.equal(resultado.anterior, null)
 })
+
+test('getComissaoAtualAnterior separa comissao atual e passada da grade 2026', () => {
+  const resultado = getComissaoAtualAnterior({ pct_comissao_atual: 22, pct_comissao_anterior: 18, apolices_auto: null })
+  assert.deepEqual(resultado, { atual: 22, anterior: 18 })
+})

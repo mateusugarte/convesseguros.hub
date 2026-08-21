@@ -1587,7 +1587,10 @@ export default function AutoEmissoes() {
 
   const { mutate: mover } = useMutation({
     mutationFn: ({ id, coluna }) => moverEmissaoColuna(id, coluna),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['auto-emissoes'] }),
+    onSuccess: () => Promise.all([
+      qc.invalidateQueries({ queryKey: ['auto-emissoes'] }),
+      qc.invalidateQueries({ queryKey: ['auto-pendencias'] }),
+    ]),
   })
 
   // Coluna virtual "Renovacoes": renovacoes ainda sem cotacao vinculada,
@@ -1603,6 +1606,7 @@ export default function AutoEmissoes() {
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
       await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-pendencias'] })
       toast({ type: 'success', title: 'Proposta transmitida', message: 'A linha e o Pipeline foram atualizados juntos.' })
     },
     onError: error => toast({ type: 'error', title: 'Erro ao salvar a linha', message: error?.message || 'Confira os campos informados.' }),

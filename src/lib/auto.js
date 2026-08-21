@@ -1,9 +1,10 @@
 import { supabase } from './supabase'
 import { limparNomeSegurado, normalizeCompareText, somarUmAno } from './autoHistoricoImport.js'
-import { normalizePolicyImportIdentity } from './autoPolicyImport.js'
+import { normalizePolicyImportIdentity, policyImportHasVehicleData, policyImportRelationshipReady } from './autoPolicyImport.js'
 import { calcularValorComissaoAuto, subtrairDiasUteis } from './autoCalc.js'
 import { planejarExclusaoGrupoAuto } from './autoExclusao.js'
 import { renewalStatusFields } from './autoOperational.js'
+import { buildAutoPendingNotifications } from './autoPending.js'
 
 export { calcularValorComissaoAuto }
 
@@ -1156,6 +1157,24 @@ export async function getRenovacoesAuto({ periodo, mes } = {}) {
   return data ?? []
 }
 
+export async function getAutoPendingNotifications({ today } = {}) {
+  const [{ data: renovacoes, error: renovacoesError }, { data: emissoes, error: emissoesError }] = await Promise.all([
+    supabase
+      .from('renovacoes_auto')
+      .select(RENOVACAO_LISTA_SELECT)
+      .order('vigencia_fim', { ascending: true }),
+    supabase
+      .from('emissoes_auto')
+      .select('*, cotacoes_auto(*), apolices_auto(*)')
+      .in('coluna', ['cotacao_feita', 'aguardando_vistoria', 'proposta_transmitida'])
+      .order('updated_at', { ascending: true }),
+  ])
+
+  if (renovacoesError) throw renovacoesError
+  if (emissoesError) throw emissoesError
+  return buildAutoPendingNotifications({ renovacoes: renovacoes ?? [], emissoes: emissoes ?? [], today })
+}
+
 // Renovações operacionais ainda não concluídas. Inclui as que já tiveram a
 // cotação iniciada para que permaneçam nas duas primeiras colunas do Pipeline
 // até a cotação ser marcada como feita; isso impede renovação de cair em
@@ -1896,14 +1915,15 @@ export async function importarApolicesAutoPlanilha(rows = []) {
     const seguradora = normalizeImportText(row.seguradora)
     const vigenciaFim = row.vigencia_fim || somarUmAno(row.vigencia_inicio) || null
 
-    if (!nomeCliente || !vigenciaFim || !normalizeImportText(row.modelo_veiculo)) {
+    const temVeiculoInformado = policyImportHasVehicleData(row)
+    if (!nomeCliente || !vigenciaFim) {
       resultado.ignoradas += 1
-      resultado.erros.push({ linha, motivo: 'Nome do segurado, veículo ou vigência ausente.' })
+      resultado.erros.push({ linha, motivo: 'Nome do segurado ou vigência ausente.' })
       continue
     }
-    if (!row.cliente_confirmado || !row.veiculo_confirmado) {
+    if (!policyImportRelationshipReady(row)) {
       resultado.ignoradas += 1
-      resultado.erros.push({ linha, motivo: 'Confirme o cliente e o veículo antes de subir a apólice.' })
+      resultado.erros.push({ linha, motivo: temVeiculoInformado ? 'Confirme o cliente e o veículo informado antes de subir a apólice.' : 'Confirme o cliente antes de subir a apólice.' })
       continue
     }
 

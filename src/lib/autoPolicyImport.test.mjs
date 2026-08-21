@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   normalizePolicyImportIdentity,
   policyClientCandidates,
+  policyImportRelationshipReady,
   suggestPolicyVehicle,
   splitInsuredAndVehicle,
 } from './autoPolicyImport.js'
@@ -36,4 +37,13 @@ test('identifica o mesmo veiculo por placa ou modelo', () => {
   const client = { veiculos: [{ id: 'v1', modelo_veiculo: 'Honda HR-V', placa: 'ABC1D23' }] }
   assert.equal(suggestPolicyVehicle({ modelo_veiculo: 'HR-V' }, client)?.id, 'v1')
   assert.equal(suggestPolicyVehicle({ placa: 'abc1d23' }, client)?.id, 'v1')
+})
+
+test('permite importar sem veículo depois de confirmar o cliente', () => {
+  assert.equal(policyImportRelationshipReady({ cliente_confirmado: true, modelo_veiculo: '', placa: '', veiculo_confirmado: false }), true)
+})
+
+test('exige confirmação quando algum dado de veículo foi informado', () => {
+  assert.equal(policyImportRelationshipReady({ cliente_confirmado: true, modelo_veiculo: 'HR-V', veiculo_confirmado: false }), false)
+  assert.equal(policyImportRelationshipReady({ cliente_confirmado: true, placa: 'ABC1D23', veiculo_confirmado: true }), true)
 })

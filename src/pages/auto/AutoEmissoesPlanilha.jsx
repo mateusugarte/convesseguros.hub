@@ -63,7 +63,10 @@ export default function AutoEmissoesPlanilha() {
   const range = useMemo(() => monthRange(month), [month])
 
   const { data: rows = [], isLoading, isError, error } = useQuery({ queryKey: ['auto-emissoes', 'planilha', range.inicio, range.fim], queryFn: () => getEmissoesAuto(range) })
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['auto-emissoes'] })
+  const invalidate = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['auto-emissoes'] }),
+    queryClient.invalidateQueries({ queryKey: ['auto-pendencias'] }),
+  ])
   const saveCellMutation = useMutation({
     mutationFn: ({ row, fields }) => atualizarEmissaoPlanilhaAuto(row.id, fields, row),
     onMutate: async ({ row, fields }) => {

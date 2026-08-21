@@ -14,21 +14,28 @@ import {
 } from 'recharts'
 import {
   ArrowRight,
+  AlertTriangle,
+  BellRing,
   CalendarDays,
   Car,
   CircleDollarSign,
+  ClipboardCheck,
+  Clock3,
   FileText,
   Gauge,
   Layers3,
   Megaphone,
+  PhoneCall,
   Plus,
   RefreshCw,
+  ScanLine,
   ShieldCheck,
   Sparkles,
   TrendingUp,
 } from 'lucide-react'
 import {
   getAutoRenovacaoMesStatus,
+  getAutoPendingNotifications,
   getDashboardAutoMetrics,
   getGraficoCotacoesStatus,
   getGraficoEmissoesMensais,
@@ -104,9 +111,36 @@ function FinanceMetric({ label, current, previous, money = true }) {
   )
 }
 
+const PENDING_KIND_META = {
+  cotacao_envio: { label: 'Cotação', icon: FileText, tone: 'amber' },
+  emissao: { label: 'Emissão', icon: ClipboardCheck, tone: 'blue' },
+  coletar_apolice: { label: 'Apólice', icon: ShieldCheck, tone: 'teal' },
+  vistoria: { label: 'Vistoria', icon: ScanLine, tone: 'violet' },
+  followup: { label: 'Follow-up', icon: PhoneCall, tone: 'coral' },
+}
+
+const PENDING_FILTERS = [
+  { id: 'all', label: 'Todas' },
+  { id: 'urgent', label: 'Urgentes' },
+  { id: 'cotacoes', label: 'Cotações' },
+  { id: 'emissoes', label: 'Emissões' },
+  { id: 'pos_venda', label: 'Pós-venda' },
+  { id: 'followup', label: 'Follow-ups' },
+]
+
+function matchesPendingFilter(item, filter) {
+  if (filter === 'urgent') return item.priority === 'critical'
+  if (filter === 'cotacoes') return item.kind === 'cotacao_envio'
+  if (filter === 'emissoes') return item.kind === 'emissao'
+  if (filter === 'pos_venda') return ['coletar_apolice', 'vistoria'].includes(item.kind)
+  if (filter === 'followup') return item.kind === 'followup'
+  return true
+}
+
 export default function AutoDashboard() {
   const navigate = useNavigate()
   const [mesRef, setMesRef] = useState(currentMonthRef)
+  const [pendingFilter, setPendingFilter] = useState('all')
   const monthLabel = useMemo(() => formatMonthRef(mesRef), [mesRef])
 
   const mesesParaChecarStatus = useMemo(() => {
@@ -146,7 +180,21 @@ export default function AutoDashboard() {
     queryFn: () => getGraficoCotacoesStatus(6, mesRef),
   })
 
+  const { data: pendingItems = [], isLoading: loadingPending, isError: pendingFailed, error: pendingError, isFetching: refreshingPending, refetch: refetchPending } = useQuery({
+    queryKey: ['auto-pendencias'],
+    queryFn: () => getAutoPendingNotifications(),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  })
+
   const loading = loadingMetrics || loadingEmissoes || loadingCotacoes
+  const filteredPendingItems = useMemo(
+    () => pendingItems.filter(item => matchesPendingFilter(item, pendingFilter)),
+    [pendingItems, pendingFilter],
+  )
+  const criticalPendingCount = pendingItems.filter(item => item.priority === 'critical').length
+  const followupPendingCount = pendingItems.filter(item => item.kind === 'followup').length
+  const todayPendingCount = pendingItems.filter(item => item.dueLabel === 'Para hoje' || item.dueLabel === 'Entrou hoje').length
   const hasEmissoes = graficoEmissoes.some(item => item.novos || item.renovacoes)
   const hasCotacoes = graficoCotacoes.some(item => item.abertas || item.convertidas || item.perdidas)
 
@@ -183,9 +231,9 @@ export default function AutoDashboard() {
     {
       key: 'pendencias',
       label: 'Ação necessária',
-      value: loading ? '—' : metrics?.renovacoesPendentes ?? 0,
-      hint: 'renovações pendentes',
-      tone: Number(metrics?.renovacoesPendentes) > 0 ? 'warning' : 'neutral',
+      value: loadingPending || pendingFailed ? '—' : pendingItems.length,
+      hint: 'tarefas operacionais',
+      tone: pendingFailed ? 'danger' : pendingItems.length > 0 ? 'warning' : 'neutral',
       icon: Megaphone,
     },
     {
@@ -249,6 +297,69 @@ export default function AutoDashboard() {
       )}
 
       <AutoStatStrip items={stats} className="auto-dashboard-stats" />
+
+      <section className="auto-pending-center auto-v2-enter" aria-labelledby="auto-pending-title">
+        <header className="auto-pending-header">
+          <div className="auto-pending-heading">
+            <span className="auto-pending-heading-icon"><BellRing aria-hidden="true" /></span>
+            <div>
+              <span>Central de pendências</span>
+              <h2 id="auto-pending-title">Seu próximo trabalho, já priorizado</h2>
+              <p>Cotações, emissões, apólices, vistorias e retornos que precisam de ação.</p>
+            </div>
+          </div>
+          <div className="auto-pending-header-actions">
+            <AutoBadge tone={criticalPendingCount ? 'warning' : 'success'}>
+              {criticalPendingCount ? `${criticalPendingCount} crítica${criticalPendingCount === 1 ? '' : 's'}` : 'Sem atrasos críticos'}
+            </AutoBadge>
+            <button type="button" className="auto-pending-refresh" onClick={() => refetchPending()} disabled={refreshingPending} title="Atualizar pendências">
+              <RefreshCw className={refreshingPending ? 'is-spinning' : ''} aria-hidden="true" />
+              Atualizar
+            </button>
+          </div>
+        </header>
+
+        <div className="auto-pending-summary" aria-label="Resumo das pendências">
+          <div className={criticalPendingCount ? 'is-critical' : 'is-clear'}><strong>{criticalPendingCount}</strong><span>atrasos críticos</span><small>{criticalPendingCount ? 'Resolva estes primeiro' : 'Nenhuma tarefa muito atrasada'}</small></div>
+          <div className="is-today"><strong>{todayPendingCount}</strong><span>ações de hoje</span><small>Entraram ou vencem hoje</small></div>
+          <div className="is-followup"><strong>{followupPendingCount}</strong><span>follow-ups</span><small>Retornos programados</small></div>
+        </div>
+
+        <nav className="auto-pending-filters" aria-label="Filtrar pendências">
+          {PENDING_FILTERS.map(filter => {
+            const count = pendingItems.filter(item => matchesPendingFilter(item, filter.id)).length
+            return <button key={filter.id} type="button" className={pendingFilter === filter.id ? 'is-active' : ''} onClick={() => setPendingFilter(filter.id)}>{filter.label}<b>{count}</b></button>
+          })}
+        </nav>
+
+        <div className="auto-pending-list" aria-live="polite">
+          {loadingPending ? (
+            <div className="auto-pending-loading"><span /><div><strong>Montando sua fila de trabalho</strong><small>Verificando prazos e etapas do AUTO…</small></div></div>
+          ) : pendingFailed ? (
+            <div className="auto-pending-empty is-error"><AlertTriangle aria-hidden="true" /><div><strong>Não foi possível carregar as pendências</strong><small>{pendingError?.message || 'Tente atualizar a central novamente.'}</small><button type="button" onClick={() => refetchPending()}>Tentar novamente</button></div></div>
+          ) : filteredPendingItems.length === 0 ? (
+            <div className="auto-pending-empty"><ShieldCheck aria-hidden="true" /><div><strong>{pendingItems.length ? 'Nenhuma pendência neste filtro' : 'Operação em dia'}</strong><small>{pendingItems.length ? 'Escolha outro filtro para ver as demais tarefas.' : 'Não encontramos tarefas vencidas ou aguardando ação.'}</small></div></div>
+          ) : filteredPendingItems.map(item => {
+            const meta = PENDING_KIND_META[item.kind] || PENDING_KIND_META.cotacao_envio
+            const Icon = meta.icon
+            return (
+              <button key={item.id} type="button" className={`auto-pending-row is-${item.priority}`} onClick={() => navigate(item.href)}>
+                <span className={`auto-pending-kind is-${meta.tone}`}><Icon aria-hidden="true" /></span>
+                <div className="auto-pending-content">
+                  <span>{meta.label}</span>
+                  <strong>{item.title}</strong>
+                  <small>{item.description}</small>
+                </div>
+                <div className="auto-pending-deadline">
+                  <span className={`is-${item.priority}`}><Clock3 aria-hidden="true" />{item.dueLabel}</span>
+                  <small>{item.actionLabel}</small>
+                </div>
+                <ArrowRight className="auto-pending-arrow" aria-hidden="true" />
+              </button>
+            )
+          })}
+        </div>
+      </section>
 
       <section className="auto-intelligence-grid auto-v2-enter" aria-label="Inteligência operacional">
         <article className="auto-performance-orbit-card">

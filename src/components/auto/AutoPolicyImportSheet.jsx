@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
 import { Car, Check, CheckCircle2, ClipboardPaste, Download, FileUp, Plus, Trash2, Upload, UserCheck, UserPlus, X } from 'lucide-react'
 import { calcularValorComissaoAuto, getClientesAutoComVeiculos, importarApolicesAutoPlanilha } from '../../lib/auto'
-import { normalizePolicyImportIdentity, policyClientCandidates, policyVehicleCandidates, suggestPolicyVehicle } from '../../lib/autoPolicyImport'
+import { normalizePolicyImportIdentity, policyClientCandidates, policyImportHasVehicleData, policyImportRelationshipReady, policyVehicleCandidates, suggestPolicyVehicle } from '../../lib/autoPolicyImport'
 import { normalizeSpreadsheetNumber } from '../../lib/spreadsheetPaste'
 import { useToast } from '../../contexts/ToastContext'
 import OperationalSpreadsheet from './OperationalSpreadsheet'
@@ -130,6 +130,7 @@ function PolicyRelationshipCell({ row, clients, loading, onPatch }) {
   const selectedClient = clients.find(client => client.id === row.cliente_id) || null
   const knownVehicles = selectedClient ? policyVehicleCandidates(selectedClient) : []
   const suggestedVehicle = selectedClient ? suggestPolicyVehicle(row, selectedClient) : null
+  const hasVehicleData = policyImportHasVehicleData(row)
 
   if (!row.cliente_confirmado) {
     if (loading) return <span className="policy-link-empty">Buscando cliente…</span>
@@ -137,6 +138,10 @@ function PolicyRelationshipCell({ row, clients, loading, onPatch }) {
       return <div className="policy-link-cell is-question"><span><UserCheck /><b>Este cliente já existe?</b></span>{candidates.map(client => <button key={client.id} onClick={() => onPatch({ cliente_id: client.id, vinculo_cliente: 'existente', cliente_confirmado: true, veiculo_confirmado: false, outro_veiculo: false })}><strong>{client.nome_completo}</strong><small>{client.celular || client.cpf || 'Cadastro existente'}</small><i>É o mesmo</i></button>)}<button className="is-new" onClick={() => onPatch({ cliente_id: '', vinculo_cliente: 'novo', cliente_confirmado: true, veiculo_confirmado: false, outro_veiculo: true })}><UserPlus />Não é nenhum deles</button></div>
     }
     return <div className="policy-link-cell is-question"><span><UserPlus /><b>Nenhum cliente igual encontrado</b></span><button className="is-new" onClick={() => onPatch({ cliente_id: '', vinculo_cliente: 'novo', cliente_confirmado: true, veiculo_confirmado: false, outro_veiculo: true })}>Confirmar novo cliente</button></div>
+  }
+
+  if (!hasVehicleData) {
+    return <div className="policy-link-cell is-confirmed is-vehicle-optional"><span><CheckCircle2 /><b>{row.vinculo_cliente === 'existente' ? selectedClient?.nome_completo || 'Cliente existente' : 'Novo cliente'}</b></span><small><Car />Veículo não informado · opcional</small></div>
   }
 
   if (row.veiculo_confirmado) {
@@ -166,12 +171,14 @@ export default function AutoPolicyImportSheet({ onClose }) {
   const populatedRows = useMemo(() => rows.filter(hasPolicyRowData), [rows])
   const validRows = useMemo(() => populatedRows
     .map(normalizePolicyImportIdentity)
-    .filter(row => row.nome_cliente.trim() && row.modelo_veiculo.trim() && row.vigencia_inicio && row.cliente_confirmado && row.veiculo_confirmado)
+    .filter(row => row.nome_cliente.trim() && row.vigencia_inicio && policyImportRelationshipReady(row))
     .map(row => ({ ...row, vigencia_fim: row.vigencia_fim || plusOneYear(row.vigencia_inicio) })), [populatedRows])
   const incompleteRows = useMemo(() => rows.filter(row => {
-    return hasPolicyRowData(row) && (!row.nome_cliente.trim() || !row.modelo_veiculo.trim() || !row.vigencia_inicio)
+    return hasPolicyRowData(row) && (!row.nome_cliente.trim() || !row.vigencia_inicio)
   }), [rows])
-  const pendingReviewRows = useMemo(() => populatedRows.filter(row => !row.cliente_confirmado || !row.veiculo_confirmado), [populatedRows])
+  const pendingReviewRows = useMemo(() => populatedRows.filter(row => {
+    return !policyImportRelationshipReady(row)
+  }), [populatedRows])
   const importMutation = useMutation({
     mutationFn: () => importarApolicesAutoPlanilha(validRows),
     onSuccess: async result => {
@@ -182,6 +189,7 @@ export default function AutoPolicyImportSheet({ onClose }) {
         queryClient.invalidateQueries({ queryKey: ['auto-renovacoes'] }),
         queryClient.invalidateQueries({ queryKey: ['auto-clientes'] }),
         queryClient.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] }),
+        queryClient.invalidateQueries({ queryKey: ['auto-pendencias'] }),
       ])
       toast({ type: result.erros.length ? 'info' : 'success', title: 'Subida de apólices concluída', message: `${result.importadas} nova(s), ${result.atualizadas} atualizada(s) e ${result.ignoradas} ignorada(s).` })
     },
@@ -243,7 +251,7 @@ export default function AutoPolicyImportSheet({ onClose }) {
     { field: 'status', label: 'STATUS', editable: true, width: 125 },
     { field: 'numero_apolice', label: 'Nº APÓLICE', editable: true, width: 135 },
     { field: 'forma_pagamento', label: 'FORMA DE PAGAMENTO', editable: true, width: 145 },
-    { key: 'vinculo', label: 'CONFIRMAR CLIENTE E VEÍCULO', width: 300, render: row => <PolicyRelationshipCell row={row} clients={clients} loading={clientsLoading} onPatch={fields => updateRow(row._id, fields)} /> },
+    { key: 'vinculo', label: 'CONFIRMAR CLIENTE · VEÍCULO OPCIONAL', width: 300, render: row => <PolicyRelationshipCell row={row} clients={clients} loading={clientsLoading} onPatch={fields => updateRow(row._id, fields)} /> },
     { key: 'remove', label: '', width: 48, render: row => <button className="ops-sheet-icon-button is-danger" title="Remover linha" onClick={() => setRows(current => current.filter(item => item._id !== row._id))}><Trash2 /></button> },
     { field: 'modelo_veiculo', label: 'VEÍCULO', editable: true, width: 175 },
     { field: 'placa', label: 'PLACA', editable: true, width: 95 },
@@ -260,11 +268,11 @@ export default function AutoPolicyImportSheet({ onClose }) {
       <span><ClipboardPaste />Clique em Data de transmissão e cole o bloco inteiro</span>
       <button className="is-save" disabled={!validRows.length || incompleteRows.length > 0 || pendingReviewRows.length > 0 || importMutation.isPending} onClick={() => importMutation.mutate()}>{importMutation.isPending ? 'Subindo…' : pendingReviewRows.length ? `Revisar ${pendingReviewRows.length} vínculo(s)` : `Subir ${validRows.length || ''} apólice(s)`}</button>
     </div>
-    <div className="policy-import-readiness"><span className="is-ready"><CheckCircle2 />{validRows.length} prontas</span><span className={incompleteRows.length ? 'is-warning' : ''}>{incompleteRows.length} incompletas</span><span className={pendingReviewRows.length ? 'is-warning' : ''}>{pendingReviewRows.length} aguardando confirmação</span><span>`SEGURADO --- VEÍCULO` é separado automaticamente · o vencimento é calculado um ano após a Vigência</span></div>
+    <div className="policy-import-readiness"><span className="is-ready"><CheckCircle2 />{validRows.length} prontas</span><span className={incompleteRows.length ? 'is-warning' : ''}>{incompleteRows.length} incompletas</span><span className={pendingReviewRows.length ? 'is-warning' : ''}>{pendingReviewRows.length} aguardando confirmação</span><span>O veículo é opcional · `SEGURADO --- VEÍCULO` é separado automaticamente · o vencimento é calculado um ano após a Vigência</span></div>
     <OperationalSpreadsheet rows={rows} columns={columns} getRowId={row => row._id} getRowClassName={row => {
       if (!hasPolicyRowData(row)) return 'is-sheet-row-empty'
-      if (!row.nome_cliente?.trim() || !row.modelo_veiculo?.trim() || !row.vigencia_inicio) return 'is-sheet-row-error'
-      if (!row.cliente_confirmado || !row.veiculo_confirmado) return 'is-sheet-row-review'
+      if (!row.nome_cliente?.trim() || !row.vigencia_inicio) return 'is-sheet-row-error'
+      if (!policyImportRelationshipReady(row)) return 'is-sheet-row-review'
       return 'is-sheet-row-ready'
     }} onCommit={commitCell} onBulkCommit={bulkCommit} className="is-policy-import" statusLabel={`${validRows.length} apólice(s) pronta(s) para subir`} />
     {summary && <div className="policy-import-result"><CheckCircle2 /><div><strong>Importação processada</strong><span>{summary.importadas} novas · {summary.atualizadas} atualizadas · {summary.ignoradas} ignoradas</span>{summary.erros.length > 0 && <small>{summary.erros.slice(0, 4).map(error => `Linha ${error.linha}: ${error.motivo}`).join(' · ')}</small>}</div></div>}

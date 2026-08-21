@@ -68,6 +68,7 @@ export default function AutoRenovacoesPlanilha() {
     queryClient.invalidateQueries({ queryKey: ['auto-renovacoes-pendentes'] }),
     queryClient.invalidateQueries({ queryKey: ['auto-emissoes'] }),
     queryClient.invalidateQueries({ queryKey: ['auto-cotacoes'] }),
+    queryClient.invalidateQueries({ queryKey: ['auto-pendencias'] }),
   ])
 
   const saveMutation = useMutation({

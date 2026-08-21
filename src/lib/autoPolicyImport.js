@@ -63,6 +63,14 @@ export function normalizePolicyImportIdentity(row = {}) {
   }
 }
 
+export function policyImportHasVehicleData(row = {}) {
+  return Boolean(cleanText(row.modelo_veiculo) || cleanText(row.placa))
+}
+
+export function policyImportRelationshipReady(row = {}) {
+  return Boolean(row.cliente_confirmado && (!policyImportHasVehicleData(row) || row.veiculo_confirmado))
+}
+
 export function policyClientCandidates(nameValue, clients = []) {
   const name = normalizePolicyMatchText(nameValue)
   if (name.length < 3) return []

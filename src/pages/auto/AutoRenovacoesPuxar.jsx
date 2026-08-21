@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
-import { ArrowLeft, Check, ClipboardPaste, Link2, Plus, RefreshCw, Search, Trash2, Upload, UserCheck, XCircle } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, ArrowRight, CalendarClock, Check, CheckCircle2, ClipboardPaste, FileSpreadsheet, Link2, ListChecks, Plus, RefreshCw, Search, Sparkles, Trash2, Upload, UserCheck, UsersRound, XCircle } from 'lucide-react'
 import {
   criarRenovacoesEmLote,
   getAutoRenovacaoMesStatus,
@@ -12,13 +12,14 @@ import {
   puxarRenovacoesDoSistema,
 } from '../../lib/auto'
 import { parseAutoComissaoPlanilha } from '../../lib/autoComissaoImport'
+import { alignRenewalDateToMonth, isNamesOnlyRenewalPaste, normalizeRenewalIdentity, parseRenewalPlanningMatrix, renewalDraftIssue } from '../../lib/autoRenewalImport'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../contexts/ToastContext'
-import { DataCard, EmptyState, PageHeader } from '../../components/ui'
+import { EmptyState, PageHeader } from '../../components/ui'
 import OperationalSpreadsheet from '../../components/auto/OperationalSpreadsheet'
 import RenewalInsuredEditor from '../../components/auto/RenewalInsuredEditor'
 import { subtrairDiasUteis } from './autoShared'
-import { suggestRenewalClientByName } from '../../lib/autoOperational'
+import { parseRenovacoesPaste, suggestRenewalClientByName } from '../../lib/autoOperational'
 
 const STATUS_OPTIONS = [
   { value: 'pendente', label: 'Pendente' }, { value: 'em_andamento', label: 'Cotando' },
@@ -61,7 +62,18 @@ function findSuggestion(row, clients) { return row.cliente_id || row.link_decisi
 function sheetNameForMonth(names, monthRef) {
   const [year, month] = monthRef.split('-').map(Number)
   const monthName = normalize(new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'long' }))
-  return names.find(name => normalize(name).includes(monthName) && normalize(name).includes(String(year))) || names[names.length - 1]
+  const exactLabel = `${monthName} ${year}`
+  return names.find(name => normalize(name) === exactLabel)
+    || names.find(name => normalize(name).includes(monthName) && normalize(name).includes(String(year)))
+    || names.find(name => normalize(name) === monthName)
+    || null
+}
+
+function parseRenewalPlanningSheet(workbook, sheetName, monthRef) {
+  const sheet = workbook.Sheets[sheetName]
+  if (!sheet) return []
+  const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' })
+  return parseRenewalPlanningMatrix(matrix, monthRef)
 }
 
 export default function AutoRenovacoesPuxar() {
@@ -73,6 +85,9 @@ export default function AutoRenovacoesPuxar() {
   const [month, setMonth] = useState(() => searchParams.get('mes') || currentMonthRef())
   const [draftRows, setDraftRows] = useState(() => blankRows(searchParams.get('mes') || currentMonthRef()))
   const [editingRow, setEditingRow] = useState(null)
+  const [smartPaste, setSmartPaste] = useState('')
+  const [showPastePanel, setShowPastePanel] = useState(true)
+  const [showLinkReview, setShowLinkReview] = useState(false)
   const uploadRef = useRef(null)
 
   const { data: clients = [] } = useQuery({ queryKey: ['auto-clientes-vinculo-renovacoes'], queryFn: getClientesAutoParaVinculo, staleTime: 60_000 })
@@ -83,17 +98,21 @@ export default function AutoRenovacoesPuxar() {
     queryClient.invalidateQueries({ queryKey: ['auto-renovacoes'] }),
     queryClient.invalidateQueries({ queryKey: ['auto-renovacoes-todas'] }),
     queryClient.invalidateQueries({ queryKey: ['auto-renovacoes-pendentes'] }),
+    queryClient.invalidateQueries({ queryKey: ['auto-pendencias'] }),
   ])
   const systemMutation = useMutation({
     mutationFn: () => puxarRenovacoesDoSistema(month),
     onSuccess: async result => { await invalidate(); toast({ type: 'success', title: 'Renovações puxadas', message: `${result.criadas} nova(s) de ${result.encontradas} encontrada(s).` }) },
     onError: err => toast({ type: 'error', title: 'Erro ao puxar do sistema', message: err?.message || 'Tente novamente.' }),
   })
-  const validRows = useMemo(() => draftRows.filter(row => row.nome_cliente.trim() && row.vigencia_fim), [draftRows])
+  const filledRows = useMemo(() => draftRows.filter(row => String(row.nome_cliente || '').trim()), [draftRows])
+  const invalidRows = useMemo(() => filledRows.filter(row => renewalDraftIssue(row, month)), [filledRows, month])
+  const validRows = useMemo(() => filledRows.filter(row => !renewalDraftIssue(row, month)), [filledRows, month])
   const pendingLinks = useMemo(() => validRows.filter(row => findSuggestion(row, clients) && !row.cliente_id && row.link_decision !== 'custom'), [validRows, clients])
+  const readyRows = useMemo(() => validRows.filter(row => !pendingLinks.includes(row)), [validRows, pendingLinks])
   const saveMutation = useMutation({
     mutationFn: () => criarRenovacoesEmLote(month, validRows),
-    onSuccess: async result => { setDraftRows(blankRows(month)); await invalidate(); toast({ type: 'success', title: 'Mês atualizado', message: `${result.criadas} renovação(ões) adicionada(s); ${result.ignoradas} repetida(s) ignorada(s).` }) },
+    onSuccess: async result => { setDraftRows(blankRows(month)); setShowLinkReview(false); await invalidate(); toast({ type: result.criadas ? 'success' : 'info', title: result.criadas ? 'Renovações adicionadas' : 'Nenhuma linha nova', message: `${result.criadas} renovação(ões) adicionada(s); ${result.ignoradas} repetida(s) ignorada(s).` }) },
     onError: err => toast({ type: 'error', title: 'Erro ao salvar planilha', message: err?.message || 'Revise as linhas.' }),
   })
   const completeMutation = useMutation({
@@ -109,6 +128,12 @@ export default function AutoRenovacoesPuxar() {
     updateRow(row._id, fields)
   }
   const bulkCommit = changes => {
+    if (isNamesOnlyRenewalPaste(changes)) {
+      const names = new Map(changes.filter(change => String(change.value || '').trim()).map(change => [change.row._id, String(change.value).trim()]))
+      setDraftRows(rows => rows.map(row => names.has(row._id) ? { ...row, nome_cliente: names.get(row._id), cliente_id: '', cliente_nome: '', link_decision: 'pending' } : row))
+      toast({ type: 'info', title: 'Lista de segurados reconhecida', message: `${names.size} nome(s) foram colocados na coluna Segurado; o vencimento padrão de ${monthLabel(month)} foi mantido.` })
+      return
+    }
     const grouped = new Map()
     changes.forEach(({ row, column, value }) => {
       const fields = { ...(grouped.get(row._id) || {}), [column.field]: value }
@@ -120,6 +145,37 @@ export default function AutoRenovacoesPuxar() {
   }
   const linkClient = (row, client) => updateRow(row._id, { cliente_id: client.id, cliente_nome: client.nome_completo, nome_cliente: client.nome_completo, link_decision: 'existing' })
   const keepCustom = row => updateRow(row._id, { cliente_id: '', cliente_nome: '', link_decision: 'custom' })
+  const linkAllSuggested = () => setDraftRows(rows => rows.map(row => {
+    const suggestion = findSuggestion(row, clients)
+    return suggestion ? { ...row, cliente_id: suggestion.id, cliente_nome: suggestion.nome_completo, nome_cliente: suggestion.nome_completo, link_decision: 'existing' } : row
+  }))
+  const keepAllCustom = () => setDraftRows(rows => rows.map(row => findSuggestion(row, clients) ? { ...row, cliente_id: '', cliente_nome: '', link_decision: 'custom' } : row))
+
+  const handleSave = () => {
+    if (invalidRows.length) {
+      toast({ type: 'error', title: 'Existem datas para corrigir', message: `${invalidRows.length} linha(s) está(ão) com vencimento inválido ou fora de ${monthLabel(month)}.` })
+      return
+    }
+    if (pendingLinks.length) {
+      setShowLinkReview(true)
+      toast({ type: 'info', title: 'Confirme os clientes encontrados', message: 'Escolha vincular ou manter o nome avulso antes de gravar.' })
+      return
+    }
+    saveMutation.mutate()
+  }
+
+  const applySmartPaste = () => {
+    const parsed = parseRenovacoesPaste(smartPaste, month).map(normalizeRenewalIdentity)
+    if (!parsed.length) {
+      toast({ type: 'error', title: 'Nada para importar', message: 'Cole pelo menos um nome ou uma grade copiada do Excel.' })
+      return
+    }
+    const rows = parsed.map((row, index) => newDraft(index, month, { ...row, origem: 'manual' }))
+    setDraftRows([...rows, ...blankRows(month, 8)])
+    setSmartPaste('')
+    setShowPastePanel(false)
+    toast({ type: 'success', title: 'Conteúdo organizado na grade', message: `${rows.length} renovação(ões) reconhecida(s). Revise os dados e os vínculos sugeridos.` })
+  }
 
   const columns = useMemo(() => [
     { field: 'vigencia_fim', label: 'Data de vencimento', type: 'date', editable: true, width: 145 },
@@ -140,12 +196,24 @@ export default function AutoRenovacoesPuxar() {
     if (!file) return
     try {
       const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: false })
-      const sourceMonth = shiftYear(month, -1)
-      const sheetName = sheetNameForMonth(workbook.SheetNames, sourceMonth)
-      const rows = parseAutoComissaoPlanilha(workbook, sheetName).map((row, index) => newDraft(index, month, {
-        nome_cliente: row.nome_cliente || '', seguradora: row.seguradora || '', vigencia_fim: row.vigencia_fim || monthLastDay(month),
-        data_limite_envio: row.vigencia_fim ? subtrairDiasUteis(row.vigencia_fim, 7) : '', pct_comissao_anterior: row.pct_comissao ?? '', origem: 'xls',
-      }))
+      const targetSheetName = sheetNameForMonth(workbook.SheetNames, month)
+      const planningRows = targetSheetName ? parseRenewalPlanningSheet(workbook, targetSheetName, month) : []
+      let rows
+      if (planningRows.length) {
+        rows = planningRows.map((row, index) => newDraft(index, month, { ...row, origem: 'xls' }))
+      } else {
+        const sourceMonth = shiftYear(month, -1)
+        const sourceSheetName = sheetNameForMonth(workbook.SheetNames, sourceMonth)
+        if (!sourceSheetName) throw new Error(`Não encontrei a aba de ${monthLabel(sourceMonth)} nesta planilha.`)
+        rows = parseAutoComissaoPlanilha(workbook, sourceSheetName).map((row, index) => {
+          const alignedDue = alignRenewalDateToMonth(row.vigencia_fim, month) || monthLastDay(month)
+          return newDraft(index, month, {
+            nome_cliente: row.nome_cliente || '', seguradora: row.seguradora || '', identificacao_veiculo: row.identificacao_veiculo || '', vigencia_fim: alignedDue,
+            data_limite_envio: subtrairDiasUteis(alignedDue, 7), pct_comissao_anterior: row.pct_comissao ?? '', origem: 'xls',
+          })
+        })
+      }
+      if (!rows.length) throw new Error('A aba foi encontrada, mas não contém renovações reconhecíveis.')
       setDraftRows(rows.length ? [...rows, ...blankRows(month, 5)] : blankRows(month))
       toast({ type: 'info', title: 'Planilha carregada para revisão', message: `${rows.length} linha(s). Confirme os vínculos sugeridos antes de salvar.` })
     } catch (err) { toast({ type: 'error', title: 'Erro ao ler planilha', message: err?.message || 'Arquivo inválido.' }) }
@@ -153,19 +221,58 @@ export default function AutoRenovacoesPuxar() {
 
   const changeMonth = value => {
     const next = value || currentMonthRef()
-    if (validRows.length && !window.confirm('Trocar o mês descartará as linhas ainda não salvas. Continuar?')) return
+    if (filledRows.length && !window.confirm('Trocar o mês descartará as linhas ainda não salvas. Continuar?')) return
     setMonth(next)
     setDraftRows(blankRows(next))
   }
 
-  return <div className="auto-page auto-operation-page animate-fade-in">
-    <PageHeader eyebrow="Operação Auto · Preparação" title="Organizar renovações" description={`Monte a planilha de ${monthLabel(month)}, cole várias células e confirme possíveis clientes existentes antes de gravar.`} actions={<div className="flex flex-wrap gap-2"><button className="btn-secondary" onClick={() => navigate(`/auto/renovacoes?mes=${month}`)}><ArrowLeft className="h-4 w-4" />Voltar ao resumo</button><input className="input" type="month" value={month} onChange={event => changeMonth(event.target.value)} /><button className="btn-secondary" onClick={() => navigate(`/auto/renovacoes/planilha?mes=${month}`)}>Abrir renovações salvas</button></div>} />
+  return <div className="auto-page auto-operation-page renewal-intake-page animate-fade-in">
+    <PageHeader eyebrow="Operação Auto · Carteira" title="Entrada de renovações" description={`Organize ${monthLabel(month)} em três etapas: importe, revise e grave. Nenhuma linha será salva fora do mês escolhido.`} actions={<div className="flex flex-wrap gap-2"><button className="btn-secondary" onClick={() => navigate(`/auto/renovacoes?mes=${month}`)}><ArrowLeft className="h-4 w-4" />Resumo</button><label className="renewal-month-picker"><CalendarClock /><span>Mês da carteira</span><input type="month" value={month} onChange={event => changeMonth(event.target.value)} /></label><button className="btn-primary" onClick={() => navigate(`/auto/renovacoes/planilha?mes=${month}`)}>Abrir carteira salva <ArrowRight className="h-4 w-4" /></button></div>} />
 
-    <section className="renewal-pull-command"><div><span><RefreshCw /></span><div><strong>Fontes do mês</strong><small>Puxe da carteira ou carregue uma planilha para revisar na grade abaixo.</small></div></div><button onClick={() => systemMutation.mutate()} disabled={systemMutation.isPending}>{systemMutation.isPending ? 'Puxando…' : 'Puxar do sistema'}</button><input ref={uploadRef} type="file" accept=".xlsx,.xls" onChange={handleUpload} hidden /><button onClick={() => uploadRef.current?.click()}><Upload />Carregar .xlsx</button><button className={monthStatus?.concluido_em ? 'is-complete' : ''} onClick={() => completeMutation.mutate()} disabled={completeMutation.isPending}><Check />{monthStatus?.concluido_em ? 'Mês concluído' : 'Marcar mês concluído'}</button></section>
+    <section className="renewal-intake-deck">
+      <div className="renewal-intake-source">
+        <header><div><span>1 · Entrada dos dados</span><h2>Como você quer montar a carteira?</h2><p>Use qualquer uma das fontes. Tudo vai primeiro para a grade de revisão.</p></div><span className="renewal-intake-month"><CalendarClock />{monthLabel(month)}</span></header>
+        <div className="renewal-source-grid">
+          <button className={showPastePanel ? 'is-selected' : ''} onClick={() => setShowPastePanel(value => !value)}><span className="is-blue"><ClipboardPaste /></span><div><strong>Colar do Excel</strong><small>Aceita nomes, colunas ou uma tabela completa.</small></div><CheckCircle2 /></button>
+          <button onClick={() => uploadRef.current?.click()}><span className="is-violet"><FileSpreadsheet /></span><div><strong>Carregar planilha</strong><small>Importa o mês do ano anterior e corrige o ano.</small></div><Upload /></button>
+          <button onClick={() => systemMutation.mutate()} disabled={systemMutation.isPending}><span className="is-teal"><RefreshCw className={systemMutation.isPending ? 'is-spinning' : ''} /></span><div><strong>{systemMutation.isPending ? 'Buscando carteira…' : 'Puxar do sistema'}</strong><small>Encontra apólices que vencem no período.</small></div><ArrowRight /></button>
+          <input ref={uploadRef} type="file" accept=".xlsx,.xls" onChange={handleUpload} hidden />
+        </div>
+        {showPastePanel && <div className="renewal-smart-paste"><div><Sparkles /><span><strong>Colagem inteligente</strong><small>Cole somente os nomes ou inclua cabeçalhos como Data, Cia, Segurado, Veículo e Status.</small></span></div><textarea value={smartPaste} onChange={event => setSmartPaste(event.target.value)} placeholder={'Exemplo:\n31/08/2026\tALLIANZ\tMARCELO ALMEIDA\tHR-V\n31/08/2026\tPORTO\tANA SILVA\tT-CROSS\n\nOu cole apenas uma lista de nomes.'} /><footer><span><ClipboardPaste />Ctrl/⌘ + V para colar</span><button disabled={!smartPaste.trim()} onClick={applySmartPaste}>Interpretar e colocar na grade <ArrowRight /></button></footer></div>}
+      </div>
+      <aside className="renewal-intake-guide">
+        <header><ListChecks /><div><span>Fluxo seguro</span><strong>Antes de gravar</strong></div></header>
+        <ol>
+          <li className={filledRows.length ? 'is-done' : 'is-current'}><span>{filledRows.length ? <Check /> : '1'}</span><div><strong>Entrada</strong><small>{filledRows.length ? `${filledRows.length} linha(s) recebida(s)` : 'Cole, carregue ou puxe os dados'}</small></div></li>
+          <li className={invalidRows.length ? 'is-warning' : pendingLinks.length ? 'is-current' : filledRows.length ? 'is-done' : ''}><span>{!invalidRows.length && filledRows.length && !pendingLinks.length ? <Check /> : '2'}</span><div><strong>Revisão</strong><small>{invalidRows.length ? `${invalidRows.length} data(s) para corrigir` : pendingLinks.length ? `${pendingLinks.length} cliente(s) para confirmar` : filledRows.length ? 'Datas e vínculos conferidos' : 'Valide datas e clientes'}</small></div></li>
+          <li className={readyRows.length && !invalidRows.length && !pendingLinks.length ? 'is-current' : ''}><span>3</span><div><strong>Gravar carteira</strong><small>{readyRows.length ? `${readyRows.length} linha(s) prontas` : 'Conclua a revisão primeiro'}</small></div></li>
+        </ol>
+        <button className={monthStatus?.concluido_em ? 'is-complete' : ''} onClick={() => completeMutation.mutate()} disabled={completeMutation.isPending}><CheckCircle2 />{monthStatus?.concluido_em ? 'Mês já concluído' : 'Marcar organização concluída'}</button>
+      </aside>
+    </section>
 
-    <section className="ops-sheet-workspace renewal-builder-workspace"><header className="ops-sheet-toolbar"><div className="ops-sheet-title"><span><ClipboardPaste /></span><div><strong>Planilha de entrada · {monthLabel(month)}</strong><small>{validRows.length} linha(s) preenchida(s) · cole diretamente em qualquer célula</small></div></div><button onClick={() => setDraftRows(rows => [...rows, ...blankRows(month, 10)])}><Plus />Adicionar 10 linhas</button><button className="is-active" disabled={!validRows.length || pendingLinks.length > 0 || saveMutation.isPending} onClick={() => saveMutation.mutate()}>{saveMutation.isPending ? 'Salvando…' : pendingLinks.length ? `Revise ${pendingLinks.length} vínculo(s)` : `Salvar ${validRows.length || ''} renovação(ões)`}</button></header><div className="ops-sheet-help"><span>Cole a partir da Data de vencimento</span><span>Datas 31/08/2026 são reconhecidas</span><span>Enter/↑/↓ navegam</span><span>Vínculos nunca são automáticos sem confirmação</span></div><OperationalSpreadsheet rows={draftRows} columns={columns} getRowId={row => row._id} getRowClassName={row => `is-renewal-status-${row.status || 'pendente'}`} onCommit={commitCell} onBulkCommit={bulkCommit} className="is-renewal-builder" emptyMessage="Adicione uma linha para começar." statusLabel={`${validRows.length} linha(s) pronta(s) para salvar`} /></section>
+    <section className="renewal-intake-health" aria-label="Validação da importação">
+      <div className="is-total"><UsersRound /><span><strong>{filledRows.length}</strong><small>segurados na entrada</small></span></div>
+      <div className={invalidRows.length ? 'is-danger' : 'is-ok'}>{invalidRows.length ? <AlertTriangle /> : <CheckCircle2 />}<span><strong>{invalidRows.length}</strong><small>datas para corrigir</small></span></div>
+      <div className={pendingLinks.length ? 'is-warning' : 'is-ok'}><Link2 /><span><strong>{pendingLinks.length}</strong><small>vínculos para decidir</small></span></div>
+      <div className="is-ready"><Check /><span><strong>{readyRows.length}</strong><small>prontas para gravar</small></span></div>
+    </section>
 
-    <DataCard title={`Já salvas em ${monthLabel(month)}`} subtitle={`${existing.length} renovação(ões) no sistema. A edição completa fica em Abrir renovações.`} actions={<button className="btn-primary" onClick={() => navigate(`/auto/renovacoes/planilha?mes=${month}`)}>ABRIR RENOVAÇÕES</button>}>{isLoading ? <div className="py-8 text-center text-sm text-dark-muted">Carregando…</div> : isError ? <EmptyState icon={<XCircle />} title="Erro ao carregar renovações" description={error?.message || 'Tente novamente.'} /> : <div className="renewal-saved-preview">{existing.slice(0, 8).map(row => <div key={row.id}><strong>{row.clientes_auto?.nome_completo || row.nome_segurado_anterior || row.apolices_auto?.nome_cliente || 'Sem nome'}</strong><span>{row.seguradora || 'Sem seguradora'} · {row.vigencia_fim ? new Date(`${row.vigencia_fim}T12:00:00`).toLocaleDateString('pt-BR') : 'sem data'}</span></div>)}{existing.length > 8 && <button onClick={() => navigate(`/auto/renovacoes/planilha?mes=${month}`)}>Ver mais {existing.length - 8}</button>}</div>}</DataCard>
+    {pendingLinks.length > 0 && <section className={`renewal-link-review ${showLinkReview ? 'is-open' : ''}`}>
+      <header><div><span><Link2 /></span><div><strong>Encontramos {pendingLinks.length} possível(is) cliente(s) existente(s)</strong><small>Confirme o vínculo ou mantenha o nome avulso. Nada é anexado automaticamente.</small></div></div><div><button onClick={keepAllCustom}>Manter todos avulsos</button><button className="is-primary" onClick={linkAllSuggested}><UserCheck />Vincular todos sugeridos</button><button className="is-toggle" onClick={() => setShowLinkReview(value => !value)}>{showLinkReview ? 'Recolher' : 'Revisar um a um'}</button></div></header>
+      {showLinkReview && <div className="renewal-link-review-grid">{pendingLinks.map(row => { const suggestion = findSuggestion(row, clients); return <article key={row._id}><span><UsersRound /></span><div><small>Nome colado</small><strong>{row.nome_cliente}</strong><p>Possível cadastro: <b>{suggestion?.nome_completo}</b>{suggestion?.cpf ? ` · ${suggestion.cpf}` : ''}</p></div><button onClick={() => keepCustom(row)}>Não vincular</button><button className="is-accept" onClick={() => linkClient(row, suggestion)}><Check />É o mesmo cliente</button></article> })}</div>}
+    </section>}
+
+    <section className="ops-sheet-workspace renewal-builder-workspace">
+      <header className="ops-sheet-toolbar renewal-builder-toolbar"><div className="ops-sheet-title"><span><FileSpreadsheet /></span><div><strong>2 · Grade de revisão · {monthLabel(month)}</strong><small>Edite como no Excel. A primeira coluna também aceita uma lista simples de nomes.</small></div></div><button onClick={() => setDraftRows(rows => [...rows, ...blankRows(month, 10)])}><Plus />10 linhas</button><button className="renewal-save-button is-active" disabled={!filledRows.length || saveMutation.isPending} onClick={handleSave}>{saveMutation.isPending ? 'Gravando carteira…' : invalidRows.length ? `Corrigir ${invalidRows.length} data(s)` : pendingLinks.length ? `Revisar ${pendingLinks.length} vínculo(s)` : `Gravar ${validRows.length} renovação(ões)`}<ArrowRight /></button></header>
+      <div className="renewal-sheet-instructions"><span><b>A</b>Cole datas ou uma lista de nomes</span><span><b>C</b>Segurado fica sempre visível</span><span><b>↵</b>Enter avança para a próxima linha</span><span><b>✓</b>Linhas vermelhas não serão salvas</span></div>
+      <OperationalSpreadsheet rows={draftRows} columns={columns} getRowId={row => row._id} getRowClassName={row => { const issue = row.nome_cliente ? renewalDraftIssue(row, month) : null; return issue ? 'is-renewal-import-error' : `is-renewal-status-${row.status || 'pendente'}` }} onCommit={commitCell} onBulkCommit={bulkCommit} className="is-renewal-builder" emptyMessage="Adicione uma linha para começar." statusLabel={`${readyRows.length} pronta(s) · ${pendingLinks.length} aguardando vínculo · ${invalidRows.length} com erro`} />
+    </section>
+
+    <section className="renewal-saved-section">
+      <header><div><span>Carteira já gravada</span><h2>{existing.length} renovações em {monthLabel(month)}</h2><p>Abra a planilha operacional para contatos, follow-ups, descontos, notas e mudança de status.</p></div><button onClick={() => navigate(`/auto/renovacoes/planilha?mes=${month}`)}>Abrir planilha operacional <ArrowRight /></button></header>
+      {isLoading ? <div className="renewal-saved-state">Carregando carteira…</div> : isError ? <EmptyState icon={<XCircle />} title="Erro ao carregar renovações" description={error?.message || 'Tente novamente.'} /> : existing.length === 0 ? <div className="renewal-saved-empty"><FileSpreadsheet /><div><strong>Este mês ainda está vazio</strong><small>As renovações gravadas aparecerão aqui.</small></div></div> : <div className="renewal-saved-preview">{existing.slice(0, 8).map(row => <div key={row.id}><span>{row.vigencia_fim ? new Date(`${row.vigencia_fim}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—'}</span><div><strong>{row.clientes_auto?.nome_completo || row.nome_segurado_anterior || row.apolices_auto?.nome_cliente || 'Sem nome'}</strong><small>{row.seguradora || 'Sem seguradora'} · {row.identificacao_veiculo || 'Veículo não informado'}</small></div></div>)}{existing.length > 8 && <button onClick={() => navigate(`/auto/renovacoes/planilha?mes=${month}`)}>+ {existing.length - 8} renovações <ArrowRight /></button>}</div>}
+    </section>
 
     {editingRow && <RenewalInsuredEditor initialName={editingRow.nome_cliente} initialClientId={editingRow.cliente_id} onClose={() => setEditingRow(null)} onSave={fields => { updateRow(editingRow._id, { cliente_id: fields.cliente_id || '', cliente_nome: fields.cliente?.nome_completo || '', nome_cliente: fields.nome_segurado_anterior, link_decision: fields.cliente_id ? 'existing' : 'custom' }); setEditingRow(null) }} />}
   </div>

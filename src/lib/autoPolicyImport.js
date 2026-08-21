@@ -26,7 +26,7 @@ export function splitInsuredAndVehicle(value) {
 
   return {
     insured: cleanText(match[1]),
-    vehicle: cleanText(match[2]).replace(/^(?:-{2,}|—{2,}|–{2,})\s*/g, ''),
+    vehicle: cleanText(match[2]).replace(/^[-—–]+\s*/g, ''),
     separated: true,
   }
 }

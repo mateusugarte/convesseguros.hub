@@ -16,6 +16,14 @@ test('separa segurado e veiculo quando chegam unidos por tres tracos', () => {
   })
 })
 
+test('remove traços finais sem inventar um veículo', () => {
+  assert.deepEqual(splitInsuredAndVehicle('Maria Procópio ---'), {
+    insured: 'Maria Procópio',
+    vehicle: '',
+    separated: true,
+  })
+})
+
 test('normaliza a identidade mesmo quando o texto combinado cai na coluna de veiculo', () => {
   const row = normalizePolicyImportIdentity({ nome_cliente: '', modelo_veiculo: 'Marcelo Almeida --- HRV' })
   assert.equal(row.nome_cliente, 'Marcelo Almeida')

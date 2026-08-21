@@ -44,6 +44,16 @@ test('extrairLinhasComissaoDaAba usa fallback de posicao quando o cabecalho do t
   assert.equal(linhas[0].tipo, 'renovacao')
 })
 
+test('separa o veículo quando o segurado vem combinado com traços', () => {
+  const rows = [
+    ['TRANSMISSÃO', 'VIGÊNCIA', 'SEGURADO', 'SEGURADORA', '% COMISSÃO', 'CORRETOR', 'O QUE É'],
+    [45500, 45900, 'MARCELO ALMEIDA --- HR-V', 'MAPFRE', 0.15, '', 'RENOVAÇÃO'],
+  ]
+  const [result] = extrairLinhasComissaoDaAba(rows)
+  assert.equal(result.nome_cliente, 'MARCELO ALMEIDA')
+  assert.equal(result.identificacao_veiculo, 'HR-V')
+})
+
 test('parseAutoComissaoPlanilha filtra so linhas tipo RENOVACAO da aba pedida', () => {
   const rows = [
     HEADER,

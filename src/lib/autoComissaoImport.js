@@ -1,5 +1,6 @@
 import * as XLSXModule from 'xlsx'
 import { limparNomeSegurado } from './autoHistoricoImport.js'
+import { splitInsuredAndVehicle } from './autoPolicyImport.js'
 
 const XLSX = XLSXModule.default ?? XLSXModule
 
@@ -70,7 +71,9 @@ export function extrairLinhasComissaoDaAba(rows) {
   const result = []
   for (let rowIndex = 1; rowIndex < rows.length; rowIndex += 1) {
     const row = rows[rowIndex]
-    const nome = limparNomeSegurado(row[cols.segurado])
+    const rawName = cleanText(row[cols.segurado])
+    const identity = splitInsuredAndVehicle(rawName)
+    const nome = identity.separated ? identity.insured : limparNomeSegurado(rawName)
     if (!nome) continue
 
     // Linhas de endosso guardam o texto "ENDOSSO" na coluna VIGENCIA em vez
@@ -81,6 +84,7 @@ export function extrairLinhasComissaoDaAba(rows) {
     result.push({
       linha: rowIndex + 1,
       nome_cliente: nome,
+      identificacao_veiculo: identity.separated && !/^(?:equipe|captacao|captação)$/i.test(identity.vehicle) ? identity.vehicle : '',
       seguradora: cols.seguradora >= 0 ? cleanText(row[cols.seguradora]) : '',
       vigencia_fim: vigenciaFim,
       premio_liquido: cols.premio >= 0 && row[cols.premio] !== '' ? Number(row[cols.premio]) : null,

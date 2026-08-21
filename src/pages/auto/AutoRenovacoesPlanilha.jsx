@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, BarChart3, Check, Download, ExternalLink, Filter, MessageSquarePlus, Plus, RefreshCw, Search, Trash2, UserRound, XCircle } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, BarChart3, CalendarClock, Check, CheckCircle2, Clock3, Download, ExternalLink, Filter, MessageSquarePlus, Plus, RefreshCw, Search, SlidersHorizontal, Trash2, UserRound, UsersRound, XCircle } from 'lucide-react'
 import { atualizarRenovacoesEmLote, atualizarStatusRenovacao, excluirRenovacao, getRenovacoesAuto, marcarRenovacaoCotada } from '../../lib/auto'
 import { renewalStatusFields, renewalStatusValue } from '../../lib/autoOperational'
 import { useToast } from '../../contexts/ToastContext'
@@ -19,6 +19,10 @@ const STATUS_OPTIONS = [
 function currentMonthRef() {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+function localToday() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 }
 function monthLabel(value) {
   const [year, month] = String(value).split('-').map(Number)
@@ -49,6 +53,7 @@ export default function AutoRenovacoesPlanilha() {
   const [busca, setBusca] = useState('')
   const [statusFilter, setStatusFilter] = useState('todos')
   const [followupFilter, setFollowupFilter] = useState(false)
+  const [sendTodayFilter, setSendTodayFilter] = useState(false)
   const [sort, setSort] = useState({ field: 'vigencia_fim', direction: 'asc' })
   const [editingInsured, setEditingInsured] = useState(null)
 
@@ -93,12 +98,13 @@ export default function AutoRenovacoesPlanilha() {
   })
   const deleteMutation = useMutation({ mutationFn: excluirRenovacao, onSuccess: invalidateOperation, onError: err => toast({ type: 'error', title: 'Erro ao excluir', message: err?.message || 'Tente novamente.' }) })
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localToday()
   const filteredRows = useMemo(() => {
     const term = normalize(busca)
     return rows.filter(row => {
       if (statusFilter !== 'todos' && renewalStatusValue(row) !== statusFilter) return false
       if (followupFilter && (!row.proximo_followup_em || row.proximo_followup_em > today)) return false
+      if (sendTodayFilter && ((row.data_limite_envio || row.vigencia_fim) > today || ['cotada', 'enviada', 'negociando', 'renovada', 'nao_renovada', 'outra_corretora'].includes(renewalStatusValue(row)))) return false
       if (!term) return true
       return normalize([customerName(row), vehicleName(row), row.seguradora, row.apolices_auto?.numero_apolice, row.notas_negociacao].filter(Boolean).join(' ')).includes(term)
     }).sort((a, b) => {
@@ -106,13 +112,13 @@ export default function AutoRenovacoesPlanilha() {
       const comparison = String(get(a)).localeCompare(String(get(b)), 'pt-BR', { numeric: true })
       return sort.direction === 'asc' ? comparison : -comparison
     })
-  }, [rows, busca, statusFilter, followupFilter, sort, today])
+  }, [rows, busca, statusFilter, followupFilter, sendTodayFilter, sort, today])
 
   const metrics = useMemo(() => ({
     total: rows.length,
-    paraEnviar: rows.filter(row => (row.data_limite_envio || row.vigencia_fim) <= today && !['cotada', 'enviada', 'negociando', 'renovada'].includes(renewalStatusValue(row))).length,
+    paraEnviar: rows.filter(row => (row.data_limite_envio || row.vigencia_fim) <= today && !['cotada', 'enviada', 'negociando', 'renovada', 'nao_renovada', 'outra_corretora'].includes(renewalStatusValue(row))).length,
     cotadas: rows.filter(row => ['cotada', 'enviada', 'negociando', 'renovada'].includes(renewalStatusValue(row))).length,
-    followups: rows.filter(row => row.proximo_followup_em && row.proximo_followup_em <= today).length,
+    followups: rows.filter(row => row.proximo_followup_em && row.proximo_followup_em <= today && !['renovada', 'nao_renovada', 'outra_corretora'].includes(renewalStatusValue(row))).length,
     renovadas: rows.filter(row => renewalStatusValue(row) === 'renovada').length,
   }), [rows, today])
 
@@ -156,17 +162,21 @@ export default function AutoRenovacoesPlanilha() {
   const handleSort = field => setSort(current => current.field === field ? { field, direction: current.direction === 'asc' ? 'desc' : 'asc' } : { field, direction: 'asc' })
   const progress = metrics.total ? Math.round((metrics.cotadas / metrics.total) * 100) : 0
 
-  return <div className="auto-page auto-operation-page animate-fade-in">
-    <PageHeader eyebrow="Operação Auto · Renovações" title="Planilha de renovações" description={`Mesa completa de ${monthLabel(mesRef)}. Clique no segurado para usar um nome personalizado ou vincular um cliente existente.`} actions={<div className="flex flex-wrap gap-2"><button className="btn-secondary" onClick={() => navigate(`/auto/renovacoes?mes=${mesRef}`)}><ArrowLeft className="h-4 w-4" />Resumo do mês</button><input className="input" type="month" value={mesRef} onChange={event => setMesRef(event.target.value || currentMonthRef())} /><button className="btn-secondary" onClick={() => navigate(`/auto/renovacoes/puxar?mes=${mesRef}`)}><Plus className="h-4 w-4" />Adicionar renovações</button><button className="btn-primary" onClick={() => navigate('/auto/gestao')}>Abrir Pipeline</button></div>} />
-    <section className="auto-operation-summary">
-      <div className="auto-operation-progress"><span><BarChart3 />Progresso da carteira</span><strong>{progress}% cotada</strong><div><i style={{ width: `${progress}%` }} /></div></div>
-      {[['Renovações', metrics.total], ['Para enviar', metrics.paraEnviar], ['Cotadas', metrics.cotadas], ['Follow-ups hoje', metrics.followups], ['Renovadas', metrics.renovadas]].map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}
+  return <div className="auto-page auto-operation-page renewal-ledger-page animate-fade-in">
+    <PageHeader eyebrow="Operação Auto · Renovações" title="Carteira de renovações" description={`Mesa operacional de ${monthLabel(mesRef)}. Edite qualquer célula, registre contatos e acompanhe o próximo passo de cada cliente.`} actions={<div className="flex flex-wrap gap-2"><button className="btn-secondary" onClick={() => navigate(`/auto/renovacoes?mes=${mesRef}`)}><ArrowLeft className="h-4 w-4" />Resumo</button><label className="renewal-month-picker"><CalendarClock /><span>Carteira</span><input type="month" value={mesRef} onChange={event => setMesRef(event.target.value || currentMonthRef())} /></label><button className="btn-secondary" onClick={() => navigate(`/auto/renovacoes/puxar?mes=${mesRef}`)}><Plus className="h-4 w-4" />Adicionar</button><button className="btn-primary" onClick={() => navigate('/auto/gestao')}>Abrir Pipeline</button></div>} />
+
+    <section className="renewal-ledger-overview" aria-label="Resumo da carteira">
+      <div className="renewal-ledger-progress"><div><span><BarChart3 />Progresso da carteira</span><strong>{progress}%</strong></div><p>{metrics.cotadas} de {metrics.total} renovações já avançaram para cotação.</p><div className="renewal-ledger-progressbar"><i style={{ width: `${progress}%` }} /></div></div>
+      <button className={!sendTodayFilter && !followupFilter && statusFilter === 'todos' ? 'is-active' : ''} onClick={() => { setStatusFilter('todos'); setFollowupFilter(false); setSendTodayFilter(false) }}><span className="is-blue"><UsersRound /></span><div><small>Carteira completa</small><strong>{metrics.total}</strong><p>todas as renovações</p></div></button>
+      <button className={sendTodayFilter ? 'is-active is-warning' : ''} onClick={() => { setSendTodayFilter(value => !value); setFollowupFilter(false); setStatusFilter('todos') }}><span className="is-amber"><AlertTriangle /></span><div><small>Prioridade agora</small><strong>{metrics.paraEnviar}</strong><p>para enviar hoje</p></div></button>
+      <button className={followupFilter ? 'is-active is-coral' : ''} onClick={() => { setFollowupFilter(value => !value); setSendTodayFilter(false); setStatusFilter('todos') }}><span className="is-coral"><Clock3 /></span><div><small>Relacionamento</small><strong>{metrics.followups}</strong><p>follow-ups vencidos</p></div></button>
+      <button className={statusFilter === 'renovada' ? 'is-active is-success' : ''} onClick={() => { setStatusFilter(statusFilter === 'renovada' ? 'todos' : 'renovada'); setFollowupFilter(false); setSendTodayFilter(false) }}><span className="is-green"><CheckCircle2 /></span><div><small>Conversão</small><strong>{metrics.renovadas}</strong><p>renovadas / emitidas</p></div></button>
     </section>
-    <section className="ops-sheet-workspace" aria-label="Planilha operacional de renovações">
-      <header className="ops-sheet-toolbar"><div className="ops-sheet-title"><span><RefreshCw /></span><div><strong>Renovações de {monthLabel(mesRef)}</strong><small>{filteredRows.length} de {rows.length} linhas · salvamento automático</small></div></div><label className="ops-sheet-search"><Search /><input value={busca} onChange={event => setBusca(event.target.value)} placeholder="Cliente, veículo, placa, seguradora ou nota" /></label><select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="todos">Todos os status</option>{STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select><button className={followupFilter ? 'is-active' : ''} onClick={() => setFollowupFilter(value => !value)}><Filter />Follow-ups vencidos</button><button onClick={() => exportCsv(filteredRows)}><Download />Exportar Excel/CSV</button></header>
-      <div className="ops-sheet-help"><span>Clique e edite</span><span>Cole também na Data de vencimento</span><span>Datas 31/08/2026 são reconhecidas</span><span>Enter/↑/↓ navegam</span><span>Ordene pelo cabeçalho</span></div>
-      <div className="renewal-status-legend" aria-label="Cores dos status"><span className="is-emitted">Emitida / renovada</span><span className="is-cancelled">Cancelada</span><span className="is-sent">Enviada</span><span className="is-waiting">Aguardando retorno</span></div>
-      {isLoading ? <div className="ops-sheet-loading">Carregando renovações…</div> : isError ? <EmptyState icon={<XCircle />} title="Erro ao carregar renovações" description={error?.message || 'Tente recarregar a página.'} /> : <OperationalSpreadsheet rows={filteredRows} columns={columns} getRowClassName={row => `is-renewal-status-${renewalStatusValue(row)}`} onCommit={saveCell} onBulkCommit={bulkSave} sort={sort} onSort={handleSort} emptyMessage="Nenhuma renovação corresponde aos filtros." />}
+
+    <section className="ops-sheet-workspace renewal-ledger-workspace" aria-label="Planilha operacional de renovações">
+      <header className="renewal-ledger-commandbar"><div className="renewal-ledger-title"><span><RefreshCw /></span><div><small>Planilha operacional</small><strong>Renovações de {monthLabel(mesRef)}</strong><p>{filteredRows.length} de {rows.length} linhas visíveis · alterações salvas automaticamente</p></div></div><label className="renewal-ledger-search"><Search /><input value={busca} onChange={event => setBusca(event.target.value)} placeholder="Pesquisar cliente, veículo, placa, seguradora ou nota…" />{busca && <button onClick={() => setBusca('')}><XCircle /></button>}</label><div className="renewal-ledger-tools"><label><SlidersHorizontal /><select value={statusFilter} onChange={event => { setStatusFilter(event.target.value); setSendTodayFilter(false) }}><option value="todos">Todos os status</option>{STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><button className={sendTodayFilter ? 'is-active' : ''} onClick={() => setSendTodayFilter(value => !value)}><AlertTriangle />Enviar hoje</button><button className={followupFilter ? 'is-active' : ''} onClick={() => setFollowupFilter(value => !value)}><Filter />Follow-ups</button><button onClick={() => exportCsv(filteredRows)}><Download />Exportar</button></div></header>
+      <div className="renewal-ledger-ribbon"><div><span className="is-emitted">Emitida / renovada</span><span className="is-cancelled">Cancelada</span><span className="is-sent">Enviada</span><span className="is-waiting">Aguardando retorno</span></div><p><b>Duplo clique não é necessário:</b> clique uma vez no campo e edite · Enter salva e avança · cole blocos do Excel diretamente.</p></div>
+      {isLoading ? <div className="ops-sheet-loading">Carregando renovações…</div> : isError ? <EmptyState icon={<XCircle />} title="Erro ao carregar renovações" description={error?.message || 'Tente recarregar a página.'} /> : <OperationalSpreadsheet rows={filteredRows} columns={columns} getRowClassName={row => `is-renewal-status-${renewalStatusValue(row)}`} onCommit={saveCell} onBulkCommit={bulkSave} sort={sort} onSort={handleSort} emptyMessage="Nenhuma renovação corresponde aos filtros." statusLabel={`${filteredRows.length} visível(is) · salvamento automático ativo`} />}
     </section>
     {editingInsured && <RenewalInsuredEditor initialName={customerName(editingInsured)} initialClientId={editingInsured.cliente_id || ''} onClose={() => setEditingInsured(null)} onSave={fields => { saveMutation.mutate({ id: editingInsured.id, campos: { cliente_id: fields.cliente_id, nome_segurado_anterior: fields.nome_segurado_anterior } }); setEditingInsured(null) }} />}
   </div>

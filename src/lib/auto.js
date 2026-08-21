@@ -5,6 +5,7 @@ import { calcularValorComissaoAuto, subtrairDiasUteis } from './autoCalc.js'
 import { planejarExclusaoGrupoAuto } from './autoExclusao.js'
 import { renewalStatusFields } from './autoOperational.js'
 import { buildAutoPendingNotifications } from './autoPending.js'
+import { isRenewalDateInMonth } from './autoRenewalImport.js'
 
 export { calcularValorComissaoAuto }
 
@@ -1267,6 +1268,11 @@ export async function atualizarEmissaoPlanilhaAuto(id, campos, linhaAtual = {}) 
 export async function criarRenovacoesEmLote(mesRef, rows = []) {
   if (!parseMonthRef(mesRef)) throw new Error('Selecione um mes valido.')
   if (!rows.length) throw new Error('Cole ao menos um segurado para criar as renovacoes.')
+
+  const datasInvalidas = rows.filter(row => !isRenewalDateInMonth(row.vigencia_fim, mesRef))
+  if (datasInvalidas.length) {
+    throw new Error(`${datasInvalidas.length} renovacao(oes) possui(em) vencimento invalido ou fora do mes selecionado. Corrija as datas destacadas antes de salvar.`)
+  }
 
   const { inicio, fim } = getRangeFromMonthRef(mesRef)
   const { data: existentes, error: existentesError } = await supabase

@@ -3,7 +3,7 @@
 ## Page
 
 - Name: Auto (Dashboard, Cotacoes, Gestao AUTO/Emissoes, Renovacoes, Clientes, Sinistros, Etiquetas)
-- Route: `/auto`, `/auto/cotacoes(/:id)(/consulta)`, `/auto/gestao`, `/auto/emissoes(/:id)`, `/auto/emissoes/planilha`, `/auto/renovacoes`, `/auto/renovacoes/puxar`, `/auto/clientes(/:id)`, `/auto/apolices/:id`, `/auto/sinistros`, `/auto/etiquetas`
+- Route: `/auto`, `/auto/cotacoes(/:id)(/consulta)`, `/auto/gestao`, `/auto/emissoes(/:id)`, `/auto/emissoes/planilha`, `/auto/renovacoes`, `/auto/renovacoes/planilha`, `/auto/renovacoes/puxar`, `/auto/clientes(/:id)`, `/auto/apolices/:id`, `/auto/sinistros`, `/auto/etiquetas`
 - Domain: Seguro Auto (cotacao -> emissao -> apolice -> renovacao)
 
 ## Purpose
@@ -77,9 +77,17 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   desconto, notas e `cotada_em` em `renovacoes_auto`; aceita o resultado neutro
   `cotada` em `emissoes_auto` e cria a RPC atomica da passagem para Cotacoes
   feitas. Executar depois da migration 63.
-- `/auto/renovacoes` e uma mesa unica de negociacao, sem a lista duplicada de
-  cards. `/auto/emissoes` e a entrada de Apolices e abre a grade completa em
+- `/auto/renovacoes` e o resumo mensal somente-leitura, sem a lista duplicada de
+  cards;
+  o botao `ABRIR RENOVACOES` leva a grade editavel em
+  `/auto/renovacoes/planilha`. `/auto/emissoes` e a entrada de Apolices e abre a grade completa em
   `/auto/emissoes/planilha` pelo botao `VER EMISSOES`.
+- Na planilha de renovacoes, clicar no segurado abre
+  `RenewalInsuredEditor`: o usuario escolhe nome personalizado ou pesquisa um
+  cliente existente, persistindo `renovacoes_auto.cliente_id` apenas depois da
+  confirmacao. A grade de `/auto/renovacoes/puxar` usa o mesmo editor e
+  `suggestRenewalClientByName`; correspondencias unicas por nome aparecem como
+  sugestao `Vincular`/`Nao`, nunca como vinculo automatico silencioso.
 
 - Migration `supabase/63_auto_operacao_planilhas_pipeline.sql` e obrigatoria
   antes de publicar este codigo. Ela adiciona os campos das duas grades,

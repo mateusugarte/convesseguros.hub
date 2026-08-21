@@ -1,19 +1,21 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { BarChart3, Check, Download, ExternalLink, Filter, MessageSquarePlus, Plus, RefreshCw, Search, Trash2, XCircle } from 'lucide-react'
-import { atualizarRenovacoesEmLote, atualizarStatusRenovacao, excluirRenovacao, getRenovacoesAuto, marcarRenovacaoCotada } from '../../lib/auto'
-import { renewalStatusFields, renewalStatusValue } from '../../lib/autoOperational'
-import { useToast } from '../../contexts/ToastContext'
-import { EmptyState, PageHeader } from '../../components/ui'
-import OperationalSpreadsheet from '../../components/auto/OperationalSpreadsheet'
+import { useQuery } from '@tanstack/react-query'
+import { ArrowRight, BarChart3, CalendarClock, CheckCircle2, Clock3, RefreshCw, Table2, XCircle } from 'lucide-react'
+import { getRenovacoesAuto } from '../../lib/auto'
+import { renewalStatusValue } from '../../lib/autoOperational'
+import { DataCard, EmptyState, MetricCard, PageHeader } from '../../components/ui'
 
-const STATUS_OPTIONS = [
-  { value: 'pendente', label: 'Pendente' }, { value: 'em_andamento', label: 'Cotando' },
-  { value: 'cotada', label: 'Cotada' }, { value: 'enviada', label: 'Enviada' },
-  { value: 'negociando', label: 'Negociando' }, { value: 'outra_corretora', label: 'Outra corretora' },
-  { value: 'renovada', label: 'Renovada' }, { value: 'nao_renovada', label: 'Cancelada' },
-]
+const STATUS_META = {
+  pendente: { label: 'Pendentes', color: '#f97316' },
+  em_andamento: { label: 'Cotando', color: '#f59e0b' },
+  cotada: { label: 'Cotadas', color: '#3563e9' },
+  enviada: { label: 'Enviadas', color: '#38bdf8' },
+  negociando: { label: 'Negociando', color: '#a855f7' },
+  renovada: { label: 'Renovadas', color: '#10b981' },
+  outra_corretora: { label: 'Outra corretora', color: '#64748b' },
+  nao_renovada: { label: 'Canceladas', color: '#ef4444' },
+}
 
 function currentMonthRef() {
   const now = new Date()
@@ -21,148 +23,44 @@ function currentMonthRef() {
 }
 function monthLabel(value) {
   const [year, month] = String(value).split('-').map(Number)
-  return year && month ? new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : 'mês atual'
+  return new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 }
-function normalize(value) { return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() }
-function customerName(row) { return row.clientes_auto?.nome_completo || row.apolices_auto?.nome_cliente || row.nome_segurado_anterior || '' }
-function vehicleName(row) { return row.identificacao_veiculo || [row.apolices_auto?.modelo_veiculo, row.apolices_auto?.placa].filter(Boolean).join(' · ') || '' }
-
-function exportCsv(rows) {
-  const headers = ['Data', 'Cia', 'Segurado', 'Veículo', 'Status', 'Limite', 'Contatos', 'Follow-ups', 'Último contato', 'Próximo follow-up', 'Descontos', 'Desconto %', 'Comissão', 'Comissão passada', 'Notas']
-  const values = rows.map(row => [row.vigencia_fim, row.seguradora, customerName(row), vehicleName(row), renewalStatusValue(row), row.data_limite_envio, row.contatos_realizados, row.followups_realizados, row.ultimo_contato_em, row.proximo_followup_em, row.descontos_realizados, row.desconto_percentual, row.pct_comissao_atual, row.pct_comissao_anterior, row.notas_negociacao])
-  const escape = value => `"${String(value ?? '').replace(/"/g, '""')}"`
-  const blob = new Blob([[headers, ...values].map(line => line.map(escape).join(';')).join('\n')], { type: 'text/csv;charset=utf-8' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = `renovacoes-auto-${new Date().toISOString().slice(0, 10)}.csv`
-  link.click()
-  URL.revokeObjectURL(link.href)
-}
+function customerName(row) { return row.clientes_auto?.nome_completo || row.nome_segurado_anterior || row.apolices_auto?.nome_cliente || 'Sem nome' }
+function formatDate(value) { return value ? new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR') : '—' }
 
 export default function AutoRenovacoes() {
   const navigate = useNavigate()
-  const toast = useToast()
-  const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [mesRef, setMesRef] = useState(() => searchParams.get('mes') || currentMonthRef())
-  const [busca, setBusca] = useState('')
-  const [statusFilter, setStatusFilter] = useState('todos')
-  const [followupFilter, setFollowupFilter] = useState(false)
-  const [sort, setSort] = useState({ field: 'vigencia_fim', direction: 'asc' })
-
-  useEffect(() => {
-    const next = new URLSearchParams(searchParams)
-    next.set('mes', mesRef)
-    if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true })
-  }, [mesRef, searchParams, setSearchParams])
-
-  const { data: rows = [], isLoading, isError, error } = useQuery({
-    queryKey: ['auto-renovacoes', 'mes_atual', mesRef], queryFn: () => getRenovacoesAuto({ periodo: 'mes_atual', mes: mesRef }),
-  })
-
-  const invalidateOperation = async () => Promise.all([
-    queryClient.invalidateQueries({ queryKey: ['auto-renovacoes'] }),
-    queryClient.invalidateQueries({ queryKey: ['auto-renovacoes-todas'] }),
-    queryClient.invalidateQueries({ queryKey: ['auto-renovacoes-pendentes'] }),
-    queryClient.invalidateQueries({ queryKey: ['auto-emissoes'] }),
-    queryClient.invalidateQueries({ queryKey: ['auto-cotacoes'] }),
-  ])
-
-  const saveMutation = useMutation({
-    mutationFn: ({ id, campos }) => atualizarStatusRenovacao(id, campos),
-    onMutate: async ({ id, campos }) => {
-      await queryClient.cancelQueries({ queryKey: ['auto-renovacoes'] })
-      queryClient.setQueriesData({ queryKey: ['auto-renovacoes'] }, current => Array.isArray(current) ? current.map(row => row.id === id ? { ...row, ...campos } : row) : current)
-    },
-    onError: err => { invalidateOperation(); toast({ type: 'error', title: 'Célula não salva', message: err?.message || 'Tente novamente.' }) },
-    onSettled: invalidateOperation,
-  })
-  const bulkMutation = useMutation({
-    mutationFn: atualizarRenovacoesEmLote,
-    onSuccess: () => toast({ type: 'success', title: 'Colagem concluída', message: 'As células foram atualizadas em bloco.' }),
-    onError: err => toast({ type: 'error', title: 'Erro na colagem', message: err?.message || 'Revise os valores colados.' }),
-    onSettled: invalidateOperation,
-  })
-  const quotedMutation = useMutation({
-    mutationFn: marcarRenovacaoCotada,
-    onSuccess: async () => { await invalidateOperation(); toast({ type: 'success', title: 'Cotação concluída', message: 'A renovação já aparece em Cotações feitas na Pipeline.' }) },
-    onError: err => toast({ type: 'error', title: 'Não foi possível concluir a cotação', message: err?.message || 'Tente novamente.' }),
-  })
-  const deleteMutation = useMutation({ mutationFn: excluirRenovacao, onSuccess: invalidateOperation, onError: err => toast({ type: 'error', title: 'Erro ao excluir', message: err?.message || 'Tente novamente.' }) })
-
+  const [month, setMonth] = useState(() => searchParams.get('mes') || currentMonthRef())
   const today = new Date().toISOString().slice(0, 10)
-  const filteredRows = useMemo(() => {
-    const term = normalize(busca)
-    return rows.filter(row => {
-      if (statusFilter !== 'todos' && renewalStatusValue(row) !== statusFilter) return false
-      if (followupFilter && (!row.proximo_followup_em || row.proximo_followup_em > today)) return false
-      if (!term) return true
-      return normalize([customerName(row), vehicleName(row), row.seguradora, row.apolices_auto?.numero_apolice, row.notas_negociacao].filter(Boolean).join(' ')).includes(term)
-    }).sort((a, b) => {
-      const get = row => sort.field === 'nome' ? customerName(row) : (row[sort.field] ?? '')
-      const comparison = String(get(a)).localeCompare(String(get(b)), 'pt-BR', { numeric: true })
-      return sort.direction === 'asc' ? comparison : -comparison
-    })
-  }, [rows, busca, statusFilter, followupFilter, sort, today])
-
-  const metrics = useMemo(() => ({
-    total: rows.length,
-    paraEnviar: rows.filter(row => (row.data_limite_envio || row.vigencia_fim) <= today && !['cotada', 'enviada', 'negociando', 'renovada'].includes(renewalStatusValue(row))).length,
-    cotadas: rows.filter(row => ['cotada', 'enviada', 'negociando', 'renovada'].includes(renewalStatusValue(row))).length,
-    followups: rows.filter(row => row.proximo_followup_em && row.proximo_followup_em <= today).length,
-    renovadas: rows.filter(row => renewalStatusValue(row) === 'renovada').length,
-  }), [rows, today])
-
-  const saveCell = (row, column, value) => {
-    if (column.field === 'status') {
-      if (value === 'cotada') quotedMutation.mutate(row.id)
-      else saveMutation.mutate({ id: row.id, campos: renewalStatusFields(value) })
-      return
-    }
-    saveMutation.mutate({ id: row.id, campos: { [column.field]: value === '' ? null : value } })
+  const setSelectedMonth = value => {
+    const nextMonth = value || currentMonthRef()
+    setMonth(nextMonth)
+    const next = new URLSearchParams(searchParams)
+    next.set('mes', nextMonth)
+    setSearchParams(next, { replace: true })
   }
-  const bulkSave = changes => {
-    const grouped = new Map()
-    changes.forEach(({ row, column, value }) => {
-      if (column.field === 'status') return
-      grouped.set(row.id, { ...(grouped.get(row.id) || {}), [column.field]: value === '' ? null : value })
-    })
-    if (grouped.size) bulkMutation.mutate(Array.from(grouped, ([id, campos]) => ({ id, campos })))
-  }
-  const quickContact = (row, followup = false) => saveMutation.mutate({ id: row.id, campos: followup ? { followups_realizados: Number(row.followups_realizados || 0) + 1, ultimo_contato_em: today } : { contatos_realizados: Number(row.contatos_realizados || 0) + 1, ultimo_contato_em: today } })
 
-  const columns = useMemo(() => [
-    { field: 'vigencia_fim', label: 'Data', type: 'date', editable: true, sortable: true, width: 118 },
-    { field: 'seguradora', label: 'Cia', editable: true, sortable: true, width: 132 },
-    { field: 'nome', label: 'Segurado', sortable: true, width: 210, render: row => <button className="ops-sheet-primary-link" onClick={() => row.apolice_id && navigate(`/auto/apolices/${row.apolice_id}`)}>{customerName(row) || 'Sem nome'}</button> },
-    { field: 'identificacao_veiculo', label: 'Veículo', editable: true, width: 190, getValue: vehicleName },
-    { field: 'status', label: 'Status', type: 'select', editable: true, width: 145, options: STATUS_OPTIONS, getValue: renewalStatusValue },
-    { field: 'data_limite_envio', label: 'Limite', type: 'date', editable: true, sortable: true, width: 118 },
-    { field: 'contatos_realizados', label: 'Contatos', type: 'number', min: 0, editable: true, width: 86, parse: value => Math.max(0, Number(value) || 0) },
-    { field: 'followups_realizados', label: 'Follow-ups', type: 'number', min: 0, editable: true, width: 92, parse: value => Math.max(0, Number(value) || 0) },
-    { field: 'ultimo_contato_em', label: 'Último contato', type: 'date', editable: true, width: 126 },
-    { field: 'proximo_followup_em', label: 'Próximo follow-up', type: 'date', editable: true, sortable: true, width: 138 },
-    { field: 'descontos_realizados', label: 'Descontos', type: 'number', min: 0, editable: true, width: 90, parse: value => Math.max(0, Number(value) || 0) },
-    { field: 'desconto_percentual', label: 'Desconto %', type: 'number', step: '0.01', min: 0, max: 100, editable: true, width: 100, parse: value => value === '' ? null : Number(value) },
-    { field: 'pct_comissao_atual', label: 'Comissão %', type: 'number', step: '0.01', editable: true, width: 96, parse: value => value === '' ? null : Number(value) },
-    { field: 'pct_comissao_anterior', label: 'Com. passada %', type: 'number', step: '0.01', editable: true, width: 112, parse: value => value === '' ? null : Number(value) },
-    { field: 'notas_negociacao', label: 'Notas da negociação', type: 'textarea', editable: true, width: 280, placeholder: 'Objeções, retorno e próximos passos' },
-    { key: 'actions', label: 'Ações', width: 250, render: row => <div className="ops-sheet-actions"><button title="Registrar contato agora" onClick={() => quickContact(row)}><MessageSquarePlus />Contato</button><button title="Registrar follow-up agora" onClick={() => quickContact(row, true)}><Plus />Follow-up</button>{renewalStatusValue(row) === 'cotada' ? <span className="ops-sheet-done"><Check />Cotada</span> : <button className="is-primary" onClick={() => quotedMutation.mutate(row.id)}><Check />Cotada</button>}{row.cotacao_id && <button title="Abrir cotação" onClick={() => navigate(`/auto/cotacoes/${row.cotacao_id}`)}><ExternalLink /></button>}<button className="is-danger" title="Excluir" onClick={() => window.confirm('Excluir esta renovação definitivamente?') && deleteMutation.mutate(row.id)}><Trash2 /></button></div> },
-  ], [navigate, quotedMutation, deleteMutation, saveMutation, today])
+  const { data: rows = [], isLoading, isError, error } = useQuery({ queryKey: ['auto-renovacoes', 'mes_atual', month], queryFn: () => getRenovacoesAuto({ periodo: 'mes_atual', mes: month }) })
+  const summary = useMemo(() => {
+    const counts = Object.fromEntries(Object.keys(STATUS_META).map(key => [key, 0]))
+    rows.forEach(row => { const key = renewalStatusValue(row); counts[key] = (counts[key] || 0) + 1 })
+    const paraEnviar = rows.filter(row => (row.data_limite_envio || row.vigencia_fim) <= today && ['pendente', 'em_andamento'].includes(renewalStatusValue(row))).length
+    const followups = rows.filter(row => row.proximo_followup_em && row.proximo_followup_em <= today).length
+    const cotadas = rows.filter(row => ['cotada', 'enviada', 'negociando', 'renovada'].includes(renewalStatusValue(row))).length
+    return { counts, paraEnviar, followups, cotadas, renovadas: counts.renovada || 0 }
+  }, [rows, today])
+  const total = rows.length
+  const progress = total ? Math.round((summary.cotadas / total) * 100) : 0
+  const urgent = useMemo(() => rows.filter(row => !['renovada', 'nao_renovada', 'outra_corretora'].includes(renewalStatusValue(row))).sort((a, b) => String(a.data_limite_envio || a.vigencia_fim).localeCompare(String(b.data_limite_envio || b.vigencia_fim))).slice(0, 8), [rows])
 
-  const handleSort = field => setSort(current => current.field === field ? { field, direction: current.direction === 'asc' ? 'desc' : 'asc' } : { field, direction: 'asc' })
-  const progress = metrics.total ? Math.round((metrics.cotadas / metrics.total) * 100) : 0
+  return <div className="auto-page space-y-5 animate-fade-in">
+    <PageHeader eyebrow="Operação Auto · Renovações" title="Renovações" description={`Acompanhe os números e prioridades de ${monthLabel(month)}. A edição completa fica na planilha operacional.`} actions={<div className="flex flex-wrap gap-2"><input className="input" type="month" value={month} onChange={event => setSelectedMonth(event.target.value)} /><button className="btn-secondary" onClick={() => navigate(`/auto/renovacoes/puxar?mes=${month}`)}>Organizar mês</button><button className="btn-primary" onClick={() => navigate(`/auto/renovacoes/planilha?mes=${month}`)}><Table2 className="h-4 w-4" />ABRIR RENOVAÇÕES</button></div>} stats={<><MetricCard label="Renovações" value={total} hint={monthLabel(month)} icon={<RefreshCw className="h-5 w-5" />} /><MetricCard label="Para enviar" value={summary.paraEnviar} hint="hoje ou atrasadas" tone="warning" icon={<CalendarClock className="h-5 w-5" />} /><MetricCard label="Follow-ups" value={summary.followups} hint="previstos até hoje" tone="accent" icon={<Clock3 className="h-5 w-5" />} /><MetricCard label="Renovadas" value={summary.renovadas} hint="negócios concluídos" tone="success" icon={<CheckCircle2 className="h-5 w-5" />} /></>} />
 
-  return <div className="auto-page auto-operation-page animate-fade-in">
-    <PageHeader eyebrow="Operação Auto · Renovações" title="Mesa de renovação" description={`Uma única visão de trabalho para ${monthLabel(mesRef)}. Edite células, cole dados do Excel e registre toda a negociação sem abrir fichas.`} actions={<div className="flex flex-wrap gap-2"><input className="input" type="month" value={mesRef} onChange={event => setMesRef(event.target.value || currentMonthRef())} /><button className="btn-secondary" onClick={() => navigate(`/auto/renovacoes/puxar?mes=${mesRef}`)}><Plus className="h-4 w-4" />Adicionar renovações</button><button className="btn-primary" onClick={() => navigate('/auto/gestao')}>Abrir Pipeline</button></div>} />
-    <section className="auto-operation-summary">
-      <div className="auto-operation-progress"><span><BarChart3 />Progresso da carteira</span><strong>{progress}% cotada</strong><div><i style={{ width: `${progress}%` }} /></div></div>
-      {[['Renovações', metrics.total], ['Para enviar', metrics.paraEnviar], ['Cotadas', metrics.cotadas], ['Follow-ups hoje', metrics.followups], ['Renovadas', metrics.renovadas]].map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}
-    </section>
-    <section className="ops-sheet-workspace" aria-label="Planilha operacional de renovações">
-      <header className="ops-sheet-toolbar"><div className="ops-sheet-title"><span><RefreshCw /></span><div><strong>Renovações de {monthLabel(mesRef)}</strong><small>{filteredRows.length} de {rows.length} linhas · salvamento automático</small></div></div><label className="ops-sheet-search"><Search /><input value={busca} onChange={event => setBusca(event.target.value)} placeholder="Cliente, veículo, placa, seguradora ou nota" /></label><select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="todos">Todos os status</option>{STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select><button className={followupFilter ? 'is-active' : ''} onClick={() => setFollowupFilter(value => !value)}><Filter />Follow-ups vencidos</button><button onClick={() => exportCsv(filteredRows)}><Download />Exportar Excel/CSV</button></header>
-      <div className="ops-sheet-help"><span>Clique e edite</span><span>Enter/↑/↓ navegam</span><span>Cole várias células do Excel</span><span>Ordene pelo cabeçalho</span></div>
-      {isLoading ? <div className="ops-sheet-loading">Carregando renovações…</div> : isError ? <EmptyState icon={<XCircle />} title="Erro ao carregar renovações" description={error?.message || 'Tente recarregar a página.'} /> : <OperationalSpreadsheet rows={filteredRows} columns={columns} onCommit={saveCell} onBulkCommit={bulkSave} sort={sort} onSort={handleSort} emptyMessage="Nenhuma renovação corresponde aos filtros." />}
-    </section>
+    {isLoading ? <div className="ops-sheet-loading">Carregando dados do mês…</div> : isError ? <EmptyState icon={<XCircle />} title="Erro ao carregar renovações" description={error?.message || 'Tente novamente.'} /> : <>
+      <DataCard className="overflow-hidden" bodyClassName="p-0"><div className="renewal-month-overview"><div><span><BarChart3 />Andamento de {monthLabel(month)}</span><strong>{progress}% da carteira já cotada</strong><p>{summary.cotadas} de {total} renovações passaram da etapa inicial.</p><div className="renewal-month-progress"><i style={{ width: `${progress}%` }} /></div></div><div className="renewal-status-distribution">{Object.entries(STATUS_META).map(([key, meta]) => { const count = summary.counts[key] || 0; const width = total ? Math.max(3, (count / total) * 100) : 0; return <div key={key}><span><i style={{ background: meta.color }} />{meta.label}</span><strong>{count}</strong><small><i style={{ width: `${width}%`, background: meta.color }} /></small></div> })}</div></div></DataCard>
+
+      <DataCard title="Próximas prioridades" subtitle="Leitura rápida do mês. Para editar nomes, contatos, datas, notas ou status, abra a planilha."><div className="renewal-priority-list">{urgent.length === 0 ? <EmptyState icon={<CheckCircle2 />} title="Nenhuma prioridade pendente" description="As renovações deste mês estão concluídas ou não precisam de ação agora." /> : urgent.map(row => { const status = renewalStatusValue(row); return <button key={row.id} onClick={() => navigate(`/auto/renovacoes/planilha?mes=${month}`)}><span className="renewal-priority-date"><small>Limite</small><strong>{formatDate(row.data_limite_envio || row.vigencia_fim)}</strong></span><span className="renewal-priority-person"><strong>{customerName(row)}</strong><small>{row.identificacao_veiculo || row.apolices_auto?.modelo_veiculo || row.seguradora || 'Sem veículo informado'}</small></span><span className="renewal-priority-status" style={{ '--status-color': STATUS_META[status]?.color }}>{STATUS_META[status]?.label || status}</span><ArrowRight /></button> })}</div></DataCard>
+    </>}
   </div>
 }

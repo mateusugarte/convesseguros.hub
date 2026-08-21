@@ -1,5 +1,19 @@
 # CURRENT TASK
 
+## Navegacao e preparacao de renovacoes em planilha (2026-08-21, Codex — CONCLUIDA)
+
+Objetivo: manter `/auto/renovacoes` como resumo do mes e exigir uma acao explicita para abrir a grade; permitir editar o segurado como nome personalizado ou cliente existente; transformar `Puxar renovacoes` em uma planilha real com deteccao assistida de clientes.
+
+Entrega: `/auto/renovacoes` agora mostra indicadores, grafico de distribuicao e proximas prioridades do mes selecionado. O botao `ABRIR RENOVACOES` abre `/auto/renovacoes/planilha`, onde clicar no nome do segurado abre uma escolha entre nome personalizado e pesquisa por nome/CPF em `clientes_auto`. O vinculo altera apenas a renovacao e pode ser trocado ou removido depois.
+
+`/auto/renovacoes/puxar` foi refeito como grade de entrada: celulas editaveis, navegacao por teclado, colagem de blocos do Excel, linhas adicionais, importacao `.xlsx` para revisao e salvamento em lote. O sistema carrega uma base leve de clientes e sugere correspondencias unicas por nome; cada sugestao exige `Vincular` ou `Nao`. Linhas com sugestao pendente bloqueiam o salvamento, evitando vinculo silencioso ou acidental.
+
+Arquivos principais: `src/pages/auto/AutoRenovacoes.jsx`, `src/pages/auto/AutoRenovacoesPlanilha.jsx`, `src/pages/auto/AutoRenovacoesPuxar.jsx`, `src/components/auto/RenewalInsuredEditor.jsx`, `src/components/auto/OperationalSpreadsheet.jsx`, `src/lib/auto.js`, `src/lib/autoOperational.js`, `src/App.jsx` e `src/styles/auto-ui.css`.
+
+Validacao: suite completa, parser JSX/ESM, parser CSS e `git diff --check`. Nenhuma migration nova nesta rodada; continua obrigatoria a migration 64 descrita abaixo para os campos operacionais da planilha principal.
+
+---
+
 ## Mesa operacional AUTO — renovacoes e emissoes em planilha (2026-08-21, Codex — CONCLUIDA; migration 64 pendente)
 
 Objetivo: substituir a organizacao fragmentada das renovacoes por uma mesa unica, realmente operavel como planilha, e separar a consulta/edicao de emissoes da pagina de entrada de Apolices.

@@ -1,548 +1,172 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
-import { ArrowLeft, CalendarClock, ClipboardPaste, ExternalLink, RefreshCw, Upload, XCircle } from 'lucide-react'
+import { ArrowLeft, Check, ClipboardPaste, Link2, Plus, RefreshCw, Search, Trash2, Upload, UserCheck, XCircle } from 'lucide-react'
 import {
-  atualizarStatusRenovacao,
-  buscarClientesAuto,
-  criarRenovacaoManual,
   criarRenovacoesEmLote,
-  excluirRenovacao,
   getAutoRenovacaoMesStatus,
+  getClientesAutoParaVinculo,
   getRenovacoesAuto,
   marcarMesRenovacaoConcluido,
-  puxarRenovacoesDePlanilha,
   puxarRenovacoesDoSistema,
 } from '../../lib/auto'
-import SeguradoraSelect from '../../components/SeguradoraSelect'
 import { parseAutoComissaoPlanilha } from '../../lib/autoComissaoImport'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../contexts/ToastContext'
-import { PageHeader, DataCard, EmptyState } from '../../components/ui'
-import SeguradoraBadge from '../../components/SeguradoraBadge'
-import ModalEditarRenovacao from './ModalEditarRenovacao'
-import { isValidIsoDate, subtrairDiasUteis } from './autoShared'
-import { parseRenovacoesPaste } from '../../lib/autoOperational'
+import { DataCard, EmptyState, PageHeader } from '../../components/ui'
+import OperationalSpreadsheet from '../../components/auto/OperationalSpreadsheet'
+import RenewalInsuredEditor from '../../components/auto/RenewalInsuredEditor'
+import { subtrairDiasUteis } from './autoShared'
+import { suggestRenewalClientByName } from '../../lib/autoOperational'
 
-const PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS = 7
+const STATUS_OPTIONS = [
+  { value: 'pendente', label: 'Pendente' }, { value: 'em_andamento', label: 'Cotando' },
+  { value: 'enviada', label: 'Enviada' }, { value: 'negociando', label: 'Negociando' },
+  { value: 'renovada', label: 'Renovada' }, { value: 'outra_corretora', label: 'Outra corretora' },
+  { value: 'nao_renovada', label: 'Cancelada' },
+]
 
 function currentMonthRef() {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
-
-function shiftMonth(monthRef, offset) {
-  const [year, month] = String(monthRef || '').split('-').map(Number)
-  const date = new Date(year || new Date().getFullYear(), (month || 1) - 1 + offset, 1)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-}
-
-function formatarMes(monthRef) {
-  const [year, month] = String(monthRef || '').split('-').map(Number)
-  if (!year || !month) return 'mês atual'
+function monthLabel(value) {
+  const [year, month] = String(value).split('-').map(Number)
   return new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 }
-
-function formatarData(str) {
-  if (!str) return '-'
-  return new Date(`${str}T12:00:00`).toLocaleDateString('pt-BR')
+function monthLastDay(value) {
+  const [year, month] = String(value).split('-').map(Number)
+  const last = new Date(year, month, 0).getDate()
+  return `${year}-${String(month).padStart(2, '0')}-${String(last).padStart(2, '0')}`
+}
+function shiftYear(value, offset) {
+  const [year, month] = String(value).split('-').map(Number)
+  return `${year + offset}-${String(month).padStart(2, '0')}`
+}
+function normalize(value) { return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, ' ').trim().toLowerCase() }
+function newDraft(index, month, values = {}) {
+  const due = values.vigencia_fim || monthLastDay(month)
+  return {
+    _id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
+    vigencia_fim: due,
+    seguradora: '', nome_cliente: '', identificacao_veiculo: '', status: 'pendente',
+    data_limite_envio: values.data_limite_envio || subtrairDiasUteis(due, 7),
+    pct_comissao_atual: '', pct_comissao_anterior: '', cliente_id: '', cliente_nome: '',
+    link_decision: 'pending', origem: 'manual', ...values,
+  }
+}
+function blankRows(month, count = 12) { return Array.from({ length: count }, (_, index) => newDraft(index, month)) }
+function findSuggestion(row, clients) { return row.cliente_id || row.link_decision === 'custom' ? null : suggestRenewalClientByName(row.nome_cliente, clients) }
+function sheetNameForMonth(names, monthRef) {
+  const [year, month] = monthRef.split('-').map(Number)
+  const monthName = normalize(new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'long' }))
+  return names.find(name => normalize(name).includes(monthName) && normalize(name).includes(String(year))) || names[names.length - 1]
 }
 
-// Remove marcas diacriticas (acentos) apos normalizar em NFD, comparando o
-// code point direto em vez de um literal de regex Unicode no arquivo fonte
-// (evita risco de mojibake ao salvar/reabrir com encoding diferente).
-function normalizarNomeAba(valor) {
-  const semAcento = Array.from(String(valor ?? '').normalize('NFD'))
-    .filter(ch => {
-      const code = ch.codePointAt(0)
-      return code < 0x300 || code > 0x36f
-    })
-    .join('')
-  return semAcento
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-}
-
-// As abas da planilha real sao nomeadas pelo mes ("JULHO 2026"). Procuramos a
-// aba do mes esperado (mes-alvo um ano antes), ignorando caixa e acentos.
-function encontrarAbaDoMes(sheetNames = [], monthRef) {
-  const [ano, mes] = String(monthRef || '').split('-').map(Number)
-  if (!ano || !mes) return null
-  const nomeMes = normalizarNomeAba(new Date(ano, mes - 1, 1).toLocaleDateString('pt-BR', { month: 'long' }))
-  if (!nomeMes) return null
-  const alvo = `${nomeMes} ${ano}`
-  return sheetNames.find(nome => normalizarNomeAba(nome) === alvo)
-    || sheetNames.find(nome => {
-      const normalizado = normalizarNomeAba(nome)
-      return normalizado.includes(nomeMes) && normalizado.includes(String(ano))
-    })
-    || null
-}
-
-// Area dedicada a organizar as renovacoes de um mes: puxar do sistema, puxar
-// por planilha ou criar uma a uma manualmente — com a lista do que ja foi
-// organizado para o mes sempre visivel logo abaixo, atualizada a cada acao
-// (nao precisa voltar para /auto/renovacoes so para confirmar que colou).
 export default function AutoRenovacoesPuxar() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const toast = useToast()
+  const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
-  const [mesParaPuxar, setMesParaPuxar] = useState(() => searchParams.get('mes') || currentMonthRef())
-  const [resumoPuxar, setResumoPuxar] = useState(null)
-  const [textoColado, setTextoColado] = useState('')
-  const xlsInputRef = useRef(null)
-  const qc = useQueryClient()
+  const [month, setMonth] = useState(() => searchParams.get('mes') || currentMonthRef())
+  const [draftRows, setDraftRows] = useState(() => blankRows(searchParams.get('mes') || currentMonthRef()))
+  const [editingRow, setEditingRow] = useState(null)
+  const uploadRef = useRef(null)
 
-  const { data: renovacoesDoMes = [], isLoading: loadingRenovacoesDoMes, isError: isErrorRenovacoesDoMes, error: errorRenovacoesDoMes } = useQuery({
-    queryKey: ['auto-renovacoes', 'mes_atual', mesParaPuxar],
-    queryFn: () => getRenovacoesAuto({ periodo: 'mes_atual', mes: mesParaPuxar }),
+  const { data: clients = [] } = useQuery({ queryKey: ['auto-clientes-vinculo-renovacoes'], queryFn: getClientesAutoParaVinculo, staleTime: 60_000 })
+  const { data: existing = [], isLoading, isError, error } = useQuery({ queryKey: ['auto-renovacoes', 'mes_atual', month], queryFn: () => getRenovacoesAuto({ periodo: 'mes_atual', mes: month }) })
+  const { data: monthStatus } = useQuery({ queryKey: ['auto-renovacao-mes-status-unico', month], queryFn: async () => (await getAutoRenovacaoMesStatus([month]))[month] || null })
+
+  const invalidate = async () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['auto-renovacoes'] }),
+    queryClient.invalidateQueries({ queryKey: ['auto-renovacoes-todas'] }),
+    queryClient.invalidateQueries({ queryKey: ['auto-renovacoes-pendentes'] }),
+  ])
+  const systemMutation = useMutation({
+    mutationFn: () => puxarRenovacoesDoSistema(month),
+    onSuccess: async result => { await invalidate(); toast({ type: 'success', title: 'Renovações puxadas', message: `${result.criadas} nova(s) de ${result.encontradas} encontrada(s).` }) },
+    onError: err => toast({ type: 'error', title: 'Erro ao puxar do sistema', message: err?.message || 'Tente novamente.' }),
+  })
+  const validRows = useMemo(() => draftRows.filter(row => row.nome_cliente.trim() && row.vigencia_fim), [draftRows])
+  const pendingLinks = useMemo(() => validRows.filter(row => findSuggestion(row, clients) && !row.cliente_id && row.link_decision !== 'custom'), [validRows, clients])
+  const saveMutation = useMutation({
+    mutationFn: () => criarRenovacoesEmLote(month, validRows),
+    onSuccess: async result => { setDraftRows(blankRows(month)); await invalidate(); toast({ type: 'success', title: 'Mês atualizado', message: `${result.criadas} renovação(ões) adicionada(s); ${result.ignoradas} repetida(s) ignorada(s).` }) },
+    onError: err => toast({ type: 'error', title: 'Erro ao salvar planilha', message: err?.message || 'Revise as linhas.' }),
+  })
+  const completeMutation = useMutation({
+    mutationFn: () => marcarMesRenovacaoConcluido(month, user?.id),
+    onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['auto-renovacao-mes-status'] }), queryClient.invalidateQueries({ queryKey: ['auto-renovacao-mes-status-unico', month] })]); toast({ type: 'success', title: 'Mês marcado como concluído' }) },
   })
 
-  const { data: statusMesPuxar } = useQuery({
-    queryKey: ['auto-renovacao-mes-status-unico', mesParaPuxar],
-    queryFn: async () => (await getAutoRenovacaoMesStatus([mesParaPuxar]))[mesParaPuxar] || null,
-  })
-
-  async function refetchListaDoMes() {
-    await qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
-    await qc.invalidateQueries({ queryKey: ['auto-renovacoes-todas'] })
-    // Excluir uma renovacao ja cotada arrasta a cotacao/emissao geradas por
-    // ela: as telas de cotacoes e o Kanban precisam recarregar tambem.
-    await qc.invalidateQueries({ queryKey: ['auto-renovacoes-pendentes'] })
-    await qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
-    await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
-    await qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
+  const updateRow = (id, fields) => setDraftRows(rows => rows.map(row => row._id === id ? { ...row, ...fields } : row))
+  const commitCell = (row, column, value) => {
+    const fields = { [column.field]: value }
+    if (column.field === 'nome_cliente') Object.assign(fields, { cliente_id: '', cliente_nome: '', link_decision: 'pending' })
+    if (column.field === 'vigencia_fim' && value) fields.data_limite_envio = subtrairDiasUteis(value, 7)
+    updateRow(row._id, fields)
   }
-
-  const { mutateAsync: puxarDoSistema, isPending: puxandoSistema } = useMutation({
-    mutationFn: () => puxarRenovacoesDoSistema(mesParaPuxar),
-    onSuccess: async resultado => {
-      setResumoPuxar({ tipo: 'sistema', ...resultado })
-      await refetchListaDoMes()
-      toast({ type: 'success', title: 'Renovações puxadas', message: `${resultado.criadas} nova(s) de ${resultado.encontradas} encontrada(s).` })
-    },
-    onError: err => toast({ type: 'error', title: 'Erro ao puxar renovações', message: err?.message || 'Tente novamente.' }),
-  })
-
-  const { mutateAsync: puxarPlanilha, isPending: puxandoPlanilha } = useMutation({
-    mutationFn: rows => puxarRenovacoesDePlanilha(mesParaPuxar, rows),
-    onSuccess: async resultado => {
-      setResumoPuxar({ tipo: 'xls', ...resultado })
-      await refetchListaDoMes()
-      toast({ type: 'success', title: 'Planilha importada', message: `${resultado.importadas} nova(s), ${resultado.duplicadas} duplicada(s) ignorada(s).` })
-    },
-    onError: err => toast({ type: 'error', title: 'Erro ao importar planilha', message: err?.message || 'Arquivo inválido.' }),
-  })
-
-  const linhasColadas = parseRenovacoesPaste(textoColado, mesParaPuxar)
-  const { mutateAsync: criarLoteAsync, isPending: criandoLote } = useMutation({
-    mutationFn: () => criarRenovacoesEmLote(mesParaPuxar, linhasColadas),
-    onSuccess: async resultado => {
-      setTextoColado('')
-      await refetchListaDoMes()
-      toast({ type: 'success', title: 'Renovações coladas', message: `${resultado.criadas} criada(s) e ${resultado.ignoradas} repetida(s) ignorada(s).` })
-    },
-    onError: err => toast({ type: 'error', title: 'Erro ao colar renovações', message: err?.message || 'Confira as linhas coladas.' }),
-  })
-
-  const { mutateAsync: marcarConcluido, isPending: marcandoConcluido } = useMutation({
-    mutationFn: () => marcarMesRenovacaoConcluido(mesParaPuxar, user?.id),
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['auto-renovacao-mes-status-unico', mesParaPuxar] })
-      await qc.invalidateQueries({ queryKey: ['auto-renovacao-mes-status'] })
-      toast({ type: 'success', title: 'Mês marcado como concluído' })
-    },
-    onError: err => toast({ type: 'error', title: 'Erro ao marcar mês concluído', message: err?.message || 'Tente novamente.' }),
-  })
-
-  const [editandoRenovacao, setEditandoRenovacao] = useState(null)
-
-  const { mutateAsync: salvarEdicaoAsync, isPending: salvandoEdicao } = useMutation({
-    mutationFn: ({ id, campos }) => atualizarStatusRenovacao(id, campos),
-    onSuccess: async () => {
-      await refetchListaDoMes()
-      toast({ type: 'success', title: 'Renovação atualizada' })
-      setEditandoRenovacao(null)
-    },
-    onError: err => toast({ type: 'error', title: 'Erro ao atualizar renovação', message: err?.message || 'Tente novamente.' }),
-  })
-
-  const { mutateAsync: excluirRenovacaoAsync, isPending: excluindo } = useMutation({
-    mutationFn: id => excluirRenovacao(id),
-    onSuccess: async () => {
-      await refetchListaDoMes()
-      toast({ type: 'success', title: 'Renovação excluída' })
-    },
-    onError: err => toast({ type: 'error', title: 'Erro ao excluir renovação', message: err?.message || 'Tente novamente.' }),
-  })
-
-  function handleExcluir(id) {
-    if (!window.confirm('Excluir esta renovação definitivamente? Essa ação não pode ser desfeita.')) return
-    excluirRenovacaoAsync(id)
+  const bulkCommit = changes => {
+    const grouped = new Map()
+    changes.forEach(({ row, column, value }) => {
+      const fields = { ...(grouped.get(row._id) || {}), [column.field]: value }
+      if (column.field === 'nome_cliente') Object.assign(fields, { cliente_id: '', cliente_nome: '', link_decision: 'pending' })
+      if (column.field === 'vigencia_fim' && value) fields.data_limite_envio = subtrairDiasUteis(value, 7)
+      grouped.set(row._id, fields)
+    })
+    setDraftRows(rows => rows.map(row => grouped.has(row._id) ? { ...row, ...grouped.get(row._id) } : row))
   }
+  const linkClient = (row, client) => updateRow(row._id, { cliente_id: client.id, cliente_nome: client.nome_completo, nome_cliente: client.nome_completo, link_decision: 'existing' })
+  const keepCustom = row => updateRow(row._id, { cliente_id: '', cliente_nome: '', link_decision: 'custom' })
 
-  const [manualBusca, setManualBusca] = useState('')
-  const [manualClientes, setManualClientes] = useState([])
-  const [buscandoManual, setBuscandoManual] = useState(false)
-  const [manualClienteId, setManualClienteId] = useState('')
-  const [manualNomeLivre, setManualNomeLivre] = useState('')
-  const [manualSeguradora, setManualSeguradora] = useState('')
-  const [manualVigenciaFim, setManualVigenciaFim] = useState('')
-  const [manualDataLimite, setManualDataLimite] = useState('')
-  const [manualPossuiDoisVeiculos, setManualPossuiDoisVeiculos] = useState(false)
-  const [manualIdentificacaoVeiculo, setManualIdentificacaoVeiculo] = useState('')
+  const columns = useMemo(() => [
+    { field: 'vigencia_fim', label: 'Data', type: 'date', editable: true, width: 118 },
+    { field: 'seguradora', label: 'Cia', editable: true, width: 135, placeholder: 'Seguradora' },
+    { field: 'nome_cliente', label: 'Segurado', editable: true, width: 220, placeholder: 'Nome do segurado' },
+    { field: 'identificacao_veiculo', label: 'Veículo', editable: true, width: 190, placeholder: 'Veículo / placa' },
+    { field: 'status', label: 'Status', type: 'select', editable: true, width: 132, options: STATUS_OPTIONS },
+    { field: 'data_limite_envio', label: 'Limite', type: 'date', editable: true, width: 118 },
+    { field: 'pct_comissao_atual', label: 'Comissão %', type: 'number', step: '0.01', editable: true, width: 100, parse: value => value === '' ? null : Number(value) },
+    { field: 'pct_comissao_anterior', label: 'Com. passada %', type: 'number', step: '0.01', editable: true, width: 115, parse: value => value === '' ? null : Number(value) },
+    { key: 'link', label: 'Vínculo com cliente', width: 290, render: row => { const suggestion = findSuggestion(row, clients); if (row.cliente_id) return <div className="renewal-link-status is-linked"><UserCheck /><span><strong>Vinculado</strong><small>{row.cliente_nome || row.nome_cliente}</small></span><button onClick={() => setEditingRow(row)}>Trocar</button></div>; if (suggestion && row.link_decision !== 'custom') return <div className="renewal-link-suggestion"><span><strong>Cliente encontrado</strong><small>{suggestion.nome_completo} · {suggestion.cpf || 'sem CPF'}</small></span><button className="is-accept" onClick={() => linkClient(row, suggestion)}><Check />Vincular</button><button onClick={() => keepCustom(row)}>Não</button></div>; return <button className="renewal-link-search" onClick={() => setEditingRow(row)}><Search />{row.link_decision === 'custom' ? 'Nome personalizado · alterar' : 'Pesquisar cliente existente'}</button> } },
+    { key: 'remove', label: '', width: 50, render: row => <button className="ops-sheet-icon-button is-danger" title="Remover linha" onClick={() => setDraftRows(rows => rows.filter(item => item._id !== row._id))}><Trash2 /></button> },
+  ], [clients])
 
-  async function handleBuscarClienteManual() {
-    const termo = manualBusca.trim()
-    if (!termo) return
-    setBuscandoManual(true)
-    try {
-      setManualClientes(await buscarClientesAuto(termo))
-    } catch (err) {
-      toast({ type: 'error', title: 'Erro ao buscar cliente', message: err?.message || 'Tente novamente.' })
-    } finally {
-      setBuscandoManual(false)
-    }
-  }
-
-  // Sugere a data limite 7 dias uteis antes do vencimento na primeira vez que
-  // o usuario preenche o vencimento; depois disso o campo fica livre para
-  // edicao manual sem ser sobrescrito de novo. So calcula quando o valor for
-  // uma data completa e valida — o input nativo de data dispara onChange a
-  // cada digito, e um valor parcial/invalido nao deve gerar sugestao.
-  function handleVigenciaFimManual(value) {
-    setManualVigenciaFim(value)
-    if (!manualDataLimite && isValidIsoDate(value)) {
-      setManualDataLimite(subtrairDiasUteis(value, PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS))
-    }
-  }
-
-  function limparFormularioManual() {
-    setManualBusca('')
-    setManualClientes([])
-    setManualClienteId('')
-    setManualNomeLivre('')
-    setManualSeguradora('')
-    setManualVigenciaFim('')
-    setManualDataLimite('')
-    setManualPossuiDoisVeiculos(false)
-    setManualIdentificacaoVeiculo('')
-  }
-
-  const { mutateAsync: criarManualAsync, isPending: criandoManual } = useMutation({
-    mutationFn: () => criarRenovacaoManual({
-      cliente_id: manualClienteId || null,
-      nomeManual: manualClienteId ? null : manualNomeLivre,
-      seguradora: manualSeguradora,
-      vigencia_fim: manualVigenciaFim,
-      data_limite_envio: manualDataLimite || null,
-      identificacaoVeiculo: manualPossuiDoisVeiculos ? manualIdentificacaoVeiculo.trim() || null : null,
-    }),
-    onSuccess: async () => {
-      toast({ type: 'success', title: 'Renovação criada', message: 'Já aparece na lista abaixo.' })
-      limparFormularioManual()
-      await refetchListaDoMes()
-    },
-    onError: err => toast({ type: 'error', title: 'Erro ao criar renovação', message: err?.message || 'Tente novamente.' }),
-  })
-
-  async function handleUploadPlanilhaRenovacao(event) {
+  async function handleUpload(event) {
     const file = event.target.files?.[0]
-    if (xlsInputRef.current) xlsInputRef.current.value = ''
+    if (uploadRef.current) uploadRef.current.value = ''
     if (!file) return
     try {
-      const buffer = await file.arrayBuffer()
-      const workbook = XLSX.read(buffer, { type: 'array', cellDates: false })
-      // A UI pede a aba do mes-alvo um ano antes; se ela nao existir na
-      // planilha, caimos na ultima aba para nao travar o upload.
-      const abaAlvo = encontrarAbaDoMes(workbook.SheetNames, shiftMonth(mesParaPuxar, -12))
-        || workbook.SheetNames[workbook.SheetNames.length - 1]
-      const rows = parseAutoComissaoPlanilha(workbook, abaAlvo)
-      await puxarPlanilha(rows)
-    } catch (error) {
-      toast({ type: 'error', title: 'Erro ao ler planilha', message: error?.message || 'Arquivo inválido ou fora do modelo esperado.' })
-    }
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: false })
+      const sourceMonth = shiftYear(month, -1)
+      const sheetName = sheetNameForMonth(workbook.SheetNames, sourceMonth)
+      const rows = parseAutoComissaoPlanilha(workbook, sheetName).map((row, index) => newDraft(index, month, {
+        nome_cliente: row.nome_cliente || '', seguradora: row.seguradora || '', vigencia_fim: row.vigencia_fim || monthLastDay(month),
+        data_limite_envio: row.vigencia_fim ? subtrairDiasUteis(row.vigencia_fim, 7) : '', pct_comissao_anterior: row.pct_comissao ?? '', origem: 'xls',
+      }))
+      setDraftRows(rows.length ? [...rows, ...blankRows(month, 5)] : blankRows(month))
+      toast({ type: 'info', title: 'Planilha carregada para revisão', message: `${rows.length} linha(s). Confirme os vínculos sugeridos antes de salvar.` })
+    } catch (err) { toast({ type: 'error', title: 'Erro ao ler planilha', message: err?.message || 'Arquivo inválido.' }) }
   }
 
-  return (
-    <div className="auto-page space-y-6 animate-fade-in">
-      <PageHeader
-        eyebrow="Modulo auto"
-        title="Puxar renovações"
-        description={`Organize a carteira de renovações de ${formatarMes(mesParaPuxar)}: cole várias linhas, puxe do sistema, importe a planilha ou cadastre manualmente.`}
-        actions={(
-          <div className="flex flex-wrap items-center gap-2">
-            <button onClick={() => navigate('/auto/renovacoes')} className="btn-secondary inline-flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Voltar para lista de renovações
-            </button>
-          </div>
-        )}
-      />
+  const changeMonth = value => {
+    const next = value || currentMonthRef()
+    if (validRows.length && !window.confirm('Trocar o mês descartará as linhas ainda não salvas. Continuar?')) return
+    setMonth(next)
+    setDraftRows(blankRows(next))
+  }
 
-      <DataCard title="Mês a organizar">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 rounded-2xl border border-dark-border bg-dark-surface/75 px-3 py-2 text-sm text-dark-text">
-            <CalendarClock className="h-4 w-4 text-dark-muted" />
-            <input
-              type="month"
-              value={mesParaPuxar}
-              onChange={e => { setMesParaPuxar(e.target.value || currentMonthRef()); setResumoPuxar(null) }}
-              className="bg-transparent outline-none"
-            />
-          </label>
-          {statusMesPuxar?.concluido_em ? (
-            <span className="badge badge-success">Mês já marcado como concluído em {formatarData(statusMesPuxar.concluido_em.slice(0, 10))}</span>
-          ) : (
-            <span className="badge badge-warning">Mês ainda não concluído</span>
-          )}
-        </div>
-      </DataCard>
+  return <div className="auto-page auto-operation-page animate-fade-in">
+    <PageHeader eyebrow="Operação Auto · Preparação" title="Organizar renovações" description={`Monte a planilha de ${monthLabel(month)}, cole várias células e confirme possíveis clientes existentes antes de gravar.`} actions={<div className="flex flex-wrap gap-2"><button className="btn-secondary" onClick={() => navigate(`/auto/renovacoes?mes=${month}`)}><ArrowLeft className="h-4 w-4" />Voltar ao resumo</button><input className="input" type="month" value={month} onChange={event => changeMonth(event.target.value)} /><button className="btn-secondary" onClick={() => navigate(`/auto/renovacoes/planilha?mes=${month}`)}>Abrir renovações salvas</button></div>} />
 
-      <DataCard
-        title="Colar várias renovações"
-        subtitle="Copie uma coluna de nomes ou uma grade do Excel. Aceita DATA, CIA, SEGURADO, VEÍCULO, STATUS, LIMITE, COMISSÃO e COM PASSADA."
-      >
-        <textarea
-          value={textoColado}
-          onChange={event => setTextoColado(event.target.value)}
-          rows={7}
-          className="input min-h-[150px] w-full resize-y font-mono text-xs leading-6"
-          placeholder={'Ana Souza\nBruno Lima\n\nou cole células completas copiadas do Excel'}
-        />
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-dark-muted">
-            {linhasColadas.length ? `${linhasColadas.length} linha(s) pronta(s) para ${formatarMes(mesParaPuxar)}.` : 'Cole nomes ou células separadas por tabulação.'}
-          </p>
-          <button
-            type="button"
-            onClick={() => criarLoteAsync()}
-            disabled={criandoLote || !linhasColadas.length}
-            className="btn-primary inline-flex items-center gap-2 disabled:opacity-60"
-          >
-            <ClipboardPaste className="h-4 w-4" />
-            {criandoLote ? 'Criando linhas…' : 'Adicionar linhas ao mês'}
-          </button>
-        </div>
-      </DataCard>
+    <section className="renewal-pull-command"><div><span><RefreshCw /></span><div><strong>Fontes do mês</strong><small>Puxe da carteira ou carregue uma planilha para revisar na grade abaixo.</small></div></div><button onClick={() => systemMutation.mutate()} disabled={systemMutation.isPending}>{systemMutation.isPending ? 'Puxando…' : 'Puxar do sistema'}</button><input ref={uploadRef} type="file" accept=".xlsx,.xls" onChange={handleUpload} hidden /><button onClick={() => uploadRef.current?.click()}><Upload />Carregar .xlsx</button><button className={monthStatus?.concluido_em ? 'is-complete' : ''} onClick={() => completeMutation.mutate()} disabled={completeMutation.isPending}><Check />{monthStatus?.concluido_em ? 'Mês concluído' : 'Marcar mês concluído'}</button></section>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <DataCard title="Puxar do sistema" subtitle="Busca apólices emitidas no mesmo mês, um ano antes.">
-          <button
-            onClick={() => puxarDoSistema()}
-            disabled={puxandoSistema}
-            className="btn-primary inline-flex items-center gap-2 disabled:opacity-60"
-          >
-            {puxandoSistema ? 'Puxando...' : 'Puxar renovações do sistema'}
-          </button>
-        </DataCard>
-        <DataCard title="Puxar por planilha" subtitle={`Suba a aba do mês-alvo um ano antes (ex.: para ${formatarMes(mesParaPuxar)}, a aba de ${formatarMes(shiftMonth(mesParaPuxar, -12))}).`}>
-          <input
-            ref={xlsInputRef}
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={handleUploadPlanilhaRenovacao}
-            className="hidden"
-            id="upload-planilha-renovacao"
-          />
-          <label
-            htmlFor="upload-planilha-renovacao"
-            className={`btn-secondary inline-flex cursor-pointer items-center gap-2 ${puxandoPlanilha ? 'pointer-events-none opacity-60' : ''}`}
-          >
-            <Upload className="h-4 w-4" />
-            {puxandoPlanilha ? 'Importando...' : 'Selecionar planilha (.xlsx)'}
-          </label>
-        </DataCard>
-      </div>
+    <section className="ops-sheet-workspace renewal-builder-workspace"><header className="ops-sheet-toolbar"><div className="ops-sheet-title"><span><ClipboardPaste /></span><div><strong>Planilha de entrada · {monthLabel(month)}</strong><small>{validRows.length} linha(s) preenchida(s) · cole diretamente em qualquer célula</small></div></div><button onClick={() => setDraftRows(rows => [...rows, ...blankRows(month, 10)])}><Plus />Adicionar 10 linhas</button><button className="is-active" disabled={!validRows.length || pendingLinks.length > 0 || saveMutation.isPending} onClick={() => saveMutation.mutate()}>{saveMutation.isPending ? 'Salvando…' : pendingLinks.length ? `Revise ${pendingLinks.length} vínculo(s)` : `Salvar ${validRows.length || ''} renovação(ões)`}</button></header><div className="ops-sheet-help"><span>Clique em uma célula e edite</span><span>Cole linhas/colunas do Excel</span><span>Enter/↑/↓ navegam</span><span>Vínculos nunca são automáticos sem confirmação</span></div><OperationalSpreadsheet rows={draftRows} columns={columns} getRowId={row => row._id} onCommit={commitCell} onBulkCommit={bulkCommit} className="is-renewal-builder" emptyMessage="Adicione uma linha para começar." /></section>
 
-      <DataCard title="Criar manualmente" subtitle="Cadastre uma renovação direto, sem depender do puxar automático nem de planilha.">
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Segurado</label>
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                value={manualBusca}
-                onChange={e => { setManualBusca(e.target.value); setManualClienteId('') }}
-                placeholder="Buscar cliente já cadastrado (nome ou CPF)"
-                className="input flex-1"
-              />
-              <button type="button" onClick={handleBuscarClienteManual} disabled={buscandoManual} className="btn-secondary disabled:opacity-60">
-                {buscandoManual ? 'Buscando...' : 'Buscar'}
-              </button>
-            </div>
+    <DataCard title={`Já salvas em ${monthLabel(month)}`} subtitle={`${existing.length} renovação(ões) no sistema. A edição completa fica em Abrir renovações.`} actions={<button className="btn-primary" onClick={() => navigate(`/auto/renovacoes/planilha?mes=${month}`)}>ABRIR RENOVAÇÕES</button>}>{isLoading ? <div className="py-8 text-center text-sm text-dark-muted">Carregando…</div> : isError ? <EmptyState icon={<XCircle />} title="Erro ao carregar renovações" description={error?.message || 'Tente novamente.'} /> : <div className="renewal-saved-preview">{existing.slice(0, 8).map(row => <div key={row.id}><strong>{row.clientes_auto?.nome_completo || row.nome_segurado_anterior || row.apolices_auto?.nome_cliente || 'Sem nome'}</strong><span>{row.seguradora || 'Sem seguradora'} · {row.vigencia_fim ? new Date(`${row.vigencia_fim}T12:00:00`).toLocaleDateString('pt-BR') : 'sem data'}</span></div>)}{existing.length > 8 && <button onClick={() => navigate(`/auto/renovacoes/planilha?mes=${month}`)}>Ver mais {existing.length - 8}</button>}</div>}</DataCard>
 
-            {manualClientes.length > 0 && (
-              <select
-                value={manualClienteId}
-                onChange={e => setManualClienteId(e.target.value)}
-                className="input mt-2 w-full"
-              >
-                <option value="">Cliente não cadastrado — digitar nome abaixo</option>
-                {manualClientes.map(cliente => (
-                  <option key={cliente.id} value={cliente.id}>
-                    {cliente.nome_completo} · {cliente.cpf || 'sem CPF'}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {!manualClienteId && (
-              <input
-                value={manualNomeLivre}
-                onChange={e => setManualNomeLivre(e.target.value)}
-                placeholder="Nome do segurado (cliente ainda não cadastrado)"
-                className="input mt-2 w-full"
-              />
-            )}
-          </div>
-
-          <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora</label>
-            <SeguradoraSelect value={manualSeguradora} onChange={setManualSeguradora} produto="auto" placeholder="Selecionar seguradora" />
-          </div>
-          <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Data de vencimento</label>
-            <input type="date" value={manualVigenciaFim} onChange={e => handleVigenciaFimManual(e.target.value)} className="input w-full" />
-          </div>
-          <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Data limite da cotação</label>
-            <input type="date" value={manualDataLimite} onChange={e => setManualDataLimite(e.target.value)} className="input w-full" />
-          </div>
-          <div className="md:col-span-2">
-            <label className="flex items-center gap-2 text-sm text-dark-text">
-              <input
-                type="checkbox"
-                checked={manualPossuiDoisVeiculos}
-                onChange={e => {
-                  setManualPossuiDoisVeiculos(e.target.checked)
-                  if (!e.target.checked) setManualIdentificacaoVeiculo('')
-                }}
-              />
-              Possui 2 veículos?
-            </label>
-            {manualPossuiDoisVeiculos && (
-              <input
-                value={manualIdentificacaoVeiculo}
-                onChange={e => setManualIdentificacaoVeiculo(e.target.value)}
-                placeholder="Qual veículo é essa renovação? (ex.: Gol branco placa ABC1234)"
-                className="input mt-2 w-full"
-              />
-            )}
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => criarManualAsync()}
-          disabled={criandoManual || !manualVigenciaFim || (!manualClienteId && !manualNomeLivre.trim())}
-          className="btn-primary mt-3 inline-flex items-center gap-2 disabled:opacity-60"
-        >
-          {criandoManual ? 'Criando...' : 'Criar renovação'}
-        </button>
-
-        {resumoPuxar && (
-          <div className="mt-4 rounded-2xl border border-brand-accent/20 bg-brand-accent/5 px-4 py-3 text-sm text-dark-text">
-            {resumoPuxar.tipo === 'sistema'
-              ? `${resumoPuxar.encontradas} apólice(s) encontrada(s), ${resumoPuxar.criadas} nova(s) renovação(ões) criada(s).`
-              : `${resumoPuxar.lidas} linha(s) lida(s), ${resumoPuxar.importadas} nova(s), ${resumoPuxar.duplicadas} duplicada(s) ignorada(s)${resumoPuxar.foraDoMes ? `, ${resumoPuxar.foraDoMes} fora do mes selecionado` : ''}.`}
-          </div>
-        )}
-
-        <div className="mt-4 flex justify-end border-t border-dark-border/60 pt-4">
-          <button
-            onClick={() => marcarConcluido()}
-            disabled={marcandoConcluido}
-            className="btn-secondary inline-flex items-center gap-2 disabled:opacity-60"
-          >
-            {marcandoConcluido ? 'Salvando...' : 'Marcar mês concluído'}
-          </button>
-        </div>
-      </DataCard>
-
-      <DataCard
-        title={`Renovações de ${formatarMes(mesParaPuxar)}`}
-        subtitle="Cada renovação puxada ou criada aqui aparece nesta lista assim que for salva."
-      >
-        {loadingRenovacoesDoMes ? (
-          <div className="py-8 text-center text-sm text-dark-muted">Carregando...</div>
-        ) : isErrorRenovacoesDoMes ? (
-          <EmptyState icon={<XCircle className="w-6 h-6" />} title="Erro ao carregar renovações" description={errorRenovacoesDoMes?.message || 'Tente recarregar a página.'} />
-        ) : renovacoesDoMes.length === 0 ? (
-          <EmptyState icon={<RefreshCw className="w-6 h-6" />} title="Nenhuma renovação neste mês ainda" description="Puxe do sistema, importe a planilha ou crie manualmente acima." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-dark-border/60 text-left">
-                  <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Cliente</th>
-                  <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora</th>
-                  <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Vencimento</th>
-                  <th className="pb-3 pr-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Origem</th>
-                  <th className="pb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Ação</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-dark-border/40">
-                {renovacoesDoMes.map(item => {
-                  const apolice = item.apolices_auto || {}
-                  const apoliceId = apolice.id || item.apolice_id
-                  const nome = item.clientes_auto?.nome_completo || apolice.nome_cliente || item.nome_segurado_anterior || '-'
-                  const seguradoraNome = item.seguradora || apolice.seguradora || null
-                  const origemLabel = item.origem === 'manual' ? 'Manual' : item.origem === 'xls' ? 'Planilha' : 'Sistema'
-                  return (
-                    <tr key={item.id} className="transition-colors hover:bg-brand-accent/5">
-                      <td className="py-3 pr-4 font-medium text-dark-text">
-                        {nome}
-                        {item.identificacao_veiculo && (
-                          <p className="mt-0.5 text-xs font-normal text-dark-muted">Veículo: {item.identificacao_veiculo}</p>
-                        )}
-                      </td>
-                      <td className="py-3 pr-4 text-dark-muted">
-                        {seguradoraNome ? <SeguradoraBadge nome={seguradoraNome} size="sm" /> : '-'}
-                      </td>
-                      <td className="py-3 pr-4 text-dark-muted">{formatarData(item.vigencia_fim)}</td>
-                      <td className="py-3 pr-4"><span className="badge badge-muted">{origemLabel}</span></td>
-                      <td className="py-3">
-                        <div className="flex flex-wrap gap-2">
-                          {item.cotacao_id ? (
-                            <button onClick={() => navigate(`/auto/cotacoes/${item.cotacao_id}`)} className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-3 py-1.5 text-xs font-semibold text-status-info inline-flex items-center gap-1">
-                              Ver cotação
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </button>
-                          ) : apoliceId ? (
-                            <button onClick={() => navigate(`/auto/apolices/${apoliceId}`)} className="rounded-2xl border border-brand-secondary/20 bg-brand-secondary/8 px-3 py-1.5 text-xs font-semibold text-status-info">
-                              Abrir apólice
-                            </button>
-                          ) : (
-                            <span className="text-xs text-dark-muted">Ainda não cotada</span>
-                          )}
-                          <button onClick={() => setEditandoRenovacao(item)} className="rounded-2xl border border-dark-border px-3 py-1.5 text-xs font-semibold text-dark-muted hover:border-brand-accent/40 hover:text-dark-text">
-                            Editar
-                          </button>
-                          <button onClick={() => handleExcluir(item.id)} disabled={excluindo} className="rounded-2xl border border-status-danger/30 bg-status-danger/5 px-3 py-1.5 text-xs font-semibold text-status-danger hover:bg-status-danger/10 disabled:opacity-60">
-                            Excluir
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </DataCard>
-
-      {editandoRenovacao && (
-        <ModalEditarRenovacao
-          renovacao={editandoRenovacao}
-          onClose={() => setEditandoRenovacao(null)}
-          isSaving={salvandoEdicao}
-          onSave={campos => salvarEdicaoAsync({ id: editandoRenovacao.id, campos })}
-        />
-      )}
-    </div>
-  )
+    {editingRow && <RenewalInsuredEditor initialName={editingRow.nome_cliente} initialClientId={editingRow.cliente_id} onClose={() => setEditingRow(null)} onSave={fields => { updateRow(editingRow._id, { cliente_id: fields.cliente_id || '', cliente_nome: fields.cliente?.nome_completo || '', nome_cliente: fields.nome_segurado_anterior, link_decision: fields.cliente_id ? 'existing' : 'custom' }); setEditingRow(null) }} />}
+  </div>
 }

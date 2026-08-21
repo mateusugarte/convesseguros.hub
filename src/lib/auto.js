@@ -1267,9 +1267,9 @@ export async function criarRenovacoesEmLote(mesRef, rows = []) {
     if (vistas.has(key)) continue
     vistas.add(key)
     payload.push({
-      cliente_id: null,
+      cliente_id: row.cliente_id || null,
       apolice_id: null,
-      origem: 'manual',
+      origem: row.origem || 'manual',
       nome_segurado_anterior: nome,
       seguradora: row.seguradora || null,
       vigencia_fim: row.vigencia_fim,
@@ -1537,6 +1537,25 @@ export async function buscarClientesAuto(termo) {
   return data ?? []
 }
 
+// Base leve usada apenas para sugerir vinculos durante a montagem da planilha
+// de renovacoes. A decisao continua sendo humana: a UI nunca vincula sozinha.
+export async function getClientesAutoParaVinculo() {
+  const result = []
+  const pageSize = 1000
+  for (let page = 0; page < 10; page += 1) {
+    const from = page * pageSize
+    const { data, error } = await supabase
+      .from('clientes_auto')
+      .select('id, nome_completo, cpf, celular')
+      .order('nome_completo', { ascending: true })
+      .range(from, from + pageSize - 1)
+    if (error) throw error
+    result.push(...(data ?? []))
+    if ((data ?? []).length < pageSize) break
+  }
+  return result
+}
+
 // Cria uma renovacao pendente direto pelo formulario "Criar manualmente" do
 // painel de Renovacoes, sem depender do puxar automatico (sistema/planilha).
 // cliente_id vem preenchido quando o usuario seleccionou um cliente ja
@@ -1663,9 +1682,9 @@ export async function iniciarCotacaoRenovacao(renovacaoId) {
     status: 'pendente',
     // Renovacao vinda de XLS nao tem apolice nem cliente vinculado: o unico
     // nome disponivel e o texto puro em nome_segurado_anterior.
-    nome_cliente: apolice.nome_cliente || cliente.nome_completo || renovacao.nome_segurado_anterior || null,
-    cpf_cliente: apolice.cpf_cliente || cliente.cpf || null,
-    celular_cliente: apolice.celular_cliente || cliente.celular || cliente.telefone || null,
+    nome_cliente: cliente.nome_completo || renovacao.nome_segurado_anterior || apolice.nome_cliente || null,
+    cpf_cliente: cliente.cpf || apolice.cpf_cliente || null,
+    celular_cliente: cliente.celular || cliente.telefone || apolice.celular_cliente || null,
     email_cliente: cliente.email || null,
     condutor_nome: apolice.condutor_nome || null,
     condutor_cpf: apolice.condutor_cpf || null,

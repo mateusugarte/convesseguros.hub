@@ -6,6 +6,7 @@ import {
   renewalStatusFields,
   renewalStatusValue,
   scoreCotacaoSuggestion,
+  suggestRenewalClientByName,
 } from './autoOperational.js'
 
 test('separa renovacoes futuras das que ja precisam ser enviadas', () => {
@@ -51,4 +52,12 @@ test('prioriza sugestao exata e proxima da data informada', () => {
   const exact = scoreCotacaoSuggestion({ nome_cliente: 'Ana Souza', created_at: '2026-08-19', cotacao_id: '1' }, 'Ana Souza', '2026-08-20')
   const partial = scoreCotacaoSuggestion({ nome_cliente: 'Ana Souza Lima', created_at: '2026-01-01', cotacao_id: '2' }, 'Ana Souza', '2026-08-20')
   assert.ok(exact > partial)
+})
+
+test('sugere cliente existente pelo nome apenas quando a correspondencia e unica', () => {
+  const clientes = [{ id: '1', nome_completo: 'José da Silva' }, { id: '2', nome_completo: 'Maria Souza' }]
+  assert.equal(suggestRenewalClientByName('Jose da Silva', clientes)?.id, '1')
+  assert.equal(suggestRenewalClientByName('Maria', clientes)?.id, '2')
+  assert.equal(suggestRenewalClientByName('Jo', clientes), null)
+  assert.equal(suggestRenewalClientByName('Ana', [{ id: '3', nome_completo: 'Ana Lima' }, { id: '4', nome_completo: 'Ana Souza' }]), null)
 })

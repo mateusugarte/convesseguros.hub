@@ -151,3 +151,16 @@ export function scoreCotacaoSuggestion(item, term, referenceDate) {
   if (item?.cotacao_id || item?.cotacoes_auto?.id) score += 10
   return score
 }
+
+// Sugestao conservadora para vincular uma linha colada a clientes_auto.
+// Retorna somente quando ha uma correspondencia unica; a UI ainda pede a
+// confirmacao do usuario antes de persistir cliente_id.
+export function suggestRenewalClientByName(nameValue, clients = []) {
+  const name = normalizeText(nameValue).replace(/[^a-z0-9]+/g, ' ').trim()
+  if (name.length < 3) return null
+  const normalized = clients.map(client => ({ client, name: normalizeText(client?.nome_completo).replace(/[^a-z0-9]+/g, ' ').trim() }))
+  const exact = normalized.filter(entry => entry.name === name)
+  if (exact.length === 1) return exact[0].client
+  const close = normalized.filter(entry => entry.name.startsWith(name) || name.startsWith(entry.name))
+  return close.length === 1 ? close[0].client : null
+}

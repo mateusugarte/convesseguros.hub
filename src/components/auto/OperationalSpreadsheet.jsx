@@ -127,11 +127,18 @@ export default function OperationalSpreadsheet({
       if (!row) return
       let cursor = startColumn
       cells.forEach(value => {
-        while (cursor < columns.length && !columns[cursor].editable) cursor += 1
-        const column = columns[cursor]
+        let column = null
+        while (cursor < columns.length) {
+          const candidate = columns[cursor]
+          cursor += 1
+          if (candidate.editable) {
+            column = candidate
+            break
+          }
+          if (candidate.consumePaste) return
+        }
         if (!column) return
         changes.push({ row, column, value: parsePastedValue(column, value) })
-        cursor += 1
       })
     })
     if (changes.length) onBulkCommit?.(changes)

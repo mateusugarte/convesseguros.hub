@@ -24,8 +24,8 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   navegacao por teclado, ordenacao, colagem de blocos do Excel, reconhecimento
   de datas brasileiras/seriais do Excel, linha ativa e densidade ajustavel.
 - `AutoPolicyImportSheet` — revisao em grade de XLSX/CSV ou dados colados antes
-  da subida; cria a emissao em `apolice_emitida`, a apolice e, quando ha CPF,
-  cria ou vincula o cliente correspondente.
+  da subida; cria a emissao em `apolice_emitida` e a apolice. A entrada visivel
+  usa Transmissao e Vigencia; `vigencia_fim` e derivada internamente em +1 ano.
 - `autoShared.js` — helpers puros e testados (`diasParaVencer`, `getRenovacaoUrgencia`,
   `getRenewalQuoteStatus`, formatadores de data/mes, mapas de status/tom).
 
@@ -173,9 +173,10 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
 - `autoPdfParser.js` detecta a seguradora e normaliza dados comuns do segurado, condutor, veiculo, vigencia, premios, comissao e pagamento. A configuracao/mapeamento por seguradora e tratada separadamente pela tarefa ativa registrada em `docs/CURRENT_TASK.md`.
 - `AutoRenovacoes` pesquisa simultaneamente cliente, contato, apolice, veiculo, placa e seguradora; periodo e filtro de acompanhamento ficam no `localStorage`.
 - Nas planilhas de renovacoes, `vigencia_fim` e exibida explicitamente como
-  "Data de vencimento" e aceita colagem. Na planilha de emissoes, Veiculo e
-  Placa ficam ao final dos dados operacionais; a entrada em lote comeca em
-  Data de transmissao e sempre passa por revisao antes de persistir.
+  "Data de vencimento" e aceita colagem. Na entrada de apolices, as primeiras
+  colunas seguem a planilha de comissao (Transmissao ate Status), a comissao e
+  calculada, CPF/data de emissao/vencimento nao aparecem e WhatsApp e a ultima
+  coluna. A entrada sempre passa por revisao antes de persistir.
 - `AutoSinistrosV2` salva checklist e dossie no dispositivo e gera um resumo copiavel. Esses dados ainda nao sao enviados ao Supabase.
 
 ## Handoff Checklist

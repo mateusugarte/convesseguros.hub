@@ -1834,11 +1834,11 @@ export async function importarApolicesAutoPlanilha(rows = []) {
     const linha = row.linha || index + 1
     const nomeCliente = normalizeImportText(row.nome_cliente)
     const seguradora = normalizeImportText(row.seguradora)
-    const vigenciaFim = row.vigencia_fim || null
+    const vigenciaFim = row.vigencia_fim || somarUmAno(row.vigencia_inicio) || null
 
     if (!nomeCliente || !vigenciaFim) {
       resultado.ignoradas += 1
-      resultado.erros.push({ linha, motivo: 'Nome do segurado ou data de vencimento ausente.' })
+      resultado.erros.push({ linha, motivo: 'Nome do segurado ou vigência ausente.' })
       continue
     }
 

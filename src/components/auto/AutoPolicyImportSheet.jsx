@@ -9,22 +9,20 @@ import OperationalSpreadsheet from './OperationalSpreadsheet'
 const TYPES = [{ value: 'novo', label: 'Seguro novo' }, { value: 'renovacao', label: 'Renovação' }, { value: 'endosso', label: 'Endosso' }]
 const FIELD_ALIASES = {
   data_transmissao: ['data de transmissao', 'transmissao', 'data'],
-  data_emissao: ['data de emissao', 'emissao'],
   vigencia_inicio: ['inicio da vigencia', 'vigencia inicio', 'vigencia'],
-  vigencia_fim: ['fim da vigencia', 'vigencia fim', 'vencimento', 'data de vencimento'],
   nome_cliente: ['nome do segurado', 'segurado', 'cliente', 'nome'],
-  cpf_cliente: ['cpf do segurado', 'cpf cliente', 'cpf'],
   celular_cliente: ['celular do segurado', 'celular', 'telefone', 'whatsapp'],
   numero_apolice: ['numero da apolice', 'n apolice', 'apolice'],
   seguradora: ['seguradora', 'cia', 'companhia'],
-  parcelamento: ['parcelamento', 'parcelas'],
+  parcelamento: ['parcelamento', 'parcelas', 'qnt de parcelas', 'quantidade de parcelas'],
   forma_pagamento: ['forma de pagamento', 'pagamento'],
   premio_liquido: ['premio liquido', 'premio'],
   pct_comissao: ['comissao percentual', 'percentual de comissao', 'comissao'],
-  valor_repasse: ['valor repasse', 'repasse'],
+  valor_repasse: ['valor repasse', 'repasse', 'repasse comissao'],
   responsavel: ['responsavel', 'corretor'],
   emissor: ['emissor', 'operador'],
   tipo: ['tipo', 'o que e', 'producao'],
+  status: ['status', 'situacao'],
   modelo_veiculo: ['modelo do veiculo', 'veiculo', 'modelo'],
   placa: ['placa do veiculo', 'placa'],
 }
@@ -55,7 +53,7 @@ function plusOneYear(value) {
 function blankRow(index = 0, values = {}) {
   return {
     _id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
-    data_transmissao: '', data_emissao: '', vigencia_inicio: '', vigencia_fim: '', nome_cliente: '', cpf_cliente: '', celular_cliente: '', numero_apolice: '', seguradora: '', parcelamento: '', forma_pagamento: '', premio_liquido: '', pct_comissao: '', valor_repasse: '', responsavel: '', emissor: '', tipo: 'novo', modelo_veiculo: '', placa: '',
+    data_transmissao: '', vigencia_inicio: '', vigencia_fim: '', nome_cliente: '', celular_cliente: '', numero_apolice: '', seguradora: '', parcelamento: '', forma_pagamento: '', premio_liquido: '', pct_comissao: '', valor_repasse: '', responsavel: '', emissor: '', tipo: 'novo', status: '', modelo_veiculo: '', placa: '',
     ...values,
   }
 }
@@ -88,7 +86,7 @@ function parseWorkbook(workbook) {
       const row = { aba: sheetName, linha: headerIndex + index + 2 }
       mapping.forEach((field, column) => {
         if (!field || row[field]) return
-        row[field] = ['data_transmissao', 'data_emissao', 'vigencia_inicio', 'vigencia_fim'].includes(field) ? dateToIso(values[column]) : String(values[column] ?? '').trim()
+        row[field] = ['data_transmissao', 'vigencia_inicio'].includes(field) ? dateToIso(values[column]) : String(values[column] ?? '').trim()
       })
       if (!row.nome_cliente && !row.numero_apolice) return
       if (!row.vigencia_fim && row.vigencia_inicio) row.vigencia_fim = plusOneYear(row.vigencia_inicio)
@@ -101,7 +99,7 @@ function parseWorkbook(workbook) {
 }
 
 function downloadTemplate() {
-  const headers = ['Data de transmissão', 'Data de emissão', 'Início da vigência', 'Data de vencimento', 'Segurado', 'CPF', 'Celular', 'Nº apólice', 'Seguradora', 'Parcelas', 'Forma de pagamento', 'Prêmio líquido', '% comissão', 'Repasse', 'Corretor', 'Emissor', 'Tipo', 'Veículo', 'Placa']
+  const headers = ['TRANSMISSÃO', 'VIGÊNCIA', 'SEGURADO', 'QNT. DE PARCELAS', 'SEGURADORA', 'PRÊMIO LÍQUIDO', '% COMISSÃO', 'VALOR DA COMISSÃO', 'REPASSE COMISSÃO', 'CORRETOR', 'O QUE É', 'EMISSOR', 'STATUS', 'Nº APÓLICE', 'FORMA DE PAGAMENTO', 'VEÍCULO', 'PLACA', 'WHATSAPP']
   const blob = new Blob([`\uFEFF${headers.join(';')}\n`], { type: 'text/csv;charset=utf-8' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
@@ -117,10 +115,10 @@ export default function AutoPolicyImportSheet({ onClose }) {
   const [rows, setRows] = useState(() => blankRows())
   const [summary, setSummary] = useState(null)
 
-  const validRows = useMemo(() => rows.filter(row => row.nome_cliente.trim() && row.vigencia_fim), [rows])
+  const validRows = useMemo(() => rows.filter(row => row.nome_cliente.trim() && row.vigencia_inicio).map(row => ({ ...row, vigencia_fim: row.vigencia_fim || plusOneYear(row.vigencia_inicio) })), [rows])
   const incompleteRows = useMemo(() => rows.filter(row => {
-    const hasUserData = ['data_transmissao', 'data_emissao', 'vigencia_inicio', 'vigencia_fim', 'nome_cliente', 'cpf_cliente', 'celular_cliente', 'numero_apolice', 'seguradora', 'parcelamento', 'forma_pagamento', 'premio_liquido', 'pct_comissao', 'valor_repasse', 'responsavel', 'emissor', 'modelo_veiculo', 'placa'].some(field => String(row[field] || '').trim())
-    return hasUserData && (!row.nome_cliente.trim() || !row.vigencia_fim)
+    const hasUserData = ['data_transmissao', 'vigencia_inicio', 'nome_cliente', 'celular_cliente', 'numero_apolice', 'seguradora', 'parcelamento', 'forma_pagamento', 'premio_liquido', 'pct_comissao', 'valor_repasse', 'responsavel', 'emissor', 'status', 'modelo_veiculo', 'placa'].some(field => String(row[field] || '').trim())
+    return hasUserData && (!row.nome_cliente.trim() || !row.vigencia_inicio)
   }), [rows])
   const importMutation = useMutation({
     mutationFn: () => importarApolicesAutoPlanilha(validRows),
@@ -173,27 +171,25 @@ export default function AutoPolicyImportSheet({ onClose }) {
   }
 
   const columns = useMemo(() => [
-    { field: 'data_transmissao', label: 'Data de transmissão', type: 'date', editable: true, width: 145 },
-    { field: 'data_emissao', label: 'Data de emissão', type: 'date', editable: true, width: 130 },
-    { field: 'vigencia_inicio', label: 'Início da vigência', type: 'date', editable: true, width: 140 },
-    { field: 'vigencia_fim', label: 'Data de vencimento', type: 'date', editable: true, width: 145 },
-    { field: 'nome_cliente', label: 'Segurado', editable: true, sticky: true, width: 225, placeholder: 'Nome completo' },
-    { field: 'cpf_cliente', label: 'CPF', editable: true, width: 125 },
-    { field: 'celular_cliente', label: 'Celular', editable: true, width: 125 },
-    { field: 'numero_apolice', label: 'Nº apólice', editable: true, width: 135 },
-    { field: 'seguradora', label: 'Seguradora', editable: true, width: 135 },
-    { field: 'parcelamento', label: 'Parcelas', editable: true, width: 90 },
-    { field: 'forma_pagamento', label: 'Pagamento', editable: true, width: 130 },
-    { field: 'premio_liquido', label: 'Prêmio líquido', type: 'number', step: '0.01', editable: true, width: 115, parse: value => value === '' ? null : Number(value) },
-    { field: 'pct_comissao', label: '% comissão', type: 'number', step: '0.01', editable: true, width: 95, parse: value => value === '' ? null : Number(value) },
-    { key: 'valor_comissao', label: 'Comissão calculada', width: 130, format: value => value, getValue: row => calcularValorComissaoAuto(row.premio_liquido || 0, row.pct_comissao || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) },
-    { field: 'valor_repasse', label: 'Repasse', type: 'number', step: '0.01', editable: true, width: 105, parse: value => value === '' ? null : Number(value) },
-    { field: 'responsavel', label: 'Corretor', editable: true, width: 120 },
-    { field: 'emissor', label: 'Emissor', editable: true, width: 115 },
-    { field: 'tipo', label: 'Tipo', type: 'select', editable: true, width: 120, options: TYPES },
-    { field: 'modelo_veiculo', label: 'Veículo', editable: true, width: 175 },
-    { field: 'placa', label: 'Placa', editable: true, width: 95 },
+    { field: 'data_transmissao', label: 'TRANSMISSÃO', type: 'date', editable: true, width: 130 },
+    { field: 'vigencia_inicio', label: 'VIGÊNCIA', type: 'date', editable: true, width: 125 },
+    { field: 'nome_cliente', label: 'SEGURADO', editable: true, sticky: true, width: 225, placeholder: 'Nome completo' },
+    { field: 'parcelamento', label: 'QNT. DE PARCELAS', editable: true, width: 125 },
+    { field: 'seguradora', label: 'SEGURADORA', editable: true, width: 135 },
+    { field: 'premio_liquido', label: 'PRÊMIO LÍQUIDO', type: 'number', step: '0.01', editable: true, width: 125, parse: value => value === '' ? null : Number(value) },
+    { field: 'pct_comissao', label: '% COMISSÃO', type: 'number', step: '0.01', editable: true, width: 105, parse: value => value === '' ? null : Number(value) },
+    { key: 'valor_comissao', label: 'VALOR DA COMISSÃO', width: 145, consumePaste: true, format: value => value, getValue: row => calcularValorComissaoAuto(row.premio_liquido || 0, row.pct_comissao || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) },
+    { field: 'valor_repasse', label: 'REPASSE COMISSÃO', type: 'number', step: '0.01', editable: true, width: 135, parse: value => value === '' ? null : Number(value) },
+    { field: 'responsavel', label: 'CORRETOR', editable: true, width: 120 },
+    { field: 'tipo', label: 'O QUE É', type: 'select', editable: true, width: 120, options: TYPES, parse: value => { const type = normalize(value); return type.includes('renov') ? 'renovacao' : type.includes('endos') ? 'endosso' : 'novo' } },
+    { field: 'emissor', label: 'EMISSOR', editable: true, width: 115 },
+    { field: 'status', label: 'STATUS', editable: true, width: 125 },
+    { field: 'numero_apolice', label: 'Nº APÓLICE', editable: true, width: 135 },
+    { field: 'forma_pagamento', label: 'FORMA DE PAGAMENTO', editable: true, width: 145 },
+    { field: 'modelo_veiculo', label: 'VEÍCULO', editable: true, width: 175 },
+    { field: 'placa', label: 'PLACA', editable: true, width: 95 },
     { key: 'remove', label: '', width: 48, render: row => <button className="ops-sheet-icon-button is-danger" title="Remover linha" onClick={() => setRows(current => current.filter(item => item._id !== row._id))}><Trash2 /></button> },
+    { field: 'celular_cliente', label: 'WHATSAPP', editable: true, width: 130 },
   ], [])
 
   return <section className="policy-import-workspace">
@@ -206,7 +202,7 @@ export default function AutoPolicyImportSheet({ onClose }) {
       <span><ClipboardPaste />Clique em Data de transmissão e cole o bloco inteiro</span>
       <button className="is-save" disabled={!validRows.length || importMutation.isPending} onClick={() => importMutation.mutate()}>{importMutation.isPending ? 'Subindo…' : `Subir ${validRows.length || ''} apólice(s)`}</button>
     </div>
-    <div className="policy-import-readiness"><span className="is-ready"><CheckCircle2 />{validRows.length} prontas</span><span className={incompleteRows.length ? 'is-warning' : ''}>{incompleteRows.length} incompletas</span><span>CPF cria/vincula o cliente automaticamente · sem CPF, a apólice continua válida e fica sem vínculo</span></div>
+    <div className="policy-import-readiness"><span className="is-ready"><CheckCircle2 />{validRows.length} prontas</span><span className={incompleteRows.length ? 'is-warning' : ''}>{incompleteRows.length} incompletas</span><span>O vencimento é calculado automaticamente como um ano após a Vigência · WhatsApp fica na última coluna</span></div>
     <OperationalSpreadsheet rows={rows} columns={columns} getRowId={row => row._id} onCommit={commitCell} onBulkCommit={bulkCommit} className="is-policy-import" statusLabel={`${validRows.length} apólice(s) pronta(s) para subir`} />
     {summary && <div className="policy-import-result"><CheckCircle2 /><div><strong>Importação processada</strong><span>{summary.importadas} novas · {summary.atualizadas} atualizadas · {summary.ignoradas} ignoradas</span>{summary.erros.length > 0 && <small>{summary.erros.slice(0, 4).map(error => `Linha ${error.linha}: ${error.motivo}`).join(' · ')}</small>}</div></div>}
   </section>

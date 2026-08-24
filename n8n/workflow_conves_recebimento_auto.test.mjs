@@ -26,3 +26,14 @@ test('workflow nao possui mais a gravacao parcial cliente -> cotacao', async () 
   assert.doesNotMatch(serialized, /Supabase Upsert Cliente Auto/)
   assert.doesNotMatch(serialized, /Supabase Insert Cotacao Auto/)
 })
+
+test('normalizador preserva e canoniza os campos complementares do Forms', async () => {
+  const workflow = JSON.parse(await readFile(workflowUrl, 'utf8'))
+  const code = workflow.nodes.find(node => node.name === 'Normalizar Seguro Auto').parameters.jsCode
+
+  assert.match(code, /tipoResidencia/)
+  assert.match(code, /passagemLeilao/)
+  assert.match(code, /_conves/)
+  assert.match(code, /tipo_residencia/)
+  assert.match(code, /passagem_leilao/)
+})

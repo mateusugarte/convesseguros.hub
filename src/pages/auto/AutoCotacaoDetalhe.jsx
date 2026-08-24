@@ -19,6 +19,7 @@ import { calcularValorComissaoAuto, deletarCotacaoAuto, getCotacaoAutoPorId, atu
 import { COTACAO_STATUS, formatDateTimeBR, formatMoney, toneClasses } from './autoShared'
 import { formatDecimalBRInput, parseDecimalBR } from '../../lib/numberInput'
 import { parseOrcamentoAuto } from '../../lib/autoPdfParser.js'
+import { valorFormularioAuto } from '../../lib/autoFormPayload'
 
 function QuoteStatusBadge({ status }) {
   const meta = COTACAO_STATUS[status] || COTACAO_STATUS.aberta
@@ -508,6 +509,8 @@ export default function AutoCotacaoDetalhe() {
               <DetailField label={<span className="inline-flex items-center gap-1.5"><Car className="h-3.5 w-3.5" /> Modelo do veiculo</span>} value={cotacao.modelo_veiculo} onSave={value => salvarCampo({ field: 'modelo_veiculo', value })} />
               <DetailField label={<span className="inline-flex items-center gap-1.5"><Car className="h-3.5 w-3.5" /> Placa</span>} value={cotacao.placa} onSave={value => salvarCampo({ field: 'placa', value })} />
               <DetailField label={<span className="inline-flex items-center gap-1.5"><Car className="h-3.5 w-3.5" /> Uso do veiculo</span>} value={cotacao.uso_veiculo} onSave={value => salvarCampo({ field: 'uso_veiculo', value })} />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><Car className="h-3.5 w-3.5" /> Tipo de residência</span>} value={valorFormularioAuto(cotacao, 'tipo_residencia')} readOnly />
+              <DetailField label={<span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Passagem por leilão</span>} value={valorFormularioAuto(cotacao, 'passagem_leilao')} readOnly />
               <DetailField label={<span className="inline-flex items-center gap-1.5"><Car className="h-3.5 w-3.5" /> Veiculo financiado</span>} value={cotacao.veiculo_financiado} onSave={value => salvarCampo({ field: 'veiculo_financiado', value })} />
               <DetailField label={<span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> CEP pernoite</span>} value={cotacao.cep_pernoite} onSave={value => salvarCampo({ field: 'cep_pernoite', value })} />
               <DetailField label={<span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Garagem residencia</span>} value={cotacao.garagem_residencia} onSave={value => salvarCampo({ field: 'garagem_residencia', value })} />

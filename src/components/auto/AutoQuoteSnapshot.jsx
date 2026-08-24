@@ -8,6 +8,7 @@ import {
   UserRound,
 } from 'lucide-react'
 import { formatDateBR, formatMoney } from '../../pages/auto/autoShared'
+import { valorFormularioAuto } from '../../lib/autoFormPayload'
 
 function first(...values) {
   return values.find(value => value !== null && value !== undefined && value !== '') ?? ''
@@ -50,6 +51,8 @@ export default function AutoQuoteSnapshot({ quote = {}, emission = {}, policy = 
   const client = quote.clientes_auto || emission.clientes_auto || policy.clientes_auto || {}
   const commission = first(emission.valor_comissao, policy.valor_comissao)
   const premium = first(emission.premio_liquido, policy.premio_liquido, current.premio_liquido)
+  const tipoResidencia = valorFormularioAuto(quote, 'tipo_residencia')
+  const passagemLeilao = valorFormularioAuto(quote, 'passagem_leilao')
 
   return (
     <div className="auto-quote-snapshot">
@@ -66,6 +69,8 @@ export default function AutoQuoteSnapshot({ quote = {}, emission = {}, policy = 
         <SnapshotValue label="Marca / modelo" value={first(emission.modelo_veiculo, policy.modelo_veiculo, quote.modelo_veiculo)} highlight />
         <SnapshotValue label="Placa" value={first(emission.placa, policy.placa, quote.placa)} mono />
         <SnapshotValue label="Uso do veículo" value={quote.uso_veiculo} />
+        <SnapshotValue label="Tipo de residência" value={tipoResidencia} />
+        <SnapshotValue label="Passagem por leilão" value={yesNo(passagemLeilao)} />
         <SnapshotValue label="Financiado / alienado" value={yesNo(quote.veiculo_financiado)} />
         <SnapshotValue label="Kit gás" value={yesNo(quote.possui_kit_gas)} />
         <SnapshotValue label="Blindagem" value={yesNo(quote.possui_blindagem)} />

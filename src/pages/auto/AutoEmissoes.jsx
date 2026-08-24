@@ -11,7 +11,7 @@ import {
   salvarPropostaPlanilhaAuto, salvarResultadoCotacao,
 } from '../../lib/auto'
 import { PageHeader, MetricCard, DataCard, DatePicker, FilterBar, EmptyState } from '../../components/ui'
-import { AutoPdfAutomation } from '../../components/auto'
+import { AutoPdfAutomation, AutoQuoteSnapshot } from '../../components/auto'
 import SeguradoraBadge from '../../components/SeguradoraBadge'
 import SeguradoraSelect from '../../components/SeguradoraSelect'
 import { useToast } from '../../contexts/ToastContext'
@@ -618,30 +618,6 @@ function CardRenovacaoPendente({ renovacao, onIniciarCotacao, onCancelar, inicia
   )
 }
 
-function InfoRow({ label, value }) {
-  if (value === null || value === undefined || value === '') return null
-  return (
-    <div>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">{label}</p>
-      <p className="mt-1 text-sm text-dark-text">{value}</p>
-    </div>
-  )
-}
-
-function BoolRow({ label, value }) {
-  if (value === null || value === undefined) return null
-  return (
-    <div className="flex items-center justify-between py-1">
-      <p className="text-sm text-dark-muted">{label}</p>
-      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-        value ? 'bg-status-success/10 text-status-success' : 'bg-dark-border/60 text-dark-muted'
-      }`}>
-        {value ? 'Sim' : 'Nao'}
-      </span>
-    </div>
-  )
-}
-
 // ─── Modal Detalhe ─────────────────────────────────────────────────────
 
 function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, onEmitirApolice, onEditar, onExcluir, isDeleting, page = false, tagsAtivas = [], onSalvarTags }) {
@@ -649,7 +625,8 @@ function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, 
   const apolice = getApoliceVinculada(emissao)
   const temCotacao = Boolean(emissao.cotacoes_auto?.id || emissao.cotacao_id)
   const nome = nomeEmissao(emissao)
-  const tipo = (c.tipo || emissao.tipo) === 'renovacao' ? 'Renovacao' : 'Novo'
+  const tipoRaw = c.tipo || emissao.tipo || 'novo'
+  const tipo = tipoRaw === 'renovacao' ? 'Renovação' : tipoRaw === 'endosso' ? 'Endosso' : 'Seguro novo'
   const seguradoras = Array.isArray(emissao.seguradoras_cotadas) ? emissao.seguradoras_cotadas : []
   const seguradoraAtual = emissao.seguradora || apolice?.seguradora || c.seguradora_preferencial?.nome || c.seguradora_mais_barata?.nome || ''
   const etapaAtual = emissao.resultado === 'aprovada' ? 'Cotacao aprovada' : emissao.resultado === 'recusada' ? 'Cotacao recusada' : emissao.resultado === 'cotada' ? 'Cotacao feita' : 'Aguardando resultado'
@@ -665,7 +642,7 @@ function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, 
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-dark-surface px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">{colunaAtual}</span>
-                  <span className={tipo === 'Renovacao' ? 'rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success' : 'rounded-full bg-brand-secondary/10 px-2.5 py-1 text-[10px] font-semibold text-status-info'}>{tipo}</span>
+                  <span className={tipoRaw === 'renovacao' ? 'rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success' : 'rounded-full bg-brand-secondary/10 px-2.5 py-1 text-[10px] font-semibold text-status-info'}>{tipo}</span>
                   {emissao.resultado && <span className={emissao.resultado === 'aprovada' ? 'rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success' : emissao.resultado === 'recusada' ? 'rounded-full bg-red-100 px-2.5 py-1 text-[10px] font-semibold text-red-600' : 'rounded-full bg-brand-secondary/10 px-2.5 py-1 text-[10px] font-semibold text-status-info'}>{emissao.resultado === 'aprovada' ? 'Aprovada' : emissao.resultado === 'recusada' ? 'Recusada' : 'Cotada'}</span>}
                 </div>
                 <h2 className="mt-4 truncate text-2xl font-semibold text-dark-text">{nome}</h2>
@@ -676,44 +653,11 @@ function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, 
               </button>
             </div>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div className="rounded-[28px] border border-white/70 bg-white/80 p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Cliente</p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <InfoRow label="Nome" value={emissao.nome_cliente || c.nome_cliente} />
-                  <InfoRow label="CPF" value={emissao.cpf_cliente || c.cpf_cliente} />
-                  <InfoRow label="Celular" value={emissao.celular_cliente || c.celular_cliente} />
-                  <InfoRow label="Email" value={c.email_cliente} />
-                </div>
+            <div className="mt-6 auto-pipeline-quote-complete">
+              <div className="auto-pipeline-quote-complete-head">
+                <div><span>Cotação completa</span><strong>Todas as informações disponíveis</strong><small>O primeiro clique na Pipeline já abre o conteúdo integral do negócio.</small></div>
               </div>
-              <div className="rounded-[28px] border border-white/70 bg-white/80 p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Veiculo</p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <InfoRow label="Modelo" value={emissao.modelo_veiculo || c.modelo_veiculo} />
-                  <InfoRow label="Placa" value={emissao.placa || c.placa} />
-                  <InfoRow label="Uso" value={c.uso_veiculo} />
-                  <InfoRow label="CEP pernoite" value={c.cep_pernoite} />
-                </div>
-              </div>
-              <div className="rounded-[28px] border border-white/70 bg-white/80 p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Condutor</p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <InfoRow label="Nome" value={emissao.condutor_nome || c.condutor_nome} />
-                  <InfoRow label="CPF" value={emissao.condutor_cpf || c.condutor_cpf} />
-                  <InfoRow label="Estado civil" value={c.estado_civil_condutor} />
-                </div>
-              </div>
-              <div className="rounded-[28px] border border-white/70 bg-white/80 p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Apolice e financeiro</p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <InfoRow label="Seguradora" value={emissao.seguradora || apolice?.seguradora || c.seguradora_preferencial?.nome || c.seguradora_mais_barata?.nome} />
-                  <InfoRow label="Numero da apolice" value={emissao.numero_apolice || apolice?.numero_apolice} />
-                  <InfoRow label="Vigencia inicio" value={emissao.vigencia_inicio || apolice?.vigencia_inicio || c.vigencia_inicio} />
-                  <InfoRow label="Vigencia fim" value={emissao.vigencia_fim || apolice?.vigencia_fim || c.vigencia_fim} />
-                  <InfoRow label="Premio liquido" value={emissao.premio_liquido || apolice?.premio_liquido ? formatMoney(emissao.premio_liquido || apolice?.premio_liquido) : null} />
-                  <InfoRow label="Comissao %" value={emissao.pct_comissao ?? apolice?.pct_comissao ?? null} />
-                </div>
-              </div>
+              <AutoQuoteSnapshot quote={c} emission={emissao} policy={apolice || {}} />
             </div>
 
             {onSalvarTags && (
@@ -786,7 +730,7 @@ function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, 
                 <button type="button" onClick={() => onExcluir?.(emissao)} disabled={isDeleting} className="flex w-full items-center justify-between rounded-2xl border border-red-200 bg-red-50/80 px-4 py-3 text-left text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50">
                   {isDeleting ? 'Excluindo...' : 'Excluir emissao'} <Trash2 className="h-4 w-4" />
                 </button>
-                {temCotacao && onAbrirCotacao && <button type="button" onClick={onAbrirCotacao} className="btn-secondary w-full text-xs">Ver cotacao completa</button>}
+                {temCotacao && onAbrirCotacao && <button type="button" onClick={onAbrirCotacao} className="btn-secondary w-full text-xs">Editar no workspace da cotação</button>}
                 <button type="button" onClick={() => onRegistrarResultado?.(emissao)} className="w-full rounded-2xl border border-brand-secondary/20 bg-dark-surface/75 px-4 py-3 text-left transition-colors hover:border-brand-secondary/40 hover:bg-white">
                   <p className="text-sm font-semibold text-dark-text">Registrar resultado da cotacao</p>
                   <p className="mt-1 text-xs text-dark-muted">Aprovacao, recusa e seguradoras cotadas.</p>

@@ -5,10 +5,11 @@ import { Activity, BadgeDollarSign, CalendarDays, Car, Check, ClipboardCheck, Co
 import { DataCard, EmptyState } from '../../components/ui'
 import {
   AutoBadge,
-  AutoInfoGrid,
   AutoLoading,
   AutoPageHeader,
   AutoPdfAutomation,
+  AutoQuoteComparison,
+  AutoQuoteSnapshot,
   AutoStatStrip,
   AutoTabs,
   AutoTypeBadge,
@@ -180,7 +181,7 @@ const DETAIL_TABS = [
   { value: 'resumo', label: 'Resumo', icon: Gauge },
   { value: 'segurado', label: 'Segurado', icon: UserRound },
   { value: 'risco', label: 'Veículo e risco', icon: Car },
-  { value: 'seguradoras', label: 'Seguradoras', icon: ShieldCheck },
+  { value: 'seguradoras', label: 'Orçamentos', icon: ShieldCheck },
   { value: 'operacao', label: 'Operação', icon: Activity },
 ]
 
@@ -480,19 +481,8 @@ export default function AutoCotacaoDetalhe() {
 
       <div className={tab === 'resumo' ? 'grid gap-4 xl:grid-cols-[1.65fr_0.95fr]' : 'grid gap-4 xl:grid-cols-2'}>
         <div className={tab === 'resumo' ? 'space-y-4' : 'contents'}>
-          <DataCard className={tab === 'resumo' ? '' : 'hidden'} title="Visão consolidada" subtitle="Os dados decisivos da oportunidade em um único bloco">
-            <AutoInfoGrid
-              items={[
-                { label: 'Segurado', value: cotacao.nome_cliente },
-                { label: 'CPF', value: cotacao.cpf_cliente },
-                { label: 'Condutor', value: cotacao.condutor_nome || cotacao.nome_cliente },
-                { label: 'Vigência', value: cotacao.vigencia_inicio && cotacao.vigencia_fim ? `${cotacao.vigencia_inicio} — ${cotacao.vigencia_fim}` : 'Pendente' },
-                { label: 'Veículo', value: cotacao.modelo_veiculo },
-                { label: 'Placa', value: cotacao.placa },
-                { label: 'Preferencial', value: cotacao.seguradora_preferencial?.nome },
-                { label: 'Mais econômica', value: cotacao.seguradora_mais_barata?.nome },
-              ]}
-            />
+          <DataCard className={tab === 'resumo' ? '' : 'hidden'} title="Cotação completa" subtitle="Todas as informações recebidas e preenchidas, sem abrir outra tela">
+            <AutoQuoteSnapshot quote={cotacao} />
           </DataCard>
           <DataCard className={tab === 'segurado' ? '' : 'hidden'} title="Identificação" subtitle="Nome do segurado e dados do lead">
             <div className="grid gap-3 md:grid-cols-2">
@@ -530,20 +520,17 @@ export default function AutoCotacaoDetalhe() {
             </div>
           </DataCard>
 
-          <DataCard className={tab === 'seguradoras' ? 'xl:col-span-2' : 'hidden'} title="Seguradoras" subtitle="Compare propostas e ajuste os valores da cotação">
-            <div className="mb-4">
+          <DataCard className={tab === 'seguradoras' ? 'xl:col-span-2 auto-comparison-card' : 'hidden'} title="Orçamentos da cotação" subtitle="Dois PDFs, revisão obrigatória e dados prontos para o comparativo final">
+            <AutoQuoteComparison key={cotacao.id} quote={cotacao} />
+            <div className="auto-comparison-manual-divider"><span>Leitura atual preservada</span></div>
+            <div className="auto-comparison-legacy-tool">
               <AutoPdfAutomation
-                mode="orcamento"
-                file={pdfFile}
-                status={pdfStatus}
-                result={pdfResult}
-                error={pdfError}
-                applied={pdfApplied}
-                onFile={handlePdf}
-                onApply={() => { void aplicarPdf().catch(() => {}) }}
+                mode="orcamento" file={pdfFile} status={pdfStatus} result={pdfResult} error={pdfError} applied={pdfApplied}
+                onFile={handlePdf} onApply={() => { void aplicarPdf().catch(() => {}) }}
                 onClear={() => { setPdfFile(null); setPdfStatus('idle'); setPdfResult(null); setPdfError(''); setPdfApplied(false) }}
               />
             </div>
+            <div className="auto-comparison-manual-divider"><span>Ajustes financeiros rápidos</span></div>
             <div className="grid gap-4 lg:grid-cols-2">
               {[
                 { key: 'seguradora_preferencial', title: 'Seguradora preferencial' },

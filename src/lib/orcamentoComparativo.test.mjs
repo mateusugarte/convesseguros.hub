@@ -1,0 +1,289 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+
+import {
+  CATEGORIAS_COBERTURA,
+  classificarCobertura,
+  criarCotacaoOrcamento,
+  detectarTipoOperacao,
+  corDaSeguradora,
+  tomClaro,
+  contrasteSobre,
+  textoColisao,
+  montarCard,
+  montarComparativo,
+  validarCotacao,
+  formatarReferencia,
+  formatarMoeda,
+  normalizarTexto,
+} from './orcamentoComparativo.js'
+
+// ─── Dicionario de coberturas ──────────────────────────────────────────
+
+test('classifica sinonimos de assistencia 24h de seguradoras diferentes', () => {
+  for (const nome of ['Assistência 24 Horas', 'SOS Automóvel', 'Guincho / Reboque', 'Socorro Mecânico']) {
+    assert.equal(classificarCobertura(nome), 'assistencia', `falhou em "${nome}"`)
+  }
+})
+
+test('vidros vence casco quando os dois termos aparecem', () => {
+  // "Casco + Vidros" tem que cair em vidros, senao a franquia por peca some do card.
+  assert.equal(classificarCobertura('Cobertura de Casco + Vidros'), 'vidros')
+  assert.equal(classificarCobertura('Vidros, retrovisores, lanternas e faróis'), 'vidros')
+})
+
+test('classifica RCF-V escrito de varias formas', () => {
+  for (const nome of ['RCF-V Danos Materiais', 'Responsabilidade Civil Facultativa', 'Danos morais a terceiros']) {
+    assert.equal(classificarCobertura(nome), 'terceiros', `falhou em "${nome}"`)
+  }
+})
+
+test('classifica a cobertura principal das duas cotacoes reais', () => {
+  assert.equal(classificarCobertura('Indenização por Valor Referenciado'), 'colisao')   // Tokio
+  assert.equal(classificarCobertura('Cobertura Compreensiva'), 'colisao')                // Porto
+})
+
+test('nome desconhecido devolve null em vez de chutar categoria', () => {
+  assert.equal(classificarCobertura('Cobertura Inventada XPTO'), null)
+  assert.equal(classificarCobertura(''), null)
+  assert.equal(classificarCobertura(null), null)
+})
+
+test('normalizarTexto remove acento sem apagar as letras', () => {
+  // Regressao do bug do Code Node do n8n, onde o range de combinantes corrompido
+  // apagava o texto inteiro.
+  assert.equal(normalizarTexto('Assistência 24 Horas'), 'assistencia 24 horas')
+  assert.equal(normalizarTexto('  RENOVAÇÃO   DA  CIA '), 'renovacao da cia')
+})
+
+// ─── Tipo de operacao ──────────────────────────────────────────────────
+
+test('reconhece o tipo de operacao como as seguradoras escrevem', () => {
+  assert.equal(detectarTipoOperacao('Renovação Congênere'), 'renovacao')   // Tokio
+  assert.equal(detectarTipoOperacao('RENOVAÇÃO DA CIA'), 'renovacao')      // Porto
+  assert.equal(detectarTipoOperacao('Seguro Novo'), 'novo')
+  assert.equal(detectarTipoOperacao('Endosso de inclusão'), 'endosso')
+  assert.equal(detectarTipoOperacao('texto qualquer'), null)
+})
+
+// ─── Cores ─────────────────────────────────────────────────────────────
+
+test('usa a cor cadastrada da seguradora quando existe', () => {
+  assert.equal(corDaSeguradora({ nome: 'Qualquer', cor_destaque: '#AB12CD' }), '#ab12cd')
+})
+
+test('cai no mapa por nome canonico quando nao ha cor cadastrada', () => {
+  assert.equal(corDaSeguradora({ nome: 'Tokio Marine' }), '#956e26')
+  assert.equal(corDaSeguradora({ nome: 'PORTO SEGURO' }), '#1b4782')
+})
+
+test('seguradora desconhecida cai no fallback pelo papel', () => {
+  assert.equal(corDaSeguradora({ nome: 'Seguradora Nova' }, 'atual'), '#956e26')
+  assert.equal(corDaSeguradora({ nome: 'Seguradora Nova' }, 'outra'), '#1b4782')
+})
+
+test('tomClaro reproduz os tons do mockup validado', () => {
+  // No mockup o numerao da Tokio sai claro sobre o navy; o importante e o tom
+  // continuar legivel (bem mais claro que a cor cheia), nao o hex exato.
+  const claro = tomClaro('#956e26')
+  assert.match(claro, /^#[0-9a-f]{6}$/)
+  assert.ok(parseInt(claro.slice(1, 3), 16) > 0x95)
+})
+
+test('contraste escolhe texto branco sobre cor escura e tinta sobre clara', () => {
+  assert.equal(contrasteSobre('#1b4782'), '#ffffff')
+  assert.equal(contrasteSobre('#ffd400'), '#101f33')
+})
+
+// ─── Indenizacao integral: o campo critico ─────────────────────────────
+
+test('indenizacao integral inclusa nomeia o percentual da FIPE', () => {
+  const cot = criarCotacaoOrcamento()
+  cot.indenizacao_integral = { incluida: true, percentual_fipe: 100, observacao: '' }
+  assert.match(textoColisao(cot), /inclusa a 100% da tabela FIPE/)
+})
+
+test('indenizacao integral ausente e dita com todas as letras', () => {
+  const cot = criarCotacaoOrcamento()
+  cot.indenizacao_integral = { incluida: false, percentual_fipe: null, observacao: '' }
+  assert.match(textoColisao(cot), /não possui \(somente parcial, com franquia\)/)
+})
+
+test('indenizacao integral nao confirmada nao vira texto nenhum', () => {
+  // Nunca inventar a favor da seguradora: sem confirmacao, silencio (e a
+  // validacao abaixo impede gerar o PDF nesse estado).
+  const cot = criarCotacaoOrcamento()
+  assert.doesNotMatch(textoColisao(cot), /integral/)
+})
+
+test('indenizacao integral nao confirmada bloqueia a geracao', () => {
+  const cot = cotacaoCompleta()
+  cot.indenizacao_integral = { incluida: null, percentual_fipe: null, observacao: '' }
+  const v = validarCotacao(cot)
+  assert.equal(v.podeGerar, false)
+  assert.ok(v.bloqueios.some(b => b.caminho === 'indenizacao_integral.incluida'))
+})
+
+// ─── Validacao ─────────────────────────────────────────────────────────
+
+function cotacaoCompleta(patch = {}) {
+  const cot = criarCotacaoOrcamento()
+  cot.seguradora = { id: 'x', nome: 'Tokio Marine', logo_url: 'logo.png', cor_destaque: '' }
+  cot.cotacao = { numero: '1056418301', tipo_operacao: 'renovacao', validade: '2026-08-29', data_emissao: '2026-08-24' }
+  cot.segurado = { nome: 'Priscila Cunha dos Santos', cpf_cnpj: '000', data_nascimento: null }
+  cot.condutor_principal = { nome: 'Aguinosvan A. dos Santos', cpf: '111', estado_civil: null }
+  cot.veiculo = {
+    marca_modelo: 'Ford EcoSport SE 1.5 12V Flex Aut.', ano_modelo: '2018/2018',
+    placa: 'GAO-1151', uso: 'Particular, sem fim comercial',
+    cep_pernoite: '04849-015', condutor_18_25: 'Sem cobertura',
+  }
+  cot.valores = {
+    premio_liquido: 4200, iof: 460.7, premio_total: 4660.7,
+    premio_parcelado: 'Em até 12x sem juros no cartão (R$ 388,29)',
+    descontos_aplicados: [], franquia: 3373, franquia_tipo: 'Parcial reduzida a 50%',
+  }
+  cot.indenizacao_integral = { incluida: false, percentual_fipe: null, observacao: 'Indenização por Valor Referenciado — 100% da tabela FIPE.' }
+  return Object.assign(cot, patch)
+}
+
+test('cotacao completa passa na validacao', () => {
+  const v = validarCotacao(cotacaoCompleta())
+  assert.equal(v.podeGerar, true, JSON.stringify(v.bloqueios))
+})
+
+test('premio total ausente bloqueia', () => {
+  const cot = cotacaoCompleta()
+  cot.valores.premio_total = null
+  assert.equal(validarCotacao(cot).podeGerar, false)
+})
+
+test('tipo de operacao ausente bloqueia', () => {
+  const cot = cotacaoCompleta()
+  cot.cotacao.tipo_operacao = ''
+  assert.equal(validarCotacao(cot).podeGerar, false)
+})
+
+test('campo de atencao nao bloqueia, mas aparece na lista', () => {
+  const cot = cotacaoCompleta()
+  cot.veiculo.placa = ''
+  const v = validarCotacao(cot)
+  assert.equal(v.podeGerar, true)
+  assert.ok(v.pendencias.some(p => p.caminho === 'veiculo.placa' && p.severidade === 'atencao'))
+})
+
+test('cobertura nao classificada e reportada sem bloquear', () => {
+  const cot = cotacaoCompleta()
+  cot.coberturas = [{ nome_padronizado: 'Cobertura Inventada XPTO', incluida: true, categoria: null }]
+  const v = validarCotacao(cot)
+  assert.equal(v.podeGerar, true)
+  assert.ok(v.pendencias.some(p => /não classificada/.test(p.label)))
+})
+
+// ─── Montagem do card ──────────────────────────────────────────────────
+
+test('cobertura nao inclusa sai das categorias e vai para "nao incluso"', () => {
+  const cot = cotacaoCompleta()
+  cot.coberturas = [
+    { nome_padronizado: 'Assistência 24 Horas', incluida: true, categoria: null, observacoes: 'Reboque de até 500 km.' },
+    { nome_padronizado: 'Acidentes Pessoais de Passageiros', incluida: false, categoria: null, observacoes: 'Não contratados.' },
+  ]
+  const card = montarCard(cot)
+  const assistencia = card.categorias.find(c => c.key === 'assistencia')
+  assert.match(assistencia.texto, /500 km/)
+  assert.ok(card.nao_incluso.some(i => i.titulo === 'Acidentes Pessoais de Passageiros'))
+  // e nao pode ter vazado para nenhuma categoria
+  assert.ok(!card.categorias.some(c => c.itens.some(i => i.nome_padronizado === 'Acidentes Pessoais de Passageiros')))
+})
+
+test('cobertura inclusa sem categoria reconhecida cai em adicional', () => {
+  const cot = cotacaoCompleta()
+  cot.coberturas = [{ nome_padronizado: 'Cobertura Inventada XPTO', incluida: true, categoria: null, observacoes: 'detalhe' }]
+  const card = montarCard(cot)
+  assert.ok(card.categorias.find(c => c.key === 'adicional'))
+})
+
+test('categoria adicional some do card quando nao ha nada nela', () => {
+  const card = montarCard(cotacaoCompleta())
+  assert.equal(card.categorias.find(c => c.key === 'adicional'), undefined)
+})
+
+test('as 6 categorias fixas sempre aparecem, na mesma ordem, nos dois cards', () => {
+  const fixas = CATEGORIAS_COBERTURA.filter(c => c.key !== 'adicional').map(c => c.key)
+  const a = montarCard(cotacaoCompleta(), { papel: 'atual' })
+  const b = montarCard(cotacaoCompleta(), { papel: 'outra' })
+  for (const card of [a, b]) {
+    assert.deepEqual(card.categorias.filter(c => c.key !== 'adicional').map(c => c.key), fixas)
+  }
+})
+
+test('a franquia usa tipo e valor do bloco de valores', () => {
+  const card = montarCard(cotacaoCompleta())
+  const franquia = card.categorias.find(c => c.key === 'franquia')
+  assert.match(franquia.texto, /Parcial reduzida a 50%/)
+  assert.match(franquia.texto, /3\.373,00/)
+})
+
+test('rodape cita as condicoes gerais e o numero da cotacao', () => {
+  const cot = cotacaoCompleta()
+  cot.condicoes_gerais = { referencia: 'Porto Seguro Auto Sênior CG144', anexada_em: '2026-08-17' }
+  assert.equal(montarCard(cot).rodape, 'Porto Seguro Auto Sênior CG144, anexada em 17/08/2026 · Cotação nº 1056418301')
+})
+
+test('seguradora sem condicoes gerais nao trava o card (spec secao 8)', () => {
+  const card = montarCard(cotacaoCompleta())
+  assert.equal(card.rodape, 'Cotação nº 1056418301')
+})
+
+// ─── Comparativo ───────────────────────────────────────────────────────
+
+test('comparativo monta dois cards e a barra unica do cliente', () => {
+  const atual = cotacaoCompleta()
+  const outra = cotacaoCompleta()
+  outra.seguradora = { id: 'y', nome: 'Porto Seguro', logo_url: 'p.png', cor_destaque: '' }
+  outra.condutor_principal.nome = 'José Antônio dos Santos'
+  outra.valores.premio_total = 5970.31
+
+  const comp = montarComparativo({ atual, outra, referencia: 'CV-2026-0817', emitidoEm: '2026-08-24' })
+
+  assert.equal(comp.cards.length, 2)
+  assert.equal(comp.cards[0].seguradora.cor, '#956e26')
+  assert.equal(comp.cards[1].seguradora.cor, '#1b4782')
+  assert.equal(comp.cliente.segurado, 'Priscila Cunha dos Santos')
+  assert.equal(comp.cliente.placa, 'GAO-1151')
+  assert.equal(comp.cliente.tipo_operacao_label, 'Renovação')
+  assert.equal(comp.cards[1].valores.total_formatado, formatarMoeda(5970.31))
+  assert.equal(comp.validacao.podeGerar, true)
+})
+
+test('comparativo aponta divergencia de placa entre os dois PDFs', () => {
+  // Upload trocado: duas cotacoes de veiculos diferentes no mesmo comparativo.
+  const atual = cotacaoCompleta()
+  const outra = cotacaoCompleta()
+  outra.veiculo.placa = 'XXX-0000'
+  const comp = montarComparativo({ atual, outra })
+  assert.ok(comp.divergencias.some(d => d.caminho === 'veiculo.placa'))
+})
+
+test('comparativo nao pode ser gerado se um dos lados tem bloqueio', () => {
+  const atual = cotacaoCompleta()
+  const outra = cotacaoCompleta()
+  outra.valores.premio_total = null
+  assert.equal(montarComparativo({ atual, outra }).validacao.podeGerar, false)
+})
+
+test('referencia interna segue o formato CV-AAAA-NNNN do mockup', () => {
+  assert.equal(formatarReferencia(2026, 817), 'CV-2026-0817')
+  assert.equal(formatarReferencia(2026, 1), 'CV-2026-0001')
+})
+
+test('nao repete a indenizacao integral quando a observacao ja falava dela', () => {
+  // A Porto embute "indenizacao integral a 100% da FIPE" dentro do proprio texto
+  // da cobertura compreensiva. Sem o filtro, o card dizia duas vezes.
+  const cot = criarCotacaoOrcamento()
+  cot.indenizacao_integral = {
+    incluida: true, percentual_fipe: 100,
+    observacao: 'Cobertura Compreensiva — indenização integral inclusa a 100% da tabela FIPE.',
+  }
+  const texto = textoColisao(cot)
+  assert.equal(texto.match(/indenização integral/gi)?.length, 1, texto)
+})

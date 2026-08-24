@@ -15,3 +15,5 @@ export {
 } from './AutoVisual'
 
 export { default as AutoPdfAutomation } from './AutoPdfAutomation'
+export { default as AutoQuoteComparison } from './AutoQuoteComparison'
+export { default as AutoQuoteSnapshot } from './AutoQuoteSnapshot'

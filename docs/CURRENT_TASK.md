@@ -1,5 +1,53 @@
 # CURRENT TASK
 
+## Design do workspace de cotacao AUTO (2026-08-24, Codex — CONCLUIDA; somente interface)
+
+Objetivo: aplicar visualmente a especificacao do Orcamento Comparativo na pagina de cotacao e melhorar a leitura do card aberto na Pipeline, sem alterar banco, parser, automacoes, persistencia ou regras de negocio.
+
+Entrega: `AutoCotacaoDetalhe` agora apresenta uma leitura operacional completa do segurado, contato, condutor, veiculo, risco, vigencia, seguradoras e financeiro. A aba `Orcamentos` recebeu um prototipo visual com dois slots de PDF, progresso Upload/Revisao/PDF final, revisao lado a lado, campos criticos e estados responsivos. O prototipo declara na propria interface que nao le nem salva arquivos. A ferramenta de leitura de PDF que ja existia foi preservada sem mudanca funcional, em um bloco separado. A Pipeline usa o mesmo snapshot visual completo no primeiro clique, eliminando a apresentacao fragmentada sem alterar as transicoes do Kanban.
+
+Arquivos principais: `src/components/auto/AutoQuoteComparison.jsx`, `src/components/auto/AutoQuoteSnapshot.jsx`, `src/pages/auto/AutoCotacaoDetalhe.jsx`, `src/pages/auto/AutoEmissoes.jsx` e `src/styles/auto-ui.css`.
+
+Restricao confirmada pelo usuario: nenhuma funcao nova de automacao foi conectada nesta rodada. Nao houve migration nova, RPC, mudanca de query, parser ou contrato de dados. A implementacao real de upload duplo, extracao, vinculo e geracao de PDF fica para a proxima fase.
+
+Validacao do redesign: `npm test` 316/316, `npm run build` concluido e `git diff --check` limpo. `check:page-contexts` continua apontando somente a pendencia pre-existente de `src/pages/comercial/GestaoComercial.jsx`.
+
+---
+
+## Orcamento Comparativo AUTO — nucleo de dominio e template do PDF (2026-08-24, Claude — EM ANDAMENTO; migration 67 pendente)
+
+Objetivo: automatizar a montagem do orcamento comparativo de seguro Auto que hoje e feito a mao no Word/Canva a cada cotacao. Spec do usuario em `documentos_automacao/specorcamentocomparativoseguros.md`; mockup ja validado em tres rodadas em `documentos_automacao/modelo/orcamentomodeloCONVES (2).pdf`.
+
+**Entregue nesta rodada (nao depende das seguradoras que faltam):**
+
+- `src/lib/orcamentoComparativo.js` — modulo puro com as 7 categorias fixas de cobertura, o dicionario de equivalencia de nomes entre seguradoras, o schema da cotacao (secao 5 da spec), a montagem dos dois cards e a validacao que trava a geracao.
+- `src/lib/orcamentoComparativoHtml.js` — template do PDF como funcao pura (`comparativo -> string HTML`), reproduzindo o mockup validado. Auto-contido: sem folha externa, sem fonte baixada, sem script — vira PDF tanto pelo print do browser quanto por Chromium headless.
+- `public/conves-logo.png` — logo da corretora com fundo transparente, extraida do proprio mockup (o projeto nao tinha o arquivo que a spec citava como `assets/conves-logo.png`).
+- `src/lib/orcamentoExtracao.js` — ponte entre o parser de PDF existente (`parseOrcamentoAutoText`) e o schema do comparativo. TRADUZ, nunca ADIVINHA: o parser de hoje nao extrai cobertura nenhuma, entao coberturas/franquia/indenizacao integral voltam vazias e a revisao fica obrigatoria. `detectarTipoOperacao` roda sobre o texto bruto, o que resolve "Renovacao Congenere" (Tokio) e "RENOVACAO DA CIA" (Porto) sem regra por seguradora.
+- `supabase/67_auto_orcamento_comparativo.sql` — **escrita, NAO executada**.
+- Testes: 63 novos em tres arquivos (`orcamentoComparativo`, `orcamentoComparativoHtml`, `orcamentoExtracao`), registrados em `npm test`.
+
+**Divisao com o Codex (confirmada pelo usuario em 24/08):** Codex responde por design; banco, Supabase e regras de negocio ficam aqui, como ja diz o `IA_ORCHESTRATOR.md`. Durante esta rodada o Codex chegou a criar `src/lib/autoQuoteComparison.js` e a migration 68 (dominio e banco) e depois reverteu os dois, mantendo so os componentes de apresentacao. `AutoQuoteComparison.jsx` hoje e presentacional puro (139 linhas, so React + lucide). **Nao recriar dominio de comparativo fora de `orcamentoComparativo.js`** — foi justamente a duplicacao que se desfez.
+
+**Decisoes que valem registrar:**
+
+- **A logo da seguradora vem do cadastro** (`seguradoras.logo_url`), nunca recortada do PDF da cotacao — pedido explicito do usuario. Seguradora sem logo cai para o nome em serifada dentro do mesmo selo, sem abrir buraco no card.
+- **A cor e da seguradora, nao do papel no comparativo.** Inverter "atual" e "outra" nao pode trocar as cores. `seguradoras` ainda nao tem a coluna; ate a migration 67 rodar, `CORES_SEGURADORA_PADRAO` responde por nome canonico. Tokio `#956e26` e Porto `#1b4782` foram amostradas do mockup, nao escolhidas a olho.
+- **Indenizacao integral e o campo critico.** A Tokio trata como adicional separado ("possui/nao possui"); a Porto embute 100% da FIPE dentro da compreensiva. O card SEMPRE nomeia a cobertura literalmente, com a mesma frase nos dois lados, e `null` (ninguem confirmou) BLOQUEIA a geracao. Nada aqui deduz cobertura a favor da seguradora.
+- **`min-height`, nunca `height` + `overflow:hidden` na pagina.** Chegar a uma pagina cortando cobertura em silencio seria pior do que transbordar para a pagina 2. O caso de referencia fecha em 281,7mm (15,3mm de folga em A4), medido com Chromium headless.
+- **Divergencia entre os dois PDFs vira aviso IMPRESSO**, nao so alerta de tela: se o corretor gerou com placa/segurado diferentes entre as duas cotacoes, quem le o documento precisa saber.
+- Todo texto que vem de PDF de terceiro passa por `escapeHtml` — teste de injecao incluido.
+
+Validacao: `npm test` 316/316 verde. PDF de referencia gerado por Chromium headless e conferido contra o mockup, 1 pagina, salvo em `documentos_automacao/modelo/orcamento-gerado-pelo-sistema.pdf` (o script que o produz esta ao lado, em `exemplo-render.mjs`). `git diff --check` limpo. `check:page-contexts` acusa somente a pendencia pre-existente de `GestaoComercial.jsx`. `npm run build` continua bloqueado pelo ambiente local pre-existente.
+
+**PENDENTE PARA PRODUCAO:** executar `supabase/67_auto_orcamento_comparativo.sql` no SQL Editor depois da 66. Ela adiciona `seguradoras.cor_destaque` (com CHECK de hex), cria `seguradora_condicoes_gerais` e `auto_orcamentos` (persistindo o JSON estruturado, nao so o PDF) e a RPC `proximo_numero_orcamento_auto`, que aloca o sequencial CV-AAAA-NNNN no banco — dois corretores gerando ao mesmo tempo pelo front produziriam o mesmo numero. Nenhuma alteracao de banco foi executada automaticamente.
+
+**FOLLOW-UP DE DESIGN CONCLUIDO PELO CODEX:** a interface de revisao e a nova apresentacao do detalhe/Pipeline foram entregues sem conectar automacao. Ainda faltam upload duplo real, extracao, geracao/persistencia do PDF final, cadastro operacional de Condicoes Gerais e os exemplos das outras seguradoras AUTO.
+
+Responsavel: Claude. Proximo passo: usuario enviar as cotacoes de exemplo das demais seguradoras AUTO em `documentos_automacao/orçamentos/`.
+
+---
+
 ## Navegacao e preparacao de renovacoes em planilha (2026-08-21, Codex — CONCLUIDA)
 
 Objetivo: manter `/auto/renovacoes` como resumo do mes e exigir uma acao explicita para abrir a grade; permitir editar o segurado como nome personalizado ou cliente existente; transformar `Puxar renovacoes` em uma planilha real com deteccao assistida de clientes.

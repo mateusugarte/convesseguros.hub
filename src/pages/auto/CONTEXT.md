@@ -187,6 +187,47 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   coluna. A entrada sempre passa por revisao antes de persistir.
 - `AutoSinistrosV2` salva checklist e dossie no dispositivo e gera um resumo copiavel. Esses dados ainda nao sao enviados ao Supabase.
 
+## Orcamento Comparativo (2026-08-24, design do workspace entregue)
+
+- O nucleo vive em `src/lib/orcamentoComparativo.js` (dominio puro) e
+  `src/lib/orcamentoComparativoHtml.js` (template do PDF). O prototipo visual
+  esta em `AutoQuoteComparison`: dois slots de upload, revisao lado a lado e
+  estados criticos. Ele nao le PDF, nao persiste e nao gera documento; a tela
+  deixa essa restricao explicita. A automacao existente foi mantida separada.
+  Spec em `documentos_automacao/specorcamentocomparativoseguros.md`.
+- **Nao confundir com `autoPdfParser.js`.** O parser existente extrai campos
+  ESCALARES de uma cotacao para preencher o formulario de emissao. O comparativo
+  precisa de estrutura COMPARAVEL entre duas seguradoras — coberturas
+  classificadas em 7 categorias fixas, com incluido x nao incluido. Sao dois
+  problemas diferentes sobre o mesmo PDF; misturar os dois transformaria
+  `CAMPOS_COTACAO` numa lista impossivel de manter.
+- As 7 categorias (`CATEGORIAS_COBERTURA`) tem ordem, rotulo e icone FIXOS e
+  iguais nos dois cards — e o que permite ler lado a lado sem comparar textos de
+  marketing escritos de formas diferentes por cada cia. Seguradora nova deve
+  SO acrescentar sinonimos em `DICIONARIO_COBERTURAS`, nunca criar categoria.
+- A logo do card vem de `seguradoras.logo_url` (cadastro em Configuracoes),
+  nunca recortada do PDF da cotacao. Sem logo, cai para o nome em serifada.
+- A cor da faixa e identidade da SEGURADORA, nao do papel ("atual" x "outra"):
+  inverter a ordem nao troca as cores. Enquanto `seguradoras.cor_destaque`
+  (migration 67) nao existir, `CORES_SEGURADORA_PADRAO` responde por nome.
+- **Indenizacao integral e o campo critico de exatidao.** Tokio trata como
+  adicional separado; Porto embute 100% da FIPE na compreensiva. `textoColisao`
+  sempre nomeia a cobertura literalmente, com a mesma frase nos dois lados, e
+  `incluida: null` BLOQUEIA a geracao em `validarCotacao`. Nao deduzir cobertura
+  a favor da seguradora — a spec marca isso como o erro mais grave possivel.
+- A pagina do PDF usa `min-height`, nunca `height` + `overflow:hidden`: cotacao
+  com muitas coberturas transborda para a pagina 2, jamais e cortada em silencio.
+- Migration `supabase/67_auto_orcamento_comparativo.sql` (pendente) adiciona
+  `seguradoras.cor_destaque`, cria `seguradora_condicoes_gerais` e
+  `auto_orcamentos` e a RPC `proximo_numero_orcamento_auto` — o sequencial
+  CV-AAAA-NNNN e alocado no banco, nao no front, senao dois corretores gerando
+  ao mesmo tempo produzem o mesmo numero.
+- `AutoQuoteSnapshot` e a leitura visual comum usada no resumo da cotacao e no
+  primeiro clique da Pipeline; nenhuma query ou regra de dados foi alterada.
+- Restricao desta rodada: somente JSX/CSS e estados locais demonstrativos. Nao
+  adicionar migration, RPC, parser, persistencia ou mudanca de fluxo ate a fase
+  de automacoes ser iniciada explicitamente pelo usuario.
+
 ## Handoff Checklist
 
 - Read `docs/IA_ORCHESTRATOR.md`

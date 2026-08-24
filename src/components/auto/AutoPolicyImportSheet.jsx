@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
 import { Car, Check, CheckCircle2, ClipboardPaste, Download, FileUp, Plus, Trash2, Upload, UserCheck, UserPlus, X } from 'lucide-react'
 import { calcularValorComissaoAuto, getClientesAutoComVeiculos, importarApolicesAutoPlanilha } from '../../lib/auto'
-import { normalizePolicyImportIdentity, policyClientCandidates, policyImportHasVehicleData, policyImportRelationshipReady, policyVehicleCandidates, suggestPolicyVehicle } from '../../lib/autoPolicyImport'
+import { normalizePolicyImportIdentity, normalizePolicyImportPercentage, policyClientCandidates, policyImportHasVehicleData, policyImportRelationshipReady, policyVehicleCandidates, suggestPolicyVehicle, summarizePolicyImportErrors } from '../../lib/autoPolicyImport'
 import { normalizeSpreadsheetNumber } from '../../lib/spreadsheetPaste'
 import { useToast } from '../../contexts/ToastContext'
 import OperationalSpreadsheet from './OperationalSpreadsheet'
@@ -91,7 +91,8 @@ function parseWorkbook(workbook) {
       mapping.forEach((field, column) => {
         if (!field || row[field]) return
         if (['data_transmissao', 'vigencia_inicio'].includes(field)) row[field] = dateToIso(values[column])
-        else if (['premio_liquido', 'pct_comissao', 'valor_comissao', 'valor_repasse'].includes(field)) row[field] = normalizeSpreadsheetNumber(values[column])
+        else if (field === 'pct_comissao') row[field] = normalizePolicyImportPercentage(values[column])
+        else if (['premio_liquido', 'valor_comissao', 'valor_repasse'].includes(field)) row[field] = normalizeSpreadsheetNumber(values[column])
         else row[field] = String(values[column] ?? '').trim()
       })
       if (!row.nome_cliente && !row.numero_apolice) return
@@ -161,6 +162,7 @@ export default function AutoPolicyImportSheet({ onClose }) {
   const uploadRef = useRef(null)
   const [rows, setRows] = useState(() => blankRows())
   const [summary, setSummary] = useState(null)
+  const summarizedErrors = useMemo(() => summarizePolicyImportErrors(summary?.erros || []), [summary])
 
   const { data: clients = [], isLoading: clientsLoading } = useQuery({
     queryKey: ['auto-clientes', 'policy-import-links'],
@@ -191,7 +193,15 @@ export default function AutoPolicyImportSheet({ onClose }) {
         queryClient.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] }),
         queryClient.invalidateQueries({ queryKey: ['auto-pendencias'] }),
       ])
-      toast({ type: result.erros.length ? 'info' : 'success', title: 'Subida de apólices concluída', message: `${result.importadas} nova(s), ${result.atualizadas} atualizada(s) e ${result.ignoradas} ignorada(s).` })
+      const noneSaved = result.importadas + result.atualizadas === 0 && result.ignoradas > 0
+      const firstReason = summarizePolicyImportErrors(result.erros)[0]
+      toast({
+        type: noneSaved ? 'error' : result.erros.length ? 'info' : 'success',
+        title: noneSaved ? 'Nenhuma apólice foi gravada' : 'Subida de apólices concluída',
+        message: noneSaved && firstReason
+          ? `${firstReason.quantidade} linha(s): ${firstReason.motivo}`
+          : `${result.importadas} nova(s), ${result.atualizadas} atualizada(s) e ${result.ignoradas} ignorada(s).`,
+      })
     },
     onError: error => toast({ type: 'error', title: 'Erro ao subir apólices', message: error?.message || 'Revise as linhas.' }),
   })
@@ -275,6 +285,6 @@ export default function AutoPolicyImportSheet({ onClose }) {
       if (!policyImportRelationshipReady(row)) return 'is-sheet-row-review'
       return 'is-sheet-row-ready'
     }} onCommit={commitCell} onBulkCommit={bulkCommit} className="is-policy-import" statusLabel={`${validRows.length} apólice(s) pronta(s) para subir`} />
-    {summary && <div className="policy-import-result"><CheckCircle2 /><div><strong>Importação processada</strong><span>{summary.importadas} novas · {summary.atualizadas} atualizadas · {summary.ignoradas} ignoradas</span>{summary.erros.length > 0 && <small>{summary.erros.slice(0, 4).map(error => `Linha ${error.linha}: ${error.motivo}`).join(' · ')}</small>}</div></div>}
+    {summary && <div className={`policy-import-result ${summary.importadas + summary.atualizadas === 0 && summary.ignoradas ? 'is-error' : ''}`}><CheckCircle2 /><div><strong>{summary.importadas + summary.atualizadas === 0 && summary.ignoradas ? 'Nenhuma apólice foi gravada' : 'Importação processada'}</strong><span>{summary.importadas} novas · {summary.atualizadas} atualizadas · {summary.ignoradas} ignoradas</span>{summarizedErrors.length > 0 && <div className="policy-import-error-summary">{summarizedErrors.map(error => <p key={error.motivo}><b>{error.quantidade} linha(s)</b><span>{error.motivo}</span></p>)}</div>}</div></div>}
   </section>
 }

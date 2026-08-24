@@ -25,8 +25,7 @@ export function isValidIsoDate(value) {
 }
 
 // Subtrai N dias uteis (pula sabado/domingo; sem calendario de feriados) de
-// uma data 'YYYY-MM-DD'. Usado para a data limite da cotacao de renovacao
-// (regra: 7 dias uteis antes do vencimento).
+// uma data 'YYYY-MM-DD'.
 export function subtrairDiasUteis(value, diasUteis) {
   if (!isValidIsoDate(value)) return null
   const [ano, mes, dia] = value.split('-').map(Number)
@@ -40,4 +39,12 @@ export function subtrairDiasUteis(value, diasUteis) {
   const m = String(date.getMonth() + 1).padStart(2, '0')
   const d = String(date.getDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
+}
+
+export const PRAZO_RENOVACAO_DIAS_UTEIS = 10
+
+// Regra unica para toda entrada/edicao de renovacao. Centralizar o prazo aqui
+// evita que planilha, importacao e trigger acabem mostrando datas diferentes.
+export function calcularDataLimiteRenovacao(vigenciaFim) {
+  return subtrairDiasUteis(vigenciaFim, PRAZO_RENOVACAO_DIAS_UTEIS)
 }

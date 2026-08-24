@@ -85,10 +85,16 @@ export function parseRenovacoesPaste(text, monthRef) {
   if (!lines.length) return []
 
   const header = lines[0].split('\t').map(normalizeText)
-  const hasHeader = header.some(cell => ['data', 'cia', 'segurado', 'nome', 'status', 'limite', 'veiculo'].includes(cell))
+  const hasHeader = header.some(cell => (
+    ['data', 'cia', 'segurado', 'nome', 'status', 'limite', 'veiculo'].includes(cell)
+    || cell.includes('vencimento')
+    || cell.includes('seguradora')
+    || cell.includes('comissao')
+  ))
   const indexes = {
     data: header.findIndex(cell => cell === 'data' || cell.includes('vencimento')),
-    cia: header.findIndex(cell => cell === 'cia' || cell.includes('seguradora')),
+    cia: header.findIndex(cell => cell === 'cia' || cell === 'seguradora' || cell.includes('seguradora atual')),
+    outraSeguradora: header.findIndex(cell => cell.includes('outra seguradora') || cell.includes('segunda seguradora') || cell.includes('seguradora alternativa')),
     nome: header.findIndex(cell => cell.includes('segurado') || cell === 'nome' || cell.includes('cliente')),
     veiculo: header.findIndex(cell => cell.includes('veiculo') || cell.includes('modelo')),
     status: header.findIndex(cell => cell.includes('status')),
@@ -119,11 +125,12 @@ export function parseRenovacoesPaste(text, monthRef) {
     return {
       nome_cliente: nome,
       seguradora: singleName ? '' : (cells[indexes.cia >= 0 ? indexes.cia : 1] || ''),
-      vigencia_fim: parseDate(indexes.data >= 0 ? cells[indexes.data] : '', fallbackDate),
+      outra_seguradora: indexes.outraSeguradora >= 0 ? cells[indexes.outraSeguradora] || '' : (!hasHeader && !singleName ? cells[4] || '' : ''),
+      vigencia_fim: parseDate(indexes.data >= 0 ? cells[indexes.data] : (!hasHeader && !singleName ? cells[0] : ''), fallbackDate),
       data_limite_envio: parseDate(indexes.limite >= 0 ? cells[indexes.limite] : '', ''),
-      identificacao_veiculo: indexes.veiculo >= 0 ? cells[indexes.veiculo] || '' : '',
+      identificacao_veiculo: indexes.veiculo >= 0 ? cells[indexes.veiculo] || '' : (!hasHeader && !singleName ? cells[3] || '' : ''),
       pct_comissao_atual: indexes.comissao >= 0 ? parseNumber(cells[indexes.comissao]) : null,
-      pct_comissao_anterior: indexes.comissaoAnterior >= 0 ? parseNumber(cells[indexes.comissaoAnterior]) : null,
+      pct_comissao_anterior: indexes.comissaoAnterior >= 0 ? parseNumber(cells[indexes.comissaoAnterior]) : (!hasHeader && !singleName ? parseNumber(cells[5]) : null),
       status,
     }
   }).filter(Boolean)

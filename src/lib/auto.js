@@ -1,7 +1,7 @@
 import { supabase } from './supabase'
 import { limparNomeSegurado, normalizeCompareText, somarUmAno } from './autoHistoricoImport.js'
 import { normalizePolicyImportIdentity, policyImportHasVehicleData, policyImportRelationshipReady } from './autoPolicyImport.js'
-import { calcularValorComissaoAuto, subtrairDiasUteis } from './autoCalc.js'
+import { calcularDataLimiteRenovacao, calcularValorComissaoAuto } from './autoCalc.js'
 import { planejarExclusaoGrupoAuto } from './autoExclusao.js'
 import { renewalStatusFields } from './autoOperational.js'
 import { buildAutoPendingNotifications } from './autoPending.js'
@@ -110,7 +110,7 @@ const EMISSAO_AUTO_COLUMNS = 'id, cotacao_id, cliente_id, tipo, coluna, data_tra
 
 const COTACAO_AUTO_COLUMNS = 'id, cliente_id, tipo, origem_lead, nome_cliente, cpf_cliente, celular_cliente, email_cliente, estado_civil_cliente, profissao_cliente, condutor_nome, condutor_cpf, estado_civil_condutor, cep_pernoite, uso_veiculo, garagem_residencia, garagem_trabalho, garagem_estudo, jovens_18_26, modelo_veiculo, placa, veiculo_financiado, possui_kit_gas, possui_blindagem, isento_imposto, seguradora_preferencial, seguradora_mais_barata, vigencia_inicio, vigencia_fim, status, created_at, updated_at'
 
-const RENOVACAO_AUTO_COLUMNS = 'id, apolice_id, cliente_id, seguradora, vigencia_fim, status_cotacao, status_renovacao, created_at'
+const RENOVACAO_AUTO_COLUMNS = 'id, apolice_id, cliente_id, seguradora, outra_seguradora, identificacao_veiculo, vigencia_fim, data_limite_envio, pct_comissao_anterior, status_cotacao, status_renovacao, created_at'
 
 function pickDefined(source, fields) {
   return fields.reduce((acc, field) => {
@@ -1204,9 +1204,13 @@ export async function getRenovacoesPendentesSemCotacao(mes) {
 }
 
 export async function atualizarStatusRenovacao(id, campos) {
+  const patch = { ...campos }
+  if (Object.prototype.hasOwnProperty.call(patch, 'vigencia_fim')) {
+    patch.data_limite_envio = calcularDataLimiteRenovacao(patch.vigencia_fim)
+  }
   const { error } = await supabase
     .from('renovacoes_auto')
-    .update(campos)
+    .update(patch)
     .eq('id', id)
   if (error) throw error
 }
@@ -1299,9 +1303,9 @@ export async function criarRenovacoesEmLote(mesRef, rows = []) {
       nome_segurado_anterior: nome,
       seguradora: row.seguradora || null,
       vigencia_fim: row.vigencia_fim,
-      data_limite_envio: row.data_limite_envio || subtrairDiasUteis(row.vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS),
+      data_limite_envio: calcularDataLimiteRenovacao(row.vigencia_fim),
       identificacao_veiculo: row.identificacao_veiculo || null,
-      pct_comissao_atual: toFloatOrNull(row.pct_comissao_atual),
+      outra_seguradora: row.outra_seguradora || null,
       pct_comissao_anterior: toFloatOrNull(row.pct_comissao_anterior),
       ...renewalStatusFields(row.status),
     })
@@ -1438,8 +1442,6 @@ export async function marcarMesRenovacaoConcluido(mesRef, userId) {
   if (error) throw error
 }
 
-const PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS = 7
-
 export async function puxarRenovacoesDoSistema(mesRef) {
   const alvo = parseMonthRef(mesRef)
   if (!alvo) throw new Error('Mes invalido.')
@@ -1449,7 +1451,7 @@ export async function puxarRenovacoesDoSistema(mesRef) {
 
   const { data: apolices, error: apolicesError } = await supabase
     .from('apolices_auto')
-    .select('id, cliente_id, seguradora, vigencia_inicio, vigencia_fim, premio_liquido, pct_comissao, nome_cliente, numero_apolice')
+    .select('id, cliente_id, seguradora, vigencia_inicio, vigencia_fim, premio_liquido, pct_comissao, nome_cliente, numero_apolice, modelo_veiculo, placa')
     .gte('vigencia_inicio', inicio)
     .lte('vigencia_inicio', fim)
     // renovacoes_auto.vigencia_fim e NOT NULL: uma apolice legada sem vigencia
@@ -1475,7 +1477,7 @@ export async function puxarRenovacoesDoSistema(mesRef) {
     cliente_id: apolice.cliente_id,
     seguradora: apolice.seguradora,
     vigencia_fim: apolice.vigencia_fim,
-    data_limite_envio: subtrairDiasUteis(apolice.vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS),
+    data_limite_envio: calcularDataLimiteRenovacao(apolice.vigencia_fim),
     status_cotacao: 'nao_cotada',
     status_renovacao: 'pendente',
     origem: 'sistema',
@@ -1483,6 +1485,7 @@ export async function puxarRenovacoesDoSistema(mesRef) {
     numero_apolice_anterior: apolice.numero_apolice,
     premio_liquido_anterior: apolice.premio_liquido,
     pct_comissao_anterior: apolice.pct_comissao,
+    identificacao_veiculo: [apolice.modelo_veiculo, apolice.placa].filter(Boolean).join(' · ') || null,
   }))
 
   const { error: insertError } = await supabase.from('renovacoes_auto').insert(payload)
@@ -1528,12 +1531,14 @@ export async function puxarRenovacoesDePlanilha(mesRef, rows = []) {
       apolice_id: null,
       cliente_id: null,
       seguradora: row.seguradora || null,
+      outra_seguradora: row.outra_seguradora || null,
       vigencia_fim: row.vigencia_fim,
-      data_limite_envio: subtrairDiasUteis(row.vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS),
+      data_limite_envio: calcularDataLimiteRenovacao(row.vigencia_fim),
       status_cotacao: 'nao_cotada',
       status_renovacao: 'pendente',
       origem: 'xls',
       nome_segurado_anterior: row.nome_cliente,
+      identificacao_veiculo: row.identificacao_veiculo || null,
       premio_liquido_anterior: row.premio_liquido,
       pct_comissao_anterior: row.pct_comissao,
     })
@@ -1617,7 +1622,7 @@ export async function getClientesAutoComVeiculos() {
 // cadastrado (busca por nome/CPF); nesse caso o nome real do cliente vira
 // nome_segurado_anterior tambem, para o card exibir o nome sem precisar de
 // outro join. Sem cliente_id, nomeManual e o unico nome disponivel.
-export async function criarRenovacaoManual({ cliente_id, nomeManual, seguradora, vigencia_fim, data_limite_envio, identificacaoVeiculo }) {
+export async function criarRenovacaoManual({ cliente_id, nomeManual, seguradora, outra_seguradora, vigencia_fim, identificacaoVeiculo }) {
   if (!vigencia_fim) throw new Error('Informe a data de vencimento.')
 
   let nomeSegurado = nomeManual || null
@@ -1638,8 +1643,9 @@ export async function criarRenovacaoManual({ cliente_id, nomeManual, seguradora,
       cliente_id: cliente_id || null,
       apolice_id: null,
       seguradora: seguradora || null,
+      outra_seguradora: outra_seguradora || null,
       vigencia_fim,
-      data_limite_envio: data_limite_envio || subtrairDiasUteis(vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS),
+      data_limite_envio: calcularDataLimiteRenovacao(vigencia_fim),
       status_cotacao: 'nao_cotada',
       status_renovacao: 'pendente',
       origem: 'manual',
@@ -1684,7 +1690,7 @@ export async function iniciarCotacaoRenovacaoPorApolice(apoliceId) {
       cliente_id: apolice.cliente_id,
       seguradora: apolice.seguradora,
       vigencia_fim: apolice.vigencia_fim,
-      data_limite_envio: subtrairDiasUteis(apolice.vigencia_fim, PRAZO_ENVIO_ORCAMENTO_DIAS_UTEIS),
+      data_limite_envio: calcularDataLimiteRenovacao(apolice.vigencia_fim),
       status_cotacao: 'nao_cotada',
       status_renovacao: 'pendente',
       origem: 'sistema',
@@ -1892,15 +1898,29 @@ async function resolverClienteImportacaoApolice(row, nomeCliente) {
     throw new Error('Confirme se o segurado é um cliente existente ou um novo cliente.')
   }
 
+  const cpf = normalizeCpf(row.cpf_cliente)
+  if (cpf) {
+    const { data: existentePorCpf, error: cpfError } = await supabase
+      .from('clientes_auto')
+      .select('id')
+      .eq('cpf', cpf)
+      .maybeSingle()
+    if (cpfError) throw cpfError
+    if (existentePorCpf?.id) return existentePorCpf.id
+  }
+
   const { data, error } = await supabase
     .from('clientes_auto')
     .insert({
       nome_completo: nomeCliente,
-      cpf: normalizeCpf(row.cpf_cliente) || null,
+      cpf: cpf || null,
       celular: normalizeImportText(row.celular_cliente) || null,
     })
     .select('id')
     .single()
+  if (error?.code === '23502' && String(error?.message || '').includes('cpf')) {
+    throw new Error('O banco ainda exige CPF para criar clientes. Aplique a atualização 66 para permitir apólices sem CPF.')
+  }
   if (error) throw error
   return data.id
 }

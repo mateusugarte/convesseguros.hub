@@ -71,6 +71,28 @@ export function policyImportRelationshipReady(row = {}) {
   return Boolean(row.cliente_confirmado && (!policyImportHasVehicleData(row) || row.veiculo_confirmado))
 }
 
+// Percentuais formatados pelo Excel chegam como fracao quando a celula e
+// numerica (0.15 representa 15%). Texto colado como "15%" ja chega inteiro.
+export function normalizePolicyImportPercentage(value) {
+  if (value === null || value === undefined || value === '') return ''
+  if (typeof value === 'number' && Number.isFinite(value)) return String(Math.abs(value) <= 1 ? value * 100 : value)
+  const raw = String(value).trim().replace('%', '').replace(/\s/g, '')
+  const normalized = raw.includes(',') ? raw.replace(/\./g, '').replace(',', '.') : raw
+  const parsed = Number(normalized)
+  if (!Number.isFinite(parsed)) return ''
+  return String(Math.abs(parsed) <= 1 ? parsed * 100 : parsed)
+}
+
+export function summarizePolicyImportErrors(errors = []) {
+  const counts = new Map()
+  errors.forEach(error => {
+    const reason = cleanText(error?.motivo) || 'Não foi possível importar a linha.'
+    counts.set(reason, (counts.get(reason) || 0) + 1)
+  })
+  return Array.from(counts, ([motivo, quantidade]) => ({ motivo, quantidade }))
+    .sort((a, b) => b.quantidade - a.quantidade || a.motivo.localeCompare(b.motivo, 'pt-BR'))
+}
+
 export function policyClientCandidates(nameValue, clients = []) {
   const name = normalizePolicyMatchText(nameValue)
   if (name.length < 3) return []

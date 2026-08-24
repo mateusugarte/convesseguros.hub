@@ -18,7 +18,7 @@ import { useToast } from '../../contexts/ToastContext'
 import { EmptyState, PageHeader } from '../../components/ui'
 import OperationalSpreadsheet from '../../components/auto/OperationalSpreadsheet'
 import RenewalInsuredEditor from '../../components/auto/RenewalInsuredEditor'
-import { subtrairDiasUteis } from './autoShared'
+import { calcularDataLimiteRenovacao } from './autoShared'
 import { parseRenovacoesPaste, suggestRenewalClientByName } from '../../lib/autoOperational'
 
 const STATUS_OPTIONS = [
@@ -50,11 +50,11 @@ function newDraft(index, month, values = {}) {
   const due = values.vigencia_fim || monthLastDay(month)
   return {
     _id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
-    vigencia_fim: due,
-    seguradora: '', nome_cliente: '', identificacao_veiculo: '', status: 'pendente',
-    data_limite_envio: values.data_limite_envio || subtrairDiasUteis(due, 7),
-    pct_comissao_atual: '', pct_comissao_anterior: '', cliente_id: '', cliente_nome: '',
+    seguradora: '', outra_seguradora: '', nome_cliente: '', identificacao_veiculo: '', status: 'pendente',
+    pct_comissao_anterior: '', cliente_id: '', cliente_nome: '',
     link_decision: 'pending', origem: 'manual', ...values,
+    vigencia_fim: due,
+    data_limite_envio: calcularDataLimiteRenovacao(due),
   }
 }
 function blankRows(month, count = 12) { return Array.from({ length: count }, (_, index) => newDraft(index, month)) }
@@ -124,7 +124,7 @@ export default function AutoRenovacoesPuxar() {
   const commitCell = (row, column, value) => {
     const fields = { [column.field]: value }
     if (column.field === 'nome_cliente') Object.assign(fields, { cliente_id: '', cliente_nome: '', link_decision: 'pending' })
-    if (column.field === 'vigencia_fim' && value) fields.data_limite_envio = subtrairDiasUteis(value, 7)
+    if (column.field === 'vigencia_fim') fields.data_limite_envio = calcularDataLimiteRenovacao(value)
     updateRow(row._id, fields)
   }
   const bulkCommit = changes => {
@@ -138,7 +138,7 @@ export default function AutoRenovacoesPuxar() {
     changes.forEach(({ row, column, value }) => {
       const fields = { ...(grouped.get(row._id) || {}), [column.field]: value }
       if (column.field === 'nome_cliente') Object.assign(fields, { cliente_id: '', cliente_nome: '', link_decision: 'pending' })
-      if (column.field === 'vigencia_fim' && value) fields.data_limite_envio = subtrairDiasUteis(value, 7)
+      if (column.field === 'vigencia_fim') fields.data_limite_envio = calcularDataLimiteRenovacao(value)
       grouped.set(row._id, fields)
     })
     setDraftRows(rows => rows.map(row => grouped.has(row._id) ? { ...row, ...grouped.get(row._id) } : row))
@@ -179,13 +179,13 @@ export default function AutoRenovacoesPuxar() {
 
   const columns = useMemo(() => [
     { field: 'vigencia_fim', label: 'Data de vencimento', type: 'date', editable: true, width: 145 },
-    { field: 'seguradora', label: 'Cia', editable: true, width: 135, placeholder: 'Seguradora' },
+    { field: 'seguradora', label: 'Seguradora atual', editable: true, width: 155, placeholder: 'Opcional' },
     { field: 'nome_cliente', label: 'Segurado', editable: true, sticky: true, width: 220, placeholder: 'Nome do segurado' },
-    { field: 'identificacao_veiculo', label: 'Veículo', editable: true, width: 190, placeholder: 'Veículo / placa' },
+    { field: 'identificacao_veiculo', label: 'Veículo', editable: true, width: 190, placeholder: 'Opcional · veículo / placa' },
+    { field: 'outra_seguradora', label: 'Outra seguradora', editable: true, width: 165, placeholder: 'Opcional' },
     { field: 'status', label: 'Status', type: 'select', editable: true, width: 132, options: STATUS_OPTIONS },
-    { field: 'data_limite_envio', label: 'Limite', type: 'date', editable: true, width: 118 },
-    { field: 'pct_comissao_atual', label: 'Comissão %', type: 'number', step: '0.01', editable: true, width: 100, parse: value => value === '' ? null : Number(value) },
-    { field: 'pct_comissao_anterior', label: 'Com. passada %', type: 'number', step: '0.01', editable: true, width: 115, parse: value => value === '' ? null : Number(value) },
+    { field: 'data_limite_envio', label: 'Limite automático', type: 'date', width: 142, consumePaste: true },
+    { field: 'pct_comissao_anterior', label: 'Comissão passada %', type: 'number', step: '0.01', editable: true, width: 145, parse: value => value === '' ? null : Number(value) },
     { key: 'link', label: 'Vínculo com cliente', width: 290, render: row => { const suggestion = findSuggestion(row, clients); if (row.cliente_id) return <div className="renewal-link-status is-linked"><UserCheck /><span><strong>Vinculado</strong><small>{row.cliente_nome || row.nome_cliente}</small></span><button onClick={() => setEditingRow(row)}>Trocar</button></div>; if (suggestion && row.link_decision !== 'custom') return <div className="renewal-link-suggestion"><span><strong>Cliente encontrado</strong><small>{suggestion.nome_completo} · {suggestion.cpf || 'sem CPF'}</small></span><button className="is-accept" onClick={() => linkClient(row, suggestion)}><Check />Vincular</button><button onClick={() => keepCustom(row)}>Não</button></div>; return <button className="renewal-link-search" onClick={() => setEditingRow(row)}><Search />{row.link_decision === 'custom' ? 'Nome personalizado · alterar' : 'Pesquisar cliente existente'}</button> } },
     { key: 'remove', label: '', width: 50, render: row => <button className="ops-sheet-icon-button is-danger" title="Remover linha" onClick={() => setDraftRows(rows => rows.filter(item => item._id !== row._id))}><Trash2 /></button> },
   ], [clients])
@@ -209,7 +209,7 @@ export default function AutoRenovacoesPuxar() {
           const alignedDue = alignRenewalDateToMonth(row.vigencia_fim, month) || monthLastDay(month)
           return newDraft(index, month, {
             nome_cliente: row.nome_cliente || '', seguradora: row.seguradora || '', identificacao_veiculo: row.identificacao_veiculo || '', vigencia_fim: alignedDue,
-            data_limite_envio: subtrairDiasUteis(alignedDue, 7), pct_comissao_anterior: row.pct_comissao ?? '', origem: 'xls',
+            pct_comissao_anterior: row.pct_comissao ?? '', origem: 'xls',
           })
         })
       }
@@ -238,7 +238,7 @@ export default function AutoRenovacoesPuxar() {
           <button onClick={() => systemMutation.mutate()} disabled={systemMutation.isPending}><span className="is-teal"><RefreshCw className={systemMutation.isPending ? 'is-spinning' : ''} /></span><div><strong>{systemMutation.isPending ? 'Buscando carteira…' : 'Puxar do sistema'}</strong><small>Encontra apólices que vencem no período.</small></div><ArrowRight /></button>
           <input ref={uploadRef} type="file" accept=".xlsx,.xls" onChange={handleUpload} hidden />
         </div>
-        {showPastePanel && <div className="renewal-smart-paste"><div><Sparkles /><span><strong>Colagem inteligente</strong><small>Cole somente os nomes ou inclua cabeçalhos como Data, Cia, Segurado, Veículo e Status.</small></span></div><textarea value={smartPaste} onChange={event => setSmartPaste(event.target.value)} placeholder={'Exemplo:\n31/08/2026\tALLIANZ\tMARCELO ALMEIDA\tHR-V\n31/08/2026\tPORTO\tANA SILVA\tT-CROSS\n\nOu cole apenas uma lista de nomes.'} /><footer><span><ClipboardPaste />Ctrl/⌘ + V para colar</span><button disabled={!smartPaste.trim()} onClick={applySmartPaste}>Interpretar e colocar na grade <ArrowRight /></button></footer></div>}
+        {showPastePanel && <div className="renewal-smart-paste"><div><Sparkles /><span><strong>Colagem inteligente</strong><small>Cole somente os nomes ou inclua cabeçalhos como Vencimento, Seguradora atual, Segurado, Veículo, Outra seguradora e Comissão passada.</small></span></div><textarea value={smartPaste} onChange={event => setSmartPaste(event.target.value)} placeholder={'VENCIMENTO\tSEGURADORA ATUAL\tSEGURADO\tVEÍCULO\tOUTRA SEGURADORA\tCOMISSÃO PASSADA\n31/08/2026\tALLIANZ\tMARCELO ALMEIDA\tHR-V\tPORTO\t15%\n31/08/2026\tPORTO\tANA SILVA\tT-CROSS\t\t20%\n\nOu cole apenas uma lista de nomes.'} /><footer><span><ClipboardPaste />Ctrl/⌘ + V para colar</span><button disabled={!smartPaste.trim()} onClick={applySmartPaste}>Interpretar e colocar na grade <ArrowRight /></button></footer></div>}
       </div>
       <aside className="renewal-intake-guide">
         <header><ListChecks /><div><span>Fluxo seguro</span><strong>Antes de gravar</strong></div></header>
@@ -265,7 +265,7 @@ export default function AutoRenovacoesPuxar() {
 
     <section className="ops-sheet-workspace renewal-builder-workspace">
       <header className="ops-sheet-toolbar renewal-builder-toolbar"><div className="ops-sheet-title"><span><FileSpreadsheet /></span><div><strong>2 · Grade de revisão · {monthLabel(month)}</strong><small>Edite como no Excel. A primeira coluna também aceita uma lista simples de nomes.</small></div></div><button onClick={() => setDraftRows(rows => [...rows, ...blankRows(month, 10)])}><Plus />10 linhas</button><button className="renewal-save-button is-active" disabled={!filledRows.length || saveMutation.isPending} onClick={handleSave}>{saveMutation.isPending ? 'Gravando carteira…' : invalidRows.length ? `Corrigir ${invalidRows.length} data(s)` : pendingLinks.length ? `Revisar ${pendingLinks.length} vínculo(s)` : `Gravar ${validRows.length} renovação(ões)`}<ArrowRight /></button></header>
-      <div className="renewal-sheet-instructions"><span><b>A</b>Cole datas ou uma lista de nomes</span><span><b>C</b>Segurado fica sempre visível</span><span><b>↵</b>Enter avança para a próxima linha</span><span><b>✓</b>Linhas vermelhas não serão salvas</span></div>
+      <div className="renewal-sheet-instructions"><span><b>A</b>Cole datas ou uma lista de nomes</span><span><b>C</b>Segurado fica sempre visível</span><span><b>10</b>Limite calculado em dias úteis</span><span><b>✓</b>Comissão passada é opcional</span></div>
       <OperationalSpreadsheet rows={draftRows} columns={columns} getRowId={row => row._id} getRowClassName={row => { const issue = row.nome_cliente ? renewalDraftIssue(row, month) : null; return issue ? 'is-renewal-import-error' : `is-renewal-status-${row.status || 'pendente'}` }} onCommit={commitCell} onBulkCommit={bulkCommit} className="is-renewal-builder" emptyMessage="Adicione uma linha para começar." statusLabel={`${readyRows.length} pronta(s) · ${pendingLinks.length} aguardando vínculo · ${invalidRows.length} com erro`} />
     </section>
 

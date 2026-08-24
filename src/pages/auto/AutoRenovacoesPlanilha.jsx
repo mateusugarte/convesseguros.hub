@@ -33,8 +33,8 @@ function customerName(row) { return row.clientes_auto?.nome_completo || row.nome
 function vehicleName(row) { return row.identificacao_veiculo || [row.apolices_auto?.modelo_veiculo, row.apolices_auto?.placa].filter(Boolean).join(' · ') || '' }
 
 function exportCsv(rows) {
-  const headers = ['Data de vencimento', 'Cia', 'Segurado', 'Veículo', 'Status', 'Limite', 'Contatos', 'Follow-ups', 'Último contato', 'Próximo follow-up', 'Descontos', 'Desconto %', 'Comissão', 'Comissão passada', 'Notas']
-  const values = rows.map(row => [row.vigencia_fim, row.seguradora, customerName(row), vehicleName(row), renewalStatusValue(row), row.data_limite_envio, row.contatos_realizados, row.followups_realizados, row.ultimo_contato_em, row.proximo_followup_em, row.descontos_realizados, row.desconto_percentual, row.pct_comissao_atual, row.pct_comissao_anterior, row.notas_negociacao])
+  const headers = ['Data de vencimento', 'Seguradora atual', 'Segurado', 'Veículo', 'Outra seguradora', 'Status', 'Limite automático', 'Contatos', 'Follow-ups', 'Último contato', 'Próximo follow-up', 'Descontos', 'Desconto %', 'Comissão', 'Comissão passada', 'Notas']
+  const values = rows.map(row => [row.vigencia_fim, row.seguradora, customerName(row), vehicleName(row), row.outra_seguradora, renewalStatusValue(row), row.data_limite_envio, row.contatos_realizados, row.followups_realizados, row.ultimo_contato_em, row.proximo_followup_em, row.descontos_realizados, row.desconto_percentual, row.pct_comissao_atual, row.pct_comissao_anterior, row.notas_negociacao])
   const escape = value => `"${String(value ?? '').replace(/"/g, '""')}"`
   const blob = new Blob([[headers, ...values].map(line => line.map(escape).join(';')).join('\n')], { type: 'text/csv;charset=utf-8' })
   const link = document.createElement('a')
@@ -106,7 +106,7 @@ export default function AutoRenovacoesPlanilha() {
       if (followupFilter && (!row.proximo_followup_em || row.proximo_followup_em > today)) return false
       if (sendTodayFilter && ((row.data_limite_envio || row.vigencia_fim) > today || ['cotada', 'enviada', 'negociando', 'renovada', 'nao_renovada', 'outra_corretora'].includes(renewalStatusValue(row)))) return false
       if (!term) return true
-      return normalize([customerName(row), vehicleName(row), row.seguradora, row.apolices_auto?.numero_apolice, row.notas_negociacao].filter(Boolean).join(' ')).includes(term)
+      return normalize([customerName(row), vehicleName(row), row.seguradora, row.outra_seguradora, row.apolices_auto?.numero_apolice, row.notas_negociacao].filter(Boolean).join(' ')).includes(term)
     }).sort((a, b) => {
       const get = row => sort.field === 'nome' ? customerName(row) : (row[sort.field] ?? '')
       const comparison = String(get(a)).localeCompare(String(get(b)), 'pt-BR', { numeric: true })
@@ -142,11 +142,12 @@ export default function AutoRenovacoesPlanilha() {
 
   const columns = useMemo(() => [
     { field: 'vigencia_fim', label: 'Data de vencimento', type: 'date', editable: true, sortable: true, width: 145 },
-    { field: 'seguradora', label: 'Cia', editable: true, sortable: true, width: 132 },
+    { field: 'seguradora', label: 'Seguradora atual', editable: true, sortable: true, width: 155 },
     { field: 'nome', label: 'Segurado', sortable: true, sticky: true, width: 230, render: row => <button className="ops-sheet-primary-link ops-sheet-insured-link" onClick={() => setEditingInsured(row)} title="Editar nome ou vincular cliente"><UserRound /> <span>{customerName(row) || 'Sem nome'}</span></button> },
     { field: 'identificacao_veiculo', label: 'Veículo', editable: true, width: 190, getValue: vehicleName },
+    { field: 'outra_seguradora', label: 'Outra seguradora', editable: true, width: 165, placeholder: 'Opcional' },
     { field: 'status', label: 'Status', type: 'select', editable: true, width: 145, options: STATUS_OPTIONS, getValue: renewalStatusValue },
-    { field: 'data_limite_envio', label: 'Limite', type: 'date', editable: true, sortable: true, width: 118 },
+    { field: 'data_limite_envio', label: 'Limite automático', type: 'date', sortable: true, width: 142, consumePaste: true },
     { field: 'contatos_realizados', label: 'Contatos', type: 'number', min: 0, editable: true, width: 86, parse: value => Math.max(0, Number(value) || 0) },
     { field: 'followups_realizados', label: 'Follow-ups', type: 'number', min: 0, editable: true, width: 92, parse: value => Math.max(0, Number(value) || 0) },
     { field: 'ultimo_contato_em', label: 'Último contato', type: 'date', editable: true, width: 126 },

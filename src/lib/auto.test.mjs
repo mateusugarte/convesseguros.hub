@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-const { calcularValorComissaoAuto, isValidIsoDate, subtrairDiasUteis } = await import('./autoCalc.js')
+const { calcularDataLimiteRenovacao, calcularValorComissaoAuto, isValidIsoDate, subtrairDiasUteis } = await import('./autoCalc.js')
 
 test('calcularValorComissaoAuto aplica o percentual direto sobre o premio liquido', () => {
   // premio 1000, comissao 10% => 100 (exemplo confirmado pelo usuario)
@@ -57,4 +57,9 @@ test('subtrairDiasUteis pula fins de semana (7 dias uteis antes de uma segunda-f
 
 test('subtrairDiasUteis retorna null para data invalida', () => {
   assert.equal(subtrairDiasUteis('0202-02-01', 7), null)
+})
+
+test('calcularDataLimiteRenovacao retorna 10 dias uteis antes do vencimento', () => {
+  // 31/08/2026 e segunda-feira; dez dias uteis antes cai em 17/08/2026.
+  assert.equal(calcularDataLimiteRenovacao('2026-08-31'), '2026-08-17')
 })

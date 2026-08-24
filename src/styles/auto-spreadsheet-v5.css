@@ -452,6 +452,37 @@
   background: rgb(var(--color-surface));
 }
 
+.policy-import-result.is-error {
+  border-top-color: rgba(239, 68, 68, .28);
+  background: linear-gradient(90deg, rgba(239, 68, 68, .1), rgba(245, 158, 11, .045));
+  color: #dc2626;
+}
+
+.policy-import-error-summary {
+  display: grid;
+  max-width: 980px;
+  gap: .35rem;
+  margin-top: .55rem;
+}
+
+.policy-import-error-summary p {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: .5rem;
+  margin: 0;
+  padding: .42rem .55rem;
+  border: 1px solid rgba(239, 68, 68, .16);
+  border-radius: 9px;
+  background: rgb(var(--color-surface) / .72);
+  color: var(--auto-muted);
+  font-size: .61rem;
+  line-height: 1.4;
+}
+
+.policy-import-error-summary b { color: #dc2626; white-space: nowrap; }
+.policy-import-error-summary span { margin: 0; font-size: inherit; }
+
 /* The legacy emissions grid follows the same visual language. */
 .auto-sheet-wrap {
   border-radius: 20px;

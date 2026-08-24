@@ -2,8 +2,10 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   normalizePolicyImportIdentity,
+  normalizePolicyImportPercentage,
   policyClientCandidates,
   policyImportRelationshipReady,
+  summarizePolicyImportErrors,
   suggestPolicyVehicle,
   splitInsuredAndVehicle,
 } from './autoPolicyImport.js'
@@ -54,4 +56,21 @@ test('permite importar sem veículo depois de confirmar o cliente', () => {
 test('exige confirmação quando algum dado de veículo foi informado', () => {
   assert.equal(policyImportRelationshipReady({ cliente_confirmado: true, modelo_veiculo: 'HR-V', veiculo_confirmado: false }), false)
   assert.equal(policyImportRelationshipReady({ cliente_confirmado: true, placa: 'ABC1D23', veiculo_confirmado: true }), true)
+})
+
+test('converte percentual numerico do Excel sem reduzir 15% para 0,15%', () => {
+  assert.equal(normalizePolicyImportPercentage(0.15), '15')
+  assert.equal(normalizePolicyImportPercentage('15%'), '15')
+  assert.equal(normalizePolicyImportPercentage('20,5%'), '20.5')
+})
+
+test('agrupa os motivos das linhas ignoradas', () => {
+  assert.deepEqual(summarizePolicyImportErrors([
+    { motivo: 'CPF obrigatório.' },
+    { motivo: 'CPF obrigatório.' },
+    { motivo: 'Vigência ausente.' },
+  ]), [
+    { motivo: 'CPF obrigatório.', quantidade: 2 },
+    { motivo: 'Vigência ausente.', quantidade: 1 },
+  ])
 })

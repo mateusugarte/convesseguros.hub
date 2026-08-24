@@ -7,7 +7,7 @@ import { endOfMonth, format, startOfMonth, startOfWeek } from 'date-fns'
 import {
   atualizarEmissaoAutoCompleta, atualizarTagsEmissao, calcularValorComissaoAuto, cancelarRenovacao, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
   emitirApoliceAuto, getApolicesAuto, getAutoTags, getEmissaoAuto, getEmissaoColuna, getEmissoesAuto, getRenovacoesPendentesSemCotacao,
-  iniciarCotacaoRenovacao, importarApolicesAutoPlanilha, importarApolicesAutoHistorico, moverEmissaoColuna,
+  iniciarCotacaoRenovacao, importarApolicesAutoHistorico, moverEmissaoColuna,
   salvarPropostaPlanilhaAuto, salvarResultadoCotacao,
 } from '../../lib/auto'
 import { PageHeader, MetricCard, DataCard, DatePicker, FilterBar, EmptyState } from '../../components/ui'
@@ -22,7 +22,7 @@ import {
 } from './autoShared'
 import { uploadDocumento } from '../../lib/documentos'
 import { toNumber } from '../../lib/apolices'
-import { limparNomeSegurado, parseAutoHistoricoPlanilha, somarUmAno } from '../../lib/autoHistoricoImport.js'
+import { parseAutoHistoricoPlanilha, somarUmAno } from '../../lib/autoHistoricoImport.js'
 import { parseOrcamentoAuto, parsePropostaAuto } from '../../lib/autoPdfParser.js'
 import { AUTO_PIPELINE_STAGES, AUTO_TIPO_META, classificarRenovacoesPipeline, scoreCotacaoSuggestion } from '../../lib/autoOperational.js'
 const COLUNAS = [
@@ -274,119 +274,6 @@ function toNumberOrEmpty(value) {
   return Number.isFinite(parsed) && parsed !== 0 ? parsed : (String(value || '').trim() === '' ? '' : parsed)
 }
 
-function normalizePlanilhaHeader(value) {
-  return String(value ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-}
-
-function cleanPlanilhaText(value) {
-  return String(value ?? '').replace(/\s+/g, ' ').trim()
-}
-
-function excelDateToISO(value) {
-  if (value === null || value === undefined || value === '') return ''
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return format(value, 'yyyy-MM-dd')
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    const parsed = XLSX.SSF.parse_date_code(value)
-    if (!parsed) return ''
-    return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`
-  }
-  const raw = cleanPlanilhaText(value)
-  const br = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/)
-  if (br) {
-    const year = br[3].length === 2 ? `20${br[3]}` : br[3]
-    return `${year}-${br[2].padStart(2, '0')}-${br[1].padStart(2, '0')}`
-  }
-  const iso = raw.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/)
-  if (iso) return `${iso[1]}-${iso[2].padStart(2, '0')}-${iso[3].padStart(2, '0')}`
-  return ''
-}
-
-function percentFromPlanilha(value) {
-  if (value === null || value === undefined || value === '') return null
-  if (typeof value === 'number' && Number.isFinite(value)) return value <= 1 ? value : value / 100
-  const raw = cleanPlanilhaText(value).replace('%', '').replace(',', '.')
-  const parsed = Number(raw)
-  if (!Number.isFinite(parsed)) return null
-  return parsed <= 1 ? parsed : parsed / 100
-}
-
-function findHeaderColumn(headerRow, start, end, labels) {
-  for (let col = start; col < end; col += 1) {
-    const header = normalizePlanilhaHeader(headerRow[col])
-    if (labels.some(label => header === label || header.includes(label))) return col
-  }
-  return -1
-}
-
-function rowsFromAutoSheet(sheetName, rows) {
-  const result = []
-  rows.forEach((headerRow, headerIndex) => {
-    const dataColumns = headerRow
-      .map((cell, index) => (normalizePlanilhaHeader(cell) === 'data' ? index : -1))
-      .filter(index => index >= 0)
-
-    dataColumns.forEach((dataCol, blockIndex) => {
-      const end = dataColumns[blockIndex + 1] ?? headerRow.length
-      const ciaCol = findHeaderColumn(headerRow, dataCol, end, ['cia', 'seguradora'])
-      const seguradoCol = findHeaderColumn(headerRow, dataCol, end, ['segurado', 'cliente'])
-      const statusCol = findHeaderColumn(headerRow, dataCol, end, ['status'])
-      const limiteCol = findHeaderColumn(headerRow, dataCol, end, ['limite', 'prazo'])
-      const comissaoCol = findHeaderColumn(headerRow, dataCol, end, ['comissao'])
-      const comissaoPassadaCol = findHeaderColumn(headerRow, dataCol, end, ['com passada', 'comissao passada'])
-      const cpfCol = findHeaderColumn(headerRow, dataCol, end, ['cpf'])
-      const celularCol = findHeaderColumn(headerRow, dataCol, end, ['celular', 'telefone'])
-      const placaCol = findHeaderColumn(headerRow, dataCol, end, ['placa'])
-      const modeloCol = findHeaderColumn(headerRow, dataCol, end, ['modelo', 'veiculo'])
-      const apoliceCol = findHeaderColumn(headerRow, dataCol, end, ['apolice'])
-
-      if (seguradoCol < 0) return
-
-      for (let rowIndex = headerIndex + 1; rowIndex < rows.length; rowIndex += 1) {
-        const row = rows[rowIndex]
-        if (normalizePlanilhaHeader(row[dataCol]) === 'data') break
-
-        const nome = limparNomeSegurado(row[seguradoCol])
-        const vigenciaFim = excelDateToISO(row[dataCol])
-        if (!nome && !vigenciaFim) continue
-        if (!nome || !vigenciaFim) continue
-
-        result.push({
-          aba: sheetName,
-          linha: rowIndex + 1,
-          nome_cliente: nome,
-          seguradora: cleanPlanilhaText(ciaCol >= 0 ? row[ciaCol] : ''),
-          status: cleanPlanilhaText(statusCol >= 0 ? row[statusCol] : ''),
-          vigencia_fim: vigenciaFim,
-          limite: excelDateToISO(limiteCol >= 0 ? row[limiteCol] : ''),
-          pct_comissao: percentFromPlanilha(comissaoCol >= 0 ? row[comissaoCol] : null),
-          comissao_passada: percentFromPlanilha(comissaoPassadaCol >= 0 ? row[comissaoPassadaCol] : null),
-          cpf_cliente: cleanPlanilhaText(cpfCol >= 0 ? row[cpfCol] : ''),
-          celular_cliente: cleanPlanilhaText(celularCol >= 0 ? row[celularCol] : ''),
-          placa: cleanPlanilhaText(placaCol >= 0 ? row[placaCol] : ''),
-          modelo_veiculo: cleanPlanilhaText(modeloCol >= 0 ? row[modeloCol] : ''),
-          numero_apolice: cleanPlanilhaText(apoliceCol >= 0 ? row[apoliceCol] : ''),
-          tipo_producao: 'individual',
-        })
-      }
-    })
-  })
-  return result
-}
-
-async function parseAutoPlanilhaFile(file) {
-  const buffer = await file.arrayBuffer()
-  const workbook = XLSX.read(buffer, { type: 'array', cellDates: false })
-  return workbook.SheetNames.flatMap(sheetName => {
-    const sheet = workbook.Sheets[sheetName]
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' })
-    return rowsFromAutoSheet(sheetName, rows)
-  })
-}
 async function parseAutoHistoricoPlanilhaFile(file) {
   const buffer = await file.arrayBuffer()
   const workbook = XLSX.read(buffer, { type: 'array', cellDates: false, cellStyles: true })
@@ -1531,7 +1418,6 @@ export default function AutoEmissoes() {
   const [emissaoPdfError, setEmissaoPdfError] = useState('')
   const [emissaoPdfApplied, setEmissaoPdfApplied] = useState(false)
   const emissaoFileRef = useRef(null)
-  const importFileRef = useRef(null)
   const importHistoricoFileRef = useRef(null)
   const kanbanScrollRef = useRef(null)
   const [kanbanNavigation, setKanbanNavigation] = useState({ index: 0, canLeft: false, canRight: true })
@@ -1541,7 +1427,6 @@ export default function AutoEmissoes() {
   const [filtroInicio, setFiltroInicio] = useState(initialRange.inicio)
   const [filtroFim, setFiltroFim] = useState(initialRange.fim)
   const [buscaPipeline, setBuscaPipeline] = useState('')
-  const [importResumo, setImportResumo] = useState(null)
   const [importHistoricoResumo, setImportHistoricoResumo] = useState(null)
   const [mesAnoEmissoes, setMesAnoEmissoes] = useState(() => {
     const now = new Date()
@@ -1804,25 +1689,6 @@ export default function AutoEmissoes() {
   })
 
 
-  const { mutateAsync: importarPlanilhaAsync, isPending: isImportingPlanilha } = useMutation({
-    mutationFn: rows => importarApolicesAutoPlanilha(rows),
-    onSuccess: resumo => {
-      qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
-      qc.invalidateQueries({ queryKey: ['auto-apolices'] })
-      qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
-      qc.invalidateQueries({ queryKey: ['auto-renovacoes-todas'] })
-      qc.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] })
-      setImportResumo(resumo)
-      toast({
-        type: 'success',
-        title: 'Planilha importada',
-        message: `${resumo.importadas} novas e ${resumo.atualizadas} atualizadas. ${resumo.ignoradas} ignoradas.`,
-      })
-    },
-    onError: error => {
-      toast({ type: 'error', title: 'Erro ao importar planilha', message: error?.message || 'Revise o arquivo enviado.' })
-    },
-  })
   const { mutateAsync: importarHistoricoAsync, isPending: isImportingHistorico } = useMutation({
     mutationFn: rows => importarApolicesAutoHistorico(rows),
     onSuccess: resumo => {
@@ -2000,26 +1866,6 @@ export default function AutoEmissoes() {
   }
 
 
-  async function handleImportPlanilha(event) {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) return
-
-    try {
-      const rows = await parseAutoPlanilhaFile(file)
-      if (!rows.length) {
-        toast({
-          type: 'error',
-          title: 'Planilha sem linhas reconhecidas',
-          message: 'Use colunas DATA, CIA, SEGURADO e STATUS, como na planilha de renova��es auto.',
-        })
-        return
-      }
-      await importarPlanilhaAsync(rows)
-    } catch (error) {
-      toast({ type: 'error', title: 'Erro ao ler planilha', message: error?.message || 'Arquivo invalido ou fora do modelo esperado.' })
-    }
-  }
   async function handleImportHistorico(event) {
     const file = event.target.files?.[0]
     event.target.value = ''
@@ -2371,20 +2217,12 @@ export default function AutoEmissoes() {
             >
               {isGestaoRoute ? 'Ver apólices e emissões' : 'Abrir Pipeline'}
             </button>
-            <input
-              ref={importFileRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={handleImportPlanilha}
-              className="hidden"
-            />
             <button
-              onClick={() => importFileRef.current?.click()}
-              disabled={isImportingPlanilha}
-              className="btn-secondary inline-flex items-center gap-2 disabled:opacity-50"
+              onClick={() => navigate('/auto/emissoes/planilha?subir=1')}
+              className="btn-secondary inline-flex items-center gap-2"
             >
-              {isImportingPlanilha ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              Importar planilha
+              <Upload className="h-4 w-4" />
+              Subir apólices
             </button>
             <input
               ref={importHistoricoFileRef}
@@ -2421,23 +2259,6 @@ export default function AutoEmissoes() {
           </>
         )}
       />
-      {importResumo && (
-        <DataCard className="border-brand-accent/20 bg-brand-accent/5" bodyClassName="p-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-dark-text">Ultima importacao de apolices auto</p>
-              <p className="mt-1 text-xs text-dark-muted">
-                {importResumo.total} linhas lidas. {importResumo.importadas} novas, {importResumo.atualizadas} atualizadas e {importResumo.ignoradas} ignoradas.
-              </p>
-            </div>
-            {importResumo.erros?.length > 0 && (
-              <span className="rounded-2xl border border-status-warning/25 bg-status-warning/10 px-3 py-2 text-xs font-medium text-status-warning">
-                {importResumo.erros.length} linha(s) com aviso
-              </span>
-            )}
-          </div>
-        </DataCard>
-      )}
       {importHistoricoResumo && (
         <DataCard className="border-status-warning/25 bg-status-warning/5" bodyClassName="p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

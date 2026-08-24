@@ -30,9 +30,26 @@ test('cola uma grade com cabecalhos da planilha e veiculo', () => {
   const [row] = parseRenovacoesPaste('DATA\tCIA\tSEGURADO\tVEICULO\tSTATUS\tLIMITE\n21/08\tHDI\tAna\tCivic\tENVIADO\t14/08', '2026-08')
   assert.deepEqual(row, {
     nome_cliente: 'Ana', seguradora: 'HDI', vigencia_fim: '2026-08-21',
-    data_limite_envio: '2026-08-14', identificacao_veiculo: 'Civic', status: 'enviada',
+    data_limite_envio: '2026-08-14', identificacao_veiculo: 'Civic', outra_seguradora: '', status: 'enviada',
     pct_comissao_atual: null, pct_comissao_anterior: null,
   })
+})
+
+test('reconhece seguradora atual e outra seguradora opcionais', () => {
+  const [row] = parseRenovacoesPaste('VENCIMENTO\tSEGURADORA ATUAL\tSEGURADO\tVEÍCULO\tOUTRA SEGURADORA\tCOMISSÃO PASSADA\n31/08/2026\tAllianz\tAna\tHR-V\tPorto\t18%', '2026-08')
+  assert.equal(row.seguradora, 'Allianz')
+  assert.equal(row.outra_seguradora, 'Porto')
+  assert.equal(row.identificacao_veiculo, 'HR-V')
+  assert.equal(row.pct_comissao_anterior, 18)
+})
+
+test('cola linha sem cabecalho na ordem exibida pela entrada de renovacoes', () => {
+  const [row] = parseRenovacoesPaste('31/08/2026\tAllianz\tAna\tHR-V\tPorto\t18%', '2026-08')
+  assert.equal(row.vigencia_fim, '2026-08-31')
+  assert.equal(row.nome_cliente, 'Ana')
+  assert.equal(row.identificacao_veiculo, 'HR-V')
+  assert.equal(row.outra_seguradora, 'Porto')
+  assert.equal(row.pct_comissao_anterior, 18)
 })
 
 test('preserva os status operacionais e comissoes usados em agosto de 2026', () => {

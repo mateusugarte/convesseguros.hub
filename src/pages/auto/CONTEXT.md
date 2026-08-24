@@ -112,9 +112,17 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   existe) e cria a funcao SQL `subtrair_dias_uteis`, usada pelo trigger
   `fn_criar_renovacao_auto`. Precisa ser executada manualmente no SQL Editor
   antes de "Criar renovacao manualmente" funcionar em producao.
-- Data limite da cotacao de renovacao = 7 dias UTEIS antes do vencimento
+- Migration `supabase/65_auto_renovacoes_prazo_seguradoras.sql` adiciona a
+  seguradora alternativa opcional, recalcula a carteira existente e protege no
+  banco a regra automatica de prazo. Precisa ser executada no SQL Editor.
+- Migration `supabase/66_auto_clientes_cpf_opcional_importacao.sql` remove o
+  `NOT NULL` legado de `clientes_auto.cpf`. A subida de apolices nao pede CPF e
+  deve conseguir criar o cliente apenas com o nome. O botao da pagina principal
+  abre a mesma grade de revisao de `/auto/emissoes/planilha?subir=1`; nao criar
+  outro atalho que envie linhas sem confirmar o vinculo do cliente.
+- Data limite da cotacao de renovacao = 10 dias UTEIS antes do vencimento
   (pula sabado/domingo, sem calendario de feriados) — regra unica em
-  `isValidIsoDate`/`subtrairDiasUteis` (`src/lib/autoCalc.js`), usada tanto no
+  `calcularDataLimiteRenovacao` (`src/lib/autoCalc.js`), usada tanto no
   front-end (`AutoRenovacoes.jsx`) quanto no backend (`src/lib/auto.js` e o
   trigger SQL acima). Nao usar dias corridos nem duplicar essa logica.
 - O Kanban de `/auto/gestao` usa uma faixa horizontal com oito etapas na ordem

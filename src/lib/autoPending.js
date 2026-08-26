@@ -72,14 +72,70 @@ function renewalHref(item, today) {
   return `/auto/renovacoes/planilha?mes=${monthRef(item.vigencia_fim, today)}`
 }
 
+function linkedEmissionStage(item = {}) {
+  const emission = Array.isArray(item.emissoes_auto)
+    ? item.emissoes_auto.find(candidate => candidate?.coluna)
+    : item.emissoes_auto
+  return emission?.coluna || ''
+}
+
+function reminderMeta(dueDate, today) {
+  const distance = daysBetween(today, dueDate)
+  if (distance === 1) return { priority: 'normal', dueLabel: 'Amanhã' }
+  if (distance === 0) return { priority: 'high', dueLabel: 'Para hoje' }
+  return deadlineMeta(dueDate, today)
+}
+
 /**
  * Converte o estado real da operação AUTO em uma fila única de trabalho.
  * O retorno é deliberadamente independente de React/Supabase para manter as
  * regras testáveis e reutilizáveis por outros pontos do sistema.
  */
-export function buildAutoPendingNotifications({ renovacoes = [], emissoes = [], today } = {}) {
+export function buildAutoPendingNotifications({ renovacoes = [], emissoes = [], cotacoes = [], lembretes = [], today } = {}) {
   const referenceDay = dateOnly(today) || localToday()
   const notifications = []
+
+  cotacoes.forEach(item => {
+    const status = String(item.status || 'pendente')
+    const stage = linkedEmissionStage(item)
+    const lastUpdate = dateOnly(item.ultimo_followup_em || item.updated_at || item.created_at)
+    const staleDays = Math.max(0, daysBetween(lastUpdate, referenceDay))
+    const name = personName(item)
+
+    if (['pendente', 'aberta'].includes(status) && !stage && staleDays >= 1) {
+      notifications.push({
+        id: `cotacao_confirmacao:${item.id}`,
+        kind: 'cotacao_confirmacao',
+        priority: staleDays >= 3 ? 'critical' : 'high',
+        title: `A cotação de ${name} foi feita?`,
+        subject: name,
+        description: staleDays === 1
+          ? 'Sem atualização desde ontem. Confirme se a cotação foi concluída ou continua pendente.'
+          : `Sem atualização há ${staleDays} dias. Confirme o andamento e registre o próximo passo.`,
+        dueDate: lastUpdate,
+        dueLabel: waitingLabel(lastUpdate, referenceDay),
+        actionLabel: 'Responder andamento',
+        href: `/auto/cotacoes/${item.id}?tab=operacao`,
+      })
+    }
+
+    const nextDate = dateOnly(item.proximo_passo_em)
+    if (!['convertida', 'perdida'].includes(status) && nextDate && nextDate <= referenceDay) {
+      const meta = deadlineMeta(nextDate, referenceDay)
+      notifications.push({
+        id: `proximo_passo_cotacao:${item.id}`,
+        kind: 'followup',
+        priority: meta.priority,
+        title: item.proximo_passo || `Retomar ${name}`,
+        subject: name,
+        description: item.observacoes_operacionais || 'Execute o próximo passo combinado e registre o retorno.',
+        dueDate: nextDate,
+        dueLabel: meta.dueLabel,
+        actionLabel: 'Abrir acompanhamento',
+        href: `/auto/cotacoes/${item.id}?tab=operacao`,
+      })
+    }
+  })
 
   renovacoes.forEach(item => {
     const status = renewalStatusValue(item)
@@ -133,16 +189,16 @@ export function buildAutoPendingNotifications({ renovacoes = [], emissoes = [], 
 
     if (stage === 'cotacao_feita' && startDate <= referenceDay) {
       notifications.push({
-        id: `emissao:${item.id}`,
-        kind: 'emissao',
+        id: `continuidade:${item.id}`,
+        kind: 'continuidade',
         priority: waitPriority(startDate, referenceDay, 2),
-        title: `Transmitir proposta: ${name}`,
+        title: `A cotação de ${name} teve continuidade?`,
         subject: name,
-        description: 'A cotação está pronta; faça a emissão e registre a transmissão.',
+        description: 'Confirme se segue em andamento, entrou em negociação ou avançou para emissão.',
         dueDate: startDate,
         dueLabel: waitingLabel(startDate, referenceDay),
-        actionLabel: 'Fazer emissão',
-        href,
+        actionLabel: 'Atualizar próximo passo',
+        href: item.cotacao_id ? `/auto/cotacoes/${item.cotacao_id}?tab=operacao` : href,
       })
     }
 
@@ -179,6 +235,46 @@ export function buildAutoPendingNotifications({ renovacoes = [], emissoes = [], 
         href,
       })
     }
+
+    const nextDate = dateOnly(item.proximo_passo_em)
+    if (nextDate && nextDate <= referenceDay && !['apolice_emitida', 'emitida'].includes(stage)) {
+      const meta = deadlineMeta(nextDate, referenceDay)
+      notifications.push({
+        id: `proximo_passo_emissao:${item.id}`,
+        kind: 'followup',
+        priority: meta.priority,
+        title: item.proximo_passo || `Retomar ${name}`,
+        subject: name,
+        description: item.observacoes_operacionais || 'Execute o próximo passo e registre o retorno.',
+        dueDate: nextDate,
+        dueLabel: meta.dueLabel,
+        actionLabel: 'Abrir acompanhamento',
+        href: item.cotacao_id ? `/auto/cotacoes/${item.cotacao_id}?tab=operacao` : href,
+      })
+    }
+  })
+
+  lembretes.forEach(item => {
+    const dueDate = dateOnly(item.data_lembrete)
+    if (!dueDate || item.concluido_em) return
+    const notifyFrom = daysBetween(referenceDay, dueDate)
+    if (notifyFrom > Number(item.avisar_antes_dias ?? 1)) return
+    const meta = reminderMeta(dueDate, referenceDay)
+    const name = personName(item)
+    notifications.push({
+      id: `lembrete:${item.id}`,
+      kind: 'lembrete',
+      priority: meta.priority,
+      title: item.titulo || `Lembrete de ${name}`,
+      subject: name,
+      description: item.observacao || `Lembrete programado para ${name}.`,
+      dueDate,
+      dueLabel: meta.dueLabel,
+      actionLabel: 'Abrir lembrete',
+      href: item.cotacao_id
+        ? `/auto/cotacoes/${item.cotacao_id}?tab=operacao`
+        : item.emissao_id ? `/auto/emissoes/${item.emissao_id}` : '/auto',
+    })
   })
 
   return notifications.sort((left, right) => {

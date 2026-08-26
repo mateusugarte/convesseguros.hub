@@ -34,9 +34,37 @@ test('cria emissão, coleta de apólice e vistoria conforme a etapa do pipeline'
       { id: 'e3', nome_cliente: 'Enzo', coluna: 'aguardando_vistoria', modelo_veiculo: 'HR-V', created_at: '2026-08-21T10:00:00Z' },
     ],
   })
-  assert.deepEqual(new Set(result.map(item => item.kind)), new Set(['emissao', 'coletar_apolice', 'vistoria']))
+  assert.deepEqual(new Set(result.map(item => item.kind)), new Set(['continuidade', 'coletar_apolice', 'vistoria']))
   assert.equal(result.find(item => item.kind === 'coletar_apolice').priority, 'critical')
   assert.equal(result.find(item => item.kind === 'vistoria').description.includes('HR-V'), true)
+})
+
+test('pergunta se cotação parada foi feita e direciona para o acompanhamento', () => {
+  const result = buildAutoPendingNotifications({
+    today,
+    cotacoes: [{ id: 'c1', nome_cliente: 'Gabi', status: 'pendente', updated_at: '2026-08-18T10:00:00Z', emissoes_auto: [] }],
+  })
+  assert.equal(result[0].kind, 'cotacao_confirmacao')
+  assert.equal(result[0].priority, 'critical')
+  assert.match(result[0].title, /foi feita\?$/)
+  assert.equal(result[0].href, '/auto/cotacoes/c1?tab=operacao')
+})
+
+test('lembrete aparece na véspera, no dia e quando atrasa', () => {
+  const base = { id: 'l1', cotacao_id: 'c1', titulo: 'Ligar para Ana', avisar_antes_dias: 1 }
+  assert.equal(buildAutoPendingNotifications({ today, lembretes: [{ ...base, data_lembrete: '2026-08-22' }] })[0].dueLabel, 'Amanhã')
+  assert.equal(buildAutoPendingNotifications({ today, lembretes: [{ ...base, data_lembrete: today }] })[0].dueLabel, 'Para hoje')
+  assert.match(buildAutoPendingNotifications({ today, lembretes: [{ ...base, data_lembrete: '2026-08-19' }] })[0].dueLabel, /Atrasada/)
+  assert.equal(buildAutoPendingNotifications({ today, lembretes: [{ ...base, data_lembrete: '2026-08-23' }] }).length, 0)
+})
+
+test('próximo passo vencido vira follow-up e cotação com emissão não duplica pergunta inicial', () => {
+  const result = buildAutoPendingNotifications({
+    today,
+    cotacoes: [{ id: 'c2', nome_cliente: 'Hugo', status: 'aberta', updated_at: '2026-08-18', proximo_passo: 'Cobrar documentos', proximo_passo_em: today, emissoes_auto: [{ coluna: 'cotacao_feita' }] }],
+  })
+  assert.deepEqual(result.map(item => item.kind), ['followup'])
+  assert.equal(result[0].title, 'Cobrar documentos')
 })
 
 test('não pede coleta quando a proposta já possui apólice vinculada', () => {
@@ -58,4 +86,3 @@ test('ordena críticas antes das tarefas normais', () => {
   assert.equal(result[0].id, 'coletar_apolice:critical')
   assert.equal(result.at(-1).priority, 'normal')
 })
-

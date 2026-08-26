@@ -1,5 +1,261 @@
 # CURRENT TASK
 
+## Acompanhamento operacional e parsers AUTO (2026-08-26, Codex — CONCLUIDO)
+
+Responsavel: Codex, Agente de Sistemas. Entregue: parsers fixos para Darwin, Pier, Suhai, Yelum e Tokio Marine usando os PDFs reais, com fixtures posicionais e saida no contrato de `orcamentoComparativo.js`. O parser Allianz permaneceu sob responsabilidade do Claude. Toda seguradora cujo PDF contenha mais de um produto agora expoe as opcoes e bloqueia a leitura final ate escolha explicita: HDI (2), Pier (2), Suhai (4) e Allianz (6, integracao independente).
+
+O roteador `orcamentoSeguradoraParser.js` identifica todos os layouts fora da Allianz; `orcamentoLeitura.js` preserva a integracao Allianz e encaminha as demais. Produtos unicos preenchem a revisao direto; multiplos abrem `AutoOrcamentoOfertas`. A pagina rasterizada dos produtos Pier nao gera numeros fixos: preco e limites ficam bloqueados para OCR/revisao.
+
+Tambem foi entregue o acompanhamento operacional solicitado: cotações paradas perguntam se foram feitas; cotações feitas perguntam se houve continuidade; a cotacao ganhou proximo passo, data, observacoes, etiquetas, historico de contatos/follow-ups e lembretes com aviso antecipado. A Central de Pendencias agrega confirmacoes, continuidade, proximos passos e lembretes. Migration obrigatoria: `supabase/68_auto_acompanhamento_operacional.sql`.
+
+Validacao final: `npm test` com 495 testes aprovados; `npm run build` concluido. Permanecem apenas os avisos preexistentes do import `xlsx` e do chunk dinamico de `orcamentoLeitura`.
+
+---
+
+## Cotacoes de exemplo das 12 seguradoras + cor de destaque (2026-08-25, Claude — EM ANDAMENTO)
+
+Amostras recebidas em `documentos_automacao/orçamentos/`: ALLIANZ, AZUL, BRADESCO, DARWIN, HDI,
+ITAU, MITSUI, PIER, SUHAI, YELLUM (10) + Tokio e Porto ja conhecidas = 12.
+Todas tem texto real extraivel via `pdfjs-dist`; nenhuma e imagem escaneada.
+
+**Descoberta que muda o tamanho do trabalho de parser:** AZUL, ITAU e MITSUI **nao sao tres
+layouts** — sao o mesmo documento do grupo Porto Seguro. Mesmo CNPJ emissor
+(61.198.164/0001-60), mesmo numero raiz de orcamento (`6065143265-0-2/-3/-4`, so muda o
+sufixo), mesmo cabecalho "Versao Condicoes Gerais: CGxxx / <MARCA> TRADICIONAL e PROTECAO
+COMBINADA v1.0". Com a Porto, sao **4 seguradoras cobertas por 1 parser**. Isso tambem explica
+o `#00a0ff` que aparecia como cor dominante nas tres: e a barra do sistema de cotacao da Porto,
+nao a logo da marca.
+
+**Seguradoras fora do `LAYOUTS` do `autoPdfParser.js`:** DARWIN, MITSUI, PIER, YELLUM.
+E ha 3 no parser sem amostra: mapfre, liberty (hoje Yelum), zurich.
+
+**Cores.** `CORES_SEGURADORA_PADRAO` ja cobria 15 seguradoras. Nesta rodada: acrescentado
+Mitsui (`#201060`, amostrado da logo embutida no PDF) e `SEGURADORAS_SEM_COR = ['darwin','pier']`
+— nas duas a logo do PDF e vetorial, nao houve pixel para amostrar.
+
+**Bug silencioso corrigido em `corDaSeguradora`:** o casamento pelo mapa era por IGUALDADE
+EXATA do nome normalizado. Como `seguradoras.nome_canonico` carrega razao social ("Mitsui
+Sumitomo Seguros S.A.", "Bradesco Auto/RE Companhia de Seguros", "HDI SEGUROS S.A."), nenhum
+desses nomes casava e a cor caia no `CORES_FALLBACK` **por papel** — ou seja, inverter "atual" e
+"outra" trocava a cor da seguradora, exatamente o que a regra do modulo proibe, e saia um PDF
+com cor plausivel mas errada. Agora e exato primeiro, depois a chave mais longa contida no nome.
+2 testes novos cobrem os dois casos. `npm test` 322/322.
+
+**Regra reafirmada pelo usuario em 25/08:** COMISSAO NUNCA ENTRA NO ORCAMENTO — o documento vai
+para o cliente; `pct_comissao` continua sendo extraido e guardado so no sistema. Verificado: a
+palavra nao aparece em nenhum dos tres modulos do comparativo. E: cobertura tem que ser
+afirmacao explicita nos dois sentidos ("tem X" / "NAO tem Y").
+
+**Decisao do usuario:** extracao por **parser fixo por seguradora** (spec secao 4, Opcao B),
+nao por IA.
+
+**PENDENTE:**
+1. Cor REAL de Darwin e Pier. O usuario informou em 25/08 que as duas sao rosa; entraram no
+   mapa como PROVISORIAS (`#c2185b` e `#ff4d8d`), escolhidas afastadas de proposito. Nao foi
+   possivel amostrar: a logo e vetorial no PDF, a RLS bloqueia `seguradoras` para anon e a
+   listagem do bucket publico `cadastros-media` volta vazia. Depende do usuario mandar os
+   `logo_url`.
+1b. COLISAO DE COR ENTRE SEGURADORAS JA CADASTRADAS, achada pela guarda nova: Bradesco x
+   Mapfre da distancia 23 e Porto x Allianz da 50, numa escala onde o par validado Tokio x
+   Porto da 252. Cotar qualquer um desses dois pares junto produz dois cards que o cliente
+   nao distingue. `montarComparativo` agora devolve `cores_proximas` (avisa, nao bloqueia —
+   e problema de cadastro). Resolver escurecendo/clareando uma das duas de cada par.
+2. ~~Tres estados de cobertura~~ **FEITO em 25/08.** `blocoCoberturas` nao filtra mais por
+   conteudo; quem decide o que sai do card e `montarCategorias`, funcao nova compartilhada por
+   `montarCard` e `validarCotacao` (as duas TEM que concordar sobre o estado, senao a revisao
+   libera e o PDF sai com linha faltando). `ESTADO_COBERTURA`: INCLUIDA / NAO_INCLUIDA /
+   NAO_INFORMADO. A lista livre `nao_incluso` do schema agora tambem decide estado de categoria
+   — "Carro reserva" listado ali marca a LINHA de carro reserva como negada, em vez de deixar a
+   linha em branco e mencionar o assunto so no painel do rodape. NAO_INFORMADO bloqueia a
+   geracao. "Beneficios adicionais" e a unica que pode sumir (spec secao 9, item 7): ausencia de
+   beneficio extra nao e lacuna de cobertura. Caso de referencia conferido apos a mudanca: Tokio
+   6 linhas, Porto 7, `podeGerar: true`, zero bloqueio — o mockup validado nao mudou, entao nao
+   ha risco novo de estourar para a pagina 2. 8 testes novos.
+3. Os parsers de cobertura em si — nenhum existe ainda (`parseOrcamentoAutoText` extrai zero
+   cobertura). Contrato do que cada um deve devolver: `documentos_automacao/CONTRATO_EXTRACAO.md`.
+4. Ligar os 3 modulos de dominio a tela — hoje nenhum `.jsx` os importa.
+
+**PARSER DA FAMILIA PORTO — FEITO em 25/08.** `src/lib/pdfLayout.js` (reconstrucao de tabela por
+coordenada, puro) + `src/lib/orcamentoPortoParser.js` (Porto, Azul, Itau e Mitsui num parser so)
++ `extractPdfLayout` em `apoliceParser.js` (ponte pdfjs). 25 testes contra fixtures dos PDFs
+reais, em `src/lib/__fixtures__/porto-familia.json`.
+
+**POR QUE POSICIONAL E NAO REGEX — nao repetir esse erro nos proximos parsers.** `extractPdfText`
+junta os fragmentos na ordem de DESENHO do PDF, nao na ordem visual. Medido na linha do Casco da
+Azul (orcamento 6065143265-0-4):
+
+    posicao real -> LMI 100,00% | Franquia R$ 3.600,00 | ... | Premio R$ 1.320,61
+    texto plano  -> 100.00% R$ 1.320,61 0.00% 0.00% R$ 3.600,00
+
+Lido do texto plano na ordem do cabecalho, franquia e premio saem TROCADOS. Sairia franquia
+errada num documento entregue ao cliente, sem nada indicando erro. As colunas sao ancoradas no
+texto do cabecalho, nunca em X fixo, porque as tres marcas tem larguras diferentes.
+
+**Dois bugs de dominio que so apareceram ao ligar parser + card:**
+- `montarCategorias` montava o texto da categoria com `observacoes || nome_padronizado`. Cobertura
+  extraida so com `nome_original_seguradora` (que e como o parser entrega) dava texto vazio e caia
+  em NAO_INFORMADO — cobertura lida corretamente do PDF e mesmo assim bloqueando a geracao.
+  Corrigido com fallback para `nome_original_seguradora`.
+- `DICIONARIO_COBERTURAS` so tinha "custas de defesa"; a familia Porto escreve "CUSTOS DE DEFESA
+  AUTO". O item caia em "Beneficios adicionais", como se defesa juridica fosse um mimo. As duas
+  grafias entraram.
+
+**Estado real das 3 cotacoes apos o parser:** 6 das 7 categorias INCLUIDA; `carro_reserva` sai
+NAO_INFORMADO nas tres porque nenhuma das tres cotacoes menciona carro reserva — e BLOQUEIA, que
+e o comportamento certo. Nao ha o que "consertar" ai: falta o dado no PDF de origem.
+
+**PARSER BRADESCO — FEITO em 25/08.** `src/lib/orcamentoBradescoParser.js` + 21 testes, fixture em
+`src/lib/__fixtures__/bradesco.json`. **Primeira cotacao das amostras que fecha com
+`podeGerar: true`, zero bloqueio e zero aviso** — e a unica que declara carro reserva
+("(060) Auto Reserva 07 Dias"), a categoria que trava as quatro da familia Porto.
+
+Layout totalmente diferente da Porto: nao ha tabela com colunas, e sim grade de `rotulo: valor`
+em tres colunas, dividida em secoes (CLAUSULAS, LMI, FRANQUIAS, PREMIOS, PAGAMENTO). Primitiva
+nova em `pdfLayout.js`: `valorAposRotulo`.
+
+**O escopo por secao NAO e opcional — duas armadilhas medidas:**
+- `Veículo:` existe em duas secoes: na LMI vale "Valor de Mercado Referenciado", nas FRANQUIAS
+  vale "2.497,72 (Reduzida)". Busca no documento inteiro imprimiria a franquia errada.
+- `Nome:` existe em DADOS DO PROPONENTE e em DADOS DO CORRETOR. Sem o corte, o segurado do
+  orcamento sairia como sendo a propria Conves.
+Os dois casos tem teste marcado REGRESSAO.
+
+**Terceira confirmacao de que texto plano nao serve:** as regexes escalares (nome, placa, numero
+da cotacao) voltaram TODAS vazias na primeira tentativa. No texto plano deste PDF "Nº Cotação:" e
+seguido de "DEMONSTRATIVO DE CÁLCULO", nao do valor. Passaram a sair por `valorAposRotulo`.
+
+**Regra do Bradesco que difere da Porto:** a cobertura vem da lista de CLAUSULAS, nao de haver
+premio. Um item contratado pode ter premio 0,00 por estar incluso no pacote — deduzir ausencia de
+premio zerado inventaria exclusao. As clausulas sao mapeadas por CODIGO ((001), (060), (024)...),
+nao por nome: o Bradesco reescreve o nome comercial entre versoes, o codigo do produto nao muda.
+
+**Tabela de pagamento por coluna:** a linha de 12x so existe para o Cartao de Credito Bradesco (2
+celulas, contra 8 das demais linhas). Lida por posicao na lista, o 12x seria atribuido ao Debito
+em Conta e o card anunciaria 12x num meio que so vai ate 11x. Carne corretamente para em 6x, onde
+o total salta de R$ 1.929,86 para R$ 2.223,45.
+
+**Cobertura de parsers: 5 de 12 seguradoras** (Porto, Azul, Itau, Mitsui, Bradesco).
+Faltam: Allianz, Darwin, HDI, Pier, Suhai, Yelum, Tokio. Nenhuma delas compartilha layout —
+conferido por CNPJ e cabecalho; a economia da familia Porto nao se repete.
+
+**PARSER HDI — FEITO em 25/08.** `src/lib/orcamentoHdiParser.js` + 24 testes, fixture em
+`src/lib/__fixtures__/hdi.json`. `podeGerar: true`, as 7 categorias preenchidas.
+
+**A HDI traz DUAS COTACOES ALTERNATIVAS no mesmo PDF**, lado a lado, cada uma com LMI, premio,
+totais e tabela de parcelamento proprios: "VLR. MERCADO REFERENCIADO" (total R$ 1.478,24) e
+"Valor Determinado" (R$ 1.664,71). Sao produtos diferentes — mercado indeniza 100% da FIPE do dia
+do sinistro, determinado indeniza valor fixo combinado hoje. O parser usa `mercado` por PADRAO,
+porque e a modalidade que Porto e Bradesco tambem cotam: comparar o "Valor Determinado" da HDI
+com o "Mercado Referenciado" da Porto poria produtos diferentes lado a lado no mesmo documento.
+`modalidade: 'determinado'` tem que ser pedido explicitamente, e o total da outra fica em
+`modalidade_alternativa` para o corretor nao reabrir o PDF. **Confirmar com o usuario se o padrao
+esta certo para a operacao.**
+
+**Classificacao pela nota de rodape — padrao novo, reutilizavel.** A HDI batiza cobertura em
+jargao interno: "07 DIAS CR MANUAL" e carro reserva, "ESPECIAL AUTO - 600KM" e assistencia 24h.
+Nenhum dos dois casa com o dicionario, e encher o dicionario compartilhado de jargao de uma cia so
+seria errado. Mas o proprio PDF explica os dois nas notas (*3) e (*4), no vocabulario normal do
+ramo. A classificacao roda sobre nome + nota, e o dicionario continua limpo.
+
+**Bug pego antes de sair impresso:** o L.M.I. do casco e "100,00% FIPE", nao dinheiro. Formatado
+como moeda virava "Casco: R$ 100,00" no documento do cliente — valor de indenizacao falso e mil
+vezes menor que o real. Teste REGRESSAO cobre.
+
+**Refatoracao:** `humanizarCobertura` subiu para `orcamentoComparativo.js` — Porto e HDI usavam a
+mesma logica de caixa alta -> caixa mista com preservacao de sigla. `orcamentoPortoParser`
+reexporta como `humanizar` para nao quebrar quem ja importava.
+
+**Dicionario:** APP (Acidentes Pessoais de Passageiros) entrou em `adicional` DE PROPOSITO.
+Antes caia la por falta de classificacao, o que disparava o aviso "cobertura nao classificada" em
+toda cotacao HDI — e aviso que sempre aparece deixa de ser lido.
+
+**PARSER ALLIANZ — FEITO em 26/08.** `src/lib/orcamentoAllianzParser.js` + 30 testes, fixture em
+`src/lib/__fixtures__/allianz.json` (cotacao 493446723, VW Fox 2012, 6 paginas). Com a oferta
+escolhida: `podeGerar: true`, zero pendencia, as 7 categorias preenchidas.
+
+**A ALLIANZ NAO COTA UM SEGURO, COTA SEIS.** "Roubo e Furto | Basico | Ampliado" num bloco,
+"Completo | Master | Exclusivo" noutro, cada uma com LMI, preco por cobertura e total proprios.
+Neste documento os totais vao de R$ 2.453,03 a R$ 4.866,50 — R$ 2.413,47 de diferenca entre a
+primeira e a ultima — e as coberturas mudam junto (RCF Danos Materiais e R$ 100.000,00 na primeira
+e R$ 1.000.000,00 na ultima). **Nenhuma vem marcada como escolhida**: o proprio PDF diz "o preco
+por cobertura da Oferta A SER CONTRATADA". O documento e um cardapio; a escolha acontece fora dele.
+
+**Decisao: o parser nao escolhe.** Chamado sem `oferta`, devolve tudo o que independe da escolha
+(segurado, veiculo, condutor, franquia, carro reserva, condicoes gerais) + as seis em `cot.ofertas`
+com o preco de cada uma, e marca `cot.escolha_pendente`. Chutar a primeira ou a mais barata poria
+um premio errado num documento que vai para o cliente, sem nada indicando o erro.
+
+**`escolha_pendente` — mecanismo novo e generico em `orcamentoComparativo.js`.** Sem ele a
+validacao cuspia OITO bloqueios para um problema so, e cinco deles diziam "a cotacao nao informa" —
+**mentira**: a cotacao informa, seis vezes, uma por oferta. Agora a pendencia e uma, e traz as
+opcoes com preco para a tela de revisao montar o seletor. As checagens que nao dependem da escolha
+continuam rodando, para o corretor ver tudo o que falta de uma vez. **Serve tambem para a HDI**
+(mercado x determinado), que hoje resolve isso com um default — vale unificar depois.
+
+**Por que pareamento sequencial e nao `colunasPeloCabecalho`:** a tabela de coberturas nao tem
+cabecalho por coluna utilizavel. O nome da oferta fica centralizado sobre o PAR de colunas e
+desalinhado das duas ("Basico" em x=342, valores em x=305 e x=375). E as linhas de total tem 3
+celulas onde as de cobertura tem 6, entao um unico conjunto de fronteiras em X erra as duas: o
+"Preco Liquido" da primeira oferta sai em x=210, que e exatamente a fronteira entre LMI e Preco.
+
+**Rotulo com os valores NO MEIO dele.** O Casco sai em tres linhas fisicas: rotulo (y=699), valores
+(y=694), continuacao do rotulo (y=688). O rotulo e remontado por janela de 10pt em Y ao redor da
+linha de valores — fragmentos do mesmo rotulo distam 5–6pt, a proxima cobertura dista 14pt.
+
+**Expansao de sigla pela legenda do proprio documento — reuso do padrao da HDI.** "RCF** - Gastos
+com Defesa" e "APP*** - Morte" nao casavam com o dicionario (com os asteriscos, "app*** - morte"
+nao contem "app morte"), e as tres caiam sem classificacao disparando aviso em toda cotacao
+Allianz. O rodape da pagina 2 traduz as duas siglas ("** RCF: Responsabilidade Civil Facultativa |
+*** APP: Acidentes Pessoais de Passageiros"), entao a sigla e trocada pelo que o documento diz que
+ela significa. Dicionario compartilhado continua sem jargao de seguradora nenhuma, e o card imprime
+"Responsabilidade Civil Facultativa - Danos Materiais" em vez de "RCF** - Danos Materiais".
+
+**Bug silencioso pego em teste:** a frase que abre a secao de pagamento ("...taxas de juros e
+valores de parcelas...") contem "juros" e "parcelas" e casava como se fosse o cabecalho da tabela.
+Resultado: lista de ofertas VAZIA, sem erro nenhum — cotacao sem premio e sem cobertura, como se o
+PDF estivesse em branco. O cabecalho passou a ser casado por CELULA, nao por linha.
+
+**Primeira amostra que NEGA carro reserva explicitamente** ("Nao Contratado" no LMI), entao a
+categoria sai NAO_INCLUIDA em vez de NAO_INFORMADO — ao contrario da familia Porto, que so nao
+menciona e por isso trava. Licao do Bradesco confirmada de novo: preco "-" nao e ausencia; o
+Guincho 500 Km vem sem preco proprio nas seis ofertas por estar embutido no pacote.
+
+**Cobertura de parsers: 7 de 12 seguradoras** (Porto, Azul, Itau, Mitsui, Bradesco, HDI, Allianz).
+Faltam: Darwin, Pier, Suhai, Yelum, Tokio. `npm test` 429/429.
+
+**A TELA PASSA A PERGUNTAR (26/08, a pedido do usuario — so Allianz por enquanto).**
+`src/lib/orcamentoLeitura.js` (ponte arquivo -> parser, unico modulo do comparativo que encosta em
+pdfjs e no `File`; import dinamico para o pdfjs nao entrar no bundle de quem nao envia PDF) +
+`src/components/auto/AutoOrcamentoOfertas.jsx` (o seletor) + fiacao em `AutoQuoteComparison.jsx`.
+8 testes novos em `orcamentoLeitura.test.mjs`. `npm test` 437/437, `npm run build` OK.
+
+Fluxo: solta o PDF -> le -> se for Allianz e houver mais de uma oferta, a tela PARA e mostra as
+seis com o preco de cada -> escolhida uma, a cotacao e reprocessada (sem reabrir o arquivo) e a
+revisao e preenchida. Trocar de oferta depois e uma acao normal, o seletor continua visivel.
+Seguradora sem parser ligado cai em revisao manual, com aviso na tela — nada e adivinhado.
+
+**Bug pego pelo teste, e que teria chegado ao cliente:** enquanto a escolha esta pendente,
+`montarCategorias` devolve "A cotação não informa." em TODAS as categorias, e a ponte estava
+levando essa frase para a revisao. Campo vazio diz "ainda nao sabemos"; aquela frase diz "a
+seguradora nao cobre" — coisa diferente, e falsa aqui, porque a cotacao informa uma vez por oferta.
+Agora os campos que dependem da oferta ficam vazios ate a escolha. Mesma familia do bloqueio que ja
+tinha sido corrigido em `validarCotacao`.
+
+`camposDaCotacao` espelha as chaves de `REVIEW_FIELDS` do `.jsx`; ha teste travando esse
+espelhamento, porque renomear um campo la sumiria com o dado sem quebrar nada visivel.
+
+**Nao verificado ao vivo:** build e testes passam, mas a tela nao foi aberta no navegador com um
+PDF real — o caminho ate `AutoQuoteComparison` exige cotacao no Supabase e login.
+
+**Em aberto:** a HDI segue com `mercado` como padrao. Confirmado com o usuario que "Auto Perfil" e
+o nome do PRODUTO (`Hdi Auto Perfil`, calculo 1212810730), nao a modalidade de indenizacao — sao
+eixos diferentes, e a escolha mercado x determinado continua valendo. Candidata a migrar para
+`escolha_pendente`.
+
+Responsavel: Claude.
+
+---
+
 ## Design do workspace de cotacao AUTO (2026-08-24, Codex — CONCLUIDA; somente interface)
 
 Objetivo: aplicar visualmente a especificacao do Orcamento Comparativo na pagina de cotacao e melhorar a leitura do card aberto na Pipeline, sem alterar banco, parser, automacoes, persistencia ou regras de negocio.

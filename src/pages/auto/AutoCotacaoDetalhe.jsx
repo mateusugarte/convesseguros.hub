@@ -13,6 +13,7 @@ import {
   AutoStatStrip,
   AutoTabs,
   AutoTypeBadge,
+  AutoWorkflowPanel,
 } from '../../components/auto'
 import SeguradoraSelect from '../../components/SeguradoraSelect'
 import { calcularValorComissaoAuto, deletarCotacaoAuto, getCotacaoAutoPorId, atualizarCotacaoAuto } from '../../lib/auto'
@@ -266,7 +267,7 @@ export default function AutoCotacaoDetalhe() {
   const qc = useQueryClient()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [actionError, setActionError] = useState(null)
-  const [tab, setTab] = useState('resumo')
+  const [tab, setTab] = useState(() => new URLSearchParams(location.search).get('tab') || 'resumo')
   const [copied, setCopied] = useState('')
   const [pdfFile, setPdfFile] = useState(null)
   const [pdfStatus, setPdfStatus] = useState('idle')
@@ -385,6 +386,11 @@ export default function AutoCotacaoDetalhe() {
   useEffect(() => {
     setConfirmDelete(false)
   }, [id])
+
+  useEffect(() => {
+    const requested = new URLSearchParams(location.search).get('tab')
+    if (requested && DETAIL_TABS.some(item => item.value === requested)) setTab(requested)
+  }, [location.search])
 
   const backTo = location.state?.from || '/auto/cotacoes'
 
@@ -638,6 +644,9 @@ export default function AutoCotacaoDetalhe() {
         </div>
 
         <div className={tab === 'resumo' ? 'space-y-4' : 'contents'}>
+          <div className={tab === 'operacao' ? 'xl:col-span-2' : 'hidden'}>
+            <AutoWorkflowPanel cotacao={cotacao} />
+          </div>
           <DataCard className={tab === 'operacao' ? '' : 'hidden'} title="Informações" subtitle="Dados técnicos e operacionais">
             <div className="grid gap-3">
               <DetailField label={<span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> ID</span>} value={cotacao.id} readOnly />

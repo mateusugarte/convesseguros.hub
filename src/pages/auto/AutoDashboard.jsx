@@ -117,6 +117,9 @@ const PENDING_KIND_META = {
   coletar_apolice: { label: 'Apólice', icon: ShieldCheck, tone: 'teal' },
   vistoria: { label: 'Vistoria', icon: ScanLine, tone: 'violet' },
   followup: { label: 'Follow-up', icon: PhoneCall, tone: 'coral' },
+  cotacao_confirmacao: { label: 'Confirmar cotação', icon: FileText, tone: 'amber' },
+  continuidade: { label: 'Continuidade', icon: ClipboardCheck, tone: 'blue' },
+  lembrete: { label: 'Lembrete', icon: BellRing, tone: 'violet' },
 }
 
 const PENDING_FILTERS = [
@@ -126,14 +129,16 @@ const PENDING_FILTERS = [
   { id: 'emissoes', label: 'Emissões' },
   { id: 'pos_venda', label: 'Pós-venda' },
   { id: 'followup', label: 'Follow-ups' },
+  { id: 'lembretes', label: 'Lembretes' },
 ]
 
 function matchesPendingFilter(item, filter) {
   if (filter === 'urgent') return item.priority === 'critical'
-  if (filter === 'cotacoes') return item.kind === 'cotacao_envio'
-  if (filter === 'emissoes') return item.kind === 'emissao'
+  if (filter === 'cotacoes') return ['cotacao_envio', 'cotacao_confirmacao'].includes(item.kind)
+  if (filter === 'emissoes') return ['emissao', 'continuidade'].includes(item.kind)
   if (filter === 'pos_venda') return ['coletar_apolice', 'vistoria'].includes(item.kind)
   if (filter === 'followup') return item.kind === 'followup'
+  if (filter === 'lembretes') return item.kind === 'lembrete'
   return true
 }
 

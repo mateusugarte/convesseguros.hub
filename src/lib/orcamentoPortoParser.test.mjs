@@ -1,0 +1,246 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import fs from 'node:fs'
+
+import { agruparLinhas, celulaEm, colunasPeloCabecalho, fatiar } from './pdfLayout.js'
+import {
+  parseCotacaoPorto, ehLayoutPorto, detectarMarca, extrairCoberturas,
+  extrairIndenizacaoIntegral, extrairValores, extrairAdicionais,
+  moeda, percentual, humanizar,
+} from './orcamentoPortoParser.js'
+import { montarCategorias, validarCotacao, ESTADO_COBERTURA } from './orcamentoComparativo.js'
+
+// Fixtures capturados dos PDFs reais recebidos em 25/08/2026
+// (`documentos_automacao/orçamentos/`), com as coordenadas preservadas.
+const FX = JSON.parse(fs.readFileSync(new URL('./__fixtures__/porto-familia.json', import.meta.url)))
+const MARCAS = ['AZUL', 'ITAU', 'MITSUI']
+const parse = nome => parseCotacaoPorto({ itens: FX[nome].itens, texto: FX[nome].texto })
+
+// ─── pdfLayout ─────────────────────────────────────────────────────────
+
+test('agruparLinhas junta pelo Y e ordena da esquerda para a direita', () => {
+  const linhas = agruparLinhas([
+    { texto: 'B', x: 200, y: 100, pagina: 1 },
+    { texto: 'A', x: 60, y: 101, pagina: 1 },   // 1pt de diferenca = mesma linha
+    { texto: 'C', x: 60, y: 80, pagina: 1 },
+  ])
+  assert.equal(linhas.length, 2)
+  assert.equal(linhas[0].texto, 'A B')
+  assert.equal(linhas[1].texto, 'C')
+})
+
+test('colunasPeloCabecalho exige o cabecalho inteiro', () => {
+  const linhas = agruparLinhas([
+    { texto: 'Franquia', x: 348, y: 500, pagina: 1 },   // so metade
+    { texto: 'LMI', x: 265, y: 400, pagina: 1 },
+    { texto: 'Franquia', x: 348, y: 400, pagina: 1 },
+  ])
+  assert.equal(colunasPeloCabecalho(linhas, { f: 'Franquia' }).f, 348)
+  const duas = colunasPeloCabecalho(linhas, { lmi: 'LMI', f: 'Franquia' })
+  assert.equal(duas.lmi, 265)
+  assert.equal(duas.f, 348)
+  assert.equal(colunasPeloCabecalho(linhas, { x: 'Inexistente' }), null)
+})
+
+test('fatiar recorta a secao entre dois marcadores', () => {
+  const linhas = agruparLinhas([
+    { texto: 'antes', x: 60, y: 300, pagina: 1 },
+    { texto: 'COBERTURAS AUTO', x: 60, y: 200, pagina: 1 },
+    { texto: 'meio', x: 60, y: 150, pagina: 1 },
+    { texto: 'COBERTURAS RE', x: 60, y: 100, pagina: 1 },
+  ])
+  assert.deepEqual(fatiar(linhas, { de: 'COBERTURAS AUTO', ate: 'COBERTURAS RE' }).map(l => l.texto),
+    ['COBERTURAS AUTO', 'meio'])
+})
+
+test('celulaEm pega a celula sob a coluna, nao a vizinha', () => {
+  const [linha] = agruparLinhas([
+    { texto: 'R$ 3.600,00', x: 338, y: 100, pagina: 1 },
+    { texto: 'R$ 1.320,61', x: 525, y: 100, pagina: 1 },
+  ])
+  assert.equal(celulaEm(linha, 348), 'R$ 3.600,00')   // coluna Franquia
+  assert.equal(celulaEm(linha, 522), 'R$ 1.320,61')   // coluna Premio
+})
+
+// ─── Numeros ───────────────────────────────────────────────────────────
+
+test('moeda e percentual tratam o traco como ausencia, nao como zero', () => {
+  assert.equal(moeda('R$ 3.600,00'), 3600)
+  assert.equal(moeda('R$ 1.320,61'), 1320.61)
+  assert.equal(moeda('-'), null)
+  assert.equal(moeda('*'), null)
+  assert.equal(moeda(''), null)
+  assert.equal(percentual('100.00%'), 100)
+  assert.equal(percentual('-'), null)
+})
+
+// ─── A regressao que motivou o parser posicional ───────────────────────
+
+test('REGRESSAO: franquia e premio nao podem sair trocados', () => {
+  // O texto plano do PDF entrega a linha do Casco assim:
+  //   "COMPREENSIVA 100.00% R$ 1.320,61 0.00% 0.00% R$ 3.600,00"
+  // Lida na ordem do cabecalho (LMI | Franquia | ... | Premio), a franquia
+  // sairia R$ 1.320,61 e o premio R$ 3.600,00 — os dois invertidos. Pela
+  // posicao real na pagina, franquia = R$ 3.600,00 e premio = R$ 1.320,61.
+  // Franquia e um dos numeros que o cliente mais olha, e sairia errado num
+  // documento entregue a ele.
+  const cot = parse('AZUL')
+  const casco = cot.coberturas.find(c => /compreensiva/i.test(c.nome_original_seguradora))
+  assert.equal(casco.franquia, 3600)
+  assert.equal(casco.premio, 1320.61)
+  assert.equal(cot.valores.franquia, 3600)
+})
+
+// ─── Identificacao do layout ───────────────────────────────────────────
+
+test('reconhece a familia pelo CNPJ do emissor, nao pelo nome da marca', () => {
+  for (const m of MARCAS) assert.equal(ehLayoutPorto(FX[m].texto), true, m)
+  assert.equal(ehLayoutPorto('Cotacao HDI Seguros'), false)
+})
+
+test('distingue as tres marcas dentro do mesmo layout', () => {
+  assert.equal(detectarMarca(FX.AZUL.texto).id, 'azul')
+  assert.equal(detectarMarca(FX.ITAU.texto).id, 'itau')
+  assert.equal(detectarMarca(FX.MITSUI.texto).id, 'mitsui')
+})
+
+// ─── Coberturas ────────────────────────────────────────────────────────
+
+test('o nome da cobertura vem inteiro, juntando a linha de continuacao', () => {
+  // No PDF o nome quebra em duas linhas. Lendo so a linha de dados, o card do
+  // cliente saia com "Danos aos Vidros e Retrovisores e".
+  const vidros = parse('AZUL').coberturas.find(c => /vidros/i.test(c.nome_original_seguradora))
+  assert.match(vidros.nome_original_seguradora, /FARÓIS E LANTERNAS - REFERENCIADA$/)
+})
+
+test('captura o rotulo do grupo que fica acima da linha', () => {
+  const cot = parse('AZUL')
+  assert.equal(cot.coberturas.find(c => /compreensiva/i.test(c.nome_original_seguradora)).grupo, 'Casco')
+  assert.equal(cot.coberturas.find(c => /vidros/i.test(c.nome_original_seguradora)).grupo, 'Vidros')
+})
+
+test('as tres marcas trazem as mesmas 5 coberturas de auto', () => {
+  for (const m of MARCAS) {
+    const nomes = parse(m).coberturas.map(c => c.nome_original_seguradora).join(' | ')
+    assert.equal(parse(m).coberturas.length, 5, `${m}: ${nomes}`)
+    assert.match(nomes, /COMPREENSIVA/)
+    assert.match(nomes, /RCF-V DANOS CORPORAIS/)
+    assert.match(nomes, /RCF-V DANOS MATERIAIS/)
+    assert.match(nomes, /CUSTOS DE DEFESA/)
+  }
+})
+
+test('nao invade as coberturas RE (seguro residencial vendido junto)', () => {
+  const nomes = parse('AZUL').coberturas.map(c => c.nome_original_seguradora).join(' ')
+  assert.doesNotMatch(nomes, /INC[ÊE]NDIO, EXPLOS[ÃA]O/i)
+  assert.doesNotMatch(nomes, /PAGAMENTO DE ALUGUEL/i)
+})
+
+// ─── Assistencia: cada marca batiza de um jeito ────────────────────────
+
+test('acha a assistencia 24h nas tres marcas, apesar dos nomes diferentes', () => {
+  assert.equal(parse('AZUL').assistencias[0].tipo, 'ASSISTÊNCIA GRATUITA - 200 KM')
+  assert.equal(parse('ITAU').assistencias[0].tipo, 'ITAÚ ESSENCIAL 600 KM')
+  assert.equal(parse('MITSUI').assistencias[0].tipo, '34 - REDE REFERENCIADA - 400KM')
+})
+
+test('beneficio sem quilometragem nao vira assistencia', () => {
+  for (const m of MARCAS) {
+    assert.ok(parse(m).servicos_adicionais.some(s => /EXTENS[ÃA]O DE PER[ÍI]METRO/i.test(s)), m)
+    assert.ok(!parse(m).assistencias.some(a => /PER[ÍI]METRO/i.test(a.tipo)), m)
+  }
+})
+
+test('o titulo da secao nao entra na lista como se fosse um item', () => {
+  for (const m of MARCAS) {
+    const todos = [...parse(m).assistencias.map(a => a.tipo), ...parse(m).servicos_adicionais]
+    assert.ok(!todos.some(s => /COBERTURAS ADICIONAIS|ERTURAS/i.test(s)), `${m}: ${todos.join(' | ')}`)
+  }
+})
+
+// ─── Campos fora da tabela ─────────────────────────────────────────────
+
+test('indenizacao integral vem da frase, com o percentual da FIPE', () => {
+  for (const m of MARCAS) {
+    assert.deepEqual(parse(m).indenizacao_integral, { incluida: true, percentual_fipe: 100, observacao: '' })
+  }
+})
+
+test('sem a frase da indenizacao integral o campo fica null, nunca false', () => {
+  // `null` bloqueia a geracao; `false` afirmaria ao cliente que nao tem.
+  assert.deepEqual(extrairIndenizacaoIntegral('cotacao sem essa frase'),
+    { incluida: null, percentual_fipe: null, observacao: '' })
+})
+
+test('separa premio liquido, IOF e total do bloco unico', () => {
+  assert.deepEqual(extrairValores(FX.AZUL.texto), { premio_liquido: 2683.72, iof: 198.06, premio_total: 2881.78 })
+  const soma = 2683.72 + 198.06
+  assert.equal(Math.round(soma * 100) / 100, 2881.78)
+})
+
+test('as tres cotacoes sao do mesmo risco com precos diferentes', () => {
+  // Mesmo cliente, mesmo carro, cotado nas tres marcas no mesmo dia — e o que
+  // permite conferir o parser cruzando os tres documentos.
+  const cots = MARCAS.map(parse)
+  for (const c of cots) {
+    assert.equal(c.segurado.nome, 'DAVID MATEO RIOS CONDORENA')
+    assert.equal(c.veiculo.placa, 'CSI3640')
+    assert.equal(c.veiculo.cep_pernoite, '07183-320')
+    assert.equal(c.vigencia.inicio, '2026-08-24')
+    assert.equal(c.cotacao.tipo_operacao, 'novo')
+  }
+  const totais = cots.map(c => c.valores.premio_total)
+  assert.equal(new Set(totais).size, 3, `precos deviam diferir: ${totais}`)
+})
+
+test('humanizar preserva sigla do ramo e minuscula preposicao', () => {
+  assert.equal(humanizar('RCF-V DANOS CORPORAIS'), 'RCF-V Danos Corporais')
+  assert.equal(humanizar('DANOS AOS VIDROS E RETROVISORES'), 'Danos aos Vidros e Retrovisores')
+  assert.equal(humanizar('Cobertura Compreensiva'), 'Cobertura Compreensiva')  // ja mista, nao mexe
+})
+
+// ─── Integracao com o comparativo ──────────────────────────────────────
+
+test('as coberturas extraidas chegam classificadas no card', () => {
+  const { categorias } = montarCategorias(parse('AZUL'))
+  const estado = key => categorias.find(c => c.key === key).estado
+  for (const key of ['colisao', 'terceiros', 'assistencia', 'franquia', 'vidros']) {
+    assert.equal(estado(key), ESTADO_COBERTURA.INCLUIDA, key)
+  }
+})
+
+test('custos de defesa e cobertura de terceiros, nao beneficio adicional', () => {
+  const { categorias } = montarCategorias(parse('ITAU'))
+  assert.match(categorias.find(c => c.key === 'terceiros').texto, /Custos de Defesa/i)
+  const adicional = categorias.find(c => c.key === 'adicional')
+  if (adicional) assert.doesNotMatch(adicional.texto, /Custos de Defesa/i)
+})
+
+test('carro reserva ausente nas tres bloqueia a geracao', () => {
+  // Nenhuma das tres cotacoes menciona carro reserva. O certo e BLOQUEAR ate o
+  // corretor confirmar — nunca imprimir "nao tem" por conta propria.
+  for (const m of MARCAS) {
+    const cot = parse(m)
+    assert.equal(montarCategorias(cot).categorias.find(c => c.key === 'carro_reserva').estado,
+      ESTADO_COBERTURA.NAO_INFORMADO, m)
+    const v = validarCotacao(cot)
+    assert.equal(v.podeGerar, false, m)
+    assert.ok(v.bloqueios.some(b => b.caminho === 'coberturas.carro_reserva'), m)
+  }
+})
+
+test('a logo e a cor vem do cadastro, nunca do PDF', () => {
+  const cot = parseCotacaoPorto({
+    itens: FX.AZUL.itens,
+    texto: FX.AZUL.texto,
+    seguradoraMeta: { id: 'abc', nome_canonico: 'Azul Seguros', logo_url: 'https://cdn/azul.png', cor_destaque: '#0a58ca' },
+  })
+  assert.equal(cot.seguradora.id, 'abc')
+  assert.equal(cot.seguradora.logo_url, 'https://cdn/azul.png')
+  assert.equal(cot.seguradora.cor_destaque, '#0a58ca')
+})
+
+test('sem cadastro, cai para a marca lida do PDF em vez de ficar vazio', () => {
+  assert.equal(parse('MITSUI').seguradora.nome, 'Mitsui Sumitomo Seguros')
+  assert.equal(parse('MITSUI').seguradora.logo_url, '')
+})

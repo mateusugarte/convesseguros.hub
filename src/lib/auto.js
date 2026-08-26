@@ -520,7 +520,7 @@ export async function getCotacaoAutoPorId(id) {
 export async function atualizarCotacaoAuto(id, changes) {
   const { data, error } = await supabase
     .from('cotacoes_auto')
-    .update(changes)
+    .update({ ...changes, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .maybeSingle()
@@ -531,7 +531,7 @@ export async function atualizarCotacaoAuto(id, changes) {
 export async function atualizarStatusCotacao(id, status) {
   const { error } = await supabase
     .from('cotacoes_auto')
-    .update({ status })
+    .update({ status, updated_at: new Date().toISOString() })
     .eq('id', id)
   if (error) throw error
 }
@@ -1159,7 +1159,12 @@ export async function getRenovacoesAuto({ periodo, mes } = {}) {
 }
 
 export async function getAutoPendingNotifications({ today } = {}) {
-  const [{ data: renovacoes, error: renovacoesError }, { data: emissoes, error: emissoesError }] = await Promise.all([
+  const [
+    { data: renovacoes, error: renovacoesError },
+    { data: emissoes, error: emissoesError },
+    { data: cotacoes, error: cotacoesError },
+    { data: lembretes, error: lembretesError },
+  ] = await Promise.all([
     supabase
       .from('renovacoes_auto')
       .select(RENOVACAO_LISTA_SELECT)
@@ -1169,11 +1174,26 @@ export async function getAutoPendingNotifications({ today } = {}) {
       .select('*, cotacoes_auto(*), apolices_auto(*)')
       .in('coluna', ['cotacao_feita', 'aguardando_vistoria', 'proposta_transmitida'])
       .order('updated_at', { ascending: true }),
+    supabase
+      .from('cotacoes_auto')
+      .select('*, emissoes_auto(id,coluna)')
+      .in('status', ['pendente', 'aberta'])
+      .order('updated_at', { ascending: true }),
+    supabase
+      .from('auto_lembretes')
+      .select('*, clientes_auto(nome_completo), cotacoes_auto(nome_cliente)')
+      .is('concluido_em', null)
+      .order('data_lembrete', { ascending: true }),
   ])
 
   if (renovacoesError) throw renovacoesError
   if (emissoesError) throw emissoesError
-  return buildAutoPendingNotifications({ renovacoes: renovacoes ?? [], emissoes: emissoes ?? [], today })
+  if (cotacoesError) throw cotacoesError
+  if (lembretesError) throw lembretesError
+  return buildAutoPendingNotifications({
+    renovacoes: renovacoes ?? [], emissoes: emissoes ?? [],
+    cotacoes: cotacoes ?? [], lembretes: lembretes ?? [], today,
+  })
 }
 
 // Renovações operacionais ainda não concluídas. Inclui as que já tiveram a
@@ -2625,6 +2645,128 @@ export async function atualizarTagsEmissao(id, tags) {
     .update({ tags: Array.isArray(tags) ? tags : [], updated_at: new Date().toISOString() })
     .eq('id', id)
   if (error) throw error
+}
+
+// Acompanhamento operacional de uma cotação: histórico, próximo passo,
+// etiquetas e lembretes em uma única carga para o workspace do corretor.
+export async function getAutoCotacaoWorkflow(cotacaoId) {
+  const [cotacaoResult, emissaoResult, interacoesResult, lembretesResult] = await Promise.all([
+    supabase.from('cotacoes_auto').select('*').eq('id', cotacaoId).single(),
+    supabase.from('emissoes_auto').select('id,coluna,updated_at,proximo_passo,proximo_passo_em,followups_realizados').eq('cotacao_id', cotacaoId).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('auto_interacoes').select('*').eq('cotacao_id', cotacaoId).order('created_at', { ascending: false }),
+    supabase.from('auto_lembretes').select('*').eq('cotacao_id', cotacaoId).order('data_lembrete', { ascending: true }),
+  ])
+  if (cotacaoResult.error) throw cotacaoResult.error
+  if (emissaoResult.error) throw emissaoResult.error
+  if (interacoesResult.error) throw interacoesResult.error
+  if (lembretesResult.error) throw lembretesResult.error
+  return {
+    cotacao: cotacaoResult.data,
+    emissao: emissaoResult.data,
+    interacoes: interacoesResult.data ?? [],
+    lembretes: lembretesResult.data ?? [],
+  }
+}
+
+export async function atualizarAcompanhamentoCotacao(cotacaoId, changes) {
+  const permitido = pickDefined(changes || {}, [
+    'observacoes_operacionais', 'proximo_passo', 'proximo_passo_em', 'tags',
+  ])
+  const { data, error } = await supabase
+    .from('cotacoes_auto')
+    .update({ ...permitido, updated_at: new Date().toISOString() })
+    .eq('id', cotacaoId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function registrarAutoInteracao({
+  cotacaoId, emissaoId = null, clienteId = null, tipo, observacao = '',
+  proximoPasso, proximoPassoEm, statusAnterior = null, statusNovo = null,
+}) {
+  const agora = new Date().toISOString()
+  const { data: atual, error: atualError } = await supabase
+    .from('cotacoes_auto')
+    .select('followups_realizados')
+    .eq('id', cotacaoId)
+    .single()
+  if (atualError) throw atualError
+
+  const { data, error } = await supabase
+    .from('auto_interacoes')
+    .insert({
+      cotacao_id: cotacaoId,
+      emissao_id: emissaoId,
+      cliente_id: clienteId,
+      tipo,
+      observacao: observacao?.trim() || null,
+      proximo_passo: proximoPasso?.trim() || null,
+      proximo_passo_em: proximoPassoEm || null,
+      status_anterior: statusAnterior,
+      status_novo: statusNovo,
+    })
+    .select()
+    .single()
+  if (error) throw error
+
+  const patch = {
+    updated_at: agora,
+    ...(proximoPasso !== undefined ? { proximo_passo: proximoPasso?.trim() || null } : {}),
+    ...(proximoPassoEm !== undefined ? { proximo_passo_em: proximoPassoEm || null } : {}),
+  }
+  if (tipo === 'followup' || tipo === 'contato') {
+    patch.ultimo_followup_em = agora
+    patch.followups_realizados = Number(atual?.followups_realizados || 0) + 1
+  }
+  if (tipo === 'nota' && observacao?.trim()) patch.observacoes_operacionais = observacao.trim()
+
+  const { error: quoteError } = await supabase.from('cotacoes_auto').update(patch).eq('id', cotacaoId)
+  if (quoteError) throw quoteError
+
+  if (emissaoId || statusNovo) {
+    let emissionUpdate = supabase
+      .from('emissoes_auto')
+      .update({ ...(statusNovo ? { coluna: statusNovo } : {}), updated_at: agora })
+    emissionUpdate = emissaoId ? emissionUpdate.eq('id', emissaoId) : emissionUpdate.eq('cotacao_id', cotacaoId)
+    const { error: emissionError } = await emissionUpdate
+    if (emissionError) throw emissionError
+  }
+  return data
+}
+
+export async function criarAutoLembrete({
+  cotacaoId, emissaoId = null, renovacaoId = null, clienteId = null,
+  titulo, observacao = '', dataLembrete, avisarAntesDias = 1,
+}) {
+  const { data, error } = await supabase
+    .from('auto_lembretes')
+    .insert({
+      cotacao_id: cotacaoId,
+      emissao_id: emissaoId,
+      renovacao_id: renovacaoId,
+      cliente_id: clienteId,
+      titulo: titulo?.trim(),
+      observacao: observacao?.trim() || null,
+      data_lembrete: dataLembrete,
+      avisar_antes_dias: Number(avisarAntesDias ?? 1),
+    })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function concluirAutoLembrete(id, concluido = true) {
+  const { data, error } = await supabase
+    .from('auto_lembretes')
+    .update({ concluido_em: concluido ? new Date().toISOString() : null, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
 }
 // Busca universal do workspace Auto. As consultas são limitadas e executadas
 // em paralelo para manter o command center rápido mesmo com carteiras grandes.

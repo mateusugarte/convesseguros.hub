@@ -190,11 +190,26 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
 ## Orcamento Comparativo (2026-08-24, design do workspace entregue)
 
 - O nucleo vive em `src/lib/orcamentoComparativo.js` (dominio puro) e
-  `src/lib/orcamentoComparativoHtml.js` (template do PDF). O prototipo visual
-  esta em `AutoQuoteComparison`: dois slots de upload, revisao lado a lado e
-  estados criticos. Ele nao le PDF, nao persiste e nao gera documento; a tela
-  deixa essa restricao explicita. A automacao existente foi mantida separada.
+  `src/lib/orcamentoComparativoHtml.js` (template do PDF). A tela e
+  `AutoQuoteComparison`: dois slots de upload, revisao lado a lado e estados
+  criticos. **Desde 26/08 os layouts Porto/Azul/Itau/Mitsui, Bradesco, HDI,
+  Allianz, Darwin, Pier, Suhai, Yelum e Tokio sao identificados e lidos por
+  parser fixo.** Nada persiste e o PDF final ainda nao e gerado.
   Spec em `documentos_automacao/specorcamentocomparativoseguros.md`.
+- `src/lib/orcamentoLeitura.js` e a ponte arquivo -> parser: e o unico modulo do
+  comparativo que encosta em `pdfjs` e no `File` do navegador (import dinamico,
+  para o pdfjs nao entrar no bundle de quem nao envia PDF). Os parsers seguem
+  puros e testados em `node --test`. `camposDaCotacao` traduz a cotacao extraida
+  para as chaves de `REVIEW_FIELDS` — ha teste travando esse espelhamento.
+- **Cotacao com mais de uma oferta/produto: a tela PERGUNTA, nunca escolhe.**
+  Allianz oferece seis pacotes, HDI duas modalidades, Pier dois produtos e
+  Suhai quatro produtos. O parser so le preco e coberturas depois da escolha.
+  O parser devolve `cotacao.escolha_pendente` e `AutoOrcamentoOfertas` mostra as
+  opcoes com o preco de cada uma. Enquanto ninguem escolhe, os campos que
+  dependem da oferta ficam VAZIOS na revisao: preencher com "A cotação não
+  informa." seria mentira (ela informa, uma vez por oferta) e chegaria ao cliente
+  como se a seguradora nao cobrisse. Trocar a oferta depois reprocessa a cotacao
+  sem reabrir o arquivo.
 - **Nao confundir com `autoPdfParser.js`.** O parser existente extrai campos
   ESCALARES de uma cotacao para preencher o formulario de emissao. O comparativo
   precisa de estrutura COMPARAVEL entre duas seguradoras — coberturas
@@ -224,9 +239,20 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   ao mesmo tempo produzem o mesmo numero.
 - `AutoQuoteSnapshot` e a leitura visual comum usada no resumo da cotacao e no
   primeiro clique da Pipeline; nenhuma query ou regra de dados foi alterada.
-- Restricao desta rodada: somente JSX/CSS e estados locais demonstrativos. Nao
-  adicionar migration, RPC, parser, persistencia ou mudanca de fluxo ate a fase
-  de automacoes ser iniciada explicitamente pelo usuario.
+
+## Acompanhamento operacional AUTO (2026-08-26)
+
+- `AutoWorkflowPanel` fica na aba Operacao da cotacao e concentra confirmacao
+  de andamento, proximo passo/data, observacoes, etiquetas, registro de contato
+  ou follow-up, historico e lembretes.
+- Cotacao pendente sem atualizacao volta para a Central com a pergunta "foi
+  feita?". A etapa `cotacao_feita` pergunta se houve continuidade ou se segue
+  em andamento; responder atualiza o card e reinicia o prazo de acompanhamento.
+- `autoPending.js` inclui proximos passos vencidos e `auto_lembretes`: com aviso
+  de 1 dia, o item aparece na vespera, no dia e permanece se atrasar.
+- Migration obrigatoria: `supabase/68_auto_acompanhamento_operacional.sql` cria
+  `auto_interacoes`, `auto_lembretes` e os campos operacionais nas cotacoes,
+  emissoes e clientes. Sem ela, o painel mostra a orientacao de instalacao.
 
 ## Handoff Checklist
 

@@ -155,6 +155,14 @@ body{
 .bolha .ic{width:3.7mm;height:3.7mm}
 .cobertura h4{font-family:var(--serif);font-size:8.2pt;font-weight:700;line-height:1.18;margin-bottom:.7mm}
 .cobertura p{font-size:7pt;line-height:1.3;color:#33445c}
+/* cobertura que a cotacao NEGA: mesma linha, mesmo lugar, marca invertida */
+.cobertura.sem .bolha{background:#fff;border:1px solid rgba(154,58,43,.3);color:var(--alerta)}
+.cobertura.sem h4{color:var(--alerta)}
+.cobertura.sem p{color:#7d4034}
+/* cobertura que a cotacao NAO INFORMA: so aparece se alguem burlar o bloqueio */
+.cobertura.vago .bolha{background:#fff6e5;border:1px solid rgba(180,113,0,.32);color:#b47100}
+.cobertura.vago h4{color:#7a4f00}
+.cobertura.vago p{color:#7a4f00;font-style:italic}
 
 /* nao incluso */
 .nao-incluso{margin:2.8mm 4mm 0;background:var(--alerta-bg);border-left:2.4pt solid var(--alerta);padding:2.6mm 3.4mm}
@@ -204,12 +212,25 @@ function selo(seguradora) {
   return `<div class="selo-logo">${conteudo}</div>`
 }
 
+/**
+ * Uma linha por categoria, SEMPRE — nao ha filtro por conteudo aqui.
+ *
+ * Filtrar categoria sem dado era o bug: a linha sumia do card e o cliente lia
+ * o silencio como "nao tem", enquanto o card do lado, que tinha a linha,
+ * deixava de alinhar. Quem decide o que sai do documento e `montarCategorias`,
+ * que so remove "Beneficios adicionais" quando vazia. Cada estado ganha marca
+ * propria: o check da categoria, um X para o que a cotacao nega, e um alerta
+ * para o que ela nao informou — este ultimo, na pratica, nao chega ao PDF,
+ * porque `validarCotacao` bloqueia a geracao antes.
+ */
+const MARCA_ESTADO = { nao_incluida: 'x', nao_informado: 'alerta' }
+const CLASSE_ESTADO = { nao_incluida: ' sem', nao_informado: ' vago' }
+
 function blocoCoberturas(card) {
   const linhas = card.categorias
-    .filter(cat => !cat.vazia)
     .map(cat => `
-      <div class="cobertura">
-        <div class="bolha">${icone(cat.icone)}</div>
+      <div class="cobertura${CLASSE_ESTADO[cat.estado] || ''}">
+        <div class="bolha">${icone(MARCA_ESTADO[cat.estado] || cat.icone)}</div>
         <div>
           <h4>${escapeHtml(cat.label)}</h4>
           <p>${escapeHtml(cat.texto)}</p>

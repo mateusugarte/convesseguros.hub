@@ -51,6 +51,45 @@ function extractOwnerEmail(text, sectionRegexes = []) {
   return generic ? generic[1].trim() : null
 }
 
+/**
+ * Texto do PDF COM as coordenadas de cada fragmento.
+ *
+ * `extractPdfText` junta os fragmentos na ordem em que o PDF manda desenhar,
+ * que nao e a ordem visual — na cotacao da familia Porto isso troca duas
+ * colunas da tabela de coberturas de lugar. Quem precisa ler tabela usa esta
+ * funcao e decide a coluna pelo X. Ver `src/lib/pdfLayout.js`.
+ *
+ * @returns { itens: [{ texto, x, y, pagina }], texto }
+ */
+export async function extractPdfLayout(file, { paginas = null } = {}) {
+  const arrayBuffer = await file.arrayBuffer()
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+  const itens = []
+  let texto = ''
+
+  for (let i = 1; i <= pdf.numPages; i += 1) {
+    const page = await pdf.getPage(i)
+    const content = await page.getTextContent()
+    texto += content.items.map(item => item.str).join(' ') + '\n'
+
+    // `paginas` limita a captura posicional: so a tabela precisa de coordenada,
+    // e guardar item por item do documento inteiro nao se paga.
+    if (paginas && !paginas.includes(i)) continue
+    for (const item of content.items) {
+      const str = String(item.str || '').trim()
+      if (!str) continue
+      itens.push({
+        texto: str,
+        x: Math.round(item.transform[4]),
+        y: Math.round(item.transform[5]),
+        pagina: i,
+      })
+    }
+  }
+
+  return { itens, texto }
+}
+
 export async function extractPdfText(file) {
   const arrayBuffer = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise

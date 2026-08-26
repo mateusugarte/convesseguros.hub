@@ -1,0 +1,2804 @@
+
+===== PAGE 1 =====
+CONDIÇÕES GERAIS
+DARWIN SEGUROS S.A.
+SEGURO AUTOMÓVEL INDIVIDUAL MENSAL
+CNPJ nº 44.187.990/0001-94
+Processo SUSEP nº 15414.605110/2024-53
+Versão 2025.05 (para contratos celebrados a partir de 11.12.2025)
+
+===== PAGE 2 =====
+Sumário
+1 Pontos Iniciais ................................................................................................................................... 6
+2 Para que serve o Seguro? .............................................................................................................. 7
+3 Deveres do Segurado ...................................................................................................................... 7
+4 Definições ........................................................................................................................................... 9
+5 Aceitação........................................................................................................................................... 21
+6 Forma de Contratação do Bilhete ............................................................................................... 23
+7 Interesse Legítimo .......................................................................................................................... 23
+8 Franquias .......................................................................................................................................... 23
+9 Renovação ........................................................................................................................................ 24
+10 Âmbito geográfico .......................................................................................................................... 24
+11 Coberturas ........................................................................................................................................ 24
+12 Riscos cobertos .............................................................................................................................. 41
+13 Bens não compreendidos no seguro ........................................................................................ 41
+14 Riscos excluídos ............................................................................................................................. 41
+15 Vigência do seguro, vigência da cobertura e critérios de suspensão das coberturas 45
+16 Pagamento de prêmios .................................................................................................................. 45
+17 Boa-fé, Declarações Inexatas ou Omissas, Agravamento do Risco e Despesas de Contenção e
+Salvamento .................................................................................................................................................... 45
+18 Concorrência de Apólices e/ou Bilhetes................................................................................... 47
+19 Atualização dos valores contratados ........................................................................................ 48
+20 Atualização de outras obrigações pecuniárias ....................................................................... 48
+21 Comunicação do Sinistro ............................................................................................................. 48
+22 Documentos Necessários para o Aviso de Sinistro .............................................................. 50
+23 Liquidação de Sinistros................................................................................................................. 51
+23.7. Procedimentos, Prazos e Adiantamentos ................................................................................... 54
+23.8. Comunicação e continuidade do processo ................................................................................. 55
+24 Salvados ............................................................................................................................................ 55
+25 Sub-rogação ..................................................................................................................................... 55
+26 Oficinas Referenciadas ................................................................................................................. 56
+27 Prazos prescricionais .................................................................................................................... 56
+28 Perda de direitos ............................................................................................................................. 56
+
+===== PAGE 3 =====
+29 Cancelamento e Rescisão ............................................................................................................ 59
+30 Reintegração .................................................................................................................................... 60
+31 Cláusula de Restrições por Sanções e Embargos ................................................................. 60
+32 Foro .................................................................................................................................................... 61
+
+===== PAGE 4 =====
+CONDIÇÕES GERAIS
+SEGURO AUTOMÓVEL INDIVIDUAL MENSAL
+A Darwin Seguros recomenda a leitura atenta das Condições Gerais do Seguro Automóvel
+Individual Mensal. É fundamental que você leia com atenção todos os pontos nela detalhados,
+pois eles são essenciais para garantir o funcionamento adequado da sua cobertura.
+Este seguro está diretamente vinculado ao uso do Aplicativo da Seguradora e Permissões
+Obrigatórias, o que permite a coleta e o processamento de dados e informações, os quais
+são considerados em todas as fases do seguro, desde a análise inicial do risco até a eventual
+regulação de sinistros, sendo, portanto, obrigatórios para este seguro.
+A falta do Aplicativo da Seguradora e Permissões Obrigatórias poderá impactar o valor do
+seguro em renovações futuras, a critério da Seguradora. Por isso, manter o Aplicativo da
+Seguradora instalado, atualizado e com as Permissões Obrigatórias é uma condição
+indispensável para o pleno funcionamento e continuidade do seu seguro, conforme
+aprofundamos a seguir.
+Regras Fundamentais para o funcionamento do Seguro Automóvel Individual Mensal –
+atenção para não ficar sem cobertura!
+Inicialmente, queremos te lembrar que o seu Seguro Individual Mensal depende, dentre
+outros, de dois principais fatores:
+1) Aplicativo da Seguradora e Permissões Obrigatórias: nosso Seguro Individual
+Mensal funciona com base nos dados coletados através do Aplicativo da Seguradora
+e, para isso, é obrigatório a concessão das Permissões Obrigatórias ao Aplicativo
+da Seguradora (vamos ajudar um pouco mais abaixo explicando quais são elas), o
+qual deverá estar no smartphone do Segurado. Se essas Permissões Obrigatórias
+ao Aplicativo da Seguradora forem retiradas no smartphone do Segurado,
+especialmente no momento de um sinistro, você perderá o direito à indenização; e
+2) Smartphone do Segurado e Principal Condutor: O Segurado que realizou a
+contratação do Seguro Individual Mensal, precisa ser o Principal Condutor (e é ele
+quem deve possuir o Aplicativo da Seguradora instalado e com as Permissões
+Obrigatórias).
+Logo, esses fatores são cruciais e serão utilizados para determinar se você tem ou não direito
+a quaisquer indenizações. Para facilitar, segue abaixo um resumo:
+4
+
+===== PAGE 5 =====
+Smartphone do
+Segurado
+Em pelo menos 60%
+dos quilômetros
+Aplicativo da rodados(¹) e,
+Seguradora necessariamente, no Veículo Segurado
+operacional e ativo momento de um
+sinistro
+Permissões
+Obrigatórias
+(Movimento e
+Localização Precisa)
+Nota (1): quilômetros rodados durante a Vigência do Bilhete ou desde o início do primeiro Bilhete da última sequência de contratações ininterruptas.
+Ou seja, caso qualquer uma das quatro condições fundamentais acima não seja satisfeita em
+um potencial sinistro e em no mínimo 60% (sessenta por cento) dos quilômetros rodados
+durante a Vigência do Bilhete ou desde o início do primeiro Bilhete da última sequência de
+contratações ininterruptas, o direito à indenização em caso de Sinistros será perdido.
+Portanto, é fundamental e indispensável manter o Aplicativo da Seguradora instalado no
+smartphone do Segurado e com todas as Permissões Obrigatórias do Aplicativo
+disponíveis e habilitadas!
+Recomendamos que você preste bastante atenção em um capítulo chamado “Perda de
+Direitos” para evitar quaisquer imprevistos!
+Fale Conosco!
+Se precisar de qualquer ajuda, sugerimos que procure seu corretor de seguros ou fale conosco
+diretamente pelo nosso aplicativo ou pelos meios de comunicação abaixo:
+• Central de Assistência 24 Horas: (11) 3512-7210 – disponível 24 horas, 7 dias por
+semana da seguinte forma:
+o Das 8h às 20h através do WhatsApp; e
+o Das 20h às 8h através do telefone;
+• Central de Assistência para vidros, faróis, lanternas e retrovisores e/ou carro reserva:
+(11) 3512-7210 – disponível de segunda a segunda das 08h às 20h;
+• Central do Cliente (WhatsApp ou telefone): (11) 3512-7210 – disponível de segunda à
+segunda das 08h às 20h;
+• Central de Suporte ao Corretor de Seguros (WhatsApp): (11) 91275-3173 – disponível
+de segunda à sexta das 8h às 18h;
+• Email para temas gerais: chamaqui@darwinseguros.com
+5
+
+===== PAGE 6 =====
+• Serviço de Atendimento ao Consumidor – SAC (0800 2371 360) – disponível de
+segunda a segunda das 08h às 20h;
+• Ouvidoria: 0800 7010 512 – disponível de segunda à segunda das 08h às 17h.
+1 Pontos Iniciais
+Temos uma lista de itens que você precisa ler e compreender! Se tiver qualquer dúvida, fale
+com o seu corretor ou conte conosco em nossos canais de atendimento.
+(a) Antes de qualquer coisa, como já destacado no início destas Condições Gerais, é crucial
+que você tenha total ciência de que o Seguro Individual Mensal dependente
+integralmente do correto funcionamento das Permissões Obrigatórias no
+Aplicativo da Seguradora. Sem as Permissões Obrigatórias ativas, não conseguiremos
+oferecer suporte quando você precisar;
+(b) Como já mencionado, o Segurado que contratou o seguro deve, obrigatoriamente, ser o
+Principal Condutor, caso contrário, a Seguradora poderá negar a indenização de
+quaisquer Sinistros que ocorram;
+(c) A Aceitação do seguro estará sujeita à análise do Risco pela Darwin Seguros.
+(d) O registro deste plano na SUSEP não implica, por parte da Autarquia, incentivo ou
+recomendação à sua comercialização.
+(e) Os casos não previstos nestas Condições Gerais serão tratados de acordo com as leis
+e normas administrativas que fiscalizam os seguros no Brasil.
+(f) A eventual presença de palavras isoladas e expressões curtas, de origem estrangeira, e
+de uso corrente no mercado de seguros encontram-se definidas no glossário de termos
+técnicos.
+(g) O Corretor de Seguros é o intermediário e consultor especializado que deve ser acionado
+pelo segurado em caso de dúvidas sobre as coberturas contratadas e a vigência do
+contrato, em caso de sinistros, ou em caso de alteração no estado do risco coberto pelo
+seguro. Por isso, é muito importante que o Segurado tenha sempre o contato atualizado
+de seu Corretor.
+(h) O Segurado poderá consultar a situação cadastral de seu corretor de seguros no site
+www.susep.gov.br por meio do seu número de registro na SUSEP, nome completo,
+CNPJ ou CPF.
+(i) Estas Condições Gerais encontram-se expressas em linguagem clara e objetiva, de
+forma que não gere multiplicidade de interpretações e apresentam em destaque todas
+as cláusulas com obrigações e/ou restrições de direito do segurado.
+(j) ESTAS CONDIÇÕES GERAIS PODEM SER CONSULTADAS NO ENDEREÇO
+ELETRÔNICO WWW.SUSEP.GOV.BR, BEM COMO NO SITE E APLICATIVO DA
+6
+
+===== PAGE 7 =====
+DARWIN SEGUROS.
+Além deste documento, é importante que você leia atentamente a Política de Privacidade da
+Darwin Seguros, que estabelece as condições de coleta e tratamento de dados pessoais, em
+atenção à Lei Geral de Proteção de Dados (Lei nº 13.709/2018) e demais leis aplicáveis, e é
+parte integrante deste contrato.
+Ao aceitar estas Condições Gerais, você aceita e concorda com a Política de Privacidade da
+Darwin Seguros. Caso não concorde com as disposições da nossa Política de Privacidade,
+recomendamos que você não contrate este Seguro.
+2 Para que serve o Seguro?
+O Seguro garante o pagamento de uma indenização ao Segurado ou Beneficiário, mediante
+o pagamento de um valor à Seguradora (o tal do “Prêmio”!), em razão de eventos ocorridos
+durante o período em que o Seguro está válido (ou seja, durante a Vigência). No segurês,
+esses eventos são conhecidos como “Sinistros”!
+Para garantir o direito ao pagamento da indenização, é importante que esses eventos:
+(a) estejam previstos nessas Condições Gerais;
+(b) respeitem as coberturas contratadas e os Limite Máximo de Indenização e;
+(c) possam ser comprovados;
+(d) não sejam considerados riscos excluídos por essas Condições Gerais e/ou não
+decorram de tais riscos excluídos; e
+(e) não estejam sujeitos às hipóteses de Perda de Direitos (cláusula 26).
+Vale lembrar que para garantir o direito à indenização é importante que o Segurado mantenha
+a boa-fé durante toda a execução do contrato.
+Nós sabemos que Sinistro, Prêmio, indenização, Condições Gerais e Perda de Direitos são
+termos complicados, mas vamos te ajudar a entender melhor tudo isso logo abaixo!
+3 Deveres do Segurado
+O Segurado obriga-se a observar os deveres legais e contratuais que asseguram a validade
+e a eficácia deste seguro, nos termos da Lei 15.040/2024 (em especial os artigos 13, 14, 44,
+45, 66, 68, 94, 100, 101 e 105), comprometendo-se a:
+Durante a vigência do seguro:
+• prestar informações completas, verídicas e relevantes à Seguradora no momento da
+contratação e sempre que solicitado, especialmente sobre o interesse e o risco a ser
+garantido;
+• comunicar à Seguradora qualquer agravamento ou alteração relevante do risco tão
+logo dele tome conhecimento;
+• não agravar intencionalmente o risco coberto e não permitir que condutores
+regulares ou eventuais do Veículo Segurado agravem intencionalmente o risco coberto,
+7
+
+===== PAGE 8 =====
+sob pena de perda da garantia. Para fins deste seguro considera-se agravamento
+intencional do risco, entre outras, as seguintes condutas: (a) conduzir o Veículo
+Segurado sob efeito de álcool e/ou drogas; (b) conduzir o Veículo Segurado sem
+permissão legal ou habilitação compatível para o tipo de veículo, ou ainda com a
+permissão suspensa ou cassada; (iii) alterar características originais de fábrica do
+Veículo Segurado, tais como alterações na potência do motor, modificações do tipo
+tuning, rebaixamento de suspensão ou quaisquer intervenção que importe modificação
+estrutural, funcional ou estética diversa das especificações originais do fabricante. ;
+• manter o Veículo Segurado em bom estado de conservação e manutenção e adotar
+medidas razoáveis de prevenção de sinistros;
+• informar prontamente a Seguradora sobre a existência de outros seguros que cubram
+o mesmo risco;
+• permitir a realização de vistoria sempre que solicitada pela Seguradora;
+• pagar o Prêmio na forma e prazos contratados.
+Em caso de sinistro:
+• tomar as providências necessárias e úteis para evitar o agravamento dos danos e
+mitigar as consequências do evento;
+• avisar prontamente a Seguradora em seus canais de atendimento, por meio do App ou
+da nossa Central de Atendimento (11) 3512-7210). Horário de funcionamento: de
+segunda a sexta, das 08h00 às 18h00;
+• prestar todas as informações de que disponha sobre o sinistro, suas causas e
+consequências, sempre que solicitado;
+• preservar o local e os bens atingidos até vistoria da Seguradora;
+• apresentar todos os documentos comprobatórios e colaborar integralmente durante o
+Aviso e Liquidação do Sinistro;
+• não alterar, remover ou destruir vestígios, peças ou equipamentos relacionados ao
+evento, salvo quando necessário para contenção ou segurança.
+• em caso de sinistros envolvendo terceiro, colaborar com a Seguradora no exercício dos
+seus direitos de sub-rogação;
+Em caso de Reclamação de Terceiros (Cobertura de Responsabilidade Civil Facultativa
+de Veículos (RCF-V)
+Quando contratada cobertura de RCF-V, o Segurado deve, adicionalmente:
+• informar prontamente à Seguradora qualquer notificação, reclamação ou ação judicial
+movida por terceiros em razão de fatos relacionados ao seguro;
+8
+
+===== PAGE 9 =====
+• informar os terceiros prejudicados sobre a existência do contrato de seguro e os dados
+mínimos de identificação da Apólice e da Seguradora;
+• abster-se de assumir obrigações, reconhecer responsabilidades ou negociar acordos
+com terceiros sem a anuência expressa da Seguradora;
+• fornecer à Seguradora todos os documentos e informações relevantes e colaborar
+plenamente na defesa, inclusive comparecendo aos atos processuais para os quais for
+intimado;
+• não agir em detrimento dos direitos da Seguradora ou praticar atos que possam
+comprometer sua defesa.
+Atenção! O descumprimento injustificado dos deveres acima poderá acarretar as seguintes
+consequências, nos termos da Lei nº 15.040/2024:
+• perda total do direito à indenização, quando constatada conduta dolosa, má-fé, fraude,
+omissão intencional de informações relevantes ou agravamento intencional do risco
+(artigos 13, §3º; 44, §1º; 66, §1º; 68, §2º; 69);
+• redução proporcional da indenização, quando o descumprimento decorrer de culpa do
+Segurado, inclusive por omissão culposa de informações relevantes ou atraso
+injustificado na comunicação do sinistro (artigos 14, §4º; 44, §2º; 66, §2º; 68, §1º).
+4 Definições
+Esta seção tem o objetivo de deixar claro que cada termo tem o possui um significado
+específico e definido.
+Além do mais, sempre que você encontrar um termo escrito com Letras Maiúsculas, ele terá
+o exato significado que apresentamos a seguir.
+Aceitação
+Quer dizer que as informações relativas ao seu perfil de risco se enquadram nos critérios que
+a Darwin Seguros definiu e que aprovamos a contratação de seguro para ele. É a partir da
+Aceitação do risco pela Darwin Seguros que, mediante o pagamento de Prêmio, o seu Bilhete
+será emitido.
+Acessórios
+São as peças incluídas de forma permanente no Veículo Segurado, independentemente de
+ser ou não original de fábrica, referentes a som e imagem (rádios e toca-fitas, conjugados ou
+não, amplificadores, equalizadores, CD players, auto falantes, televisores, telefones móveis e
+aparelhos transmissores e ou receptores de rádio).
+Acidente de Trânsito
+9
+
+===== PAGE 10 =====
+Acontece de forma imprevista e involuntária e pode causar um Prejuízo Indenizável ao
+Segurado ou Beneficiário e/ou Dano à Terceiro (também chamado de Sinistro de Trânsito).
+Acidente Pessoal de Passageiro
+Acidente de Trânsito com o Veículo Segurado que cause lesão física que, independentemente
+de toda e qualquer outra causa, tenha como consequência direta a morte e/ou Invalidez
+Permanente dos ocupantes do Veículo Segurado.
+Aplicativo da Seguradora
+É o aplicativo da Darwin Seguros, disponibilizado nas lojas oficiais de aplicativos Android
+(Google Play) e Apple (App Store), e seu uso é obrigatório pelo Segurado, devendo este
+garantir que as Permissões de Acesso sejam devidamente concedidas. O Aplicativo da
+Seguradora, que deve obrigatoriamente estar instalado e operacional no smartphone do
+Segurado, é responsável por (i) coletar dados, uma condição fundamental e obrigatória para
+a validade do Seguro e (ii) fornecer o atendimento digital ao segurado. É responsabilidade do
+Segurado, antes da contratação do seguro, verificar se o seu smartphone é compatível com
+as versões de sistema operacional requeridas pelo Aplicativo da Seguradora, assegurando o
+pleno funcionamento de todas as suas funcionalidades - sem o Aplicativo da Seguradora, o
+Segurado terá suas coberturas prejudicadas.
+App Store: https://apps.apple.com/br/app/darwin-seguros/id1585018294
+Google Play: https://play.google.com/store/apps/details?id=com.darwinseguros.app&pli=1
+Em caso de quaisquer dúvidas, procure o seu corretor de seguros ou a Darwin Seguros por
+meio dos nossos canais de atendimento.
+Apropriação Indébita
+É o ato ilegal de tomar para si coisa alheia móvel de quem tem a posse ou a detenção.
+Bilhete
+É o documento emitido pela Darwin Seguros que formaliza e comprova a Aceitação do Seguro.
+Neste documento você encontrará as principais informações do seu seguro, tais como quais
+coberturas você contratou, qual o Limite Máximo de Indenização de cada uma delas, qual o
+valor do Prêmio.
+Avarias
+São os danos que existem no Veículo Segurado antes mesmo da contratação do seguro ou
+que, mesmo quando forem posteriores à contratação, não possuam relação nenhuma com o
+Sinistro ocorrido (isto é, nexo causal).
+Em qualquer um dos dois casos, os valores correspondentes às Avarias serão descontados
+da Indenização, já que nada tem a ver com o Sinistro, exceto no caso de Indenização Integral.
+Aviso de Sinistro
+10
+
+===== PAGE 11 =====
+É o ato formal de entrega à Seguradora de todos os documentos e informações necessários
+à análise da cobertura, conforme listados nas Condições Gerais ou nos comunicados oficiais
+da Seguradora.
+Nos termos dos arts. 86 e 87 da Lei nº 15.040/2024, somente com o aviso de sinistro, se
+considerará iniciado o prazo legal para a manifestação da Seguradora quanto à cobertura (30
+dias) e, se reconhecida, para o pagamento da indenização (mais 30 dias).
+A ausência de entrega completa dos documentos suspenderá a contagem dos prazos legais
+de Regulação e Liquidação de Sinistro.
+Beneficiário
+É a pessoa física (quem tem CPF!) ou jurídica (quem tem CNPJ!) que, em razão de alguma
+lei e/ou por decisão do Segurado mediante indicação no Bilhete, é quem terá direito à
+Indenização.
+Bônus
+Desconto pessoal e intransferível obtido pelo Segurado na renovação do seguro. São
+condições fundamentais para obtenção do bônus não ter havido nos últimos 12 (doze) meses
+anteriores (a) nenhuma ocorrência de sinistro, (b) nenhuma transferência de direitos ou
+obrigações e (c) qualquer interrupção na vigência do contrato de seguro.
+Cancelamento por Arrependimento
+É a possibilidade de o Segurado desistir da contratação do seguro durante os primeiros 7
+(sete) dias corridos do início de Vigência do Bilhete de Seguros, conforme prevê o Código de
+Defesa do Consumidor para as contratações por meio digital.
+Vale lembrar que em caso de Cancelamento por Arrependimento, é como se o seguro nunca
+tivesse existido, então nunca caberá o pagamento de Indenização pela Seguradora.
+Casco
+É o Veículo Segurado propriamente dito.
+CEP de Pernoite
+É o CEP do local em que o Veículo Segurado permanece estacionado no período noturno por
+4 (quatro) dias ou mais de cada semana que compõe o período de vigência do seguro ou o
+CEP associado a um endereço do Segurado, conforme definido pela Seguradora. Trata-se de
+informação importante a ser prestada pelo Segurado no Questionário de Risco, à medida que
+será avaliada para a precificação de seu seguro (o valor do prêmio) e até mesmo para a
+própria subscrição do risco (aceitação da proposta).
+Comunicação de Sinistro
+É o ato pelo qual o Segurado informa à Seguradora a ocorrência de um evento que possa
+11
+
+===== PAGE 12 =====
+caracterizar sinistro, tão logo tome conhecimento do fato, utilizando-se de qualquer meio
+idôneo e dos canais oficiais de atendimento.
+Lembre-se que a comunicação com a gente é super fácil e você poderá nos contatar
+em nosso aplicativo, a qualquer momento, ou pelos nossos canais de atendimento, de
+segunda a sexta-feira, das 08h às 18h!
+A comunicação tem por objetivo permitir que a Seguradora adote medidas para evitar ou
+minorar prejuízos e para orientar o Segurado quanto às providências necessárias.
+Nos termos do art. 66 da Lei nº 15.040/2024, o descumprimento doloso ou culposo desse
+dever pode acarretar, respectivamente, a perda do direito à indenização ou a redução
+proporcional de seu valor, quando houver nexo causal entre a omissão e o agravamento dos
+danos.
+Condições Gerais
+É este documento aqui! Nele reunimos tudo o que você precisa saber e concordar sobre as
+obrigações e os direitos relacionados ao seu seguro.
+Dano
+É o prejuízo sofrido pelo Segurado e indenizável pela Seguradora de acordo com as condições
+pactuadas e previstas no Bilhete.
+Para fins deste Seguro, significa o Dano Corporal e/ou Material e/ou Moral, tal qual definido
+logo abaixo, estando excluídos os Danos Estéticos, Danos Morais Puros e Lucros
+Cessantes, mesmo quando causados em razão de algum Risco coberto.
+Dano Corporal
+Lesões exclusivamente físicas, causadas a pessoas, por acidente de trânsito que envolva o
+Veículo Segurado. Esta definição inclui eventuais consequências da lesão física, como
+pensionamento, reembolso de despesas médico-hospitalares dentre outras. Exclui-se da
+definição de Danos Corporais os Danos Morais, Estéticos ou Psicológicos. No Seguro Darwin,
+o conceito de Danos Corporais aplica-se exclusivamente para a cobertura de
+Responsabilidade Civil Facultativa de Veículos (RCF-V).
+Dano Estético
+Todo e qualquer dano decorrente de Acidente de Trânsito envolvendo o Veículo Segurado
+que implique redução ou eliminação dos padrões de beleza ou estética estabelecidos. Para
+fins deste Seguro, o conceito de Danos Estéticos aplica-se exclusivamente para a cobertura
+de Responsabilidade Civil Facultativa de Veículos (RCF-V), estando excluído das demais
+coberturas.
+Dano Material
+É o dano causado exclusivamente à bens móveis e imóveis.
+12
+
+===== PAGE 13 =====
+Dano Moral
+É o dano, ofensa ou violação aos princípios e valores de ordem moral, tais como liberdade,
+honra, sentimento, dignidade pessoal ou familiar. Para as pessoas jurídicas, são as perdas
+financeiras indiretas, não contabilizáveis, decorrentes exclusivamente de ofensa comprovada
+ao seu nome ou à sua imagem.
+Como não possui um valor econômico pré-definido, é o Juiz do processo que poderá
+reconhecer a existência de tal dano e determinar o valor para a sua eventual reparação.
+Dano Moral Puro
+É o Dano Moral que não decorre de Danos Corporais ou de Danos Materiais indenizáveis.
+Para fins deste seguro, trata-se de risco excluído.
+Endosso
+Documento, emitido pela Seguradora, por meio do qual podem ser formalizadas alterações ou
+cancelamento do seguro contratado.
+Equipamentos
+São as peças instaladas de forma permanente no Veículo Segurado e cuja finalidade não
+esteja relacionada com a locomoção, mas esteja relacionada com estética ou lazer dos
+ocupantes do veículo.
+Estelionato
+É crime e significa obter para si ou para outra pessoa vantagem ilícita que cause prejuízo
+alheio, induzindo ou mantendo alguém em erro, mediante artifício, ardil ou qualquer outro meio
+fraudulento. Nesse tipo de crime, a principal intenção do autor é atingir o patrimônio da vítima
+por meio de ação fraudulenta e/ou induzindo a vítima a erro!
+Extorsão
+Constranger alguém, mediante violência ou grave ameaça, e com intuito de obter para si ou
+para outrem indevida vantagem econômica, a fazer, tolerar que se faça ou deixar de fazer
+alguma coisa.
+Fator de Ajuste
+Vamos te explicar de uma vez por todas o que é o Fator de Ajuste!
+- O que é o Fator de Ajuste?
+É um percentual estabelecido pelo Segurado no momento da contratação e que servirá para
+determinar a relação entre o valor do Limite Máximo de Indenização e o valor do Veículo
+Segurado correspondente na Tabela de Referência utilizada no momento da contratação do
+Seguro.
+13
+
+===== PAGE 14 =====
+- Mas para que ele serve?
+O Fator de Ajuste serve para que você possa ajustar qual o valor da Indenização Integral a
+ser recebida pelo Veículo Segurado no caso de um Sinistro coberto.
+- Como faço para calcular o valor de uma Indenização Integral a ser paga pela Darwin Seguros
+no caso de um Sinistro coberto?
+Basta multiplicar o Fator de Ajuste escolhido por você pelo valor do Veículo Segurado
+correspondente na Tabela de Referência no mês de referência da ocorrência do Sinistro.
+Franquia
+É um valor que o segurado necessariamente participa (paga do próprio bolso) antes de a
+seguradora cobrir o restante dos custos de um sinistro.
+Trata-se de mecanismo que existe para evitar acionamentos constantes do seguro para
+pequenos prejuízos, ajudando a manter os custos dos seguros mais baixos e garantindo que
+a cobertura seja usada para situações mais graves.
+Pode ficar em paz que esses valores são previamente estabelecidos e você encontrará quais
+os valores de Franquia aplicáveis no seu Bilhete!
+Furto
+É um crime em que um bem ou parte dele é subtraído sem que exista ameaça ou violência à
+pessoa.
+Indenização Integral
+Será devida quando os Prejuízos Indenizáveis resultantes de um mesmo Sinistro atingirem ou
+ultrapassarem 75% (setenta e cinco por cento) do valor do Veículo Segurado estabelecido na
+Tabela de Referência na data da ocorrência do Sinistro, levando em consideração o Fator de
+Ajuste contratado no Bilhete e deduzida a Franquia, se aplicável.
+Indenização Parcial
+Será devida quando os Prejuízos Indenizáveis resultantes de um mesmo Sinistro não
+atingirem 75% (setenta e cinco por cento) do valor do Veículo Segurado estabelecido na
+Tabela de Referência na data da ocorrência do Sinistro, levando em consideração o Fator de
+Ajuste contratado no Bilhete, e deduzida a Franquia, se contratada.
+Invalidez Permanente
+Invalidez total e/ou parcial, de forma permanente, do Passageiro do Veículo Segurado, em
+decorrência de um Acidente de Trânsito envolvendo o Veículo Segurado, durante a vigência
+do seguro, devidamente comprovada por meio de laudo e/ou declaração médica.
+Limite Máximo de Indenização (LMI)
+14
+
+===== PAGE 15 =====
+É o valor máximo a ser pago pela Seguradora por cobertura contratada, na ocorrência de
+Sinistro coberto. Esse valor estará sempre indicado no seu Bilhete!
+Os Limites Máximos de Indenização das coberturas contratadas são independentes, não se
+somam e/ou se comunicam.
+Não ocorrerá a reintegração do Limite Máximo de Indenização quando da ocorrência de
+sinistros cobertos.
+Liquidação de Sinistros
+É a etapa posterior à Regulação, em que a Seguradora efetua o pagamento da indenização
+devida ao Segurado, Beneficiário ou Terceiro, nos prazos e condições previstos na Lei nº
+15.040/2024.
+Lucros Cessantes
+São lucros que deixam de ser auferidos devido à paralisação do veículo em decorrência do
+Sinistro.
+Para fins deste seguro, trata-se de risco excluído, exceto no que se refere aos Lucros
+Cessantes de Terceiros resultantes diretamente e exclusivamente da responsabilidade do
+Segurado por Danos Materiais e Danos Corporais cobertos pela Apólice, quando contratada
+a cobertura de Responsabilidade Civil Facultativa de Veículos (RCF-V).
+Má-fé
+Comportamento deliberado e intencional do Segurado para prejudicar a Seguradora, como
+por exemplo o fornecimento, por si, seu representante, seu Corretor de Seguros, de
+informações inexatas, incompletas ou omissas, ou a causação dolosa do sinistro.
+Oficinas Referenciadas
+Rede de oficinas e concessionárias, previamente definidas pela Darwin Seguros, que visam
+oferecer confiança, qualidade, atendimento diferenciado e agilidade. As Oficinas
+Referenciadas passam por um criterioso processo de seleção feito pela Darwin Seguros que
+avalia a capacidade técnica, qualificação dos profissionais e equipamentos. As Oficinas
+Referenciadas trabalham exclusivamente com peças genuínas e originais, sendo que a
+Darwin oferece a garantia de qualidade do serviço executado por essas Oficinas por um prazo
+de 12 meses para mão-de-obra e de 90 dias para peças.
+A relação das Oficinas Referenciadas será sempre apresentada ao segurado no momento da
+abertura do sinistro, podendo ser consultada em nossa central de atendimento, site ou em
+nossos outros canais de atendimento.
+Passageiro
+Pessoa que se encontra no interior do Veículo Segurado, no momento do Acidente de
+Trânsito, inclusive o Condutor, respeitado o limite máximo de capacidade de passageiros no
+Veículo Segurado.
+15
+
+===== PAGE 16 =====
+Perda Parcial
+Se caracteriza quando o custo de reparação do Veículo Segurado não atingir 75% (setenta e
+cinco por cento) do valor referenciado do Veículo Segurado na Tabela de Referência levando
+em consideração o Fator de Ajuste contratado no Bilhete.
+Perda Total
+Se caracteriza quando o custo de reparação do Veículo Segurado atingir ou ultrapassar 75%
+(setenta e cinco por cento) do valor referenciado do Veículo Segurado na Tabela de
+Referência levando em consideração o Fator de Ajuste contratado no Bilhete.
+Peças Novas Originais
+Serão destinadas para a substituição das peças de reparação do Veículo Segurado. As Peças
+Novas Originais são fabricadas pelos mesmos fornecedores da montadora do Veículo
+Segurado, seguem o mesmo processo de fabricação (tecnologia) e possuem as mesmas
+especificações técnicas das peças genuínas que substituem.
+Permissões Obrigatórias
+São as permissões obrigatórias de acesso ao funcionamento integral do Aplicativo da
+Seguradora no smartphone do Segurado, quais sejam: (i) acesso à localização precisa
+(necessariamente disponível a todo o momento) e (ii) acesso aos sensores de movimento.
+As Permissões Obrigatórias são mandatórias para a execução das coberturas contratadas,
+devendo estar permanentemente habilitadas, sendo que a interrupção e/ou bloqueio (e/ou
+qualquer medida similar) das referidas Permissões Obrigatórias, inviabilizará o direito à
+indenização, conforme previsto e amplamente esclarecido no início dessas Condições Gerais,
+bem como previsto na Cláusula 26 – Perda de Direitos. As Permissões Obrigatórias devem
+ser configuradas de modo a permitir que o acesso à localização aconteça “sempre”. Opções
+de compartilhamento de localização que, de alguma forma, restrinjam o compartilhamento de
+dados do smartphone do Segurado com o Aplicativo da Seguradora, tais como “nunca”, “não
+permitir”, “perguntar da próxima vez ou quando eu compartilhar”, “perguntar sempre”, “durante
+o uso do app”, “permitir durante o uso do app”, dentre outras, não são suficientes para garantir
+a operação adequada do Aplicativo da Seguradora e a execução das coberturas contratadas.
+As Permissões Obrigatórias podem ter nomenclaturas diferentes conforme o sistema
+operacional de cada smartphone.
+Rodas Não de Série
+Rodas que não façam parte do modelo básico do Veículo Segurado.
+Peças Novas Genuínas
+São aquelas vendidas pelo fabricante à montadora de veículos e distribuídos para os
+concessionários ou para as distribuidoras de peças que a representam e que, em geral, trazem
+o logotipo, símbolo ou marca da montadora.
+16
+
+===== PAGE 17 =====
+Peças Novas Compatíveis
+Também denominada peça de pós-venda, são peças novas compatíveis e destinadas a
+substituir peça de reposição original, que apresente as mesmas especificações técnicas do
+fabricante e características de qualidade.
+Prêmio
+É o valor pago pelo Segurado à Seguradora para a contratação do Bilhete.
+Prejuízo Indenizável
+É o prejuízo financeiro sofrido pelo Segurado em decorrência de Sinistro coberto envolvendo
+o Veículo Segurado. Estão excluídos deste conceito os Lucros Cessantes, mesmo
+quando causados em razão de algum Risco coberto, exceto no que se refere aos Lucros
+Cessantes de Terceiros resultantes diretamente da responsabilidade por Danos
+Materiais e Danos Corporais cobertos pelo Bilhete, quando contratada a cobertura de
+Responsabilidade Civil Facultativa de Veículos (RCF-V).
+Prescrição
+Perda do direito de ação para reclamar os direitos ou obrigações em virtude do decurso dos
+prazos previstos em lei nos termos do Código Civil.
+Primeiro Risco Absoluto
+É uma modalidade de contratação de seguro pela qual a Darwin Seguros se compromete a
+efetuar o pagamento das indenizações devidas até o Limite Máximo de Indenização
+contratado sob a forma de Valor de Mercado Referenciado.
+Principal Condutor
+É o Segurado, pessoa legalmente habilitada e que utiliza o Veículo Segurado por no mínimo
+60% (sessenta por cento) dos quilômetros rodados desde o início de Vigência do primeiro
+Bilhete, sendo considerado como tal o primeiro Bilhete da série ininterrupta mais recente de
+renovações. O Aplicativo da Seguradora deve ser instalado e cadastrado em nome do
+Segurado, e com todas as Permissões Obrigatórias devidamente concedidas e habilitadas.
+Trata-se de informação importante a ser prestada pelo Segurado, à medida que será avaliada
+para a precificação de seu seguro (o valor do prêmio) e até mesmo para a própria subscrição
+do risco.
+Questionário de Avaliação do Risco
+É o conjunto de perguntas sobre o Veículo Segurado, a utilização que lhe é dada pelo
+Segurado ou pelo(s) condutor(es), bem como sobre a própria pessoa do(s) condutor(es).
+É um documento essencial para a formação do contrato de seguro e deve ser encaminhado
+pelo Segurado para que a Darwin possa efetuar o cálculo do valor do Prêmio.
+17
+
+===== PAGE 18 =====
+Por isso, é indispensável que o Questionário de Avaliação de Risco seja respondido de forma
+correta, completa e verdadeira!
+Regulação de Sinistro
+É o procedimento iniciado após o registro do Aviso de Sinistro, por meio do qual a Seguradora
+apura as causas e consequências do evento, verifica se há cobertura conforme a Apólice
+contratada e determina o valor da indenização devida, quando aplicável.
+Temos um capítulo neste documento só para te explicar como funciona a Regulação e a
+Liquidação de Sinistros! Vale a pena dar uma conferida!
+Responsabilidade Civil Facultativa de Veículos (RCF-V)
+É a cobertura de seguros que prevê o pagamento de indenização em decorrência de danos à
+Terceiros causados por Acidente de Trânsito envolvendo o Veículo Segurado ou por sua carga
+transportada.
+Observamos ainda que a garantia de danos corporais da cobertura de RCF-V somente deve
+responder, em cada reclamação, pela parte da indenização que exceder os limites vigentes
+na data do sinistro para as coberturas do seguro obrigatório de DPVAT, que é contratado a
+“primeiro risco absoluto”.
+O DPVAT é um seguro de “primeiro risco absoluto” nos casos de sinistros de danos corporais,
+o que significa que ele é o primeiro a ser acionado para as seguintes situações: (i) morte, (ii)
+invalidez permanente e (iii) reembolso de despesas médico-hospitalares comprovadas de
+pessoas que sofreram acidente de trânsito em vias terrestres.
+Coberturas como a de Responsabilidade Civil Facultativa de Veículos (RCF-V) também tem
+por objetivo reparar danos corporais de terceiros envolvidos no sinistro, porém são
+consideradas de “segundo risco”, o que significa que garantirão indenização aos beneficiários
+apenas depois destes terem acionado o DPVAT e recebido as respectivas indenizações.
+Este dispositivo evita que haja duplicidade de indenizações, nos casos em que ambos os
+seguros estejam cobrindo o mesmo risco.
+Ressarcimento
+É o direito que a Seguradora possui de recuperar o valor pago ao Segurado ou Beneficiário
+em decorrência de um Sinistro, cobrando-o do responsável pelo Sinistro ou da Seguradora de
+tal responsável pelo Sinistro, quando for o caso.
+Por isso é muito importante que, em caso de sinistros envolvendo terceiros, o Segurado
+colabore com a Seguradora garantindo a ela o exercício dos seus direitos de sub-rogação.
+Risco
+É o evento futuro e incerto, possível, concreto, lícito e que independe da vontade do Segurado
+e contra o qual o seguro é feito.
+18
+
+===== PAGE 19 =====
+Roubo
+É um crime em que um bem ou parte dele é subtraído com ameaça ou violência à pessoa.
+Dica: o Roubo é diferente do Furto porque no Roubo existe ameaça ou violência à pessoa,
+enquanto no Furto não existe.
+Salvado
+São os veículos e/ou objetos resgatados de um Sinistro, quer tenham ficado em perfeito
+estado ou sido danificados. Após o pagamento da indenização integral, passam a ser de
+propriedade da Seguradora.
+Segurado
+É a pessoa física que, tendo interesse segurável, contrata um seguro em benefício próprio ou
+em benefício de terceiros e que, obrigatoriamente, deve ser o Principal Condutor.
+Seguradora
+É a Darwin Seguros, empresa autorizada a funcionar pela SUSEP no Brasil e que, mediante
+o pagamento do Prêmio, indeniza o Segurado ou Beneficiário pelos Danos causados e/ou
+Prejuízos Indenizáveis sofridos em decorrência de Sinistros cobertos.
+Sinistro
+É a ocorrência do Risco coberto, durante a Vigência do Bilhete contra o qual foi contratado o
+seguro.
+Sub-rogação
+A sub-rogação é a substituição de uma pessoa por outra em determinada relação jurídica, e
+opera quando quem paga uma dívida assume os direitos do credor original contra o devedor.
+Nos contratos de Seguro, a sub-rogação opera quando a Seguradora paga indenização ao
+Segurado e assume, nos limites desta indenização, sua posição de credor frente a quem deu
+causa ao sinistro.
+O Segurado deverá cooperar com a Seguradora para o exercício do direito de sub-rogação,
+abstendo-se de praticar qualquer ato que possa reduzi-lo ou extingui-lo, respondendo pelos
+prejuízos que causar à Seguradora.
+SUSEP
+É a Superintendência de Seguros Privados, Autarquia Federal responsável pela regulação e
+fiscalização do mercado de seguros no Brasil.
+Tabela de Referência
+19
+
+===== PAGE 20 =====
+É a tabela divulgada em jornal de grande circulação, revista especializada ou mídias digitais
+que indica o valor médio de cada veículo, e que é determinada no momento da contratação
+do seguro e informada no Bilhete. Como um exemplo, temos a tabela FIPE.
+Tabela Substituta
+É a tabela que será utilizada em caso de extinção ou interrupção da publicação da Tabela de
+Referência adotada na contratação do seguro.
+Terceiro
+É a pessoa envolvida no Acidente de Trânsito com o Segurado, que pode ser culpada ou
+prejudicada. Não são considerados “Terceiros” os Passageiros do Veículo Segurado, o próprio
+Segurado e/ou seus ascendentes, descendentes, cônjuge, irmãos e pessoas que com ele
+residam ou que dele dependam economicamente.
+Valor de Mercado Referenciado (VMR)
+- O que é Valor de Mercado Referenciado (VMR)?
+É uma modalidade de contratação de seguro que, no caso de uma Indenização Integral em
+razão de um Sinistro coberto, garante ao Segurado o pagamento da indenização de acordo
+com o Fator de Ajuste e Tabela de Referência estabelecidos no Bilhete.
+- E o que acontece no caso de veículos zero quilômetro?
+Consideraremos o Veículo Segurado como sendo Novo até o prazo de 30 (trinta) dias
+contados da data de saída da concessionária. Caso o Bilhete seja renovado sem
+interrupção, o prazo da cobertura com base no Valor de Novo será prorrogado para mais 30
+(trinta) dias e, havendo novamente a renovação pelo terceiro período consecutivo (sem
+interrupção), a cobertura ficará prorrogada por mais 30 (trinta) dias, somando assim o prazo
+máximo de cobertura com base no Valor de Novo de até 90 (noventa) dias.
+Vale lembrar que um Veículo Segurado zero-quilômetro, para ser considerado como
+Novo, não poderá ter sinistros anteriores, ou seja, o Sinistro de Indenização Integral
+aberto junto à Darwin Seguros deverá ser o primeiro.
+Além disso, note que isto é válido apenas para veículos que tenham a data de saída da
+concessionária igual ao início de vigência do Bilhete, ou se de outra forma previamente
+acordado com a Darwin Seguros!
+Veículo Segurado
+É o veículo para o qual o Bilhete foi contratado.
+Vigência
+20
+
+===== PAGE 21 =====
+É o prazo que determina o início e o fim de incidência do Bilhete contratado.
+Vistoria Prévia
+É uma das etapas utilizadas pela Seguradora para a Aceitação ou não do Risco em que são
+verificadas as características e condições do veículo a ser segurado.
+A Vistoria Prévia acontecerá de forma bastante fácil, diretamente no Aplicativo da Seguradora
+ou por outra forma disponibilizada pela Seguradora e é indispensável para que você possa
+contratar o seu seguro com a gente, salvo se previamente dispensada pela Seguradora! Vale
+lembrar que o início das coberturas contratadas se dará após a avaliação das etapas para a
+Aceitação ou não do Risco pela Seguradora, incluindo, mas não se limitando à Vistoria Prévia,
+bem como dependerá da (i) aceitação do risco pela Seguradora, (ii) pagamento do prêmio
+pelo Segurado e (iii) emissão do Bilhete.
+Vistoria de Sinistro
+É a inspeção realizada pela Seguradora, de forma digital ou física, a exclusivo critério da
+Seguradora, em caso de Sinistro no Veículo Segurado ou por ele causado a Terceiros para
+verificar os Prejuízos Indenizáveis ou Danos.
+5 Aceitação
+Vamos te explicar passo a passo como acontece o processo de Aceitação aqui na Darwin
+Seguros!
+a) Cotação
+Para a cotação, o primeiro passo é responder o Questionário de Avaliação de Risco. É
+obrigatório que as informações inseridas ali estejam corretas, tudo bem? Suas respostas nos
+ajudarão a avaliar, junto com outros critérios, se o seu veículo será ou não protegido por um
+seguro da Darwin Seguros, e nos fornecerá os elementos necessários para uma correta
+precificação (o valor do Prêmio).
+Normalmente, a Darwin Seguros solicitará os dados cadastrais do Principal Condutor, como
+por exemplo, mas não se limitando a nome completo, CPF, CNH, foto, CEP de Pernoite, bem
+como os dados do Veículo Segurado, como por exemplo, mas não se limitando, Placa, Chassi,
+tipo de uso, entre outros que forem necessários. Se necessário, documentos e/ou informações
+adicionais poderão ser solicitados.
+b) Questionário de Risco:
+Para a contratação deste seguro, o Segurado deve responder de forma clara, completa e
+verdadeira ao Questionário de Avaliação de Risco fornecido pela Seguradora, que integra a
+Proposta de Seguro e as presentes Condições Gerais.
+Nos termos dos arts. 44 a 46 da Lei nº 15.040/2024:
+• A omissão ou inexatidão dolosa nas informações prestadas resultará na perda
+21
+
+===== PAGE 22 =====
+do direito à garantia contratada;
+• A omissão ou inexatidão culposa implicará a redução proporcional da
+indenização, considerando o prêmio pago e o risco assumido.
+Além disso, o Segurado, o Proponente e quaisquer terceiros intervenientes ficam obrigados,
+ao responderem ao Questionário de Avaliação de Risco, a informar tudo aquilo que souberem
+ou que razoavelmente devam saber a respeito do interesse e do risco a serem garantidos, de
+acordo com as regras ordinárias de conhecimento, sob pena de perda de direitos, nos termos
+do art. 45 da Lei nº 15.040/2024.
+O Segurado compromete-se a informar corretamente, entre outros aspectos relevantes para
+avaliação do risco: tipo de uso do veículo, perfil do(s) condutor(es), histórico de sinistros e
+demais dados solicitados no questionário.
+O preenchimento incorreto, incompleto ou a omissão de informações relevantes poderá
+impactar diretamente a cobertura e a indenização.
+c) Vistoria Prévia
+Além de responder ao Questionário de Avaliação de Risco, também será necessário realizar
+a Vistoria Prévia, exceto se prévia e taxativamente dispensada pela Darwin Seguros.
+Esse ponto é importante! Todas as Aceitações relacionadas a qualquer veículo
+dependem, dentre outros critérios, da comunicação do resultado positivo da Vistoria
+Prévia.
+O Segurado deverá apresentar o Veículo Segurado indicado na Apólice para realização da
+Vistoria Prévia sempre que solicitado pela Seguradora.
+- Contratações Consecutivas
+- O que ocorre em contratações consecutivas, ou seja, sem intervalo entre o fim da Vigência
+de um Bilhete e o início da Vigência do Bilhete subsequente, se houver alteração em
+qualquer item do Questionário de Avaliação de Riscos e/ou nas coberturas de seguros?
+Nesses casos, será necessária uma nova Vistoria Prévia e uma nova análise de risco na
+primeira contratação após as alterações, exceto se previamente dispensado pela Darwin
+Seguros.
+- E se as contratações consecutivas não envolverem alterações em qualquer item do
+Questionário de Avaliação de Riscos e/ou coberturas de seguros?
+Nesse caso, não será necessária uma nova Vistoria Prévia. Simples, não é?!
+d) Análise de Risco
+A partir dos resultados dos itens (a), (b) e (c), o risco passará por análise e poderá ser aceito
+ou não pela Seguradora, de acordo com os requisitos desta.
+Adicionalmente, se tiver alguma dúvida, recomendamos que você sempre cheque com seu
+22
+
+===== PAGE 23 =====
+corretor ou até mesmo diretamente com a Darwin Seguros sobre a Aceitação do veículo para
+não restarem dúvidas sobre o seguro.
+6 Forma de Contratação do Bilhete
+Observados os itens (a), (b), (c) e (d) da cláusula de Aceitação, a contratação deste seguro
+será feita, mediante pagamento de Prêmio e por meio da emissão do Bilhete, pela forma
+disponibilizada pela Darwin Seguros, incluindo, mas não se limitando, pelos seus parceiros
+de distribuição.
+A modalidade de contratação desse seguro é a Primeiro Risco Absoluto, salvo as coberturas
+de RCF-V e APP no que diz respeito a Danos Corporais, e sob a forma de Valor de Mercado
+Referenciado.
+Assim, o Bilhete incluirá, dentre outras, as seguintes informações:
+(a) qual a Tabela de Referência a ser utilizada;
+(b) Fator de Ajuste.
+- É possível alterar a cobertura do seguro?
+Sim, o Segurado pode alterar as coberturas do seu seguro em sua próxima renovação. Em
+caso de dúvidas, procure seu corretor de seguros.
+7 Interesse Legítimo
+A contratação e a manutenção deste seguro estão condicionadas à existência de interesse
+legítimo do Segurado na manutenção do bem, nos termos da legislação aplicável.
+Considera-se interesse legítimo o vínculo econômico ou jurídico do Segurado com o bem
+objeto da cobertura, que justifique a sua proteção securitária, podendo decorrer da
+propriedade, posse, uso, usufruto, arrendamento, alienação fiduciária, comodato, locação,
+guarda ou outro título legítimo que caracterize interesse na preservação do veículo.
+O interesse legítimo deve existir no momento da contratação e durante toda a vigência do
+seguro.
+A cessação do interesse legítimo, por qualquer motivo (como a alienação do veículo,
+transferência de titularidade, perda definitiva da posse ou extinção do direito sobre o bem),
+implica na não renovação do contrato de seguro.
+A constatação de inexistência de interesse legítimo sobre o bem segurado acarretará a
+nulidade de pleno direito do contrato, sem direito à restituição do Prêmio.
+8 Franquias
+As Franquias estabelecidas no Bilhete contratado correrão por conta do Segurado e serão
+deduzidas dos Prejuízos Indenizáveis em cada Sinistro.
+A Franquia não se aplica nos casos de Sinistro com Indenização Integral e/ou
+decorrentes de incêndio.
+23
+
+===== PAGE 24 =====
+9 Renovação
+Este seguro não prevê renovação automática, exceto caso o Segurado manifeste
+expressamente perante a Seguradora a sua intenção em renovar o seguro automaticamente.
+10 Âmbito geográfico
+Este seguro aplica-se única e exclusivamente a Sinistros ocorridos dentro do território
+brasileiro, incluindo os serviços de assistência, salvo expressa menção em contrário no
+Bilhete. Para as coberturas Compreensiva Casco e Casco Simples, também estão cobertos
+os danos ocorridos em cidades da Argentina, Paraguai e Uruguai, países pertencentes ao
+Mercosul, desde que fronteiriças com estados brasileiros, sendo de responsabilidade
+exclusiva e integral do Segurado o transporte do veículo até a cidade brasileira fronteiriça.
+11 Coberturas
+As coberturas contratadas são aquelas discriminadas no Bilhete, respeitadas as regras
+estabelecidas nestas Condições Gerais e regras vigentes aplicáveis.
+Este seguro poderá ser constituído de coberturas Básicas e Adicionais, conforme a seguir:
+Coberturas
+Básicas • Compreensiva Casco (Colisão, Incêndio, Roubo, Furto,
+Granizo e Alagamento)
+• Casco Simples (Roubo, Furto e incêndio)
+• Terceiros (Responsabilidade Civil Facultativa de Veículos -
+RCFV)
+• Blindagem
+• Responsabilidade Civil Facultativa de Veículos (RCFV)
+• Acidente Pessoal de Passageiro (APP)
+Adicionais
+• Assistência 24 horas
+• Vidros (Básica, Completa, VIP ou Blindado)
+• Carro Reserva
+O Segurado, mediante pagamento de Prêmio respectivo, deverá contratar pelo menos uma
+das coberturas básicas e poderá contratar coberturas adicionais, as quais são opcionais,
+conforme tabela acima, mediante pagamento de Prêmio específico.
+As coberturas adicionais somente poderão ser contratadas conjuntamente com ao
+menos 1 (uma) cobertura básica.
+A indenização relativa a qualquer Sinistro não poderá exceder, em hipótese alguma, o Limite
+Máximo de Indenização vinculado a cada cobertura contratada.
+24
+
+===== PAGE 25 =====
+11.1. Coberturas
+11.1.1. Compreensiva Casco (Colisão, Incêndio, Roubo, Furto, Granizo e
+Alagamento) – Cobertura Básica
+Esta cobertura poderá ser contratada isoladamente.
+Na hipótese de Perda Total ou Perda Parcial, esta cobertura tem por objetivo indenizar o
+Segurado, até o Limite Máximo de Indenização (LMI), pelos Prejuízos Indenizáveis ocorridos
+ao Veículo Segurado decorrentes, exclusivamente, de colisão, incêndio, Roubo, Furto, granizo
+e/ou alagamento do Veículo Segurado.
+(a) Riscos cobertos
+• Colisão, choque, abalroamento ou capotagem acidental;
+• Queda acidental em precipícios ou pontes;
+• Queda acidental, sobre o Veículo Segurado, de qualquer agente externo, desde que o
+agente externo não faça parte integrante do Veículo Segurado ou não esteja nele
+afixado;
+• Queda, deslizamento ou vazamento, sobre o Veículo Segurado, da carga e/ou objeto
+por ele transportado, em decorrência de Acidente de Trânsito e não da simples freada;
+• Raio e suas consequências, incêndio ou explosão acidental do Veículo Segurado;
+• Roubo ou furto, total ou parcial, do Veículo Segurado;
+• Acidente ocorrido durante o transporte do Veículo Segurado por qualquer meio
+apropriado;
+• Atos danosos praticados por terceiros, exceto se constantes do item “(b) Riscos não
+cobertos” e na Cláusula “12. Riscos Excluídos”;
+• Submersão parcial ou total do Veículo Segurado em água doce proveniente de
+enchentes ou inundações, inclusive nos casos de veículos guardados no subsolo;
+• Danos em decorrência de chuva de granizo, furacão e/ou terremoto;
+• Os valores referentes aos danos patrimoniais comprovadamente causados pelo
+Segurado e/ou por terceiros na tentativa de evitar o sinistro, minorar o dano ou salvar
+a coisa, sendo limitada até o Limite Máximo de Indenização (LMI) contratado para essa
+cobertura; e/ou
+• Danos ocorridos em cidades da Argentina, Paraguai e Uruguai, países pertencentes ao
+Mercosul, desde que fronteiriças com estados brasileiros, sendo de responsabilidade
+exclusiva e integral do Segurado o transporte do veículo até a cidade brasileira
+fronteiriça.
+(b) Riscos e interesses não cobertos
+A Seguradora não indenizará os eventos e bens listados abaixo:
+i. Incêndio causado por sobrecarga elétrica resultante da instalação e/ou
+manutenção inadequada de itens não originais de fábrica, como alarmes, faróis
+auxiliares, acessórios de som e imagem;
+25
+
+===== PAGE 26 =====
+ii. Danos a bens de terceiros, móveis ou imóveis, em poder do Segurado para
+guarda, custódia, transporte, uso, manipulação ou execução de quaisquer
+trabalhos;
+iii. Danos, perdas ou extravios de bens transportados no interior do Veículo
+Segurado, como aparelho de celular, joias, tablets, notebooks, bolsas, mochilas,
+dinheiro ou outros, ainda que decorrentes de Sinistro coberto;
+iv. Multas, fianças, custas e despesas processuais de natureza penal impostas ao
+Segurado, mesmo que decorrentes de sinistro coberto;
+v. Desgaste natural, depreciação pelo uso, falhas de material, defeito de fabricação,
+vício oculto ou falha de manutenção mecânica ou elétrica do Veículo Segurado;
+vi. Danos cuja reparação tenha sido feita sem autorização prévia e expressa da
+Seguradora, incluídas eventuais despesas relacionadas a providências adotadas
+diretamente pelo Segurado no momento do evento, quando não houver
+orientação específica da Seguradora para sua execução;
+vii. Despesas e perdas financeiras indiretas e/ou Lucros Cessantes, como aluguel de
+veículo substituto, custos com transporte alternativo, perda de renda em razão
+da paralisação do Veículo Segurado;
+viii. Danos decorrentes de utilização do veículo em situação sabidamente perigosa
+ou contrária às normas de trânsito, como condução na contramão de direção ou
+em velocidade superior à permitida;
+ix. Danos causados à carga transportada, ainda que de propriedade do Segurado;
+x. Danos decorrentes de contaminação ou poluição ambiental causada pela carga
+transportada, inclusive quando afetar veículos de terceiros eventualmente
+envolvidos no mesmo evento;
+xi. Equipamentos e dispositivos não integrados originalmente ao veículo de fábrica,
+como sistema antifurto, GPS, rastreadores, DVD, kit viva-voz, micro system ou
+similares, rádio comunicador, televisores, sistemas de som ou vídeo;
+xii. Itens, adaptações ou equipamentos não originais de fábrica, como toca CD’s,
+controle remoto inclusive, rádios, toca-fitas, kit multimídia, kit gás, tacógrafo,
+cabine suplementar, carroçarias, Equipamentos ou adaptações para
+acessibilidade;
+xiii. Veículos com alterações em suas características originais de fábrica,
+compreendendo, entre outras, modificações do tipo tuning, adaptações estéticas
+ou de desempenho, rebaixamento de suspensão, instalação de turbocompressor
+ou quaisquer intervenções que importem modificação estrutural, funcional ou
+estética diversa das especificações originais do fabricante;
+xiv. Congelamento da água do motor do Veículo Segurado;
+26
+
+===== PAGE 27 =====
+xv. Roubo, Furto ou danos ocorridos apenas aos pneus e câmaras de ar, quando não
+houver outros danos ao Veículo Segurado;
+xvi. Danos decorrentes da ausência e/ou falha na manutenção preventiva
+recomendada pelo fabricante do Veículo Segurado e/ou de negligência na
+conservação do Veículo Segurado;
+xvii. Despesas que não sejam diretamente necessárias para o reparo do Veículo
+Segurado e seu retorno às condições originais de uso anteriores ao Sinistro
+coberto;
+xviii. Roubo e/ou Furto exclusivo de partes removíveis de equipamentos eletrônicos,
+como frente destacável de toca-CD, painel removível, controle remoto ou kit
+multimídia, ainda que originais de fábrica;
+xix. Submersão total ou parcial do Veículo Segurado em água salgada;
+xx. Travamento do motor decorrente de falta de óleo e/ou de água, sem relação com
+Sinistro coberto;
+xxi. Reparos efetuados fora da rede de Oficinas Referenciadas, sem prévia e expressa
+autorização da Seguradora;
+xxii. Dano decorrentes da instalação de kit gás não homologado pelas autoridades
+competentes;
+xxiii. Danos decorrentes da má instalação, manutenção inadequada ou homologação
+vencida do kit gás;
+xxiv. Perdas e/ou danos causados ao Veículo Segurado ou causados por ele a
+Terceiros, quando o Veículo Segurado for utilizado, ainda que ocasionalmente,
+para transporte remunerado de pessoas, bens, cargas, mercadorias e/ou animais,
+inclusive nas seguintes situações:
+(a) Transporte de passageiros por meio de aplicativos, plataformas digitais
+ou serviços similares (como Uber, 99, InDrive, Cabify, entre outros);
+(b) Transporte de cargas ou entregas mediante remuneração, como frete,
+delivery, transporte por aplicativos, motofrete ou serviços de utilitários
+comerciais;
+(c) Atividades de táxi, transporte escolar, transporte de valores.
+xxv. Perdas e/ou danos causados ao Veículo Segurado quando o condutor estiver
+conduzindo o veículo, com ou sem anuência do Segurado, sem habilitação legal
+e apropriada, ou quando tal documento estiver suspenso, cassado, vencido e/ou
+não renovado por restrições legais ou médicas;
+xxvi. Perdas e/ou danos causados ao Veículo Segurado quando o condutor estiver,
+com ou sem anuência do Segurado, conduzindo o veículo sob efeito de álcool,
+27
+
+===== PAGE 28 =====
+drogas ou medicamentos que alterem os sentidos.
+11.1.2. Casco Simples (Roubo, Furto e Incêndio) – Cobertura Básica
+Esta cobertura poderá ser contratada isoladamente.
+Na hipótese de Perda Total, esta cobertura tem por objetivo indenizar o Segurado, até o Limite
+Máximo de Indenização (LMI), pela reposição do Veículo Segurado em decorrência de Roubo,
+Furto e/ou Incêndio.
+(a) Riscos cobertos
+• Perda Total em decorrência de Roubo ou Furto total do Veículo Segurado;
+• Perda Total em decorrência de raio e suas consequências, incêndio ou explosão
+acidental do Veículo Segurado;
+• Os valores referentes aos danos patrimoniais comprovadamente causados pelo
+Segurado e/ou por terceiros na tentativa de evitar o sinistro, minorar o dano ou salvar
+a coisa, sendo limitada até o Limite Máximo de Indenização (LMI) contratado para essa
+cobertura; e/ou
+• Danos ocorridos em cidades da Argentina, Paraguai e Uruguai, países pertencentes ao
+Mercosul, desde que fronteiriças com estados brasileiros, sendo de responsabilidade
+exclusiva e integral do Segurado o transporte do veículo até a cidade brasileira
+fronteiriça.
+(b) Riscos não cobertos
+A Seguradora não indenizará os eventos e bens listados abaixo:
+i. Incêndio causado por sobrecarga elétrica resultante da instalação e/ou
+manutenção inadequada de itens não originais de fábrica, como alarmes, faróis
+auxiliares, acessórios de som e imagem;
+ii. Perda Parcial decorrente de Roubo, Furto, raio, incêndio ou explosão acidental e
+suas consequências, uma vez que esta cobertura limita-se à indenização por
+Perda Total do veículo segurado;
+iii. Despesas e perdas financeiras indiretas e/ou Lucros Cessantes, como aluguel de
+veículo substituto, custos com transporte alternativo, perda de renda em razão
+da paralisação do Veículo Segurado;
+iv. Danos, perdas ou extravios de bens transportados no interior do Veículo
+Segurado, tais como aparelho de celular, joias, tablets, notebooks, bolsas,
+mochilas, dinheiro ou outros bens, ainda que decorrentes de Sinistro coberto;
+v. Multas, fianças, custas e despesas processuais de natureza penal impostas ao
+Segurado, mesmo que decorrentes de sinistro coberto;
+28
+
+===== PAGE 29 =====
+vi. Equipamentos e dispositivos não integrados originalmente ao veículo de fábrica,
+como sistema antifurto, GPS, rastreadores, DVD, kit viva-voz, micro system ou
+similares, rádio comunicador, televisores, sistemas de som ou vídeo;
+vii. Itens, adaptações ou equipamentos não originais de fábrica, como toca CD’s,
+controle remoto inclusive, rádios, toca-fitas, kit multimídia, kit gás, tacógrafo,
+cabine suplementar, carroçarias, Equipamentos ou adaptações para
+acessibilidade;
+viii. Veículos com alterações em suas características originais de fábrica,
+compreendendo, entre outras, modificações do tipo tuning, adaptações estéticas
+ou de desempenho, rebaixamento de suspensão, instalação de turbocompressor
+ou quaisquer intervenções que importem modificação estrutural, funcional ou
+estética diversa das especificações originais do fabricante.
+ix. Roubo e/ou Furto exclusivo de partes removíveis de equipamentos eletrônicos,
+como frente destacável de toca-CD, painel removível, controle remoto ou kit
+multimídia, ainda que originais de fábrica;
+x. Danos, perdas ou destruição de carga transportada, ainda que de propriedade do
+próprio Veículo Segurado, independentemente de sua natureza ou valor;
+xi. Danos decorrentes de instalação de kit gás não homologado pelas autoridades
+competentes;
+xii. Perdas e/ou danos causados ao Veículo Segurado ou causados por ele a
+terceiros, quando o Veículo Segurado for utilizado, ainda que ocasionalmente,
+para transporte remunerado de pessoas, bens, cargas, mercadorias e/ou animais,
+inclusive nas seguintes situações:
+(a) Transporte de passageiros por meio de aplicativos, plataformas digitais
+ou serviços similares (como Uber, 99, InDrive, Cabify, entre outros);
+(b) Transporte de cargas ou entregas mediante remuneração, como frete,
+delivery, transporte por aplicativos, motofrete ou serviços de utilitários
+comerciais;
+(c) Atividades de táxi, transporte escolar, transporte de valores;
+xiii. Perdas e/ou danos causados ao Veículo Segurado quando o condutor estiver
+conduzindo o veículo, com ou sem anuência do Segurado, sem habilitação legal
+e apropriada, ou quando tal documento estiver suspenso, cassado, vencido e/ou
+não renovado por restrições legais ou médicas;
+xiv. Perdas e/ou danos causados ao Veículo Segurado quando o condutor estiver,
+com ou sem anuência do Segurado, conduzindo o veículo sob efeito de álcool,
+drogas ou medicamentos que alterem os sentidos.
+11.1.3. Responsabilidade Civil Facultativa de Veículos (RCFV) – Cobertura
+Básica ou Adicional
+29
+
+===== PAGE 30 =====
+Esta cobertura poderá ser contratada isoladamente como cobertura básica ou como cobertura
+adicional mediante o pagamento de Prêmio.
+Esta cobertura de Responsabilidade Civil Facultativa de Veículos tem como objetivo, a critério
+da Seguradora, indenizar diretamente o Terceiro ou reembolsar o Segurado das quantias que
+ele for obrigado a pagar quando acionado judicialmente, respeitando o Limite Máximo de
+Indenização (LMI) contratado no Bilhete. Não estão cobertos Danos causados a terceiros
+ocorridos durante o evento de Roubo ou Furto.
+(a) Riscos cobertos
+• Quando o Veículo Segurado causar algum Dano a bens de Terceiros e/ou ao Terceiro;
+• Quando houver um atropelamento de um Terceiro;
+• Quando o Segurado for condenado por sentença judicial transitada em julgado ou
+realizar acordo autorizado de modo expresso pela Seguradora, exclusivamente
+relacionada a Danos causados a Terceiros durante a Vigência do Bilhete em
+decorrência de Risco coberto;
+• Quando, durante seu transporte, a carga transportada pelo Veículo Segurado causar
+um Dano a bens de Terceiros e/ou a Terceiros; e/ou
+• Lucros Cessantes e/ou prejuízos patrimoniais de Terceiros resultantes diretamente da
+responsabilidade por Danos Materiais e Danos Corporais cobertos pelo Bilhete;
+• Custos de Defesa, para que o Segurado possa se defender em um processo cível
+movido pelo Terceiro, conforme abaixo definido:
+i. a Seguradora reembolsará ao Segurado as despesas necessárias à sua
+defesa em reclamações cíveis cobertas por esta Apólice, incluindo:
+a. custas e despesas judiciais, relativos exclusivamente aos pedidos
+cobertos. Essas despesas, a critério do Segurado, poderão ser pagas
+antecipadamente, mediante apresentação da contestação protocolizada,
+ou ao final do processo judicial; e
+b. honorários de advogado, desde que previamente comunicados à
+Seguradora e relacionados a evento e pedidos amparados pelo contrato
+de seguro. O reembolso não poderá ultrapassar 10% do valor dos
+pedidos cobertos ou da importância segurada, o que for menor,
+limitado a R$ 10.000,00 (dez mil reais). Eventual reembolso dos
+honorários ficará condicionado à apresentação do contrato de prestação
+de serviços advocatícios, que deverá ser aprovado pela Seguradora. No
+caso de pagamento ou reembolso de honorários advocatícios, haverá
+perda de bônus.
+(b) Riscos não cobertos
+A Seguradora não indenizará os eventos e bens listados abaixo:
+i. Indenizações por Danos Estéticos que o Segurado, seus Beneficiários e/ou os
+respectivos representantes legais sejam obrigados a pagar, em razão de ação
+judicial, reclamação extrajudicial ou acordo, por não se enquadrarem na
+definição de Danos Corporais cobertos por pela Apólice;
+30
+
+===== PAGE 31 =====
+ii. Lucros Cessantes, perda de receita, interrupção da atividade ou outros prejuízos
+patrimoniais indiretos, não resultantes diretamente de Danos Materiais ou Danos
+Corporais cobertos pela Apólice;
+iii. Colisão, choque, abalroamento ou capotagem ocorridos exclusivamente durante
+o período em que o Veículo Segurado estiver em poder de terceiros, em razão de
+Roubo ou Furto;
+iv. Danos causados ao Veículo Segurado pela queda, deslizamento ou vazamento
+de objetos e/ou carga transportada, salvo quando decorrentes de Acidente de
+Trânsito e não da simples freada;
+v. Danos Corporais sofridos pelo(s) Passageiro(s), incluindo o condutor do Veículo
+Segurado;
+vi. Danos causados pela utilização do Veículo Segurado em situações sabidamente
+impróprias, perigosas ou em desacordo com as normas de trânsito, como
+condução na contramão de direção, excesso de velocidade acima do limite legal
+ou participação em competições não autorizadas;
+vii. Danos decorrentes da ausência e/ou falha de manutenção preventiva ou da falta
+de conservação ao Veículo Segurado;
+viii. Juros, correção monetária ou outras verbas de natireza acessória incidentes
+sobre condeções judiciais, quando o Segurado, tendo causado o sinistro,
+recusar-se injustificadamente a acionar o seguro para ressarcimento de terceiro
+prejudicado. Nessa hipótese, a responsabilidade da Seguradora limita-se ao valor
+dos prejuízos diretos apurados na data do sinistro;
+ix. Danos sofridos por pacientes transportados em ambulâncias ou veículos
+adaptados para transporte médico, quando as lesões não forem consequência
+direta do Acidente de Trânsito envolvendo o Veículo Segurado;
+x. Situações em que o Segurado deixar de comunicar imediatamente à Seguradora
+a existência de reclamação ou ação judicial proposta por terceiros, relacionada
+aos riscos cobertos pela Apólice;
+xi. Assunção de responsabilidade pelo Segurado quando a culpa pelo sinistro não
+lhe cabia;
+xii. Quando comprovado que o Sinistro foi causado pelo terceiro e não pelo
+Segurado, ficando afastada a responsabilidade da Seguradora pelos danos
+decorrentes do evento.
+xiii. Perdas e/ou danos causados pelo Veículo Segurado quando seu condutor
+estiver, com ou sem anuência do Segurado, conduzindo o Veículo Segurado sem
+habilitação legal e apropriada, ou quando tal documento estiver suspenso,
+cassado, vencido e/ou não renovado por restrições legais ou médicas.
+31
+
+===== PAGE 32 =====
+xiv. Perdas e/ou danos causados pelo Veículo Segurado quando seu condutor
+estiver, com ou sem anuência do Segurado, conduzindo o veículo sob efeito de
+álcool, drogas ou medicamentos que alterem os sentidos.
+11.1.4. Blindagem – Cobertura Adicional
+A blindagem relacionada no Bilhete, com Limite Máximo de Indenização individual, estará
+garantida enquanto estiver fixada ao Veículo Segurado, desde que o prêmio correspondente
+tenha sido pago. A cobertura estará sujeita aos riscos estipulados na Cobertura Básica e à
+franquia indicada no Bilhete, conforme as seguintes regras:
+• A contratação da cobertura de blindagem é obrigatória para todos os veículos que
+possuam esta adaptação.
+• Blindagem original de fábrica: Quando o veículo tiver blindagem original de fábrica, esta
+estará contemplada no valor do Veículo Segurado.
+• Reparos em caso de Perda Parcial: Em caso de Perda Parcial, o veículo blindado será
+reparado com peças e itens de blindagem comercializados no Brasil.
+• Limite Máximo de Indenização: Os Limites Máximos de Indenização indicados no
+Bilhete não representam valores previamente determinados, sendo apenas os limites
+exigíveis conforme as condições do Bilhete:
+Documentos exigidos para emissão do Bilhete:
+• Nota fiscal referente à instalação da blindagem e/ou Vistoria Prévia e/ou Certificado de
+Registro de Blindagem de veículo.
+Documentos exigidos em caso de Sinistro:
+Em caso de Sinistro com veículos blindados segurados pelo Bilhete, além da documentação
+habitual, será exigido:
+• Termo de responsabilidade de blindagem, expedido pela Blindadora;
+• Registro de veículo blindado, expedido pela Polícia Civil – Departamento de Produtos
+Controlados (DPC) para veículos blindados antes de 2002;
+• Certificado de Registro de Blindagem de veículo, expedido pelo Ministério do Exército
+(CR), para veículos blindados a partir de 2002.
+11.1.5. Acidente Pessoal de Passageiro (APP) – Cobertura Adicional
+A cobertura de APP é uma cobertura adicional, disponível mediante o pagamento de Prêmio
+e não poderá ser contratada isoladamente.
+Esta cobertura, se contratada, garante o pagamento de indenização ao Passageiro (incluindo
+o motorista) que esteja no interior do Veículo Segurado no caso de morte e/ou Invalidez
+Permanente, em decorrência de Acidente de Trânsito envolvendo o Veículo Segurado e
+observado o Limite Máximo de Indenização (LMI) estabelecido no Bilhete.
+As regras de indenização para essa cobertura de APP estão previstas no Anexo I destas
+Condições Gerais.
+32
+
+===== PAGE 33 =====
+Morte
+(a) Riscos Cobertos
+O Bilhete estipulará o Limite Máximo de Indenização (LMI) por Passageiro, o qual será igual
+para todos os ocupantes do Veículo Segurado, considerando as seguintes condições:
+(i) Morte em decorrência de Acidente de Trânsito coberto ocorrido na Vigência do seguro;
+(ii) Invalidez Permanente em decorrência de Acidente de Trânsito coberto ocorrido na
+Vigência do seguro;
+(iii) Valor referente aos danos materiais comprovadamente causados pelo Segurado e/ou
+por Terceiros na tentativa de minorar o dano ou salvar a coisa, até o Limite Máximo de
+Indenização (LMI) contratado para essa cobertura.
+(b) Riscos Não Cobertos
+A Seguradora não indenizará os eventos listados abaixo:
+i. Doenças, inclusive as de origem bacteriana, viral, degenerativa, congênita ou
+funcional, ainda que se manifestem ou sejam agravadas em consequência de
+acidente com o Veículo Segurado. Excetuam-se apenas as infecções, estados
+septicêmicos e embolias resultantes de ferimento visível, diretamente causado
+por Acidente de Trânsito coberto;
+ii. Intercorrências médicas, complicações ou consequências de exames,
+tratamentos clínicos ou cirúrgicos, parto ou aborto, quando não relacionados ao
+Acidente de Trânsito coberto;
+iii. Envenenamentos, intoxicações ou absorção de substâncias tóxicas,
+entorpecentes ou drogas ilícitas, ainda que acidentais, exceto quando
+decorrentes de medicamentos prescritos em tratamento médico de lesões
+resultantes de Acidente de Trânsito coberto;
+iv. Transtornos mentais, psicológicos ou psiquiátricos, ainda que relacionados ao
+Acidente de Trânsito coberto, salvo de diretamente decorrentes de lesão física
+acidental comprovada;
+v. Atos reconhecidamente perigosos praticados pelo Segurado ou Passageiro,
+quando não motivados por necessidade justificada;
+vi. Suicídio, tentativa de suicídio ou qualquer forma de autolesão voluntária, ainda
+que praticada sob influência de distúrbio emocional ou mental;
+vii. Despesas médicas, hospitalares ou de convalescença incorridas após a alta
+médica, bem como despesas de acompanhantes;
+33
+
+===== PAGE 34 =====
+viii. Danos, substituição ou reposição de órteses e próteses de caráter permanente,
+salvo aquelas implantadas em virtude direta do Acidente de Trânsito coberto;
+ix. Acidentes que causem danos físicos aos Passageiros do Veículo Segurado em
+número superior à sua lotação oficial, conforme registro no órgão competente.
+Nessa hipótese, a indenização prevista na Apólice será limitada ao valor
+correspondente ao número máximo de Passageiros permitido, sendo rateada, em
+partes iguais, entre todos os Passageiros efetivamente transportados no
+momento do Sinistro, que tenham sofrido lesão corporal diretamente causada
+pelo Acidente de Trânsito. Quando o excesso de Passageiros ocorrer em razão
+de situação emergencial, inevitável ou de necessidade comprovada, como em
+casos de resgate, calamidade pública, sinistro anterior, ameaça à segurança ou
+outra circunstância que impeça o cumprimento da lotação regular, a regra de
+rateio prevista neste item será aplicada como exceção à exclusão.;
+x. Indenizações por Danos Morais ou Danos Estéticos, ainda que resultantes de
+ação judicial, reclamação extrajudicial ou acordo, uma vez que não integram o
+objeto da cobertura de Acidentes Pessoais de Passageiros;
+xi. Lucros cessantes, perda de receita, paralisação de atividade profissional ou
+qualquer outro prejuízo financeiro indireto do segurado ou dos passageiros,
+ainda que resultantes de risco coberto pelo seguro;
+xii. Doenças de qualquer natureza, ainda que diagnosticadas após o Acidente de
+Trânsito, não configurando lesão corporal causada por evento súbito,
+involuntário e externo;
+xiii. Lesões, sequelas ou condições preexistentes;
+xiv. Danos causados a pacientes transportados em ambulâncias ou veículos
+adaptados para transporte médico, quando as lesões não decorrerem do
+Acidente de Trânsito envolvendo o Veículo Segurado;
+xv. Despesas médicas e hospitalares, ainda que relacionadas ao restabelecimento
+da saúde de qualquer Passageiro ou do motorista; e/ou
+xvi. Perdas e/ou danos causados ao Veículo Segurado ou causados por ele a
+terceiros, quando o Veículo Segurado for utilizado, ainda que ocasionalmente,
+para transporte remunerado de pessoas, bens, cargas, mercadorias e/ou animais,
+inclusive nas seguintes situações:
+a. Transporte de passageiros por meio de aplicativos, plataformas digitais ou
+serviços similares (como Uber, 99, InDrive, Cabify, entre outros);
+b. Transporte de cargas ou entregas mediante remuneração, como frete,
+delivery, transporte por aplicativos, motofrete ou serviços de utilitários
+comerciais;
+34
+
+===== PAGE 35 =====
+c. Atividades de táxi, transporte escolar, transporte de valores.
+xvii. Danos causados aos passageiros que decorram de acidente em que o condutor
+do Veículo Segurado estiver conduzindo o veículo sem habilitação legal e
+apropriada, ou quando tal documento estiver suspenso, cassado, vencido e/ou
+não renovado por restrições legais ou médicas;
+xviii. Danos causados aos passageiros que decorram de acidente em que o condutor
+do Veículo Segurado estiver conduzindo o veículo sob efeito de álcool, drogas
+ou medicamentos que alterem os sentidos.
+11.1.6. Assistência 24 Horas – Cobertura Adicional
+A cobertura de Assistência 24 Horas é uma cobertura adicional, disponível mediante o
+pagamento de Prêmio, e não poderá ser contratada isoladamente, observado o Limite Máximo
+de Indenização (LMI) estabelecido no Bilhete.
+Poderão ser contratados três tipos de planos: o Plano Guincho 100 km, Plano Guincho 200
+km ou Plano Guincho 1000 km, os quais estão definidos no Anexo II destas Condições Gerais.
+Cada Assistência 24h poderá ser composta por quaisquer serviços abaixo e o Segurado
+e/ou Veículo Segurado terá uma limitação de 3 (três) utilizações de Assistência 24h a cada
+12 (doze) meses, sendo vedada a utilização de mais de uma Assistência 24h ao longo do
+período de vigência do Bilhete, independentemente dos serviços solicitados. Os serviços
+incluídos na Assistência 24 Horas são os indicados abaixo:
+(a) Auto Socorro;
+(b) Guincho;
+(c) Troca de Pneus;
+(d) Chaveiro;
+(e) Pane Seca;
+(f) Meio de Transporte Alternativo;
+(g) Transporte para Recuperação do Veículo;
+(h) Hospedagem; e
+(i) Carro Reserva.
+Todos os serviços de Assistência 24 Horas, descritos no Anexo II destas Condições Gerais,
+devem ser obrigatoriamente acionados por meio da Central de Atendimento 24 Horas da
+Seguradora.
+11.1.7. Riscos Não Cobertos
+A Seguradora não indenizará os eventos e bens listados abaixo:
+i. Acionamento da cobertura de Assistência 24 Horas de forma particular ou por
+meio diverso do previsto nas Condições Gereias, sem a prévia autorização da
+Central de Atendimento 24 Horas da Seguradora;
+35
+
+===== PAGE 36 =====
+ii. Peças, componentes e materiais utilizados na reparação ou substituição de
+partes do Veículo Segurado, os quais não estão incluídos nos serviços de
+assistência;
+iii. Proteção, guarda, transporte ou remoção de objetos pessoais, mercadorias,
+bagagens ou quaisquer itens deixados no interior do Veículo Segurado, durante
+sua remoção ou reparo;
+iv. Despesas com atendimento médico, hospitalar, farmacêutico ou pessoal ao
+Segurado e/ou Passageiros;
+v. Serviços de assistência prestados a veículo, passageiros ou ocupantes de
+terceiros, que não sejam o Veículo Segurado nem seus ocupantes regulares;
+vi. Impossibilidade de prestação dos serviços de assistência em razão de eventos
+externos e inevitáveis, como interrupção de comunicação telefônica, bloqueio de
+acesso ou situações emergenciais decorrentes de fenômenos naturais
+(enchentes, deslizamentos, tempestades), convulsões sociais, greves ou outras
+causas alheias à vontade de Seguradora ou de seus prestadores;
+vii. Despesas decorrentes de panes repetitivas do Veículo Segurado, caracterizando
+a falta de manutenção preventiva adequada;
+viii. Eventos decorrentes de guerra (declarada ou não), invasão, insurreição, atos de
+terrorismo, operações bélicas, guerra civil, rebelião, revolução, bem como danos
+resultantes de radiação ou contaminação nuclear;
+ix. Serviços de assistência realizados sem a prévia autorização da Seguradora, não
+sendo devido o reembolso de quaisquer despesas efetuadas por conta própria;
+x. Despesas e custos que excedam os limites de utilização ou valores máximos
+definidos para cada serviço;
+xi. Despesas com alimentação, comunicação (ligações telefônicas, internet) ou
+quaisquer outras não diretamente relacionadas com as diárias de hospedagem
+previstas nesta cobertura, ainda que dentro do limite total de utilização
+estabelecido;
+xii. Remoção, proteção ou transporte da carga transportada pelo Veículo Segurado,
+cabendo exclusivamente ao Segurado providenciar a retirada ou guarda dessa
+carga para viabilizar os serviços de assistência;
+xiii. Perdas ou danos ocorridos ao Veículo Segurado durante a circulação em locais
+inadequados, como trilhas, estradas não pavimentadas, vias interditadas ao
+tráfego, areias fofas ou movediças, praias, dunas ou margens de rios;
+xiv. Despesas com excesso de bagagem cobradas por empresa aérea, quando o meio
+de transporte alternativo autorizado for desta natureza;
+36
+
+===== PAGE 37 =====
+xv. Serviços, remoção ou acondicionamento de carga, animais ou mercadorias
+transportadas no Veículo Segurado, que não façam parte dos serviços previstos
+nesta cobertura;
+xvi. Perdas financeiras ou Lucros Cessantes decorrentes da paralisação do Veículo
+Segurado enquanto aguarda a prestação da assistência;
+xvii. Perdas e/ou danos causados ao Veículo Segurado ou causados por ele a
+terceiros, quando o Veículo Segurado for utilizado, ainda que ocasionalmente,
+para transporte remunerado de pessoas, bens, cargas, mercadorias e/ou animais,
+inclusive nas seguintes situações:
+a. Transporte de passageiros por meio de aplicativos, plataformas digitais ou
+serviços similares (como Uber, 99, InDrive, Cabify, entre outros);
+b. Transporte de cargas ou entregas mediante remuneração, como frete,
+delivery, transporte por aplicativos, motofrete ou serviços de utilitários
+comerciais;
+c. Atividades de táxi, transporte escolar, transporte de valores;
+xviii. Perdas e danos ocorridos durante a participação do Veículo Segurado em
+competições, apostas, provas de velocidade, ou treinos preparatórios para tais
+eventos.
+11.1.8. Vidros – Cobertura Adicional
+A cobertura de Vidros é uma cobertura adicional, disponível mediante o pagamento de
+Prêmio e não poderá ser contratada isoladamente, observado o Limite Máximo de
+Indenização (LMI) estabelecido no Bilhete.
+Esta cobertura, se contratada, garante a indenização contra os Prejuízos Indenizáveis
+previstos nesta cobertura de Vidros.
+Poderão ser contratados dois tipos de planos, o Básico, Completo, VIP ou Blindado, os
+quais estão definidos no Anexo III destas Condições Gerais.
+Risco Não Cobertos
+A Seguradora não indenizará os eventos e bens listados abaixo:
+i. Acionamento da cobertura de Vidros de forma particular ou por meio diverso
+daquele previsto nas Condições Gerais, sem a prévia autorização da Central de
+Atendimento da Seguradora;
+ii. Vidros blindados, exceto se contratada a cobertura adicional para Blindagem;
+iii. Teto solar e teto panorâmico;
+iv. Riscos, manchas, arranhões ou danos superficiais nos vidros, que não impeçam
+37
+
+===== PAGE 38 =====
+a visibilidade nem caracterizem quebra ou trinca;
+v. Reposição de película protetora em vidro lateral e vigia que não esteja em
+conformidade com a legislação de trânsito vigente;
+vi. Películas de segurança ou películas instaladas em desacordo com as normas do
+CONTRAN, inclusive no para-brisa e demais vidros fora do padrão permitido;
+vii. Mecanismos manuais ou elétricos de acionamento que não integrem a peça
+substituída, bem como a máquina de vidro quando não danificado pelo sinistro
+coberto;
+viii. Danos decorrentes de panes elétricas, desgaste natural, falta ou falha de
+manutenção preventiva ou corretiva, desde que comprovada a ausência de
+relação direta com sinistro coberto;
+ix. Danos à lataria do veículo resultantes da quebra dos vidros;
+x. Peças com infiltração, oxidação, ação química, riscos, manchas, arranhões ou
+danos estéticos, que não caracterizem quebra ou trinca do vidro;
+xi. Sensores, câmeras ou mecanismos eletrônicos integrados aos vidros;
+xii. Molduras, vidros de capotas e carrocerias especiais acopladas ao veículo, hastes
+de alumínio/ suportes, estribos, canaletas, pestana, grades, guarnições, fiação;
+xiii. Despesas e perdas financeiras indiretas e/ou Lucros Cessantes, como aluguel de
+veículo substituto, custos com transporte alternativo, perda de renda, durante o
+período de troca e/ou reparo dos vidros e acessórios;
+xiv. Veículos de características especiais, tais como motos, conversíveis, ônibus,
+micro-ônibus, tratores, veículos importados por conta e ordem do segurado,
+adaptados, transformados ou blindados sem cobertura adicional contratada, bem
+como danos provocados intencionalmente, vandalismo, tumultos, motins ou uso
+em competições, ralis ou testes de velocidade;
+xv. Recalibração, reconfiguração ou ajuste de sistemas de assistência à direção
+ADAS e sensores associados aos vidros, quando não diretamente relacionados
+à substituição do vidro coberto;
+xvi. Danos ocorridos durante o trânsito em vias não abertas ao tráfego ou
+interditadas, como trilhas, dunas, praias, margens de rios ou caminhos de
+acessos restritos;
+xvii. Danos causados aos vidros e/ou acessórios causados por objetos transportados
+no veículo ou nele fixados;
+xviii. Componentes eletroeletrônicos, módulos, reatores, chicotes, conectores ou
+sistemas elétricos de retrovisores, faróis e lanternas;
+38
+
+===== PAGE 39 =====
+xix. Riscos, manchas ou microfissuras nas lentes de faróis, lanternas, luzes
+auxiliares ou retrovisores;
+xx. Retrovisores e faróis auxiliares adaptados ou instalados fora da posição original
+de fábrica, break-light, luz refletiva e dispositivos similares;
+xxi. Troca ou queima exclusiva de lâmpadas de faróis, lanternas ou luzes auxiliares;
+xxii. Danos à lataria ou ao forro de porta decorrentes da quebra de retrovisor;
+xxiii. Roubo, furto ou perda exclusiva de faróis, lanternas, luzes auxiliares ou
+retrovisores, bem como danos à lataria resultantes da quebra de vidro ou
+retrovisor;
+xxiv. Faróis, lanternas ou retrovisores adaptados ou modificados em desacordo com
+as normas do CONTRAN, incluindo xenônio, LED, OLED, laser ou outras
+tecnologias não homologadas para uso no veículo;
+xxv. Danos pré-existentes na máquina de vidro;
+xxvi. Danos existentes ou identificáveis antes da contratação da assistência,
+independentemente do tipo ou natureza da peça afetada;
+xxvii. Máquinas adaptadas;
+xxviii. A retirada exclusiva da máquina de vidro mesmo que o veículo esteja em trabalho
+de funilaria;
+xxix. Danos causados a máquina de vidro por objetos transportados pelo Veículo
+Segurado ou nele fixados. Realização de qualquer tipo de manutenção preventiva
+(aplicação de lubrificante);
+xxx. Substituição da fiação, componentes elétricos, módulo, chicote, plug conector;
+xxxi. Mecanismos manuais que não façam parte da peça a ser trocada, bem como
+fechaduras, forros de porta, presilhas entre outros;
+xxxii. Danos à lataria ou forro de porta provenientes da quebra da máquina;
+xxxiii. Máquinas de vidro de teto solar e vidro traseiro (vigia);
+xxxiv. Os componentes tais como canaletas, suportes, hastes de alumínio, frisos,
+borrachas, trincos, maçanetas, fechaduras, pestanas e interruptores além de
+outros não descritos no objeto deste contrato que tenham sido danificados,
+furtados ou roubados em consequência da quebra do vidro;
+xxxv. Peça com movimentação lenta;
+xxxvi. Modelos adaptados de veículo, carenagens, bagageiros ou acessórios que não
+39
+
+===== PAGE 40 =====
+sejam os faróis, lanternas e retrovisores;
+xxxvii. Perdas e/ou danos causados ao Veículo Segurado ou causados por ele a
+terceiros, quando o Veículo Segurado for utilizado, ainda que ocasionalmente,
+para transporte remunerado de pessoas, bens, cargas, mercadorias e/ou animais,
+inclusive nas seguintes situações:
+a. Transporte de passageiros por meio de aplicativos, plataformas digitais ou
+serviços similares (como Uber, 99, InDrive, Cabify, entre outros);
+b. Transporte de cargas ou entregas mediante remuneração, como frete,
+delivery, transporte por aplicativos, motofrete ou serviços de utilitários
+comerciais;
+c. Atividades de táxi, transporte escolar, transporte de valores;
+xxxviii. Danos não decorrentes de colisões acidentais, quando provocados por ações
+voluntárias, intencionais ou dolosas, por parte do Segurado ou de terceiros
+(como vandalismo, tumultos, motins, ou desordem pública);
+xxxix. Danos causados por fenômenos da natureza, como chuva de granizo, incêndio,
+alagamento, ciclone, furacão, tempestade, terremoto, tornado, vendaval ou raio;
+xl. Danos que tenham ensejado a abertura de sinistro na cobertura de casco;
+xli. Danos ocorridos fora do período de vigência do Bilhete;
+xlii. Danos causados a terceiros durante o Roubo ou Furto do veículo.
+11.1.9. Carro Reserva – Cobertura Adicional
+A cobertura de Carro Reserva é uma cobertura adicional, disponível mediante o pagamento
+de Prêmio, e não poderá ser contratada isoladamente.
+Se contratada, oferece ao Segurado, dentro do limite de dias contratados, o aluguel de veículo
+automotor terrestre, em caso de Sinistro coberto e indenizável, conforme definido no Anexo
+IV destas Condições Gerais. O aluguel de veículo será disponibilizado apenas a maiores de
+18 (dezoito) anos, com CNH válida (com data mínima de emissão de 2 (dois) anos) e cartão
+de crédito com saldo suficiente para caução, de acordo com os requisitos da locadora.
+Risco Não Cobertos
+A Seguradora não indenizará os eventos e bens listados abaixo:
+a) contratação particular de carro reserva sem a autorização prévia e expressa da
+Seguradora;
+b) serviços solicitados diretamente pelo Segurado sem a autorização prévia e expressa
+da Seguradora;
+c) liberação de carro reserva em casos de pane no Veículo Segurado ou quando da
+utilização de Serviços de Assistência 24 Horas;
+d) custos e/ou serviços adicionais comercializados diretamente pela locadora;
+e) custos com pedágios, combustível ou multas decorrentes do uso do veículo locado pelo
+40
+
+===== PAGE 41 =====
+segurado;
+f) diárias que excedam os limites contratados.
+12 Riscos cobertos
+Consideram-se cobertos os Riscos expressamente descritos no Bilhete contratado pelo
+Segurado e não excluídos nestas Condições Gerais, observadas as disposições,
+responsabilidades e/ou obrigações contidas nestas Condições Gerais, incluindo, mas não se
+limitando a todas aquelas relacionadas ao uso do Aplicativo da Seguradora e Permissões de
+Acesso.
+13 Bens não compreendidos no seguro
+Não estão garantidos por este seguro quaisquer itens que não sejam de série ou demais itens,
+incluindo Rodas Não de Série, ainda que pertencentes ao Veículo Segurado, que não sejam
+itens de série advindos do fabricante quando da aquisição do veículo.
+Não são bens compreendidos no seguro aparelho de celular, joias, tablets, notebooks, bolsas,
+mochilas, numerário ou quaisquer outros bens ou pertences de uso pessoal, ainda que
+estejam no Veículo Segurado no momento do Sinistro.
+14 Riscos excluídos
+Salvo quando contratada cobertura específica, nos termos da Cláusula 9.1., a
+Seguradora não indenizará as hipóteses descritas abaixo:
+i. Perdas ou danos causados por atos de hostilidade ou de guerra civil ou guerrilha,
+guerra química ou bacteriológica, hostilidades, agitação, sublevação, rebelião,
+insurreição, revolução, detenção, apreensão, confisco, nacionalização,
+destruição ou requisição decorrentes de qualquer ato de autoridade de fato ou
+direito, civil ou militar, e em geral todo e qualquer ato ou consequência dessas
+ocorrências, não respondendo ainda, por prejuízos direta ou indiretamente
+relacionados com ou para os quais próxima ou remotamente tenham contribuído
+tumultos, vandalismo, motins, greves, "lockout" e quaisquer outras perturbações
+de ordem pública;
+ii. Perdas ou danos direta ou indiretamente causados por eventos da natureza,
+salvo os expressamente previstos nas Condições Gerais ou no Bilhete;
+iii. Danos causados a ascendentes, descendentes, cônjuge e irmãos do Segurado,
+bem como a parentes ou pessoas que com ele residam ou dele dependam
+economicamente;
+iv. Danos causados a empregados ou prepostos do Segurado, quando a seu
+serviço;
+v. Danos causados a sócios-dirigentes, dirigentes ou administradores de empresa
+do Segurado, salvo se contratada a cobertura específica;
+41
+
+===== PAGE 42 =====
+vi. Danos a bens dos quais o Segurado tenha posse, ainda que não sejam de sua
+propriedade;
+vii. Danos a bens de terceiros sob a guarda, custódia, transporte, uso, manipulação
+ou execução de trabalhos pelo Segurado;
+viii. Operação de basculamento do Veículo Segurado ou de seus implementos;
+ix. Responsabilidades assumidas por contrato, convenção ou acordo, quando não
+decorrerem de responsabilidade civil que existiria na ausência do contrato;
+x. Danos a pessoas transportadas em locais não destinados e apropriados ao
+transporte de passageiros;
+xi. Danos resultantes de prestações de serviços técnico-profissionais para os quais
+o Veículo Segurado seja destinado;
+xii. Perdas ou danos pela queda, deslizamento ou vazamento da carga transportada
+ou de peça integrante do Veículo Segurado, salvo se consequentes de Risco
+coberto;
+xiii. Eventos ocorridos em áreas operacionais de aeródromos (como pistas, pátios,
+campo) durante decolagem, pouso ou movimentação de aeronaves;
+xiv. Danos causados por poluição ou contaminação ambiental, bem como despesas
+de limpeza ou descontaminação;
+xv. Responsabilidades assumidas por contrato, convenções ou acordos sem a
+prévia concordância da Seguradora;
+xvi. Trânsito em vias interditadas ou não abertas ao tráfego (trilhas, areias
+movediças, praias, margens de rios), ainda que haja autorização de órgão
+competente;
+xvii. Perdas, danos ou responsabilidades de qualquer natureza causados por
+radiações ionizantes, contaminação radioativa, combustível nuclear, resíduos
+nucleares, fissão, fusão ou material de armas nucleares.;
+xviii. Atos ilícitos culposos ou dolosos praticados por empregados do Segurado ou
+pessoas a eles equiparadas;
+xix. Danos causados por ato doloso praticado pelo Segurado, Beneficiário ou
+Representante, sendo nula a garantia contra risco de ato doloso;
+xx. Participação do Veículo Segurado em competições, gincanas, test de direção,
+apostas, provas de velocidade ou trilha;
+xxi. Danos ao Veículo Segurado quando rebocado ou transportado por veículo não
+apropriado, salvo remoção de emergência orientada pela Seguradora;
+42
+
+===== PAGE 43 =====
+xxii. Acidentes diretamente ocasionados pela inobservância à disposições legais, tais
+como lotação máxima de passageiros, dimensão, peso e acondicionamento da
+carga transportada, excesso de velocidade;
+xxiii. Danos causados pela contaminação ou radiação de qualquer natureza e
+processos provocados por combustíveis e materiais de armas nucleares e ainda
+qualquer processo de fissão nuclear;
+xxiv. Danos causados ao meio ambiente pelo Veículo Segurado ou por veículo de
+terceiro;
+xxv. Danos Morais;
+xxvi. Danos Estéticos;
+xxvii. Danos causados a pessoas transportadas gratuitamente ou mediante frete;
+xxviii. Custas e honorários de processos criminais;
+xxix. Fuga do condutor do local do sinistro;
+xxx. Desvalorização do veículo (depreciação, remarcação de chassi ou decorrente de
+sinistro/uso);
+xxxi. Estelionato, Apropriação Indébita, e Furto mediante fraude;
+xxxii. Roubo, Furto ou Danos Materiais praticados com Dolo ou culpa grave equiparada
+ao dolo por dependentes do Segurado/condutor ou por cônjuge, sócios,
+ascendentes/descendentes ou co-residentes;
+xxxiii. Superlotação de pessoas ou sobrecarga de carga;
+xxxiv. Participação do Veículo Segurado em práticas esportivas bem como em
+competições, apostas e provas de velocidade, autorizadas ou não;
+xxxv. Condução ou manobra por pessoa sob efeito de álcool, substância psicoativa,
+entorpecentes, drogas ou medicamentos contraindicados para condução de
+veículos automotores. A recusa do condutor em realizar o teste de embriaguez,
+quando solicitada por autoridade competente, poderá ensejar a perda do direito
+à indenização, quando comprovado prejuízo à apuração dos fatos ou existam
+outros elementos que evidenciem o estado de embriaguez e sua relação causal
+com o sinistro;
+xxxvi. Despesas e perdas financeiras indiretas e/ou Lucros Cessantes pela paralisação
+do Veículo Segurado, ainda que decorrentes de risco coberto;
+xxxvii. Dano Moral Puro;
+xxxviii. Danos exclusivamente à pintura do Veículo Segurado;
+43
+
+===== PAGE 44 =====
+xxxix. Falha/defeito de airbag no período de garantia ou com chamamento para reparo
+ou substituição expedido (recall), que cause danos a ocupantes ou a peças dos
+veículos;
+xl. Vidros instalados em capotas e/ou em veículos modificados;
+xli. Despesas do Segurado/ advogado com locomoção, refeição ou estadia em
+processos judiciais;
+xlii. Danos causados por veículos destinados a serviços técnico-profissionais (ex.:
+retroescavadeiras, Munck) durante a operação como equipamento (em vias,
+canteiro, pátios); há cobertura apenas quando o veículo estiver em trânsito;
+xliii. Cobrança de diárias de estadia (oficinas, pátios públicos ou privados ou local
+assemelhado), durante a paralisação do Veículo Segurado e/ou do terceiro;
+xliv. Veículo em posse e/ou propriedade de terceiros para venda em consignação e/ou
+exposição no momento do Sinistro;
+xlv. Ausência de aviso imediato à autoridade policial em caso de desaparecimento,
+roubo, furto ou incêndio do veículo e/ou seus acessórios;
+xlvi. Alteração de características originais do Veículo Segurado (rebaixar suspensão,
+alterar potência, transformar carroceria, etc);
+xlvii. Quando o Veículo Segurado apresentar alterações em suas características
+originais de fábrica, compreendendo, dentre outras, modificações do tipo tuning,
+adaptações estéticas ou de desempenho, rebaixamento de suspensão,
+instalação de turbocompressor ou quaisquer intervenções que importem
+modificação estrutural, funcional ou estética diversa das especificações originais
+do fabricante;
+xlviii. Perdas e/ou danos causados ao Veículo Segurado ou causados por ele a
+terceiros, quando o Veículo Segurado for utilizado, ainda que ocasionalmente,
+para transporte remunerado de pessoas, bens, cargas, mercadorias e/ou animais,
+inclusive nas seguintes situações:
+a. Transporte de passageiros por meio de aplicativos, plataformas digitais ou
+serviços similares (como Uber, 99, InDrive, Cabify, entre outros);
+b. Transporte de cargas ou entregas mediante remuneração, como frete,
+delivery, transporte por aplicativos, motofrete ou serviços de utilitários
+comerciais;
+c. Atividades de táxi, transporte escolar, transporte de valores.
+xlix. Perdas e/ou danos causados ao Veículo Segurado ou causados por ele a
+terceiros, quando o condutor estiver conduzindo o veículo, com ou sem anuência
+do Segurado, sem habilitação legal e apropriada, ou quando tal documento
+44
+
+===== PAGE 45 =====
+estiver suspenso, cassado, vencido e/ou não renovado por restrições legais ou
+médicas;
+l. Perdas e/ou danos causados ao Veículo Segurado ou causados por ele a
+terceiros, quando o condutor estiver, com ou sem anuência do Segurado,
+conduzindo o veículo sob efeito de álcool, drogas ou medicamentos que alterem
+os sentidos.
+15 Vigência do seguro, vigência da cobertura e critérios de suspensão das
+coberturas
+A Vigência do seguro será mensal e o início de vigência do Bilhete de Seguros será
+considerado a partir das 00h00, enquanto o término de vigência será considerado após as
+23h59 horas.
+16 Pagamento de prêmios
+O pagamento do prêmio deverá ser à vista e antecipado.
+17 Boa-fé, Declarações Inexatas ou Omissas, Agravamento do Risco e Despesas de
+Contenção e Salvamento
+17.1 Boa-fé
+O contrato de seguro é regido pelos princípios da boa-fé, cooperação e lealdade entre as
+partes (art. 37 da Lei nº 15.040/2024).
+O Segurado deve prestar à Seguradora todas as informações relevantes sobre o risco,
+antes de celebrado o contrato (na fase de envio de proposta e preenchimento do
+Questionário do Risco), bem como durante toda a vigência da Apólice, informando toda e
+qualquer alteração no risco que foi aceito pela Darwin.
+17.2. Declarações inexatas ou omissas
+Nos termos do art. 44 da Lei nº 15.040/2024:
+a) Se as declarações inexatas ou omissões decorrerem de dolo ou má-fé, o Segurado
+perderá o direito à indenização, podendo a Seguradora anular o contrato, sem restituição
+do prêmio pago.
+b) Se não houver dolo ou má-fé, a Seguradora poderá:
+• antes da ocorrência do sinistro:
+o cancelar o seguro, restituindo o prêmio proporcional ao tempo decorrido, ou
+o permitir a continuidade do seguro mediante cobrança da diferença de prêmio
+cabível;
+• após a ocorrência do sinistro:
+45
+
+===== PAGE 46 =====
+o reduzir proporcionalmente a indenização, com base na diferença entre o
+prêmio pago e o que seria devido se o risco fosse corretamente declarado.
+17.3. Agravamento do Risco
+Conforme o art. 14 da Lei nº 15.040/2024:
+a) O Segurado deve comunicar imediatamente à Seguradora qualquer fato ou alteração
+que possa agravar de modo relevante o risco coberto.
+b) A Seguradora terá 15 (quinze) dias para manifestar-se, por escrito, sobre a manutenção
+ou rescisão do contrato, podendo propor ajuste de prêmio ou restrição de cobertura.
+c) Se o agravamento for doloso e relevante, o Segurado perderá o direito à indenização.
+d) Se o agravamento decorrer de culpa, a indenização poderá ser reduzida
+proporcionalmente ao impacto da modificação do risco.
+17.4. Despesas de Contenção e Salvamento
+A Seguradora reembolsará as despesas comprovadamente realizadas pelo Segurado ou por
+Terceiros, necessárias e úteis para evitar a ocorrência de sinistro iminente ou reduzir seus
+efeitos, desde que tais medidas sejam razoáveis, proporcionais e compatíveis com a
+natureza do evento, ainda que se revelem ineficazes, nos termos do art. 67 da Lei nº
+15.040/2024.
+As despesas de contenção e salvamento não reduzem o Limite Máximo de Indenização
+(LMI) da cobertura contratada e ficam limitadas a R$ 400,00 (quatrocentos reais) por
+vigência do seguro, e não por evento de sinistro.
+Não se enquadram como despesas de contenção ou salvamento, para fins de
+reembolso:
+a. serviços de guincho, reboque, socorro mecânico, troca de pneus, pane seca,
+chaveiro, transporte alternativo, hospedagem e demais serviços emergenciais
+abrangidos pela cobertura de Assistência 24 horas ou correlatas;
+b. custos de manutenção preventiva, limpeza ou conservação regular do veículo;
+c. despesas notoriamente inadequadas ou desproporcionais em relação ao tipo de
+sinistro;
+d. despesas não comprovadas documentalmente ou realizadas sem nexo direto com o
+evento coberto.
+Para fins de reembolso, o Segurado deverá comprovar as despesas mediante apresentação
+de notas fiscais, recibos ou documentos equivalentes, no prazo de até 30 (trinta) dias
+contados do sinistro, salvo motivo justificável.
+As comunicações, orientações gerais, informações operacionais, esclarecimentos sobre
+processos, procedimentos de atendimento, avisos de sinistro ou quaisquer manifestações da
+46
+
+===== PAGE 47 =====
+seguradora ou de seus representantes não serão interpretadas como recomendação de
+medidas de contenção ou de salvamento.
+Somente constituem recomendação expressa aquelas instruções emitidas pela seguradora
+de forma clara, específica, individualizada e diretamente relacionadas ao caso concreto, com
+indicação inequívoca de que se trata de medidas de contenção ou de salvamento.
+A adoção de medidas pelo segurado por iniciativa própria não caracteriza recomendação da
+seguradora, ainda que comunicadas à seguradora, salvo quando houver confirmação
+expressa desta quanto ao seu enquadramento como medida de contenção ou de
+salvamento.
+18 Concorrência de Apólices e/ou Bilhetes
+18.1. O Segurado que na vigência de um seguro pretender obter novo seguro sobre os
+mesmos bens e contra os mesmos riscos deverá comunicar sua intenção, previamente, por
+escrito, a todas as sociedades seguradoras envolvidas, sob pena de Perda de Direito.
+18.2. A indenização relativa a qualquer sinistro não poderá exceder, em hipótese alguma, o
+valor do prejuízo vinculado à cobertura considerada.
+18.3. Na ocorrência de sinistro contemplado por coberturas concorrentes, ou seja, que
+garantam os mesmos interesses contra os mesmos riscos, em apólice e/ou bilhete de seguro
+distintos, a distribuição da responsabilidade entre as sociedades seguradoras envolvidas
+deverá obedecer às seguintes disposições:
+(I) será calculada a indenização individual de cada cobertura como se o respectivo contrato
+fosse o único vigente, considerando-se, quando for o caso, franquias, participações
+obrigatórias, limite máximo de indenização da cobertura e cláusula de rateio;
+(II) será calculada a “indenização individual ajustada” de cada cobertura na seguinte forma:
+(a) se, para uma determinada apólice e/ou bilhete de seguro, for verificado que a soma
+das indenizações correspondentes às diversas coberturas abrangidas pelo sinistro
+for maior que seu respectivo limite máximo da garantia, a indenização individual de
+cada cobertura será recalculada, determinando-se, assim, a respectiva indenização
+individual ajustada. Para efeito deste recálculo, as indenizações individuais
+ajustadas relativas às coberturas que não apresentem concorrência com outras
+apólices e/ou bilhetes de seguro serão as maiores possíveis, observados os
+prejuízos e os limites máximos de indenização destas coberturas. O valor restante
+do limite máximo de garantia da apólice e/ou bilhete de seguro será distribuído entre
+as coberturas concorrentes, observados os prejuízos e os limites máximos de
+indenização destas coberturas;
+(b) caso contrário, a “indenização individual ajustada” será a indenização individual,
+calculada de acordo com o subitem I do item 15.3.
+(III) será definida a soma das indenizações individuais ajustadas das coberturas
+concorrentes de diferentes apólices e/ou bilhetes de seguro, relativas aos prejuízos
+47
+
+===== PAGE 48 =====
+comuns, calculadas de acordo com o subitem II do item 15.3;
+(IV) se a quantia a que se refere o subitem III do item 15.3 for igual ou inferior ao prejuízo
+vinculado à cobertura concorrente, cada seguradora envolvida participará com a
+respectiva indenização individual ajustada e a quantia estabelecida naquele inciso;
+(V) se a quantia estabelecida no inciso III for maior que o prejuízo vinculado à cobertura
+concorrente, cada sociedade seguradora envolvida participará com percentual do
+prejuízo correspondente à razão entre a respectiva indenização individual ajustada e a
+quantia estabelecida naquele inciso;
+(VI) a sub-rogação relativa aos salvados operar-se-á na mesma proporção da cota de
+participação de cada Seguradora na indenização paga.
+18.4. A indenização relativa a qualquer sinistro não poderá exceder, em hipótese alguma, o
+valor do prejuízo vinculado à cobertura considerada.
+19 Atualização dos valores contratados
+Todos os valores constantes no Bilhete deverão ser expressos em moeda corrente nacional,
+vedada a utilização de unidade monetária de qualquer outra natureza.
+Como este seguro pode ser contratado apenas com vigência mensal, é vedada a atualização
+de valores.
+20 Atualização de outras obrigações pecuniárias
+Os valores (incluindo a indenização) das obrigações pecuniárias das sociedades seguradoras
+sujeitam-se à atualização monetária pela variação positiva do índice de Preços ao Consumidor
+Amplo (IPCA/IBGE), na hipótese de não cumprimento do prazo para o pagamento.
+A atualização será efetuada com base na variação apurada entre o último índice publicado
+antes da data de exigibilidade da obrigação pecuniária e aquele publicado imediatamente
+anterior à data de sua efetiva liquidação.
+Os valores relativos às obrigações pecuniárias serão acrescidos de multa, quando prevista, e
+de juros moratórios, quando o prazo de sua liquidação superar o prazo fixado em contrato
+para esse fim, respeitada a regulamentação específica, particularmente no que se refere ao
+limite temporal para a liquidação e a faculdade de suspensão da respectiva contagem. Os
+juros moratórios, contados a partir do primeiro dia posterior ao término do prazo fixado em
+contrato, devem ter a taxa estipulada nas Condições Gerais ou regulamento, sendo que, na
+sua falta, serão equivalentes à taxa que estiver em vigor para a mora do pagamento de
+impostos devidos à Fazenda Nacional.
+21 Comunicação do Sinistro
+21.1. O que fazer em caso de sinistros?
+Em qualquer tipo de sinistro, o Segurado deve agir com prudência e comunicar a Seguradora
+o quanto antes.
+48
+
+===== PAGE 49 =====
+O descumprimento do dever de comunicação:
+• Se praticado com dolo ou má-fé, acarretará a perda do direito à indenização;
+• Se decorrente de culpa, acarretará a perda do direito à indenização do valor equivalente
+aos danos decorrentes da omissão;
+• Se a demora na comunicação ocasionar agravamento dos danos, o Segurado poderá
+perder o direito à indenização na parcela correspondente ao agravamento.
+Passos principais:
+a) Mantenha a calma;
+b) Preserve a segurança das pessoas e evite novos danos;
+c) Havendo vítimas, providencie socorro e comunique as autoridades locais (polícia,
+bombeiros, resgate etc.);
+d) Aguarde o boletim de ocorrência e confira se todos os detalhes do acidente estão descritos
+corretamente;
+e) Proteja o veículo e retire pertences pessoais antes da remoção pelo guincho;
+f) Comunique o sinistro imediatamente à Darwin Seguros através do App ou da nossa Central
+de Atendimento (11) 3512-7210). Horário de funcionamento: de segunda a sexta, das 08h00
+às 18h00. Caso tenha dúvidas ou dificuldades, não se esqueça que o seu Corretor de Seguros
+também pode te auxiliar neste momento.
+g) Envie informações básicas, como data, horário, local e breve descrição do ocorrido, além
+de fotos do veículo e documentos solicitados para análise inicial.
+Importante:
+Mesmo que o sinistro pareça de pequena gravidade, a Comunicação do Sinistro de forma
+célere é obrigatória.
+21.2. Sinistro com Terceiros Envolvidos
+a) Registre dados do(s) veículo(s) e das pessoas envolvidas (nome, telefone, placa, modelo).
+b) Não assuma qualquer compromisso ou acordo sem orientação da Darwin Seguros ou em
+detrimento à Seguradora (art. 100, IV da Lei 15.040/24).
+c) Anote nomes e contatos de testemunhas.
+d) Faça o boletim de ocorrência, mesmo sem vítimas, para agilizar a regulação.
+e) Oriente o terceiro a contatar a Central Darwin (11) 3512-7210, informando o número do
+sinistro, placa e modelo do veículo segurado.
+A reclamação do terceiro só poderá ser registrada após a Comunicação do Sinistro pelo
+segurado.
+21.3 Roubo ou Furto do Veículo Segurado
+a) Comunique imediatamente às autoridades (telefone 190);
+b) Se houver rastreador, acione a empresa responsável;
+c) Registre boletim de ocorrência na delegacia local ou, se permitido, pela internet;
+d) Comunique o sinistro à Darwin Seguros através do App ou da nossa Central de Atendimento
+(11) 3512-7210). Horário de funcionamento: de segunda a sexta, das 08h00 às 18h00. Caso
+tenha dúvidas ou dificuldades, não se esqueça que o seu Corretor de Seguros também pode
+te auxiliar neste momento;
+49
+
+===== PAGE 50 =====
+e) Envie informações básicas, como data, horário, local e breve descrição do ocorrido, além
+de fotos do veículo e documentos solicitados para análise inicial..
+22 Documentos Necessários para o Aviso de Sinistro
+O Segurado deverá entregar, de forma completa, verdadeira e tempestiva, todos os
+documentos e informações necessários para comprovação do sinistro e definição da
+indenização, conforme listagem divulgada pela Seguradora e eventuais solicitações
+complementares justificadas:
+Colisão, alagamento, granizo e incêndio: - Fotos do veículo;
+- Cópia da carteira nacional de habilitação
+(CNH) do segurado ou do condutor (se for
+diferente do segurado);
+- Cópia do certificado de registro de veículo
+(CRV) popularmente conhecido como “DUT”;
+- Boletim de ocorrência e/ou laudos de
+atendimento médico ou de órgãos
+competentes, quando houver sua
+elaboração em razão do sinistro, os quais
+deverão ser obrigatoriamente enviados à
+Seguradora.
+Roubo e Furto: - Boletim de ocorrência;
+- Cópia da carteira nacional de habilitação
+(CNH) do segurado ou do condutor (se for
+diferente do segurado);
+- Cópia do certificado de registro de veículo
+(CRV) popularmente conhecido como “DUT”.
+Responsabilidade Civil Facultativa de - Fotos do veículo;
+Veículos (RCFV), Danos Corporais (DC) e - Cópia da carteira nacional de habilitação
+Acidente Pessoal de Passageiro (APP): (CNH) do segurado ou do condutor (se for
+diferente do segurado);
+- Cópia do certificado de registro de veículo
+(CRV) popularmente conhecido como “DUT”;
+- Boletim de ocorrência e/ou laudos de
+atendimento médico ou de órgãos
+competentes, quando houver sua
+elaboração em razão do sinistro, os quais
+deverão ser obrigatoriamente enviados à
+Seguradora.
+Laudo médico contendo descrição dos
+danos sofridos e tratamento para a
+recuperação, relatório de alta definitiva e, em
+caso de morte, laudo necropsia do instituto
+médico legal (IML) e certidão de óbito.
+22.1. Uso de Dados Telemétricos
+Poderão também ser utilizados os dados coletados através de rastreador, bloqueador,
+localizador, hardwares, devices, dispositivos ou quaisquer outras formas de captação de
+informações e telemetria definidos pela Darwin Seguros.
+50
+
+===== PAGE 51 =====
+Os dispositivos telemétricos eventualmente instalados no veículo têm finalidade exclusiva de
+localização e rastreamento, não sendo projetados para detectar colisões, paradas abruptas
+ou quaisquer eventos que possam, por si sós, caracterizar a ocorrência de sinistro.
+Dessa forma, a existência de tais dispositivos não implica ciência prévia da Seguradora sobre
+o sinistro, permanecendo o dever do segurado de comunicar a ocorrência e prestar as
+informações necessárias à sua regulação.
+22.2. Análise e Prazos
+Nos termos da Lei nº 15.040/2024, a Seguradora analisará a ocorrência comunicada e se
+manifestará quanto à existência ou não de cobertura no prazo de até 30 (trinta) dias, contado
+da entrega de toda a documentação necessária.
+Esse prazo poderá ser suspenso para a apresentação de documentos complementares.
+Reconhecida a cobertura e apurados os valores devidos, a Seguradora efetuará a liquidação
+da indenização no prazo de até 30 (trinta) dias.
+22.3. Inobservância de Prazos ou Documentos
+Caso o Segurado não entregue os documentos solicitados no prazo concedido, a Seguradora
+ficará desobrigada do pagamento da indenização.
+23 Liquidação de Sinistros
+23.1. Formas de Liquidação
+(i) Indenização em moeda corrente, por meio de crédito em conta do Proprietário Legal do
+Veículo ou Beneficiário, conforme aplicável, nos casos de Indenização Integral;
+(ii) Reparo do Veículo Segurado, nos casos de Indenização Parcial.
+(iii) Reembolso ao Segurado do valor dos reparos quando o conserto tiver sido previamente
+e expressamente autorizado pela Seguradora, deduzida a franquia aplicável;
+(iv) Pagamento da franquia pelo Segurado diretamente à oficina nos sinistros de Indenização
+Parcial, quando houver.
+Qualquer indenização somente será paga ao Proprietário legal do veículo segurado mediante
+apresentação dos documentos solicitados pela Seguradora (Inclusive os que comprovem os
+direitos de propriedade, livre e desembaraçada de qualquer ônus, do Segurado sobre o
+veículo), observado o rito de análise, prazos e comunicações previstos nestas Condições
+Gerais.
+23.2. Indenização Parcial (peças, reparo, reembolso)
+(a) Peças Novas Genuínas ou Originais serão utilizadas quando houver
+substituição para: (a) sistemas de freios e seus subcomponentes; (b) caixa
+de direção e eixos; (c) suspensão; (d) sistema de airbag; (e) cinto de
+segurança; (f) lataria de porta, capo, tampa traseira, lateral, painel
+dianteiro e traseiro; (g) rodas.
+(b) Para plásticos (para-choque, paralama, grade e molduras), peças de
+iluminação (faróis e lanternas) e vidros (dianteiro, traseiro, laterais e
+51
+
+===== PAGE 52 =====
+retrovisores), poderão ser usadas peças novas compatíveis, nacionais e
+importadas, desde que mantenham as especificações técnicas do fabricante.
+(c) A Franquia deverá ser paga diretamente à oficina referenciada.
+Falta de peças no mercado: caso haja indisponibilidade, o Segurado poderá receber o
+valor correspondente às peças conforme a tabela da montadora e a mão de obra
+necessária para a reposição. A indisponibilidade de peças de reposição é um
+problema exclusivo da indústria automotiva e de autopeças. Deste modo,
+eventual indisponibilidade de peças não converte Perda Parcial em Indenização
+Integral, nem caracteriza responsabilidade da Seguradora por atrasos
+decorrentes de fatores alheios à sua atividade, sendo a disponibilidade das
+mesmas de responsabilidade do fabricante e das demais empresas que
+integram a cadeia de consumo do mercado automotivo e de autopeças.
+(d) A inexistência, no mercado brasileiros de Peças Novas Genuínas ou
+Originais não transforma o processo de Sinistro de Perda Parcial em
+Indenização Integral
+23.3. Indenização Integral (transferência, débitos, gravames)
+(a) Transferência do Salvado: nos casos de Indenização Integral, o documento de
+transferência de propriedade do Veículo Segurado (DUT/ATPV-e) deverá ser
+devidamente preenchido e assinado em favor da Seguradora, que passará a ser
+proprietária do Veículo Segurado após o pagamento da indenização
+(b) Dedução de débitos: da indenização poderão ser deduzidos débitos existentes
+e ocorridos até a data do Sinistro (ex.: multas, licenciamento(s), IPVA ou outros débitos
+identificados pela Seguradora).
+(c) Financiamento/gravame:
+i. Alienação Fiduciária: a Indenização será paga à financeira e,
+havendo saldo, repasse ao Segurado;
+ii. Arrendamento Mercantil (leasing): a indenização será paga
+diretamente à empresa de Arrendamento Mercantil (leasing) que
+repassará ao Segurado a parte que lhe couber.
+(d) Vedada a dedução de valores referentes às Avarias previamente
+constatadas nos casos de Indenização Integral.
+(e) IPVA: a Seguradora poderá exigir o IPVA quitado relativo aos anos anteriores e,
+relativamente ao ano que ocorreu o Sinistro, conforme legislação estadual vigente, ou
+comprovação de isenção.
+(f) Veículo com isenção tributária (ex.: IPI): o Segurado apresentará as guias
+para recolhimento dos tributos dispensados na aquisição. Os impostos serão pagos
+integralmente pela Seguradora, sendo deduzidos da indenização os valores relativos a
+tributos que sejam de responsabilidade do Segurado ou de terceiros, cabendo ao
+Segurado a obtenção das guias junto ao órgão competente.
+Documentos específicos para Indenização Integral: ver Cláusula 20.2 (lista documentária).
+23.4. Indenização de Terceiros (RCF-V) e APP
+(a) Responsabilidade Civil Facultativa de Veículos (RCF-V): a Indenização será paga
+diretamente ao Terceiro, após a conclusão da Regulação do Sinistro. É vedado ao
+52
+
+===== PAGE 53 =====
+Segurado reconhecer sua responsabilidade, transigir ou indenizar diretamente o
+terceiro sem anuência expressa da Darwin.
+(b) Acidentes Pessoais Passageiro (APP):
+(i) Invalidez Permanente: pagamento da indenização direto ao
+passageiro, conforme critérios e o Limite Máximo de Indenização da
+Apólice para esta cobertura.
+(ii) Morte: o pagamento de metade da indenização ao cônjuge não
+separado judicialmente ou ao seu companheiro e o restante aos
+herdeiros, obedecida a ordem da vocação hereditária. Na ausência de
+pessoas indicadas nesta cláusula, serão beneficiários os que provarem
+dependência econômica.
+(iii) Menores de 14 anos: indenização restrita ao reembolso das
+despesas de funeral (excluída aquisição de terrenos, jazigos ou
+carneiros), até o Limite Máximo de Indenização. As despesas devem ser
+comprovadas mediante apresentação dos recibos e/ou notas fiscais
+originais.
+(iv) Compensação: havendo pagamento prévio por invalidez
+permanente, a indenização por morte/invalidez será ajustada pela
+dedução do valor já pago.
+Documentos específicos para APP: ver Cláusula 20.3 (lista documentária).
+23.5. Documentos para Liquidação de Sinistro com Indenização Integral
+Os documentos abaixo somente serão exigidos após o reconhecimento da cobertura e para
+efetivação do pagamento da indenização, conforme o art. 87 da Lei 15.040/2024.
+Além dos Documentos Gerais apresentados no Aviso de Sinistro, o Segurado deverá fornecer:
+a) Certificado de Propriedade do Veículo DUT/ATPV-e preenchido e assinado em favor da
+Seguradora, com firma reconhecida por autenticidade;
+b) CPF e RG do Segurado e do proprietário legal do veículo.
+c) Comprovante de endereço do Segurado e do proprietário do veículo datada em até 6 meses
+desta solicitação (exemplos: conta de água, luz, telefone, etc.);
+d) Termo de responsabilidade pelas multas e débitos existentes até a data do Sinistro, com
+firma reconhecida ou assinatura digital (original);
+e) IPVA quitado relativo aos anos anteriores e, relativo ao ano que ocorreu o Sinistro de acordo
+com a legislação vigente do Estado onde o veículo está cadastrado. Caso o veículo seja
+isento, apresentar comprovante do Detran;
+f) Chaves e manual do Veículo (se possuir);
+g) Carta de Saldo Devedor da Financeira, caso o veículo esteja alienado. Tal documento será
+53
+
+===== PAGE 54 =====
+entregue preferencialmente junto com toda a documentação solicitada. A carta deverá ter
+validade por 7 (sete) dias úteis;
+h) Veículos com isenção de IPI: para receber a Indenização integral relacionada a veículo
+adquirido com benefício tributário, além dos documentos básicos, o Segurado deverá
+apresentar para a Seguradora, quando solicitadas, as guias necessárias para o recolhimento
+dos impostos a que foi isento na aquisição do veículo. Os impostos serão pagos integralmente
+pela Seguradora, sendo deduzidos da indenização os valores correspondentes aos tributos
+cuja responsabilidade seja do Segurado ou de terceiros. Caberá ao Segurado a obtenção das
+guias de recolhimento junto ao Órgão Fiscal e a apresentação para a Seguradora. Para obter
+as guias de recolhimento o Segurado deverá se dirigir ao mesmo órgão que lhe concedeu a
+documentação validando o benefício;
+i) Recibo de quitação do bem com firma reconhecida e cópia autenticada da Procuração dos
+Signatários em caso de Leasing;
+l) Auto de Localização e Auto de Entrega originais ou cópias autenticadas pelo órgão que fez
+o documento com baixa da restrição de roubo e furto junto ao Detran (somente para sinistros
+de roubo/furto localizado);
+m) Em se tratando de veículo 0km com Valor de Novo, cópia da Nota Fiscal de compra do
+Veículo Segurado evidenciando a data de saída da concessionária.
+Observação: Os documentos listados nesta cláusula têm a finalidade exclusiva de viabilizar
+o pagamento da indenização integral e a transferência da propriedade do veículo salvado para
+a Seguradora, conforme artigos 87 e 94 da Lei 15.040/2024.
+23.6 Documentos para a Liquidação do Sinistro de Acidente Pessoal de Passageiro
+(APP)
+Após reconhecida a cobertura, deverão ser apresentados, para fins de liquidação da
+indenização, os seguintes documentos:
+a) CPF, Cédula de Identidade ou certidão de nascimento (quando for menor de idade) da
+vítima e documentos de identificação dos beneficiários;
+b) Laudo do Instituto de Criminalística, autenticado pela autoridade competente;
+c) Certidão de casamento atualizada ou contrato de união estável;
+d) Comprovante de residência da vítima e de todos os beneficiários legais.
+Observação: Esses documentos têm por finalidade comprovar a legitimidade e a condição
+dos beneficiários para recebimento da indenização devida, em conformidade com os artigos
+113 a 117 e 87 da Lei 15.040/2024.
+23.7. Procedimentos, Prazos e Adiantamentos
+(a) Manifestação sobre a cobertura: até 30 (trinta) dias contados do recebimento do aviso
+acompanhado de todos os elementos necessários.
+(b) Pedido de documentos complementares: suspende a contagem uma única vez para seguro
+de automóvel.
+54
+
+===== PAGE 55 =====
+(c) Pagamento da indenização reconhecida: até 30 (trinta) dias da completa entrega dos
+elementos necessários à quantificação. Suspensão de prazo: uma única vez nas mesmas
+condições do item (b).
+(d) Adiantamentos: apuradas quantias parciais devidas, a Seguradora efetuará adiantamentos
+em até 30 (trinta) dias, por conta do pagamento final, quando aplicável.
+(e) Penalidades por mora: multas de 2% sobre o valor devido, correção monetária e juros
+legais, a partir da data em que o pagamento deveria ter sido realizado.
+(f) Transparência: a negativa de cobertura será expressa, motivada e comunicada
+formalmente, no mesmo prazo aplicável à manifestação sobre a cobertura.
+23.8. Comunicação e continuidade do processo
+(a) Veículo localizado antes do pagamento da Indenização Integral: o pagamento será
+suspenso para retomada da regulação e reavaliação dos prejuízos indenizáveis.
+(b) O Segurado é obrigado a informar a Seguradora quando obtiver notícia de localização do
+veículo, mesmo após o recebimento da indenização.
+(c) Despesas de regulação e liquidação correm por conta da Seguradora, salvo as relativas a
+documentos ordinariamente em poder do interessado.
+24 Salvados
+Fica estabelecido que, uma vez efetuado o pagamento da Indenização Integral, deduzindo
+eventuais débitos que o veículo possua, os salvados passam ser de inteira responsabilidade
+da seguradora.
+Em caso de Indenização Parcial, o veículo salvado é do Segurado, sem prejuízo de acordo
+diverso com a Seguradora.
+A contratação do seguro com Fator de Ajuste inferior a 100%, não caracteriza Indenização
+Parcial do bem, pertencendo o salvado à Seguradora.
+25 Sub-rogação
+Após pagar a indenização, a Seguradora sub-roga-se, nos limites da indenização paga, nos
+direitos e ações do Segurado contra o Terceiro causador do dano.
+O Segurado deve cooperar integralmente com a Seguradora, fornecendo todas as
+informações, documentos e meios necessários para o exercício do direito de sub-rogação,
+abstendo-se de praticar qualquer ato que o dificulte ou impeça.
+Se o Segurado, de má-fé, praticar ato que prejudique o direito de sub-rogação, perderá o
+direito à indenização, sem prejuízo da restituição de valores eventualmente pagos.
+Salvo dolo, a Seguradora não exercerá o direito de sub-rogação quando o sinistro decorrer de
+culpa não grave de cônjuge, parentes até o segundo grau, consanguíneos ou por afinidade,
+do segurado ou do beneficiário, além de empregados ou pessoas sob a responsabilidade do
+Segurado, salvo quando o responsável estiver coberto por seguro de responsabilidade civil,
+hipótese em que o direito será exercido diretamente contra a Seguradora do responsável.
+55
+
+===== PAGE 56 =====
+É ineficaz qualquer ato do Segurado que diminua ou extinga, em prejuízo da Seguradora, os
+direitos a que esta se refere, respondendo o Segurado pelos prejuízos decorrentes de sua
+conduta.
+26 Oficinas Referenciadas
+O Segurado terá acesso às Oficinas Referenciadas para os reparos dos Veículos Segurados
+sinistrados, sendo certo que quaisquer reparos realizados fora das Oficinas Referenciadas
+e/ou sem a aprovação prévia e expressa da Seguradora não terão cobertura, exceto se
+acordado de forma diversa com a Seguradora.
+27 Prazos prescricionais
+Os Prazos Prescricionais são aqueles determinados em lei.
+28 Perda de direitos
+O Segurado perderá o direito à indenização nas seguintes hipóteses:
+:
+(i) Caso ocorram quaisquer Prejuízos Indenizáveis (seja ao Segurado ou a
+Terceiros) e, simultaneamente, haja a interrupção e/ou bloqueio (e/ou qualquer
+medida similar) das Permissões Obrigatórias;
+(ii) Caso a Seguradora não tenha acesso aos dados de, no mínimo, 60% (sessenta
+por cento) dos quilômetros rodados desde o início de Vigência do primeiro
+Bilhete, sendo considerado como tal o primeiro Bilhete da série ininterrupta mais
+recente de renovações, até a ocorrência de Prejuízo Indenizável, seja por: (a) o
+smartphone do Segurado não estar devidamente ligado, operacional e com o
+Aplicativo da Seguradora instalado e necessariamente cadastrado em nome do
+Segurado, (b) interrupção e/ou bloqueio (e/ou qualquer medida similar) das
+Permissões Obrigatórias e/ou (iii) viagens do Veículo Segurado sem a presença
+do smartphone do Segurado;
+(iii)Caso haja a retirada, desativação ou manipulação dolosa de rastreador,
+bloqueador, localizador, equipamento eletrônico ou componente físico
+(hardwares), dispositivos ou quaisquer outras formas de captação de
+informações de telemetria definidos pela Darwin Seguros, que poderão ser
+solicitados pela Seguradora, no momento de contratação do seguro;
+(iv)Caso se constate alterações não homologadas nas características originais de
+fábrica do Veículo Segurado, compreendendo, dentre outras, modificações do
+tipo tuning, adaptações estéticas ou de desempenho, rebaixamento de
+suspensão, instalação de turbocompressor ou quaisquer intervenções que
+importem modificação estrutural, funcional ou estética diversa das
+especificações originais do fabricante;
+(v) Se no momento do sinistro o Segurado ou o Condutor estiverem conduzindo o
+Veículo Segurado sem habilitação legal e apropriada, ou quando tal documento
+56
+
+===== PAGE 57 =====
+estiver suspenso, cassado, vencido e/ou não renovado por restrições legais ou
+médicas;
+(vi) Se no momento do sinistro o Segurado ou o Condutor estiverem conduzindo o
+Veículo Segurado sob efeito de álcool, drogas, substâncias tóxicas,
+entorpecentes ou medicamentos contraindicados para condução de veículos
+automotores;
+(vii) Se agravar intencionalmente e de forma relevante o risco objeto do seguro;
+(viii) Se deixar de comunicar à Seguradora, tão logo tenha conhecimento, qualquer
+fato que represente relevante agravamento do risco, agindo com dolo ou má-fé;
+(ix) Se omitir dolosamente ou prestar informações falsas na proposta de seguro, no
+Questionário de Avaliação do Risco ou durante a regulação de sinistro, nos
+termos do art. 44 da Lei nº 15.040/2024;
+(x) Se não cumprir e/ou deixar de cumprir quaisquer disposições,
+responsabilidades, obrigações e/ou requisitos previstos nestas Condições
+Gerais;
+(xi) Se tentar obter, por meio de fraude, simulação ou qualquer outro artifício,
+vantagem indevida do seguro, inclusive apresentando documentos falsos ou
+adulterados;
+(xii) Se não comunicar imediatamente à Seguradora a existência de reclamação ou
+ação judicial movida por terceiros relacionada aos riscos cobertos pela Apólice;
+(xiii) Se não comunicar imediatamente à Seguradora a existência de reclamação ou
+ação judicial movida por terceiros relacionada aos riscos cobertos pela Apólice;
+(xiv) Se o Segurado modificar dolosamente o local do sinistro, destruir ou alterar
+elementos relacionados ao evento, prejudicando a apuração dos fatos;
+(xv) Se o sinistro for dolosa ou intencionalmente provocado pelo Segurado, pelo
+Beneficiário ou por seu representante;
+(xvi) Se o Segurado, ciente da prática de ato doloso que possa causar o sinistro, não
+adotar medidas para tentar evitá-lo, tendo meios razoáveis para tanto;
+(xvii) Se realizar acordo judicial ou extrajudicial sem autorização expressa da
+Seguradora;
+(xviii) Se o Segurado impedir ou deixar de cooperar com a Seguradora durante a
+57
+
+===== PAGE 58 =====
+regulação e liquidação do sinistro, dificultando a obtenção de informações,
+documentos ou a realização de vistorias;
+(xix) Se o Segurado dificultar ou impedir o exercício do direito de sub-rogação da
+Seguradora em relação a terceiros responsáveis pelo dano;
+(xx) Se o Segurado deixar de pagar o prêmio (ou a primeira parcela) nos prazos
+contratualmente definidos, hipótese em que o contrato será resolvido de pleno
+direito;
+(xxi) Se comprovado que o risco era impossível ou já se havia realizado no momento
+da contratação, com conhecimento do Segurado;
+(xxii) Se for acionado judicialmente e deixar de comparecer às audiências designadas,
+não apresentar defesa no prazo legal ou não estiver adequadamente
+representado;
+(xxiii) Se o Veículo Segurado:
+a. Não estiver livre de dívidas, penhoras, ônus, gravames, contestações ou
+restrições de qualquer natureza, no momento da contratação ou durante o
+período de cobertura, mesmo que provenientes do proprietário anterior;
+b. Não apresentar documentos ou registros autênticos e regulares;
+c. For importado e não estiver transitando legalmente no país;
+d. For utilizado para fim diferente do indicado na contratação;
+e. For utilizado para fins de prática de atividade ilícita, crimes e
+contravenções penais, conforme disposições legais;
+f. Não for apresentado para a Vistoria, sempre que a Seguradora considerar
+necessário;
+g. Estiver em posse e/ou propriedade de Terceiros para venda em
+consignação e/ou exposição;
+h. Se o Veículo Segurado for usado para transportes de pessoas e estiver
+sem condições de segurança exigidas por lei ou não estiver licenciado
+junto ao órgão de trânsito e/ou poder concedente.
+(xxiv) Por esgotamento do Limite Máximo de Indenização da cobertura contratada;
+(xxv) O Veículo Segurado for dirigido por pessoa sem habilitação legal ou com direito
+de dirigir suspenso ou cassado, ou com o exame médico vencido e sem
+condições de ser renovado, nos termos da legislação de trânsito nacional.
+Boa-fé
+Se o Segurado fizer declarações inexatas ou omitir circunstâncias que possam influir na
+aceitação do seguro, na análise do risco, na estipulação do prêmio e/ou na análise das
+circunstâncias decorrentes do sinistro, o Segurado perderá o direito à indenização
+58
+
+===== PAGE 59 =====
+Se a inexatidão ou omissão nas declarações não resultar de Má-fé do Segurado, a
+Seguradora poderá, na hipótese de não ocorrência do Sinistro:
+(i) Cancelar o seguro, retendo do Prêmio originalmente pactuado a parcela proporcional
+ao tempo decorrido; ou
+(ii) Permitir a continuidade do seguro, cobrando a diferença de Prêmio cabível.
+Se a inexatidão ou omissão nas declarações não resultar de Má-fé do Segurado, a
+Seguradora poderá, na hipótese de ocorrência de Sinistro sem Indenização Integral:
+(i) Cancelar o seguro após o pagamento da indenização retendo, do Prêmio originalmente
+pactuado, acrescido da diferença cabível, a parcela calculada proporcionalmente ao
+tempo decorrido; ou
+(ii) Permitir a continuidade do seguro, cobrando a diferença de Prêmio cabível ou
+deduzindo-a do valor a ser indenizado.
+Declarações Inexatas ou Omissas
+Se a inexatidão ou omissão nas declarações resultar de Má-fé do Segurado, a Seguradora
+poderá, na hipótese de ocorrência de qualquer tipo de Sinistro, cancelar o seguro
+imediatamente sem que haja o pagamento de qualquer tipo de indenização.
+Agravamento do Risco
+O Segurado está obrigado a comunicar à Seguradora, logo que saiba, qualquer fato suscetível
+de agravar o risco coberto, sob pena de perder o direito à indenização, se ficar comprovado
+que silenciou de Má-fé.
+A Seguradora terá 15 (quinze) dias após o recebimento do aviso de alteração relevante do
+estado de risco para dar ciência ao Segurado, por escrito, de sua decisão de cancelar o
+contrato ou, mediante acordo entre as partes, restringir a cobertura contratada ou fazer um
+endosso com cobrança de prêmio adicional.
+Conforme disposto na Cláusula “18. Aviso de Sinistro” acima, o segurado deve comunicar o
+Sinistro à Seguradora, tão logo tome conhecimento, e adotar as providências imediatas para
+minorar suas consequências, sob pena de perder o direito à indenização.
+29 Cancelamento e Rescisão
+O Segurado poderá cancelar um Bilhete contratado a qualquer momento através do seu
+corretor de seguros, Aplicativo da Seguradora, central de atendimento, SAC, ou quaisquer
+outros meios de comunicação com a Seguradora. Neste cenário, não haverá restituição do
+Prêmio já pago e a cobertura de seguros será mantida até o fim da Vigência do Bilhete de
+Seguros sobre o qual foi solicitado o cancelamento.
+O seguro estará cancelado quando houver o pagamento da Indenização Integral do Veículo
+Segurado ou quando a soma das indenizações por cobertura atingir o Limite Máximo de
+Indenização da respectiva cobertura, conforme contratado.
+59
+
+===== PAGE 60 =====
+Quanto à restituição do Prêmio, nos casos de cancelamento do seguro em decorrência de
+Sinistro, a Seguradora não irá restituir o Prêmio relativo às demais coberturas contratadas que
+não tiverem sido utilizadas, uma vez que fora concedido desconto pela contratação simultânea
+de mais de uma cobertura.
+Quanto ao Cancelamento por Arrependimento, a Seguradora providenciará a devolução do
+Prêmio pago (a) em até 5 (cinco) dias úteis contatos do pedido de cancelamento do cliente se
+realizado por meio de Pix ou transferência bancária ou (b) conforme o prazo da administradora
+do cartão de crédito, sendo certo que nunca caberá o pagamento de indenização pela
+Seguradora ao Segurado, Beneficiário e/ou Terceiro, conforme aplicável.
+30 Reintegração
+Nos termos do art. 72 da Lei nº 15.040/2024, fica expressamente estabelecido que a
+ocorrência de sinistros, ainda que parciais, implicará redução proporcional do valor da
+garantia, não havendo reintegração automática do Limite Máximo de Indenização (LMI)
+durante a vigência da Apólice.
+Se na vigência da Apólice, a soma das indenizações pagas em relação a uma cobertura atingir
+o respectivo LMI, essa cobertura será automaticamente cancelada.
+Na hipótese da soma de todas as indenizações pagas ao Segurado atingir o somatório dos
+LMIs de todas as coberturas, a Apólice será automaticamente cancelado.
+31 Cláusula de Restrições por Sanções e Embargos
+A cobertura prevista neste seguro, bem como o pagamento de qualquer indenização, será
+suspensa caso o Segurado, seus Beneficiários ou o local da ocorrência do sinistro figurem, a
+qualquer tempo, em listas nacionais ou internacionais de sanções, embargos ou demais
+restrições relacionadas à prevenção à lavagem de dinheiro, financiamento ao terrorismo ou
+medidas equivalentes.
+A suspensão terá início a partir da data da inclusão do nome na respectiva lista e permanecerá
+vigente até a efetiva exclusão ou até que seja apresentada decisão judicial que afaste a
+restrição.
+Para fins desta cláusula, consideram-se abrangidas, entre outras listas reconhecidas por
+autoridades competentes:
+a) Listas do Conselho de Segurança da Organização das Nações Unidas (ONU);
+b) Sanções e medidas restritivas emitidas pela União Europeia e pelo Reino Unido;
+c) Lista de Pessoas Especialmente Designadas (SDN), publicada pelo Escritório de Controle
+de Ativos Estrangeiros do Departamento do Tesouro dos Estados Unidos (Office of Foreign
+Assets Control – OFAC);
+d) Recomendações e comunicações do Grupo de Ação Financeira (GAFI), bem como listas
+nacionais voltadas à prevenção à lavagem de dinheiro e financiamento do terrorismo.
+As listas e regulamentações referidas podem ser atualizadas periodicamente por seus órgãos
+emissores, e a Seguradora acompanhará tais alterações para fins de cumprimento desta
+60
+
+===== PAGE 61 =====
+cláusula.
+32 Foro
+As questões judiciais entre o Segurado e a Seguradora serão processadas no foro do domicílio
+do Segurado.
+61
+
+===== PAGE 62 =====
+ANEXO I – COBERTURA ADICIONAL - ACIDENTE PESSOAL DE PASSAGEIRO (APP)
+Com a contratação dessa cobertura, os Limites Máximos de Indenização serão iguais para
+todos os Beneficiários, tanto para garantia por morte quanto por Invalidez Permanente, em
+decorrência de Acidente de Trânsito coberto por este seguro, ocorrido durante a Vigência do
+Bilhete.
+A cobertura de APP é uma cobertura adicional, disponível mediante o pagamento de Prêmio,
+e não poderá ser contratada isoladamente, devendo ser contratada em conjunto com uma das
+coberturas básicas previstas nestas Condições Gerais.
+Observados os limites estabelecidos no Bilhete, indeniza a vítima ou seus beneficiários em
+caso de lesão corporal e/ou falecimento do Passageiro, decorrente de Acidente de Trânsito
+envolvendo o Veículo Segurado, desde que este esteja licenciado para o transporte de
+pessoas. O Bilhete estabelecerá o Limite Máximo de Indenização por Passageiro e por
+cobertura.
+Morte Acidental
+Em caso de Morte, garante o pagamento do Limite Máximo de Indenização contratado:
+50% (cinquenta por cento) do valor da indenização será pago ao cônjuge sobrevivente e
+50% (cinquenta por cento) aos herdeiros legais (em partes iguais). Inexistindo sociedade
+conjugal, 100% (cem por cento) será pago aos herdeiros legais, observado o disposto nos
+artigos 791, 792 e 793 do Código Civil e no artigo 226 da Constituição Federal.
+No caso de menores de 18 anos, deverá ser observado o seguinte:
+• Menores de 14 anos: a garantia de morte destina-se apenas ao reembolso das
+despesas com o funeral, que deverão ser comprovadas mediante a apresentação de
+contas originais especificadas, podendo ser substituídas por outros comprovantes
+satisfatórios, a critério da Seguradora. Incluem-se entre as despesas com o funeral as
+havidas com o translado. Não estão cobertas as despesas com aquisição de terrenos
+ou jazigos;
+• Idade superior a 14 e até 16 anos: a indenização, em caso de morte, será paga aos
+herdeiros legais do menor Segurado;
+Idade superior a 16 anos e até 18 anos: em caso de morte, será paga indenização
+correspondente a 50% do Limite Máximo de Indenização contratado ao cônjuge sobrevivente
+e os outros 50% do Limite Máximo de Indenização aos herdeiros legais, em partes iguais;
+inexistindo sociedade conjugal, 100% do Limite Máximo de Indenização aos herdeiros legais.
+Invalidez Permanente (total ou parcial)
+Em caso de invalidez, a cobertura garante o pagamento do Limite Máximo de Indenização
+contratado ao Passageiro do Veículo Segurado, caso este fique total ou parcialmente inválido
+62
+
+===== PAGE 63 =====
+de forma permanente, em decorrência de um Acidente de Trânsito envolvendo o Veículo
+Segurado durante a vigência do seguro. A Invalidez Permanente deve ser comprovada por
+meio de laudo e/ou declaração médica.
+Considera-se “Invalidez Permanente Total” os acidentes de trânsito envolvendo o Veículo
+Segurado que resultem em:
+a) Perda total da visão de ambos os olhos;
+b) Perda total do uso de ambos os braços;
+c) Perda total do uso de ambas as pernas;
+d) Perda total do uso de ambas as mãos;
+e) Perda total do uso de um braço e uma perna;
+f) Perda total do uso de uma das mãos e um dos pés;
+g) Perda total do uso de ambos os pés;
+h) Alienação mental total e incurável;
+i) Nefrectomia bilateral.
+Em caso de invalidez parcial devido a um Acidente de Trânsito envolvendo o Veículo
+Segurado, quando as funções do membro ou órgão afetado não são completamente
+comprometidas, a indenização será calculada com base na porcentagem de perda funcional
+apresentada. O valor da indenização para perda parcial será determinado aplicando-se o grau
+de redução funcional à porcentagem prevista na Tabela de Cálculo de Indenização para
+Invalidez Permanente Total ou Parcial.
+63
+
+===== PAGE 64 =====
+64
+
+===== PAGE 65 =====
+ANEXO II - COBERTURA ADICIONAL DE ASSISTÊNCIA 24 HORAS
+A coberturas de Assistência 24 Horas é uma cobertura adicional, e não poderá ser contratada
+isoladamente, ou seja, deve ser contratada conjuntamente com uma das coberturas básicas
+presentes nessas Condições Gerais.
+Os planos a seguir poderão ser contratados mediante pagamento de Prêmio adicional:
+Limite quilometragem
+P lano por evento
+Guincho 100 km 100km
+Guincho 200 km 200km
+Guincho 1000 km 1000km
+Um chamado de Assistência 24h poderá ser composto, de acordo com a política da
+Seguradora, todos os serviços listados abaixo.
+Além disso, o serviço de Assistência 24 horas é (i) limitado a 1 (uma) utilização por período
+de vigência do Bilhete e (ii) limitado a 3 (três) utilizações por Segurado e/ou Veículo Segurado
+a cada 12 meses, limitado, e está sujeito aos Limites Máximos de Indenização estabelecidos
+nas Condições Gerais para as Coberturas Adicionais de Assistência 24 Horas.
+Adicionalmente, serão observados os limites máximos de reembolso das despesas abaixo
+(quando aplicável), desde que previamente aprovados de forma expressa pela Seguradora
+Exclusivamente para:
+(i) o serviço de Meio de Transporte Alternativo, o limite de utilização para o Segurado e/ou
+Veículo Segurado será de (i) 1 (uma) utilização por período de vigência;
+(ii) já para o serviço de Transporte para Recuperação do Veículo, o limite de utilização para o
+Segurado e/ou Veículo Segurado será de 1 (uma) utilização a cada 12 (doze) meses.
+Reembolsos
+Limites total das despesas
+Serviços 100km 200km 1000km
+Auto Socorro por pane mecânica ou elétrica R$ 80,00 R$ 120,00 R$ 170,00
+Guincho R$ 180,00 R$ 320,00 R$ 480,00
+Troca de pneus R$ 70,00 R$ 120,00 R$ 130,00
+Chaveiro R$ 130,00 R$ 180,00 R$ 220,00
+Pane Seca R$ 180,00 R$ 180,00 R$ 180,00
+Meio de Transporte Alternativo R$ 180,00 R$ 220,00 R$ 480,00
+Transporte para Recuperação do Veículo R$ 180,00 R$ 220,00 R$ 480,00
+Hospedagem R$ 180,00 R$ 220,00 R$ 480,00
+65
+
+===== PAGE 66 =====
+COMO UTILIZAR A ASSISTÊNCIA 24 HORAS?
+Os serviços de Assistência 24 Horas disponíveis nos planos 100km, 200km ou 1000km,
+devem ser solicitados por intermédio do Aplicativo da Seguradora ou nossa Central de
+Atendimento 24 Horas ou quaisquer outros meios de comunicação estabelecidos pela
+Seguradora.
+Não há cobertura para acionamento de forma particular ou qualquer outra forma
+diferente da prevista acima, e sem a autorização prévia da Central de Atendimento 24
+Horas.
+1. AUTO SOCORRO POR PANE MECÂNICA OU ELÉTRICA
+1.1 Garantia
+Caso ocorra pane no Veículo Segurado que impeça sua locomoção, a cobertura de Auto
+Socorro disponibilizará o socorro mecânico e/ou elétrico, desde que tecnicamente possível,
+para realizar o reparo paliativo do Veículo Segurado no próprio local. Se não for possível o
+reparo paliativo no próprio local, o Veículo Segurado será rebocado pela Seguradora até uma
+oficina capaz de fazê-lo, limitado ao raio contratado para a cobertura de Guincho, devidamente
+especificado no Bilhete.
+Os prestadores de serviços indicados pela Seguradora serão orientados a não efetuar o
+rompimento de lacres colocados pela montadora do veículo quando este estiver dentro do
+período de garantia de fábrica.
+A cobertura garante a mão-de-obra do prestador de serviços no momento do atendimento
+emergencial. Os demais custos, tais como aqueles decorrentes de substituição de peças,
+serão de inteira responsabilidade do Segurado.
+Esta cobertura somente poderá ser contratada para veículos de passeio e desde que
+contratada conjuntamente com a cobertura de Guincho.
+A abrangência territorial desta cobertura é nacional.
+2. GUINCHO
+2.1 Garantia
+Em caso de pane ou ocorrendo uma colisão, abalroamento, capotamento, incêndio,
+alagamento que impeça a locomoção do Veículo Segurado e na impossibilidade de resolução
+do problema no próprio local, a cobertura de Guincho garantirá o reboque do Veículo Segurado
+pela Seguradora até uma oficina ou concessionária para reparos, dentro do raio máximo
+contratado.
+Não havendo oficina ou concessionária em funcionamento no momento do atendimento, o
+Veículo Segurado será rebocado para guarda até nova remoção ao destino indicado. Caso o
+Veículo Segurado seja rebocado para local indicado pelo Segurado, a guarda e seus custos
+até o momento da nova remoção serão de responsabilidade integral do Segurado. Caso aja a
+necessidade de uma segunda remoção em que o ponto de partida seja o local para onde o
+66
+
+===== PAGE 67 =====
+Veículo Segurado foi direcionado na primeira remoção e o destino seja uma oficina,
+concessionária ou outro local de escolha do Segurado, a segunda remoção poderá ser
+realizada, respeitado o limite de raio de até 100 (cem) km, sem que essa segunda remoção
+seja descontada dos limites contratados.
+A abrangência territorial desta cobertura é nacional.
+3. TROCA DE PNEUS
+3.1 Garantia
+Na ocorrência de dano a um dos pneus do Veículo Segurado que impeça sua locomoção, a
+cobertura de Troca de Pneus assegurará um profissional para realizar a troca do mesmo no
+local, mediante a existência do estepe do pneu em perfeitas condições para procedimento. Se
+não for possível a troca do pneu do Veículo Segurado no próprio local, este será rebocado
+pela Seguradora até uma oficina de indicação do Segurado, respeitando o limite de
+quilometragem contratado para a cobertura de Guincho.
+Está coberta a mão-de-obra do profissional. Os demais custos, tais como, conserto do pneu,
+câmara, aro e outras peças, serão de responsabilidade do Segurado.
+Esta cobertura somente poderá ser contratada para veículos de passeio.
+A abrangência territorial desta cobertura é nacional.
+4. CHAVEIRO
+4.1 Garantia
+Estão cobertos a perda ou esquecimento das chaves no interior do Veículo Segurado ou
+quebra da chave na ignição, fechadura ou na tranca de direção, que impeça a locomoção do
+Veículo Segurado. Esta cobertura, desde que tecnicamente possível, realizará a abertura do
+veículo, sem arrombamento e sem danos.
+Se não for possível a solução do problema no próprio local ou se o Veículo Segurado possuir
+chave codificada, o mesmo poderá ser rebocado pela Seguradora até uma oficina de
+indicação do Segurado, respeitando o limite de quilometragem contratado para a cobertura de
+Guincho.
+Esta cobertura não garantirá a utilização de utensílios especiais e/ou códigos eletrônicos para
+a abertura do Veículo Segurado. Os demais custos, tais como, confecção de cópias
+suplementares de chaves, peças para troca, conserto da fechadura, ignição, trancas ou de
+quaisquer outros materiais, serão de inteira responsabilidade do Segurado.
+Esta cobertura somente poderá ser contratada para veículos de passeio.
+A abrangência territorial desta cobertura é nacional.
+67
+
+===== PAGE 68 =====
+5. PANE SECA
+5.1 Garantia
+Ocorrendo a falta de combustível que impossibilite a locomoção do Veículo Segurado, a
+cobertura de Pane Seca, quando contratada, garantirá o reboque até o posto de
+abastecimento mais próximo do local da ocorrência, respeitando o limite de quilometragem
+contratado para a cobertura de Guincho.
+Os custos decorrentes da pane seca, inclusive com o combustível, serão de inteira
+responsabilidade do Segurado.
+Esta cobertura somente poderá ser contratada para veículos de passeio.
+A Abrangência territorial desta cobertura é nacional.
+6. MEIO DE TRANSPORTE ALTERNATIVO
+6.1 Garantia
+Após ocorrência de pane sem a possibilidade de circulação regular do Veículo Segurado, a
+critério exclusivo da Seguradora, e/ou Sinistro identificado que impeça a locomoção do
+Segurado e respeitando a regra de uma distância superior a 50 (cinquenta) quilômetros do
+CEP de Pernoite do Veículo Segurado, a cobertura de Meio de Transporte Alternativo
+disponibilizará a partir do local do evento um meio de transporte para o destino mais próximo,
+seja o retorno ao domicílio do Segurado ou chegada ao destino da viagem. Caso o Segurado
+opte pela maior distância, será de sua responsabilidade o pagamento da totalidade dos custos.
+O meio de transporte será disponibilizado para todos os ocupantes do Veículo Segurado,
+respeitando a sua capacidade máxima.
+O meio de transporte deverá ser condizente com as necessidades de lotação e trajeto,
+podendo ser terrestre (táxi, Uber ou veículos particulares de transporte de passageiros) para
+distancias de até 400 (quatrocentos) quilômetros ou aéreo para distancias superiores a 400
+(quatrocentos) quilômetros do destino.
+Esta cobertura somente poderá ser contratada para veículos de passeio.
+A abrangência territorial desta cobertura é nacional.
+7. TRANSPORTE PARA RECUPERAÇÃO DO VEÍCULO
+7.1 Garantia
+Esta garantia está condicionada a utilização da cobertura de Meio de Transporte Alternativo
+por pane ou Sinistro e disponibiliza ao Segurado ou pessoa por ele designada, um meio de
+transporte para buscar o Veículo Segurado após seu reparo ou localização nos casos de
+Roubo e Furto, respeitando a regra de uma distância superior a 50 (cinquenta) quilômetros do
+CEP de Pernoite do Veículo Segurado. O trecho coberto compreende desde o domicílio do
+68
+
+===== PAGE 69 =====
+Segurado até o local da retirada do Veículo Segurado. Não haverá cobertura quando a pane
+ou Sinistro ocorrer dentro do município de domicílio do Segurado.
+O meio de transporte deverá ser condizente com as necessidades de lotação e trajeto,
+podendo ser terrestre (táxi, Uber ou veículos particulares de transporte de passageiros) para
+distancias de até 400 (quatrocentos) quilômetros ou aéreo para distancias superiores a 400
+(quatrocentos) quilômetros do destino.
+Esta cobertura somente poderá ser contratada para veículos de passeio.
+A abrangência territorial desta cobertura é nacional.
+8 HOSPEDAGEM
+8.1 Garantia
+Esta garantia está condicionada a utilização das coberturas de Auto Socorro por Pane
+Mecânica ou Elétrica ou Guincho em decorrência de pane ou Sinistro a mais de 50 (cinquenta)
+km do CEP de Pernoite do Veículo Segurado.
+É necessário que o tempo necessário para o reparo do Veículo Segurado seja superior a 6
+(seis) horas.
+Caso não tenha oficina aberta no momento do evento, a cobertura de Hospedagem garantirá
+o pagamento de diárias de hospedagem na mesma cidade para a qual o Veículo Segurado foi
+rebocado, para os ocupantes do Veículo Segurado, respeitando sua capacidade máxima e de
+no máximo 2 (dois) quartos.
+Está incluído nesta cobertura o translado da oficina para o hotel. Os demais custos, tais como,
+telefonemas, restaurantes, frigobar, lavanderia e similares, são de inteira responsabilidade do
+Segurado.
+Esta cobertura somente poderá ser contratada para veículos de passeio.
+A abrangência territorial desta cobertura é nacional.
+69
+
+===== PAGE 70 =====
+ANEXO III - COBERTURA ADICIONAL DE VIDRO
+A cobertura de Vidros é cobertura adicional, disponível mediante o pagamento de Prêmio, e
+não poderá ser contratada isoladamente, devendo ser contratada em conjunto com uma das
+coberturas básicas previstas nestas Condições Gerais.
+Poderá ser contratado o Plano Básico ou o Plano Completo, condicionados aos limites de
+utilização e/ou aos Limites Máximos de Indenização estabelecidos nestas Condições Gerais.
+1 VIDROS BÁSICO
+1.1 Garantia
+a) Vidros sem blindagem - Reparo do para-brisa (quando possível), ou a reposição dos
+vidros laterais, para-brisa e traseiro (vigia) do Veículo Segurado.
+Se necessária, será efetuada a substituição da guarnição somente dos vidros para-brisa e
+traseiro (vigia). Para os vidros laterais, não haverá substituição da guarnição. O prestador de
+serviços irá avaliar o dano do para-brisa para decidir se deverá ser reparado ou trocado.
+Nos casos de troca dos vidros, estrão inclusos:
+• Gravação do número do chassi;
+• Colocação de insulfilm/película no vidro substituído, em conformidade à legislação de
+trânsito, caso os vidros do carro tenham película aplicada.
+2 VIDROS COMPLETO
+2.1 Garantia
+Além dos serviços indicados no Vidros Básico, inclui-se nesta cobertura a reposição de:
+• Retrovisores externos e internos (lentes e carenagem), a substituição parcial ou de
+todos os itens danificados originais de fábrica.
+• Faróis convencionais, faróis de xenônio/led originais de fábrica, lanternas
+convencionais e lanternas de led originais de fábrica (lentes e lâmpadas).
+• Faróis auxiliares (milha ou neblina), originais de fábrica instalados no para-choque
+dianteiro.
+• Lanternas auxiliares traseira (com função de luz) originais de fábrica.
+• Máquina de vidro elétrica/manual: reparo ou substituição de todos os itens
+existentes exclusivamente na máquina de vidro: (hastes de elevação dos vidros de
+plástico ou metal, roldanas, cabo de aço e motor elétrico).
+3 VIDROS VIP
+3.1 Garantia
+70
+
+===== PAGE 71 =====
+Além dos serviços indicados no Vidros Completo, inclui-se nesta cobertura reparo de
+lataria e pintura a mão-de-obra para a reparação de danos à lataria do veículo segurado em
+caso de colisão acidental, desde que seja tecnicamente possível restaurar as características
+originais das peças.
+Estão cobertos apenas os danos que tenham sido causados em um único evento.
+Caso ocorram sinistros envolvendo vidros, lanternas, faróis ou retrovisores, e essas peças
+também sejam danificadas, o segurado poderá utilizar as assistências correspondentes de
+forma simultânea, arcando com a franquia aplicável a cada acionamento.
+Caso o valor da troca ultrapasse o limite monetário estabelecido no Bilhete ou nas condições
+gereais, o Segurado poderá optar por utilizar a assistência, pagando a franquia
+correspondente e o valor excedente diretamente à oficina.
+4 VIDROS BLINDADOS
+4.1 Garantia
+Além dos serviços indicados no Vidros Completo, está garantida, desde que contratada no
+Bilhete, a reposição de peças com as mesmas especificações técnicas do kit original de
+blindagem do veículo para o para-brisa, vidros laterais e traseiro (vigia), sendo dispensada a
+exigência de mesma marca de fabricação.
+Estão cobertos apenas os danos que tenham sido causados em um único evento.
+INFORMAÇÕES GERAIS DOS PLANOS DE VIDROS: BÁSICO, COMPLETO, VIP E
+BLINDADOS
+I. As peças repostas são de fabricantes com certificação ou homologação, que atendam
+o mercado de montadora no Brasil ou exterior, podendo não ser do mesmo fabricante
+instalado no Veículo Segurado.
+II. As peças repostas não estão condicionadas à existência da Logomarca do fabricante
+do Veículo Segurado ou qualquer marca, desenhos, assinaturas, símbolos, emblemas
+ou serigrafia que remeta a mesma, exceto se constar no Bilhete o Serviço de
+Logomarca.
+III. Para realizar o serviço será necessária a apresentação da peça avariada para
+constatação dos danos.
+IV. Será necessária em alguns casos, uma avaliação prévia do Veículo Segurado (vistoria)
+para constatação dos danos a fim de identificar a cobertura e/ou o tipo de peça correta,
+em virtude dos diversos modelos e particularidades de cada veículo.
+V. A troca ou reparo somente será realizado se não houver danos à lataria que impeçam
+o encaixe da peça.
+71
+
+===== PAGE 72 =====
+VI. O prazo de reposição da peça dependerá da disponibilidade no mercado de reposição
+nacional ou exterior.
+VII. O prazo para formalizar a abertura do atendimento é durante o período de vigência do
+Bilhete /Endosso.
+VIII. Serviços ou Prestação de Garantia realizados à revelia sem autorização ou
+conhecimento da Central de Atendimento ((11) 3512-7210) não serão reembolsados.
+IX. Na utilização dos serviços, o carro reserva não será concedido porque o evento não é
+considerado pane ou sinistro.
+X. É vedado o fornecimento de peças pela Seguradora para execução do serviço em loja
+não indicada pela Central de Atendimento ((11) 3512-7210).
+XI. Em caso de substituição de peças, as peças danificadas pertencerão a Seguradora.
+XII. Não será enviada Nota Fiscal de peças devido ser uma prestação de serviço sem
+nenhuma compra efetuada pelo segurado.
+XIII. Em caso de reembolso autorizado previamente pela Central de Atendimento ((11)
+3512-7210), o valor será fixado em moeda nacional “Real” (R$). Despesas com
+postagem não serão reembolsadas.
+XIV. Despesas extras não serão reembolsadas (custo com deslocamento, multa de trânsito,
+pedágio, estacionamento, combustível, hospedagem etc.).
+XV. Caberá exclusivamente a Central de Atendimento ((11) 3512-7210) avaliar a liberação
+do Serviço Móvel para os serviços previamente autorizados.
+XVI. A cada evento/acionamento (os serviços de vidros, retrovisores, faróis e/ou lanternas
+(convencional e/ou auxiliar)) estarão limitados a troca de até 3 (três) peças respeitando
+o limite máximo de utilização. Caso o limite tenha excedido, a solicitação não será
+liberada.
+XVII. Cola de secagem rápida ofertada pelo prestador de serviços: a aplicação é opcional e
+o custo é de responsabilidade do segurado.
+Abrangência territorial desta cobertura é nacional.
+PEÇAS E SERVIÇOS NÃO COBERTOS E VEÍCULOS NÃO COBERTOS
+As peças, serviços e veículos indicados na tabela abaixo NÃO ESTÃO COBERTOS:
+• Peças não originais de fábrica, adaptadas e/ou transformada de outros
+veículos, mesmo que vendidas em concessionária;
+• Peças que apresentem infiltração, desgaste natural dos componentes,
+Peças e mau funcionamento por pane elétrica ou ação química;
+Serviços
+Não • Calibragem ou configuração de sensores, câmeras e componentes dos
+sistemas de apoio à direção (ADAS) e/ou similares;
+Cobertos
+• Substituição de sensores, câmeras ou mecanismos;
+• Componentes, como canaletas, guarnição de vidros laterais, canaletas,
+frisos, borrachas, suportes, hastes de alumínio, pestanas e interruptores
+72
+
+===== PAGE 73 =====
+e similares, mesmo que tenham sido danificados ou furtados em
+consequência da quebra do vidro;
+• Reposição de peças que tenham sido roubadas ou furtadas;
+• Substituição por peças com logotipo do fabricante ou qualquer marca,
+desenho ou serigrafia que remeta à marca da fabricante de veículo,
+exceto quando contratada clausula específica para este fim;
+• Reparação da lataria, mesmo que seja para viabilizar a realização da
+substituição do vidro;
+• Teto solar ou tetos panorâmicos, exceto quando houver contratação
+específica desta cláusula;
+• Películas de segurança, películas instaladas no vidro para-brisa e/ou
+fora do padrão estabelecido pelo CONTRAN;
+• Peças que apresentem manchas, riscos, arranhões ou qualquer outro
+dano que não seja a quebra;
+• Vidros com tecnologia eletrocrômica (smart glass) ou demais tecnologias
+não disseminadas na frota brasileira;
+• Veículos com mais de 20 anos de fabricação;
+• Veículos adaptados, transformados, off-road e motor homes;
+• Veículos utilizados para lotação, transporte coletivo, teste drive ou
+similar;
+• Ônibus e micro-ônibus;
+• Máquinas de linha amarela, como tratores, empilhadeiras e
+Veículos
+escavadeiras;
+Não
+Cobertos • Veículos de competição;
+• Veículos de importação independente;
+• Veículos blindados pela montadora (blindados de fábrica);
+• Veículos avaliados pela Tabela FIPE em valor superior a R$300.000,00
+• Veículos blindados, exceto quando contratada cláusula específica;
+• Veículos com sinistro de casco aberto.
+3 PROCEDIMENTOS PARA UTILIZAÇÃO
+Os atendimentos referentes ao Plano Básico ou Completo devem ser solicitados,
+exclusivamente, por intermédio do Aplicativo da Seguradora, da nossa Central de Atendimento
+73
+
+===== PAGE 74 =====
+((11) 3512-7210), ou qualquer outro canal disponibilizado pela Darwin, que fará a análise do
+evento e indicará a loja que executará o serviço.
+4 LIMITE DE UTILIZAÇÃO
+Todos os serviços são limitados a (i) 1 (uma) utilização por período de vigência do Bilhete e
+(ii) 3 (três) utilizações, por Segurado e/ou Veículo Segurado, em um período de 12 meses, ou
+aos Limites Máximos de Indenização estabelecidos nestas Condições Gerais para a Cobertura
+Adicional de Vidros.
+Serviços Limites de Utilização a cada 12 (doze)
+meses ininterruptos de vigência do
+seguro*
+Reparo dos Vidros Sem limite
+Para-brisa, Laterais, Traseiro (Vigia) Sem limite
+Retrovisor (Interno e Externo) 2 (duas) peças
+Faróis e/ou Lanternas não integrados 2 (duas) peças
+(bipartidas) são contados separadamente
+Faróis Auxiliares (Milha/Neblina) instalados 2 (duas) peças
+no para-choque dianteiro
+Lanterna Auxiliar Traseira (com função de 1 (uma) peça
+luz)
+Máquina do Vidro elétrico 1 (uma) utilização
+*será vedada mais de uma utilização dentro do mesmo período de vigência do Bilhete
+Reparo a lataria e pintura 1 (uma) utilização (limitado a R$ 1.000,00)
+5 FRANQUIAS
+a) As Franquias referentes aos Planos Básico, Completo, VIP e Blindados estarão
+expressas no Bilhete.
+b) Será aplicada uma Franquia para cada peça trocada.
+c) O reparo dos vidros não tem Franquia.
+d) Será aplicada uma Franquia para troca ou reparo da máquina de vidro.
+e) Em caso de dano parcial ao retrovisor externo, será substituída apenas as peças
+quebradas ou trincadas e será aplicada a Franquia.
+f) Troca exclusiva da lente do retrovisor não tem Franquia.
+74
+
+===== PAGE 75 =====
+ANEXO IV - COBERTURA CARRO RESERVA
+A cobertura de Carro Reserva é cobertura adicional, disponível mediante o pagamento de
+Prêmio, e não poderá ser contratada isoladamente, devendo ser contratada em conjunto com
+uma das coberturas básicas previstas nestas Condições Gerais.
+1. CARRO RESERVA
+1.1 Garantia
+Esta cobertura estará disponível para os Segurados que optaram pela contratação de diárias
+de carro reserva e na ocorrência de Sinistro indenizável, ou seja, desde que os reparos
+estejam autorizados, no caso de perda parcial, ou, montante dos danos caracterizem
+Indenização Integral do Veículo Segurado ou ainda nos casos de Roubo e Furto, mediante a
+abertura de Sinistro e apresentação de Boletim de Ocorrência.
+Quando contratado o carro reserva, a sua permanência será de 7 (sete) ou 15 (quinze) diárias.
+Segurados que não selecionarem diárias de carro reserva na contratação da Assistência 24
+Horas não terão direito a esta cobertura.
+A cobertura de Carro Reserva garantirá a locação de um veículo reserva de acordo com os
+limites estipulados no Bilhete em caso de Sinistro decorrente de colisão, abalroamento,
+capotamento, incêndio, alagamento, Roubo ou Furto – excluindo-se casos de pane ao Veículo
+Segurado.
+IMPORTANTE: A utilização do carro reserva por meio de locação em locadora parceira
+da Darwin Seguros deverá observar as seguintes disposições:
+A locação se dará de acordo com o limite contratado no Bilhete, podendo ser um veículo
+Básico 1.0 com ar-condicionado.
+Não será aplicável aos Sinistros cujo orçamento de reparação ficar abaixo do valor da
+Franquia de casco estipulada no Bilhete, para Avisos de Sinistro que forem cancelados
+pelo Segurado ou para Sinistro aberto apenas para constatação de danos e sem
+prosseguimento.
+A utilização desta cobertura não será possível no caso de acionamento de Sinistro,
+exclusivamente, de vidros.
+O carro reserva estará disponível exclusivamente para o período de reparo do Veículo
+Segurado ou até seu pagamento em caso de Indenização Integral, respeitados os limites
+contratados.
+A contagem de diárias ocorrerá de maneira diferenciada de acordo com o tipo de
+Sinistro, sempre considerando o limite de diárias contratado no Bilhete:
+a) Indenização Parcial: Data da entrega do veículo locado ao Segurado até a liberação,
+pela Oficina Referenciada, do Veículo Segurado reparado ou até o pagamento da
+Indenização Parcial;
+b) Indenização Integral: Data da entrega do veículo locado ao Segurado até o pagamento
+da Indenização Integral.
+75
+
+===== PAGE 76 =====
+Nos casos em que o pagamento da Indenização Integral ou o término da
+indisponibilidade do Veículo Segurado ocorram antes de esgotado o limite máximo de
+diárias contratadas, o carro reserva deverá ser devolvido.
+A não entrega nesta data implicará em responsabilidade direta do Segurado ou da
+pessoa indicada no contrato de locação, pelo pagamento das diárias excedentes.
+Quando esgotadas as diárias concedidas, o Segurado poderá permanecer com o
+veículo pelo tempo que julgar necessário, entretanto deverá efetuar a solicitação da
+prorrogação à locadora antes do término do período de locação. Neste caso, os custos
+das diárias passarão a correr por conta do Segurado, podendo ser concedido desconto
+especial sob o valor da diária.
+A cada Sinistro, as diárias de locação que o Segurado utilizar serão deduzidas do total
+de diárias contratadas para esta cobertura.
+A cobertura de Carro Reserva deverá ser acionada posteriormente ao Aviso de Sinistro
+coberto que deu causa à indisponibilidade do Veículo Segurado, junto ao Aplicativo da
+Seguradora ou à Central de Atendimento 24 Horas da Seguradora, e desde que o Veículo
+Segurado esteja na Oficina Referenciada para realização do conserto, exceto nos casos
+de Roubo ou Furto total.
+O Segurado deverá observar as cláusulas e condições do contrato de aluguel de carros
+da locadora, que lhe será entregue juntamente com o veículo locado. O carro reserva
+será providenciado no prazo de até 24 (vinte e quatro) horas úteis, considerando o
+horário de ocorrência do evento, o horário de atendimento da locadora e a
+disponibilidade de veículos na loja indicada pela Central de Atendimento 24 Horas da
+Seguradora.
+A retirada do veículo deverá ser efetuada pessoalmente pelo Segurado, ascendentes,
+descendentes, cônjuge ou Principal Condutor.
+O carro locado deverá ser devolvido na mesma loja em que foi retirado. Caso contrário,
+o condutor será responsável pelo pagamento de taxa de retorno cobrada pela locadora.
+A locação do carro reserva somente poderá ser feita em nome de pessoa física maior
+de 18 (dezoito) anos, habilitada há pelo menos 2 (dois) anos e que esteja apta para
+conduzir o veículo segundo as leis de trânsito.
+O Segurado deverá prestar caução à locadora de veículos, via cartão de crédito com
+limite mínimo disponível, no valor a ser confirmado direto na locadora, a qual, a seu
+exclusivo critério, poderá fornecer opção diversa de caução, que deverá ser prestada
+impreterivelmente pela pessoa física solicitante do veículo.
+Caso o veículo seja utilizado por mais de um condutor, o Segurado será responsável
+pelo pagamento de taxa adicional estipulada pela locadora.
+Durante o período de utilização do veículo locado, o Segurado será responsável pelo
+pagamento de multas, combustível, franquia em caso de sinistro e demais custos extras
+cobrados pela locadora no ato da devolução. Em caso de dano ao carro reserva, o
+serviço de locação será suspenso até que as responsabilidades sobre o acidente sejam
+apuradas. Em caso de Sinistro sofrido pelo carro reserva, a cobertura de casco, parcial
+76
+
+===== PAGE 77 =====
+e total, e RCF-V do veículo estarão garantidas, desde que o Segurado participe com o
+valor da Franquia estipulada pela locadora. Na hipótese de o carro reserva causar danos
+a Terceiros, quando contratada a cobertura de RCF-V, a Seguradora arcará com
+eventuais prejuízos à Segundo Risco, até o Limite Máximo de Indenização (LMI) para a
+cobertura de RCF-V contratado no Bilhete do Veículo Segurado na Darwin Seguros.
+Caso o Segurado não tenha contratado a cobertura de RCF-V, deverá arcar com os
+prejuízos decorrentes dos danos causados a Terceiros, que excederem ao limite do
+seguro da locadora. Se, após o fornecimento do carro reserva, restar comprovado que
+o seguro não foi utilizado, em razão de:
+(i) os prejuízos apurados não superarem o valor da Franquia de casco;
+(ii) o seguro ter sido cancelado pelo Segurado ou seu representante;
+(iii) não ter havido a apresentação da documentação necessária para a regulação
+e liquidação do Sinistro;
+(iv) qualquer outro motivo, caberá ao Segurado arcar com os custos da locação
+junto à locadora, desde o primeiro dia.
+Esta cobertura somente poderá ser contratada para veículos de passeio.
+A cobertura adicional de Carro Reserva somente poderá ser contratada juntamente com a
+Cobertura Compreensiva Casco e Casco Simples.
+A abrangência territorial desta cobertura é nacional.
+Limite máximos
+Diárias Padrão do Veículo Reserva Limite por Limite por
+Diária Vigência
+7 Veículo básico com ar-condicionado R$ 60,00 R$ 520,00
+15 Veículo básico com ar-condicionado R$ 60,00 R$ 1.200,00
+30 Veículo básico com ar-condicionado R$ 60,00 R$1.800,00
+Os limites máximos de reembolso acima estabelecido dependem de aprovação prévia e
+expressa da Seguradora, mediante a apresentação obrigatória de nota fiscal, em nome do
+Segurado, emitida por locadora regularizada.
+77

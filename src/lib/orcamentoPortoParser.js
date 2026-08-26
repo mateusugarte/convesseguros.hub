@@ -1,0 +1,380 @@
+// ─── Parser de cotacao — familia Porto Seguro ──────────────────────────
+//
+// COBRE QUATRO SEGURADORAS COM UM PARSER SO. Porto Seguro, Azul Seguros, Itau
+// Seguros e Mitsui Sumitomo emitem o MESMO documento: mesmo CNPJ emissor
+// (61.198.164/0001-60), mesmo numero raiz de orcamento variando so o sufixo
+// (6065143265-0-2 Itau, -0-3 Mitsui, -0-4 Azul) e o mesmo cabecalho
+// "Versao Condicoes Gerais: CGxxx / <MARCA> TRADICIONAL e PROTECAO COMBINADA".
+// Azul e uma marca licenciada da Porto; o documento diz isso em letras miudas.
+//
+// A tabela de coberturas e lida por COORDENADA, nunca pelo texto plano — ver o
+// cabecalho de `pdfLayout.js` para o caso medido em que o texto plano troca
+// franquia por premio.
+//
+// O QUE ESTE MODULO NAO FAZ: nao inventa cobertura. Categoria que a cotacao nao
+// menciona sai ausente, vira NAO_INFORMADO em `montarCategorias` e BLOQUEIA a
+// geracao ate alguem confirmar. E o comportamento certo: as cotacoes desta
+// familia so listam o que foi contratado, entao silencio aqui e mesmo silencio,
+// nao ausencia de cobertura.
+
+import { agruparLinhas, celulaEm, colunasPeloCabecalho, fatiar } from './pdfLayout.js'
+import { criarCotacaoOrcamento, detectarTipoOperacao, humanizarCobertura } from './orcamentoComparativo.js'
+
+export const CNPJ_EMISSOR_PORTO = '61.198.164/0001-60'
+
+/** Marcas que emitem por este layout. A ordem importa: a mais especifica primeiro. */
+const MARCAS = [
+  { id: 'mitsui', nome: 'Mitsui Sumitomo Seguros', padrao: /MITSUI\s+SUMITOMO/i },
+  { id: 'azul', nome: 'Azul Seguros', padrao: /\bAZUL\s+(?:TRADICIONAL|SEGURO)/i },
+  { id: 'itau', nome: 'Itaú Seguros', padrao: /\bITA[ÚU]\s+TRADICIONAL/i },
+  { id: 'porto', nome: 'Porto Seguro', padrao: /PORTO\s+SEGURO/i },
+]
+
+const CABECALHO_TABELA = {
+  lmi: 'LMI (indenização)',
+  franquia: 'Franquia',
+  variacao: 'Var. de Opcionais',
+  depreciacao: 'Depreciação',
+  premio: 'Valor do Prêmio',
+}
+
+/**
+ * Reconhece se o documento e desta familia.
+ *
+ * Casa pelo CNPJ do emissor, nao pelo nome da marca: e o CNPJ que prova que o
+ * PDF saiu do sistema da Porto. A marca sozinha enganaria — "Porto Seguro"
+ * aparece dentro da cotacao da Azul, da Itau e da Mitsui.
+ */
+export function ehLayoutPorto(texto) {
+  const t = String(texto || '')
+  const cnpj = CNPJ_EMISSOR_PORTO.replace(/[^\d]/g, '')
+  return t.replace(/[^\d]/g, '').includes(cnpj)
+}
+
+export function detectarMarca(texto) {
+  const t = String(texto || '')
+  for (const marca of MARCAS) {
+    if (marca.padrao.test(t)) return marca
+  }
+  return null
+}
+
+// ─── Numeros ───────────────────────────────────────────────────────────
+
+/** "R$ 3.600,00" -> 3600. Devolve null para "-", "" e qualquer coisa sem digito. */
+export function moeda(texto) {
+  const t = String(texto ?? '').trim()
+  if (!t || t === '-' || t === '*') return null
+  const m = t.match(/-?[\d.]+,\d{2}/)
+  if (!m) return null
+  const n = Number(m[0].replace(/\./g, '').replace(',', '.'))
+  return Number.isFinite(n) ? n : null
+}
+
+/** "100.00%" -> 100. Aceita virgula tambem. */
+export function percentual(texto) {
+  const t = String(texto ?? '').trim()
+  const m = t.match(/(-?[\d.,]+)\s*%/)
+  if (!m) return null
+  const n = Number(m[1].replace(/\.(?=\d{3}\b)/g, '').replace(',', '.'))
+  return Number.isFinite(n) ? n : null
+}
+
+// ─── Tabela de coberturas ──────────────────────────────────────────────
+
+// Linhas que aparecem na regiao da tabela mas nao sao cobertura de auto.
+// "COBERTURAS RE" e o seguro residencial vendido junto — nao pertence ao
+// comparativo de auto e entrar aqui poluiria o card com incendio de imovel.
+const FIM_DA_TABELA_AUTO = 'COBERTURAS RE'
+
+const RUIDO = [
+  /^COBERTURAS/i, /^LMI/i, /^Franquia:/i, /^\*Franquias/i, /^CPF\/CNPJ/i,
+  /^Impresso/i, /^Uso Interno/i, /^Orçamento/i, /^Processo SUSEP/i,
+  /^Foram oferecidas/i, /^Em caso de indenização/i, /^Caso esta tabela/i,
+  /^\d+ evento/i, /^Os serviços/i, /^Pag\./i, /^Versão Condições/i,
+]
+
+const ehRuido = texto => !texto || RUIDO.some(r => r.test(texto))
+
+/**
+ * Coberturas de AUTO com LMI, franquia e premio, lidas por coluna.
+ *
+ * @param linhas saida de `agruparLinhas`
+ * @returns [{ nome_original_seguradora, valor_lmi, lmi_percentual, franquia, premio, incluida }]
+ */
+// Distancia maxima em Y para considerar que a linha de baixo e continuacao do
+// nome da cobertura acima. Medido: as continuacoes reais caem a 12-13pt, e o
+// paragrafo seguinte (nota de franquia) a 31pt. 16 separa os dois com folga.
+const CONTINUACAO_MAX_Y = 16
+
+export function extrairCoberturas(linhas) {
+  const colunas = colunasPeloCabecalho(linhas, CABECALHO_TABELA)
+  if (!colunas) return []
+
+  // So a parte de AUTO: da primeira linha "COBERTURAS" ate "COBERTURAS RE".
+  const regiao = fatiar(linhas, { de: 'COBERTURAS AUTO', ate: FIM_DA_TABELA_AUTO })
+  const fonte = regiao.length ? regiao : linhas
+
+  // Uma cobertura ocupa TRES linhas no PDF desta familia:
+  //
+  //   Vidros                                              <- rotulo do grupo
+  //   DANOS AOS VIDROS E RETROVISORES E  | ... | R$ 66,30  <- linha de dados
+  //   FARÓIS E LANTERNAS - REFERENCIADA                    <- resto do nome
+  //
+  // Ler so a linha de dados devolvia o nome cortado no meio ("DANOS AOS VIDROS
+  // E RETROVISORES E"), que e o texto que iria impresso no card do cliente.
+  const coberturas = []
+  let rotuloGrupo = ''
+  let ultima = null
+  let yUltima = 0
+
+  for (const linha of fonte) {
+    const primeira = linha.celulas[0]
+    if (!primeira || primeira.x > colunas.lmi - 60) continue   // nome fica a esquerda
+
+    const texto = primeira.texto
+    const premio = moeda(celulaEm(linha, colunas.premio))
+
+    if (premio == null) {
+      // Linha sem valor: ou e o resto do nome da cobertura anterior, ou e o
+      // rotulo do grupo da proxima. Quem decide e a distancia vertical.
+      if (ehRuido(texto) || linha.celulas.length > 1) { ultima = null; continue }
+      if (ultima && yUltima - linha.y <= CONTINUACAO_MAX_Y) {
+        ultima.nome_original_seguradora += ` ${texto}`
+        yUltima = linha.y
+      } else {
+        rotuloGrupo = texto
+        ultima = null
+      }
+      continue
+    }
+
+    if (ehRuido(texto)) { ultima = null; continue }
+
+    const lmiTexto = celulaEm(linha, colunas.lmi)
+    ultima = {
+      nome_original_seguradora: texto,
+      nome_padronizado: '',
+      grupo: rotuloGrupo,
+      valor_lmi: moeda(lmiTexto),
+      lmi_percentual: percentual(lmiTexto),
+      franquia: moeda(celulaEm(linha, colunas.franquia)),
+      premio,
+      incluida: true,
+      observacoes: '',
+    }
+    yUltima = linha.y
+    rotuloGrupo = ''
+    coberturas.push(ultima)
+  }
+
+  // `observacoes` e o que vai IMPRESSO no card, e so pode ser montada AGORA:
+  // o nome so esta completo depois que as linhas de continuacao foram juntadas
+  // acima. Compor dentro do laco truncava o texto do cliente em "Danos aos
+  // Vidros e Retrovisores e".
+  for (const cobertura of coberturas) cobertura.observacoes = comporObservacao(cobertura)
+
+  return coberturas
+}
+
+// ─── Campos fora da tabela ─────────────────────────────────────────────
+
+/**
+ * Indenizacao integral.
+ *
+ * O texto da familia Porto e sempre "Em caso de indenizacao integral, a mesma,
+ * sera de 100.00% do valor do veiculo referencia da tabela FIPE". Quando a
+ * frase nao aparece, devolve `incluida: null` — que BLOQUEIA a geracao. Nunca
+ * assume `false`: a spec proibe deduzir cobertura, nos dois sentidos.
+ */
+export function extrairIndenizacaoIntegral(texto) {
+  const t = String(texto || '')
+  const m = t.match(/indeniza[çc][ãa]o\s+integral[^.]{0,80}?([\d.,]+)\s*%\s*do valor do ve[íi]culo/i)
+  if (m) {
+    return { incluida: true, percentual_fipe: percentual(`${m[1]}%`), observacao: '' }
+  }
+  return { incluida: null, percentual_fipe: null, observacao: '' }
+}
+
+/** "Franquia: 50% da Obrigatória" -> tipo textual da franquia do casco. */
+export function extrairTipoFranquia(texto) {
+  const m = String(texto || '').match(/Franquia:\s*([^\n]{1,60}?)(?:\s{2,}|\s+Vidros|\s+LMI|$)/i)
+  return m ? m[1].trim() : ''
+}
+
+/** Bloco "Prêmio Total Líquido: IOF: Prêmio Total: R$ a + R$ b R$ c". */
+export function extrairValores(texto) {
+  const t = String(texto || '')
+  const m = t.match(/Pr[êe]mio Total L[íi]quido:\s*IOF:\s*Pr[êe]mio Total:\s*(R\$[\d.,\s]+)\+\s*(R\$[\d.,\s]+?)\s+(R\$[\d.,\s]+)/i)
+  if (!m) return { premio_liquido: null, iof: null, premio_total: null }
+  return { premio_liquido: moeda(m[1]), iof: moeda(m[2]), premio_total: moeda(m[3]) }
+}
+
+export function extrairDescontos(texto) {
+  const t = String(texto || '')
+  const i = t.search(/DESCONTOS APLICADOS NO OR[ÇC]AMENTO/i)
+  if (i < 0) return []
+  const trecho = t.slice(i, i + 700)
+  return [...trecho.matchAll(/(Desconto[^:]{1,70}):\s*([\d.,]+)\s*%/gi)]
+    .map(m => `${m[1].trim()}: ${m[2]}%`)
+}
+
+// Cada seguradora da familia batiza a assistencia 24h de um jeito e nenhuma
+// delas usa sempre a palavra "assistencia":
+//
+//   Azul   -> "ASSISTÊNCIA GRATUITA - 200 KM"
+//   Itaú   -> "ITAÚ ESSENCIAL 600 KM"
+//   Mitsui -> "34 - REDE REFERENCIADA - 400KM"
+//
+// O que os tres tem em comum e a quilometragem de reboque, que e exatamente o
+// que a assistencia 24h e nesta familia. Itens sem KM ("EXTENSÃO DE PERÍMETRO
+// BÁSICO", "COLETA DE DOCUMENTOS") sao beneficio, nao assistencia — e caem em
+// `servicos`, onde aparecem na linha "Beneficios adicionais" do card.
+const PADRAO_ASSISTENCIA = /ASSIST[ÊE]NCIA|\d+\s*KM\b/i
+
+/** Assistencia e beneficios do bloco "COBERTURAS ADICIONAIS, SERVICOS E BENEFICIOS". */
+export function extrairAdicionais(texto) {
+  const t = String(texto || '')
+  const cabecalho = t.match(/COBERTURAS ADICIONAIS, SERVI[ÇC]OS E BENEF[ÍI]CIOS/i)
+  if (!cabecalho) return { assistencias: [], servicos: [] }
+
+  // Recorta DEPOIS do cabecalho e ANTES do bloco de descontos. Sem os dois
+  // limites o proprio titulo da secao entrava na lista como se fosse item.
+  const inicio = cabecalho.index + cabecalho[0].length
+  const fim = t.slice(inicio).search(/DESCONTOS APLICADOS|FORMAS DE PAGAMENTO|CL[ÁA]USULAS/i)
+  const trecho = t.slice(inicio, fim >= 0 ? inicio + fim : inicio + 600)
+
+  const assistencias = []
+  const servicos = []
+  // Os itens vem como "<NOME> Gratuita". Cortar em toda ocorrencia da palavra
+  // nao serve: a Azul chama a assistencia de "ASSISTÊNCIA GRATUITA - 200 KM",
+  // e o corte ingenuo partia o item em "ASSISTÊNCIA" + "- 200 KM". O marcador
+  // so vale quando esta no FIM do item — ou seja, seguido do inicio do proximo
+  // (letra ou digito) ou do fim do trecho.
+  const ITEM = /(.+?)\s+(?:Gratuita|Contratada|Inclusa)(?=\s+[A-ZÀ-Ü0-9]|\s*$)/gi
+  for (const m of trecho.matchAll(ITEM)) {
+    const nome = m[1].replace(/\s+/g, ' ').trim()
+    if (!nome || nome.length < 4) continue
+    if (PADRAO_ASSISTENCIA.test(nome)) assistencias.push({ tipo: nome, incluida: true, detalhes: nome })
+    else servicos.push(nome)
+  }
+  return { assistencias, servicos }
+}
+
+// ─── Montagem ──────────────────────────────────────────────────────────
+
+/**
+ * Cotacao no schema da secao 5, a partir do layout posicionado + texto plano.
+ *
+ * O texto plano ainda serve para campo solto (frase corrida, bloco de valores);
+ * o que exige coluna vem do layout. Os dois vem do MESMO PDF, entao nao ha
+ * risco de misturar documentos.
+ *
+ * `seguradoraMeta` vem do cadastro: logo e cor SEMPRE do cadastro, nunca do PDF.
+ */
+export function parseCotacaoPorto({ itens = [], texto = '', seguradoraMeta = null } = {}) {
+  const linhas = agruparLinhas(itens)
+  const marca = detectarMarca(texto)
+  const cot = criarCotacaoOrcamento()
+
+  cot.seguradora = {
+    id: seguradoraMeta?.id ?? null,
+    nome: seguradoraMeta?.nome_canonico || marca?.nome || '',
+    logo_url: seguradoraMeta?.logo_url || '',
+    cor_destaque: seguradoraMeta?.cor_destaque || '',
+  }
+
+  const numero = texto.match(/Or[çc]amento:\s*([\d-]+)/i)
+  const validade = texto.match(/Or[çc]amento v[áa]lido[\s\S]{0,60}?(\d{2}\/\d{2}\/\d{4})/i)
+  const emissao = texto.match(/Realizado em\s*(\d{2}\/\d{2}\/\d{4})/i)
+  const operacao = texto.match(/Tipo de Opera[çc][ãa]o\s+([A-ZÀ-Ü\s]{3,40}?)\s+Segmento/i)
+
+  cot.cotacao = {
+    numero: numero ? numero[1] : '',
+    tipo_operacao: detectarTipoOperacao(operacao ? operacao[1] : texto) || '',
+    validade: paraIso(validade?.[1]),
+    data_emissao: paraIso(emissao?.[1]),
+  }
+
+  const cg = texto.match(/Vers[ãa]o Condi[çc][õo]es Gerais:\s*([A-Z0-9]+)/i)
+  if (cg) cot.condicoes_gerais = { referencia: `${cot.seguradora.nome} ${cg[1]}`.trim(), anexada_em: '' }
+
+  const condutor = texto.match(/Nome do principal Condutor:\s*([^:]{3,60}?)\s+CPF:/i)
+  const cpfCondutor = texto.match(/Nome do principal Condutor:[\s\S]{0,80}?CPF:\s*([\d.\-]{11,18})/i)
+  cot.condutor_principal = {
+    nome: condutor ? condutor[1].trim() : '',
+    cpf: cpfCondutor ? cpfCondutor[1] : '',
+    estado_civil: null,
+  }
+
+  const segurado = texto.match(/PROPONENTE\s+([A-ZÀ-Ü][A-ZÀ-Ü\s]{5,60}?)\s+\d{2}\/\d{2}\/\d{4}/)
+  const cpfSegurado = texto.match(/PROPONENTE[\s\S]{0,90}?(\d{3}\.\d{3}\.\d{3}-\d{2})/)
+  cot.segurado = {
+    nome: segurado ? segurado[1].trim() : '',
+    cpf_cnpj: cpfSegurado ? cpfSegurado[1] : '',
+    data_nascimento: null,
+  }
+
+  const placa = texto.match(/Placa\s+Chassi\s+([A-Z0-9]{7})/i)
+  const cep = texto.match(/CEP PERNOITE:\s*([\d-]{8,10})/i)
+  const uso = texto.match(/Tipo do Uso:\s*([A-ZÀ-Ü\s]{3,30}?)\s+(?:Possui|Seguro)/i)
+  const veiculo = texto.match(/Ano Fabrica[çc][ãa]o \/ Modelo[\s\S]{0,40}?-\s*-\s*([A-Z0-9][^\n]{4,50}?)\s+(\d{4})\s*\/\s*(\d{4})/i)
+
+  cot.veiculo = {
+    marca_modelo: veiculo ? veiculo[1].trim() : '',
+    ano_modelo: veiculo ? `${veiculo[2]}/${veiculo[3]}` : '',
+    placa: placa ? placa[1] : '',
+    uso: uso ? capitalizar(uso[1].trim()) : '',
+    cep_pernoite: cep ? cep[1] : '',
+    condutor_18_25: null,
+  }
+
+  const vig = texto.match(/Vig[êe]ncia\s*(\d{2}\/\d{2}\/\d{4})\s*at[ée]\s*(\d{2}\/\d{2}\/\d{4})/i)
+  cot.vigencia = { inicio: paraIso(vig?.[1]), fim: paraIso(vig?.[2]) }
+
+  const coberturas = extrairCoberturas(linhas)
+  const casco = coberturas.find(c => /casco|compreensiva/i.test(c.nome_original_seguradora))
+
+  cot.valores = {
+    ...extrairValores(texto),
+    premio_parcelado: '',
+    descontos_aplicados: extrairDescontos(texto),
+    franquia: casco?.franquia ?? null,
+    franquia_tipo: extrairTipoFranquia(texto),
+  }
+
+  cot.indenizacao_integral = extrairIndenizacaoIntegral(texto)
+  cot.coberturas = coberturas
+
+  const adicionais = extrairAdicionais(texto)
+  cot.assistencias = adicionais.assistencias
+  cot.servicos_adicionais = adicionais.servicos
+
+  return cot
+}
+
+/** "RCF-V DANOS CORPORAIS" + LMI 100000 -> "RCF-V Danos Corporais: R$ 100.000,00". */
+export function comporObservacao(cobertura) {
+  const nome = humanizar(cobertura?.nome_original_seguradora)
+  const lmi = cobertura?.valor_lmi
+  if (lmi != null) return `${nome}: ${moedaBR(lmi)}`
+  return nome
+}
+
+// Reexportado para nao quebrar quem ja importa daqui; a implementacao vive
+// em `orcamentoComparativo.js` porque os parsers de HDI e Porto usam a mesma.
+export const humanizar = humanizarCobertura
+
+function moedaBR(valor) {
+  return `R$ ${Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+function paraIso(br) {
+  const m = String(br || '').match(/(\d{2})\/(\d{2})\/(\d{4})/)
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : ''
+}
+
+function capitalizar(texto) {
+  const t = String(texto || '').toLowerCase().trim()
+  return t ? t[0].toUpperCase() + t.slice(1) : ''
+}

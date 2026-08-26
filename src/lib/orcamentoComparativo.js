@@ -66,6 +66,40 @@ export function normalizarTexto(valor) {
     .trim()
 }
 
+// Siglas do ramo que precisam continuar em caixa alta quando o nome cru da
+// seguradora, que vem em CAIXA ALTA, e convertido para o documento do cliente.
+// Lista explicita em vez de regra por tamanho: "RCF-V" tem 4 letras e "DANOS"
+// tem 5, entao qualquer limite de comprimento erra um dos dois — e errar
+// produzia "Rcf-v Danos Corporais" impresso para o cliente.
+const SIGLAS_RAMO = new Set(['RCF', 'RCF-V', 'RCFV', 'LMI', 'IOF', 'APP', 'DPVAT', 'RE', 'KM', 'CG', 'SUSEP', 'CR', 'HDI'])
+
+const PALAVRAS_MINUSCULAS = new Set([
+  'de', 'da', 'do', 'das', 'dos', 'e', 'a', 'o', 'as', 'os', 'ao', 'aos',
+  'em', 'ou', 'no', 'na', 'nos', 'nas', 'com', 'por', 'para',
+])
+
+/**
+ * Nome de cobertura em caixa alta -> caixa mista legivel.
+ *
+ * Compartilhado pelos parsers porque toda seguradora imprime o nome da
+ * cobertura em caixa alta e o comparativo vai para o cliente. Nome que ja vem
+ * em caixa mista fica como esta: foi a seguradora que escolheu assim.
+ */
+export function humanizarCobertura(texto) {
+  const t = String(texto || '').trim().replace(/\s+/g, ' ')
+  if (!t || t !== t.toUpperCase()) return t
+
+  return t.split(' ').map((palavra, i) => {
+    const nu = palavra.replace(/[^A-Za-zÀ-Ü0-9-]/g, '')
+    if (!nu) return palavra
+    if (SIGLAS_RAMO.has(nu.toUpperCase())) return nu.toUpperCase()
+    if (!/[A-Za-zÀ-Ü]/.test(nu)) return palavra
+    const min = palavra.toLowerCase()
+    if (i > 0 && PALAVRAS_MINUSCULAS.has(min)) return min
+    return min[0].toUpperCase() + min.slice(1)
+  }).join(' ')
+}
+
 // ─── Dicionario de equivalencia de coberturas ──────────────────────────
 //
 // Spec secao 4: seguradoras diferentes nomeiam a mesma cobertura de formas
@@ -99,7 +133,11 @@ export const DICIONARIO_COBERTURAS = [
   ] },
   { categoria: 'terceiros', termos: [
     'rcf-v', 'rcf v', 'rcfv', 'responsabilidade civil', 'danos a terceiros',
-    'danos materiais', 'danos corporais', 'danos morais', 'custas de defesa',
+    'danos materiais', 'danos corporais', 'danos morais',
+    // A familia Porto escreve "CUSTOS DE DEFESA AUTO"; o mockup trazia "custas
+    // de defesa". Sem as duas grafias o item caia em "Beneficios adicionais",
+    // como se defesa juridica fosse um mimo, e nao cobertura de terceiros.
+    'custas de defesa', 'custos de defesa',
     'terceiros',
   ] },
   { categoria: 'colisao', termos: [
@@ -111,6 +149,12 @@ export const DICIONARIO_COBERTURAS = [
     'leva e traz', 'leva-e-traz', 'residencia', 'lampada', 'pneu',
     'desconto na franquia', 'clube', 'beneficio', 'servicos gratuitos',
     'rede propria', 'oficina',
+    // Acidentes Pessoais de Passageiros. Nao tem categoria propria entre as 7,
+    // e "adicional" e onde ela pertence — mas precisa estar AQUI, e nao cair no
+    // balde por falta de classificacao: cobertura que cai por omissao dispara
+    // o aviso de "nao classificada", e um aviso que sempre aparece deixa de
+    // ser lido. Ver `validarCotacao`.
+    'app morte', 'app invalidez', 'acidentes pessoais', 'app ',
   ] },
 ]
 
@@ -164,6 +208,12 @@ export function criarCotacaoOrcamento(patch = {}) {
     // Fato critico e explicito — nunca derivado do texto das coberturas.
     // `null` = o corretor ainda nao confirmou; a revisao trava nisso.
     indenizacao_integral: { incluida: null, percentual_fipe: null, observacao: '' },
+    // Preenchido pelo parser quando o PDF cota MAIS DE UM produto e nao diz qual
+    // vale — a cotacao Allianz traz seis ofertas, a HDI traz duas modalidades.
+    // `{ campo, label, opcoes }`. Enquanto estiver setado, a geracao trava: o
+    // premio e as coberturas mudam de opcao para opcao, e escolher por conta
+    // propria poria numero errado num documento que vai para o cliente.
+    escolha_pendente: null,
     coberturas: [],
     assistencias: [],
     servicos_adicionais: [],
@@ -233,6 +283,21 @@ export const CORES_SEGURADORA_PADRAO = {
   'sul america': '#e30613',
   'yelum': '#00a0af',
   'yelum seguros': '#00a0af',
+  // Amostrada da logo embutida no proprio PDF de cotacao (25/08/2026): o azul
+  // marinho aparece com o vermelho #e00010 como cor secundaria da marca.
+  'mitsui': '#201060',
+  'mitsui sumitomo': '#201060',
+  'mitsui sumitomo seguros': '#201060',
+  // PROVISORIAS. O usuario informou em 25/08 que as duas marcas sao rosa, mas a
+  // logo de nenhuma das duas pode ser amostrada: no PDF de cotacao ela e
+  // vetorial, e o cadastro nao e legivel fora do app. Os dois hex abaixo foram
+  // escolhidos DENTRO do rosa e deliberadamente afastados um do outro, para que
+  // um comparativo Darwin x Pier continue legivel enquanto a cor real nao chega.
+  // Substituir por `seguradoras.cor_destaque` assim que o hex real for definido.
+  'darwin': '#c2185b',
+  'darwin seguros': '#c2185b',
+  'pier': '#ff4d8d',
+  'pier seguros': '#ff4d8d',
 }
 
 /** Papel no comparativo quando a seguradora nao tem cor propria cadastrada. */
@@ -240,11 +305,40 @@ export const CORES_FALLBACK = { atual: '#956e26', outra: '#1b4782' }
 
 export const TINTA = '#101f33'
 
+// Chaves ordenadas da mais longa para a mais curta: "mitsui sumitomo seguros"
+// precisa ser testada antes de "mitsui", senao a chave curta vence e uma
+// eventual divergencia de cor entre as duas passaria despercebida.
+const CHAVES_COR_POR_TAMANHO = Object.keys(CORES_SEGURADORA_PADRAO)
+  .sort((a, b) => b.length - a.length)
+
+/**
+ * Cor de destaque da seguradora.
+ *
+ * Precedencia: `cor_destaque` do cadastro > mapa por nome > fallback por papel.
+ *
+ * O casamento pelo mapa NAO e por igualdade exata de proposito. O nome vem de
+ * `seguradoras.nome_canonico`, que carrega razao social ("Mitsui Sumitomo
+ * Seguros S.A.", "Bradesco Auto/RE Companhia de Seguros"). Com igualdade exata
+ * esses nomes nao casavam e a cor caia no fallback por PAPEL — ou seja,
+ * inverter "atual" e "outra" trocava a cor da seguradora, exatamente o que a
+ * regra do modulo proibe. E um erro silencioso: sai um PDF com cor plausivel,
+ * so que errada. Por isso: exato primeiro, depois a chave mais longa contida
+ * no nome.
+ */
 export function corDaSeguradora(seguradora, papel = 'atual') {
   const explicita = String(seguradora?.cor_destaque || '').trim()
   if (/^#[0-9a-f]{6}$/i.test(explicita)) return explicita.toLowerCase()
-  const padrao = CORES_SEGURADORA_PADRAO[normalizarTexto(seguradora?.nome)]
-  return padrao || CORES_FALLBACK[papel] || CORES_FALLBACK.atual
+
+  const nome = normalizarTexto(seguradora?.nome)
+  if (!nome) return CORES_FALLBACK[papel] || CORES_FALLBACK.atual
+
+  const exata = CORES_SEGURADORA_PADRAO[nome]
+  if (exata) return exata
+
+  const contida = CHAVES_COR_POR_TAMANHO.find(chave => nome.includes(chave))
+  return (contida && CORES_SEGURADORA_PADRAO[contida])
+    || CORES_FALLBACK[papel]
+    || CORES_FALLBACK.atual
 }
 
 function hexParaRgb(hex) {
@@ -266,6 +360,34 @@ export function tomClaro(hex, forca = 0.72) {
 }
 
 /** Preto ou branco conforme a luminancia — para texto sobre a faixa colorida. */
+/**
+ * Distancia perceptual entre duas cores (0 = identicas, ~765 = opostas).
+ *
+ * Usa a aproximacao "redmean", que pesa os canais conforme a sensibilidade do
+ * olho — distancia euclidiana crua em RGB acha que #ff0000 e #00ff00 sao tao
+ * diferentes quanto dois azuis vizinhos, e nao sao.
+ */
+export function distanciaCor(hexA, hexB) {
+  const [r1, g1, b1] = hexParaRgb(hexA)
+  const [r2, g2, b2] = hexParaRgb(hexB)
+  const rm = (r1 + r2) / 2
+  const dr = r1 - r2, dg = g1 - g2, db = b1 - b2
+  return Math.sqrt(
+    (2 + rm / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256) * db * db,
+  )
+}
+
+/**
+ * Abaixo disso as duas faixas do comparativo ficam parecidas demais para o
+ * cliente distinguir de relance qual card e de qual seguradora — que e a unica
+ * funcao da cor no documento.
+ *
+ * Calibrado contra o par ja validado no mockup: Tokio x Porto da ~250. Duas
+ * seguradoras da mesma familia de cor (Darwin e Pier, as duas rosa) e o caso
+ * real que motivou o limite.
+ */
+export const DISTANCIA_COR_MINIMA = 120
+
 export function contrasteSobre(hex) {
   const [r, g, b] = hexParaRgb(hex)
   const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
@@ -340,30 +462,68 @@ export function textoColisao(cotacao) {
  * - categoria sem conteudo nao aparece no card (exceto as 6 fixas, que sempre
  *   aparecem, para os dois cards terem a mesma altura e a mesma ordem de leitura).
  */
-export function montarCard(cotacao, { papel = 'atual' } = {}) {
-  const cot = cotacao || criarCotacaoOrcamento()
-  const cor = corDaSeguradora(cot.seguradora, papel)
+// ─── Os tres estados de uma categoria de cobertura ─────────────────────
+//
+// Duas nao bastam. "Tem" e "nao tem" sao afirmacoes, e uma cotacao pode
+// simplesmente NAO DIZER — a maioria dos layouts so lista o que contratou.
+// Tratar esse silencio como "nao tem" e mentir na direcao oposta a de tratar
+// como "tem". Por isso o terceiro estado existe e BLOQUEIA a geracao ate
+// alguem confirmar, mesma mecanica que `indenizacao_integral: null` ja usava.
+export const ESTADO_COBERTURA = {
+  INCLUIDA: 'incluida',
+  NAO_INCLUIDA: 'nao_incluida',
+  NAO_INFORMADO: 'nao_informado',
+}
 
-  const porCategoria = new Map(CATEGORIA_KEYS.map(k => [k, []]))
-  const naoIncluso = [...(cot.nao_incluso || [])]
+const TEXTO_NAO_INCLUIDA = 'Não incluso nesta cotação.'
+const TEXTO_NAO_INFORMADO = 'A cotação não informa.'
+
+/**
+ * Estado das 7 categorias + o que sobrou para o painel "nao incluso".
+ *
+ * Vive fora de `montarCard` porque `validarCotacao` precisa exatamente do mesmo
+ * calculo: o que bloqueia a geracao e o estado das categorias, e as duas
+ * funcoes tem que concordar sobre ele. Duplicar a regra aqui e la seria criar
+ * o caso em que a revisao libera e o PDF sai com linha faltando.
+ */
+export function montarCategorias(cotacao) {
+  const cot = cotacao || criarCotacaoOrcamento()
+  const itensPor = new Map(CATEGORIA_KEYS.map(k => [k, []]))
+  const exclusoesPor = new Map(CATEGORIA_KEYS.map(k => [k, []]))
+  const naoIncluso = []
+
+  // Categoria "real" = a que o dicionario reconhece. `adicional` e o balde de
+  // sobra: um item que so caiu la nao prova ausencia de cobertura nenhuma, e
+  // por isso nao pode marcar categoria como NAO INCLUIDA.
+  const categoriaReal = nome => {
+    const key = classificarCobertura(nome)
+    return key && key !== CATEGORIA_OPCIONAL ? key : null
+  }
+
+  const excluir = (titulo, detalhe) => {
+    if (!titulo) return
+    const key = categoriaReal(titulo)
+    if (key) exclusoesPor.get(key).push({ titulo, detalhe: detalhe || '' })
+    else naoIncluso.push({ titulo, detalhe: detalhe || '' })
+  }
 
   for (const cobertura of cot.coberturas || []) {
     const nome = cobertura.nome_padronizado || cobertura.nome_original_seguradora
     if (cobertura.incluida === false) {
-      naoIncluso.push({ titulo: nome, detalhe: cobertura.observacoes || '' })
+      excluir(nome, cobertura.observacoes)
       continue
     }
     const categoria = cobertura.categoria || classificarCobertura(nome) || CATEGORIA_OPCIONAL
-    porCategoria.get(categoria)?.push(cobertura)
+    itensPor.get(categoria)?.push(cobertura)
   }
 
   for (const assistencia of cot.assistencias || []) {
     if (assistencia.incluida === false) {
-      naoIncluso.push({ titulo: assistencia.tipo, detalhe: assistencia.detalhes || '' })
+      excluir(assistencia.tipo, assistencia.detalhes)
       continue
     }
     const categoria = classificarCobertura(assistencia.tipo) || 'assistencia'
-    porCategoria.get(categoria)?.push({
+    itensPor.get(categoria)?.push({
       nome_padronizado: assistencia.tipo,
       observacoes: assistencia.detalhes || '',
       valor_lmi: null,
@@ -371,18 +531,57 @@ export function montarCard(cotacao, { papel = 'atual' } = {}) {
   }
 
   for (const servico of cot.servicos_adicionais || []) {
-    porCategoria.get(CATEGORIA_OPCIONAL).push({ nome_padronizado: servico, observacoes: '' })
+    itensPor.get(CATEGORIA_OPCIONAL).push({ nome_padronizado: servico, observacoes: '' })
   }
 
+  // A lista livre `nao_incluso` do schema tambem decide estado de categoria:
+  // "Carro reserva" listado ali e a cotacao dizendo que NAO tem carro reserva,
+  // e isso pertence a LINHA de carro reserva. Deixar so no painel do rodape
+  // manteria a linha em branco — exatamente o silencio que se quer eliminar.
+  for (const item of cot.nao_incluso || []) excluir(item?.titulo, item?.detalhe)
+
   const categorias = CATEGORIAS_COBERTURA.map(meta => {
-    const itens = porCategoria.get(meta.key) || []
+    const itens = itensPor.get(meta.key) || []
+    const exclusoes = exclusoesPor.get(meta.key) || []
+
     let texto
     if (meta.key === 'colisao') texto = textoColisao(cot)
     else if (meta.key === 'franquia') texto = textoFranquia(cot, itens)
-    else texto = itens.map(i => i.observacoes || i.nome_padronizado).filter(Boolean).join(' ')
+    // `nome_original_seguradora` fecha a cadeia de propósito. Sem ele, uma
+    // cobertura extraida sem observacao e sem nome padronizado — que e como o
+    // parser da familia Porto entrega, com o nome cru da seguradora — produzia
+    // texto vazio e a categoria caia em NAO_INFORMADO. Ou seja: a cobertura
+    // tinha sido lida corretamente do PDF e mesmo assim o card dizia que a
+    // cotacao nao informava, bloqueando a geracao sem motivo.
+    else texto = itens
+      .map(i => i.observacoes || i.nome_padronizado || i.nome_original_seguradora)
+      .filter(Boolean)
+      .join(' ')
 
-    return { ...meta, itens, texto, vazia: !texto }
-  }).filter(cat => cat.key !== CATEGORIA_OPCIONAL || !cat.vazia)
+    let estado = ESTADO_COBERTURA.INCLUIDA
+    if (!texto && exclusoes.length) {
+      estado = ESTADO_COBERTURA.NAO_INCLUIDA
+      texto = exclusoes.map(e => e.detalhe).filter(Boolean).join(' ') || TEXTO_NAO_INCLUIDA
+    } else if (!texto) {
+      estado = ESTADO_COBERTURA.NAO_INFORMADO
+      texto = TEXTO_NAO_INFORMADO
+    }
+
+    return { ...meta, itens, exclusoes, texto, estado, opcional: meta.key === CATEGORIA_OPCIONAL }
+  })
+    // "Beneficios adicionais" e a UNICA que pode sumir do card: nao ter
+    // beneficio extra nao e lacuna de cobertura, e a spec (secao 9, item 7) ja
+    // previa isso. As outras 6 sempre aparecem, nos dois cards, na mesma ordem
+    // — e o que faz as linhas alinharem lado a lado.
+    .filter(cat => !(cat.opcional && cat.estado !== ESTADO_COBERTURA.INCLUIDA))
+
+  return { categorias, naoIncluso }
+}
+
+export function montarCard(cotacao, { papel = 'atual' } = {}) {
+  const cot = cotacao || criarCotacaoOrcamento()
+  const cor = corDaSeguradora(cot.seguradora, papel)
+  const { categorias, naoIncluso } = montarCategorias(cot)
 
   return {
     papel,
@@ -400,7 +599,7 @@ export function montarCard(cotacao, { papel = 'atual' } = {}) {
       jovem_18_25: cot.veiculo?.condutor_18_25 || 'Não informado',
     },
     categorias,
-    nao_incluso: naoIncluso.filter(item => item.titulo),
+    nao_incluso: naoIncluso,
     valores: {
       total: cot.valores?.premio_total ?? null,
       total_formatado: formatarMoeda(cot.valores?.premio_total),
@@ -459,6 +658,9 @@ const CAMPOS_CRITICOS = [
   { caminho: 'cotacao.tipo_operacao',    label: 'Tipo de operação' },
 ]
 
+// Campos que so existem depois de escolhida a opcao, quando ha mais de uma.
+const DEPENDEM_DA_ESCOLHA = ['valores.premio_total']
+
 const CAMPOS_ATENCAO = [
   { caminho: 'cotacao.numero',           label: 'Número da cotação' },
   { caminho: 'cotacao.validade',         label: 'Validade da cotação' },
@@ -481,7 +683,26 @@ export function validarCotacao(cotacao) {
   const cot = cotacao || {}
   const pendencias = []
 
+  // Escolha de produto pendente: o premio, as coberturas, a indenizacao integral
+  // e o parcelamento dependem TODOS da opcao escolhida, e nenhum deles existe
+  // ainda. Cobrar cada um separadamente daria oito pendencias para um problema
+  // so — e as das categorias diriam "a cotacao nao informa", que seria mentira:
+  // a cotacao informa, so que uma vez por opcao. Aqui a pendencia e uma, e e a
+  // verdadeira. As checagens que NAO dependem da escolha continuam rodando, para
+  // o corretor ver tudo o que falta de uma vez.
+  const escolha = cot.escolha_pendente
+  if (escolha) {
+    pendencias.push({
+      caminho: `escolha.${escolha.campo || 'opcao'}`,
+      label: escolha.label || 'Esta cotação traz mais de uma opção; escolha qual vale',
+      opcoes: escolha.opcoes || [],
+      severidade: SEVERIDADE.CRITICO,
+      bloqueia: true,
+    })
+  }
+
   for (const campo of CAMPOS_CRITICOS) {
+    if (escolha && DEPENDEM_DA_ESCOLHA.includes(campo.caminho)) continue
     if (vazio(lerCaminho(cot, campo.caminho))) {
       pendencias.push({ ...campo, severidade: SEVERIDADE.CRITICO, bloqueia: true })
     }
@@ -490,6 +711,15 @@ export function validarCotacao(cotacao) {
   // A indenizacao integral e o unico campo que bloqueia mesmo tendo sido
   // "extraido": `null` significa que ninguem confirmou, e o texto do card muda
   // completamente entre incluida e nao incluida. Ver `textoColisao`.
+  if (escolha) {
+    // Nada abaixo daqui e verificavel antes da escolha.
+    return {
+      pendencias,
+      bloqueios: pendencias.filter(p => p.bloqueia),
+      podeGerar: false,
+    }
+  }
+
   if (cot.indenizacao_integral?.incluida == null) {
     pendencias.push({
       caminho: 'indenizacao_integral.incluida',
@@ -526,6 +756,22 @@ export function validarCotacao(cotacao) {
         bloqueia: false,
       })
     }
+  }
+
+  // Categoria que a cotacao nao mencionou. Antes esta linha simplesmente sumia
+  // do PDF, e o silencio chegava ao cliente como se fosse resposta — pior: o
+  // card do lado, que tinha a linha, ficava desalinhado, e comparar lado a lado
+  // e a unica funcao do documento. Agora bloqueia ate alguem dizer se tem ou
+  // nao tem. "Beneficios adicionais" nao entra aqui: `montarCategorias` ja a
+  // remove quando vazia, porque ausencia de beneficio extra nao e lacuna.
+  for (const cat of montarCategorias(cot).categorias) {
+    if (cat.estado !== ESTADO_COBERTURA.NAO_INFORMADO) continue
+    pendencias.push({
+      caminho: `coberturas.${cat.key}`,
+      label: `${cat.label} — a cotação não informa; confirme se tem ou não tem`,
+      severidade: SEVERIDADE.CRITICO,
+      bloqueia: true,
+    })
   }
 
   return {
@@ -570,6 +816,25 @@ export function montarComparativo({ atual, outra, referencia = '', emitidoEm = '
   conferir('veiculo.placa', 'Placa')
   conferir('veiculo.marca_modelo', 'Veículo')
 
+  const cards = [montarCard(cotAtual, { papel: 'atual' }), montarCard(cotOutra, { papel: 'outra' })]
+
+  // Duas seguradoras da mesma familia de cor deixam o comparativo ilegivel: a
+  // faixa colorida e o unico sinal que diz de relance qual card e de quem. Nao
+  // bloqueia a geracao — e problema de cadastro, nao de extracao, e o corretor
+  // pode ter motivo para seguir assim. Mas precisa aparecer na revisao, senao o
+  // PDF sai assim e ninguem percebe ate o cliente reclamar.
+  const distancia = distanciaCor(cards[0].seguradora.cor, cards[1].seguradora.cor)
+  const coresProximas = distancia < DISTANCIA_COR_MINIMA
+    ? {
+        distancia: Math.round(distancia),
+        minima: DISTANCIA_COR_MINIMA,
+        mensagem: `${cards[0].seguradora.nome || 'Seguradora atual'} e `
+          + `${cards[1].seguradora.nome || 'a outra seguradora'} têm cores de destaque `
+          + 'parecidas demais — os dois cards vão ficar difíceis de diferenciar. '
+          + 'Ajuste a cor de uma delas no cadastro.',
+      }
+    : null
+
   return {
     cabecalho: {
       referencia,
@@ -585,8 +850,9 @@ export function montarComparativo({ atual, outra, referencia = '', emitidoEm = '
       tipo_operacao: cotAtual.cotacao?.tipo_operacao || cotOutra.cotacao?.tipo_operacao || '',
       tipo_operacao_label: rotuloTipoOperacao(cotAtual.cotacao?.tipo_operacao || cotOutra.cotacao?.tipo_operacao),
     },
-    cards: [montarCard(cotAtual, { papel: 'atual' }), montarCard(cotOutra, { papel: 'outra' })],
+    cards,
     divergencias,
+    cores_proximas: coresProximas,
     validacao: {
       atual: validacaoAtual,
       outra: validacaoOutra,

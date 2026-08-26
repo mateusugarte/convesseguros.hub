@@ -1,0 +1,149 @@
+// Parser fixo da cotacao Pier. A pagina dos dois produtos e uma imagem
+// rasterizada (sem camada de texto), enquanto os dados do risco e a descricao
+// das coberturas continuam extraiveis. O parser nunca grava os numeros da
+// amostra como regra: exige o produto e deixa os valores raster pendentes para
+// OCR/revisao humana.
+
+import { agruparLinhas } from './pdfLayout.js'
+import { criarCotacaoOrcamento } from './orcamentoComparativo.js'
+import { exigirProduto, resultadoProdutos } from './orcamentoProdutos.js'
+import { formatarCep, moeda, paraIso, valorAbaixoRotulo } from './orcamentoParserUtils.js'
+
+export const PRODUTOS_PIER = [
+  { id: 'personalizado', label: 'Personalizado' },
+  { id: 'completo', label: 'Completo' },
+]
+
+export function ehLayoutPier(texto) {
+  const t = String(texto || '')
+  return /Mudando seu relacionamento\s+com seguros/i.test(t)
+    && /A Pier conta com assist[êe]ncia 24h/i.test(t)
+}
+
+export function listarProdutosPier() {
+  return resultadoProdutos('Pier Seguros', PRODUTOS_PIER)
+}
+
+export function parseCotacaoPier({
+  itens = [], texto = '', seguradoraMeta = null, produto = null, dadosProduto = null,
+} = {}) {
+  const escolhido = exigirProduto({ seguradora: 'Pier Seguros', produtos: PRODUTOS_PIER, selecionado: produto })
+  const linhas = agruparLinhas(itens)
+  const p3 = linhas.filter(l => l.pagina === 3)
+  const p5 = linhas.filter(l => l.pagina === 5)
+  const cot = criarCotacaoOrcamento()
+
+  cot.seguradora = {
+    id: seguradoraMeta?.id ?? null,
+    nome: seguradoraMeta?.nome_canonico || 'Pier Seguros',
+    logo_url: seguradoraMeta?.logo_url || '',
+    cor_destaque: seguradoraMeta?.cor_destaque || '',
+  }
+
+  const validade = texto.match(/v[áa]lida at[ée]\s+(\d{2}\/\d{2}\/\d{4})/i)
+  const tipo = valorAbaixoRotulo(p3, 'Tipo de cotação')
+  cot.cotacao = {
+    numero: '',
+    tipo_operacao: /nova?/i.test(tipo) ? 'novo' : (/renova/i.test(tipo) ? 'renovacao' : ''),
+    validade: paraIso(validade?.[1]),
+    data_emissao: '',
+  }
+  cot.segurado = {
+    nome: valorAbaixoRotulo(p3, 'Nome do segurado'),
+    cpf_cnpj: valorAbaixoRotulo(p3, 'CPF segurado'),
+    data_nascimento: null,
+  }
+  cot.condutor_principal = {
+    nome: valorAbaixoRotulo(p3, 'Nome do principal condutor'),
+    cpf: valorAbaixoRotulo(p3, 'CPF principal condutor'),
+    estado_civil: null,
+  }
+  cot.veiculo = {
+    marca_modelo: [valorAbaixoRotulo(p3, 'Fabricante'), valorAbaixoRotulo(p3, 'Modelo')].filter(Boolean).join(' '),
+    ano_modelo: valorAbaixoRotulo(p3, 'Ano'),
+    placa: valorAbaixoRotulo(p3, 'Placa do carro'),
+    uso: valorAbaixoRotulo(p3, 'Perfil de uso'),
+    cep_pernoite: formatarCep(valorAbaixoRotulo(p3, 'CEP pernoite')),
+    condutor_18_25: /^n[ãa]o$/i.test(valorAbaixoRotulo(p3, 'Outro condutor entre 18 e 25 anos?'))
+      ? 'Sem cobertura' : null,
+  }
+  cot.vigencia = { inicio: '', fim: '' }
+
+  const franquiaLinha = p5.find(l => /Franquia:/i.test(l.texto))
+  const franquia = moeda(franquiaLinha?.texto)
+  const preco = numeroOuNull(dadosProduto?.premio_total)
+  const liquido = numeroOuNull(dadosProduto?.premio_liquido)
+  const iof = numeroOuNull(dadosProduto?.iof)
+  cot.valores = {
+    premio_liquido: liquido,
+    iof,
+    premio_total: preco,
+    premio_parcelado: dadosProduto?.premio_parcelado || [
+      'Cartão de crédito: até 12x sem juros',
+      'Boleto: até 10x sem juros',
+    ],
+    descontos_aplicados: [],
+    franquia,
+    franquia_tipo: '',
+  }
+
+  cot.indenizacao_integral = {
+    incluida: true,
+    percentual_fipe: numeroOuNull(dadosProduto?.percentual_fipe),
+    observacao: 'A cotação descreve cobertura para perda total; o percentual está na página rasterizada do produto.',
+  }
+  cot.coberturas = [
+    {
+      nome_original_seguradora: 'Roubo, furto, perda total e danos parciais por colisão',
+      categoria: 'colisao', incluida: true,
+      observacoes: 'Roubo, furto, perda total, colisão e danos por causas naturais.',
+    },
+    {
+      nome_original_seguradora: 'Danos físicos, materiais e morais a terceiros',
+      categoria: 'terceiros', incluida: true,
+      observacoes: dadosProduto?.limite_terceiros
+        ? `Danos a terceiros: ${dadosProduto.limite_terceiros}.`
+        : 'Danos físicos, materiais e morais a terceiros; limites pendentes da página rasterizada.',
+    },
+    {
+      nome_original_seguradora: 'Assistência 24h', categoria: 'assistencia', incluida: true,
+      observacoes: 'Guincho, pane elétrica ou mecânica, falta de gasolina, chaveiro e troca de pneu — 3 acionamentos por ano.',
+    },
+    {
+      nome_original_seguradora: 'Vidros e faróis', categoria: 'vidros', incluida: true,
+      observacoes: 'Para-brisa, vidros laterais e traseiro, faróis, retrovisores e lanternas; sujeito a franquia.',
+    },
+  ]
+
+  // O produto completo da amostra inclui carro reserva e o personalizado nao,
+  // mas essa informacao mora na imagem. So vira afirmacao quando OCR/revisao a
+  // entregar — o nome do produto, sozinho, nao prova a cobertura.
+  if (dadosProduto?.carro_reserva === true) {
+    cot.coberturas.push({
+      nome_original_seguradora: 'Carro reserva', categoria: 'carro_reserva', incluida: true,
+      observacoes: dadosProduto.carro_reserva_detalhe || 'Carro reserva incluído.',
+    })
+  } else if (dadosProduto?.carro_reserva === false) {
+    cot.nao_incluso.push({ titulo: 'Carro reserva', detalhe: 'Não incluído no produto escolhido.' })
+  }
+
+  cot.assistencias = []
+  cot.servicos_adicionais = ['Peças novas', 'Livre escolha entre oficinas credenciadas ou indicadas pelo segurado']
+  cot.produto_selecionado = escolhido
+  cot.produtos_disponiveis = PRODUTOS_PIER.map(p => ({ ...p }))
+  cot.avisos_extracao = preco == null
+    ? [{
+        code: 'PAGINA_PRODUTO_RASTER',
+        mensagem: 'A página de preço e limites do produto não possui texto extraível. Execute OCR ou confirme os valores manualmente antes de gerar.',
+        bloqueia: true,
+      }]
+    : []
+  cot.condicoes_gerais = { referencia: 'Pier Seguro Auto', anexada_em: '' }
+  return cot
+}
+
+function numeroOuNull(valor) {
+  if (valor == null || valor === '') return null
+  const numero = typeof valor === 'number' ? valor : moeda(valor)
+  return Number.isFinite(numero) ? numero : null
+}

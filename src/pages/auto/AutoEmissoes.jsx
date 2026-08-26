@@ -69,6 +69,7 @@ const FORM_EMISSAO_VAZIO = {
   responsavel: '',
   eh_renovacao: false,
   tem_repasse: false,
+  valor_repasse: '',
   pct_repasse: '',
   nome_repasse: '',
   renovacao_premio_liquido_ano_anterior: '',
@@ -97,6 +98,7 @@ const FORM_MANUAL_VAZIO = {
   premio_liquido: '',
   pct_comissao: '',
   tem_repasse: false,
+  valor_repasse: '',
   pct_repasse: '',
   nome_repasse: '',
   forma_pagamento: '',
@@ -355,6 +357,7 @@ function getFormEmissaoInicial(emissao) {
     responsavel: emissao?.responsavel || '',
     eh_renovacao: Boolean(emissao?.eh_renovacao || c.tipo === 'renovacao'),
     tem_repasse: Boolean(emissao?.tem_repasse || seguradoraBase?.nome_repasse),
+    valor_repasse: emissao?.valor_repasse ?? '',
     pct_repasse: emissao?.pct_repasse || seguradoraBase?.pct_repasse || '',
     nome_repasse: emissao?.nome_repasse || seguradoraBase?.nome_repasse || '',
   }
@@ -1225,6 +1228,42 @@ function CampoTexto({ label, campo, value, onChange, type = 'text', placeholder 
   )
 }
 
+function PropostaTransmitidaFields({ form, onChange, valorComissao, tipo }) {
+  const setRepasse = (campo, value) => {
+    onChange(campo, value)
+    onChange('tem_repasse', Boolean(String(value || '').trim()))
+  }
+
+  return (
+    <div className="rounded-3xl border border-brand-accent/20 bg-brand-accent/5 p-4">
+      <div className="mb-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-status-info">Mesmos campos da planilha</p>
+        <p className="mt-1 text-xs text-dark-muted">Registre a transmissão agora; número da apólice e veículo continuam opcionais.</p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <CampoTexto label="Transmissão" campo="data_transmissao" type="date" value={form.data_transmissao} onChange={onChange} />
+        <CampoTexto label="Vigência" campo="vigencia_inicio" type="date" value={form.vigencia_inicio} onChange={onChange} />
+        <CampoTexto label="Segurado" campo="nome_cliente" value={form.nome_cliente} onChange={onChange} />
+        <CampoTexto label="Qnt. de parcelas" campo="parcelamento" value={form.parcelamento} onChange={onChange} placeholder="Ex.: 10x" />
+        <CampoTexto label="Seguradora" campo="seguradora" value={form.seguradora} onChange={onChange} />
+        <CampoTexto label="Prêmio líquido" campo="premio_liquido" value={form.premio_liquido} onChange={onChange} inputMode="decimal" />
+        <CampoTexto label="% Comissão" campo="pct_comissao" value={form.pct_comissao} onChange={onChange} inputMode="decimal" />
+        <CampoTexto label="Valor da comissão" campo="valor_comissao" value={valorComissao ? formatMoney(valorComissao) : ''} onChange={onChange} disabled />
+        <CampoTexto label="Repasse comissão" campo="valor_repasse" value={form.valor_repasse} onChange={setRepasse} inputMode="decimal" />
+        <CampoTexto label="Corretor" campo="responsavel" value={form.responsavel} onChange={onChange} />
+        <CampoTexto label="O que é" campo="tipo" value={AUTO_TIPO_META[tipo]?.label || 'Seguro novo'} onChange={onChange} disabled />
+        <CampoTexto label="Emissor" campo="emissor" value={form.emissor} onChange={onChange} />
+        <CampoTexto label="Status" campo="status" value="EM EMISSÃO" onChange={onChange} disabled />
+        <CampoTexto label="Nº apólice" campo="numero_apolice" value={form.numero_apolice} onChange={onChange} placeholder="Opcional nesta etapa" />
+        <CampoTexto label="Forma de pagamento" campo="forma_pagamento" value={form.forma_pagamento} onChange={onChange} />
+        <CampoTexto label="Veículo" campo="modelo_veiculo" value={form.modelo_veiculo} onChange={onChange} placeholder="Opcional" />
+        <CampoTexto label="Placa" campo="placa" value={form.placa} onChange={onChange} placeholder="Opcional" />
+        <CampoTexto label="WhatsApp" campo="celular_cliente" value={form.celular_cliente} onChange={onChange} />
+      </div>
+    </div>
+  )
+}
+
 const NOVA_LINHA_PLANILHA = {
   emissao_id: '', cotacao_id: '', data_transmissao: '', vigencia_inicio: '', nome_cliente: '',
   modelo_veiculo: '', parcelamento: '', seguradora: '', premio_liquido: '', pct_comissao: '',
@@ -1952,7 +1991,10 @@ export default function AutoEmissoes() {
   const premioLiquido = toNumber(form.premio_liquido) || 0
   const pctComissao = toNumber(form.pct_comissao) || 0
   const valorComissao = calcularValorComissaoAuto(premioLiquido, pctComissao)
-  const valorRepasse = form.tem_repasse ? valorComissao * (toNumber(form.pct_repasse) || 0) : 0
+  const valorRepasseDireto = toNumber(form.valor_repasse) || 0
+  const valorRepasse = form.tem_repasse
+    ? (valorRepasseDireto || valorComissao * (toNumber(form.pct_repasse) || 0))
+    : 0
 
   useEffect(() => {
     if (!form.vigencia_inicio) return
@@ -2531,7 +2573,9 @@ export default function AutoEmissoes() {
                     <FileText className="h-3.5 w-3.5" />
                     Emissao selecionada
                   </div>
-                  <h2 className="mt-4 text-2xl font-semibold text-dark-text">Emitir apolice</h2>
+                  <h2 className="mt-4 text-2xl font-semibold text-dark-text">
+                    {form.coluna === 'proposta_transmitida' ? 'Registrar proposta' : 'Emitir apólice'}
+                  </h2>
                   <p className="mt-2 text-sm leading-6 text-dark-muted">{modalEmissaoResumo?.cliente}</p>
 
                   <div className="mt-6 space-y-3">
@@ -2567,8 +2611,12 @@ export default function AutoEmissoes() {
               <div className="overflow-y-auto bg-dark-surface/70 p-6 md:p-7">
                 <div className="mb-5 flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Dados da apolice</p>
-                    <h3 className="mt-2 text-xl font-semibold text-dark-text">Preencher e confirmar emissao</h3>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">
+                      {form.coluna === 'proposta_transmitida' ? 'Dados da proposta' : 'Dados da apólice'}
+                    </p>
+                    <h3 className="mt-2 text-xl font-semibold text-dark-text">
+                      {form.coluna === 'proposta_transmitida' ? 'Registrar transmissão' : 'Preencher e confirmar emissão'}
+                    </h3>
                   </div>
                   <button
                     onClick={() => { setModalEmissao(null); setForm(FORM_EMISSAO_VAZIO); setEmissaoDocumento(null); if (emissaoFileRef.current) emissaoFileRef.current.value = '' }}
@@ -2626,6 +2674,14 @@ export default function AutoEmissoes() {
                       </div>
                     )}
                   </div>
+                  {form.coluna === 'proposta_transmitida' ? (
+                    <PropostaTransmitidaFields
+                      form={form}
+                      onChange={setField}
+                      valorComissao={valorComissao}
+                      tipo={tipoEmissaoModal}
+                    />
+                  ) : (<>
                   <div className="grid gap-4 md:grid-cols-2">
                     <CampoTexto label="Data de emissão" campo="data_emissao" value={form.data_emissao} onChange={setField} type="date" />
                     {tipoEmissaoModal === 'endosso' ? (
@@ -2828,6 +2884,7 @@ export default function AutoEmissoes() {
                       )}
                     </div>
                   )}
+                  </>)}
                 </div>
 
                 <div className="mt-6 flex gap-3 border-t border-dark-border/60 pt-5">

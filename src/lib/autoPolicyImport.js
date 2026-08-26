@@ -83,6 +83,18 @@ export function normalizePolicyImportPercentage(value) {
   return String(Math.abs(parsed) <= 1 ? parsed * 100 : parsed)
 }
 
+// A planilha pode representar tanto uma apolice ja concluida quanto um item
+// que ainda esta sendo emitido. Status vazio continua sendo tratado como
+// apolice emitida, pois o proprio fluxo e "Subir apolices"; somente uma
+// indicacao explicita de andamento mantem o card em Proposta transmitida.
+export function policyImportPipelineStage(statusValue) {
+  const status = normalizePolicyMatchText(statusValue)
+  if (status === 'em emissao' || status === 'emissao' || status === 'proposta transmitida') {
+    return 'proposta_transmitida'
+  }
+  return 'apolice_emitida'
+}
+
 export function summarizePolicyImportErrors(errors = []) {
   const counts = new Map()
   errors.forEach(error => {

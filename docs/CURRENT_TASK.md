@@ -1,5 +1,13 @@
 # CURRENT TASK
 
+## Importacao EM EMISSAO e arraste para Proposta transmitida AUTO (2026-08-26, Codex — CONCLUIDO)
+
+Responsavel: Codex, Agente de Sistemas. Entregue: a importacao agora interpreta a coluna STATUS; `EM EMISSAO` entra em Proposta transmitida e `EMITIDA` ou status vazio entra em Apolice emitida. A subida continua criando o registro contabilizavel sem exigir numero da apolice, veiculo ou status preenchido. O arraste para Proposta transmitida ganhou o mesmo conjunto de campos da planilha, com comissao calculada e repasse direto. A Dashboard passou a contabilizar Proposta transmitida + Apolice emitida pela data de transmissao e exibe Seguro novo, Renovacao e Endosso separadamente no resumo e no grafico. Planilha e seletores de data receberam estados de foco, status visual e controles mais claros.
+
+Validacao final: `npm test` com 501 testes aprovados e `npm run build` concluido. Permanecem somente os avisos preexistentes do pacote `xlsx` e do chunk dinamico de `orcamentoLeitura`. Proximo responsavel: usuario, para smoke test com uma linha EM EMISSAO, uma EMITIDA e um arraste real antes do push.
+
+---
+
 ## Prazo corrido de renovacoes e nomes na Visao Geral AUTO (2026-08-26, Codex — CONCLUIDO)
 
 Responsavel: Codex, Agente de Sistemas. Entregue: a data limite agora subtrai 10 dias corridos do vencimento e ajusta o resultado operacionalmente (sabado para sexta, domingo para segunda) em uma funcao unica do front-end e na migration `supabase/69_auto_renovacoes_prazo_corrido.sql`, que tambem recalcula a carteira existente. A Visao Geral/Central e a lista de cotacoes passaram a consultar o cliente vinculado e usar `clientes_auto.nome_completo` quando o nome duplicado da cotacao estiver vazio, preservando os nomes ja cadastrados.

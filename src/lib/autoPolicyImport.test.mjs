@@ -4,6 +4,7 @@ import {
   normalizePolicyImportIdentity,
   normalizePolicyImportPercentage,
   policyClientCandidates,
+  policyImportPipelineStage,
   policyImportRelationshipReady,
   summarizePolicyImportErrors,
   suggestPolicyVehicle,
@@ -62,6 +63,16 @@ test('converte percentual numerico do Excel sem reduzir 15% para 0,15%', () => {
   assert.equal(normalizePolicyImportPercentage(0.15), '15')
   assert.equal(normalizePolicyImportPercentage('15%'), '15')
   assert.equal(normalizePolicyImportPercentage('20,5%'), '20.5')
+})
+
+test('organiza status EM EMISSÃO como proposta transmitida', () => {
+  assert.equal(policyImportPipelineStage('EM EMISSÃO'), 'proposta_transmitida')
+  assert.equal(policyImportPipelineStage('em emissao'), 'proposta_transmitida')
+})
+
+test('status emitido ou vazio continua contabilizado como apólice emitida', () => {
+  assert.equal(policyImportPipelineStage('EMITIDA'), 'apolice_emitida')
+  assert.equal(policyImportPipelineStage(''), 'apolice_emitida')
 })
 
 test('agrupa os motivos das linhas ignoradas', () => {

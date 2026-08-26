@@ -2,12 +2,19 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   classificarRenovacoesPipeline,
+  countAutoEmissionTypes,
   parseRenovacoesPaste,
   renewalStatusFields,
   renewalStatusValue,
   scoreCotacaoSuggestion,
   suggestRenewalClientByName,
 } from './autoOperational.js'
+
+test('contabiliza seguro novo, renovação e endosso separadamente', () => {
+  assert.deepEqual(countAutoEmissionTypes([
+    { tipo: 'novo' }, { tipo: 'renovacao' }, { tipo: 'endosso' }, { tipo: 'novo' }, {},
+  ]), { novo: 3, renovacao: 1, endosso: 1 })
+})
 
 test('separa renovacoes futuras das que ja precisam ser enviadas', () => {
   const result = classificarRenovacoesPipeline([

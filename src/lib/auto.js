@@ -1,9 +1,9 @@
 import { supabase } from './supabase'
 import { limparNomeSegurado, normalizeCompareText, somarUmAno } from './autoHistoricoImport.js'
-import { normalizePolicyImportIdentity, policyImportHasVehicleData, policyImportRelationshipReady } from './autoPolicyImport.js'
+import { normalizePolicyImportIdentity, policyImportHasVehicleData, policyImportPipelineStage, policyImportRelationshipReady } from './autoPolicyImport.js'
 import { calcularDataLimiteRenovacao, calcularValorComissaoAuto } from './autoCalc.js'
 import { planejarExclusaoGrupoAuto } from './autoExclusao.js'
-import { renewalStatusFields } from './autoOperational.js'
+import { countAutoEmissionTypes, renewalStatusFields } from './autoOperational.js'
 import { buildAutoPendingNotifications } from './autoPending.js'
 import { isRenewalDateInMonth } from './autoRenewalImport.js'
 
@@ -786,8 +786,9 @@ export async function atualizarEmissaoAutoCompleta(payload) {
   const pctComissao = parseFloat(payload.pct_comissao) || 0
   const valorComissao = calcularValorComissaoAuto(premioLiquido, pctComissao)
   const comparativoRenovacao = buildRenewalComparisonPayload(payload, premioLiquido, valorComissao)
-  const valorRepasse = payload.tem_repasse && payload.pct_repasse
-    ? valorComissao * parseFloat(payload.pct_repasse)
+  const valorRepasseInformado = toFloatOrNull(payload.valor_repasse)
+  const valorRepasse = payload.tem_repasse
+    ? (valorRepasseInformado ?? (payload.pct_repasse ? valorComissao * parseFloat(payload.pct_repasse) : null))
     : null
 
   const emissaoPayload = {
@@ -923,8 +924,9 @@ export async function emitirApoliceAuto(payload) {
   const payloadComTipoDerivado = { ...payload, eh_renovacao: ehRenovacao }
   const comparativoRenovacao = buildRenewalComparisonPayload(payloadComTipoDerivado, premioLiquido, valorComissao)
 
-  const valorRepasse = payload.tem_repasse && payload.pct_repasse
-    ? valorComissao * parseFloat(payload.pct_repasse)
+  const valorRepasseInformado = toFloatOrNull(payload.valor_repasse)
+  const valorRepasse = payload.tem_repasse
+    ? (valorRepasseInformado ?? (payload.pct_repasse ? valorComissao * parseFloat(payload.pct_repasse) : null))
     : null
 
   const colunaDestino = payload.coluna || 'apolice_emitida'
@@ -1984,6 +1986,7 @@ export async function importarApolicesAutoPlanilha(rows = []) {
       const tipo = ['novo', 'renovacao', 'endosso'].includes(row.tipo) ? row.tipo : (row.eh_renovacao === false ? 'novo' : 'renovacao')
       const clienteId = await resolverClienteImportacaoApolice(row, nomeCliente)
       const statusRenovacao = normalizeStatusRenovacaoAuto(row.status)
+      const colunaPipeline = policyImportPipelineStage(row.status)
       const observacoes = [
         row.status ? `Status planilha: ${row.status}` : '',
         row.limite ? `Limite: ${row.limite}` : '',
@@ -2005,8 +2008,8 @@ export async function importarApolicesAutoPlanilha(rows = []) {
         cotacao_id: null,
         cliente_id: clienteId,
         tipo,
-        coluna: 'apolice_emitida',
-        data_transmissao: row.data_transmissao || row.data_emissao || null,
+        coluna: colunaPipeline,
+        data_transmissao: row.data_transmissao || row.data_emissao || new Date().toISOString().slice(0, 10),
         tipo_producao: row.tipo_producao || 'individual',
         responsavel: normalizeImportText(row.responsavel) || null,
         emissor: normalizeImportText(row.emissor) || null,
@@ -2429,7 +2432,7 @@ export async function getDashboardAutoMetrics({ mes } = {}) {
   const anoAnteriorFim = new Date(referencia.getFullYear() - 1, referencia.getMonth() + 1, 0).toISOString().split('T')[0]
 
   const [emissoes, cotacoesMes, renovadasMes, vencendoNoMes, vencendoProximoMes, apolicesMes, cotacoesConvertidas, renovacoesPendentes, renovacoesAnoAnterior] = await Promise.all([
-    supabase.from('apolices_auto').select('id, eh_renovacao').gte('created_at', inicio).lte('created_at', fim),
+    supabase.from('emissoes_auto').select('id, tipo').in('coluna', ['proposta_transmitida', 'apolice_emitida']).gte('data_transmissao', inicio).lte('data_transmissao', fim),
     supabase.from('cotacoes_auto').select('id').gte('created_at', inicio).lte('created_at', fim),
     supabase.from('renovacoes_auto').select('id').eq('status_renovacao', 'renovada').gte('created_at', inicio).lte('created_at', fim),
     supabase.from('renovacoes_auto').select('id').gte('vigencia_fim', inicio).lte('vigencia_fim', fim),
@@ -2442,6 +2445,7 @@ export async function getDashboardAutoMetrics({ mes } = {}) {
 
   const totalCotacoesMes = cotacoesMes.data?.length ?? 0
   const totalConvertidas = cotacoesConvertidas.data?.length ?? 0
+  const emissoesPorTipo = countAutoEmissionTypes(emissoes.data ?? [])
   const comissaoTotal = (apolicesMes.data ?? []).reduce((sum, item) => sum + (item.valor_comissao || 0), 0)
   const renovacoesMesAtual = (apolicesMes.data ?? []).filter(item => item.eh_renovacao)
   const renovacoesAnoPassado = renovacoesAnoAnterior.data ?? []
@@ -2452,8 +2456,9 @@ export async function getDashboardAutoMetrics({ mes } = {}) {
   const taxaConversao = totalCotacoesMes > 0 ? Math.round((totalConvertidas / totalCotacoesMes) * 100) : 0
 
   return {
-    novosNoMes: emissoes.data?.filter(item => !item.eh_renovacao).length ?? 0,
-    renovacoesNoMes: emissoes.data?.filter(item => item.eh_renovacao).length ?? 0,
+    novosNoMes: emissoesPorTipo.novo,
+    renovacoesNoMes: emissoesPorTipo.renovacao,
+    endossosNoMes: emissoesPorTipo.endosso,
     cotacoesNoMes: totalCotacoesMes,
     renovacoesConcluidas: renovadasMes.data?.length ?? 0,
     vencendoNoMes: vencendoNoMes.data?.length ?? 0,
@@ -2471,19 +2476,21 @@ export async function getDashboardAutoMetrics({ mes } = {}) {
 }
 
 export async function getGraficoEmissoesMensais(meses = 6, mes) {
-  const apolices = await supabase
-    .from('apolices_auto')
-    .select('id, eh_renovacao, created_at')
+  const emissoes = await supabase
+    .from('emissoes_auto')
+    .select('id, tipo, data_transmissao, created_at')
+    .in('coluna', ['proposta_transmitida', 'apolice_emitida'])
 
-  const lista = apolices.data ?? []
+  if (emissoes.error) throw emissoes.error
+  const lista = emissoes.data ?? []
   return toMonthSeries(lista, {
     meses,
     endMonth: mes || toMonthRef(),
-    getDate: item => item.created_at,
-    getValue: subset => ({
-      novos: subset.filter(item => !item.eh_renovacao).length,
-      renovacoes: subset.filter(item => item.eh_renovacao).length,
-    }),
+    getDate: item => item.data_transmissao || item.created_at,
+    getValue: subset => {
+      const counts = countAutoEmissionTypes(subset)
+      return { novos: counts.novo, renovacoes: counts.renovacao, endossos: counts.endosso }
+    },
   })
 }
 

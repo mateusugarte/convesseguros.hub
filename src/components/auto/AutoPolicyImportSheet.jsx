@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
 import { Car, Check, CheckCircle2, ClipboardPaste, Download, FileUp, Plus, Trash2, Upload, UserCheck, UserPlus, X } from 'lucide-react'
 import { calcularValorComissaoAuto, getClientesAutoComVeiculos, importarApolicesAutoPlanilha } from '../../lib/auto'
-import { normalizePolicyImportIdentity, normalizePolicyImportPercentage, policyClientCandidates, policyImportHasVehicleData, policyImportRelationshipReady, policyVehicleCandidates, suggestPolicyVehicle, summarizePolicyImportErrors } from '../../lib/autoPolicyImport'
+import { normalizePolicyImportIdentity, normalizePolicyImportPercentage, policyClientCandidates, policyImportHasVehicleData, policyImportPipelineStage, policyImportRelationshipReady, policyVehicleCandidates, suggestPolicyVehicle, summarizePolicyImportErrors } from '../../lib/autoPolicyImport'
 import { normalizeSpreadsheetNumber } from '../../lib/spreadsheetPaste'
 import { useToast } from '../../contexts/ToastContext'
 import OperationalSpreadsheet from './OperationalSpreadsheet'
@@ -258,7 +258,7 @@ export default function AutoPolicyImportSheet({ onClose }) {
     { field: 'responsavel', label: 'CORRETOR', editable: true, width: 120 },
     { field: 'tipo', label: 'O QUE É', type: 'select', editable: true, width: 120, options: TYPES, parse: value => { const type = normalize(value); return type.includes('renov') ? 'renovacao' : type.includes('endos') ? 'endosso' : 'novo' } },
     { field: 'emissor', label: 'EMISSOR', editable: true, width: 115 },
-    { field: 'status', label: 'STATUS', editable: true, width: 125 },
+    { field: 'status', label: 'STATUS', type: 'select', editable: true, width: 145, options: [{ value: '', label: 'Apólice emitida' }, { value: 'EMITIDA', label: 'Emitida' }, { value: 'EM EMISSÃO', label: 'Em emissão' }] },
     { field: 'numero_apolice', label: 'Nº APÓLICE', editable: true, width: 135 },
     { field: 'forma_pagamento', label: 'FORMA DE PAGAMENTO', editable: true, width: 145 },
     { key: 'vinculo', label: 'CONFIRMAR CLIENTE · VEÍCULO OPCIONAL', width: 300, render: row => <PolicyRelationshipCell row={row} clients={clients} loading={clientsLoading} onPatch={fields => updateRow(row._id, fields)} /> },
@@ -283,7 +283,7 @@ export default function AutoPolicyImportSheet({ onClose }) {
       if (!hasPolicyRowData(row)) return 'is-sheet-row-empty'
       if (!row.nome_cliente?.trim() || !row.vigencia_inicio) return 'is-sheet-row-error'
       if (!policyImportRelationshipReady(row)) return 'is-sheet-row-review'
-      return 'is-sheet-row-ready'
+      return `is-sheet-row-ready is-policy-stage-${policyImportPipelineStage(row.status)}`
     }} onCommit={commitCell} onBulkCommit={bulkCommit} className="is-policy-import" statusLabel={`${validRows.length} apólice(s) pronta(s) para subir`} />
     {summary && <div className={`policy-import-result ${summary.importadas + summary.atualizadas === 0 && summary.ignoradas ? 'is-error' : ''}`}><CheckCircle2 /><div><strong>{summary.importadas + summary.atualizadas === 0 && summary.ignoradas ? 'Nenhuma apólice foi gravada' : 'Importação processada'}</strong><span>{summary.importadas} novas · {summary.atualizadas} atualizadas · {summary.ignoradas} ignoradas</span>{summarizedErrors.length > 0 && <div className="policy-import-error-summary">{summarizedErrors.map(error => <p key={error.motivo}><b>{error.quantidade} linha(s)</b><span>{error.motivo}</span></p>)}</div>}</div></div>}
   </section>

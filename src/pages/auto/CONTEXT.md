@@ -24,8 +24,10 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   navegacao por teclado, ordenacao, colagem de blocos do Excel, reconhecimento
   de datas brasileiras/seriais do Excel, linha ativa e densidade ajustavel.
 - `AutoPolicyImportSheet` — revisao em grade de XLSX/CSV ou dados colados antes
-  da subida; cria a emissao em `apolice_emitida` e a apolice. A entrada visivel
-  usa Transmissao e Vigencia; `vigencia_fim` e derivada internamente em +1 ano.
+  da subida; cria a apolice e organiza a emissao conforme o STATUS: `EM EMISSAO`
+  fica em `proposta_transmitida`, enquanto emitida ou status vazio fica em
+  `apolice_emitida`. A entrada visivel usa Transmissao e Vigencia;
+  `vigencia_fim` e derivada internamente em +1 ano.
 - `autoShared.js` — helpers puros e testados (`diasParaVencer`, `getRenovacaoUrgencia`,
   `getRenewalQuoteStatus`, formatadores de data/mes, mapas de status/tom).
 
@@ -189,6 +191,12 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   colunas seguem a planilha de comissao (Transmissao ate Status), a comissao e
   calculada, CPF/data de emissao/vencimento nao aparecem e WhatsApp e a ultima
   coluna. A entrada sempre passa por revisao antes de persistir.
+- Arrastar uma cotacao para Proposta transmitida abre o mesmo conjunto de
+  campos operacionais da planilha de subida. Numero da apolice e veiculo sao
+  opcionais nessa etapa; a apolice final so e exigida em Apolice emitida.
+- A Dashboard contabiliza propostas transmitidas e apolices emitidas pela data
+  de transmissao, separando Seguro novo, Renovacao e Endosso no resumo e no
+  grafico mensal.
 - `AutoSinistrosV2` salva checklist e dossie no dispositivo e gera um resumo copiavel. Esses dados ainda nao sao enviados ao Supabase.
 
 ## Orcamento Comparativo (2026-08-24, design do workspace entregue)

@@ -200,7 +200,7 @@ export default function AutoDashboard() {
   const criticalPendingCount = pendingItems.filter(item => item.priority === 'critical').length
   const followupPendingCount = pendingItems.filter(item => item.kind === 'followup').length
   const todayPendingCount = pendingItems.filter(item => item.dueLabel === 'Para hoje' || item.dueLabel === 'Entrou hoje').length
-  const hasEmissoes = graficoEmissoes.some(item => item.novos || item.renovacoes)
+  const hasEmissoes = graficoEmissoes.some(item => item.novos || item.renovacoes || item.endossos)
   const hasCotacoes = graficoCotacoes.some(item => item.abertas || item.convertidas || item.perdidas)
 
   const tendenciaConversao = useMemo(() => graficoCotacoes.map(item => {
@@ -302,6 +302,13 @@ export default function AutoDashboard() {
       )}
 
       <AutoStatStrip items={stats} className="auto-dashboard-stats" />
+
+      <section className="auto-emission-type-strip" aria-label="Emissões por tipo no período">
+        <div className="auto-emission-type-heading"><span>Produção contabilizada</span><strong>Emissões por tipo</strong><small>{monthLabel}</small></div>
+        <div className="is-new"><FileText /><span><small>Seguro novo</small><strong>{metrics?.novosNoMes ?? 0}</strong></span></div>
+        <div className="is-renewal"><RefreshCw /><span><small>Renovação</small><strong>{metrics?.renovacoesNoMes ?? 0}</strong></span></div>
+        <div className="is-endorsement"><Layers3 /><span><small>Endosso</small><strong>{metrics?.endossosNoMes ?? 0}</strong></span></div>
+      </section>
 
       <section className="auto-pending-center auto-v2-enter" aria-labelledby="auto-pending-title">
         <header className="auto-pending-header">
@@ -494,6 +501,7 @@ export default function AutoDashboard() {
                   <Tooltip cursor={{ fill: 'rgba(63,94,251,0.05)' }} content={<ChartTooltip />} />
                   <Bar dataKey="novos" name="Novos" fill="#3563e9" radius={[8, 8, 3, 3]} maxBarSize={26} />
                   <Bar dataKey="renovacoes" name="Renovações" fill="#0ea5a4" radius={[8, 8, 3, 3]} maxBarSize={26} />
+                  <Bar dataKey="endossos" name="Endossos" fill="#8b5cf6" radius={[8, 8, 3, 3]} maxBarSize={26} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -501,6 +509,7 @@ export default function AutoDashboard() {
           <div className="auto-chart-legend">
             <span><i className="is-blue" />Seguro novo</span>
             <span><i className="is-teal" />Renovação</span>
+            <span><i className="is-violet" />Endosso</span>
           </div>
         </AutoPanel>
 

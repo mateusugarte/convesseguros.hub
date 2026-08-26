@@ -41,6 +41,14 @@ export const AUTO_TIPO_META = {
   endosso: { label: 'Endosso', className: 'auto-type-tag is-endorsement' },
 }
 
+export function countAutoEmissionTypes(items = []) {
+  return items.reduce((counts, item) => {
+    const tipo = ['novo', 'renovacao', 'endosso'].includes(item?.tipo) ? item.tipo : 'novo'
+    counts[tipo] += 1
+    return counts
+  }, { novo: 0, renovacao: 0, endosso: 0 })
+}
+
 export function classificarRenovacoesPipeline(items = [], today = new Date().toISOString().slice(0, 10)) {
   return items.reduce((groups, item) => {
     const limite = item?.data_limite_envio || item?.vigencia_fim || ''

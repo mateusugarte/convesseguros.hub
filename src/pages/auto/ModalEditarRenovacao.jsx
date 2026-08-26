@@ -38,7 +38,7 @@ export default function ModalEditarRenovacao({ renovacao, onClose, onSave, isSav
           <div>
             <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Data limite automática</label>
             <input type="date" value={dataLimite} readOnly className="input w-full opacity-80" />
-            <p className="mt-1 text-xs text-dark-muted">Calculada em 10 dias úteis antes do vencimento.</p>
+            <p className="mt-1 text-xs text-dark-muted">10 dias corridos antes do vencimento; sábado ajusta para sexta e domingo para segunda.</p>
           </div>
           <div>
             <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Veículo <span className="normal-case tracking-normal">(opcional)</span></label>

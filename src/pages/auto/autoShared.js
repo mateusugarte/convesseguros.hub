@@ -125,7 +125,7 @@ export function formatMonthYearBR(value) {
   return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 }
 
-export { calcularDataLimiteRenovacao, isValidIsoDate, subtrairDiasUteis } from '../../lib/autoCalc.js'
+export { calcularDataLimiteRenovacao, isValidIsoDate, subtrairDiasCorridosComAjuste, subtrairDiasUteis } from '../../lib/autoCalc.js'
 
 // Dias restantes ate a vigencia final, comparando por dia de calendario (nao
 // por horario exato) para nao variar conforme a hora em que a pagina e aberta.

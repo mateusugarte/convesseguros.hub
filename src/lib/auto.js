@@ -401,7 +401,7 @@ export async function criarClienteAuto(payload) {
 export async function getCotacoesAuto({ tipo, status, seguradora, inicio, fim } = {}) {
   let q = supabase
     .from('cotacoes_auto')
-    .select('*')
+    .select('*, clientes_auto(nome_completo, cpf, celular, telefone, email)')
     .order('created_at', { ascending: false })
 
   if (tipo) q = q.eq('tipo', tipo)
@@ -1171,12 +1171,12 @@ export async function getAutoPendingNotifications({ today } = {}) {
       .order('vigencia_fim', { ascending: true }),
     supabase
       .from('emissoes_auto')
-      .select('*, cotacoes_auto(*), apolices_auto(*)')
+      .select('*, clientes_auto(nome_completo), cotacoes_auto(*, clientes_auto(nome_completo)), apolices_auto(*)')
       .in('coluna', ['cotacao_feita', 'aguardando_vistoria', 'proposta_transmitida'])
       .order('updated_at', { ascending: true }),
     supabase
       .from('cotacoes_auto')
-      .select('*, emissoes_auto(id,coluna)')
+      .select('*, clientes_auto(nome_completo), emissoes_auto(id,coluna)')
       .in('status', ['pendente', 'aberta'])
       .order('updated_at', { ascending: true }),
     supabase

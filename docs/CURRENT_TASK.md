@@ -1,5 +1,13 @@
 # CURRENT TASK
 
+## Prazo corrido de renovacoes e nomes na Visao Geral AUTO (2026-08-26, Codex — CONCLUIDO)
+
+Responsavel: Codex, Agente de Sistemas. Entregue: a data limite agora subtrai 10 dias corridos do vencimento e ajusta o resultado operacionalmente (sabado para sexta, domingo para segunda) em uma funcao unica do front-end e na migration `supabase/69_auto_renovacoes_prazo_corrido.sql`, que tambem recalcula a carteira existente. A Visao Geral/Central e a lista de cotacoes passaram a consultar o cliente vinculado e usar `clientes_auto.nome_completo` quando o nome duplicado da cotacao estiver vazio, preservando os nomes ja cadastrados.
+
+Validacao final: `npm test` com 498 testes aprovados e `npm run build` concluido. Permanecem somente os avisos preexistentes do pacote `xlsx` e do chunk dinamico de `orcamentoLeitura`. Proximo responsavel: usuario, para executar a migration 69 depois da 65 e realizar o smoke test antes do push.
+
+---
+
 ## Acompanhamento operacional e parsers AUTO (2026-08-26, Codex — CONCLUIDO)
 
 Responsavel: Codex, Agente de Sistemas. Entregue: parsers fixos para Darwin, Pier, Suhai, Yelum e Tokio Marine usando os PDFs reais, com fixtures posicionais e saida no contrato de `orcamentoComparativo.js`. O parser Allianz permaneceu sob responsabilidade do Claude. Toda seguradora cujo PDF contenha mais de um produto agora expoe as opcoes e bloqueia a leitura final ate escolha explicita: HDI (2), Pier (2), Suhai (4) e Allianz (6, integracao independente).

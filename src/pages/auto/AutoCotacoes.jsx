@@ -96,6 +96,10 @@ function QuoteStatusBadge({ status }) {
   return <AutoBadge tone={meta.tone}>{meta.label}</AutoBadge>
 }
 
+function quoteCustomerName(item = {}) {
+  return item.nome_cliente || item.clientes_auto?.nome_completo || item.cpf_cliente || 'Sem identificação'
+}
+
 function Field({ label, value, onChange, type = 'text', placeholder, children, inputMode }) {
   return (
     <div>
@@ -379,7 +383,7 @@ export default function AutoCotacoes() {
       if (!termo) return true
 
       const text = [
-        item.nome_cliente,
+        quoteCustomerName(item),
         item.cpf_cliente,
         item.celular_cliente,
         item.email_cliente,
@@ -602,7 +606,7 @@ export default function AutoCotacoes() {
                           <div className="min-w-0 space-y-2">
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="text-sm font-semibold text-dark-text">
-                                {item.nome_cliente || item.cpf_cliente || 'Sem identificacao'}
+                                {quoteCustomerName(item)}
                               </p>
                               <QuoteStatusBadge status={item.status} />
                               <AutoTypeBadge type={item.tipo} />
@@ -944,7 +948,7 @@ export default function AutoCotacoes() {
                       <div className="min-w-0">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Segurado</p>
                         <p className="truncate text-sm font-semibold text-dark-text">
-                          {item.nome_cliente || item.cpf_cliente || 'Sem identificacao'}
+                          {quoteCustomerName(item)}
                         </p>
                         <p className="truncate text-xs text-dark-muted">
                           {item.celular_cliente ? `${item.celular_cliente} · ` : ''}{formatDateTimeBR(item.updated_at || item.created_at)}

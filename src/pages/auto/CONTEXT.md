@@ -115,16 +115,20 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
 - Migration `supabase/65_auto_renovacoes_prazo_seguradoras.sql` adiciona a
   seguradora alternativa opcional, recalcula a carteira existente e protege no
   banco a regra automatica de prazo. Precisa ser executada no SQL Editor.
+- Migration `supabase/69_auto_renovacoes_prazo_corrido.sql` substitui o prazo
+  anterior pela regra de 10 dias corridos com ajuste de fim de semana e
+  recalcula a carteira existente. Precisa ser executada depois da migration 65.
 - Migration `supabase/66_auto_clientes_cpf_opcional_importacao.sql` remove o
   `NOT NULL` legado de `clientes_auto.cpf`. A subida de apolices nao pede CPF e
   deve conseguir criar o cliente apenas com o nome. O botao da pagina principal
   abre a mesma grade de revisao de `/auto/emissoes/planilha?subir=1`; nao criar
   outro atalho que envie linhas sem confirmar o vinculo do cliente.
-- Data limite da cotacao de renovacao = 10 dias UTEIS antes do vencimento
-  (pula sabado/domingo, sem calendario de feriados) — regra unica em
+- Data limite da cotacao de renovacao = 10 dias CORRIDOS antes do vencimento;
+  se o resultado cair no sabado, antecipa para sexta, e se cair no domingo,
+  posterga para segunda (sem calendario de feriados) — regra unica em
   `calcularDataLimiteRenovacao` (`src/lib/autoCalc.js`), usada tanto no
-  front-end (`AutoRenovacoes.jsx`) quanto no backend (`src/lib/auto.js` e o
-  trigger SQL acima). Nao usar dias corridos nem duplicar essa logica.
+  front-end quanto no backend e no trigger da migration 69. Nao duplicar essa
+  logica em componentes.
 - O Kanban de `/auto/gestao` usa uma faixa horizontal com oito etapas na ordem
   definida por `AUTO_PIPELINE_STAGES`: Renovacoes futuras, Renovacoes para
   enviar hoje/atrasadas, Cotacoes pendentes (somente seguro novo), Cotacoes
@@ -253,6 +257,9 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
 - Migration obrigatoria: `supabase/68_auto_acompanhamento_operacional.sql` cria
   `auto_interacoes`, `auto_lembretes` e os campos operacionais nas cotacoes,
   emissoes e clientes. Sem ela, o painel mostra a orientacao de instalacao.
+- A Central e a lista de cotacoes consultam tambem `clientes_auto`: se um
+  registro legado tem `cliente_id` e nome no cadastro, mas `nome_cliente` vazio
+  na cotacao, a interface exibe o nome vinculado em vez de "sem nome".
 
 ## Handoff Checklist
 

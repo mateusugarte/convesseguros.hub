@@ -50,6 +50,15 @@ test('pergunta se cotação parada foi feita e direciona para o acompanhamento',
   assert.equal(result[0].href, '/auto/cotacoes/c1?tab=operacao')
 })
 
+test('usa o nome do cliente vinculado quando a cotação não repete o nome', () => {
+  const result = buildAutoPendingNotifications({
+    today,
+    cotacoes: [{ id: 'c-cliente', status: 'pendente', updated_at: '2026-08-18', clientes_auto: { nome_completo: 'Marina Lopes' }, emissoes_auto: [] }],
+  })
+  assert.equal(result[0].subject, 'Marina Lopes')
+  assert.match(result[0].title, /Marina Lopes/)
+})
+
 test('lembrete aparece na véspera, no dia e quando atrasa', () => {
   const base = { id: 'l1', cotacao_id: 'c1', titulo: 'Ligar para Ana', avisar_antes_dias: 1 }
   assert.equal(buildAutoPendingNotifications({ today, lembretes: [{ ...base, data_lembrete: '2026-08-22' }] })[0].dueLabel, 'Amanhã')

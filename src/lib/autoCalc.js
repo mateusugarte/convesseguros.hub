@@ -41,10 +41,28 @@ export function subtrairDiasUteis(value, diasUteis) {
   return `${y}-${m}-${d}`
 }
 
-export const PRAZO_RENOVACAO_DIAS_UTEIS = 10
+// Subtrai dias corridos e, quando o resultado cai no fim de semana, leva o
+// prazo para o dia util operacional mais proximo: sabado -> sexta e
+// domingo -> segunda. Nao considera feriados.
+export function subtrairDiasCorridosComAjuste(value, diasCorridos) {
+  if (!isValidIsoDate(value)) return null
+  const [ano, mes, dia] = value.split('-').map(Number)
+  const date = new Date(ano, mes - 1, dia)
+  date.setDate(date.getDate() - Math.max(0, Number(diasCorridos) || 0))
+
+  if (date.getDay() === 6) date.setDate(date.getDate() - 1)
+  if (date.getDay() === 0) date.setDate(date.getDate() + 1)
+
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+export const PRAZO_RENOVACAO_DIAS_CORRIDOS = 10
 
 // Regra unica para toda entrada/edicao de renovacao. Centralizar o prazo aqui
 // evita que planilha, importacao e trigger acabem mostrando datas diferentes.
 export function calcularDataLimiteRenovacao(vigenciaFim) {
-  return subtrairDiasUteis(vigenciaFim, PRAZO_RENOVACAO_DIAS_UTEIS)
+  return subtrairDiasCorridosComAjuste(vigenciaFim, PRAZO_RENOVACAO_DIAS_CORRIDOS)
 }

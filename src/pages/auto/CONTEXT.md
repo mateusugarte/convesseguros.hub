@@ -25,8 +25,9 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   de datas brasileiras/seriais do Excel, linha ativa e densidade ajustavel.
 - `AutoPolicyImportSheet` — revisao em grade de XLSX/CSV ou dados colados antes
   da subida; cria a apolice e organiza a emissao conforme o STATUS: `EM EMISSAO`
-  fica em `proposta_transmitida`, enquanto emitida ou status vazio fica em
-  `apolice_emitida`. A entrada visivel usa Transmissao e Vigencia;
+  fica somente em `proposta_transmitida`, enquanto emitida ou status vazio cria
+  a apolice final e fica em `apolice_emitida`. Uma apolice vinculada sempre
+  prevalece como evidencia de emissao concluida. A entrada visivel usa Transmissao e Vigencia;
   `vigencia_fim` e derivada internamente em +1 ano.
 - `autoShared.js` — helpers puros e testados (`diasParaVencer`, `getRenovacaoUrgencia`,
   `getRenewalQuoteStatus`, formatadores de data/mes, mapas de status/tom).
@@ -120,6 +121,10 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
 - Migration `supabase/69_auto_renovacoes_prazo_corrido.sql` substitui o prazo
   anterior pela regra de 10 dias corridos com ajuste de fim de semana e
   recalcula a carteira existente. Precisa ser executada depois da migration 65.
+- Migration `supabase/70_auto_apolices_importadas_emitidas.sql` corrige as
+  importacoes antigas que ja possuem registro em `apolices_auto`, mas ficaram
+  com resultado vazio: move a emissao para `apolice_emitida` e grava resultado
+  aprovado. Novas importacoes aplicam essa regra diretamente no front-end.
 - Migration `supabase/66_auto_clientes_cpf_opcional_importacao.sql` remove o
   `NOT NULL` legado de `clientes_auto.cpf`. A subida de apolices nao pede CPF e
   deve conseguir criar o cliente apenas com o nome. O botao da pagina principal

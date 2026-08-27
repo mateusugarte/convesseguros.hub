@@ -464,7 +464,8 @@ function CardEmissao({ emissao, onDragStart, onClick, tagsPorId }) {
   const isRenovacao = tipo === 'renovacao'
   const tipoMeta = AUTO_TIPO_META[tipo] || AUTO_TIPO_META.novo
   const isRecusada = emissao.resultado === 'recusada'
-  const isAprovada = emissao.resultado === 'aprovada'
+  const isEmitida = coluna === 'apolice_emitida'
+  const isAprovada = emissao.resultado === 'aprovada' && !isEmitida
   const isCotada = emissao.resultado === 'cotada'
   const nome = nomeEmissao(emissao)
   const apolice = getApoliceVinculada(emissao)
@@ -526,9 +527,10 @@ function CardEmissao({ emissao, onDragStart, onClick, tagsPorId }) {
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
           {isRecusada && <span className="rounded-full bg-red-100 px-2.5 py-1 text-[10px] font-semibold text-red-600">Recusada</span>}
+          {isEmitida && <span className="rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success">Emitida</span>}
           {isAprovada && <span className="rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success">Aprovada</span>}
-          {isCotada && <span className="rounded-full bg-brand-secondary/10 px-2.5 py-1 text-[10px] font-semibold text-status-info">Cotada</span>}
-          {!emissao.resultado && <span className="rounded-full bg-dark-surface px-2.5 py-1 text-[10px] font-semibold text-dark-muted">Em andamento</span>}
+          {isCotada && !isEmitida && <span className="rounded-full bg-brand-secondary/10 px-2.5 py-1 text-[10px] font-semibold text-status-info">Cotada</span>}
+          {!emissao.resultado && !isEmitida && <span className="rounded-full bg-dark-surface px-2.5 py-1 text-[10px] font-semibold text-dark-muted">Em andamento</span>}
         </div>
       </div>
 

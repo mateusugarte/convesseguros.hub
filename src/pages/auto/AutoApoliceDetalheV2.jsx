@@ -37,6 +37,7 @@ import {
   atualizarEmissaoAutoCompleta,
   calcularValorComissaoAuto,
   getApoliceAutoDetalhe,
+  getEmissaoColuna,
 } from '../../lib/auto'
 import { formatDateBR, formatDateTimeBR, formatMoney } from './autoShared'
 
@@ -154,6 +155,8 @@ export default function AutoApoliceDetalheV2() {
   const statusAtual = useMemo(() => {
     if (!apolice) return '—'
     const emissao = apolice.emissoes_auto || {}
+    const coluna = getEmissaoColuna({ ...emissao, apolices_auto: [apolice] })
+    if (coluna === 'apolice_emitida') return 'Apólice emitida'
     if (emissao.resultado === 'recusada') return 'Recusada'
     if (emissao.resultado === 'aprovada') return 'Aprovada'
     const labels = {
@@ -164,7 +167,7 @@ export default function AutoApoliceDetalheV2() {
       proposta_transmitida: 'Proposta transmitida',
       apolice_emitida: 'Apólice emitida',
     }
-    return labels[emissao.coluna] || 'Apólice emitida'
+    return labels[coluna] || 'Apólice emitida'
   }, [apolice])
 
   const dirty = useMemo(() => (

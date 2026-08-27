@@ -49,6 +49,18 @@ export function countAutoEmissionTypes(items = []) {
   }, { novo: 0, renovacao: 0, endosso: 0 })
 }
 
+export function resolveAutoEmissionStage(item = {}) {
+  const policies = item?.apolices_auto
+  const hasLinkedPolicy = Array.isArray(policies) ? policies.length > 0 : Boolean(policies)
+  if (hasLinkedPolicy) return 'apolice_emitida'
+
+  const raw = typeof item?.coluna === 'string' ? item.coluna.trim() : ''
+  if (!raw || raw === 'pendente') return 'pendentes'
+  if (raw === 'emitida') return 'apolice_emitida'
+  if (raw === 'cotacao_feita' && !item?.resultado) return 'pendentes'
+  return raw
+}
+
 export function classificarRenovacoesPipeline(items = [], today = new Date().toISOString().slice(0, 10)) {
   return items.reduce((groups, item) => {
     const limite = item?.data_limite_envio || item?.vigencia_fim || ''

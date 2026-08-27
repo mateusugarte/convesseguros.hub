@@ -6,6 +6,7 @@ import {
   parseRenovacoesPaste,
   renewalStatusFields,
   renewalStatusValue,
+  resolveAutoEmissionStage,
   scoreCotacaoSuggestion,
   suggestRenewalClientByName,
 } from './autoOperational.js'
@@ -14,6 +15,12 @@ test('contabiliza seguro novo, renovação e endosso separadamente', () => {
   assert.deepEqual(countAutoEmissionTypes([
     { tipo: 'novo' }, { tipo: 'renovacao' }, { tipo: 'endosso' }, { tipo: 'novo' }, {},
   ]), { novo: 3, renovacao: 1, endosso: 1 })
+})
+
+test('apólice vinculada sempre encerra a emissão como apólice emitida', () => {
+  assert.equal(resolveAutoEmissionStage({ coluna: 'proposta_transmitida', apolices_auto: [{ id: 'ap-1' }] }), 'apolice_emitida')
+  assert.equal(resolveAutoEmissionStage({ coluna: 'proposta_transmitida', apolices_auto: [] }), 'proposta_transmitida')
+  assert.equal(resolveAutoEmissionStage({ coluna: 'apolice_emitida', resultado: null }), 'apolice_emitida')
 })
 
 test('separa renovacoes futuras das que ja precisam ser enviadas', () => {

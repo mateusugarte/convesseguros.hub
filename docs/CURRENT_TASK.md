@@ -1,5 +1,13 @@
 # CURRENT TASK
 
+## Corrigir apolices AUTO importadas exibidas como Em andamento (2026-08-27, Codex — CONCLUIDO)
+
+Responsavel: Codex, Agente de Sistemas. Entregue: toda emissao com registro vinculado em `apolices_auto` agora e resolvida como `apolice_emitida` na Pipeline e recebe selo Emitida, nunca Em andamento. Novas importacoes com status emitido ou vazio gravam `coluna = apolice_emitida` e `resultado = aprovada`; `EM EMISSAO` cria somente a proposta, sem fabricar uma apolice final. Reimportar essa mesma linha depois como emitida promove a emissao existente em vez de duplicar. A migration `supabase/70_auto_apolices_importadas_emitidas.sql` corrige no banco as importacoes antigas com apolice vinculada e resultado vazio.
+
+Validacao final: `npm test` com 502 testes aprovados, testes focados aprovados, `npm run build` concluido e `git diff --check` limpo. `npm run check:page-contexts` continua falhando somente pela ausencia preexistente de `src/pages/comercial/CONTEXT.md` para `GestaoComercial.jsx`, fora do escopo AUTO. Proximo responsavel: usuario, para aplicar a migration 70 no Supabase e confirmar que as apolices importadas aparecem na coluna Apolice emitida.
+
+---
+
 ## Importacao EM EMISSAO e arraste para Proposta transmitida AUTO (2026-08-26, Codex — CONCLUIDO)
 
 Responsavel: Codex, Agente de Sistemas. Entregue: a importacao agora interpreta a coluna STATUS; `EM EMISSAO` entra em Proposta transmitida e `EMITIDA` ou status vazio entra em Apolice emitida. A subida continua criando o registro contabilizavel sem exigir numero da apolice, veiculo ou status preenchido. O arraste para Proposta transmitida ganhou o mesmo conjunto de campos da planilha, com comissao calculada e repasse direto. A Dashboard passou a contabilizar Proposta transmitida + Apolice emitida pela data de transmissao e exibe Seguro novo, Renovacao e Endosso separadamente no resumo e no grafico. Planilha e seletores de data receberam estados de foco, status visual e controles mais claros.

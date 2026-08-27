@@ -3,7 +3,7 @@ import { limparNomeSegurado, normalizeCompareText, somarUmAno } from './autoHist
 import { normalizePolicyImportIdentity, policyImportHasVehicleData, policyImportPipelineStage, policyImportRelationshipReady } from './autoPolicyImport.js'
 import { calcularDataLimiteRenovacao, calcularValorComissaoAuto } from './autoCalc.js'
 import { planejarExclusaoGrupoAuto } from './autoExclusao.js'
-import { countAutoEmissionTypes, renewalStatusFields } from './autoOperational.js'
+import { countAutoEmissionTypes, renewalStatusFields, resolveAutoEmissionStage } from './autoOperational.js'
 import { buildAutoPendingNotifications } from './autoPending.js'
 import { isRenewalDateInMonth } from './autoRenewalImport.js'
 
@@ -349,16 +349,7 @@ async function concluirCotacaoEVincularRenovacao(cotacaoId) {
 }
 
 export function getEmissaoColuna(item) {
-  const raw = item?.coluna
-  if (typeof raw !== 'string') return 'pendentes'
-  const trimmed = raw.trim()
-  if (!trimmed) return 'pendentes'
-  if (trimmed === 'pendente') return 'pendentes'
-  if (trimmed === 'emitida') return 'apolice_emitida'
-  if (trimmed === 'cotacao_feita' && !item?.resultado) {
-    return 'pendentes'
-  }
-  return trimmed
+  return resolveAutoEmissionStage(item)
 }
 
 function toMonthSeries(items, { meses = 6, getDate, getValue, endMonth } = {}) {
@@ -2003,12 +1994,30 @@ export async function importarApolicesAutoPlanilha(rows = []) {
       const { data: duplicadas, error: duplicateError } = await duplicateQuery.limit(1)
       if (duplicateError) throw duplicateError
 
-      const existente = duplicadas?.[0] || null
+      let existente = duplicadas?.[0] || null
+      if (!existente) {
+        let emissaoExistenteQuery = supabase
+          .from('emissoes_auto')
+          .select('id')
+          .eq('cliente_id', clienteId)
+          .eq('vigencia_fim', vigenciaFim)
+          .in('coluna', colunaPipeline === 'apolice_emitida'
+            ? ['proposta_transmitida', 'apolice_emitida']
+            : ['proposta_transmitida'])
+        if (seguradora) emissaoExistenteQuery = emissaoExistenteQuery.eq('seguradora', seguradora)
+        const { data: emissoesExistentes, error: emissaoExistenteError } = await emissaoExistenteQuery.limit(1)
+        if (emissaoExistenteError) throw emissaoExistenteError
+        if (emissoesExistentes?.[0]?.id) existente = { emissao_id: emissoesExistentes[0].id, somente_emissao: true }
+      }
+
+      const registrarApoliceEmitida = colunaPipeline === 'apolice_emitida' || Boolean(existente && !existente.somente_emissao)
+      const colunaDestino = registrarApoliceEmitida ? 'apolice_emitida' : 'proposta_transmitida'
       const emissaoPayload = {
         cotacao_id: null,
         cliente_id: clienteId,
         tipo,
-        coluna: colunaPipeline,
+        coluna: colunaDestino,
+        resultado: registrarApoliceEmitida ? 'aprovada' : null,
         data_transmissao: row.data_transmissao || row.data_emissao || new Date().toISOString().slice(0, 10),
         tipo_producao: row.tipo_producao || 'individual',
         responsavel: normalizeImportText(row.responsavel) || null,
@@ -2042,6 +2051,12 @@ export async function importarApolicesAutoPlanilha(rows = []) {
         const { data, error } = await supabase.from('emissoes_auto').insert({ ...emissaoPayload, created_at: new Date().toISOString() }).select('id').single()
         if (error) throw error
         emissaoId = data.id
+      }
+
+      if (!registrarApoliceEmitida) {
+        if (existente?.emissao_id) resultado.atualizadas += 1
+        else resultado.importadas += 1
+        continue
       }
 
       const apolicePayload = {

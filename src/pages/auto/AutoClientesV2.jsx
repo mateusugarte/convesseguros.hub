@@ -14,6 +14,7 @@ import {
   Save,
   Search,
   ShieldCheck,
+  UserCheck,
   Users,
 } from 'lucide-react'
 import {
@@ -291,16 +292,16 @@ export default function AutoClientesV2() {
         context="Carteira Auto"
         title="Clientes"
         description="Encontre clientes, apólices e veículos sem abrir blocos extensos."
-        actions={(
-          <button
-            type="button"
-            onClick={() => navigate('/auto/cotacoes?modo=novo')}
-            className="btn-primary inline-flex items-center gap-2"
-          >
+        actions={<div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => navigate('/auto/clientes/verificacao')} className="btn-secondary inline-flex items-center gap-2">
+            <UserCheck className="h-4 w-4" aria-hidden="true" />
+            Verificação de clientes
+          </button>
+          <button type="button" onClick={() => navigate('/auto/cotacoes?modo=novo')} className="btn-primary inline-flex items-center gap-2">
             <FileText className="h-4 w-4" aria-hidden="true" />
             Nova cotação
           </button>
-        )}
+        </div>}
       />
 
       <AutoStatStrip

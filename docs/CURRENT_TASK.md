@@ -1,5 +1,13 @@
 # CURRENT TASK
 
+## Verificacao de clientes duplicados AUTO (2026-08-27, Codex — CONCLUIDO)
+
+Responsavel: Codex, Agente de Sistemas. Entregue: a aba Clientes ganhou o botao `Verificacao de clientes` e uma tela dedicada que encontra nomes iguais ou semelhantes, compara CPF, contatos, data de cadastro, veiculos e apolices lado a lado e permite registrar `mesmo cliente` ou `clientes diferentes`. As decisoes ficam auditadas pela migration `supabase/71_auto_verificacao_clientes.sql`; nenhum cadastro e mesclado, excluido ou movimentado automaticamente. A fila prioriza pares pendentes e mais semelhantes, com busca e filtros de decisao. Durante o QA responsivo tambem foi corrigido o conflito que mantinha a sidebar movel no fluxo da pagina mesmo fechada.
+
+Validacao final: `npm test` com 506 testes aprovados, `npm run build` concluido, `git diff --check` limpo e fluxo revisado no navegador em desktop e 390x844. `npm run check:page-contexts` continua falhando somente pela ausencia preexistente de `src/pages/comercial/CONTEXT.md` para `GestaoComercial.jsx`, fora do escopo AUTO. Proximo responsavel: usuario, para aplicar a migration 71 no Supabase e testar as decisoes com os clientes reais.
+
+---
+
 ## Corrigir apolices AUTO importadas exibidas como Em andamento (2026-08-27, Codex — CONCLUIDO)
 
 Responsavel: Codex, Agente de Sistemas. Entregue: toda emissao com registro vinculado em `apolices_auto` agora e resolvida como `apolice_emitida` na Pipeline e recebe selo Emitida, nunca Em andamento. Novas importacoes com status emitido ou vazio gravam `coluna = apolice_emitida` e `resultado = aprovada`; `EM EMISSAO` cria somente a proposta, sem fabricar uma apolice final. Reimportar essa mesma linha depois como emitida promove a emissao existente em vez de duplicar. A migration `supabase/70_auto_apolices_importadas_emitidas.sql` corrige no banco as importacoes antigas com apolice vinculada e resultado vazio.

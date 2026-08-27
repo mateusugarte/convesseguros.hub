@@ -1522,6 +1522,7 @@ html.dark .shell-user-card {
   }
 
   .shell-sidebar {
+    position: fixed !important;
     top: 8px !important;
     left: 8px !important;
     width: min(88vw, 320px) !important;
@@ -1531,6 +1532,15 @@ html.dark .shell-user-card {
     overflow: visible;
     box-shadow: 26px 0 80px rgba(3, 8, 24, .3) !important;
     transition: transform 300ms cubic-bezier(.2, .75, .25, 1) !important;
+  }
+
+  .shell-sidebar.is-mobile-open {
+    transform: translateX(0) !important;
+  }
+
+  .shell-sidebar.is-mobile-closed {
+    transform: translateX(calc(-100% - 12px)) !important;
+    pointer-events: none;
   }
 
   .shell-sidebar-brand {

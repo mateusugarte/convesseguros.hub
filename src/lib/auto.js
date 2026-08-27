@@ -1590,7 +1590,7 @@ export async function getClientesAutoParaVinculo() {
     const from = page * pageSize
     const { data, error } = await supabase
       .from('clientes_auto')
-      .select('id, nome_completo, cpf, celular')
+      .select('id, nome_completo, cpf, telefone, celular, email, created_at')
       .order('nome_completo', { ascending: true })
       .range(from, from + pageSize - 1)
     if (error) throw error
@@ -1627,6 +1627,38 @@ export async function getClientesAutoComVeiculos() {
   }, new Map())
 
   return clientes.map(cliente => ({ ...cliente, veiculos: porCliente.get(cliente.id) || [] }))
+}
+
+export async function getAutoClientVerificationData() {
+  const [clientes, verificacoesResult] = await Promise.all([
+    getClientesAutoComVeiculos(),
+    supabase
+      .from('auto_clientes_verificacoes')
+      .select('id, cliente_a_id, cliente_b_id, decisao, decidido_por, decidido_em, created_at, updated_at')
+      .order('updated_at', { ascending: false }),
+  ])
+
+  if (verificacoesResult.error) {
+    if (verificacoesResult.error.code === '42P01' || String(verificacoesResult.error.message || '').includes('auto_clientes_verificacoes')) {
+      throw new Error('A verificação de clientes ainda não foi ativada no banco. Aplique a atualização 71 no Supabase.')
+    }
+    throw verificacoesResult.error
+  }
+  return { clientes, verificacoes: verificacoesResult.data ?? [] }
+}
+
+export async function salvarAutoClientVerification({ clienteAId, clienteBId, decisao }) {
+  if (!clienteAId || !clienteBId || clienteAId === clienteBId) throw new Error('Selecione dois clientes diferentes.')
+  if (!['mesmo_cliente', 'clientes_diferentes'].includes(decisao)) throw new Error('Escolha uma decisão válida.')
+  const [cliente_a_id, cliente_b_id] = [clienteAId, clienteBId].sort()
+  const now = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('auto_clientes_verificacoes')
+    .upsert({ cliente_a_id, cliente_b_id, decisao, decidido_em: now, updated_at: now }, { onConflict: 'cliente_a_id,cliente_b_id' })
+    .select()
+    .single()
+  if (error) throw error
+  return data
 }
 
 // Cria uma renovacao pendente direto pelo formulario "Criar manualmente" do

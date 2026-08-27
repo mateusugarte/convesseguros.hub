@@ -3,7 +3,7 @@
 ## Page
 
 - Name: Auto (Dashboard, Cotacoes, Gestao AUTO/Emissoes, Renovacoes, Clientes, Sinistros, Etiquetas)
-- Route: `/auto`, `/auto/cotacoes(/:id)(/consulta)`, `/auto/gestao`, `/auto/emissoes(/:id)`, `/auto/emissoes/planilha`, `/auto/renovacoes`, `/auto/renovacoes/planilha`, `/auto/renovacoes/puxar`, `/auto/clientes(/:id)`, `/auto/apolices/:id`, `/auto/sinistros`, `/auto/etiquetas`
+- Route: `/auto`, `/auto/cotacoes(/:id)(/consulta)`, `/auto/gestao`, `/auto/emissoes(/:id)`, `/auto/emissoes/planilha`, `/auto/renovacoes`, `/auto/renovacoes/planilha`, `/auto/renovacoes/puxar`, `/auto/clientes(/:id)(/verificacao)`, `/auto/apolices/:id`, `/auto/sinistros`, `/auto/etiquetas`
 - Domain: Seguro Auto (cotacao -> emissao -> apolice -> renovacao)
 
 ## Purpose
@@ -36,6 +36,10 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
 
 - `src/lib/auto.js` concentra todo o acesso a `clientes_auto`, `cotacoes_auto`,
   `emissoes_auto`, `apolices_auto`, `renovacoes_auto`, `auto_tags`.
+- `getAutoClientVerificationData` carrega a base de clientes, veiculos e
+  decisoes humanas; `salvarAutoClientVerification` persiste somente a conclusao
+  `mesmo_cliente` ou `clientes_diferentes`. A tela nunca mescla ou exclui
+  cadastros automaticamente.
 - `getRenovacoesAuto({ periodo, mes })` filtra por `vigencia_fim` considerando
   mes+ano juntos (nunca so o numero do mes) via `inicioFimMes`/`parseMonthRef`.
 - `iniciarCotacaoRenovacao(renovacaoId)` e a funcao unica usada tanto pelo botao
@@ -125,6 +129,9 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   importacoes antigas que ja possuem registro em `apolices_auto`, mas ficaram
   com resultado vazio: move a emissao para `apolice_emitida` e grava resultado
   aprovado. Novas importacoes aplicam essa regra diretamente no front-end.
+- Migration `supabase/71_auto_verificacao_clientes.sql` cria a memoria dos pares
+  de clientes revisados, com uma decisao unica por par e RLS para usuarios
+  autenticados. A deteccao de nomes iguais/semelhantes permanece no front-end.
 - Migration `supabase/66_auto_clientes_cpf_opcional_importacao.sql` remove o
   `NOT NULL` legado de `clientes_auto.cpf`. A subida de apolices nao pede CPF e
   deve conseguir criar o cliente apenas com o nome. O botao da pagina principal
@@ -191,6 +198,10 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
 - `AutoPdfAutomation` apresenta upload, extracao, revisao e aplicacao dos PDFs sem bloquear a edicao manual. Orcamentos entram no comparativo e no detalhe da cotacao; propostas/apolices entram nos formularios de emissao. Imagens continuam como anexo, sem extracao.
 - `autoPdfParser.js` detecta a seguradora e normaliza dados comuns do segurado, condutor, veiculo, vigencia, premios, comissao e pagamento. A configuracao/mapeamento por seguradora e tratada separadamente pela tarefa ativa registrada em `docs/CURRENT_TASK.md`.
 - `AutoRenovacoes` pesquisa simultaneamente cliente, contato, apolice, veiculo, placa e seguradora; periodo e filtro de acompanhamento ficam no `localStorage`.
+- `/auto/clientes` oferece o botao `Verificacao de clientes`. A rota
+  `/auto/clientes/verificacao` compara nomes normalizados iguais ou semelhantes,
+  mostra CPF, contato e veiculos lado a lado e exige decisao humana. Confirmar
+  que e a mesma pessoa registra o fato, mas nao realiza mesclagem destrutiva.
 - Nas planilhas de renovacoes, `vigencia_fim` e exibida explicitamente como
   "Data de vencimento" e aceita colagem. Na entrada de apolices, as primeiras
   colunas seguem a planilha de comissao (Transmissao ate Status), a comissao e

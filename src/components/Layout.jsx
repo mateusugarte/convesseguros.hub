@@ -427,7 +427,7 @@ export default function Layout() {
       <aside
         aria-label="Navegação principal"
         className={`shell-sidebar ${isMobile
-          ? `fixed left-0 top-0 h-full z-[400] transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
+          ? `fixed left-0 top-0 h-full z-[400] transition-transform duration-300 ${sidebarOpen ? 'translate-x-0 is-mobile-open' : '-translate-x-full is-mobile-closed'}`
           : 'relative z-[200] h-full min-h-0'
         } flex flex-col ${sidebarWidth} ${(!sidebarOpen && !isMobile) ? 'is-collapsed' : 'is-expanded'}`}
         style={shellSidebarStyle}

@@ -4,6 +4,7 @@ import './autoClientVerification.test.mjs'
 import {
   classificarRenovacoesPipeline,
   countAutoEmissionTypes,
+  isRenovacaoSemCalculo,
   parseRenovacoesPaste,
   renewalStatusFields,
   renewalStatusValue,
@@ -32,6 +33,14 @@ test('separa renovacoes futuras das que ja precisam ser enviadas', () => {
   ], '2026-08-20')
   assert.deepEqual(result.futuras.map(item => item.id), [1])
   assert.deepEqual(result.paraEnviar.map(item => item.id), [2, 3])
+})
+
+test('pipeline inclui somente renovacoes sem calculo concluido', () => {
+  assert.equal(isRenovacaoSemCalculo({ status_renovacao: 'pendente', status_operacional: 'pendente', status_cotacao: 'nao_cotada' }), true)
+  assert.equal(isRenovacaoSemCalculo({ status_renovacao: 'pendente', status_operacional: 'cotando', status_cotacao: 'cotada_nao_enviada', cotacao_id: 'c1' }), true)
+  assert.equal(isRenovacaoSemCalculo({ status_renovacao: 'pendente', status_operacional: 'cotado', cotada_em: '2026-08-20T10:00:00Z' }), false)
+  assert.equal(isRenovacaoSemCalculo({ status_renovacao: 'pendente', status_operacional: 'enviado', status_cotacao: 'cotada_enviada' }), false)
+  assert.equal(isRenovacaoSemCalculo({ status_renovacao: 'renovada', status_operacional: 'renovado' }), false)
 })
 
 test('cola uma coluna de nomes e usa o fim do mes selecionado', () => {

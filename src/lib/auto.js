@@ -3,7 +3,7 @@ import { limparNomeSegurado, normalizeCompareText, somarUmAno } from './autoHist
 import { normalizePolicyImportIdentity, policyImportHasVehicleData, policyImportPipelineStage, policyImportRelationshipReady } from './autoPolicyImport.js'
 import { calcularDataLimiteRenovacao, calcularValorComissaoAuto } from './autoCalc.js'
 import { planejarExclusaoGrupoAuto } from './autoExclusao.js'
-import { countAutoEmissionTypes, renewalStatusFields, resolveAutoEmissionStage } from './autoOperational.js'
+import { countAutoEmissionTypes, isRenovacaoSemCalculo, renewalStatusFields, resolveAutoEmissionStage } from './autoOperational.js'
 import { buildAutoPendingNotifications } from './autoPending.js'
 import { isRenewalDateInMonth } from './autoRenewalImport.js'
 
@@ -1198,6 +1198,7 @@ export async function getRenovacoesPendentesSemCotacao(mes) {
     .from('renovacoes_auto')
     .select(RENOVACAO_LISTA_SELECT)
     .neq('status_renovacao', 'nao_renovada')
+    .is('cotada_em', null)
     .order('vigencia_fim', { ascending: true })
 
   if (mes) {
@@ -1207,13 +1208,7 @@ export async function getRenovacoesPendentesSemCotacao(mes) {
 
   const { data, error } = await q
   if (error) throw error
-  return (data ?? []).filter(item => {
-    if (!item.cotacao_id) return true
-    const emissao = Array.isArray(item.cotacoes_auto?.emissoes_auto)
-      ? item.cotacoes_auto.emissoes_auto[0]
-      : item.cotacoes_auto?.emissoes_auto
-    return !emissao?.coluna || emissao.coluna === 'pendente'
-  })
+  return (data ?? []).filter(isRenovacaoSemCalculo)
 }
 
 export async function atualizarStatusRenovacao(id, campos) {
@@ -1629,22 +1624,58 @@ export async function getClientesAutoComVeiculos() {
   return clientes.map(cliente => ({ ...cliente, veiculos: porCliente.get(cliente.id) || [] }))
 }
 
+const AUTO_CLIENT_VERIFICATION_LOCAL_KEY = 'auto-clientes-verificacoes-local-v1'
+
+function isMissingClientVerificationTable(error) {
+  return error?.code === '42P01'
+    || error?.code === 'PGRST205'
+    || String(error?.message || '').includes('auto_clientes_verificacoes')
+}
+
+function readLocalClientVerifications() {
+  if (typeof localStorage === 'undefined') return []
+  try {
+    const parsed = JSON.parse(localStorage.getItem(AUTO_CLIENT_VERIFICATION_LOCAL_KEY) || '[]')
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function writeLocalClientVerification(item) {
+  if (typeof localStorage === 'undefined') return item
+  const current = readLocalClientVerifications()
+  const pairKey = `${item.cliente_a_id}:${item.cliente_b_id}`
+  const next = current.filter(entry => `${entry.cliente_a_id}:${entry.cliente_b_id}` !== pairKey)
+  next.unshift(item)
+  localStorage.setItem(AUTO_CLIENT_VERIFICATION_LOCAL_KEY, JSON.stringify(next))
+  return item
+}
+
+function removeLocalClientVerification(clienteAId, clienteBId) {
+  if (typeof localStorage === 'undefined') return
+  const pairKey = `${clienteAId}:${clienteBId}`
+  const next = readLocalClientVerifications().filter(entry => `${entry.cliente_a_id}:${entry.cliente_b_id}` !== pairKey)
+  localStorage.setItem(AUTO_CLIENT_VERIFICATION_LOCAL_KEY, JSON.stringify(next))
+}
+
 export async function getAutoClientVerificationData() {
-  const [clientes, verificacoesResult] = await Promise.all([
-    getClientesAutoComVeiculos(),
-    supabase
-      .from('auto_clientes_verificacoes')
-      .select('id, cliente_a_id, cliente_b_id, decisao, decidido_por, decidido_em, created_at, updated_at')
-      .order('updated_at', { ascending: false }),
-  ])
+  const clientes = await getClientesAutoComVeiculos()
+  const verificacoesResult = await supabase
+    .from('auto_clientes_verificacoes')
+    .select('id, cliente_a_id, cliente_b_id, decisao, decidido_por, decidido_em, created_at, updated_at')
+    .order('updated_at', { ascending: false })
 
   if (verificacoesResult.error) {
-    if (verificacoesResult.error.code === '42P01' || String(verificacoesResult.error.message || '').includes('auto_clientes_verificacoes')) {
-      throw new Error('A verificação de clientes ainda não foi ativada no banco. Aplique a atualização 71 no Supabase.')
+    if (isMissingClientVerificationTable(verificacoesResult.error)) {
+      return { clientes, verificacoes: readLocalClientVerifications(), persistence: 'local' }
     }
     throw verificacoesResult.error
   }
-  return { clientes, verificacoes: verificacoesResult.data ?? [] }
+  const database = verificacoesResult.data ?? []
+  const databasePairs = new Set(database.map(item => `${item.cliente_a_id}:${item.cliente_b_id}`))
+  const localOnly = readLocalClientVerifications().filter(item => !databasePairs.has(`${item.cliente_a_id}:${item.cliente_b_id}`))
+  return { clientes, verificacoes: [...database, ...localOnly], persistence: 'database' }
 }
 
 export async function salvarAutoClientVerification({ clienteAId, clienteBId, decisao }) {
@@ -1657,8 +1688,20 @@ export async function salvarAutoClientVerification({ clienteAId, clienteBId, dec
     .upsert({ cliente_a_id, cliente_b_id, decisao, decidido_em: now, updated_at: now }, { onConflict: 'cliente_a_id,cliente_b_id' })
     .select()
     .single()
-  if (error) throw error
-  return data
+  if (error) {
+    if (!isMissingClientVerificationTable(error)) throw error
+    return writeLocalClientVerification({
+      id: `local:${cliente_a_id}:${cliente_b_id}`,
+      cliente_a_id,
+      cliente_b_id,
+      decisao,
+      decidido_em: now,
+      updated_at: now,
+      persistence: 'local',
+    })
+  }
+  removeLocalClientVerification(cliente_a_id, cliente_b_id)
+  return { ...data, persistence: 'database' }
 }
 
 // Cria uma renovacao pendente direto pelo formulario "Criar manualmente" do

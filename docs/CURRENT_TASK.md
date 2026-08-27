@@ -1,5 +1,63 @@
 # CURRENT TASK
 
+## Restaurar verificacao de clientes AUTO sem migration 71 (2026-08-27, Codex — CONCLUIDO)
+
+Responsavel: Codex, Agente de Sistemas. Diagnostico confirmado em dados reais e navegador autenticado: existem 2 pares de clientes com nomes exatamente iguais e o comparador encontra ambos, mas a pagina descartava toda a lista quando a tabela `auto_clientes_verificacoes` ainda nao existia. Corrigido: a leitura dos candidatos foi desacoplada da memoria de decisoes. Sem a migration 71, os pares aparecem normalmente, podem ser classificados e a decisao fica temporariamente neste dispositivo com aviso explicito; quando a tabela existe, a persistencia continua compartilhada no Supabase.
+
+Validacao final: a pagina autenticada passou de `0 candidatos / verificacao indisponivel` para `2 candidatos / 2 nomes iguais`, exatamente os pares existentes na base real, sem expor ou alterar os dados. Teste de regressao adicionado para homonimos exatos. Proximo responsavel: usuario, para decidir os pares; aplicar a migration 71 continua recomendado para compartilhar as decisoes com toda a equipe.
+
+---
+
+## Conferencia do estado dos parsers de orcamento AUTO (2026-08-27, Claude — CONCLUIDA)
+
+Responsavel: Claude. Conferencia pedida pelo usuario ao retomar a sessao. Nada de codigo mudou
+nesta rodada; o que mudou foi este documento, que estava contradizendo o codigo em dois pontos.
+
+**Cobertura real hoje: 12 marcas em 9 modulos de parser.** `orcamentoPortoParser` (Porto, Azul,
+Itau, Mitsui), `orcamentoBradescoParser`, `orcamentoHdiParser`, `orcamentoDarwinParser`,
+`orcamentoPierParser`, `orcamentoSuhaiParser`, `orcamentoYelumParser`, `orcamentoTokioParser` e
+`orcamentoAllianzParser` (modulo independente, fora do roteador). As contagens "5 de 12" e "7 de
+12" que aparecem mais abaixo sao registros historicos de 25 e 26/08, nao o estado atual.
+
+**Faltam 4 seguradoras: SulAmerica, Mapfre, Zurich e Aliro.** Estao em `LAYOUTS`
+(`src/lib/autoPdfParser.js:329`) mas nao tem parser de orcamento nem amostra de PDF em
+`documentos_automacao/orçamentos/`. Liberty tambem esta no `LAYOUTS` e nao conta: virou Yelum, ja
+coberta. Nenhuma das 4 deve ser escrita sem o PDF real — todos os parsers existentes foram
+construidos por coordenada contra o documento de verdade, com fixture; deduzir layout produz
+franquia e premio trocados sem nada indicando erro, exatamente o que foi medido na linha do Casco
+da Azul.
+
+**Seguradoras que param e perguntam qual produto: 4.** Allianz (6 ofertas), Suhai (4), HDI (2) e
+Pier (2). As outras 8 marcas cotam produto unico e seguem direto para a revisao.
+
+**Duas notas deste documento estavam desatualizadas e foram corrigidas no lugar** (marcadas como
+SUPERADO/RESOLVIDO, sem apagar o historico): as duas afirmavam que a HDI ainda usava `mercado`
+como padrao e que faltava migra-la para `escolha_pendente`. Nao faltava — o Codex ligou
+`listarProdutosHdi`/`exigirProduto` em 26/08 e a HDI ja pergunta.
+
+Baseline conferido em 27/08: `npm test` 501/501, arvore limpa em `main` (`8d422d6`),
+`check:page-contexts` acusando so a pendencia pre-existente de `GestaoComercial.jsx`.
+
+**Pendencias reais, em ordem de risco:**
+1. Migrations `67`, `68` e `69` NAO executadas no Supabase. Ordem obrigatoria: 67 -> 68 -> 69.
+2. Nada verificado ao vivo: a tela do seletor de ofertas nunca foi aberta no navegador com um PDF
+   real (o caminho ate `AutoQuoteComparison` exige cotacao no Supabase e login).
+3. Cor real de Darwin e Pier — hoje provisorias (`#c2185b` e `#ff4d8d`). Depende dos `logo_url`.
+4. Colisao de cor entre seguradoras ja cadastradas: Bradesco x Mapfre (distancia 23) e Porto x
+   Allianz (50), numa escala onde o par validado Tokio x Porto da 252.
+
+Proximo responsavel: usuario, para decidir entre rodar as migrations, fazer o smoke test ou enviar
+as amostras das 4 seguradoras que faltam.
+
+---
+## Corrigir coluna Renovacoes da Pipeline AUTO (2026-08-27, Codex — CONCLUIDO)
+
+Responsavel: Codex, Agente de Sistemas. Entregue: as duas etapas de renovacao da Pipeline agora consultam exclusivamente a carteira do mes escolhido no novo seletor `Mes das renovacoes`. A consulta recorta `vigencia_fim` pelo mes+ano e exige `cotada_em` vazio; a regra defensiva tambem exclui status cotado, enviado, negociando, renovado ou cancelado. Apenas abrir/iniciar a ficha (`cotando`) ainda e corretamente tratado como sem calculo. Os atalhos da Dashboard e da planilha de renovacoes levam o mes selecionado para a Pipeline.
+
+Validacao final: teste focado com 16 casos aprovado, `npm test` com 507 testes aprovados, `npm run build` concluido e `git diff --check` limpo. Permanecem somente os avisos preexistentes do pacote `xlsx` e do chunk dinamico de `orcamentoLeitura`. Proximo responsavel: usuario, para conferir a contagem de agosto/2026 com os dados reais.
+
+---
+
 ## Verificacao de clientes duplicados AUTO (2026-08-27, Codex — CONCLUIDO)
 
 Responsavel: Codex, Agente de Sistemas. Entregue: a aba Clientes ganhou o botao `Verificacao de clientes` e uma tela dedicada que encontra nomes iguais ou semelhantes, compara CPF, contatos, data de cadastro, veiculos e apolices lado a lado e permite registrar `mesmo cliente` ou `clientes diferentes`. As decisoes ficam auditadas pela migration `supabase/71_auto_verificacao_clientes.sql`; nenhum cadastro e mesclado, excluido ou movimentado automaticamente. A fila prioriza pares pendentes e mais semelhantes, com busca e filtros de decisao. Durante o QA responsivo tambem foi corrigido o conflito que mantinha a sidebar movel no fluxo da pagina mesmo fechada.
@@ -176,12 +234,13 @@ conferido por CNPJ e cabecalho; a economia da familia Porto nao se repete.
 **A HDI traz DUAS COTACOES ALTERNATIVAS no mesmo PDF**, lado a lado, cada uma com LMI, premio,
 totais e tabela de parcelamento proprios: "VLR. MERCADO REFERENCIADO" (total R$ 1.478,24) e
 "Valor Determinado" (R$ 1.664,71). Sao produtos diferentes — mercado indeniza 100% da FIPE do dia
-do sinistro, determinado indeniza valor fixo combinado hoje. O parser usa `mercado` por PADRAO,
-porque e a modalidade que Porto e Bradesco tambem cotam: comparar o "Valor Determinado" da HDI
-com o "Mercado Referenciado" da Porto poria produtos diferentes lado a lado no mesmo documento.
-`modalidade: 'determinado'` tem que ser pedido explicitamente, e o total da outra fica em
-`modalidade_alternativa` para o corretor nao reabrir o PDF. **Confirmar com o usuario se o padrao
-esta certo para a operacao.**
+do sinistro, determinado indeniza valor fixo combinado hoje. Nesta primeira versao o parser usava
+`mercado` por PADRAO, porque e a modalidade que Porto e Bradesco tambem cotam: comparar o "Valor
+Determinado" da HDI com o "Mercado Referenciado" da Porto poria produtos diferentes lado a lado no
+mesmo documento. **SUPERADO em 26/08** — `parseCotacaoHdi` passou a exigir a escolha por
+`exigirProduto` e nao presume mais nada: chamada sem produto lanca
+`ProdutoOrcamentoObrigatorioError` e a tela pergunta, como na Allianz. O total da modalidade nao
+escolhida continua em `modalidade_alternativa` para o corretor nao reabrir o PDF.
 
 **Classificacao pela nota de rodape — padrao novo, reutilizavel.** A HDI batiza cobertura em
 jargao interno: "07 DIAS CR MANUAL" e carro reserva, "ESPECIAL AUTO - 600KM" e assistencia 24h.
@@ -279,10 +338,13 @@ espelhamento, porque renomear um campo la sumiria com o dado sem quebrar nada vi
 **Nao verificado ao vivo:** build e testes passam, mas a tela nao foi aberta no navegador com um
 PDF real — o caminho ate `AutoQuoteComparison` exige cotacao no Supabase e login.
 
-**Em aberto:** a HDI segue com `mercado` como padrao. Confirmado com o usuario que "Auto Perfil" e
-o nome do PRODUTO (`Hdi Auto Perfil`, calculo 1212810730), nao a modalidade de indenizacao — sao
-eixos diferentes, e a escolha mercado x determinado continua valendo. Candidata a migrar para
-`escolha_pendente`.
+**RESOLVIDO — nota corrigida em 27/08.** Esta secao dizia "a HDI segue com `mercado` como padrao,
+candidata a migrar para `escolha_pendente`". Nao segue mais: `parseCotacaoHdi`
+(`src/lib/orcamentoHdiParser.js:261`) exige o produto e o roteador `orcamentoSeguradoraParser.js`
+ja expoe as duas modalidades, entao a HDI pergunta na tela exatamente como a Allianz. Continua
+valendo o registro de que "Auto Perfil" e o nome do PRODUTO (`Hdi Auto Perfil`, calculo
+1212810730), nao a modalidade de indenizacao — sao eixos diferentes, e a escolha mercado x
+determinado independe dele.
 
 Responsavel: Claude.
 

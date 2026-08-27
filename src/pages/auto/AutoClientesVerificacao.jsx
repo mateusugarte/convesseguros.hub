@@ -83,14 +83,16 @@ export default function AutoClientesVerificacao() {
 
   const saveDecision = useMutation({
     mutationFn: salvarAutoClientVerification,
-    onSuccess: async (_, variables) => {
+    onSuccess: async (saved, variables) => {
       await queryClient.invalidateQueries({ queryKey: ['auto-clientes-verificacao'] })
       toast({
         type: 'success',
         title: 'Verificação registrada',
-        message: variables.decisao === 'mesmo_cliente'
-          ? 'O par foi marcado como o mesmo cliente. Nenhum cadastro foi mesclado automaticamente.'
-          : 'Os cadastros foram confirmados como clientes diferentes.',
+        message: saved?.persistence === 'local'
+          ? 'Decisão salva neste dispositivo. Aplique a atualização 71 para compartilhar a verificação com toda a equipe.'
+          : variables.decisao === 'mesmo_cliente'
+            ? 'O par foi marcado como o mesmo cliente. Nenhum cadastro foi mesclado automaticamente.'
+            : 'Os cadastros foram confirmados como clientes diferentes.',
       })
     },
     onError: mutationError => toast({ type: 'error', title: 'Não foi possível registrar', message: mutationError?.message || 'Tente novamente.' }),
@@ -122,6 +124,13 @@ export default function AutoClientesVerificacao() {
         <ShieldAlert />
         <div><strong>Verificação sem alteração automática</strong><span>Marcar “mesmo cliente” registra a decisão, mas não une cadastros, apólices ou cotações. Isso evita perda de dados.</span></div>
       </div>
+
+      {data?.persistence === 'local' && (
+        <div className="auto-client-verification-notice is-local" role="status">
+          <ShieldAlert />
+          <div><strong>Modo local temporário</strong><span>Os clientes já podem ser comparados e classificados neste dispositivo. Para compartilhar as decisões com a equipe, aplique a atualização 71 no Supabase.</span></div>
+        </div>
+      )}
 
       <AutoPanel title="Fila de comparação" description={`${visiblePairs.length} par(es) exibido(s). Os pendentes mais semelhantes aparecem primeiro.`}>
         <div className="auto-client-verification-toolbar">

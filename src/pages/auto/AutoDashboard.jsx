@@ -419,7 +419,7 @@ export default function AutoDashboard() {
               <b>{metrics?.vencendoNoMes ?? 0}</b>
               <ArrowRight aria-hidden="true" />
             </button>
-            <button type="button" onClick={() => navigate('/auto/gestao')}>
+            <button type="button" onClick={() => navigate(`/auto/gestao?mes=${mesRef}`)}>
               <span className="is-blue"><Layers3 aria-hidden="true" /></span>
               <div><strong>Negócios no fluxo</strong><small>Cotações abertas no período</small></div>
               <b>{metrics?.cotacoesNoMes ?? 0}</b>
@@ -453,7 +453,7 @@ export default function AutoDashboard() {
             description="Mova cada negócio até a emissão."
             value={metrics?.renovacoesPendentes ?? 0}
             tone="warning"
-            onClick={() => navigate('/auto/gestao')}
+            onClick={() => navigate(`/auto/gestao?mes=${mesRef}`)}
           />
           <AutoActionCard
             icon={RefreshCw}

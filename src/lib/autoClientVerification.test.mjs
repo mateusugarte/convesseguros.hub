@@ -35,3 +35,13 @@ test('monta pares candidatos e anexa decisoes existentes', () => {
   assert.equal(pairs.length, 1)
   assert.equal(pairs[0].verificacao?.decisao, 'mesmo_cliente')
 })
+
+test('sempre exibe dois cadastros com o mesmo nome como um par pendente', () => {
+  const pairs = buildClientVerificationPairs([
+    { id: 'cliente-a', nome_completo: 'Maria das Dores Souza' },
+    { id: 'cliente-b', nome_completo: 'MARIA DORES SOUZA' },
+  ])
+  assert.equal(pairs.length, 1)
+  assert.equal(pairs[0].tipoCorrespondencia, 'nome_igual')
+  assert.equal(pairs[0].verificacao, null)
+})

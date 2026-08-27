@@ -39,7 +39,9 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
 - `getAutoClientVerificationData` carrega a base de clientes, veiculos e
   decisoes humanas; `salvarAutoClientVerification` persiste somente a conclusao
   `mesmo_cliente` ou `clientes_diferentes`. A tela nunca mescla ou exclui
-  cadastros automaticamente.
+  cadastros automaticamente. A lista de candidatos nao depende da migration 71:
+  se a tabela de decisoes ainda nao existir, os pares continuam visiveis e a
+  classificacao fica temporariamente no dispositivo, com aviso explicito.
 - `getRenovacoesAuto({ periodo, mes })` filtra por `vigencia_fim` considerando
   mes+ano juntos (nunca so o numero do mes) via `inicioFimMes`/`parseMonthRef`.
 - `iniciarCotacaoRenovacao(renovacaoId)` e a funcao unica usada tanto pelo botao
@@ -131,7 +133,8 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   aprovado. Novas importacoes aplicam essa regra diretamente no front-end.
 - Migration `supabase/71_auto_verificacao_clientes.sql` cria a memoria dos pares
   de clientes revisados, com uma decisao unica por par e RLS para usuarios
-  autenticados. A deteccao de nomes iguais/semelhantes permanece no front-end.
+  autenticados. A deteccao de nomes iguais/semelhantes permanece no front-end;
+  sem essa migration a tela usa fallback local e nao bloqueia a comparacao.
 - Migration `supabase/66_auto_clientes_cpf_opcional_importacao.sql` remove o
   `NOT NULL` legado de `clientes_auto.cpf`. A subida de apolices nao pede CPF e
   deve conseguir criar o cliente apenas com o nome. O botao da pagina principal
@@ -147,8 +150,11 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   definida por `AUTO_PIPELINE_STAGES`: Renovacoes futuras, Renovacoes para
   enviar hoje/atrasadas, Cotacoes pendentes (somente seguro novo), Cotacoes
   feitas, Negociando, Vistoria/rastreador, Proposta transmitida e Apolice
-  emitida. Renovacoes iniciadas permanecem nas duas primeiras etapas ate a
-  cotacao ser feita; seguro novo, renovacao e endosso usam etiquetas distintas.
+  emitida. As duas primeiras etapas usam o mes escolhido no seletor proprio da
+  Pipeline e mostram somente renovacoes sem calculo concluido (`cotada_em` vazio;
+  uma ficha apenas aberta em `cotando` ainda conta). Depois da confirmacao do
+  calculo, o negocio sai dessas colunas e segue para Cotacoes feitas; seguro
+  novo, renovacao e endosso usam etiquetas distintas.
 - Exclusão no Auto é sempre **de grupo**: renovação, cotação, emissão (card do
   Kanban) e apólice formam um único registro lógico e saem juntas. A ordem dos
   DELETEs é montada por `planejarExclusaoGrupoAuto` (`src/lib/autoExclusao.js`,

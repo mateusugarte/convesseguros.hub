@@ -201,6 +201,20 @@ function nomeEmissao(emissao) {
   return emissao.nome_cliente || c.nome_cliente || c.nome_interessado || c.condutor_nome || emissao.condutor_nome || '-'
 }
 
+function currentMonthRef() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
+function validMonthRef(value) {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(String(value || '')) ? value : currentMonthRef()
+}
+
+function pipelineMonthLabel(value) {
+  const [year, month] = validMonthRef(value).split('-').map(Number)
+  return new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+}
+
 function cpfEmissao(emissao) {
   const c = emissao.cotacoes_auto || {}
   return emissao.cpf_cliente || c.cpf_cliente || '-'
@@ -1411,6 +1425,7 @@ export default function AutoEmissoes() {
   const [periodo, setPeriodo] = useState(periodoInicial)
   const [filtroInicio, setFiltroInicio] = useState(initialRange.inicio)
   const [filtroFim, setFiltroFim] = useState(initialRange.fim)
+  const [mesRenovacoes, setMesRenovacoes] = useState(() => validMonthRef(new URLSearchParams(location.search).get('mes')))
   const [buscaPipeline, setBuscaPipeline] = useState('')
   const [importHistoricoResumo, setImportHistoricoResumo] = useState(null)
   const [mesAnoEmissoes, setMesAnoEmissoes] = useState(() => {
@@ -1463,12 +1478,12 @@ export default function AutoEmissoes() {
     ]),
   })
 
-  // Coluna virtual "Renovacoes": renovacoes ainda sem cotacao vinculada,
-  // sempre visivel (nao segue o filtro de periodo do resto do Kanban) para
-  // nao sumir da vista so porque o filtro mudou para "Semana".
+  // As colunas virtuais de renovacao usam uma carteira mensal explicita e
+  // independente do periodo das emissoes. Somente itens sem calculo concluido
+  // entram nesta consulta.
   const { data: renovacoesPendentes = [], isError: isErrorRenovacoesPendentes, error: errorRenovacoesPendentes } = useQuery({
-    queryKey: ['auto-renovacoes-pendentes'],
-    queryFn: () => getRenovacoesPendentesSemCotacao(),
+    queryKey: ['auto-renovacoes-pendentes', mesRenovacoes],
+    queryFn: () => getRenovacoesPendentesSemCotacao(mesRenovacoes),
   })
 
   const { mutateAsync: salvarLinhaPlanilha, isPending: salvandoLinhaPlanilha } = useMutation({
@@ -1879,6 +1894,14 @@ export default function AutoEmissoes() {
     setFiltroFim(range.fim)
   }
 
+  function handleMesRenovacoesChange(value) {
+    const next = validMonthRef(value)
+    setMesRenovacoes(next)
+    const params = new URLSearchParams(location.search)
+    params.set('mes', next)
+    navigate({ pathname: location.pathname, search: params.toString() }, { replace: true })
+  }
+
   // Selecao explicita de mes+ano para "Ultimas emissoes" (considera o ano
   // junto ao mes, evitando misturar emissoes de anos diferentes).
   function handleMesAnoEmissoesChange(value) {
@@ -2268,6 +2291,11 @@ export default function AutoEmissoes() {
         <>
           <FilterBar>
             <div className="flex flex-wrap items-center gap-3">
+              <label className="renewal-month-picker">
+                <CalendarDays />
+                <span>Mês das renovações</span>
+                <input type="month" value={mesRenovacoes} onChange={event => handleMesRenovacoesChange(event.target.value)} />
+              </label>
               <span className="auto-pipeline-filter-label"><CalendarDays /> Período das emissões</span>
               <div className="inline-flex flex-wrap rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-1 shadow-sm">
                 {PERIOD_OPTIONS.map(option => {
@@ -2403,7 +2431,7 @@ export default function AutoEmissoes() {
                 <DataCard
                   key={id}
                   title={<span className="auto-kanban-column-title"><span>{String(stageIndex + 1).padStart(2, '0')}</span>{stage.label}</span>}
-                  subtitle={`${items.length} item(ns)`}
+                  subtitle={`${items.length} item(ns) sem cálculo · ${pipelineMonthLabel(mesRenovacoes)}`}
                   className={`auto-kanban-column auto-kanban-column-renewals w-[300px] shrink-0 snap-start ${id === 'renovacoes_para_enviar' ? 'is-urgent' : ''}`}
                   bodyClassName="pt-4"
                 >
@@ -2414,7 +2442,7 @@ export default function AutoEmissoes() {
                       <EmptyState
                         icon={<RefreshCw className="w-6 h-6" />}
                         title={termoPipeline ? 'Nenhuma renovação encontrada' : empty}
-                        description={termoPipeline ? 'A busca continua ativa nas outras etapas.' : (id === 'renovacoes' ? 'Aqui ficam as renovações cuja data de envio ainda está no futuro.' : 'Aqui aparecem as renovações com limite hoje ou vencido e ainda sem cotação.')}
+                        description={termoPipeline ? 'A busca continua ativa nas outras etapas.' : (id === 'renovacoes' ? `Aqui ficam somente as renovações de ${pipelineMonthLabel(mesRenovacoes)} ainda sem cálculo e com envio futuro.` : `Aqui aparecem as renovações de ${pipelineMonthLabel(mesRenovacoes)} ainda sem cálculo, com limite hoje ou vencido.`)}
                         className="py-8"
                       />
                     ) : items.map(item => (

@@ -70,6 +70,20 @@ export function classificarRenovacoesPipeline(items = [], today = new Date().toI
   }, { futuras: [], paraEnviar: [] })
 }
 
+export function isRenovacaoSemCalculo(item = {}) {
+  if (item.cotada_em) return false
+  if (['renovada', 'nao_renovada'].includes(item.status_renovacao)) return false
+
+  const operational = normalizeText(item.status_operacional).replace(/\s+/g, '_')
+  if (['cotado', 'enviado', 'negociando', 'outra_corretora', 'renovado', 'cancelado'].includes(operational)) return false
+  // Abrir a ficha de cotacao cria o vinculo e marca "cotando", mas o calculo
+  // so existe de fato depois da confirmacao que preenche cotada_em.
+  if (operational === 'cotando') return true
+
+  const quoteStatus = normalizeText(item.status_cotacao).replace(/\s+/g, '_')
+  return !quoteStatus || quoteStatus === 'nao_cotada'
+}
+
 export function renewalStatusFields(value) {
   switch (value) {
     case 'em_andamento': return { status_operacional: 'cotando', status_cotacao: 'cotada_nao_enviada', status_renovacao: 'pendente' }

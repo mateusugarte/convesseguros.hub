@@ -1,5 +1,100 @@
 # CURRENT TASK
 
+## Logo no PDF, acionamentos da assistencia e geracao do documento (2026-08-27, Claude — CONCLUIDA)
+
+Responsavel: Claude. Terceira rodada sobre o teste do usuario.
+
+**A logo nunca chegava ao PDF porque ninguem consultava o cadastro.** O template ja sabia
+imprimi-la (`seguradoras.logo_url`, nunca recortada do PDF da cotacao), mas os parsers nao
+encostam no banco: entregavam `logo_url: ''` e todo card caia no nome em serifada. A tela passou a
+carregar `fetchSeguradorasCatalog()` na geracao e casar pelo nome.
+
+**O casamento por igualdade exata NAO servia** — mesma armadilha ja documentada em
+`corDaSeguradora`: o cadastro guarda razao social ("HDI SEGUROS S.A.") e o parser entrega o nome
+comercial ("HDI Seguros"). `casarSeguradora` (nova, pura, em `orcamentoComparativo.js`) tenta
+igualdade, depois alias, depois o cadastro mais LONGO contido no nome — o mais longo primeiro para
+"Itau Seguros" nao casar com um cadastro generico "Seguros". 3 testes.
+
+**Segundo motivo de logo em branco: corrida.** Imprimir logo apos `document.write` disparava com
+as imagens ainda em voo. `imagensCarregadas` espera `load`/`error` de cada imagem, com teto de 5s;
+`error` conta como resolvida de proposito — logo quebrada nao pode travar a geracao, o template ja
+cai para o nome.
+
+**Geracao agora abre direto o dialogo de salvar em PDF** (`janela.print()` apos as imagens). O
+PDF sai vetorial, com texto selecionavel e a paginacao A4 do template. **Nao e download de um
+clique**: nao ha biblioteca de PDF no projeto, e as candidatas (jsPDF + html2canvas) rasterizam a
+pagina — o documento perderia nitidez e o texto deixaria de ser selecionavel. Se o download direto
+for obrigatorio, o caminho e uma funcao serverless renderizando o mesmo HTML.
+
+**Assistencia passou a dizer quantas vezes pode ser acionada.** Saber que ha guincho vale pouco
+sem saber quantas vezes ele pode ser chamado no ano — e o que separa uma assistencia da outra. A
+Pier imprime ("Quantas vezes pode ser acionado? 3 acionamentos/ano") e o numero agora e LIDO
+(`textoAssistencia`); antes estava fixo no codigo e continuaria dizendo "3" se a Pier mudasse.
+2 testes.
+
+**A HDI nao imprime o limite** — o rodape (*4) diz "Pacote de Servicos HDI (vide Condicoes
+Gerais)". Esse numero so pode vir do cadastro de condicoes gerais, tabela
+`seguradora_condicoes_gerais`, criada pela migration 67 — ainda nao executada. Ate la o campo
+Assistencia da revisao e editavel e o texto digitado vai para o documento.
+
+**Auditoria de cobertura nos 9 fixtures** (colisao, terceiros, franquia, assistencia, carro
+reserva, vidros), para responder "nao estavam sendo coletadas": Bradesco, HDI, Darwin, Yelum e
+Tokio saem com as 6 completas; Allianz nega carro reserva explicitamente; Pier fica sem o limite
+de terceiros (pagina rasterizada). **A Suhai sai sem vidros e sem carro reserva porque as duas
+palavras NAO APARECEM no PDF dela** — conferido no texto extraido. Nesses casos a categoria fica
+NAO_INFORMADO, bloqueia a geracao e a revisao cobra, que e o comportamento correto: o comparativo
+nao pode afirmar cobertura que o documento nao afirma.
+
+Validacao: `npm test` 535/535, `npm run build` concluido.
+
+---
+
+## Correcoes na leitura HDI/Pier apos teste do usuario (2026-08-27, Claude — CONCLUIDA)
+
+Responsavel: Claude. Segunda rodada, sobre o teste real do usuario na tela.
+
+**A HDI nao preenchia nada porque a TELA nao aplicava.** `AutoQuoteComparison` so chamava
+`aplicarCotacao` quando NAO havia escolha pendente (`if (leitura?.cotacao &&
+!leitura.cotacao.escolha_pendente)`). Como HDI, Pier e Suhai sempre abrem com escolha pendente, a
+revisao ficava intocada e o usuario via tudo em branco, mesmo com o parser tendo lido tudo. Agora
+aplica sempre — `camposDaCotacao` ja devolve vazio no que depende do produto.
+
+**A leitura deixou de apagar o que o cadastro sabe.** `aplicarCotacao` espalhava o objeto inteiro
+de campos, e cada string vazia do PDF sobrescrevia o dado vindo da cotacao. Agora so entra o que o
+PDF realmente afirma. `sideFromQuote` passou a semear segurado, condutor, veiculo, placa, uso, CEP
+e vigencia a partir de `cotacoes_auto`.
+
+**Dois dados NAO existem nos PDFs testados** — conferido no texto extraido, nao suposto:
+- **Placa na HDI**: a palavra "placa" nao aparece no documento, nao ha padrao de placa e nao ha
+  chassi. E um calculo de renovacao identificado por codigo FIPE. Vem do cadastro da cotacao.
+- **Vigencia na Pier**: o PDF so traz "valida ate 26/08/2026". Tambem vem do cadastro.
+
+**Danos a terceiros passou a exigir VALOR, nao descricao** (`textoTerceiros`, novo em
+`orcamentoComparativo.js`). Pedido explicito do usuario: a linha existe para comparar numero com
+numero. So entra fragmento que carregue "R$ 150.000", "R$ 150.000,00", "1.320,61" ou "100%". Sem
+valor a categoria cai em NAO_INFORMADO, bloqueia e a revisao cobra — antes a Pier imprimia "Danos
+fisicos, materiais e morais a terceiros" e o comparativo saia com prosa de um lado e valor do
+outro, como se as duas informassem a mesma coisa.
+
+**Indenizacao integral responde "100% ou nao", e nada alem disso.** `textoIndenizacao` parou de
+cair na observacao da seguradora quando falta o percentual — era de onde vinha "A cotacao descreve
+cobertura para perda total...", que ocupava a linha sem responder e ainda dava a revisao por
+concluida. Sem percentual, campo vazio e revisao cobra.
+
+**Carro reserva da Pier: o PDF LISTA a cobertura**, em "Coberturas adicionais". O parser nao a
+emitia. Agora emite como inclusa; a categoria e as diarias ("conforme contratado em apolice") nao
+estao no documento e ficam para a revisao. Dois testes que afirmavam o contrario foram corrigidos
+— eles descreviam o parser, nao o PDF.
+
+Estado apos as correcoes, medido nos PDFs reais: **HDI preenche 23 de 24 campos** apos escolher a
+modalidade (falta so a placa, que vem do cadastro). **Pier preenche 16** apos escolher produto e
+franquia; ficam para a revisao numero, vigencia, premio total, indenizacao integral e limite de
+terceiros — todos ausentes do PDF ou presos na pagina rasterizada.
+
+Validacao: `npm test` 530/530, `npm run build` concluido.
+
+---
+
 ## Leitura de orcamento corrigida e geracao do comparativo conectada (2026-08-27, Claude — CONCLUIDA)
 
 Responsavel: Claude. Relato do usuario ao testar HDI e Pier na tela: "nao puxou nenhuma

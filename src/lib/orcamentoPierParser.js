@@ -35,6 +35,22 @@ export function listarProdutosPier() {
   return resultadoProdutos('Pier Seguros', PRODUTOS_PIER)
 }
 
+const SERVICOS_PIER = 'Guincho, pane elétrica ou mecânica, falta de gasolina, chaveiro e troca de pneu'
+
+/**
+ * Assistencia com o LIMITE DE ACIONAMENTOS, e nao so a lista de servicos.
+ *
+ * Saber que ha guincho vale pouco sem saber quantas vezes ele pode ser chamado
+ * no ano — e o que diferencia as assistencias entre seguradoras. A Pier imprime
+ * isso ("Quantas vezes pode ser acionado? 3 acionamentos/ano"), entao o numero e
+ * LIDO do documento; antes estava fixo no codigo e continuaria dizendo "3" se a
+ * Pier mudasse a regra.
+ */
+export function textoAssistencia(texto) {
+  const m = String(texto || '').match(/(\d+)\s*acionamentos?\s*\/?\s*ano/i)
+  return m ? `${SERVICOS_PIER} — ${m[1]} acionamentos por ano.` : `${SERVICOS_PIER}.`
+}
+
 export function parseCotacaoPier({
   itens = [], texto = '', seguradoraMeta = null, produto = null, dadosProduto = null,
   franquia_tipo: franquiaTipo = null,
@@ -110,10 +126,14 @@ export function parseCotacaoPier({
     }
   }
 
+  // Indenizacao integral e "100% da FIPE" ou nao e — o cliente quer o percentual,
+  // nao um paragrafo. A Pier so afirma que cobre perda total; o percentual esta
+  // na pagina rasterizada. Sem o numero a revisao cobra, em vez de imprimir uma
+  // frase que ocupa a linha sem responder a pergunta.
   cot.indenizacao_integral = {
     incluida: true,
     percentual_fipe: numeroOuNull(dadosProduto?.percentual_fipe),
-    observacao: 'A cotação descreve cobertura para perda total; o percentual está na página rasterizada do produto.',
+    observacao: '',
   }
   cot.coberturas = [
     {
@@ -124,13 +144,27 @@ export function parseCotacaoPier({
     {
       nome_original_seguradora: 'Danos físicos, materiais e morais a terceiros',
       categoria: 'terceiros', incluida: true,
-      observacoes: dadosProduto?.limite_terceiros
-        ? `Danos a terceiros: ${dadosProduto.limite_terceiros}.`
-        : 'Danos físicos, materiais e morais a terceiros; limites pendentes da página rasterizada.',
+      // A linha de terceiros existe para mostrar o LIMITE — "R$ 100.000,00" —, e
+      // nao para descrever o que a cobertura faz: o cliente compara numero com
+      // numero. Na Pier esse valor esta na pagina rasterizada, sem camada de
+      // texto. Sem valor a linha fica vazia de proposito: assim a categoria cai
+      // em NAO_INFORMADO, bloqueia a geracao e a revisao cobra o numero. Trocar
+      // isso por prosa dava a impressao de linha preenchida e o comparativo saia
+      // com descricao de um lado e valor do outro.
+      observacoes: dadosProduto?.limite_terceiros ? String(dadosProduto.limite_terceiros) : '',
+    },
+    {
+      // O PDF lista carro reserva em "Coberturas adicionais". A categoria e as
+      // diarias ficam "conforme contratado em apolice" — o numero nao esta no
+      // documento, entao ele vem da revisao.
+      nome_original_seguradora: 'Carro reserva', categoria: 'carro_reserva', incluida: true,
+      observacoes: dadosProduto?.carro_reserva
+        ? String(dadosProduto.carro_reserva)
+        : 'Incluso — categoria e diárias conforme contratado em apólice.',
     },
     {
       nome_original_seguradora: 'Assistência 24h', categoria: 'assistencia', incluida: true,
-      observacoes: 'Guincho, pane elétrica ou mecânica, falta de gasolina, chaveiro e troca de pneu — 3 acionamentos por ano.',
+      observacoes: textoAssistencia(texto),
     },
     {
       nome_original_seguradora: 'Vidros e faróis', categoria: 'vidros', incluida: true,

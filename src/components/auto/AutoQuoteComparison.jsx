@@ -47,6 +47,25 @@ const REVIEW_FIELDS = [
   { key: 'nao_inclusos', label: 'Não incluso nesta cotação', multiline: true },
 ]
 
+/**
+ * Resolve quando toda imagem da janela terminou de carregar (ou falhou).
+ *
+ * `onerror` conta como resolvida de proposito: logo quebrada nao pode travar a
+ * geracao do orcamento — o template ja cai para o nome da seguradora.
+ */
+function imagensCarregadas(janela, limiteMs = 5000) {
+  const imagens = Array.from(janela.document.images || [])
+  const pendentes = imagens.filter(img => !img.complete)
+  if (!pendentes.length) return Promise.resolve()
+  return Promise.race([
+    Promise.all(pendentes.map(img => new Promise(resolve => {
+      img.addEventListener('load', resolve, { once: true })
+      img.addEventListener('error', resolve, { once: true })
+    }))),
+    new Promise(resolve => janela.setTimeout(resolve, limiteMs)),
+  ])
+}
+
 function formatSize(bytes) {
   if (!bytes) return ''
   return bytes > 1024 * 1024
@@ -54,14 +73,33 @@ function formatSize(bytes) {
     : `${Math.ceil(bytes / 1024)} KB`
 }
 
+/**
+ * Estado inicial de um lado, semeado com o que a COTACAO do sistema ja sabe.
+ *
+ * Nem todo PDF traz tudo: o calculo da HDI nao imprime placa em lugar nenhum, e
+ * a Pier nao imprime vigencia. Esses dados existem no cadastro da cotacao, que e
+ * o que o corretor ja preencheu — busca-los ali e o oposto de inventar, e evita
+ * exigir digitacao de algo que o sistema tem.
+ */
 function sideFromQuote(role, quote) {
   const option = role === 'atual' ? quote?.seguradora_preferencial : quote?.seguradora_mais_barata
   return {
     seguradora: option?.nome || '',
     arquivo_nome: '',
     campos: {
-      numero: '', validade: '', vigencia_inicio: quote?.vigencia_inicio || '', vigencia_fim: quote?.vigencia_fim || '',
-      premio_liquido: option?.premio_liquido ?? '', iof: option?.iof ?? '', premio_total: option?.premio_total ?? '',
+      segurado_nome: quote?.nome_cliente || '',
+      segurado_cpf: quote?.cpf_cliente || '',
+      condutor_nome: quote?.condutor_nome || '',
+      condutor_cpf: quote?.condutor_cpf || '',
+      condutor_estado_civil: quote?.estado_civil_condutor || '',
+      veiculo_modelo: quote?.modelo_veiculo || '',
+      veiculo_ano: '',
+      veiculo_placa: quote?.placa || '',
+      veiculo_uso: quote?.uso_veiculo || '',
+      veiculo_cep_pernoite: quote?.cep_pernoite || '',
+      numero: '', validade: '',
+      vigencia_inicio: quote?.vigencia_inicio || '', vigencia_fim: quote?.vigencia_fim || '',
+      premio_total: option?.premio_total ?? '',
       premio_parcelado: option?.parcelamentos || '', franquia: '', franquia_tipo: '', indenizacao_integral: '',
       assistencia: '', carro_reserva: '', vidros: '', danos_terceiros: '', nao_inclusos: '',
     },
@@ -188,9 +226,11 @@ export default function AutoQuoteComparison({ quote }) {
       const { lerOrcamento } = await import('../../lib/orcamentoLeitura')
       const leitura = await lerOrcamento(file)
       setLeituras(current => ({ ...current, [role]: leitura }))
-      // Cotacao com uma oferta so ja preenche a revisao direto. Com mais de uma,
-      // nada e preenchido ate a escolha — o premio e as coberturas dependem dela.
-      if (leitura?.cotacao && !leitura.cotacao.escolha_pendente) aplicarCotacao(role, leitura)
+      // Preenche SEMPRE, inclusive com escolha pendente: segurado, condutor,
+      // veiculo, numero e vigencia nao dependem do produto e ja foram lidos.
+      // Antes a revisao ficava inteira em branco ate a escolha e parecia leitura
+      // falhada — `camposDaCotacao` ja devolve vazio no que depende do produto.
+      if (leitura?.cotacao) aplicarCotacao(role, leitura)
     } catch (erro) {
       setErros(current => ({ ...current, [role]: `Não foi possível ler o PDF: ${erro.message}` }))
     } finally {
@@ -221,12 +261,19 @@ export default function AutoQuoteComparison({ quote }) {
   function aplicarCotacao(role, leitura) {
     const campos = camposDaCotacao(leitura.cotacao, { montarCategorias })
     if (!campos) return
+    // So o que o PDF realmente afirma sobrescreve. Espalhar `campos` inteiro
+    // apagava com string vazia o que veio do cadastro da cotacao — era assim que
+    // a placa da HDI e a vigencia da Pier sumiam depois da leitura, justamente os
+    // dois casos em que o PDF nao tem o dado e o sistema tem.
+    const lidos = Object.fromEntries(
+      Object.entries(campos).filter(([, valor]) => valor !== '' && valor != null),
+    )
     setSides(current => ({
       ...current,
       [role]: {
         ...current[role],
         seguradora: leitura.cotacao.seguradora?.nome || current[role].seguradora,
-        campos: { ...current[role].campos, ...campos },
+        campos: { ...current[role].campos, ...lidos },
       },
     }))
   }
@@ -250,17 +297,33 @@ export default function AutoQuoteComparison({ quote }) {
     setGerando(true)
     setErroGeracao('')
     try {
-      const [{ montarComparativo }, { montarHtmlOrcamento }] = await Promise.all([
+      const [{ montarComparativo, casarSeguradora }, { montarHtmlOrcamento }, { fetchSeguradorasCatalog }] = await Promise.all([
         import('../../lib/orcamentoComparativo'),
         import('../../lib/orcamentoComparativoHtml'),
+        import('../../lib/seguradoras'),
       ])
+
+      // A logo do card vem do cadastro (`seguradoras.logo_url`), nunca recortada
+      // do PDF da cotacao. O parser nao consulta o banco, entao ate aqui
+      // `logo_url` estava vazio e todo card caia no nome em serifada — era o
+      // "a logo das seguradoras nao vai no PDF".
+      const catalogo = await fetchSeguradorasCatalog().catch(() => [])
 
       const cotacaoDe = role => {
         const lida = leituras[role]?.cotacao
         if (!lida) return null
         const cot = aplicarRevisao(lida, sides[role].campos)
         const nome = sides[role].seguradora || cot.seguradora?.nome || ''
-        return { ...cot, seguradora: { ...cot.seguradora, nome } }
+        const meta = casarSeguradora(catalogo, nome)
+        return {
+          ...cot,
+          seguradora: {
+            ...cot.seguradora,
+            nome: meta?.nome_canonico || nome,
+            id: meta?.id ?? cot.seguradora?.id ?? null,
+            logo_url: meta?.logo_url || cot.seguradora?.logo_url || '',
+          },
+        }
       }
 
       const atual = cotacaoDe('atual')
@@ -287,6 +350,13 @@ export default function AutoQuoteComparison({ quote }) {
       }
       janela.document.write(montarHtmlOrcamento(comparativo))
       janela.document.close()
+
+      // Esperar as logos ANTES de abrir o dialogo. Sem isso a impressao dispara
+      // com as imagens ainda em voo e o PDF sai com os selos em branco —
+      // exatamente o sintoma de logo faltando, so que agora por corrida.
+      await imagensCarregadas(janela)
+      janela.focus()
+      janela.print()
       setComparativoGerado(comparativo)
     } catch (erro) {
       setErroGeracao(`Não foi possível gerar o orçamento: ${erro.message}`)

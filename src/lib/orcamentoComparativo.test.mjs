@@ -18,7 +18,7 @@ import {
   validarCotacao,
   formatarReferencia,
   formatarMoeda,
-  normalizarTexto,
+  normalizarTexto, casarSeguradora,
 } from './orcamentoComparativo.js'
 
 // ─── Dicionario de coberturas ──────────────────────────────────────────
@@ -424,4 +424,34 @@ test('nao repete a indenizacao integral quando a observacao ja falava dela', () 
   }
   const texto = textoColisao(cot)
   assert.equal(texto.match(/indenização integral/gi)?.length, 1, texto)
+})
+
+// ─── Casamento com o cadastro de seguradoras (logo no PDF) ──────────────
+
+test('REGRESSAO: casa o nome comercial do parser com a razao social do cadastro', () => {
+  // Sem isso nenhuma logo era encontrada e todo card caia no nome em serifada.
+  const catalogo = [
+    { id: '1', nome_canonico: 'HDI SEGUROS S.A.', logo_url: '/hdi.png', aliases: [] },
+    { id: '2', nome_canonico: 'Bradesco Auto/RE Companhia de Seguros', logo_url: '/b.png', aliases: [] },
+    { id: '3', nome_canonico: 'Pier Seguradora S.A.', logo_url: '/p.png', aliases: ['Pier'] },
+  ]
+  assert.equal(casarSeguradora(catalogo, 'HDI Seguros')?.id, '1')
+  assert.equal(casarSeguradora(catalogo, 'Bradesco Seguros')?.id, undefined) // nao contido nos dois sentidos
+  assert.equal(casarSeguradora(catalogo, 'Pier')?.id, '3')
+  assert.equal(casarSeguradora(catalogo, 'Pier Seguradora S.A.')?.id, '3')
+})
+
+test('nao casa quando nao ha relacao entre os nomes', () => {
+  const catalogo = [{ id: '1', nome_canonico: 'Tokio Marine Seguradora', logo_url: '', aliases: [] }]
+  assert.equal(casarSeguradora(catalogo, 'Allianz Seguros'), null)
+  assert.equal(casarSeguradora(catalogo, ''), null)
+  assert.equal(casarSeguradora([], 'Tokio'), null)
+})
+
+test('prefere o cadastro mais longo, nao um generico contido em tudo', () => {
+  const catalogo = [
+    { id: 'generico', nome_canonico: 'Seguros', aliases: [] },
+    { id: 'certo', nome_canonico: 'Itau Seguros', aliases: [] },
+  ]
+  assert.equal(casarSeguradora(catalogo, 'Itau Seguros Auto')?.id, 'certo')
 })

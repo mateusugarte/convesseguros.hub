@@ -194,11 +194,15 @@ export function camposDaCotacao(cotacao, { montarCategorias }) {
   }
 }
 
+// A pergunta que este campo responde e "quanto indeniza": 100% da FIPE ou nao.
+// Devolver a observacao da seguradora quando falta o percentual enchia a linha
+// com um paragrafo que nao respondia nada e ainda dava a revisao por concluida.
+// Sem o numero o campo fica vazio e a revisao cobra.
 function textoIndenizacao(integral) {
   if (!integral || integral.incluida == null) return ''
   if (integral.incluida === false) return 'Não inclusa'
   if (integral.percentual_fipe != null) return `Inclusa — ${String(integral.percentual_fipe).replace('.', ',')}% da FIPE`
-  return integral.observacao || 'Inclusa'
+  return ''
 }
 
 // ─── Revisao editada -> cotacao ────────────────────────────────────────

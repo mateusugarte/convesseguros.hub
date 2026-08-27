@@ -341,6 +341,38 @@ export function corDaSeguradora(seguradora, papel = 'atual') {
     || CORES_FALLBACK.atual
 }
 
+/**
+ * Casa o nome que o parser leu do PDF com o cadastro de `seguradoras`.
+ *
+ * Existe porque a igualdade exata NAO serve, pelo mesmo motivo ja documentado em
+ * `corDaSeguradora`: o cadastro guarda razao social ("HDI SEGUROS S.A.",
+ * "Bradesco Auto/RE Companhia de Seguros") e o parser entrega o nome comercial
+ * ("HDI Seguros"). Sem a tolerancia, nenhuma logo era encontrada e todo card
+ * caia no nome em serifada — que era o "a logo nao vai no PDF".
+ *
+ * Ordem: igualdade exata, depois alias exato, depois o nome cadastrado mais
+ * LONGO que esteja contido no outro (nos dois sentidos). O mais longo primeiro
+ * evita que "Itau Seguros" case com um cadastro generico "Seguros".
+ */
+export function casarSeguradora(catalogo = [], nome) {
+  const alvo = normalizarTexto(nome)
+  if (!alvo) return null
+
+  const lista = (catalogo || []).filter(Boolean)
+  const exata = lista.find(seg => normalizarTexto(seg.nome_canonico) === alvo)
+  if (exata) return exata
+
+  const porAlias = lista.find(seg => (seg.aliases || []).some(a => normalizarTexto(a) === alvo))
+  if (porAlias) return porAlias
+
+  const candidatos = lista
+    .map(seg => ({ seg, chave: normalizarTexto(seg.nome_canonico) }))
+    .filter(({ chave }) => chave && (alvo.includes(chave) || chave.includes(alvo)))
+    .sort((a, b) => b.chave.length - a.chave.length)
+
+  return candidatos[0]?.seg || null
+}
+
 function hexParaRgb(hex) {
   const h = String(hex).replace('#', '')
   return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16))
@@ -424,6 +456,26 @@ export function formatarDataBR(iso) {
  * cards falem sobre indenizacao integral com as mesmas palavras, mesmo quando
  * as cotacoes de origem nao falam.
  */
+// Danos a terceiros e a linha que o cliente compara NUMERO com NUMERO: "R$
+// 100.000,00" de um lado contra "R$ 150.000,00" do outro. Descrever o que a
+// cobertura faz ("cobre os danos causados às vítimas") ocupa a linha sem
+// responder a pergunta, e — pior — deixa o comparativo com valor de um lado e
+// prosa do outro, como se as duas cotacoes informassem a mesma coisa.
+//
+// Por isso aqui so entra fragmento que carrega valor. Sem nenhum, o texto sai
+// vazio de proposito: a categoria cai em NAO_INFORMADO, bloqueia a geracao e a
+// revisao cobra o limite — que e a verdade, o PDF nao informou o valor.
+// Aceita "R$ 150.000", "R$ 150.000,00", "1.320,61" e "100%": as seguradoras
+// escrevem o limite das quatro formas. Exigir centavos derrubava "R$ 150.000".
+const TEM_VALOR = /(R\$\s*\d[\d.]*(?:,\d+)?)|(\d[\d.]*,\d{2})|(\b\d+\s*%)/
+
+export function textoTerceiros(itens = []) {
+  return itens
+    .map(i => i.observacoes || i.nome_padronizado || i.nome_original_seguradora)
+    .filter(t => t && TEM_VALOR.test(t))
+    .join(' ')
+}
+
 export function textoColisao(cotacao) {
   const base = (cotacao?.coberturas || [])
     .filter(c => c.categoria === 'colisao' && c.incluida !== false)
@@ -547,6 +599,7 @@ export function montarCategorias(cotacao) {
     let texto
     if (meta.key === 'colisao') texto = textoColisao(cot)
     else if (meta.key === 'franquia') texto = textoFranquia(cot, itens)
+    else if (meta.key === 'terceiros') texto = textoTerceiros(itens)
     // `nome_original_seguradora` fecha a cadeia de propósito. Sem ele, uma
     // cobertura extraida sem observacao e sem nome padronizado — que e como o
     // parser da familia Porto entrega, com o nome cru da seguradora — produzia

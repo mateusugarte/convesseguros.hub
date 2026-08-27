@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 
-import { ehLayoutPier, listarProdutosPier, parseCotacaoPier } from './orcamentoPierParser.js'
+import { ehLayoutPier, listarProdutosPier, parseCotacaoPier, textoAssistencia} from './orcamentoPierParser.js'
 import { ProdutoOrcamentoObrigatorioError } from './orcamentoProdutos.js'
 import { montarCategorias, validarCotacao, ESTADO_COBERTURA } from './orcamentoComparativo.js'
 
@@ -57,16 +57,26 @@ test('OCR ou revisão pode entregar os campos do produto sem trocar sua identida
   assert.equal(montarCategorias(cot).categorias.find(c => c.key === 'carro_reserva')?.estado, ESTADO_COBERTURA.INCLUIDA)
 })
 
-test('não deduz carro reserva pelo nome do produto', () => {
+// Corrigido em 27/08 apos conferir o PDF: a Pier LISTA carro reserva em
+// "Coberturas adicionais", com texto proprio. O teste anterior afirmava
+// NAO_INFORMADO por supor que a cobertura vinha do nome do produto — nao vem, vem
+// do documento. O que o PDF nao diz e a categoria e o numero de diarias, e isso
+// continua saindo da revisao.
+test('carro reserva vem do que o PDF lista, nao do nome do produto', () => {
   const cot = parse('completo')
   const carro = montarCategorias(cot).categorias.find(c => c.key === 'carro_reserva')
-  assert.equal(carro.estado, ESTADO_COBERTURA.NAO_INFORMADO)
+  assert.equal(carro.estado, ESTADO_COBERTURA.INCLUIDA)
+  assert.match(carro.texto, /Incluso/i)
 })
 
-test('coberturas textuais permanecem explícitas', () => {
+test('danos a terceiros sem valor NAO conta como informado', () => {
+  // Regra nova: a linha de terceiros existe para mostrar o LIMITE. A Pier so
+  // descreve a cobertura em texto — o valor esta na pagina rasterizada. Deixar a
+  // descricao passar por informacao poria prosa de um lado do comparativo contra
+  // "R$ 150.000,00" do outro, como se as duas informassem a mesma coisa.
   const estados = Object.fromEntries(montarCategorias(parse()).categorias.map(c => [c.key, c.estado]))
+  assert.equal(estados.terceiros, ESTADO_COBERTURA.NAO_INFORMADO)
   assert.equal(estados.colisao, ESTADO_COBERTURA.INCLUIDA)
-  assert.equal(estados.terceiros, ESTADO_COBERTURA.INCLUIDA)
   assert.equal(estados.assistencia, ESTADO_COBERTURA.INCLUIDA)
   assert.equal(estados.franquia, ESTADO_COBERTURA.INCLUIDA)
   assert.equal(estados.vidros, ESTADO_COBERTURA.INCLUIDA)
@@ -92,4 +102,15 @@ test('Pier aceita o tipo de franquia escolhido e encerra a pendencia', () => {
   const cot = parseCotacaoPier({ itens: FX.itens, texto: FX.texto, produto: 'completo', franquia_tipo: 'reduzida' })
   assert.equal(cot.valores.franquia_tipo, 'Reduzida')
   assert.equal(cot.escolha_pendente, null)
+})
+
+test('assistencia informa quantos acionamentos por ano, lidos do PDF', () => {
+  const cot = parse('completo')
+  const a = montarCategorias(cot).categorias.find(c => c.key === 'assistencia')
+  assert.match(a.texto, /3 acionamentos por ano/)
+})
+
+test('sem o limite no documento, a assistencia nao inventa um numero', () => {
+  assert.equal(textoAssistencia('texto sem limite nenhum').includes('acionamentos'), false)
+  assert.match(textoAssistencia('Quantas vezes pode ser acionado? 5 acionamentos/ano'), /5 acionamentos por ano/)
 })

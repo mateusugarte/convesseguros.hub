@@ -265,6 +265,18 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   maior parcelamento sem juros e o boleto a vista; antes esse campo era sempre
   vazio. Danos a terceiros so conta como informado com LMI monetario, formatado
   em reais; percentual ou descricao generica nao liberam o documento.
+- Desde 27/08 a revisao tambem tem o campo critico **Limite KM do reboque**.
+  `extrairLimiteReboqueKm` e `limiteReboqueDaCotacao`, em
+  `orcamentoComparativo.js`, centralizam a leitura de padroes como `600 KM`,
+  `reboque ate 500 km` e `sem limite/ilimitado`. A assistencia 24h no PDF final
+  passa a exibir esse limite no texto; se a cotacao marca assistencia incluida
+  mas nao informa o limite, a geracao bloqueia e pede revisao.
+- Matriz real validada em 27/08: Allianz 500 km, Bradesco 400 km, Darwin 200
+  km, HDI 600 km, Pier Personalizado 200 km, Pier Completo sem limite, Porto/Azul
+  200 km, Itau 600 km, Mitsui 400 km, Suhai 500 km, Tokio 300 km e Yelum 500 km.
+  No Pier, preco/indenizacao integral/terceiros ainda dependem da pagina visual
+  rasterizada ou revisao manual quando o texto do PDF nao expuser esses numeros;
+  o limite de reboque vem do produto selecionado e das condicoes gerais.
 - A cor da faixa e identidade da SEGURADORA, nao do papel ("atual" x "outra"):
   inverter a ordem nao troca as cores. Enquanto `seguradoras.cor_destaque`
   (migration 67) nao existir, `CORES_SEGURADORA_PADRAO` responde por nome.

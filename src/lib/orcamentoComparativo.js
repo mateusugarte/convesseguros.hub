@@ -199,6 +199,9 @@ export function criarCotacaoOrcamento(patch = {}) {
       marca_modelo: '', ano_modelo: '', placa: '', uso: '',
       cep_pernoite: '', condutor_18_25: null,
     },
+    assistencia_24h: {
+      limite_reboque_km: null,
+    },
     vigencia: { inicio: '', fim: '' },
     valores: {
       premio_liquido: null, iof: null, premio_total: null,
@@ -487,6 +490,53 @@ export function textoTerceiros(itens = []) {
   }).filter(Boolean))].join(' ')
 }
 
+export function extrairLimiteReboqueKm(...fontes) {
+  const texto = fontes.flat(Infinity).filter(Boolean).join(' ')
+  if (/(?:guincho|reboque)[^.\n;]{0,120}?(?:sem limite de?\s*(?:km|quilometragem)|km ilimitado|ilimitad[oa])|(?:sem limite de?\s*(?:km|quilometragem)|km ilimitado|ilimitad[oa])[^.\n;]{0,120}?(?:guincho|reboque)/i.test(texto)) {
+    return 'Sem limite de KM'
+  }
+  const pares = [
+    /(?:guincho|reboque)[^.\n;]{0,120}?(\d{1,4})\s*(?:km|quil[oô]metros?)\b/i,
+    /(\d{1,4})\s*(?:km|quil[oô]metros?)\b[^.\n;]{0,120}?(?:guincho|reboque|assist[êe]ncia)/i,
+    /\b(\d{1,4})\s*km\b/i,
+  ]
+  for (const padrao of pares) {
+    const m = String(texto || '').match(padrao)
+    if (!m) continue
+    const km = Number(m[1])
+    if (Number.isFinite(km) && km > 0) return km
+  }
+  return null
+}
+
+export function limiteReboqueDaCotacao(cotacao) {
+  const direto = cotacao?.assistencia_24h?.limite_reboque_km
+  if (/sem limite|ilimitad/i.test(String(direto || ''))) return 'Sem limite de KM'
+  const n = direto == null || direto === '' ? null : Number(String(direto).replace(/\D/g, ''))
+  if (Number.isFinite(n) && n > 0) return n
+
+  const textos = [
+    cotacao?.textos_revisados?.assistencia,
+    ...(cotacao?.assistencias || []).flatMap(a => [a?.tipo, a?.detalhes]),
+    ...(cotacao?.coberturas || [])
+      .filter(c => c?.categoria === 'assistencia' || classificarCobertura(c?.nome_padronizado || c?.nome_original_seguradora) === 'assistencia')
+      .flatMap(c => [c?.observacoes, c?.nome_padronizado, c?.nome_original_seguradora]),
+  ]
+  return extrairLimiteReboqueKm(textos)
+}
+
+function textoAssistencia(cotacao, itens) {
+  const base = itens
+    .map(i => i.observacoes || i.nome_padronizado || i.nome_original_seguradora)
+    .filter(Boolean)
+    .join(' ')
+  const km = limiteReboqueDaCotacao(cotacao)
+  if (!km) return base
+  const jaTemKm = extrairLimiteReboqueKm(base) === km
+  const complemento = typeof km === 'string' ? `Reboque: ${km}.` : `Reboque: até ${km} km.`
+  return jaTemKm ? base : [base, complemento].filter(Boolean).join(' ')
+}
+
 export function textoColisao(cotacao) {
   const base = (cotacao?.coberturas || [])
     .filter(c => c.categoria === 'colisao' && c.incluida !== false)
@@ -611,6 +661,7 @@ export function montarCategorias(cotacao) {
     if (meta.key === 'colisao') texto = textoColisao(cot)
     else if (meta.key === 'franquia') texto = textoFranquia(cot, itens)
     else if (meta.key === 'terceiros') texto = textoTerceiros(itens)
+    else if (meta.key === 'assistencia') texto = textoAssistencia(cot, itens)
     // `nome_original_seguradora` fecha a cadeia de propósito. Sem ele, uma
     // cobertura extraida sem observacao e sem nome padronizado — que e como o
     // parser da familia Porto entrega, com o nome cru da seguradora — produzia
@@ -862,6 +913,16 @@ export function validarCotacao(cotacao) {
     pendencias.push({
       caminho: 'coberturas.terceiros.valor_lmi',
       label: 'Danos a terceiros — informe o limite em valor (ex.: R$ 150.000,00)',
+      severidade: SEVERIDADE.CRITICO,
+      bloqueia: true,
+    })
+  }
+
+  const assistencia = montarCategorias(cot).categorias.find(cat => cat.key === 'assistencia')
+  if (assistencia?.estado === ESTADO_COBERTURA.INCLUIDA && !limiteReboqueDaCotacao(cot)) {
+    pendencias.push({
+      caminho: 'assistencia_24h.limite_reboque_km',
+      label: 'Assistência 24h — informe o limite de KM do reboque',
       severidade: SEVERIDADE.CRITICO,
       bloqueia: true,
     })

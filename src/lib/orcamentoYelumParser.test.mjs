@@ -65,6 +65,13 @@ test('detalhe de vidros mantém as franquias por peça', () => {
   assert.match(vidro.observacoes, /Retrovisores R\$130,00/i)
 })
 
+test('plano intermediario leva o limite de reboque para a revisao', () => {
+  const cot = parse()
+  const assistencia = cot.coberturas.find(c => c.categoria === 'assistencia')
+  assert.equal(cot.assistencia_24h.limite_reboque_km, 500)
+  assert.match(assistencia.observacoes, /500 km/)
+})
+
 test('as categorias obrigatórias são explícitas e a cotação pode ser gerada', () => {
   const cot = parse()
   for (const categoria of montarCategorias(cot).categorias.filter(c => !c.opcional)) {
@@ -78,4 +85,3 @@ test('logo e cor vêm do cadastro', () => {
   assert.equal(cot.seguradora.logo_url, '/y.svg')
   assert.equal(cot.seguradora.cor_destaque, '#00a0af')
 })
-

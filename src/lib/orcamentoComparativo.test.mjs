@@ -18,7 +18,7 @@ import {
   validarCotacao,
   formatarReferencia,
   formatarMoeda,
-  normalizarTexto, casarSeguradora, textoTerceiros,
+  normalizarTexto, casarSeguradora, textoTerceiros, extrairLimiteReboqueKm,
 } from './orcamentoComparativo.js'
 
 // ─── Dicionario de coberturas ──────────────────────────────────────────
@@ -57,6 +57,14 @@ test('normalizarTexto remove acento sem apagar as letras', () => {
   // apagava o texto inteiro.
   assert.equal(normalizarTexto('Assistência 24 Horas'), 'assistencia 24 horas')
   assert.equal(normalizarTexto('  RENOVAÇÃO   DA  CIA '), 'renovacao da cia')
+})
+
+test('extrai o limite de KM do reboque em formatos de seguradoras diferentes', () => {
+  assert.equal(extrairLimiteReboqueKm('ASSISTÊNCIA GRATUITA - 200 KM'), 200)
+  assert.equal(extrairLimiteReboqueKm('Assist Auto Dia/Noite - Passeio 400 KM'), 400)
+  assert.equal(extrairLimiteReboqueKm('Plano 2 Serviços Reparo no local ou reboque: 500 Km'), 500)
+  assert.equal(extrairLimiteReboqueKm('Proteção para Terceiros, guincho com KM ilimitado.'), 'Sem limite de KM')
+  assert.equal(extrairLimiteReboqueKm('raio de guincho conforme selecionado'), null)
 })
 
 // ─── Tipo de operacao ──────────────────────────────────────────────────
@@ -248,6 +256,14 @@ test('parcelamento e franquia ausentes bloqueiam o documento do cliente', () => 
     cot.valores[caminho] = caminho === 'franquia' ? null : ''
     assert.equal(validarCotacao(cot).podeGerar, false, caminho)
   }
+})
+
+test('assistencia inclusa sem limite de reboque bloqueia a geracao', () => {
+  const cot = cotacaoCompleta()
+  cot.assistencias = [{ tipo: 'Assistência 24 Horas', incluida: true, detalhes: 'Serviços de guincho e pane.' }]
+  const v = validarCotacao(cot)
+  assert.equal(v.podeGerar, false)
+  assert.ok(v.bloqueios.some(b => b.caminho === 'assistencia_24h.limite_reboque_km'))
 })
 
 test('danos a terceiros usa o LMI estruturado e sempre o formata em dinheiro', () => {

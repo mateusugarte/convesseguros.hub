@@ -156,6 +156,12 @@ export function parseCotacaoYelum({ itens = [], texto = '', seguradoraMeta = nul
   const vidro = cot.coberturas.find(c => c.categoria === 'vidros')
   if (vidro && /Franquia Para-brisa/i.test(informacoes)) vidro.observacoes = informacoes.replace(/^.*?(VIDROS INTERMEDIARIO)/i, '$1')
 
+  const assistencia = cot.coberturas.find(c => c.categoria === 'assistencia')
+  if (assistencia && /INTERMEDIARIO/i.test(assistencia.nome_original_seguradora)) {
+    assistencia.observacoes = 'Assistência intermediária — guincho/reboque até 500 km, conforme tabela de limites das Condições Gerais Yelum.'
+    cot.assistencia_24h = { limite_reboque_km: 500 }
+  }
+
   cot.condicoes_gerais = { referencia: 'Processos SUSEP 15414.100331/2004-96 e 15414.901089/2015-23', anexada_em: '' }
   return cot
 }

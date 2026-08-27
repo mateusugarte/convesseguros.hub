@@ -23,7 +23,7 @@ const CHAVES_DA_REVISAO = [
   'numero', 'validade', 'vigencia_inicio', 'vigencia_fim',
   'premio_total', 'premio_parcelado',
   'franquia', 'franquia_tipo', 'indenizacao_integral',
-  'assistencia', 'carro_reserva', 'vidros', 'danos_terceiros', 'nao_inclusos',
+  'assistencia', 'limite_reboque_km', 'carro_reserva', 'vidros', 'danos_terceiros', 'nao_inclusos',
 ]
 
 // `premio_liquido` e `iof` saem de proposito: sao controle interno da emissao e
@@ -57,6 +57,7 @@ test('leva os valores da cotacao para a revisao', () => {
   assert.equal(c.indenizacao_integral, 'Inclusa — 100% da FIPE')
   assert.match(c.danos_terceiros, /Responsabilidade Civil Facultativa/)
   assert.match(c.assistencia, /Plano 2/)
+  assert.equal(c.limite_reboque_km, 500)
 })
 
 // Trocar a oferta tem de trocar o que vai para a revisao — e o ponto inteiro de
@@ -123,11 +124,13 @@ test('REGRESSAO: correcao feita na revisao chega ao documento', () => {
     segurado_nome: 'Nome Corrigido',
     veiculo_placa: 'ABC1D23',
     premio_total: '4.999,90',
+    limite_reboque_km: '700',
     carro_reserva: '15 dias de carro reserva',
   })
   assert.equal(revisado.segurado.nome, 'Nome Corrigido')
   assert.equal(revisado.veiculo.placa, 'ABC1D23')
   assert.equal(revisado.valores.premio_total, 4999.90)
+  assert.equal(revisado.assistencia_24h.limite_reboque_km, 700)
 
   const { categorias } = montarCategorias(revisado)
   assert.equal(categorias.find(c => c.key === 'carro_reserva').texto, '15 dias de carro reserva')

@@ -195,6 +195,7 @@ export function camposDaCotacao(cotacao, { montarCategorias }) {
     franquia_tipo: cotacao.valores?.franquia_tipo || '',
     indenizacao_integral: pendente ? '' : textoIndenizacao(cotacao.indenizacao_integral),
     assistencia: texto('assistencia'),
+    limite_reboque_km: pendente ? '' : limiteReboqueKm(cotacao, texto('assistencia')),
     carro_reserva: texto('carro_reserva'),
     vidros: texto('vidros'),
     danos_terceiros: texto('terceiros'),
@@ -280,6 +281,10 @@ export function aplicarRevisao(cotacao, campos = {}) {
         ? texto(c.premio_parcelado).split('·').map(t => t.trim()).filter(Boolean)
         : (cotacao.valores?.premio_parcelado || []),
     },
+    assistencia_24h: {
+      ...cotacao.assistencia_24h,
+      limite_reboque_km: limiteReboque(c.limite_reboque_km, cotacao.assistencia_24h?.limite_reboque_km ?? null),
+    },
     textos_revisados: Object.fromEntries(
       Object.entries(CATEGORIA_POR_CAMPO)
         .map(([campo, categoria]) => [categoria, texto(c[campo])])
@@ -308,4 +313,18 @@ export function aplicarRevisao(cotacao, campos = {}) {
   }
 
   return cot
+}
+
+function limiteReboqueKm(cotacao, textoAssistencia) {
+  const direto = cotacao?.assistencia_24h?.limite_reboque_km
+  if (direto != null && direto !== '') return direto
+  if (/sem limite|ilimitad/i.test(String(textoAssistencia || ''))) return 'Sem limite de KM'
+  const m = String(textoAssistencia || '').match(/(\d{1,4})\s*(?:km|quil[oô]metros?)\b/i)
+  return m ? Number(m[1]) : ''
+}
+
+function limiteReboque(valor, atual) {
+  if (valor === '' || valor == null) return atual
+  if (/sem limite|ilimitad/i.test(String(valor))) return 'Sem limite de KM'
+  return numero(valor, atual)
 }

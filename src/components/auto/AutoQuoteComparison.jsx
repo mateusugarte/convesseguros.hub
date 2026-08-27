@@ -41,6 +41,7 @@ const REVIEW_FIELDS = [
   { key: 'franquia_tipo', label: 'Tipo de franquia', critical: true },
   { key: 'indenizacao_integral', label: 'Indenização integral', critical: true },
   { key: 'assistencia', label: 'Assistência 24h', critical: true },
+  { key: 'limite_reboque_km', label: 'Limite KM do reboque', type: 'number', critical: true },
   { key: 'carro_reserva', label: 'Carro reserva', critical: true },
   { key: 'vidros', label: 'Vidros', critical: true },
   { key: 'danos_terceiros', label: 'Danos a terceiros (valor)', critical: true },
@@ -110,7 +111,7 @@ function sideFromQuote(role, quote) {
       vigencia_inicio: quote?.vigencia_inicio || '', vigencia_fim: quote?.vigencia_fim || '',
       premio_total: option?.premio_total ?? '',
       premio_parcelado: option?.parcelamentos || '', franquia: '', franquia_tipo: '', indenizacao_integral: '',
-      assistencia: '', carro_reserva: '', vidros: '', danos_terceiros: '', nao_inclusos: '',
+      assistencia: '', limite_reboque_km: '', carro_reserva: '', vidros: '', danos_terceiros: '', nao_inclusos: '',
     },
   }
 }
@@ -191,7 +192,7 @@ function ReviewField({ field, value, issue, onChange }) {
   return (
     <label className={`auto-comparison-review-field ${issue ? 'has-issue' : ''} ${field.critical ? 'is-critical' : ''}`}>
       <span>{field.label}{field.critical && <i>crítico</i>}</span>
-      {field.multiline ? <textarea {...props} rows="3" /> : <input {...props} type={field.type === 'date' ? 'date' : 'text'} inputMode={field.type === 'money' ? 'decimal' : undefined} />}
+      {field.multiline ? <textarea {...props} rows="3" /> : <input {...props} type={field.type === 'date' ? 'date' : 'text'} inputMode={field.type === 'money' || field.type === 'number' ? 'decimal' : undefined} />}
       {issue && <small><AlertTriangle />Campo previsto para conferência obrigatória</small>}
     </label>
   )

@@ -36,6 +36,10 @@ export function listarProdutosPier() {
 }
 
 const SERVICOS_PIER = 'Guincho, pane elétrica ou mecânica, falta de gasolina, chaveiro e troca de pneu'
+const LIMITE_REBOQUE_POR_PRODUTO = {
+  personalizado: 200,
+  completo: 'Sem limite de KM',
+}
 
 /**
  * Assistencia com o LIMITE DE ACIONAMENTOS, e nao so a lista de servicos.
@@ -46,9 +50,13 @@ const SERVICOS_PIER = 'Guincho, pane elétrica ou mecânica, falta de gasolina, 
  * LIDO do documento; antes estava fixo no codigo e continuaria dizendo "3" se a
  * Pier mudasse a regra.
  */
-export function textoAssistencia(texto) {
+export function textoAssistencia(texto, limiteProduto = null) {
   const m = String(texto || '').match(/(\d+)\s*acionamentos?\s*\/?\s*ano/i)
-  return m ? `${SERVICOS_PIER} — ${m[1]} acionamentos por ano.` : `${SERVICOS_PIER}.`
+  const limite = limiteProduto
+    ? (typeof limiteProduto === 'string' ? `guincho ${limiteProduto.toLowerCase()}` : `guincho até ${limiteProduto} km`)
+    : ''
+  const partes = [SERVICOS_PIER, limite, m ? `${m[1]} acionamentos por ano` : '']
+  return `${partes.filter(Boolean).join(' — ')}.`
 }
 
 export function parseCotacaoPier({
@@ -114,6 +122,7 @@ export function parseCotacaoPier({
     franquia,
     franquia_tipo: ROTULO_FRANQUIA[franquiaTipo] || '',
   }
+  cot.assistencia_24h = { limite_reboque_km: LIMITE_REBOQUE_POR_PRODUTO[escolhido.id] ?? null }
 
   // Pendencia de segundo estagio: o produto ja esta escolhido e o resto da
   // cotacao esta lido; falta so o dado que este PDF nao tem. A tela usa o mesmo
@@ -164,7 +173,7 @@ export function parseCotacaoPier({
     },
     {
       nome_original_seguradora: 'Assistência 24h', categoria: 'assistencia', incluida: true,
-      observacoes: textoAssistencia(texto),
+      observacoes: textoAssistencia(texto, cot.assistencia_24h.limite_reboque_km),
     },
     {
       nome_original_seguradora: 'Vidros e faróis', categoria: 'vidros', incluida: true,

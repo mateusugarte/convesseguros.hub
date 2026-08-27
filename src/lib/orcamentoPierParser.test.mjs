@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 
-import { ehLayoutPier, listarProdutosPier, parseCotacaoPier, textoAssistencia} from './orcamentoPierParser.js'
+import { ehLayoutPier, listarProdutosPier, parseCotacaoPier, textoAssistencia } from './orcamentoPierParser.js'
 import { ProdutoOrcamentoObrigatorioError } from './orcamentoProdutos.js'
 import { montarCategorias, validarCotacao, ESTADO_COBERTURA } from './orcamentoComparativo.js'
 
@@ -108,9 +108,18 @@ test('assistencia informa quantos acionamentos por ano, lidos do PDF', () => {
   const cot = parse('completo')
   const a = montarCategorias(cot).categorias.find(c => c.key === 'assistencia')
   assert.match(a.texto, /3 acionamentos por ano/)
+  assert.match(a.texto, /sem limite de km/i)
+  assert.equal(cot.assistencia_24h.limite_reboque_km, 'Sem limite de KM')
 })
 
-test('sem o limite no documento, a assistencia nao inventa um numero', () => {
+test('produto personalizado da Pier usa guincho de 200 km', () => {
+  const cot = parse('personalizado')
+  const a = montarCategorias(cot).categorias.find(c => c.key === 'assistencia')
+  assert.match(a.texto, /200 km/)
+  assert.equal(cot.assistencia_24h.limite_reboque_km, 200)
+})
+
+test('sem o limite nem produto, a assistencia nao inventa um numero', () => {
   assert.equal(textoAssistencia('texto sem limite nenhum').includes('acionamentos'), false)
   assert.match(textoAssistencia('Quantas vezes pode ser acionado? 5 acionamentos/ano'), /5 acionamentos por ano/)
 })

@@ -1,5 +1,58 @@
 # CURRENT TASK
 
+## Extracao completa das cotacoes e limite de reboque (2026-08-27, Codex — CONCLUIDA)
+
+Responsavel: Codex, Agente de Sistemas. Objetivo: corrigir a automacao de leitura dos
+orcamentos AUTO de forma transversal, garantindo que premio, parcelamento, franquia,
+indenizacao integral, assistencia, carro reserva, vidros, danos a terceiros e o novo limite
+de KM do reboque sejam extraidos e apresentados corretamente sempre que constarem no PDF.
+O teste deve passar pelos parsers reais e pela camada comum que alimenta a revisao e o PDF
+comparativo, sem inventar dado quando a cotacao nao informa.
+
+Entrega: o contrato comum de cotacoes AUTO agora inclui `assistencia_24h.limite_reboque_km`.
+`orcamentoComparativo.js` centraliza a leitura/validacao (`extrairLimiteReboqueKm` e
+`limiteReboqueDaCotacao`), acrescenta o limite ao texto de Assistencia 24h no PDF final e
+bloqueia a geracao quando a assistencia esta incluida mas o limite de reboque nao foi lido
+nem revisado. `orcamentoLeitura.js` expõe o campo `limite_reboque_km` na revisao e aplica
+correcoes manuais de volta na cotacao estruturada. `AutoQuoteComparison` ganhou o campo
+critico "Limite KM do reboque".
+
+Parsers ajustados nesta rodada: Pier passa a diferenciar Personalizado (200 km) e Completo
+(sem limite de KM) pelo produto escolhido; Yelum Intermediario passa a carregar 500 km a
+partir das condicoes gerais cadastradas no repo. Os demais parsers ja entregavam o limite
+pelos textos/coberturas existentes e agora sao validados pela camada comum.
+
+Matriz final verificada nos PDFs/fixtures atuais: Allianz 500 km, Bradesco 400 km, Darwin
+200 km, HDI 600 km, Pier Personalizado 200 km, Pier Completo sem limite, Porto/Azul 200 km,
+Itau 600 km, Mitsui 400 km, Suhai 500 km, Tokio 300 km e Yelum 500 km.
+
+Limitacao conhecida preservada com bloqueio correto: no Pier, a pagina de valores/produtos
+e rasterizada no PDF atual; sem OCR, premio total, indenizacao integral e danos a terceiros
+continuam indo para revisao/bloqueio quando nao aparecem como texto pesquisavel. Nao foi
+inventado dado.
+
+Validacao: suite focada dos parsers e leitura aprovada (217 testes); `npm test -- --runInBand`
+aprovado com 548 testes; `npm run build` concluido. O build manteve apenas avisos ja conhecidos
+de importacao do `xlsx` e chunk dinamico de `orcamentoLeitura.js`.
+
+---
+
+## Teste real HDI, orcamento por orcamento (2026-08-27, Codex — SUBSTITUIDA PELO ESCOPO GERAL)
+
+Responsavel: Codex, Agente de Sistemas. Objetivo: reproduzir no ambiente real o upload de
+um PDF HDI, selecionar explicitamente o produto e auditar, campo a campo, tudo o que chega
+na revisao: premio, parcelamento, franquia, indenizacao integral, assistencia, carro reserva,
+vidros e danos a terceiros. O teste sera feito pela interface usada pelo operador e comparado
+ao conteudo efetivo do PDF; qualquer ausencia sera registrada com a pagina/secao de origem
+para validacao conjunta com o usuario antes de seguir para outra seguradora.
+
+Atualizacao: o usuario ampliou o pedido para corrigir as cotacoes em geral e adicionar o
+limite de KM do reboque transversalmente. O escopo foi atendido na entrada imediatamente
+acima; a HDI ficou coberta pela matriz comum com 600 km de reboque e sem bloqueios de
+comparativo nos fixtures atuais.
+
+---
+
 ## Extracao completa e visualizacao do orcamento AUTO (2026-08-27, Codex — CONCLUIDA)
 
 Responsavel: Codex, Agente de Sistemas. Objetivo: auditar os PDFs reais de todas as

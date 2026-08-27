@@ -160,7 +160,13 @@ export function camposDaCotacao(cotacao, { montarCategorias }) {
   // seguradora nao cobre", que e outra coisa e chegaria ao cliente como tal.
   const pendente = ESCOLHA_DE_PRODUTO.has(cotacao.escolha_pendente?.campo)
   const { categorias, naoIncluso } = pendente ? { categorias: [], naoIncluso: [] } : montarCategorias(cotacao)
-  const texto = key => categorias.find(c => c.key === key)?.texto || ''
+  const texto = key => {
+    const categoria = categorias.find(c => c.key === key)
+    // "A cotação não informa" e estado de validacao, nao dado extraido. Levar
+    // essa frase ao input fazia a tela parecer preenchida e escondia justamente
+    // o campo que o corretor precisava completar.
+    return categoria?.estado === 'nao_informado' ? '' : (categoria?.texto || '')
+  }
 
   return {
     // Dados do risco: saem do PDF e vao para o orçamento final, entao passam
@@ -182,7 +188,9 @@ export function camposDaCotacao(cotacao, { montarCategorias }) {
     vigencia_fim: cotacao.vigencia?.fim || '',
 
     premio_total: cotacao.valores?.premio_total ?? '',
-    premio_parcelado: (cotacao.valores?.premio_parcelado || []).join(' · '),
+    premio_parcelado: Array.isArray(cotacao.valores?.premio_parcelado)
+      ? cotacao.valores.premio_parcelado.join(' · ')
+      : String(cotacao.valores?.premio_parcelado || ''),
     franquia: cotacao.valores?.franquia ?? '',
     franquia_tipo: cotacao.valores?.franquia_tipo || '',
     indenizacao_integral: pendente ? '' : textoIndenizacao(cotacao.indenizacao_integral),
@@ -283,9 +291,13 @@ export function aplicarRevisao(cotacao, campos = {}) {
   // afirmacao humana, entao vale sobre o extraido.
   const integral = texto(c.indenizacao_integral)
   if (integral) {
+    const percentual = integral.match(/(\d+(?:[.,]\d+)?)\s*%/)
     cot.indenizacao_integral = {
       ...cotacao.indenizacao_integral,
       incluida: !/^n[ãa]o\b/i.test(integral),
+      percentual_fipe: percentual
+        ? Number(percentual[1].replace(',', '.'))
+        : (/^n[ãa]o\b/i.test(integral) ? null : cotacao.indenizacao_integral?.percentual_fipe ?? null),
       observacao: integral,
     }
   }

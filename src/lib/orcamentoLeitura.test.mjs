@@ -143,6 +143,22 @@ test('campo em branco na revisao nao apaga o que foi extraido', () => {
   assert.equal(revisado.valores.franquia, cot.valores.franquia)
 })
 
+test('percentual corrigido na revisao atualiza a indenizacao integral', () => {
+  const cot = parseCotacaoAllianz({ itens: FX.itens, texto: FX.texto, oferta: 'Completo' })
+  const revisado = aplicarRevisao(cot, { indenizacao_integral: 'Inclusa — 95% da FIPE' })
+  assert.equal(revisado.indenizacao_integral.incluida, true)
+  assert.equal(revisado.indenizacao_integral.percentual_fipe, 95)
+})
+
+test('categoria nao informada chega vazia e visivel para revisao', () => {
+  const cot = criarCotacaoOrcamento()
+  const c = camposDaCotacao(cot, { montarCategorias })
+  assert.equal(c.assistencia, '')
+  assert.equal(c.carro_reserva, '')
+  assert.equal(c.vidros, '')
+  assert.equal(c.danos_terceiros, '')
+})
+
 test('aplicarRevisao devolve null sem cotacao', () => {
   assert.equal(aplicarRevisao(null, { segurado_nome: 'X' }), null)
 })

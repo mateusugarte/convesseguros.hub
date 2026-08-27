@@ -465,15 +465,26 @@ export function formatarDataBR(iso) {
 // Por isso aqui so entra fragmento que carrega valor. Sem nenhum, o texto sai
 // vazio de proposito: a categoria cai em NAO_INFORMADO, bloqueia a geracao e a
 // revisao cobra o limite — que e a verdade, o PDF nao informou o valor.
-// Aceita "R$ 150.000", "R$ 150.000,00", "1.320,61" e "100%": as seguradoras
-// escrevem o limite das quatro formas. Exigir centavos derrubava "R$ 150.000".
-const TEM_VALOR = /(R\$\s*\d[\d.]*(?:,\d+)?)|(\d[\d.]*,\d{2})|(\b\d+\s*%)/
+// O usuario pediu explicitamente um LIMITE EM DINHEIRO nessa linha. Percentual
+// (como 100% FIPE) pertence ao casco e nao pode dar terceiros por preenchido.
+// Aceita tanto "R$ 150.000,00" quanto "150.000,00".
+export const TEM_VALOR_MONETARIO = /(R\$\s*\d[\d.]*(?:,\d{2})?)|(?:^|\s)\d{1,3}(?:\.\d{3})+,\d{2}(?=\s|[.,;)]|$)/
 
 export function textoTerceiros(itens = []) {
-  return itens
-    .map(i => i.observacoes || i.nome_padronizado || i.nome_original_seguradora)
-    .filter(t => t && TEM_VALOR.test(t))
-    .join(' ')
+  return [...new Set(itens.map(item => {
+    const descricao = item.observacoes || ''
+    if (TEM_VALOR_MONETARIO.test(descricao)) return descricao
+
+    // Alguns layouts entregam o LMI corretamente em `valor_lmi`, mas deixam a
+    // observacao apenas com o nome. Descartar o campo estruturado fazia o valor
+    // sumir entre o parser e a revisao. O contrato comum agora sempre formata o
+    // LMI monetario, independentemente de como cada seguradora escreve a linha.
+    if (item.valor_lmi != null && Number.isFinite(Number(item.valor_lmi))) {
+      const nome = item.nome_padronizado || item.nome_original_seguradora || 'Limite contratado'
+      return `${humanizarCobertura(nome)}: ${formatarMoeda(item.valor_lmi)}`
+    }
+    return ''
+  }).filter(Boolean))].join(' ')
 }
 
 export function textoColisao(cotacao) {
@@ -627,7 +638,12 @@ export function montarCategorias(cotacao) {
     const revisado = cot.textos_revisados?.[meta.key]
     if (typeof revisado === 'string' && revisado.trim() && revisado !== texto) {
       texto = revisado.trim()
-      estado = ESTADO_COBERTURA.INCLUIDA
+      // A revisao tambem pode confirmar uma ausencia. Tratar "Não incluso"
+      // como INCLUIDA fazia o campo de terceiros exigir dinheiro logo depois
+      // de o corretor confirmar que a cobertura nao existe.
+      estado = /^n[ãa]o\b/i.test(texto)
+        ? ESTADO_COBERTURA.NAO_INCLUIDA
+        : ESTADO_COBERTURA.INCLUIDA
     }
 
     return { ...meta, itens, exclusoes, texto, estado, opcional: meta.key === CATEGORIA_OPCIONAL }
@@ -718,11 +734,17 @@ const CAMPOS_CRITICOS = [
   { caminho: 'segurado.nome',            label: 'Nome do segurado' },
   { caminho: 'veiculo.marca_modelo',     label: 'Veículo' },
   { caminho: 'valores.premio_total',     label: 'Prêmio total' },
+  { caminho: 'valores.premio_parcelado', label: 'Parcelamento disponível' },
+  { caminho: 'valores.franquia',         label: 'Valor da franquia' },
+  { caminho: 'valores.franquia_tipo',    label: 'Tipo de franquia' },
   { caminho: 'cotacao.tipo_operacao',    label: 'Tipo de operação' },
 ]
 
 // Campos que so existem depois de escolhida a opcao, quando ha mais de uma.
-const DEPENDEM_DA_ESCOLHA = ['valores.premio_total']
+const DEPENDEM_DA_ESCOLHA = [
+  'valores.premio_total', 'valores.premio_parcelado',
+  'valores.franquia', 'valores.franquia_tipo',
+]
 
 const CAMPOS_ATENCAO = [
   { caminho: 'cotacao.numero',           label: 'Número da cotação' },
@@ -730,8 +752,6 @@ const CAMPOS_ATENCAO = [
   { caminho: 'veiculo.placa',            label: 'Placa' },
   { caminho: 'veiculo.cep_pernoite',     label: 'CEP de pernoite' },
   { caminho: 'condutor_principal.nome',  label: 'Condutor principal' },
-  { caminho: 'valores.franquia',         label: 'Franquia' },
-  { caminho: 'valores.premio_parcelado', label: 'Parcelamento' },
 ]
 
 function lerCaminho(objeto, caminho) {
@@ -794,8 +814,8 @@ export function validarCotacao(cotacao) {
     pendencias.push({
       caminho: 'indenizacao_integral.percentual_fipe',
       label: 'Percentual da FIPE da indenização integral',
-      severidade: SEVERIDADE.ATENCAO,
-      bloqueia: false,
+      severidade: SEVERIDADE.CRITICO,
+      bloqueia: true,
     })
   }
 
@@ -832,6 +852,16 @@ export function validarCotacao(cotacao) {
     pendencias.push({
       caminho: `coberturas.${cat.key}`,
       label: `${cat.label} — a cotação não informa; confirme se tem ou não tem`,
+      severidade: SEVERIDADE.CRITICO,
+      bloqueia: true,
+    })
+  }
+
+  const terceiros = montarCategorias(cot).categorias.find(cat => cat.key === 'terceiros')
+  if (terceiros?.estado === ESTADO_COBERTURA.INCLUIDA && !TEM_VALOR_MONETARIO.test(terceiros.texto)) {
+    pendencias.push({
+      caminho: 'coberturas.terceiros.valor_lmi',
+      label: 'Danos a terceiros — informe o limite em valor (ex.: R$ 150.000,00)',
       severidade: SEVERIDADE.CRITICO,
       bloqueia: true,
     })

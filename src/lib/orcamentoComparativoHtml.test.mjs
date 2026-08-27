@@ -50,6 +50,14 @@ test('documento sai completo e com o cabecalho preenchido', () => {
   assert.ok(doc.includes('Válido por 5 dias'))
 })
 
+test('area de visualizacao oferece baixar PDF sem poluir a impressao', () => {
+  const doc = html({}, {}, { comAcoes: true })
+  assert.ok(doc.includes('Cotação pronta para conferência'))
+  assert.ok(doc.includes('>Baixar PDF</button>'))
+  assert.ok(doc.includes('onclick="window.print()"'))
+  assert.ok(doc.includes('.acoes-doc{display:none!important}'))
+})
+
 test('a barra do cliente traz segurado, veiculo com placa e o selo do tipo', () => {
   const doc = html()
   assert.ok(doc.includes('Priscila Cunha dos Santos'))

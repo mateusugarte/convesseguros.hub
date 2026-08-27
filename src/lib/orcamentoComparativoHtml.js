@@ -97,13 +97,17 @@ const CSS = `
   --mono:'SFMono-Regular',Menlo,Consolas,'Liberation Mono','Courier New',monospace;
 }
 @page{size:A4;margin:0}
-html,body{background:var(--papel)}
+html,body{background:#e9eef4}
 body{
   font-family:var(--sans);color:var(--tinta);
   font-size:7.7pt;line-height:1.38;
   -webkit-font-smoothing:antialiased;
 }
-.pagina{width:210mm;min-height:297mm;padding:0 0 6mm;margin:0 auto;position:relative;display:flex;flex-direction:column}
+.pagina{width:210mm;min-height:297mm;padding:0 0 6mm;margin:7mm auto;position:relative;display:flex;flex-direction:column;background:var(--papel);box-shadow:0 18px 60px rgba(16,31,51,.18)}
+.acoes-doc{position:sticky;z-index:20;top:0;display:flex;width:210mm;align-items:center;justify-content:space-between;gap:8mm;margin:0 auto;padding:3mm 5mm;background:rgba(16,31,51,.96);color:#fff;box-shadow:0 8px 24px rgba(16,31,51,.24);backdrop-filter:blur(12px)}
+.acoes-doc strong{font-family:var(--serif);font-size:10pt}.acoes-doc span{display:block;color:#c8d2df;font-size:7pt;margin-top:.5mm}
+.acoes-doc .botoes{display:flex;gap:2mm}.acoes-doc button{border:1px solid rgba(255,255,255,.22);border-radius:1.5mm;padding:2.2mm 4mm;background:transparent;color:#fff;font:700 7.5pt var(--sans);cursor:pointer}
+.acoes-doc button.primario{border-color:#fff;background:#fff;color:var(--tinta)}
 .barra-topo{height:4px;background:linear-gradient(90deg,#1c4a87 0%,#1c4a87 55%,#9c7328 100%)}
 
 /* ─── Cabecalho ─── */
@@ -134,10 +138,10 @@ body{
 .card{flex:1;min-width:0;border:1px solid var(--linha);border-radius:2.2mm;overflow:hidden;background:var(--papel);box-shadow:0 1px 3px rgba(16,31,51,.07),0 6px 16px rgba(16,31,51,.05);display:flex;flex-direction:column}
 
 /* faixa colorida + selo do logo */
-.faixa{background:var(--cor);display:flex;align-items:center;gap:4mm;padding:2.8mm 3.6mm;min-height:14mm}
+.faixa{background:linear-gradient(120deg,var(--cor),color-mix(in srgb,var(--cor) 82%,#101f33));display:flex;align-items:center;gap:4mm;padding:3mm 3.6mm;min-height:16mm}
 .faixa .papel-rotulo{font-family:var(--mono);font-size:6.6pt;letter-spacing:1.1pt;color:var(--cor-texto);opacity:.92;text-transform:uppercase;flex:1;line-height:1.3}
-.selo-logo{background:#fff;border-radius:1.4mm;padding:2mm 3.2mm;display:flex;align-items:center;justify-content:center;min-width:34mm;min-height:14mm;box-shadow:0 1px 4px rgba(0,0,0,.14)}
-.selo-logo img{max-height:8mm;max-width:33mm;width:auto;height:auto;display:block}
+.selo-logo{background:#fff;border-radius:1.6mm;padding:2.2mm 3.5mm;display:flex;align-items:center;justify-content:center;min-width:38mm;min-height:15mm;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.selo-logo img{max-height:9.5mm;max-width:37mm;width:auto;height:auto;display:block;object-fit:contain}
 .selo-logo .fallback{font-family:var(--serif);font-size:11pt;font-weight:700;color:var(--cor);text-align:center;line-height:1.15}
 
 /* faixa de identificacao */
@@ -191,6 +195,11 @@ body{
 .rodape{margin:3mm 12mm 0;border-top:1px solid var(--linha);padding-top:2.4mm;text-align:center;font-size:6.6pt;color:var(--rotulo);line-height:1.5}
 .rodape .contato{margin-top:1.4mm;color:#48566a}
 .aviso-divergencia{margin:4mm 12mm 0;background:#fff6e5;border-left:2.6pt solid #b47100;padding:3mm 4mm;font-size:8pt;color:#7a4f00}
+@media print{
+  html,body{background:#fff}
+  .acoes-doc{display:none!important}
+  .pagina{margin:0;box-shadow:none}
+}
 `
 
 // ─── Blocos ────────────────────────────────────────────────────────────
@@ -333,7 +342,7 @@ export const CONTATO_PADRAO = {
  * @param logoConves  URL ou data URI da logo da corretora
  * @param contato     sobrescreve `CONTATO_PADRAO`
  */
-export function montarHtmlOrcamento(comparativo, { logoConves = '/conves-logo.png', contato = CONTATO_PADRAO } = {}) {
+export function montarHtmlOrcamento(comparativo, { logoConves = '/conves-logo.png', contato = CONTATO_PADRAO, comAcoes = false } = {}) {
   const { cabecalho, cliente, cards, divergencias = [] } = comparativo
 
   const meta = [
@@ -360,6 +369,10 @@ export function montarHtmlOrcamento(comparativo, { logoConves = '/conves-logo.pn
 <style>${CSS}</style>
 </head>
 <body>
+${comAcoes ? `<nav class="acoes-doc" aria-label="Ações da cotação">
+  <div><strong>Cotação pronta para conferência</strong><span>Revise o documento e baixe uma cópia em PDF.</span></div>
+  <div class="botoes"><button type="button" onclick="window.close()">Fechar</button><button class="primario" type="button" onclick="window.print()">Baixar PDF</button></div>
+</nav>` : ''}
 <div class="pagina">
   <div class="barra-topo"></div>
 

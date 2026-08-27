@@ -6,7 +6,7 @@ import { agruparLinhas, celulaEm, colunasPeloCabecalho, fatiar } from './pdfLayo
 import {
   parseCotacaoPorto, ehLayoutPorto, detectarMarca, extrairCoberturas,
   extrairIndenizacaoIntegral, extrairValores, extrairAdicionais,
-  moeda, percentual, humanizar,
+  extrairPagamento, moeda, percentual, humanizar,
 } from './orcamentoPortoParser.js'
 import { montarCategorias, validarCotacao, ESTADO_COBERTURA } from './orcamentoComparativo.js'
 
@@ -176,6 +176,16 @@ test('separa premio liquido, IOF e total do bloco unico', () => {
   assert.deepEqual(extrairValores(FX.AZUL.texto), { premio_liquido: 2683.72, iof: 198.06, premio_total: 2881.78 })
   const soma = 2683.72 + 198.06
   assert.equal(Math.round(soma * 100) / 100, 2881.78)
+})
+
+test('REGRESSAO: Azul, Itau e Mitsui levam o parcelamento do PDF para o comparativo', () => {
+  const esperado = { AZUL: 10, ITAU: 5, MITSUI: 10 }
+  for (const marca of MARCAS) {
+    const linhas = extrairPagamento(FX[marca].texto)
+    assert.match(linhas[0], new RegExp(`até ${esperado[marca]}x`), marca)
+    assert.match(linhas.join(' '), /Boleto: à vista R\$\s*[\d.]+,\d{2}/, marca)
+    assert.deepEqual(parse(marca).valores.premio_parcelado, linhas, marca)
+  }
 })
 
 test('as tres cotacoes sao do mesmo risco com precos diferentes', () => {

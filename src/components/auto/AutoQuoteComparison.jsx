@@ -1,10 +1,10 @@
 import { useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle, ArrowRight, Check, CheckCircle2, ChevronDown, FileCheck2,
-  FileText, LoaderCircle, RefreshCw, ShieldCheck, Sparkles, UploadCloud,
+  Eye, FileText, LoaderCircle, RefreshCw, ShieldCheck, Sparkles, UploadCloud,
 } from 'lucide-react'
 
-import { montarCategorias } from '../../lib/orcamentoComparativo'
+import { montarCategorias, TEM_VALOR_MONETARIO } from '../../lib/orcamentoComparativo'
 import { aplicarRevisao, camposDaCotacao } from '../../lib/orcamentoLeitura'
 import AutoOrcamentoOfertas from './AutoOrcamentoOfertas'
 
@@ -40,12 +40,21 @@ const REVIEW_FIELDS = [
   { key: 'franquia', label: 'Franquia', type: 'money', critical: true },
   { key: 'franquia_tipo', label: 'Tipo de franquia', critical: true },
   { key: 'indenizacao_integral', label: 'Indenização integral', critical: true },
-  { key: 'assistencia', label: 'Assistência 24h' },
-  { key: 'carro_reserva', label: 'Carro reserva' },
-  { key: 'vidros', label: 'Vidros' },
-  { key: 'danos_terceiros', label: 'Danos a terceiros' },
+  { key: 'assistencia', label: 'Assistência 24h', critical: true },
+  { key: 'carro_reserva', label: 'Carro reserva', critical: true },
+  { key: 'vidros', label: 'Vidros', critical: true },
+  { key: 'danos_terceiros', label: 'Danos a terceiros (valor)', critical: true },
   { key: 'nao_inclusos', label: 'Não incluso nesta cotação', multiline: true },
 ]
+
+function campoPendente(field, value) {
+  const texto = String(value ?? '').trim()
+  if (!texto) return true
+  if (field.key === 'danos_terceiros') {
+    return !/^n[ãa]o\b/i.test(texto) && !TEM_VALOR_MONETARIO.test(texto)
+  }
+  return false
+}
 
 /**
  * Resolve quando toda imagem da janela terminou de carregar (ou falhou).
@@ -208,7 +217,12 @@ export default function AutoQuoteComparison({ quote }) {
   const [gerando, setGerando] = useState(false)
   const [erroGeracao, setErroGeracao] = useState('')
   const [comparativoGerado, setComparativoGerado] = useState(null)
-  const issues = useMemo(() => Object.fromEntries(ROLES.map(({ key }) => [key, REVIEW_FIELDS.filter(field => (field.required || field.critical) && !String(sides[key].campos[field.key] ?? '').trim()).map(field => field.key)])), [sides])
+  const issues = useMemo(() => Object.fromEntries(ROLES.map(({ key }) => [
+    key,
+    REVIEW_FIELDS
+      .filter(field => (field.required || field.critical) && campoPendente(field, sides[key].campos[field.key]))
+      .map(field => field.key),
+  ])), [sides])
   const issueCount = issues.atual.length + issues.concorrente.length
   const criticalCount = ROLES.reduce((total, { key }) => total + issues[key].filter(fieldKey => REVIEW_FIELDS.find(field => field.key === fieldKey)?.critical).length, 0)
 
@@ -289,9 +303,11 @@ export default function AutoQuoteComparison({ quote }) {
    * indenizacao integral em branco BLOQUEIAM, porque um comparativo com linha
    * faltando chega ao cliente parecendo completo.
    *
-   * O documento abre em janela para impressao/salvar em PDF. Persistir em
-   * `auto_orcamentos` e alocar o numero CV-AAAA-NNNN dependem da migration 67,
-   * ainda nao executada — por isso o cabecalho sai sem numero de referencia.
+   * O documento abre numa area propria de visualizacao. O botao "Baixar PDF"
+   * dessa area chama a impressao do navegador, mantendo texto e logos vetoriais.
+   * Persistir em
+   * `auto_orcamentos` e alocar o numero CV-AAAA-NNNN sao uma etapa separada de
+   * persistencia; esta acao apenas monta e visualiza o documento conferido.
    */
   async function gerarOrcamento() {
     setGerando(true)
@@ -322,6 +338,7 @@ export default function AutoQuoteComparison({ quote }) {
             nome: meta?.nome_canonico || nome,
             id: meta?.id ?? cot.seguradora?.id ?? null,
             logo_url: meta?.logo_url || cot.seguradora?.logo_url || '',
+            cor_destaque: meta?.cor_destaque || cot.seguradora?.cor_destaque || '',
           },
         }
       }
@@ -348,7 +365,7 @@ export default function AutoQuoteComparison({ quote }) {
         setErroGeracao('O navegador bloqueou a janela do orçamento. Libere o pop-up e tente de novo.')
         return
       }
-      janela.document.write(montarHtmlOrcamento(comparativo))
+      janela.document.write(montarHtmlOrcamento(comparativo, { comAcoes: true }))
       janela.document.close()
 
       // Esperar as logos ANTES de abrir o dialogo. Sem isso a impressao dispara
@@ -356,7 +373,6 @@ export default function AutoQuoteComparison({ quote }) {
       // exatamente o sintoma de logo faltando, so que agora por corrida.
       await imagensCarregadas(janela)
       janela.focus()
-      janela.print()
       setComparativoGerado(comparativo)
     } catch (erro) {
       setErroGeracao(`Não foi possível gerar o orçamento: ${erro.message}`)
@@ -374,10 +390,10 @@ export default function AutoQuoteComparison({ quote }) {
       <div className="auto-comparison-design-notice"><Sparkles /><span><strong>Leitura automática ativa por seguradora</strong><small>Quando o PDF traz mais de um produto, a leitura aguarda sua escolha. Nada é salvo nem gerado em PDF nesta etapa.</small></span></div>
       <header className="auto-comparison-heading">
         <div className="auto-comparison-heading-icon"><Sparkles /></div>
-        <div><span>Orçamento comparativo</span><h2>Envie, revise e compare sem sair da cotação</h2><p>Estrutura visual preparada para dois documentos, conferência humana e geração futura do PDF final.</p></div>
+        <div><span>Orçamento comparativo</span><h2>Envie, revise e compare sem sair da cotação</h2><p>Prêmio, parcelamento, franquia e coberturas são conferidos antes de abrir a cotação final.</p></div>
         <div className="auto-comparison-progress" aria-label="Progresso demonstrativo do orçamento"><span className={step === 'upload' ? 'is-active' : 'is-done'}><i>{step === 'upload' ? 1 : <Check />}</i>Upload</span><b /><span className={step === 'review' ? 'is-active' : ''}><i>2</i>Revisão</span><b /><span><i>3</i>PDF final</span></div>
       </header>
-      <div className="auto-comparison-operation"><label><span>Tipo da cotação</span><select value={quote?.tipo || 'novo'} disabled><option value="novo">Seguro novo</option><option value="renovacao">Renovação</option><option value="endosso">Endosso</option></select></label><div><ShieldCheck /><span><strong>Confirmação prevista</strong><small>Este controle será ativado com a automação.</small></span></div></div>
+      <div className="auto-comparison-operation"><label><span>Tipo da cotação</span><select value={quote?.tipo || 'novo'} disabled><option value="novo">Seguro novo</option><option value="renovacao">Renovação</option><option value="endosso">Endosso</option></select></label><div><ShieldCheck /><span><strong>Revisão obrigatória ativa</strong><small>Campos ausentes ou sem valor bloqueiam a cotação final.</small></span></div></div>
       {step === 'upload' ? <>
         <div className="auto-comparison-upload-grid">{ROLES.map(({ key }) => (
           <UploadSlot
@@ -399,9 +415,9 @@ export default function AutoQuoteComparison({ quote }) {
         <div className="auto-comparison-review-grid">{ROLES.map(({ key }) => <ReviewColumn key={key} role={key} side={sides[key]} issues={issues[key]} onPatch={(field, value) => patchField(key, field, value)} />)}</div>
         {erroGeracao && <div className="auto-comparison-review-summary is-error"><p><AlertTriangle />{erroGeracao}</p></div>}
         <footer className="auto-comparison-footer is-review">
-          <div><CheckCircle2 /><span><strong>{comparativoGerado ? 'Orçamento gerado' : 'Geração do orçamento ativa'}</strong><small>{comparativoGerado ? 'Use Imprimir → Salvar como PDF na janela aberta.' : 'O documento abre em nova janela para salvar em PDF. O arquivo ainda não é guardado no sistema (migration 67 pendente).'}</small></span></div>
+          <div><CheckCircle2 /><span><strong>{comparativoGerado ? 'Cotação pronta para visualizar' : 'Revisão pronta para concluir'}</strong><small>{comparativoGerado ? 'A área da cotação contém o botão para baixar ou salvar o PDF.' : 'Confira os campos dos dois lados; a cotação abre em uma área própria.'}</small></span></div>
           <button type="button" onClick={gerarOrcamento} disabled={gerando}>
-            {gerando ? <><LoaderCircle className="is-spinning" />Gerando…</> : <><FileCheck2 />Gerar orçamento comparativo</>}
+            {gerando ? <><LoaderCircle className="is-spinning" />Preparando…</> : <><Eye />Ver cotação</>}
           </button>
         </footer>
       </>}

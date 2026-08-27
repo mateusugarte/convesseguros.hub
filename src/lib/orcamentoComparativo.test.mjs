@@ -18,7 +18,7 @@ import {
   validarCotacao,
   formatarReferencia,
   formatarMoeda,
-  normalizarTexto, casarSeguradora,
+  normalizarTexto, casarSeguradora, textoTerceiros,
 } from './orcamentoComparativo.js'
 
 // ─── Dicionario de coberturas ──────────────────────────────────────────
@@ -240,6 +240,39 @@ test('premio total ausente bloqueia', () => {
   const cot = cotacaoCompleta()
   cot.valores.premio_total = null
   assert.equal(validarCotacao(cot).podeGerar, false)
+})
+
+test('parcelamento e franquia ausentes bloqueiam o documento do cliente', () => {
+  for (const caminho of ['premio_parcelado', 'franquia', 'franquia_tipo']) {
+    const cot = cotacaoCompleta()
+    cot.valores[caminho] = caminho === 'franquia' ? null : ''
+    assert.equal(validarCotacao(cot).podeGerar, false, caminho)
+  }
+})
+
+test('danos a terceiros usa o LMI estruturado e sempre o formata em dinheiro', () => {
+  const texto = textoTerceiros([{
+    nome_original_seguradora: 'Danos Materiais',
+    valor_lmi: 150000,
+    observacoes: 'Danos causados a terceiros',
+  }])
+  assert.match(texto, /Danos Materiais: R\$\s*150\.000,00/)
+})
+
+test('percentual nao vale como limite monetario de danos a terceiros', () => {
+  const cot = cotacaoCompleta()
+  cot.coberturas = cot.coberturas.map(item => item.categoria === 'terceiros'
+    ? { ...item, valor_lmi: null, observacoes: 'Cobertura para terceiros: 100%' }
+    : item)
+  assert.equal(validarCotacao(cot).podeGerar, false)
+})
+
+test('revisao pode confirmar que danos a terceiros nao estao inclusos', () => {
+  const cot = cotacaoCompleta()
+  cot.textos_revisados = { terceiros: 'Não incluso nesta cotação.' }
+  const terceiros = montarCard(cot).categorias.find(item => item.key === 'terceiros')
+  assert.equal(terceiros.estado, ESTADO_COBERTURA.NAO_INCLUIDA)
+  assert.equal(validarCotacao(cot).podeGerar, true)
 })
 
 test('tipo de operacao ausente bloqueia', () => {

@@ -219,6 +219,36 @@ export function extrairDescontos(texto) {
     .map(m => `${m[1].trim()}: ${m[2]}%`)
 }
 
+/**
+ * Resume as formas de pagamento da familia Porto (Azul, Itau e Mitsui).
+ *
+ * Esses PDFs trazem tabelas extensas, com 12 colunas e varias bandeiras. O
+ * comparativo precisa do que o cliente usa para decidir: maior parcelamento
+ * sem juros no cartao comum e valor a vista no boleto. Antes o parser deixava
+ * `premio_parcelado` vazio mesmo com as tabelas presentes no documento.
+ */
+export function extrairPagamento(texto) {
+  const t = String(texto || '').replace(/\s+/g, ' ')
+  const linhas = []
+
+  const inicioCartao = t.search(/CART[ÃA]O DE CR[ÉE]DITO\s*-\s*DEMAIS BANDEIRAS/i)
+  if (inicioCartao >= 0) {
+    const trecho = t.slice(inicioCartao, inicioCartao + 1800)
+    const fim = trecho.search(/TODAS\s+D[ÉE]BITO|D[ÉE]BITO C\. CORRENTE/i)
+    const tabela = trecho.slice(0, fim > 0 ? fim : trecho.length)
+    const semJuros = [...tabela.matchAll(/R\$\s*([\d.]+,\d{2})\s*\(s\/juros[^)]*\)/gi)]
+    if (semJuros.length) {
+      const ultima = semJuros.at(-1)
+      linhas.push(`Cartão de crédito: até ${semJuros.length}x de ${moedaBR(moeda(ultima[1]))} sem juros`)
+    }
+  }
+
+  const boleto = t.match(/Boleto\s+[ÀA]\s*vista\s*(R\$\s*[\d.]+,\d{2})\s*\(s\/juros\)/i)
+  if (boleto) linhas.push(`Boleto: à vista ${moedaBR(moeda(boleto[1]))}`)
+
+  return linhas
+}
+
 // Cada seguradora da familia batiza a assistencia 24h de um jeito e nenhuma
 // delas usa sempre a palavra "assistencia":
 //
@@ -337,7 +367,7 @@ export function parseCotacaoPorto({ itens = [], texto = '', seguradoraMeta = nul
 
   cot.valores = {
     ...extrairValores(texto),
-    premio_parcelado: '',
+    premio_parcelado: extrairPagamento(texto),
     descontos_aplicados: extrairDescontos(texto),
     franquia: casco?.franquia ?? null,
     franquia_tipo: extrairTipoFranquia(texto),

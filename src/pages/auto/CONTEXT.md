@@ -228,7 +228,9 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   `AutoQuoteComparison`: dois slots de upload, revisao lado a lado e estados
   criticos. **Desde 26/08 os layouts Porto/Azul/Itau/Mitsui, Bradesco, HDI,
   Allianz, Darwin, Pier, Suhai, Yelum e Tokio sao identificados e lidos por
-  parser fixo.** Nada persiste e o PDF final ainda nao e gerado.
+  parser fixo.** O botao `Ver cotacao` monta o documento final numa area propria,
+  com acao `Baixar PDF` pela impressao vetorial do navegador. A persistencia do
+  arquivo final continua fora deste fluxo.
   Spec em `documentos_automacao/specorcamentocomparativoseguros.md`.
 - `src/lib/orcamentoLeitura.js` e a ponte arquivo -> parser: e o unico modulo do
   comparativo que encosta em `pdfjs` e no `File` do navegador (import dinamico,
@@ -256,6 +258,13 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   SO acrescentar sinonimos em `DICIONARIO_COBERTURAS`, nunca criar categoria.
 - A logo do card vem de `seguradoras.logo_url` (cadastro em Configuracoes),
   nunca recortada do PDF da cotacao. Sem logo, cai para o nome em serifada.
+- O contrato transversal dos 11 PDFs reais vive em
+  `orcamentoParsersContrato.test.mjs`: premio, parcelamento, franquia,
+  indenizacao integral, assistencia, carro reserva, vidros e terceiros precisam
+  estar lidos ou gerar bloqueio visivel. Familia Porto (Azul/Itau/Mitsui) le o
+  maior parcelamento sem juros e o boleto a vista; antes esse campo era sempre
+  vazio. Danos a terceiros so conta como informado com LMI monetario, formatado
+  em reais; percentual ou descricao generica nao liberam o documento.
 - A cor da faixa e identidade da SEGURADORA, nao do papel ("atual" x "outra"):
   inverter a ordem nao troca as cores. Enquanto `seguradoras.cor_destaque`
   (migration 67) nao existir, `CORES_SEGURADORA_PADRAO` responde por nome.
@@ -266,7 +275,7 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   a favor da seguradora — a spec marca isso como o erro mais grave possivel.
 - A pagina do PDF usa `min-height`, nunca `height` + `overflow:hidden`: cotacao
   com muitas coberturas transborda para a pagina 2, jamais e cortada em silencio.
-- Migration `supabase/67_auto_orcamento_comparativo.sql` (pendente) adiciona
+- Migration `supabase/67_auto_orcamento_comparativo.sql` adiciona
   `seguradoras.cor_destaque`, cria `seguradora_condicoes_gerais` e
   `auto_orcamentos` e a RPC `proximo_numero_orcamento_auto` — o sequencial
   CV-AAAA-NNNN e alocado no banco, nao no front, senao dois corretores gerando

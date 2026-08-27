@@ -1,5 +1,37 @@
 # CURRENT TASK
 
+## Extracao completa e visualizacao do orcamento AUTO (2026-08-27, Codex — CONCLUIDA)
+
+Responsavel: Codex, Agente de Sistemas. Objetivo: auditar os PDFs reais de todas as
+seguradoras disponiveis e corrigir a passagem de premio total, parcelamento, franquia,
+indenizacao integral, assistencia, carro reserva, vidros e limites monetarios de danos a
+terceiros ate a revisao e o documento final. A geracao tambem sera ajustada para abrir uma
+area de visualizacao por meio do botao **Ver cotacao**, com as logos cadastradas das
+seguradoras e acao de baixar/salvar o PDF. Dados realmente ausentes ou rasterizados no PDF
+continuam exigindo confirmacao humana; nenhum valor de cobertura sera inventado.
+
+Arquivos em uso: `src/lib/orcamento*`, `src/components/auto/AutoQuoteComparison.jsx`,
+`src/styles/auto-ui.css`, testes dos parsers, `src/pages/auto/CONTEXT.md` e este handoff.
+
+Conclusao: criada matriz transversal com os 11 PDFs reais. O contrato comum agora exige
+premio total, parcelamento, valor/tipo de franquia, indenizacao integral confirmada (com
+percentual quando inclusa) e as seis categorias operacionais. Danos a terceiros so libera
+com valor monetario e usa `valor_lmi` mesmo quando a observacao do parser nao repete o
+numero. Campos nao informados chegam vazios e destacados na revisao, nunca mascarados pela
+frase de estado. Azul, Itau e Mitsui passaram a extrair o parcelamento que antes era
+descartado. A acao final virou **Ver cotacao**: abre o documento em area de conferencia,
+com logos e cores do cadastro e botao **Baixar PDF**, oculto na impressao. O template ganhou
+acabamento de preview, faixa de marca e logos maiores.
+
+Validacao: `npm test` 544/544; `npm run build` concluido. Permanecem os avisos preexistentes
+do bundle sobre o import default de `xlsx` e o import misto de `orcamentoLeitura.js`.
+
+Proximo responsavel: usuario para teste com PDFs operacionais. Se uma seguradora mudar o
+layout ou trouxer pagina rasterizada, o campo ficara bloqueado para revisao; adicionar OCR e
+persistencia binaria do PDF continua sendo uma evolucao separada.
+
+---
+
 ## Logo no PDF, acionamentos da assistencia e geracao do documento (2026-08-27, Claude — CONCLUIDA)
 
 Responsavel: Claude. Terceira rodada sobre o teste do usuario.

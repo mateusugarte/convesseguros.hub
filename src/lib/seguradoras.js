@@ -73,7 +73,7 @@ function normalizeSeguradora(seg) {
 async function loadCatalog() {
   const { data, error } = await supabase
     .from('seguradoras')
-    .select('id, nome_canonico, ativa, logo_url, logo_path, seguradora_aliases(alias), seguradora_produtos(produto)')
+    .select('id, nome_canonico, ativa, logo_url, logo_path, cor_destaque, seguradora_aliases(alias), seguradora_produtos(produto)')
     .order('nome_canonico')
 
   if (error) throw error

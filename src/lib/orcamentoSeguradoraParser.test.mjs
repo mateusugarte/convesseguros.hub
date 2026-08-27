@@ -1,5 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+
+// Matriz transversal dos PDFs reais: garante que todo parser cumpra o mesmo
+// contrato de campos ou exponha um bloqueio de revisao, sem ocultar lacunas.
+import './orcamentoParsersContrato.test.mjs'
 import fs from 'node:fs'
 
 import {

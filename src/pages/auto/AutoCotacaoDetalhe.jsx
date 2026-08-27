@@ -21,6 +21,7 @@ import { COTACAO_STATUS, formatDateTimeBR, formatMoney, toneClasses } from './au
 import { formatDecimalBRInput, parseDecimalBR } from '../../lib/numberInput'
 import { parseOrcamentoAuto } from '../../lib/autoPdfParser.js'
 import { valorFormularioAuto } from '../../lib/autoFormPayload'
+import { useVoltar } from '../../hooks/useVoltar.js'
 
 function QuoteStatusBadge({ status }) {
   const meta = COTACAO_STATUS[status] || COTACAO_STATUS.aberta
@@ -392,7 +393,9 @@ export default function AutoCotacaoDetalhe() {
     if (requested && DETAIL_TABS.some(item => item.value === requested)) setTab(requested)
   }, [location.search])
 
-  const backTo = location.state?.from || '/auto/cotacoes'
+  // Volta para a tela de onde a cotacao foi aberta — Visao Geral, Pipeline,
+  // ficha do cliente ou busca. A lista de cotacoes e so o ultimo recurso.
+  const voltar = useVoltar('/auto/cotacoes')
 
   const metrics = useMemo(() => [
     { key: 'status', label: 'Status comercial', value: cotacao?.status ? (COTACAO_STATUS[cotacao.status]?.label || cotacao.status) : '—', hint: 'situação atual', tone: cotacao?.status === 'convertida' ? 'success' : cotacao?.status === 'perdida' ? 'danger' : 'warning', icon: Gauge },
@@ -425,7 +428,7 @@ export default function AutoCotacaoDetalhe() {
         title="Cotacao nao encontrada"
         description="O registro pode ter sido removido ou o link esta incorreto."
         actions={(
-          <button onClick={() => navigate(backTo)} className="btn-secondary">
+          <button onClick={voltar} className="btn-secondary">
             Voltar
           </button>
         )}
@@ -439,8 +442,8 @@ export default function AutoCotacaoDetalhe() {
         context="Workspace de cotação"
         title={cotacao.nome_cliente || cotacao.cpf_cliente || 'Cotacao sem identificacao'}
         description={`${cotacao.modelo_veiculo || 'Veículo não informado'} · ${cotacao.placa || 'placa pendente'}`}
-        onBack={() => navigate(backTo)}
-        backLabel="Cotações"
+        onBack={voltar}
+        backLabel="Voltar"
         meta={(
           <>
             <AutoTypeBadge type={cotacao.tipo} />

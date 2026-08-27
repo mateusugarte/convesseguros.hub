@@ -4,6 +4,7 @@ import { ArrowLeft, Car, ClipboardList, DollarSign, FileText, RefreshCw, ShieldC
 import { DataCard, EmptyState, MetricCard, PageHeader } from '../../components/ui'
 import { getClienteAutoDetalhe } from '../../lib/auto'
 import { formatDateBR, formatDateTimeBR, formatMoney, formatMonthYearBR, getClienteStatusAuto } from './autoShared'
+import { useVoltar } from '../../hooks/useVoltar.js'
 
 function RowLink({ label, value, onClick }) {
   return (
@@ -15,6 +16,7 @@ function RowLink({ label, value, onClick }) {
 }
 
 export default function AutoClienteDetalhe() {
+  const voltar = useVoltar('/auto/clientes')
   const { id } = useParams()
   const navigate = useNavigate()
   const { data, isLoading } = useQuery({ queryKey: ['auto-cliente-detalhe', id], queryFn: () => getClienteAutoDetalhe(decodeURIComponent(id || '')), enabled: Boolean(id) })
@@ -32,7 +34,7 @@ export default function AutoClienteDetalhe() {
         title={cliente?.nome_completo || 'Cliente Auto'}
         description="Perfil completo do cliente Auto com dados cadastrais, relacionamento, apólices, renovações, cotações e histórico financeiro disponível."
         actions={(
-          <button onClick={() => navigate('/auto/clientes')} className="btn-secondary inline-flex items-center gap-2"><ArrowLeft className="h-4 w-4" /> Voltar</button>
+          <button onClick={voltar} className="btn-secondary inline-flex items-center gap-2"><ArrowLeft className="h-4 w-4" /> Voltar</button>
         )}
         stats={(
           <>

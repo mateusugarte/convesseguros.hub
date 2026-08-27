@@ -32,12 +32,46 @@ function monthRef(value, fallback) {
   return dateOnly(value).slice(0, 7) || dateOnly(fallback).slice(0, 7)
 }
 
+function primeiroTexto(...valores) {
+  for (const valor of valores) {
+    const texto = String(valor ?? '').trim()
+    if (texto) return texto
+  }
+  return ''
+}
+
+// Um relacionamento do Supabase chega como objeto quando e para-um e como array
+// quando e para-muitos. `apolices_auto` aparece das duas formas nesta fila
+// (objeto na renovacao, array na emissao), entao ler `?.campo` direto perde o
+// nome silenciosamente sempre que vier array.
+function nomesDaRelacao(relacao, campo) {
+  const lista = Array.isArray(relacao) ? relacao : relacao ? [relacao] : []
+  return lista.map(registro => registro?.[campo])
+}
+
+/**
+ * Nome que a Visao Geral mostra para cada pendencia.
+ *
+ * O cadastro do cliente vem PRIMEIRO de proposito. `nome_cliente` e uma copia
+ * denormalizada, gravada quando o registro nasceu (planilha, Forms, importacao)
+ * e nunca reescrita: corrigir o nome em `clientes_auto` nao propaga para as
+ * copias, entao preferir a copia e mostrar o nome antigo de quem ja foi
+ * corrigido no cadastro.
+ *
+ * As copias seguem valendo para o que ainda nao tem cliente vinculado — e dai
+ * vinha o "Cliente sem nome": renovacao puxada da planilha nao tem coluna
+ * `nome_cliente` nenhuma, o nome digitado mora em `nome_segurado_anterior`, que
+ * esta gravado e nao era consultado aqui.
+ */
 function personName(item = {}) {
-  return item.nome_cliente
-    || item.clientes_auto?.nome_completo
-    || item.apolices_auto?.nome_cliente
-    || item.cotacoes_auto?.nome_cliente
-    || 'Cliente sem nome'
+  return primeiroTexto(
+    ...nomesDaRelacao(item.clientes_auto, 'nome_completo'),
+    ...nomesDaRelacao(item.cotacoes_auto?.clientes_auto, 'nome_completo'),
+    item.nome_cliente,
+    ...nomesDaRelacao(item.cotacoes_auto, 'nome_cliente'),
+    ...nomesDaRelacao(item.apolices_auto, 'nome_cliente'),
+    item.nome_segurado_anterior,
+  ) || 'Cliente sem nome'
 }
 
 function emissionPolicies(item = {}) {

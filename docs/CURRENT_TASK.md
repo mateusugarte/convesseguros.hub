@@ -1,5 +1,126 @@
 # CURRENT TASK
 
+## Leitura de orcamento corrigida e geracao do comparativo conectada (2026-08-27, Claude — CONCLUIDA)
+
+Responsavel: Claude. Relato do usuario ao testar HDI e Pier na tela: "nao puxou nenhuma
+informacao"; dados de segurado e condutor faltando no documento; premio liquido e IOF sendo
+pedidos sem serem usados; e "automacao consta como nao conectada".
+
+**Os parsers estavam certos — a ponte e que descartava.** Rodados contra os PDFs reais
+(`documentos_automacao/orçamentos/HDI.pdf` e `PIER.pdf`, via pdfjs legacy), os dois entregam
+segurado, condutor, veiculo, franquia e coberturas completos. Tres defeitos em
+`orcamentoLeitura.js`:
+
+1. **`camposDaCotacao` nunca mapeou segurado, condutor nem veiculo.** O parser lia, a ponte
+   jogava fora e a revisao abria em branco. Agora sao 10 campos novos, revisaveis, e vao ao
+   documento final (o template ja imprimia condutor e segurado — faltava o dado chegar).
+2. **O caminho multi-produto devolvia so `{ seguradora, escolha_pendente }`.** Para HDI, Pier e
+   Suhai a tela ficava TODA vazia ate a escolha, parecendo leitura falhada. Agora
+   `dadosDoDocumento` adianta o que nao muda entre produtos (segurado, condutor, veiculo,
+   numero, vigencia) por lista fixa — premio, franquia e cobertura continuam esperando a escolha.
+3. **Premio liquido e IOF saiam na revisao.** Sao controle interno da emissao, nao aparecem no
+   documento do cliente. Removidos; ha teste travando a ausencia.
+
+**A Pier passou a perguntar o tipo de franquia.** O PDF dela imprime o valor
+("Franquia: R$ 3.625,62") e nao diz se e reduzida ou normal — as outras seguradoras do
+comparativo dizem, e o campo e critico. Deduzir do valor seria invencao. Usa o mesmo
+`escolha_pendente` da escolha de produto, agora em **dois estagios**: produto primeiro, franquia
+depois. Por isso `aplicarEscolha` passou a ACUMULAR escolhas — reprocessar so com a ultima
+resposta perderia o produto e voltaria a pedi-lo em looping.
+
+**Geracao do comparativo conectada.** O botao "Automacao ainda nao conectada" virou "Gerar
+orcamento comparativo": monta as duas cotacoes, valida e abre o documento em nova janela para
+salvar em PDF. Cobertura nao informada e indenizacao integral em branco BLOQUEIAM, com o motivo
+na tela.
+
+**`aplicarRevisao` (novo) e o caminho inverso de `camposDaCotacao`** — sem ele o PDF sairia com o
+texto extraido e ignoraria as correcoes do corretor, tornando a revisao decorativa. Campo em
+branco NAO apaga o extraido: em branco quer dizer "nao mexi", nao "remova". Texto de cobertura
+corrigido a mao entra por `cot.textos_revisados`, consumido por `montarCategorias`, e passa a
+valer como INCLUIDA — foi um humano quem afirmou.
+
+Verificacao ponta a ponta com os dois PDFs reais: HDI com 15 dos 16 campos preenchidos (so a
+placa falta, e o PDF nao a traz); Pier completa apos as duas escolhas; `montarComparativo`
+devolveu `podeGerar: true`, zero bloqueio, e o HTML final saiu com 21.879 bytes.
+
+**NAO persiste.** O arquivo nao e guardado e o numero CV-AAAA-NNNN nao e alocado: os dois
+dependem da migration `supabase/67_auto_orcamento_comparativo.sql`, que continua sem executar. O
+cabecalho sai sem referencia. Persistir e a proxima etapa, depois da 67.
+
+Arquivos: `src/lib/orcamentoLeitura.js`, `src/lib/orcamentoPierParser.js`,
+`src/lib/orcamentoComparativo.js`, `src/components/auto/AutoQuoteComparison.jsx`,
+`src/styles/auto-ui.css` e os tres arquivos de teste correspondentes.
+
+Validacao: `npm test` 530/530, `npm run build` concluido, `@babel/parser` e PostCSS OK.
+
+**Nao verificado no navegador.** Falta abrir a tela e conferir a janela de impressao.
+
+---
+
+## Nome do segurado na Visao Geral e retorno de navegacao AUTO (2026-08-27, Claude — CONCLUIDA)
+
+Responsavel: Claude. Dois defeitos relatados pelo usuario: pendencias aparecendo sem nome na Visao
+Geral, e o "Voltar"/"Fechar" levando para o lugar errado.
+
+**1. "Cliente sem nome" — tres causas distintas, nao uma.** `personName`, em `autoPending.js`,
+montava o nome de cada pendencia e errava em tres situacoes:
+
+- **Renovacao puxada da planilha.** `renovacoes_auto` nao tem coluna `nome_cliente`; o nome
+  digitado fica em `nome_segurado_anterior`, que estava gravado e simplesmente nao era consultado
+  ali. A planilha de renovacoes mostrava o nome, a Visao Geral nao — mesma linha, telas diferentes.
+- **Relacao que vem como array.** `apolices_auto` chega objeto na renovacao e ARRAY na emissao (o
+  proprio arquivo ja tratava isso em `emissionPolicies`, mas `personName` lia
+  `item.apolices_auto?.nome_cliente` direto, que e `undefined` para array). Perda silenciosa.
+- **Cliente vinculado a cotacao.** A query da emissao ja trazia
+  `cotacoes_auto(*, clientes_auto(nome_completo))` desde 26/08, mas `personName` nao descia ate la.
+
+**A ordem passou a comecar pelo cadastro do cliente,** a pedido do usuario ("como principal deve
+aparecer o nome do cliente"). `nome_cliente` e copia denormalizada gravada quando o registro
+nasceu e nunca reescrita: corrigir o nome em `clientes_auto` nao propaga, entao preferir a copia
+mostra o nome antigo de quem ja foi corrigido no cadastro. As copias seguem valendo para o que nao
+tem cliente vinculado. Nome so com espacos deixou de vencer a proxima origem.
+
+**2. "Voltar" com destino fixo.** Cada detalhe tinha a rota escrita no codigo (`/auto/cotacoes`,
+`/auto/emissoes`, `/auto/clientes`). Quem abria uma cotacao pela Visao Geral, pelo Pipeline, pela
+ficha do cliente ou pela busca universal era despejado numa lista onde nunca esteve, perdendo mes
+filtrado, busca digitada e rolagem. O mecanismo `state.from` ate existia em `AutoCotacaoDetalhe`,
+mas quase nenhum call site passava a origem.
+
+**Solucao sem tocar em ~20 call sites:** `src/lib/navegacaoRetorno.js` (puro) + `useVoltar` /
+`useOrigemAtual` (`src/hooks/useVoltar.js`). A decisao e `state.from` -> recuar no historico do
+proprio app -> fallback. O passo do meio usa `history.state.idx`, que o React Router numera: `> 0`
+significa que existe tela anterior DENTRO da sessao, e recuar devolve a tela exata com query
+string e rolagem. `idx === 0` (link colado, aba nova, F5 no detalhe) continua caindo no fallback,
+porque ali recuar sairia do sistema.
+
+**Bug concreto que estava no codigo:** `AutoEmissoes` responde por `/auto/gestao`, `/auto/emissoes`
+e `/auto/emissoes/:id`, mas `abrirCotacaoCompleta` declarava `from: '/auto/emissoes'` fixo — quem
+estava no Pipeline e abria uma cotacao voltava para Apolices. Agora sai de `useOrigemAtual()`.
+
+`state.from` que nao seja rota interna (`//host`, `https://host`, `javascript:`) e ignorado: viraria
+endereco absoluto e o "Voltar" tiraria o usuario do sistema.
+
+Arquivos: `src/lib/autoPending.js`, `src/lib/autoPending.test.mjs`, `src/lib/navegacaoRetorno.js`
+(novo), `src/lib/navegacaoRetorno.test.mjs` (novo), `src/hooks/useVoltar.js` (novo),
+`src/pages/auto/AutoEmissoes.jsx`, `AutoCotacaoDetalhe.jsx`, `AutoApoliceDetalhe.jsx`,
+`AutoClienteDetalhe.jsx`, `AutoClientesVerificacao.jsx`, `src/pages/auto/CONTEXT.md`,
+`package.json` (registro da suite nova).
+
+Validacao: `npm test` 523/523 (22 testes novos), `npm run build` concluido, `@babel/parser` OK nos
+5 JSX alterados, `check:page-contexts` sem regressao. Sem migration; nenhuma query foi alterada —
+os dados ja vinham do banco, o front e que nao os lia.
+
+**Nao verificado ao vivo.** Falta abrir no navegador e conferir os dois: uma renovacao de planilha
+com nome na Visao Geral, e Pipeline -> cotacao -> Voltar caindo de volta no Pipeline.
+
+**Fora do escopo, mesmo defeito de nome:** a busca universal (`AutoWorkspaceBar`) e o Kanban de
+`AutoEmissoes` montam o nome com sua propria expressao local, sem o cadastro do cliente. Nao foram
+tocados nesta rodada. A area de Fichas/Fianca ja tem mecanismo proprio de retorno (`state.backTo`)
+e nao entrou aqui.
+
+Proximo responsavel: usuario, para o smoke test.
+
+---
 ## Restaurar verificacao de clientes AUTO sem migration 71 (2026-08-27, Codex — CONCLUIDO)
 
 Responsavel: Codex, Agente de Sistemas. Diagnostico confirmado em dados reais e navegador autenticado: existem 2 pares de clientes com nomes exatamente iguais e o comparador encontra ambos, mas a pagina descartava toda a lista quando a tabela `auto_clientes_verificacoes` ainda nao existia. Corrigido: a leitura dos candidatos foi desacoplada da memoria de decisoes. Sem a migration 71, os pares aparecem normalmente, podem ser classificados e a decisao fica temporariamente neste dispositivo com aviso explicito; quando a tabela existe, a persistencia continua compartilhada no Supabase.

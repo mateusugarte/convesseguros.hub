@@ -8,6 +8,7 @@ import { useToast } from '../../contexts/ToastContext'
 import { getAutoClientVerificationData, salvarAutoClientVerification } from '../../lib/auto'
 import { buildClientVerificationPairs, normalizeClientVerificationName } from '../../lib/autoClientVerification'
 import { formatDateBR } from './autoShared'
+import { useVoltar } from '../../hooks/useVoltar.js'
 
 const FILTERS = [
   { value: 'pendentes', label: 'Pendentes' },
@@ -56,6 +57,7 @@ function ClientComparisonCard({ client, label, onOpen }) {
 }
 
 export default function AutoClientesVerificacao() {
+  const voltar = useVoltar('/auto/clientes')
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const toast = useToast()
@@ -110,7 +112,7 @@ export default function AutoClientesVerificacao() {
         context="Carteira Auto · Qualidade da base"
         title="Verificação de clientes"
         description="Compare cadastros com nomes iguais ou parecidos e registre se representam a mesma pessoa."
-        actions={<button type="button" onClick={() => navigate('/auto/clientes')} className="btn-secondary inline-flex items-center gap-2"><ArrowLeft className="h-4 w-4" />Voltar para clientes</button>}
+        actions={<button type="button" onClick={voltar} className="btn-secondary inline-flex items-center gap-2"><ArrowLeft className="h-4 w-4" />Voltar</button>}
       />
 
       <AutoStatStrip className="auto-client-verification-stats" items={[

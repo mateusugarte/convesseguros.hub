@@ -291,6 +291,31 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   registro legado tem `cliente_id` e nome no cadastro, mas `nome_cliente` vazio
   na cotacao, a interface exibe o nome vinculado em vez de "sem nome".
 
+## Nome do segurado e retorno de navegacao (2026-08-27)
+
+- `personName`, em `autoPending.js`, decide o nome de cada pendencia da Visao
+  Geral nesta ordem: cadastro do cliente (proprio ou o da cotacao vinculada),
+  copia `nome_cliente`, copia da cotacao, copia da apolice e, por ultimo,
+  `nome_segurado_anterior`. **O cadastro vem primeiro de proposito** — as copias
+  sao gravadas na criacao do registro e nunca reescritas, entao corrigir o nome
+  em `clientes_auto` nao propaga e preferir a copia mostraria o nome antigo.
+- Relacionamento do Supabase chega como objeto quando e para-um e como array
+  quando e para-muitos. `apolices_auto` aparece das duas formas nesta fila, e
+  `?.nome_cliente` direto perde o nome sempre que vier array. Usar
+  `nomesDaRelacao`, que normaliza as duas.
+- Renovacao puxada da planilha NAO tem coluna `nome_cliente`; o nome digitado
+  fica em `nome_segurado_anterior`. Era a origem principal do "Cliente sem nome".
+- O "Voltar" de qualquer detalhe do AUTO usa `useVoltar(fallback)`
+  (`src/hooks/useVoltar.js`), nunca uma rota escrita fixa. A regra pura esta em
+  `src/lib/navegacaoRetorno.js`: `state.from` primeiro, depois recuar no
+  historico do proprio app (`history.state.idx > 0`), e so entao o fallback.
+  Destino fixo despejava o usuario numa lista onde ele nunca esteve e apagava
+  mes filtrado, busca e rolagem.
+- `AutoEmissoes` responde por `/auto/gestao`, `/auto/emissoes` e
+  `/auto/emissoes/:id`. Ao abrir uma cotacao dali, a origem sai de
+  `useOrigemAtual()` — escrever `/auto/emissoes` na mao fazia quem estava no
+  Pipeline voltar para Apolices.
+
 ## Handoff Checklist
 
 - Read `docs/IA_ORCHESTRATOR.md`

@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 
 import { montarCategorias } from '../../lib/orcamentoComparativo'
-import { camposDaCotacao } from '../../lib/orcamentoLeitura'
+import { aplicarRevisao, camposDaCotacao } from '../../lib/orcamentoLeitura'
 import AutoOrcamentoOfertas from './AutoOrcamentoOfertas'
 
 const ROLES = [
@@ -13,13 +13,28 @@ const ROLES = [
   { key: 'concorrente', label: 'Outra seguradora', helper: 'Opção concorrente para comparação' },
 ]
 
+// Espelhado por `camposDaCotacao` em `orcamentoLeitura.js`, com teste travando
+// o par: renomear uma chave so aqui sumiria com o dado sem quebrar nada visivel.
+//
+// Premio liquido e IOF NAO estao nesta lista de proposito. Sao numeros de
+// controle interno, conferidos na emissao; nao saem no orcamento do cliente, e
+// pedir revisao humana deles gastava a atencao que deve ir para franquia e
+// cobertura.
 const REVIEW_FIELDS = [
+  { key: 'segurado_nome', label: 'Segurado', required: true },
+  { key: 'segurado_cpf', label: 'CPF/CNPJ do segurado' },
+  { key: 'condutor_nome', label: 'Condutor principal' },
+  { key: 'condutor_cpf', label: 'CPF do condutor' },
+  { key: 'condutor_estado_civil', label: 'Estado civil do condutor' },
+  { key: 'veiculo_modelo', label: 'Veículo', required: true },
+  { key: 'veiculo_ano', label: 'Ano/modelo' },
+  { key: 'veiculo_placa', label: 'Placa' },
+  { key: 'veiculo_uso', label: 'Uso do veículo' },
+  { key: 'veiculo_cep_pernoite', label: 'CEP de pernoite' },
   { key: 'numero', label: 'Número da cotação' },
   { key: 'validade', label: 'Validade', type: 'date' },
   { key: 'vigencia_inicio', label: 'Início da vigência', type: 'date' },
   { key: 'vigencia_fim', label: 'Fim da vigência', type: 'date' },
-  { key: 'premio_liquido', label: 'Prêmio líquido', type: 'money' },
-  { key: 'iof', label: 'IOF', type: 'money' },
   { key: 'premio_total', label: 'Prêmio total', type: 'money', required: true },
   { key: 'premio_parcelado', label: 'Parcelamento', required: true },
   { key: 'franquia', label: 'Franquia', type: 'money', critical: true },
@@ -152,6 +167,9 @@ export default function AutoQuoteComparison({ quote }) {
   const [aplicando, setAplicando] = useState({ atual: false, concorrente: false })
   const [erros, setErros] = useState({ atual: '', concorrente: '' })
   const [sides, setSides] = useState(() => ({ atual: sideFromQuote('atual', quote), concorrente: sideFromQuote('concorrente', quote) }))
+  const [gerando, setGerando] = useState(false)
+  const [erroGeracao, setErroGeracao] = useState('')
+  const [comparativoGerado, setComparativoGerado] = useState(null)
   const issues = useMemo(() => Object.fromEntries(ROLES.map(({ key }) => [key, REVIEW_FIELDS.filter(field => (field.required || field.critical) && !String(sides[key].campos[field.key] ?? '').trim()).map(field => field.key)])), [sides])
   const issueCount = issues.atual.length + issues.concorrente.length
   const criticalCount = ROLES.reduce((total, { key }) => total + issues[key].filter(fieldKey => REVIEW_FIELDS.find(field => field.key === fieldKey)?.critical).length, 0)
@@ -213,6 +231,70 @@ export default function AutoQuoteComparison({ quote }) {
     }))
   }
 
+  /**
+   * Gera o orcamento comparativo a partir do que esta na revisao.
+   *
+   * A cotacao que vai para o documento e a EXTRAIDA com a revisao aplicada por
+   * cima (`aplicarRevisao`) — o corretor corrige na tela e a correcao chega ao
+   * PDF; sem isso a revisao seria decorativa.
+   *
+   * A validacao de `montarComparativo` manda: cobertura nao informada e
+   * indenizacao integral em branco BLOQUEIAM, porque um comparativo com linha
+   * faltando chega ao cliente parecendo completo.
+   *
+   * O documento abre em janela para impressao/salvar em PDF. Persistir em
+   * `auto_orcamentos` e alocar o numero CV-AAAA-NNNN dependem da migration 67,
+   * ainda nao executada — por isso o cabecalho sai sem numero de referencia.
+   */
+  async function gerarOrcamento() {
+    setGerando(true)
+    setErroGeracao('')
+    try {
+      const [{ montarComparativo }, { montarHtmlOrcamento }] = await Promise.all([
+        import('../../lib/orcamentoComparativo'),
+        import('../../lib/orcamentoComparativoHtml'),
+      ])
+
+      const cotacaoDe = role => {
+        const lida = leituras[role]?.cotacao
+        if (!lida) return null
+        const cot = aplicarRevisao(lida, sides[role].campos)
+        const nome = sides[role].seguradora || cot.seguradora?.nome || ''
+        return { ...cot, seguradora: { ...cot.seguradora, nome } }
+      }
+
+      const atual = cotacaoDe('atual')
+      const outra = cotacaoDe('concorrente')
+      if (!atual || !outra) {
+        setErroGeracao('Envie e leia os dois PDFs antes de gerar o comparativo.')
+        return
+      }
+
+      const hoje = new Date().toISOString().slice(0, 10)
+      const comparativo = montarComparativo({ atual, outra, emitidoEm: hoje })
+      if (!comparativo.validacao.podeGerar) {
+        const motivos = [...comparativo.validacao.atual.pendencias, ...comparativo.validacao.outra.pendencias]
+          .filter(p => p.bloqueia !== false)
+          .map(p => p.label || p.caminho)
+        setErroGeracao(`Faltam dados obrigatórios: ${[...new Set(motivos)].join(' · ')}`)
+        return
+      }
+
+      const janela = window.open('', '_blank')
+      if (!janela) {
+        setErroGeracao('O navegador bloqueou a janela do orçamento. Libere o pop-up e tente de novo.')
+        return
+      }
+      janela.document.write(montarHtmlOrcamento(comparativo))
+      janela.document.close()
+      setComparativoGerado(comparativo)
+    } catch (erro) {
+      setErroGeracao(`Não foi possível gerar o orçamento: ${erro.message}`)
+    } finally {
+      setGerando(false)
+    }
+  }
+
   function patchField(role, field, value) {
     setSides(current => ({ ...current, [role]: { ...current[role], campos: { ...current[role].campos, [field]: value } } }))
   }
@@ -243,9 +325,15 @@ export default function AutoQuoteComparison({ quote }) {
         ))}</div>
         <footer className="auto-comparison-footer"><div><FileText /><span><strong>Visual pronto para a conferência</strong><small>Você pode navegar pela revisão para avaliar o design.</small></span></div><button type="button" onClick={() => setStep('review')}>Visualizar revisão <ArrowRight /></button></footer>
       </> : <>
-        <div className="auto-comparison-review-summary"><div><span>Pendências previstas</span><strong>{issueCount}</strong><small>{criticalCount} campo(s) crítico(s)</small></div><p><AlertTriangle />Franquia, indenização integral e itens não incluídos terão conferência obrigatória quando a automação for implementada.</p><button type="button" onClick={() => setStep('upload')}><RefreshCw />Voltar ao upload</button></div>
+        <div className="auto-comparison-review-summary"><div><span>Pendências previstas</span><strong>{issueCount}</strong><small>{criticalCount} campo(s) crítico(s)</small></div><p><AlertTriangle />Franquia, indenização integral e cobertura não informada bloqueiam a geração — um comparativo com linha faltando chega ao cliente parecendo completo.</p><button type="button" onClick={() => setStep('upload')}><RefreshCw />Voltar ao upload</button></div>
         <div className="auto-comparison-review-grid">{ROLES.map(({ key }) => <ReviewColumn key={key} role={key} side={sides[key]} issues={issues[key]} onPatch={(field, value) => patchField(key, field, value)} />)}</div>
-        <footer className="auto-comparison-footer is-review"><div><CheckCircle2 /><span><strong>Etapa final apenas demonstrativa</strong><small>Persistência e geração de PDF não estão conectadas.</small></span></div><button type="button" disabled><Check />Automação ainda não conectada</button></footer>
+        {erroGeracao && <div className="auto-comparison-review-summary is-error"><p><AlertTriangle />{erroGeracao}</p></div>}
+        <footer className="auto-comparison-footer is-review">
+          <div><CheckCircle2 /><span><strong>{comparativoGerado ? 'Orçamento gerado' : 'Geração do orçamento ativa'}</strong><small>{comparativoGerado ? 'Use Imprimir → Salvar como PDF na janela aberta.' : 'O documento abre em nova janela para salvar em PDF. O arquivo ainda não é guardado no sistema (migration 67 pendente).'}</small></span></div>
+          <button type="button" onClick={gerarOrcamento} disabled={gerando}>
+            {gerando ? <><LoaderCircle className="is-spinning" />Gerando…</> : <><FileCheck2 />Gerar orçamento comparativo</>}
+          </button>
+        </footer>
       </>}
     </section>
   )

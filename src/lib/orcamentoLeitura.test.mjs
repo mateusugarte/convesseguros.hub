@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 
-import { aplicarEscolha, camposDaCotacao } from './orcamentoLeitura.js'
+import { aplicarEscolha, aplicarRevisao, camposDaCotacao } from './orcamentoLeitura.js'
 import { parseCotacaoAllianz } from './orcamentoAllianzParser.js'
 import { montarCategorias, criarCotacaoOrcamento } from './orcamentoComparativo.js'
 
@@ -17,11 +17,31 @@ const campos = oferta => camposDaCotacao(
 // "Não informado" num campo que o parser preencheu — falha silenciosa, porque a
 // tela continuaria funcionando e so o dado sumiria.
 const CHAVES_DA_REVISAO = [
+  'segurado_nome', 'segurado_cpf',
+  'condutor_nome', 'condutor_cpf', 'condutor_estado_civil',
+  'veiculo_modelo', 'veiculo_ano', 'veiculo_placa', 'veiculo_uso', 'veiculo_cep_pernoite',
   'numero', 'validade', 'vigencia_inicio', 'vigencia_fim',
-  'premio_liquido', 'iof', 'premio_total', 'premio_parcelado',
+  'premio_total', 'premio_parcelado',
   'franquia', 'franquia_tipo', 'indenizacao_integral',
   'assistencia', 'carro_reserva', 'vidros', 'danos_terceiros', 'nao_inclusos',
 ]
+
+// `premio_liquido` e `iof` saem de proposito: sao controle interno da emissao e
+// nao aparecem no documento do cliente. Se voltarem a esta lista, voltam tambem
+// a consumir revisao humana de graca.
+test('premio liquido e IOF nao entram na revisao do orcamento', () => {
+  const c = campos('Completo')
+  assert.equal('premio_liquido' in c, false)
+  assert.equal('iof' in c, false)
+})
+
+// REGRESSAO: o parser lia segurado, condutor e veiculo do PDF e a ponte jogava
+// fora — a revisao abria em branco e esses dados nunca chegavam ao documento.
+test('REGRESSAO: leva segurado, condutor e veiculo do PDF para a revisao', () => {
+  const c = campos('Completo')
+  assert.ok(c.segurado_nome, 'segurado deveria vir preenchido')
+  assert.ok(c.veiculo_modelo, 'veiculo deveria vir preenchido')
+})
 
 test('preenche exatamente os campos que a coluna de revisao mostra', () => {
   assert.deepEqual(Object.keys(campos('Completo')).sort(), [...CHAVES_DA_REVISAO].sort())
@@ -90,4 +110,39 @@ test('aplica a escolha de produto nos parsers que não são Allianz', async () =
   }, 'determinado')
   assert.equal(leitura.cotacao.produto_selecionado.id, 'determinado')
   assert.equal(leitura.cotacao.valores.premio_total, 1664.71)
+})
+
+// ─── Revisao editada volta para a cotacao ───────────────────────────────
+//
+// REGRESSAO: sem `aplicarRevisao` o PDF final saia com o texto EXTRAIDO e
+// ignorava tudo o que o corretor corrigiu na tela — a revisao virava enfeite.
+
+test('REGRESSAO: correcao feita na revisao chega ao documento', () => {
+  const cot = parseCotacaoAllianz({ itens: FX.itens, texto: FX.texto, oferta: 'Completo' })
+  const revisado = aplicarRevisao(cot, {
+    segurado_nome: 'Nome Corrigido',
+    veiculo_placa: 'ABC1D23',
+    premio_total: '4.999,90',
+    carro_reserva: '15 dias de carro reserva',
+  })
+  assert.equal(revisado.segurado.nome, 'Nome Corrigido')
+  assert.equal(revisado.veiculo.placa, 'ABC1D23')
+  assert.equal(revisado.valores.premio_total, 4999.90)
+
+  const { categorias } = montarCategorias(revisado)
+  assert.equal(categorias.find(c => c.key === 'carro_reserva').texto, '15 dias de carro reserva')
+})
+
+test('campo em branco na revisao nao apaga o que foi extraido', () => {
+  // Em branco quer dizer "nao mexi", nunca "remova". Apagar aqui deixaria o
+  // documento sair sem um dado que o PDF afirmava.
+  const cot = parseCotacaoAllianz({ itens: FX.itens, texto: FX.texto, oferta: 'Completo' })
+  const revisado = aplicarRevisao(cot, { segurado_nome: '', premio_total: '', franquia: '' })
+  assert.equal(revisado.segurado.nome, cot.segurado.nome)
+  assert.equal(revisado.valores.premio_total, cot.valores.premio_total)
+  assert.equal(revisado.valores.franquia, cot.valores.franquia)
+})
+
+test('aplicarRevisao devolve null sem cotacao', () => {
+  assert.equal(aplicarRevisao(null, { segurado_nome: 'X' }), null)
 })

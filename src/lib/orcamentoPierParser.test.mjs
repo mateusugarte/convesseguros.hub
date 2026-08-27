@@ -77,3 +77,19 @@ test('logo e cor vêm do cadastro', () => {
   assert.equal(cot.seguradora.logo_url, '/p.svg')
   assert.equal(cot.seguradora.cor_destaque, '#222222')
 })
+
+// A Pier nao imprime se a franquia e reduzida ou normal, e o campo e critico:
+// sai no documento do cliente e as outras seguradoras do comparativo declaram.
+// Deduzir do valor seria invencao; o parser pergunta.
+test('Pier pede o tipo de franquia quando ele nao vem informado', () => {
+  const cot = parseCotacaoPier({ itens: FX.itens, texto: FX.texto, produto: 'completo' })
+  assert.equal(cot.valores.franquia_tipo, '')
+  assert.equal(cot.escolha_pendente.campo, 'franquia_tipo')
+  assert.deepEqual(cot.escolha_pendente.opcoes.map(o => o.indice), ['reduzida', 'normal'])
+})
+
+test('Pier aceita o tipo de franquia escolhido e encerra a pendencia', () => {
+  const cot = parseCotacaoPier({ itens: FX.itens, texto: FX.texto, produto: 'completo', franquia_tipo: 'reduzida' })
+  assert.equal(cot.valores.franquia_tipo, 'Reduzida')
+  assert.equal(cot.escolha_pendente, null)
+})

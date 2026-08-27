@@ -14,6 +14,17 @@ export const PRODUTOS_PIER = [
   { id: 'completo', label: 'Completo' },
 ]
 
+// A Pier imprime o VALOR da franquia ("Franquia: R$ 3.625,62") e nao diz se ela
+// e reduzida ou normal — as duas seguradoras que o comparativo poe ao lado dela
+// dizem. O campo e critico e sai no documento do cliente, entao nao pode ser
+// deduzido do valor nem deixado em branco: o parser pergunta.
+export const FRANQUIAS_PIER = [
+  { id: 'reduzida', label: 'Reduzida' },
+  { id: 'normal', label: 'Normal' },
+]
+
+const ROTULO_FRANQUIA = Object.fromEntries(FRANQUIAS_PIER.map(f => [f.id, f.label]))
+
 export function ehLayoutPier(texto) {
   const t = String(texto || '')
   return /Mudando seu relacionamento\s+com seguros/i.test(t)
@@ -26,6 +37,7 @@ export function listarProdutosPier() {
 
 export function parseCotacaoPier({
   itens = [], texto = '', seguradoraMeta = null, produto = null, dadosProduto = null,
+  franquia_tipo: franquiaTipo = null,
 } = {}) {
   const escolhido = exigirProduto({ seguradora: 'Pier Seguros', produtos: PRODUTOS_PIER, selecionado: produto })
   const linhas = agruparLinhas(itens)
@@ -84,7 +96,18 @@ export function parseCotacaoPier({
     ],
     descontos_aplicados: [],
     franquia,
-    franquia_tipo: '',
+    franquia_tipo: ROTULO_FRANQUIA[franquiaTipo] || '',
+  }
+
+  // Pendencia de segundo estagio: o produto ja esta escolhido e o resto da
+  // cotacao esta lido; falta so o dado que este PDF nao tem. A tela usa o mesmo
+  // seletor da escolha de produto (`escolha_pendente`), sem caminho novo.
+  if (!franquiaTipo) {
+    cot.escolha_pendente = {
+      campo: 'franquia_tipo',
+      label: 'Esta cotação da Pier não informa o tipo de franquia; selecione qual foi contratada',
+      opcoes: FRANQUIAS_PIER.map((f, ordem) => ({ indice: f.id, nome: f.label, premio_total: null, ordem })),
+    }
   }
 
   cot.indenizacao_integral = {

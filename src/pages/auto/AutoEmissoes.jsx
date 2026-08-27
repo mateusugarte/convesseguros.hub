@@ -25,6 +25,7 @@ import { toNumber } from '../../lib/apolices'
 import { parseAutoHistoricoPlanilha, somarUmAno } from '../../lib/autoHistoricoImport.js'
 import { parseOrcamentoAuto, parsePropostaAuto } from '../../lib/autoPdfParser.js'
 import { AUTO_PIPELINE_STAGES, AUTO_TIPO_META, classificarRenovacoesPipeline, scoreCotacaoSuggestion } from '../../lib/autoOperational.js'
+import { useOrigemAtual, useVoltar } from '../../hooks/useVoltar.js'
 const COLUNAS = [
   { id: 'pendentes', label: 'Cotações pendentes', hint: 'somente seguros novos ainda não cotados', tone: 'warning' },
   { id: 'cotacao_feita', label: 'Cotações feitas', hint: 'seguro novo, renovação ou endosso identificados pela etiqueta', tone: 'secondary' },
@@ -1385,6 +1386,11 @@ function PlanilhaEmissoes({ items, onSave, onOpen, onEdit, onMove, saving }) {
 export default function AutoEmissoes() {
   const qc = useQueryClient()
   const navigate = useNavigate()
+  // Esta pagina responde por /auto/gestao (Pipeline), /auto/emissoes (Apolices)
+  // e /auto/emissoes/:id (detalhe). Por isso a origem sai da rota, nunca escrita
+  // fixa: quem abria uma cotacao pelo Pipeline voltava para Apolices.
+  const origemAtual = useOrigemAtual()
+  const voltar = useVoltar('/auto/emissoes')
   const location = useLocation()
   const { id: emissaoId } = useParams()
   const toast = useToast()
@@ -1984,12 +1990,7 @@ export default function AutoEmissoes() {
     const cotacaoId = item?.cotacoes_auto?.id || item?.cotacao_id
     if (!cotacaoId) return
     setDetalhe(null)
-    navigate(`/auto/cotacoes/${cotacaoId}`, {
-      state: {
-        from: '/auto/emissoes',
-        fromLabel: 'Gestao de Emissoes',
-      },
-    })
+    navigate(`/auto/cotacoes/${cotacaoId}`, { state: { from: origemAtual } })
   }
 
   useEffect(() => {
@@ -2194,17 +2195,17 @@ export default function AutoEmissoes() {
     if (!emissaoDetalhada) {
       return (
         <div className="space-y-4 p-4">
-          <button onClick={() => navigate('/auto/emissoes')} className="btn-secondary"><ArrowLeft className="h-4 w-4" /> Voltar</button>
+          <button onClick={voltar} className="btn-secondary"><ArrowLeft className="h-4 w-4" /> Voltar</button>
           <EmptyState title="Emissão não encontrada" description="O registro pode ter sido removido." />
         </div>
       )
     }
     return (
       <div className="auto-page space-y-4 px-1 pb-8 animate-fade-in">
-        <button onClick={() => navigate('/auto/emissoes')} className="btn-secondary inline-flex items-center gap-2">
-          <ArrowLeft className="h-4 w-4" /> Voltar para emissões
+        <button onClick={voltar} className="btn-secondary inline-flex items-center gap-2">
+          <ArrowLeft className="h-4 w-4" /> Voltar
         </button>
-        <ModalDetalhe page emissao={emissaoDetalhada} onClose={() => navigate('/auto/emissoes')}
+        <ModalDetalhe page emissao={emissaoDetalhada} onClose={voltar}
           onAbrirCotacao={() => abrirCotacaoCompleta(emissaoDetalhada)} onRegistrarResultado={setModalResultado}
           onEmitirApolice={setModalEmissao} onEditar={abrirEditor} onExcluir={handleExcluir} isDeleting={isDeleting}
           tagsAtivas={tagsAtivas} onSalvarTags={(id, tags) => salvarTagsEmissao({ id, tags })} />

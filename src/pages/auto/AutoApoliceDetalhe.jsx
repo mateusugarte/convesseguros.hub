@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Clock3, CreditCard, FileText, Save, ShieldCheck } from 'lucide-react'
 import SeguradoraBadge from '../../components/SeguradoraBadge'
 import { DataCard, EmptyState, MetricCard, PageHeader } from '../../components/ui'
 import { atualizarApoliceAutoSemEmissao, atualizarEmissaoAutoCompleta, calcularValorComissaoAuto, getApoliceAutoDetalhe } from '../../lib/auto'
 import { formatDateBR, formatDateTimeBR, formatMoney } from './autoShared'
+import { useVoltar } from '../../hooks/useVoltar.js'
 
 function buildForm(apolice) {
   const emissao = apolice?.emissoes_auto || {}
@@ -67,8 +68,8 @@ function ReadItem({ label, value }) {
 }
 
 export default function AutoApoliceDetalhe() {
+  const voltar = useVoltar('/auto/emissoes')
   const { id } = useParams()
-  const navigate = useNavigate()
   const qc = useQueryClient()
   const { data: apolice, isLoading } = useQuery({ queryKey: ['auto-apolice-detalhe', id], queryFn: () => getApoliceAutoDetalhe(id), enabled: Boolean(id) })
   const [form, setForm] = useState(null)
@@ -121,7 +122,7 @@ export default function AutoApoliceDetalhe() {
         description="Área interna dedicada da apólice, seguindo o mesmo padrão de detalhamento, leitura e edição das áreas maduras do sistema."
         actions={(
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => navigate('/auto/emissoes')} className="btn-secondary inline-flex items-center gap-2"><ArrowLeft className="h-4 w-4" /> Voltar</button>
+            <button onClick={voltar} className="btn-secondary inline-flex items-center gap-2"><ArrowLeft className="h-4 w-4" /> Voltar</button>
             <button onClick={() => salvar.mutate()} disabled={salvar.isPending} className="btn-primary inline-flex items-center gap-2"><Save className="h-4 w-4" /> {salvar.isPending ? 'Salvando...' : 'Salvar alterações'}</button>
           </div>
         )}

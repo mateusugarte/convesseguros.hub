@@ -95,3 +95,96 @@ test('ordena críticas antes das tarefas normais', () => {
   assert.equal(result[0].id, 'coletar_apolice:critical')
   assert.equal(result.at(-1).priority, 'normal')
 })
+
+// ─── Nome do segurado na fila da Visão Geral ────────────────────────────
+//
+// REGRESSÃO: pendências apareciam como "Cliente sem nome" mesmo com o nome
+// gravado. Três origens distintas, todas cobertas abaixo.
+
+test('REGRESSAO: renovação puxada da planilha usa nome_segurado_anterior', () => {
+  // `renovacoes_auto` não tem coluna `nome_cliente`; o nome digitado na planilha
+  // mora em `nome_segurado_anterior`. Era o caso que caía em "Cliente sem nome".
+  const result = buildAutoPendingNotifications({
+    today,
+    renovacoes: [{
+      id: 'r-planilha',
+      nome_segurado_anterior: 'Neusa Aparecida',
+      vigencia_fim: '2026-08-30',
+      data_limite_envio: '2026-08-18',
+      status_operacional: 'pendente',
+    }],
+  })
+  assert.equal(result.length, 1)
+  assert.equal(result[0].subject, 'Neusa Aparecida')
+  assert.equal(result[0].title, 'Cotação para enviar: Neusa Aparecida')
+})
+
+test('REGRESSAO: emissão lê o nome da apólice mesmo quando a relação vem em array', () => {
+  // `apolices_auto` chega como array na emissão e como objeto na renovação.
+  // Ler `item.apolices_auto?.nome_cliente` devolvia undefined no caso array.
+  const result = buildAutoPendingNotifications({
+    today,
+    emissoes: [{
+      id: 'e-array',
+      coluna: 'aguardando_vistoria',
+      created_at: today,
+      apolices_auto: [{ id: 'a1', nome_cliente: 'Carlos Prado' }],
+    }],
+  })
+  assert.equal(result.length, 1)
+  assert.equal(result[0].subject, 'Carlos Prado')
+})
+
+test('REGRESSAO: emissão lê o cliente vinculado à cotação', () => {
+  const result = buildAutoPendingNotifications({
+    today,
+    emissoes: [{
+      id: 'e-nested',
+      coluna: 'cotacao_feita',
+      created_at: today,
+      cotacoes_auto: { id: 'c1', clientes_auto: { nome_completo: 'Marina Duarte' } },
+    }],
+  })
+  assert.equal(result.length, 1)
+  assert.equal(result[0].subject, 'Marina Duarte')
+})
+
+test('o cadastro do cliente tem precedência sobre a cópia denormalizada', () => {
+  // A cópia envelhece: corrigir o nome em `clientes_auto` não reescreve
+  // `nome_cliente` nos registros antigos. O cadastro é a fonte de verdade.
+  const result = buildAutoPendingNotifications({
+    today,
+    cotacoes: [{
+      id: 'c-corrigida',
+      status: 'aberta',
+      nome_cliente: 'JOAO DA SILVA (NOME ERRADO)',
+      clientes_auto: { nome_completo: 'João da Silva' },
+      updated_at: '2026-08-19T10:00:00Z',
+    }],
+  })
+  assert.equal(result[0].subject, 'João da Silva')
+})
+
+test('nome em branco não vence a próxima origem disponível', () => {
+  // String vazia é falsy, mas "   " não era — passaria como nome válido.
+  const result = buildAutoPendingNotifications({
+    today,
+    renovacoes: [{
+      id: 'r-branco',
+      clientes_auto: { nome_completo: '   ' },
+      nome_segurado_anterior: 'Rita Alves',
+      vigencia_fim: '2026-08-30',
+      data_limite_envio: '2026-08-18',
+      status_operacional: 'pendente',
+    }],
+  })
+  assert.equal(result[0].subject, 'Rita Alves')
+})
+
+test('sem nenhuma origem, continua dizendo que o nome falta', () => {
+  const result = buildAutoPendingNotifications({
+    today,
+    renovacoes: [{ id: 'r-vazia', vigencia_fim: '2026-08-30', data_limite_envio: '2026-08-18', status_operacional: 'pendente' }],
+  })
+  assert.equal(result[0].subject, 'Cliente sem nome')
+})

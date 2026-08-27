@@ -567,6 +567,16 @@ export function montarCategorias(cotacao) {
       texto = TEXTO_NAO_INFORMADO
     }
 
+    // Texto corrigido a mao na revisao vence o extraido. E o unico caminho para
+    // o corretor consertar uma cobertura que o PDF descreve mal, e ele passa a
+    // valer como INCLUIDA porque foi um humano quem afirmou — diferente do
+    // NAO_INFORMADO, que existe justamente para dizer que ninguem afirmou nada.
+    const revisado = cot.textos_revisados?.[meta.key]
+    if (typeof revisado === 'string' && revisado.trim() && revisado !== texto) {
+      texto = revisado.trim()
+      estado = ESTADO_COBERTURA.INCLUIDA
+    }
+
     return { ...meta, itens, exclusoes, texto, estado, opcional: meta.key === CATEGORIA_OPCIONAL }
   })
     // "Beneficios adicionais" e a UNICA que pode sumir do card: nao ter

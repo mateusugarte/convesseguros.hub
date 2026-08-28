@@ -189,6 +189,7 @@ function UploadSlot({ role, side, file, leitura, lendo, erro, aplicando, segurad
       {lendo && <p className="auto-comparison-lendo"><LoaderCircle />Lendo o PDF…</p>}
       {erro && <p className="auto-comparison-error"><AlertTriangle />{erro}</p>}
       {!lendo && leitura && !leitura.suportado && <p className="auto-comparison-warnings"><span><AlertTriangle />{leitura.motivo}</span></p>}
+      {!lendo && leitura?.cotacao?.avisos_extracao?.length > 0 && <ExtractionWarnings avisos={leitura.cotacao.avisos_extracao} />}
 
       {/* PDFs com varias ofertas/produtos param aqui ate alguem escolher. */}
       {!lendo && leitura?.cotacao?.escolha_pendente && (
@@ -219,6 +220,21 @@ function UploadSlot({ role, side, file, leitura, lendo, erro, aplicando, segurad
   )
 }
 
+function ExtractionWarnings({ avisos = [] }) {
+  const visiveis = avisos.filter(aviso => aviso?.mensagem)
+  if (!visiveis.length) return null
+  return (
+    <div className="auto-comparison-extraction-warnings">
+      {visiveis.map((aviso, index) => (
+        <span key={`${aviso.code || 'aviso'}-${index}`} className={aviso.bloqueia ? 'is-blocking' : ''}>
+          <AlertTriangle />
+          {aviso.mensagem}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 function legendaArquivo(leitura, lendo) {
   if (lendo) return 'lendo…'
   if (!leitura) return 'aguardando leitura'
@@ -231,6 +247,12 @@ function legendaArquivo(leitura, lendo) {
 
 function leituraDisponivelParaRevisao(leitura) {
   return leitura?.suportado && leitura?.cotacao
+}
+
+function camposFinanceirosAplicados(campos = {}) {
+  return campos.premio_total !== '' && campos.premio_total != null
+    && String(campos.premio_parcelado || '').trim()
+    && campos.franquia !== '' && campos.franquia != null
 }
 
 function ReviewField({ field, value, issue, onChange }) {
@@ -255,6 +277,13 @@ function ReviewColumn({ role, side, issues, leitura, aplicando, onEscolherOferta
       <header><span>{role === 'atual' ? 'Atual' : 'Concorrente'}</span><div><strong>{side.seguradora || 'Seguradora não definida'}</strong><small>{side.arquivo_nome || 'Preenchimento manual'}</small></div>{issues.length === 0 ? <CheckCircle2 className="is-valid" /> : <span className="auto-comparison-issue-count">{issues.length}</span>}</header>
       {escolha && (
         <div className="auto-comparison-review-choice">
+          <div className="auto-comparison-review-choice-warning">
+            <AlertTriangle />
+            <span>
+              <strong>Escolha o produto antes de revisar os valores</strong>
+              <small>Prêmio, parcelamento, franquia e coberturas mudam conforme o produto. Depois da escolha, a revisão é preenchida automaticamente.</small>
+            </span>
+          </div>
           <AutoOrcamentoOfertas
             escolha={escolha}
             escolhida={null}
@@ -263,7 +292,10 @@ function ReviewColumn({ role, side, issues, leitura, aplicando, onEscolherOferta
           />
         </div>
       )}
-      <div className="auto-comparison-review-fields">{REVIEW_FIELDS.map(field => <ReviewField key={field.key} field={field} value={side.campos[field.key]} issue={issues.includes(field.key)} onChange={value => onPatch(field.key, value)} />)}</div>
+      {!escolha && <>
+        {leitura?.cotacao?.avisos_extracao?.length > 0 && <ExtractionWarnings avisos={leitura.cotacao.avisos_extracao} />}
+        <div className="auto-comparison-review-fields">{REVIEW_FIELDS.map(field => <ReviewField key={field.key} field={field} value={side.campos[field.key]} issue={issues.includes(field.key)} onChange={value => onPatch(field.key, value)} />)}</div>
+      </>}
     </article>
   )
 }
@@ -298,7 +330,7 @@ export default function AutoQuoteComparison({ quote }) {
   const resumoUpload = (() => {
     if (lendo.atual || lendo.concorrente) return 'Aguarde a leitura automática terminar.'
     if (faltamArquivos.length) return `Envie o PDF de: ${faltamArquivos.join(' e ')}.`
-    if (escolhasPendentes.length) return `Você pode revisar os dados já lidos; escolha produto/oferta para liberar preço e coberturas de: ${escolhasPendentes.join(' e ')}.`
+    if (escolhasPendentes.length) return `Escolha produto/oferta para coletar prêmio, parcelamento, franquia e coberturas de: ${escolhasPendentes.join(' e ')}.`
     if (leiturasPendentes.length) return `Revise o aviso de leitura de: ${leiturasPendentes.join(' e ')}.`
     return 'As duas leituras estão prontas para conferência.'
   })()
@@ -360,14 +392,28 @@ export default function AutoQuoteComparison({ quote }) {
     const leitura = leituras[role]
     if (!leitura) return
     setAplicando(current => ({ ...current, [role]: true }))
+    setErros(current => ({ ...current, [role]: '' }))
     try {
       const { aplicarEscolha } = await import('../../lib/orcamentoLeitura')
       // O seletor continua visivel depois da escolha: trocar de opcao e uma
       // acao normal, nao um refazer do zero.
       const atualizada = await aplicarEscolha(leitura, indice)
       const comOpcoes = { ...atualizada, ofertas: leitura.ofertas || leitura.cotacao?.ofertas || leitura.cotacao?.escolha_pendente?.opcoes || [] }
+      const campos = camposDaCotacao(comOpcoes.cotacao, { montarCategorias })
+      if (comOpcoes.cotacao?.escolha_pendente) {
+        setLeituras(current => ({ ...current, [role]: comOpcoes }))
+        aplicarCamposCotacao(role, comOpcoes, campos)
+        return
+      }
+      if (!camposFinanceirosAplicados(campos)) {
+        const nomeProduto = comOpcoes.cotacao?.produto_selecionado?.label || comOpcoes.cotacao?.oferta?.nome || indice
+        setErros(current => ({
+          ...current,
+          [role]: `A opção "${nomeProduto}" foi selecionada, mas a leitura não devolveu prêmio, parcelamento e franquia completos. Reenvie o PDF ou me mande esse arquivo para mapear o layout.`,
+        }))
+      }
       setLeituras(current => ({ ...current, [role]: comOpcoes }))
-      aplicarCotacao(role, comOpcoes)
+      aplicarCamposCotacao(role, comOpcoes, campos)
     } catch (erro) {
       setErros(current => ({ ...current, [role]: `Não foi possível aplicar a opção: ${erro.message}` }))
     } finally {
@@ -377,6 +423,10 @@ export default function AutoQuoteComparison({ quote }) {
 
   function aplicarCotacao(role, leitura) {
     const campos = camposDaCotacao(leitura.cotacao, { montarCategorias })
+    aplicarCamposCotacao(role, leitura, campos)
+  }
+
+  function aplicarCamposCotacao(role, leitura, campos) {
     if (!campos) return
     // So o que o PDF realmente afirma sobrescreve. Espalhar `campos` inteiro
     // apagava com string vazia o que veio do cadastro da cotacao — era assim que

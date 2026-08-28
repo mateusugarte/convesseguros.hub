@@ -53,10 +53,22 @@ export function valorAbaixoRotulo(linhas, rotulo, { maxY = 100, maxX = 110, ocor
 
   for (let i = 0; i < (linhas || []).length; i += 1) {
     const linha = linhas[i]
-    for (const celula of linha.celulas || []) {
-      const normal = normalizarTexto(celula.texto).replace(/:$/, '')
-      if (normal !== alvo) continue
-      encontrados.push({ linha, celula, indice: i })
+    const celulas = linha.celulas || []
+    for (let c = 0; c < celulas.length; c += 1) {
+      let texto = ''
+      for (let fim = c; fim < celulas.length; fim += 1) {
+        texto = `${texto} ${celulas[fim].texto}`.trim()
+        const normal = normalizarTexto(texto).replace(/:$/, '')
+        if (!alvo.startsWith(normal)) break
+        if (normal !== alvo) continue
+        encontrados.push({
+          linha,
+          celula: celulas[c],
+          indice: i,
+          limiteDireita: celulas[fim + 1]?.x ?? null,
+        })
+        break
+      }
     }
   }
 
@@ -73,6 +85,16 @@ export function valorAbaixoRotulo(linhas, rotulo, { maxY = 100, maxX = 110, ocor
     const dy = achado.linha.y - linha.y
     if (dy <= 0) continue
     if (dy > maxY) break
+    const dentroDaColuna = achado.limiteDireita == null ? [] : (linha.celulas || [])
+      .filter(c => c.x >= achado.celula.x - 5)
+      .filter(c => c.x < achado.limiteDireita - 8)
+    if (dentroDaColuna.length) {
+      const texto = dentroDaColuna.map(c => c.texto).join(' ').replace(/\s+/g, ' ').trim()
+      const score = dy * 1000
+      if (texto && (!melhor || score < melhor.score)) melhor = { score, texto }
+      continue
+    }
+
     for (const celula of linha.celulas || []) {
       const dx = Math.abs(celula.x - achado.celula.x)
       if (dx > maxX) continue
@@ -90,4 +112,3 @@ export function textoNaColuna(linha, x, tolerancia = 45) {
     .sort((a, b) => Math.abs(a.x - x) - Math.abs(b.x - x))
   return candidatas[0]?.texto || ''
 }
-

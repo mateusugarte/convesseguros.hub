@@ -35,8 +35,10 @@ const SECOES = {
   risco: { de: 'Avaliação de Risco', ate: 'Aviso:' },
   garantias: { de: 'Garantias de Auto', ate: 'IMPRESSÃO DOS TEXTOS EXPLICATIVOS' },
   notas: { de: 'IMPRESSÃO DOS TEXTOS EXPLICATIVOS', ate: 'Parcelamento' },
-  parcelamento: { de: 'Parcelamento Vlr. Mercado Referenciado', ate: 'Assinatura do Proponente' },
+  parcelamento: { de: 'Parcelamento', ate: 'Assinatura do Proponente' },
 }
+
+const MERCADO_REFERENCIADO_RE = /\b(?:VLR\.?|VALOR)\s+(?:DE\s+)?MERCADO\s+REFERENCIADO/i
 
 export const MODALIDADES = {
   mercado: { indice: 0, rotulo: 'Valor de Mercado Referenciado' },
@@ -106,7 +108,7 @@ const RUIDO_GARANTIA = /^(Cobertura|Garantias de Auto|PR[ÊE]MIO|CUSTO DO DOCUME
  */
 export function colunasGarantias(linhas) {
   const secao = fatiar(linhas, SECOES.garantias)
-  const topo = secao.find(l => /VLR\.?\s*MERCADO REFERENCIADO/i.test(l.texto))
+  const topo = secao.find(l => MERCADO_REFERENCIADO_RE.test(l.texto))
   const sub = secao.find(l => (l.texto.match(/L\.M\.I\./g) || []).length >= 2)
   if (!topo || !sub) return null
 
@@ -140,10 +142,10 @@ export function extrairGarantias(linhas, { modalidade = 'mercado' } = {}) {
   for (const linha of secao) {
     const primeira = linha.celulas[0]
     if (!primeira || primeira.x > 60) continue
-    const nome = primeira.texto
+    const nome = nomeGarantia(linha, colunas)
     if (RUIDO_GARANTIA.test(nome)) continue
 
-    const lmiTexto = celulaEm(linha, par.lmi)
+    const lmiTexto = textoNoIntervalo(linha, par.lmi - 20, par.premio - 8) || celulaEm(linha, par.lmi)
     const premio = moeda(celulaEm(linha, par.premio))
     if (premio == null && !lmiTexto) continue
 
@@ -170,6 +172,29 @@ export function extrairGarantias(linhas, { modalidade = 'mercado' } = {}) {
   return garantias
 }
 
+function nomeGarantia(linha, colunas) {
+  const limite = Math.min(
+    ...colunas.pares.map(par => par.lmi),
+    colunas.franquia ?? Number.POSITIVE_INFINITY,
+  )
+  const partes = linha.celulas
+    .filter(c => c.x < limite - 8)
+    .map(c => c.texto)
+  return partes.join(' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*\(\*\d+\s*\)\s*/g, '')
+    .trim()
+}
+
+function textoNoIntervalo(linha, inicio, fim) {
+  return (linha?.celulas || [])
+    .filter(c => c.x >= inicio && c.x < fim)
+    .map(c => c.texto)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 /** Totais da modalidade: as duas colunas ficam nas MESMAS linhas de rodape. */
 export function extrairTotais(linhas, { modalidade = 'mercado' } = {}) {
   const colunas = colunasGarantias(linhas)
@@ -179,7 +204,7 @@ export function extrairTotais(linhas, { modalidade = 'mercado' } = {}) {
   const x = colunas ? colunas.pares[indice].premio : null
 
   const ler = padrao => {
-    const linha = secao.find(l => padrao.test(l.celulas[0]?.texto || ''))
+    const linha = secao.find(l => padrao.test(l.texto || ''))
     if (!linha || x == null) return null
     return moeda(celulaEm(linha, x, { antes: 40, depois: 40 }))
   }
@@ -209,28 +234,28 @@ const FOLGA_JUROS = 1.5
 export function extrairParcelamento(linhas, { modalidade = 'mercado', total = null } = {}) {
   const secao = fatiar(linhas, SECOES.parcelamento)
   const meiosLinha = secao.find(l => /Cart[ãa]o de Cr[ée]dito/i.test(l.texto))
-  const sub = secao.find(l => (l.texto.match(/Plano/g) || []).length >= 2)
-  if (!meiosLinha || !sub) return []
+  if (!meiosLinha) return []
 
-  const planos = sub.celulas.filter(c => /^Plano$/i.test(c.texto)).map(c => c.x)
-  const valores = sub.celulas.filter(c => /^Valor/i.test(c.texto)).map(c => c.x)
-  const meios = meiosLinha.celulas.map(c => c.texto)
+  const meios = ['Cartão de Crédito', 'Débito Em Conta', 'Carnê']
+  const posicoesMeios = posicoesMeiosPagamento(meiosLinha)
+  const modalidadeIndice = MODALIDADES[modalidade]?.indice ?? 0
+  const porMeio = meios.map(() => [])
 
-  // Metade esquerda = mercado referenciado, metade direita = valor determinado.
-  const metade = Math.floor(meios.length / 2)
-  const inicio = (MODALIDADES[modalidade]?.indice ?? 0) === 0 ? 0 : metade
-  const fim = inicio + metade
+  for (const linha of secao) {
+    const grupos = gruposParcelas(linha)
+    if (!grupos.length) continue
+    grupos.forEach(grupo => {
+      const pos = indicePosicaoMaisProxima(posicoesMeios, grupo.x)
+      if (pos < 0) return
+      const pertenceModalidade = Math.floor(pos / 3) === modalidadeIndice
+      const meio = pos % 3
+      if (pertenceModalidade && porMeio[meio]) porMeio[meio].push(grupo)
+    })
+  }
 
   const resultado = []
-  for (let i = inicio; i < fim && i < planos.length; i += 1) {
-    const linhasPlano = []
-    for (const linha of secao) {
-      const plano = celulaEm(linha, planos[i], { antes: 10, depois: 14 })
-      const n = plano && plano.match(/^(\d{1,2})\s*x$/i)
-      if (!n) continue
-      const valor = moeda(celulaEm(linha, valores[i], { antes: 14, depois: 20 }))
-      if (valor != null) linhasPlano.push({ n: Number(n[1]), valor })
-    }
+  for (let i = 0; i < meios.length; i += 1) {
+    const linhasPlano = porMeio[i]
     if (!linhasPlano.length) continue
 
     const base = total ?? Math.max(...linhasPlano.map(l => l.valor))
@@ -246,6 +271,49 @@ export function extrairParcelamento(linhas, { modalidade = 'mercado', total = nu
     })
   }
   return resultado
+}
+
+function posicoesMeiosPagamento(linha) {
+  const celulas = linha?.celulas || []
+  const agrupadas = celulas.filter(c => /^(Cart[ãa]o de Cr[ée]dito|D[ée]bito Em Conta|Carn[êe])$/i.test(c.texto))
+  if (agrupadas.length >= 6) return agrupadas.slice(0, 6).map(c => c.x)
+
+  const posicoes = []
+  for (const padrao of [/^Cart[ãa]o$/i, /^D[ée]bito$/i, /^Carn[êe]$/i]) {
+    posicoes.push(...celulas.filter(c => padrao.test(c.texto)).map(c => c.x))
+  }
+  return posicoes.sort((a, b) => a - b).slice(0, 6)
+}
+
+function indicePosicaoMaisProxima(posicoes, x) {
+  if (!posicoes.length) return -1
+  let melhor = 0
+  for (let i = 1; i < posicoes.length; i += 1) {
+    if (Math.abs(posicoes[i] - x) < Math.abs(posicoes[melhor] - x)) melhor = i
+  }
+  return Math.abs(posicoes[melhor] - x) <= 35 ? melhor : -1
+}
+
+function gruposParcelas(linha) {
+  const grupos = []
+  const celulas = linha?.celulas || []
+  for (let i = 0; i < celulas.length; i += 1) {
+    const atual = celulas[i]?.texto || ''
+    const junto = atual.match(/^(\d{1,2})\s*x$/i)
+    if (junto) {
+      const valor = moeda(celulas[i + 1]?.texto)
+      if (valor != null) grupos.push({ n: Number(junto[1]), valor, x: celulas[i].x })
+      continue
+    }
+
+    const separado = atual.match(/^(\d{1,2})$/)
+    if (separado && /^x$/i.test(celulas[i + 1]?.texto || '')) {
+      const valor = moeda(celulas[i + 2]?.texto)
+      if (valor != null) grupos.push({ n: Number(separado[1]), valor, x: celulas[i].x })
+      i += 1
+    }
+  }
+  return grupos
 }
 
 const formatar = valor => `R$ ${Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -273,9 +341,9 @@ export function parseCotacaoHdi({ itens = [], texto = '', seguradoraMeta = null,
     cor_destaque: seguradoraMeta?.cor_destaque || '',
   }
 
-  const doCliente = rotulo => valorAposRotulo(fatiar(linhas, SECOES.cliente), rotulo)
-  const doVeiculo = rotulo => valorAposRotulo(fatiar(linhas, SECOES.veiculo), rotulo)
-  const doRisco = rotulo => valorAposRotulo(fatiar(linhas, SECOES.risco), rotulo)
+  const doCliente = (rotulo, opcoes) => valorHdi(fatiar(linhas, SECOES.cliente), rotulo, opcoes)
+  const doVeiculo = (rotulo, opcoes) => valorHdi(fatiar(linhas, SECOES.veiculo), rotulo, opcoes)
+  const doRisco = (rotulo, opcoes) => valorHdi(fatiar(linhas, SECOES.risco), rotulo, opcoes)
 
   const numero = texto.match(/C[áa]lculo\s*-\s*(\d{6,})/i)
   const validade = texto.match(/COTA[ÇC][ÃA]O V[ÁA]LIDA AT[ÉE]\s*(\d{2}\/\d{2}\/\d{4})/i)
@@ -285,7 +353,7 @@ export function parseCotacaoHdi({ itens = [], texto = '', seguradoraMeta = null,
   // documento tambem traz "Companhia Anterior" preenchida, e para a corretora
   // isso e renovacao congenere — o mesmo criterio ja usado no Bradesco com
   // "Cia Renovacao". Sem isso, uma renovacao entraria no funil como negocio novo.
-  const companhiaAnterior = doVeiculo('Companhia Anterior')
+  const companhiaAnterior = doVeiculo('Companhia Anterior', { ate: ['Fim da Vig. Anterior', 'Classe Bônus', 'Sinistro'] })
 
   cot.cotacao = {
     numero: numero ? numero[1] : '',
@@ -295,19 +363,19 @@ export function parseCotacaoHdi({ itens = [], texto = '', seguradoraMeta = null,
   }
 
   cot.segurado = {
-    nome: doCliente('Proponente'),
+    nome: doCliente('Proponente', { ate: ['CPF'] }),
     cpf_cnpj: doCliente('CPF'),
     data_nascimento: null,
   }
 
   cot.condutor_principal = {
     nome: doRisco('Nome do Condutor'),
-    cpf: doRisco('CPF'),
+    cpf: doRisco('CPF', { ate: ['Data de Nasc.'] }),
     estado_civil: doRisco('Estado Civil') || null,
   }
 
   const veiculo = doVeiculo('Veículo')
-  const anoModelo = doVeiculo('Ano/Modelo')
+  const anoModelo = doVeiculo('Ano/Modelo', { ate: ['H-'] })
   cot.veiculo = {
     // "0014271 - CHEVROLET - CORSA - HATCH MAXX 1.4 ECONOFLEX 8V 5P (FIPE" —
     // fora o codigo interno e o parentese aberto da referencia FIPE.
@@ -315,7 +383,7 @@ export function parseCotacaoHdi({ itens = [], texto = '', seguradoraMeta = null,
     ano_modelo: anoModelo,
     placa: doVeiculo('Placa'),
     uso: doRisco('Utilizacao do Veiculo'),
-    cep_pernoite: formatarCep(doVeiculo('CEP Pernoite')),
+    cep_pernoite: formatarCep(doVeiculo('CEP Pernoite', { ate: ['Cobertura'] })),
     condutor_18_25: respostaJovem(doRisco('Cob Demais Condutores Resid entre 18 Até 25 Anos')),
   }
 
@@ -333,7 +401,7 @@ export function parseCotacaoHdi({ itens = [], texto = '', seguradoraMeta = null,
     premio_parcelado: textoParcelamento(extrairParcelamento(linhas, { modalidade, total: totais.total })),
     descontos_aplicados: [],
     franquia: casco?.franquia ?? null,
-    franquia_tipo: doVeiculo('Franquia'),
+    franquia_tipo: doVeiculo('Franquia', { ate: ['Combustível'] }),
   }
 
   // "100,00% FIPE" no L.M.I. do casco e a afirmacao de indenizacao integral.
@@ -403,6 +471,28 @@ function comporObservacao(garantia) {
   if (soDinheiro && garantia.valor_lmi != null) return `${nome}: ${formatar(garantia.valor_lmi)}`
   if (garantia.lmi_texto) return `${nome}: ${garantia.lmi_texto}`
   return nome
+}
+
+function valorHdi(linhas, rotulo, { ate = [] } = {}) {
+  const direto = valorAposRotulo(linhas, rotulo)
+
+  const re = new RegExp(`${escapeRegExp(rotulo).replace(/\\s+/g, '\\s+')}\\s*:?\\s*`, 'i')
+  const stops = ate.map(s => new RegExp(`\\s+${escapeRegExp(s).replace(/\\s+/g, '\\s+')}\\s*:?`, 'i'))
+  for (const linha of linhas || []) {
+    const m = linha.texto.match(re)
+    if (!m) continue
+    let resto = linha.texto.slice(m.index + m[0].length).trim()
+    for (const stop of stops) {
+      const corte = resto.search(stop)
+      if (corte >= 0) resto = resto.slice(0, corte).trim()
+    }
+    if (resto) return resto
+  }
+  return direto
+}
+
+function escapeRegExp(valor) {
+  return String(valor || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function respostaJovem(valor) {

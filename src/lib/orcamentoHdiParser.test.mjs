@@ -29,6 +29,45 @@ test('acha os dois pares de colunas, um por modalidade', () => {
   assert.ok(c.franquia != null)
 })
 
+test('REGRESSAO: aceita cabecalho HDI escrito como Valor de Mercado Referenciado', () => {
+  const l = [
+    {
+      pagina: 1, y: 100,
+      texto: 'Garantias de Auto (Valores Expressos em R$) Valor de Mercado Referenciado Valor Determinado Franquia',
+      celulas: [
+        { texto: 'Garantias', x: 28 }, { texto: 'Valor', x: 264 }, { texto: 'de', x: 282 },
+        { texto: 'Mercado', x: 291 }, { texto: 'Referenciado', x: 320 },
+        { texto: 'Valor', x: 418 }, { texto: 'Determinado', x: 443 }, { texto: 'Franquia', x: 522 },
+      ],
+    },
+    {
+      pagina: 1, y: 90, texto: 'Cobertura L.M.I. Prêmio L.M.I. Prêmio',
+      celulas: [
+        { texto: 'Cobertura', x: 28 }, { texto: 'L.M.I.', x: 274 }, { texto: 'Prêmio', x: 342 },
+        { texto: 'L.M.I.', x: 410 }, { texto: 'Prêmio', x: 467 },
+      ],
+    },
+    {
+      pagina: 1, y: 80, texto: 'CASCO 100,00% FIPE 1.522,17 66.716,10 2.053,61 4.392,74',
+      celulas: [
+        { texto: 'CASCO', x: 28 }, { texto: '100,00%', x: 281 }, { texto: 'FIPE', x: 309 },
+        { texto: '1.522,17', x: 356 }, { texto: '66.716,10', x: 420 },
+        { texto: '2.053,61', x: 477 }, { texto: '4.392,74', x: 540 },
+      ],
+    },
+    {
+      pagina: 1, y: 70, texto: 'TOTAL À VISTA (R$) 2.690,65 3.261,31',
+      celulas: [
+        { texto: 'TOTAL', x: 28 }, { texto: 'À', x: 50 }, { texto: 'VISTA', x: 57 },
+        { texto: '(R$)', x: 77 }, { texto: '2.690,65', x: 357 }, { texto: '3.261,31', x: 478 },
+      ],
+    },
+  ]
+  assert.ok(colunasGarantias(l))
+  assert.equal(extrairGarantias(l).find(g => g.nome_original_seguradora === 'CASCO')?.lmi_texto, '100,00% FIPE')
+  assert.equal(extrairTotais(l, { modalidade: 'mercado' }).total, 2690.65)
+})
+
 test('cada modalidade tem os proprios totais', () => {
   const mercado = extrairTotais(linhas(), { modalidade: 'mercado' })
   const determinado = extrairTotais(linhas(), { modalidade: 'determinado' })
@@ -141,6 +180,37 @@ test('sem juros e calculado por n x parcela, porque a HDI nao imprime o total', 
   assert.equal(planos['Cartão de Crédito'].maximo_sem_juros, 12)   // 12 x 123,18 = 1.478,16
   assert.equal(planos['Débito Em Conta'].maximo_sem_juros, 6)      // 7x ja sobe para 233,58
   assert.equal(planos['Carnê'].maximo_sem_juros, 1)                // 2 x 755,38 > total
+})
+
+test('REGRESSAO: parcelamento HDI aceita linhas quebradas em numero, x e valor', () => {
+  const l = [
+    {
+      pagina: 1, y: 30, texto: 'Parcelamento Valor de Mercado Referenciado Parcelamento Valor Determinado',
+      celulas: [{ texto: 'Parcelamento', x: 92 }, { texto: 'Valor', x: 136 }, { texto: 'Mercado', x: 163 }],
+    },
+    {
+      pagina: 1, y: 20, texto: 'Cartão de Crédito Débito Em Conta Carnê Cartão de Crédito Débito Em Conta Carnê',
+      celulas: [
+        { texto: 'Cartão', x: 80 }, { texto: 'Crédito', x: 111 },
+        { texto: 'Débito', x: 138 }, { texto: 'Conta', x: 172 }, { texto: 'Carnê', x: 211 },
+        { texto: 'Cartão', x: 349 }, { texto: 'Crédito', x: 381 },
+        { texto: 'Débito', x: 408 }, { texto: 'Conta', x: 442 }, { texto: 'Carnê', x: 481 },
+      ],
+    },
+    {
+      pagina: 1, y: 10, texto: '12 x 224,22 12 x 271,77',
+      celulas: [
+        { texto: '12', x: 83 }, { texto: 'x', x: 92 }, { texto: '224,22', x: 113 },
+        { texto: '12', x: 353 }, { texto: 'x', x: 362 }, { texto: '271,77', x: 382 },
+      ],
+    },
+  ]
+  assert.deepEqual(extrairParcelamento(l, { modalidade: 'mercado', total: 2690.65 }), [
+    { meio: 'Cartão de Crédito', maximo_sem_juros: 12, valor_parcela: 224.22 },
+  ])
+  assert.deepEqual(extrairParcelamento(l, { modalidade: 'determinado', total: 3261.31 }), [
+    { meio: 'Cartão de Crédito', maximo_sem_juros: 12, valor_parcela: 271.77 },
+  ])
 })
 
 test('pega a metade certa da tabela conforme a modalidade', () => {

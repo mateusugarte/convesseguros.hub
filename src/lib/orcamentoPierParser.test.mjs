@@ -35,6 +35,15 @@ test('preenche segurado, condutor, veículo e tipo de operação', () => {
   assert.equal(cot.cotacao.validade, '2026-08-26')
 })
 
+test('REGRESSAO: renovacao nao cai como seguro novo por conter "nova" dentro da palavra', () => {
+  const renovacao = {
+    ...FX,
+    itens: FX.itens.map(item => item.texto === 'Nova' ? { ...item, texto: 'Renovação' } : item),
+    texto: FX.texto.replace(' Nova ', ' Renovação '),
+  }
+  assert.equal(parseCotacaoPier({ ...renovacao, produto: 'personalizado' }).cotacao.tipo_operacao, 'renovacao')
+})
+
 test('lê a franquia da página textual, sem copiar preço da amostra raster', () => {
   const cot = parse('completo')
   assert.equal(cot.valores.franquia, 3625.62)

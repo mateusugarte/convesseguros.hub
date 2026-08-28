@@ -80,7 +80,7 @@ export function parseCotacaoPier({
   const tipo = valorAbaixoRotulo(p3, 'Tipo de cotação')
   cot.cotacao = {
     numero: '',
-    tipo_operacao: /nova?/i.test(tipo) ? 'novo' : (/renova/i.test(tipo) ? 'renovacao' : ''),
+    tipo_operacao: /renova/i.test(tipo) ? 'renovacao' : (/\bnovo\b|\bnova\b/i.test(tipo) ? 'novo' : ''),
     validade: paraIso(validade?.[1]),
     data_emissao: '',
   }

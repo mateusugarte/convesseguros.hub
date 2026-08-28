@@ -73,6 +73,20 @@ campos de proximo passo, follow-up e lembrete agora usam o mesmo `DatePicker`
 visual do sistema. Validado com suite focada de orcamento (76 testes), suite
 completa (551 testes) e `npm run build`.
 
+Correcao apos teste real do usuario com HDI Mercado Referenciado: o parser ja
+extraia `premio_total`, parcelamento e franquia, mas a aplicacao da escolha do
+produto para o estado da revisao ainda podia falhar sem mensagem clara. O clique
+em produto/oferta agora calcula `camposDaCotacao` imediatamente e grava os
+campos direto na revisao; se a escolha nao devolver premio, parcelamento e
+franquia completos, a tela mostra erro explicito no slot em vez de seguir com
+campos vazios. A revisao tambem nao renderiza a grade de campos quando ainda ha
+`escolha_pendente`; nesse estado exibe somente o aviso e o seletor de produto.
+Validado especificamente com HDI Mercado Referenciado: premio `1478.24`,
+parcelamento ate 12x, franquia `2465.76`, tipo `FACULTATIVA 50%`, reboque
+`600`, carro reserva 7 dias, vidros e danos a terceiros. Suite focada HDI/leitura
+aprovada (48 testes), `npm run build` aprovado e suite completa aprovada (551
+testes).
+
 ---
 
 ## Extracao completa das cotacoes e limite de reboque (2026-08-27, Codex — CONCLUIDA)

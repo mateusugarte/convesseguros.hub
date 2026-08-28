@@ -146,15 +146,10 @@ export const DICIONARIO_COBERTURAS = [
     'indenizacao integral', 'perda total', 'danos ao veiculo',
   ] },
   { categoria: 'adicional', termos: [
-    'leva e traz', 'leva-e-traz', 'residencia', 'lampada', 'pneu',
-    'desconto na franquia', 'clube', 'beneficio', 'servicos gratuitos',
-    'rede propria', 'oficina',
-    // Acidentes Pessoais de Passageiros. Nao tem categoria propria entre as 7,
-    // e "adicional" e onde ela pertence — mas precisa estar AQUI, e nao cair no
-    // balde por falta de classificacao: cobertura que cai por omissao dispara
-    // o aviso de "nao classificada", e um aviso que sempre aparece deixa de
-    // ser lido. Ver `validarCotacao`.
-    'app morte', 'app invalidez', 'acidentes pessoais', 'app ',
+    'cartao', 'cartão', 'porto bank', 'bradesco cartao', 'itaucard',
+    'itau card', 'desconto a vista', 'desconto à vista', 'pix', 'debito',
+    'débito', 'boleto', 'forma de pagamento', 'pagamento', 'parcelamento',
+    'sem juros', 'cashback',
   ] },
 ]
 
@@ -173,6 +168,16 @@ export function classificarCobertura(nome) {
     if (termos.some(termo => alvo.includes(termo))) return categoria
   }
   return null
+}
+
+export function ehBeneficioPagamento(...fontes) {
+  const texto = normalizarTexto(fontes.flat(Infinity).filter(Boolean).join(' '))
+  if (!texto) return false
+  return [
+    'cartao', 'porto bank', 'bradesco cartao', 'itaucard', 'itau card',
+    'desconto a vista', 'pix', 'debito', 'boleto', 'forma de pagamento',
+    'pagamento', 'parcelamento', 'sem juros', 'cashback',
+  ].some(termo => texto.includes(termo))
 }
 
 // ─── Schema da cotacao (spec secao 5) ──────────────────────────────────
@@ -659,8 +664,11 @@ export function montarCategorias(cotacao) {
       excluir(nome, cobertura.observacoes)
       continue
     }
-    const categoria = cobertura.categoria || classificarCobertura(nome) || CATEGORIA_OPCIONAL
-    itensPor.get(categoria)?.push(cobertura)
+    const detectada = cobertura.categoria || classificarCobertura(nome)
+    const categoria = detectada === CATEGORIA_OPCIONAL && !ehBeneficioPagamento(nome, cobertura.observacoes)
+      ? null
+      : detectada || (ehBeneficioPagamento(nome, cobertura.observacoes) ? CATEGORIA_OPCIONAL : null)
+    if (categoria) itensPor.get(categoria)?.push(cobertura)
   }
 
   for (const assistencia of cot.assistencias || []) {
@@ -677,7 +685,9 @@ export function montarCategorias(cotacao) {
   }
 
   for (const servico of cot.servicos_adicionais || []) {
-    itensPor.get(CATEGORIA_OPCIONAL).push({ nome_padronizado: servico, observacoes: '' })
+    if (ehBeneficioPagamento(servico)) {
+      itensPor.get(CATEGORIA_OPCIONAL).push({ nome_padronizado: servico, observacoes: '' })
+    }
   }
 
   // A lista livre `nao_incluso` do schema tambem decide estado de categoria:

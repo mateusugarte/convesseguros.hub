@@ -338,11 +338,17 @@ test('cobertura nao inclusa sai das categorias e vai para "nao incluso"', () => 
   assert.ok(!card.categorias.some(c => c.itens.some(i => i.nome_padronizado === 'Acidentes Pessoais de Passageiros')))
 })
 
-test('cobertura inclusa sem categoria reconhecida cai em adicional', () => {
+test('beneficios adicionais aceitam apenas condicoes de pagamento', () => {
   const cot = cotacaoCompleta()
-  cot.coberturas = [{ nome_padronizado: 'Cobertura Inventada XPTO', incluida: true, categoria: null, observacoes: 'detalhe' }]
+  cot.coberturas = [
+    { nome_padronizado: 'Leva e traz', incluida: true, categoria: null, observacoes: 'Reparo de farol na rede própria.' },
+    { nome_padronizado: 'Cartão Porto Bank', incluida: true, categoria: null, observacoes: 'Pagamento em cartão com condição diferenciada.' },
+  ]
   const card = montarCard(cot)
-  assert.ok(card.categorias.find(c => c.key === 'adicional'))
+  const adicional = card.categorias.find(c => c.key === 'adicional')
+  assert.ok(adicional)
+  assert.match(adicional.texto, /Pagamento em cartão/)
+  assert.doesNotMatch(adicional.texto, /Leva e traz/)
 })
 
 test('categoria adicional some do card quando nao ha nada nela', () => {

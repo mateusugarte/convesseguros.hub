@@ -34,7 +34,7 @@ test('escapeHtml neutraliza os caracteres perigosos', () => {
 test('texto vindo do PDF nao consegue injetar tag no documento', () => {
   // Nome de cobertura e texto livre extraido de PDF de terceiro. Sem escape,
   // um "<" ja quebraria o documento — e no preview dentro do app seria injecao.
-  const doc = html({ nao_incluso: [{ titulo: '<img src=x onerror=alert(1)>', detalhe: 'Bell & Ross' }] })
+  const doc = html({ nao_incluso: [{ titulo: 'Carro reserva', detalhe: '<img src=x onerror=alert(1)> Bell & Ross' }] })
   assert.ok(!doc.includes('<img src=x onerror'))
   assert.ok(doc.includes('&lt;img src=x onerror=alert(1)&gt;'))
   assert.ok(doc.includes('Bell &amp; Ross'))
@@ -88,11 +88,11 @@ test('seguradora sem logo cadastrada cai para o nome, sem furo no card', () => {
   assert.ok(doc.includes('<span class="fallback">Seguradora Nova</span>'))
 })
 
-test('painel "nao incluso" some quando nao ha nada, e aparece quando ha', () => {
-  assert.ok(!html().includes('Não incluso nesta cotação'))
-  const doc = html({ nao_incluso: [{ titulo: 'Acidentes Pessoais de Passageiros', detalhe: 'Não contratados.' }] })
-  assert.ok(doc.includes('Não incluso nesta cotação'))
-  assert.ok(doc.includes('Acidentes Pessoais de Passageiros'))
+test('cobertura conhecida nao inclusa aparece na propria linha da tabela', () => {
+  assert.ok(!html().includes('Não contratado nesta cotação.'))
+  const doc = html({ nao_incluso: [{ titulo: 'Carro reserva', detalhe: 'Não contratado nesta cotação.' }] })
+  assert.ok(doc.includes('Carro reserva'))
+  assert.ok(doc.includes('Não contratado nesta cotação.'))
 })
 
 test('parcelamento aceita array e string com quebras, uma linha cada', () => {

@@ -12,7 +12,7 @@ import { parseCotacaoSuhai } from './orcamentoSuhaiParser.js'
 import { parseCotacaoTokio } from './orcamentoTokioParser.js'
 import { parseCotacaoYelum } from './orcamentoYelumParser.js'
 import {
-  ESTADO_COBERTURA, montarCategorias, TEM_VALOR_MONETARIO, validarCotacao,
+  ESTADO_COBERTURA, extrairDiasCarroReserva, montarCategorias, TEM_VALOR_MONETARIO, validarCotacao,
 } from './orcamentoComparativo.js'
 
 const fixture = nome => JSON.parse(fs.readFileSync(new URL(`./__fixtures__/${nome}.json`, import.meta.url)))
@@ -60,6 +60,10 @@ test('contrato comum cobre todos os PDFs reais sem ocultar campo ausente', () =>
 
     if (categorias.terceiros?.estado === ESTADO_COBERTURA.INCLUIDA) {
       assert.match(categorias.terceiros.texto, TEM_VALOR_MONETARIO, `${nome}: terceiros sem valor monetário`)
+    }
+
+    if (categorias.carro_reserva?.estado === ESTADO_COBERTURA.INCLUIDA) {
+      assert.ok(extrairDiasCarroReserva(categorias.carro_reserva.texto), `${nome}: carro reserva sem dias/diárias`)
     }
   }
 })

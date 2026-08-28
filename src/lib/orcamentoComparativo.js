@@ -490,6 +490,39 @@ export function textoTerceiros(itens = []) {
   }).filter(Boolean))].join(' ')
 }
 
+export function extrairDiasCarroReserva(...fontes) {
+  const texto = fontes.flat(Infinity).filter(Boolean).join(' ')
+  const padroes = [
+    /(?:carro|ve[íi]culo)\s+reserva[^.\n;]{0,120}?(\d{1,2})\s*(?:dias?|di[áa]rias?)/i,
+    /(\d{1,2})\s*(?:dias?|di[áa]rias?)[^.\n;]{0,120}?(?:carro|ve[íi]culo)\s+reserva/i,
+    /\b(\d{1,2})\s*(?:dias?|di[áa]rias?)\b/i,
+  ]
+  for (const padrao of padroes) {
+    const m = String(texto || '').match(padrao)
+    if (!m) continue
+    const dias = Number(m[1])
+    if (Number.isFinite(dias) && dias > 0) return dias
+  }
+  return null
+}
+
+function textoCarroReserva(itens = []) {
+  const textos = itens
+    .map(i => i.observacoes || i.nome_padronizado || i.nome_original_seguradora)
+    .filter(Boolean)
+  const dias = extrairDiasCarroReserva(textos)
+  if (!dias) return ''
+  const base = textos.join(' ')
+  return base || `${dias} diária(s) de carro reserva.`
+}
+
+function textoBrutoItens(itens = []) {
+  return itens
+    .map(i => i.observacoes || i.nome_padronizado || i.nome_original_seguradora)
+    .filter(Boolean)
+    .join(' ')
+}
+
 export function extrairLimiteReboqueKm(...fontes) {
   const texto = fontes.flat(Infinity).filter(Boolean).join(' ')
   if (/(?:guincho|reboque)[^.\n;]{0,120}?(?:sem limite de?\s*(?:km|quilometragem)|km ilimitado|ilimitad[oa])|(?:sem limite de?\s*(?:km|quilometragem)|km ilimitado|ilimitad[oa])[^.\n;]{0,120}?(?:guincho|reboque)/i.test(texto)) {
@@ -662,6 +695,7 @@ export function montarCategorias(cotacao) {
     else if (meta.key === 'franquia') texto = textoFranquia(cot, itens)
     else if (meta.key === 'terceiros') texto = textoTerceiros(itens)
     else if (meta.key === 'assistencia') texto = textoAssistencia(cot, itens)
+    else if (meta.key === 'carro_reserva') texto = textoCarroReserva(itens)
     // `nome_original_seguradora` fecha a cadeia de propósito. Sem ele, uma
     // cobertura extraida sem observacao e sem nome padronizado — que e como o
     // parser da familia Porto entrega, com o nome cru da seguradora — produzia
@@ -672,6 +706,8 @@ export function montarCategorias(cotacao) {
       .map(i => i.observacoes || i.nome_padronizado || i.nome_original_seguradora)
       .filter(Boolean)
       .join(' ')
+
+    const textoExtraido = textoBrutoItens(itens)
 
     let estado = ESTADO_COBERTURA.INCLUIDA
     if (!texto && exclusoes.length) {
@@ -697,7 +733,7 @@ export function montarCategorias(cotacao) {
         : ESTADO_COBERTURA.INCLUIDA
     }
 
-    return { ...meta, itens, exclusoes, texto, estado, opcional: meta.key === CATEGORIA_OPCIONAL }
+    return { ...meta, itens, exclusoes, texto, texto_extraido: textoExtraido, estado, opcional: meta.key === CATEGORIA_OPCIONAL }
   })
     // "Beneficios adicionais" e a UNICA que pode sumir do card: nao ter
     // beneficio extra nao e lacuna de cobertura, e a spec (secao 9, item 7) ja

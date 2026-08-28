@@ -4,7 +4,7 @@ import {
   Eye, FileText, LoaderCircle, RefreshCw, ShieldCheck, Sparkles, UploadCloud,
 } from 'lucide-react'
 
-import { montarCategorias, TEM_VALOR_MONETARIO } from '../../lib/orcamentoComparativo'
+import { extrairDiasCarroReserva, montarCategorias, TEM_VALOR_MONETARIO } from '../../lib/orcamentoComparativo'
 import { aplicarRevisao, camposDaCotacao } from '../../lib/orcamentoLeitura'
 import AutoOrcamentoOfertas from './AutoOrcamentoOfertas'
 
@@ -12,6 +12,32 @@ const ROLES = [
   { key: 'atual', label: 'Seguradora atual', helper: 'Referência atual ou primeira opção' },
   { key: 'concorrente', label: 'Outra seguradora', helper: 'Opção concorrente para comparação' },
 ]
+
+const SEGURADORAS_ORCAMENTO = [
+  { id: 'allianz', label: 'Allianz' },
+  { id: 'porto_familia', label: 'Porto / Azul / Itaú / Mitsui' },
+  { id: 'bradesco', label: 'Bradesco' },
+  { id: 'hdi', label: 'HDI' },
+  { id: 'darwin', label: 'Darwin' },
+  { id: 'pier', label: 'Pier' },
+  { id: 'suhai', label: 'Suhai' },
+  { id: 'yelum', label: 'Yelum' },
+  { id: 'tokio', label: 'Tokio Marine' },
+]
+
+function parserInicial(nome = '') {
+  const n = String(nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  if (n.includes('allianz')) return 'allianz'
+  if (n.includes('porto') || n.includes('azul') || n.includes('itau') || n.includes('mitsui')) return 'porto_familia'
+  if (n.includes('bradesco')) return 'bradesco'
+  if (n.includes('hdi')) return 'hdi'
+  if (n.includes('darwin')) return 'darwin'
+  if (n.includes('pier')) return 'pier'
+  if (n.includes('suhai')) return 'suhai'
+  if (n.includes('yelum')) return 'yelum'
+  if (n.includes('tokio')) return 'tokio'
+  return ''
+}
 
 // Espelhado por `camposDaCotacao` em `orcamentoLeitura.js`, com teste travando
 // o par: renomear uma chave so aqui sumiria com o dado sem quebrar nada visivel.
@@ -53,6 +79,9 @@ function campoPendente(field, value) {
   if (!texto) return true
   if (field.key === 'danos_terceiros') {
     return !/^n[ãa]o\b/i.test(texto) && !TEM_VALOR_MONETARIO.test(texto)
+  }
+  if (field.key === 'carro_reserva') {
+    return !/^n[ãa]o\b/i.test(texto) && !extrairDiasCarroReserva(texto)
   }
   return false
 }
@@ -116,32 +145,44 @@ function sideFromQuote(role, quote) {
   }
 }
 
-function UploadSlot({ role, side, file, leitura, lendo, erro, aplicando, onFile, onEscolherOferta }) {
+function UploadSlot({ role, side, file, leitura, lendo, erro, aplicando, seguradoraParser, onParser, onFile, onEscolherOferta }) {
   const inputRef = useRef(null)
   const [dragging, setDragging] = useState(false)
   const meta = ROLES.find(item => item.key === role)
+  const uploadBloqueado = !seguradoraParser
   return (
     <article className={`auto-comparison-upload is-${role} ${dragging ? 'is-dragging' : ''} ${file ? 'is-ready' : ''}`}>
       <header><span className="auto-comparison-role">{meta.label}</span><small>{meta.helper}</small></header>
       <div className="auto-comparison-insurer">
-        <label>Seguradora</label>
-        <button type="button" className="auto-comparison-insurer-preview" aria-label={`${meta.label}: ${side.seguradora || 'não definida'}`}>
-          <span><ShieldCheck /><strong>{side.seguradora || 'Selecionar seguradora'}</strong></span><ChevronDown />
-        </button>
+        <label htmlFor={`seguradora-orcamento-${role}`}>Seguradora do PDF</label>
+        <div className="auto-comparison-insurer-preview">
+          <span><ShieldCheck /><strong>{side.seguradora || 'Selecione antes do upload'}</strong></span>
+          <select
+            id={`seguradora-orcamento-${role}`}
+            value={seguradoraParser}
+            onChange={event => onParser(event.target.value)}
+            aria-label={`Selecionar seguradora do PDF ${meta.label}`}
+          >
+            <option value="">Escolher seguradora…</option>
+            {SEGURADORAS_ORCAMENTO.map(seguradora => <option key={seguradora.id} value={seguradora.id}>{seguradora.label}</option>)}
+          </select>
+          <ChevronDown />
+        </div>
       </div>
       <input ref={inputRef} type="file" accept="application/pdf,.pdf" className="sr-only" onChange={event => onFile(event.target.files?.[0] || null)} />
       <button
         type="button"
         className="auto-comparison-dropzone"
+        disabled={uploadBloqueado}
         onClick={() => inputRef.current?.click()}
         onDragEnter={event => { event.preventDefault(); setDragging(true) }}
         onDragOver={event => event.preventDefault()}
         onDragLeave={() => setDragging(false)}
-        onDrop={event => { event.preventDefault(); setDragging(false); onFile(event.dataTransfer.files?.[0] || null) }}
+        onDrop={event => { event.preventDefault(); setDragging(false); if (!uploadBloqueado) onFile(event.dataTransfer.files?.[0] || null) }}
       >
         {file
           ? <><FileCheck2 /><span><strong>{file.name}</strong><small>{formatSize(file.size)} · {legendaArquivo(leitura, lendo)}</small></span></>
-          : <><UploadCloud /><span><strong>Solte ou selecione o PDF</strong><small>Leitura automática por seguradora, com escolha de produto quando necessário</small></span></>}
+          : <><UploadCloud /><span><strong>{uploadBloqueado ? 'Escolha a seguradora primeiro' : 'Solte ou selecione o PDF'}</strong><small>Leitura automática forçada pela seguradora selecionada, com escolha de produto quando necessário</small></span></>}
       </button>
 
       {lendo && <p className="auto-comparison-lendo"><LoaderCircle />Lendo o PDF…</p>}
@@ -187,6 +228,10 @@ function legendaArquivo(leitura, lendo) {
   return `${leitura.seguradora} · leitura concluída`
 }
 
+function leituraDisponivelParaRevisao(leitura) {
+  return leitura?.suportado && leitura?.cotacao
+}
+
 function ReviewField({ field, value, issue, onChange }) {
   const props = { value: value ?? '', onChange: event => onChange(event.target.value), placeholder: issue ? 'Revisar / preencher' : 'Não informado' }
   return (
@@ -215,6 +260,10 @@ export default function AutoQuoteComparison({ quote }) {
   const [aplicando, setAplicando] = useState({ atual: false, concorrente: false })
   const [erros, setErros] = useState({ atual: '', concorrente: '' })
   const [sides, setSides] = useState(() => ({ atual: sideFromQuote('atual', quote), concorrente: sideFromQuote('concorrente', quote) }))
+  const [parsers, setParsers] = useState(() => ({
+    atual: parserInicial(sideFromQuote('atual', quote).seguradora),
+    concorrente: parserInicial(sideFromQuote('concorrente', quote).seguradora),
+  }))
   const [gerando, setGerando] = useState(false)
   const [erroGeracao, setErroGeracao] = useState('')
   const [comparativoGerado, setComparativoGerado] = useState(null)
@@ -226,8 +275,24 @@ export default function AutoQuoteComparison({ quote }) {
   ])), [sides])
   const issueCount = issues.atual.length + issues.concorrente.length
   const criticalCount = ROLES.reduce((total, { key }) => total + issues[key].filter(fieldKey => REVIEW_FIELDS.find(field => field.key === fieldKey)?.critical).length, 0)
+  const faltamArquivos = ROLES.filter(({ key }) => !files[key]).map(({ label }) => label)
+  const escolhasPendentes = ROLES.filter(({ key }) => leituras[key]?.cotacao?.escolha_pendente).map(({ label }) => label)
+  const leiturasPendentes = ROLES.filter(({ key }) => files[key] && !lendo[key] && !leituraDisponivelParaRevisao(leituras[key])).map(({ label }) => label)
+  const podeRevisar = faltamArquivos.length === 0 && escolhasPendentes.length === 0 && leiturasPendentes.length === 0 && !lendo.atual && !lendo.concorrente
+  const resumoUpload = (() => {
+    if (lendo.atual || lendo.concorrente) return 'Aguarde a leitura automática terminar.'
+    if (faltamArquivos.length) return `Envie o PDF de: ${faltamArquivos.join(' e ')}.`
+    if (escolhasPendentes.length) return `Você pode revisar os dados já lidos; escolha produto/oferta para liberar preço e coberturas de: ${escolhasPendentes.join(' e ')}.`
+    if (leiturasPendentes.length) return `Revise o aviso de leitura de: ${leiturasPendentes.join(' e ')}.`
+    return 'As duas leituras estão prontas para conferência.'
+  })()
+  const podeAbrirRevisao = faltamArquivos.length === 0 && leiturasPendentes.length === 0 && !lendo.atual && !lendo.concorrente
 
   async function chooseFile(role, file) {
+    if (file && !parsers[role]) {
+      setErros(current => ({ ...current, [role]: 'Selecione a seguradora do PDF antes de enviar o arquivo.' }))
+      return
+    }
     setFiles(current => ({ ...current, [role]: file }))
     setSides(current => ({ ...current, [role]: { ...current[role], arquivo_nome: file?.name || '' } }))
     setErros(current => ({ ...current, [role]: '' }))
@@ -239,7 +304,7 @@ export default function AutoQuoteComparison({ quote }) {
       // Import dinamico: o pdfjs so entra no bundle de quem realmente envia PDF,
       // mesmo caminho ja usado por `autoPdfParser.js` e `ApoicesGestao.jsx`.
       const { lerOrcamento } = await import('../../lib/orcamentoLeitura')
-      const leitura = await lerOrcamento(file)
+      const leitura = await lerOrcamento(file, { parser_id: parsers[role] })
       setLeituras(current => ({ ...current, [role]: leitura }))
       // Preenche SEMPRE, inclusive com escolha pendente: segurado, condutor,
       // veiculo, numero e vigencia nao dependem do produto e ja foram lidos.
@@ -251,6 +316,22 @@ export default function AutoQuoteComparison({ quote }) {
     } finally {
       setLendo(current => ({ ...current, [role]: false }))
     }
+  }
+
+  function escolherParser(role, parserId) {
+    const selecionada = SEGURADORAS_ORCAMENTO.find(item => item.id === parserId)
+    setParsers(current => ({ ...current, [role]: parserId }))
+    setFiles(current => ({ ...current, [role]: null }))
+    setLeituras(current => ({ ...current, [role]: null }))
+    setErros(current => ({ ...current, [role]: '' }))
+    setSides(current => ({
+      ...current,
+      [role]: {
+        ...current[role],
+        seguradora: selecionada?.label || '',
+        arquivo_nome: '',
+      },
+    }))
   }
 
   /** Reprocessa a cotacao com a oferta/produto escolhido e leva o resultado a revisao. */
@@ -406,11 +487,13 @@ export default function AutoQuoteComparison({ quote }) {
             lendo={lendo[key]}
             erro={erros[key]}
             aplicando={aplicando[key]}
+            seguradoraParser={parsers[key]}
+            onParser={parserId => escolherParser(key, parserId)}
             onFile={file => chooseFile(key, file)}
             onEscolherOferta={indice => escolherOferta(key, indice)}
           />
         ))}</div>
-        <footer className="auto-comparison-footer"><div><FileText /><span><strong>Visual pronto para a conferência</strong><small>Você pode navegar pela revisão para avaliar o design.</small></span></div><button type="button" onClick={() => setStep('review')}>Visualizar revisão <ArrowRight /></button></footer>
+        <footer className="auto-comparison-footer"><div><FileText /><span><strong>{podeRevisar ? 'Visual pronto para a conferência' : 'Revisão parcial disponível'}</strong><small>{resumoUpload}</small></span></div><button type="button" onClick={() => setStep('review')} disabled={!podeAbrirRevisao}>Visualizar revisão <ArrowRight /></button></footer>
       </> : <>
         <div className="auto-comparison-review-summary"><div><span>Pendências previstas</span><strong>{issueCount}</strong><small>{criticalCount} campo(s) crítico(s)</small></div><p><AlertTriangle />Franquia, indenização integral e cobertura não informada bloqueiam a geração — um comparativo com linha faltando chega ao cliente parecendo completo.</p><button type="button" onClick={() => setStep('upload')}><RefreshCw />Voltar ao upload</button></div>
         <div className="auto-comparison-review-grid">{ROLES.map(({ key }) => <ReviewColumn key={key} role={key} side={sides[key]} issues={issues[key]} onPatch={(field, value) => patchField(key, field, value)} />)}</div>

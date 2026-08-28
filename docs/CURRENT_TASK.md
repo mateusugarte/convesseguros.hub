@@ -1,5 +1,65 @@
 # CURRENT TASK
 
+## Seletor de seguradora antes do upload e carro reserva com dias (2026-08-27, Codex — CONCLUIDA)
+
+Responsavel: Codex, Agente de Sistemas. Sintoma reportado pelo usuario: apos upload dos PDFs de
+orcamento, o lado esquerdo continuava quase todo vazio e o lado direito trazia dados parciais; carro
+reserva aparecia como texto generico em vez da quantidade de dias disponiveis.
+
+Causa: a entrada da tela ainda dependia da deteccao automatica por texto extraido do PDF antes de
+decidir o parser. Quando o PDF vinha com texto fraco/rasterizado ou layout ambíguo, a revisao podia
+ficar parcial ou acionar o caminho errado. Alem disso, `montarCategorias` tratava carro reserva
+generico como categoria incluida, mesmo sem dias/diarias.
+
+Entrega: `AutoQuoteComparison` agora obriga escolher a seguradora do PDF antes do upload e passa
+`parser_id` para `lerOrcamento`. `orcamentoLeitura.js` preserva esse parser no reprocessamento da
+escolha de produto; `orcamentoSeguradoraParser.js` ganhou `parserOrcamentoPorId` e aceita
+`parser_id` em `listarProdutosOrcamento`/`parseCotacaoPorSeguradora`, fazendo a escolha do usuario
+vencer a deteccao automatica. Se o operador trocar a seguradora, o PDF/leitura daquele lado sao
+limpos para evitar misturar dados.
+
+Carro reserva: `orcamentoComparativo.js` ganhou `extrairDiasCarroReserva` e a categoria
+`carro_reserva` so fica preenchida quando houver dias/diarias no texto estruturado. Frase generica
+como "Incluso conforme apolice" volta para pendencia de revisao, porque nao responde quantos dias o
+cliente tem.
+
+Validacao: suite focada de orcamento aprovada (113 testes); `npm test -- --runInBand` aprovado com
+550 testes; `npm run build` concluido. O build manteve os avisos ja conhecidos de importacao do
+`xlsx` e chunk dinamico de `orcamentoLeitura.js`.
+
+Revisao adicional pedida pelo usuario: o contrato transversal
+`orcamentoParsersContrato.test.mjs` agora tambem falha se alguma cotacao marcar
+carro reserva como incluida sem trazer quantidade de dias/diarias. Matriz
+conferida: Bradesco 7 dias, Darwin 15 dias, HDI 7 dias, Tokio 7 dias e Yelum 7
+dias; Allianz nega carro reserva explicitamente; Pier, Azul/Itau/Mitsui e Suhai
+permanecem bloqueando/revisao quando o fixture nao traz dias extraiveis. Validado
+novamente com suite focada e `npm test -- --runInBand` (550 testes).
+
+Revisao de integracao da UI em 28/08: a tela permitia clicar em "Visualizar
+revisao" mesmo quando algum lado ainda tinha `cotacao.escolha_pendente`
+(produto/oferta/franquia). Isso explica a percepcao de que "nao puxou nada":
+nesses estados, os campos de premio/cobertura ficam vazios por seguranca ate o
+usuario escolher a opcao correta. `AutoQuoteComparison` agora bloqueia a revisao
+ate os dois PDFs estarem lidos e sem escolha pendente, mostrando a pendencia no
+rodape do upload. Revalidado com suite focada, `npm test -- --runInBand` e
+`npm run build`.
+
+Revisao final apos feedback do usuario: a revisao precisa MOSTRAR tambem o texto
+extraido insuficiente, para o operador conseguir conferir e corrigir. Ajustado:
+`montarCategorias` preserva `texto_extraido`; `camposDaCotacao` usa esse texto
+bruto quando a categoria esta `nao_informado`; `AutoQuoteComparison` mantém o
+alerta visual quando o campo mostrado ainda nao cumpre a regra (ex.: carro
+reserva sem dias ou terceiros sem valor). A revisao pode abrir com dados
+parciais, mas o PDF final continua bloqueado por `validarCotacao`. Matriz
+executada em `camposDaCotacao`: HDI/Bradesco/Darwin/Tokio/Yelum preenchem os
+campos criticos; Pier mostra o texto bruto de carro reserva/terceiros para
+revisao e deixa premio/indenizacao vazios quando a pagina rasterizada nao entrega
+texto; Azul/Itau/Mitsui/Suhai seguem exibindo tudo que extraem e deixando vazios
+os campos que os fixtures nao informam. Validado com suite focada, `npm test
+-- --runInBand` (551 testes) e `npm run build`.
+
+---
+
 ## Extracao completa das cotacoes e limite de reboque (2026-08-27, Codex — CONCLUIDA)
 
 Responsavel: Codex, Agente de Sistemas. Objetivo: corrigir a automacao de leitura dos

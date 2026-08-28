@@ -271,6 +271,25 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   `reboque ate 500 km` e `sem limite/ilimitado`. A assistencia 24h no PDF final
   passa a exibir esse limite no texto; se a cotacao marca assistencia incluida
   mas nao informa o limite, a geracao bloqueia e pede revisao.
+- A tela nao depende mais apenas da deteccao automatica: antes de enviar o PDF,
+  o usuario escolhe a seguradora em `AutoQuoteComparison`. Essa escolha e passada
+  para `lerOrcamento(file, { parser_id })`, que chama o parser certo por
+  `parserOrcamentoPorId`. Isso evita que PDF com texto fraco, rasterizado ou
+  parecido com outro layout caia no parser errado.
+- A revisao pode abrir com dados parciais para conferencia, mas nao com PDF
+  ausente/lendo/sem parser valido. Se `cotacao.escolha_pendente` estiver ativa
+  (Allianz/HDI/Pier/Suhai), o rodape do upload avisa que falta escolher
+  produto/oferta/franquia; a geracao final continua bloqueada por
+  `validarCotacao`, mas os dados ja extraidos aparecem para o operador revisar.
+- Quando uma categoria tem texto extraido mas insuficiente para liberar o PDF,
+  `montarCategorias` preserva `texto_extraido` e `camposDaCotacao` o mostra na
+  revisao. Ex.: "carro reserva incluso conforme apolice" aparece para o usuario,
+  mas segue marcado pendente se nao trouxer dias/diarias.
+- **Carro reserva precisa informar dias/diarias.** `extrairDiasCarroReserva`
+  centraliza a regra em `orcamentoComparativo.js`; texto generico como
+  "incluso conforme apolice" nao libera mais a linha, porque o usuario pediu a
+  quantidade de dias disponiveis. Sem dias, a categoria fica pendente para
+  revisao/bloqueio.
 - Matriz real validada em 27/08: Allianz 500 km, Bradesco 400 km, Darwin 200
   km, HDI 600 km, Pier Personalizado 200 km, Pier Completo sem limite, Porto/Azul
   200 km, Itau 600 km, Mitsui 400 km, Suhai 500 km, Tokio 300 km e Yelum 500 km.

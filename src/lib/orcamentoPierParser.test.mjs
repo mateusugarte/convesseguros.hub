@@ -57,16 +57,15 @@ test('OCR ou revisão pode entregar os campos do produto sem trocar sua identida
   assert.equal(montarCategorias(cot).categorias.find(c => c.key === 'carro_reserva')?.estado, ESTADO_COBERTURA.INCLUIDA)
 })
 
-// Corrigido em 27/08 apos conferir o PDF: a Pier LISTA carro reserva em
-// "Coberturas adicionais", com texto proprio. O teste anterior afirmava
-// NAO_INFORMADO por supor que a cobertura vinha do nome do produto — nao vem, vem
-// do documento. O que o PDF nao diz e a categoria e o numero de diarias, e isso
-// continua saindo da revisao.
-test('carro reserva vem do que o PDF lista, nao do nome do produto', () => {
+// O usuario definiu que carro reserva precisa mostrar a quantidade de dias.
+// A Pier lista a cobertura, mas a amostra textual nao expõe as diarias do
+// produto; portanto isso deve continuar pendente em vez de virar "incluido"
+// generico.
+test('carro reserva sem quantidade de dias continua pendente para revisao', () => {
   const cot = parse('completo')
   const carro = montarCategorias(cot).categorias.find(c => c.key === 'carro_reserva')
-  assert.equal(carro.estado, ESTADO_COBERTURA.INCLUIDA)
-  assert.match(carro.texto, /Incluso/i)
+  assert.equal(carro.estado, ESTADO_COBERTURA.NAO_INFORMADO)
+  assert.equal(carro.texto, 'A cotação não informa.')
 })
 
 test('danos a terceiros sem valor NAO conta como informado', () => {

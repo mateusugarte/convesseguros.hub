@@ -7,7 +7,7 @@ import './orcamentoParsersContrato.test.mjs'
 import fs from 'node:fs'
 
 import {
-  detectarParserOrcamento, listarProdutosOrcamento, parseCotacaoPorSeguradora,
+  detectarParserOrcamento, listarProdutosOrcamento, parseCotacaoPorSeguradora, parserOrcamentoPorId,
   LayoutOrcamentoNaoReconhecidoError,
 } from './orcamentoSeguradoraParser.js'
 import { ProdutoOrcamentoObrigatorioError } from './orcamentoProdutos.js'
@@ -52,6 +52,14 @@ test('entrada única encaminha o produto explicitamente selecionado', () => {
   assert.equal(pier.produto_selecionado.id, 'completo')
   assert.equal(suhai.produto_selecionado.id, 'terceiros')
   assert.equal(suhai.valores.premio_total, 1502.87)
+})
+
+test('parser selecionado pelo usuario vence a deteccao automatica', () => {
+  const parser = parserOrcamentoPorId('hdi')
+  assert.equal(parser?.id, 'hdi')
+  assert.equal(listarProdutosOrcamento({ ...fixture('pier'), parser_id: 'hdi' }).parser_id, 'hdi')
+  const cot = parseCotacaoPorSeguradora({ ...fixture('hdi'), parser_id: 'hdi', produto: 'mercado' })
+  assert.equal(cot.seguradora.nome, 'HDI Seguros')
 })
 
 test('layout desconhecido produz erro estável para a interface', () => {

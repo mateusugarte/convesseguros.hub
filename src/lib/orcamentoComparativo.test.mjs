@@ -18,7 +18,7 @@ import {
   validarCotacao,
   formatarReferencia,
   formatarMoeda,
-  normalizarTexto, casarSeguradora, textoTerceiros, extrairLimiteReboqueKm,
+  normalizarTexto, casarSeguradora, textoTerceiros, extrairLimiteReboqueKm, extrairDiasCarroReserva,
 } from './orcamentoComparativo.js'
 
 // ─── Dicionario de coberturas ──────────────────────────────────────────
@@ -65,6 +65,15 @@ test('extrai o limite de KM do reboque em formatos de seguradoras diferentes', (
   assert.equal(extrairLimiteReboqueKm('Plano 2 Serviços Reparo no local ou reboque: 500 Km'), 500)
   assert.equal(extrairLimiteReboqueKm('Proteção para Terceiros, guincho com KM ilimitado.'), 'Sem limite de KM')
   assert.equal(extrairLimiteReboqueKm('raio de guincho conforme selecionado'), null)
+})
+
+test('carro reserva precisa trazer quantidade de dias para liberar o comparativo', () => {
+  assert.equal(extrairDiasCarroReserva('07 DIAS CR MANUAL — 7 dias de Carro Reserva'), 7)
+  assert.equal(extrairDiasCarroReserva('Carro reserva com 15 diárias'), 15)
+  const cot = criarCotacaoOrcamento()
+  cot.coberturas = [{ categoria: 'carro_reserva', nome_original_seguradora: 'Carro reserva', incluida: true, observacoes: 'Incluso conforme apólice.' }]
+  const card = montarCard(cot)
+  assert.equal(card.categorias.find(c => c.key === 'carro_reserva').estado, ESTADO_COBERTURA.NAO_INFORMADO)
 })
 
 // ─── Tipo de operacao ──────────────────────────────────────────────────

@@ -24,7 +24,7 @@ async function parsear({ parser_id: parserId, itens, texto }, escolhas = {}) {
     return parseCotacaoAllianz({ itens, texto, oferta: escolhas.oferta })
   }
   const { parseCotacaoPorSeguradora } = await import('./orcamentoSeguradoraParser.js')
-  return parseCotacaoPorSeguradora({ itens, texto, ...escolhas })
+  return parseCotacaoPorSeguradora({ parser_id: parserId, itens, texto, ...escolhas })
 }
 
 /**
@@ -33,27 +33,28 @@ async function parsear({ parser_id: parserId, itens, texto }, escolhas = {}) {
  * `itens` e `texto` voltam junto para que `aplicarEscolha` possa reprocessar a
  * cotacao com o produto escolhido sem reabrir o arquivo.
  */
-export async function lerOrcamento(file) {
+export async function lerOrcamento(file, configuracao = {}) {
   if (!file) return null
 
   const { extractPdfLayout } = await import('./apoliceParser.js')
   const { itens, texto } = await extractPdfLayout(file)
+  const parserSelecionado = configuracao?.parser_id || ''
 
   const { ehLayoutAllianz } = await import('./orcamentoAllianzParser.js')
-  if (ehLayoutAllianz(texto)) {
+  if (parserSelecionado === 'allianz' || (!parserSelecionado && ehLayoutAllianz(texto))) {
     const base = { arquivo: file.name, suportado: true, parser_id: 'allianz', seguradora: 'Allianz Seguros', itens, texto, escolhas: {} }
     // O parser da Allianz ja devolve sozinho o que independe da escolha mais a
     // lista de ofertas; nao precisa do preenchimento parcial abaixo.
     return { ...base, cotacao: await parsear(base) }
   }
 
-  const { detectarParserOrcamento, listarProdutosOrcamento } = await import('./orcamentoSeguradoraParser.js')
-  const parser = detectarParserOrcamento({ texto })
+  const { detectarParserOrcamento, listarProdutosOrcamento, parserOrcamentoPorId } = await import('./orcamentoSeguradoraParser.js')
+  const parser = parserSelecionado ? parserOrcamentoPorId(parserSelecionado) : detectarParserOrcamento({ texto })
   if (!parser) {
     return { arquivo: file.name, suportado: false, motivo: NAO_SUPORTADA, itens, texto, cotacao: null }
   }
 
-  const catalogo = listarProdutosOrcamento({ texto })
+  const catalogo = listarProdutosOrcamento({ texto, parser_id: parser.id })
   const base = {
     arquivo: file.name, suportado: true, parser_id: parser.id,
     seguradora: catalogo.seguradora, itens, texto, escolhas: {},
@@ -63,7 +64,7 @@ export async function lerOrcamento(file) {
     return { ...base, cotacao: await parsear(base) }
   }
 
-  const opcoes = catalogo.produtos.map((produto, ordem) => ({
+  const opcoesProduto = catalogo.produtos.map((produto, ordem) => ({
     indice: produto.id,
     nome: produto.label,
     premio_total: produto.premio_total ?? null,
@@ -71,13 +72,13 @@ export async function lerOrcamento(file) {
   }))
   return {
     ...base,
-    ofertas: opcoes,
+    ofertas: opcoesProduto,
     cotacao: {
       ...(await dadosDoDocumento(base, catalogo)),
       escolha_pendente: {
         campo: 'produto',
         label: 'Esta cotação traz mais de um produto; escolha qual vai para o cliente',
-        opcoes,
+        opcoes: opcoesProduto,
       },
     },
   }
@@ -165,7 +166,9 @@ export function camposDaCotacao(cotacao, { montarCategorias }) {
     // "A cotação não informa" e estado de validacao, nao dado extraido. Levar
     // essa frase ao input fazia a tela parecer preenchida e escondia justamente
     // o campo que o corretor precisava completar.
-    return categoria?.estado === 'nao_informado' ? '' : (categoria?.texto || '')
+    return categoria?.estado === 'nao_informado'
+      ? (categoria?.texto_extraido || '')
+      : (categoria?.texto || '')
   }
 
   return {

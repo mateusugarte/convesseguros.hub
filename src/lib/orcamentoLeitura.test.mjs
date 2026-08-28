@@ -162,6 +162,27 @@ test('categoria nao informada chega vazia e visivel para revisao', () => {
   assert.equal(c.danos_terceiros, '')
 })
 
+test('texto extraido insuficiente aparece na revisao sem liberar a validacao', () => {
+  const cot = criarCotacaoOrcamento()
+  cot.coberturas = [
+    {
+      nome_original_seguradora: 'Carro reserva',
+      categoria: 'carro_reserva',
+      incluida: true,
+      observacoes: 'Incluso — categoria e diárias conforme contratado em apólice.',
+    },
+    {
+      nome_original_seguradora: 'Danos físicos, materiais e morais a terceiros',
+      categoria: 'terceiros',
+      incluida: true,
+      observacoes: 'Danos físicos, materiais e morais a terceiros',
+    },
+  ]
+  const c = camposDaCotacao(cot, { montarCategorias })
+  assert.match(c.carro_reserva, /diárias conforme contratado/)
+  assert.match(c.danos_terceiros, /Danos físicos/)
+})
+
 test('aplicarRevisao devolve null sem cotacao', () => {
   assert.equal(aplicarRevisao(null, { segurado_nome: 'X' }), null)
 })

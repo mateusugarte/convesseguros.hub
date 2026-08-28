@@ -63,18 +63,22 @@ export class LayoutOrcamentoNaoReconhecidoError extends Error {
   }
 }
 
+export function parserOrcamentoPorId(id) {
+  return PARSERS_ORCAMENTO_AUTO.find(parser => parser.id === id) || null
+}
+
 export function detectarParserOrcamento({ texto = '' } = {}) {
   return PARSERS_ORCAMENTO_AUTO.find(parser => parser.detectar(texto)) || null
 }
 
-export function listarProdutosOrcamento({ texto = '' } = {}) {
-  const parser = detectarParserOrcamento({ texto })
+export function listarProdutosOrcamento({ texto = '', parser_id: parserId = '' } = {}) {
+  const parser = parserId ? parserOrcamentoPorId(parserId) : detectarParserOrcamento({ texto })
   if (!parser) throw new LayoutOrcamentoNaoReconhecidoError()
   return { parser_id: parser.id, ...parser.listarProdutos(texto) }
 }
 
 export function parseCotacaoPorSeguradora(entrada = {}) {
-  const parser = detectarParserOrcamento(entrada)
+  const parser = entrada.parser_id ? parserOrcamentoPorId(entrada.parser_id) : detectarParserOrcamento(entrada)
   if (!parser) throw new LayoutOrcamentoNaoReconhecidoError()
   return parser.parse(entrada)
 }

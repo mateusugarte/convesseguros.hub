@@ -102,6 +102,23 @@ export async function extractPdfText(file) {
   return fullText
 }
 
+export async function renderPdfPageCanvas(file, pagina = 1, { scale = 2.4 } = {}) {
+  if (typeof document === 'undefined') {
+    throw new Error('Renderização de página do PDF exige ambiente de navegador.')
+  }
+  const arrayBuffer = await file.arrayBuffer()
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+  const page = await pdf.getPage(pagina)
+  const viewport = page.getViewport({ scale })
+  const canvas = document.createElement('canvas')
+  const context = canvas.getContext('2d', { alpha: false })
+  if (!context) throw new Error('Não foi possível preparar o canvas para OCR.')
+  canvas.width = Math.ceil(viewport.width)
+  canvas.height = Math.ceil(viewport.height)
+  await page.render({ canvasContext: context, viewport }).promise
+  return canvas
+}
+
 function firstMoneyMatch(text, patterns) {
   for (const pattern of patterns) {
     const match = text.match(pattern)

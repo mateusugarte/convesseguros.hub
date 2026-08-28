@@ -100,27 +100,28 @@ const CSS = `
 html,body{background:#e9eef4}
 body{
   font-family:var(--sans);color:var(--tinta);
-  font-size:7.7pt;line-height:1.38;
+  font-size:7.8pt;line-height:1.4;
   -webkit-font-smoothing:antialiased;
 }
-.pagina{width:210mm;min-height:297mm;padding:0 0 6mm;margin:7mm auto;position:relative;display:flex;flex-direction:column;background:var(--papel);box-shadow:0 18px 60px rgba(16,31,51,.18)}
+.pagina{width:210mm;min-height:297mm;padding:0 0 6mm;margin:7mm auto;position:relative;display:flex;flex-direction:column;background:linear-gradient(180deg,#fff 0%,#fbfcfe 62%,#fff 100%);box-shadow:0 18px 60px rgba(16,31,51,.18)}
 .acoes-doc{position:sticky;z-index:20;top:0;display:flex;width:210mm;align-items:center;justify-content:space-between;gap:8mm;margin:0 auto;padding:3mm 5mm;background:rgba(16,31,51,.96);color:#fff;box-shadow:0 8px 24px rgba(16,31,51,.24);backdrop-filter:blur(12px)}
 .acoes-doc strong{font-family:var(--serif);font-size:10pt}.acoes-doc span{display:block;color:#c8d2df;font-size:7pt;margin-top:.5mm}
 .acoes-doc .botoes{display:flex;gap:2mm}.acoes-doc button{border:1px solid rgba(255,255,255,.22);border-radius:1.5mm;padding:2.2mm 4mm;background:transparent;color:#fff;font:700 7.5pt var(--sans);cursor:pointer}
 .acoes-doc button.primario{border-color:#fff;background:#fff;color:var(--tinta)}
-.barra-topo{height:4px;background:linear-gradient(90deg,#1c4a87 0%,#1c4a87 55%,#9c7328 100%)}
+.barra-topo{height:5px;background:linear-gradient(90deg,#1c4a87 0%,#1c4a87 48%,#0ea5a4 72%,#9c7328 100%)}
 
 /* ─── Cabecalho ─── */
-.cabecalho{display:flex;align-items:center;gap:8mm;padding:3.5mm 12mm 3mm}
-.marca img{height:11.5mm;width:auto;display:block}
+.cabecalho{display:flex;align-items:center;gap:8mm;padding:5mm 12mm 3.5mm}
+.marca{display:flex;align-items:center;justify-content:center;min-width:38mm;min-height:16mm;padding:2mm 3mm;border:1px solid #e6ebf1;border-radius:2mm;background:#fff;box-shadow:0 5px 18px rgba(16,31,51,.07)}
+.marca img{max-height:11.5mm;max-width:34mm;width:auto;display:block}
 .titulo-bloco{flex:1;text-align:right}
-.titulo{font-family:var(--serif);font-size:15.5pt;font-weight:700;letter-spacing:-.2pt;line-height:1.1;white-space:nowrap}
+.titulo{font-family:var(--serif);font-size:16.4pt;font-weight:700;letter-spacing:-.35pt;line-height:1.08;white-space:nowrap}
 .titulo .estrela{color:#9c7328;font-size:11pt;vertical-align:2pt;margin-right:2pt}
 .meta{font-family:var(--mono);font-size:7.4pt;color:var(--rotulo);letter-spacing:.4pt;margin-top:2.5mm;text-transform:uppercase}
 .meta span+span::before{content:'·';margin:0 2.2mm;color:var(--linha)}
 
 /* ─── Barra do cliente ─── */
-.cliente{display:flex;align-items:stretch;gap:0;margin:0 12mm;border-top:1px solid var(--linha);border-bottom:1px solid var(--linha);padding:2.4mm 0}
+.cliente{display:flex;align-items:stretch;gap:0;margin:0 12mm;border:1px solid var(--linha);border-radius:2.5mm;padding:2.4mm 0;background:#fff;box-shadow:0 7px 22px rgba(16,31,51,.045)}
 .cliente .campo{padding:0 6mm;flex:1}
 .cliente .campo:first-child{padding-left:0}
 .cliente .campo+.campo{border-left:1px solid var(--linha)}
@@ -130,18 +131,26 @@ body{
 .cliente .valor small{display:block;font-size:8.4pt;font-weight:500}
 .selo-tipo{background:var(--tinta);color:#fff;font-family:var(--mono);font-size:7pt;font-weight:600;letter-spacing:1.1pt;padding:2.1mm 4.2mm;text-transform:uppercase}
 
+/* resumo executivo */
+.resumo-precos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4mm;margin:3.4mm 12mm 0}
+.resumo-preco{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:5mm;padding:3mm 3.6mm;border:1px solid var(--linha);border-radius:2.8mm;background:#fff;box-shadow:0 8px 24px rgba(16,31,51,.055)}
+.resumo-preco::after{content:'';position:absolute;right:-12mm;top:-18mm;width:34mm;height:34mm;border-radius:50%;background:var(--cor);opacity:.08}
+.resumo-preco span{font-family:var(--mono);font-size:6.4pt;letter-spacing:1pt;text-transform:uppercase;color:var(--rotulo)}
+.resumo-preco strong{display:block;margin-top:.7mm;font-family:var(--serif);font-size:12pt;color:var(--tinta);line-height:1.1}
+.resumo-preco b{position:relative;z-index:1;font-family:var(--serif);font-size:15pt;color:var(--cor);letter-spacing:-.3pt;white-space:nowrap}
+
 /* ─── Corpo: dois cards ─── */
-.corpo{display:flex;align-items:flex-start;gap:0;padding:3.2mm 12mm 0;flex:1}
+.corpo{display:flex;align-items:flex-start;gap:0;padding:3.4mm 12mm 0;flex:1}
 .divisor{flex:0 0 8mm;align-self:stretch;position:relative;min-height:150mm}
 .divisor::before{content:'';position:absolute;left:50%;top:2mm;bottom:2mm;width:1px;background:var(--linha)}
 .divisor::after{content:'';position:absolute;left:50%;top:50%;width:3.2mm;height:3.2mm;background:var(--papel);border:1px solid #c2cad3;transform:translate(-50%,-50%) rotate(45deg)}
-.card{flex:1;min-width:0;border:1px solid var(--linha);border-radius:2.2mm;overflow:hidden;background:var(--papel);box-shadow:0 1px 3px rgba(16,31,51,.07),0 6px 16px rgba(16,31,51,.05);display:flex;flex-direction:column}
+.card{flex:1;min-width:0;border:1px solid var(--linha);border-radius:3mm;overflow:hidden;background:var(--papel);box-shadow:0 1px 3px rgba(16,31,51,.07),0 10px 26px rgba(16,31,51,.07);display:flex;flex-direction:column}
 
 /* faixa colorida + selo do logo */
-.faixa{background:linear-gradient(120deg,var(--cor),color-mix(in srgb,var(--cor) 82%,#101f33));display:flex;align-items:center;gap:4mm;padding:3mm 3.6mm;min-height:16mm}
+.faixa{background:linear-gradient(120deg,var(--cor),color-mix(in srgb,var(--cor) 78%,#101f33));display:flex;align-items:center;gap:4mm;padding:3.3mm 3.8mm;min-height:17mm}
 .faixa .papel-rotulo{font-family:var(--mono);font-size:6.6pt;letter-spacing:1.1pt;color:var(--cor-texto);opacity:.92;text-transform:uppercase;flex:1;line-height:1.3}
-.selo-logo{background:#fff;border-radius:1.6mm;padding:2.2mm 3.5mm;display:flex;align-items:center;justify-content:center;min-width:38mm;min-height:15mm;box-shadow:0 2px 8px rgba(0,0,0,.18)}
-.selo-logo img{max-height:9.5mm;max-width:37mm;width:auto;height:auto;display:block;object-fit:contain}
+.selo-logo{background:#fff;border-radius:2mm;padding:2.3mm 3.6mm;display:flex;align-items:center;justify-content:center;min-width:39mm;min-height:15.5mm;box-shadow:0 3px 10px rgba(0,0,0,.18)}
+.selo-logo img{max-height:10mm;max-width:37mm;width:auto;height:auto;display:block;object-fit:contain}
 .selo-logo .fallback{font-family:var(--serif);font-size:11pt;font-weight:700;color:var(--cor);text-align:center;line-height:1.15}
 
 /* faixa de identificacao */
@@ -180,7 +189,7 @@ body{
 .item-fora p{font-size:6.6pt;color:#7d4034;line-height:1.35;margin-top:.4mm}
 
 /* caixa de valor */
-.valor-caixa{margin:2.4mm 4mm 0;background:var(--tinta);color:#fff;border-radius:1.6mm;padding:2.6mm 3.6mm}
+.valor-caixa{margin:2.8mm 4mm 0;background:linear-gradient(135deg,#101f33,#192d49);color:#fff;border-radius:2.2mm;padding:3mm 3.8mm;box-shadow:0 10px 24px rgba(16,31,51,.18)}
 .valor-caixa .rotulo{color:#b9c2cc;margin-bottom:1.6mm}
 .valor-caixa .numero{font-family:var(--serif);font-size:15.5pt;font-weight:700;color:var(--cor-clara);letter-spacing:-.3pt;line-height:1.05}
 .pagamentos{margin-top:2.4mm;border-top:1px solid rgba(255,255,255,.16);padding-top:2.1mm;display:flex;flex-direction:column;gap:1.5mm}
@@ -304,6 +313,18 @@ function blocoValor(card) {
   </div>`
 }
 
+function resumoPreco(card) {
+  const s = card.seguradora
+  const estilo = `--cor:${s.cor}`
+  return `<div class="resumo-preco" style="${estilo}">
+    <div>
+      <span>${escapeHtml(ROTULO_PAPEL[card.papel] || 'Cotação')}</span>
+      <strong>${escapeHtml(s.nome || 'Seguradora')}</strong>
+    </div>
+    <b>${escapeHtml(card.valores.total_formatado || '—')}</b>
+  </div>`
+}
+
 function blocoCard(card) {
   const s = card.seguradora
   const estilo = `--cor:${s.cor};--cor-clara:${s.cor_clara};--cor-texto:${s.cor_texto};--cor-bolha:${s.cor}1f`
@@ -400,6 +421,10 @@ ${comAcoes ? `<nav class="acoes-doc" aria-label="Ações da cotação">
   </section>
 
   ${aviso}
+
+  <section class="resumo-precos">
+    ${cards.map(resumoPreco).join('')}
+  </section>
 
   <main class="corpo">
     ${blocoCard(cards[0])}

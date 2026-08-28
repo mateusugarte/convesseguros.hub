@@ -1,11 +1,13 @@
 import { useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle, ArrowRight, Check, CheckCircle2, ChevronDown, FileCheck2,
-  Eye, FileText, LoaderCircle, RefreshCw, ShieldCheck, Sparkles, UploadCloud,
+  Download, Eye, FileText, LoaderCircle, Maximize2, RefreshCw, ShieldCheck,
+  Sparkles, UploadCloud, X,
 } from 'lucide-react'
 
 import { extrairDiasCarroReserva, montarCategorias, TEM_VALOR_MONETARIO } from '../../lib/orcamentoComparativo'
 import { aplicarRevisao, camposDaCotacao } from '../../lib/orcamentoLeitura'
+import { getEntityImageUrl } from '../../lib/entityMedia'
 import { DatePicker } from '../ui'
 import AutoOrcamentoOfertas from './AutoOrcamentoOfertas'
 
@@ -300,6 +302,45 @@ function ReviewColumn({ role, side, issues, leitura, aplicando, onEscolherOferta
   )
 }
 
+function OrcamentoPreview({ html, fullscreen = false, onFullscreen, onCloseFullscreen, onDownload }) {
+  const iframeRef = useRef(null)
+  if (!html) return null
+
+  const frame = (
+    <section className={`auto-comparison-preview ${fullscreen ? 'is-fullscreen' : ''}`}>
+      <header>
+        <div>
+          <span>Prévia da cotação</span>
+          <strong>Orçamento completo dentro do sistema</strong>
+          <small>Confira o visual final; para salvar, use “Baixar PDF”.</small>
+        </div>
+        <div className="auto-comparison-preview-actions">
+          {fullscreen
+            ? <button type="button" onClick={onCloseFullscreen}><X />Fechar tela cheia</button>
+            : <button type="button" onClick={onFullscreen}><Maximize2 />Tela cheia</button>}
+          <button type="button" className="is-primary" onClick={() => onDownload(iframeRef)}><Download />Baixar PDF</button>
+        </div>
+      </header>
+      <div className="auto-comparison-preview-stage">
+        <iframe
+          ref={iframeRef}
+          title="Prévia do orçamento comparativo"
+          srcDoc={html}
+          sandbox="allow-same-origin allow-modals"
+        />
+      </div>
+    </section>
+  )
+
+  if (!fullscreen) return frame
+
+  return (
+    <div className="auto-comparison-preview-shell" role="dialog" aria-modal="true" aria-label="Cotação em tela cheia">
+      {frame}
+    </div>
+  )
+}
+
 export default function AutoQuoteComparison({ quote }) {
   const [step, setStep] = useState('upload')
   const [files, setFiles] = useState({ atual: null, concorrente: null })
@@ -315,6 +356,8 @@ export default function AutoQuoteComparison({ quote }) {
   const [gerando, setGerando] = useState(false)
   const [erroGeracao, setErroGeracao] = useState('')
   const [comparativoGerado, setComparativoGerado] = useState(null)
+  const [previewHtml, setPreviewHtml] = useState('')
+  const [previewFullscreen, setPreviewFullscreen] = useState(false)
   const issues = useMemo(() => Object.fromEntries(ROLES.map(({ key }) => [
     key,
     REVIEW_FIELDS
@@ -342,6 +385,7 @@ export default function AutoQuoteComparison({ quote }) {
       : 'Revisão aguardando leitura'
 
   async function chooseFile(role, file) {
+    invalidarPreview()
     if (file && !parsers[role]) {
       setErros(current => ({ ...current, [role]: 'Selecione a seguradora do PDF antes de enviar o arquivo.' }))
       return
@@ -373,6 +417,7 @@ export default function AutoQuoteComparison({ quote }) {
 
   function escolherParser(role, parserId) {
     const selecionada = SEGURADORAS_ORCAMENTO.find(item => item.id === parserId)
+    invalidarPreview()
     setParsers(current => ({ ...current, [role]: parserId }))
     setFiles(current => ({ ...current, [role]: null }))
     setLeituras(current => ({ ...current, [role]: null }))
@@ -391,6 +436,7 @@ export default function AutoQuoteComparison({ quote }) {
   async function escolherOferta(role, indice) {
     const leitura = leituras[role]
     if (!leitura) return
+    invalidarPreview()
     setAplicando(current => ({ ...current, [role]: true }))
     setErros(current => ({ ...current, [role]: '' }))
     try {
@@ -484,13 +530,14 @@ export default function AutoQuoteComparison({ quote }) {
         const cot = aplicarRevisao(lida, sides[role].campos)
         const nome = sides[role].seguradora || cot.seguradora?.nome || ''
         const meta = casarSeguradora(catalogo, nome)
+        const logoUrl = getEntityImageUrl(meta?.logo_path, meta?.logo_url || cot.seguradora?.logo_url || null) || ''
         return {
           ...cot,
           seguradora: {
             ...cot.seguradora,
             nome: meta?.nome_canonico || nome,
             id: meta?.id ?? cot.seguradora?.id ?? null,
-            logo_url: meta?.logo_url || cot.seguradora?.logo_url || '',
+            logo_url: logoUrl,
             cor_destaque: meta?.cor_destaque || cot.seguradora?.cor_destaque || '',
           },
         }
@@ -513,20 +560,9 @@ export default function AutoQuoteComparison({ quote }) {
         return
       }
 
-      const janela = window.open('', '_blank')
-      if (!janela) {
-        setErroGeracao('O navegador bloqueou a janela do orçamento. Libere o pop-up e tente de novo.')
-        return
-      }
-      janela.document.write(montarHtmlOrcamento(comparativo, { comAcoes: true }))
-      janela.document.close()
-
-      // Esperar as logos ANTES de abrir o dialogo. Sem isso a impressao dispara
-      // com as imagens ainda em voo e o PDF sai com os selos em branco —
-      // exatamente o sintoma de logo faltando, so que agora por corrida.
-      await imagensCarregadas(janela)
-      janela.focus()
+      const html = montarHtmlOrcamento(comparativo)
       setComparativoGerado(comparativo)
+      setPreviewHtml(html)
     } catch (erro) {
       setErroGeracao(`Não foi possível gerar o orçamento: ${erro.message}`)
     } finally {
@@ -535,7 +571,25 @@ export default function AutoQuoteComparison({ quote }) {
   }
 
   function patchField(role, field, value) {
+    invalidarPreview()
     setSides(current => ({ ...current, [role]: { ...current[role], campos: { ...current[role].campos, [field]: value } } }))
+  }
+
+  function invalidarPreview() {
+    setComparativoGerado(null)
+    setPreviewHtml('')
+    setPreviewFullscreen(false)
+  }
+
+  async function baixarPdf(iframeRef) {
+    const janela = iframeRef?.current?.contentWindow
+    if (!janela) {
+      setErroGeracao('Não foi possível acessar a prévia da cotação para baixar o PDF.')
+      return
+    }
+    await imagensCarregadas(janela)
+    janela.focus()
+    janela.print()
   }
 
   return (
@@ -583,9 +637,20 @@ export default function AutoQuoteComparison({ quote }) {
         <footer className="auto-comparison-footer is-review">
           <div><CheckCircle2 /><span><strong>{comparativoGerado ? 'Cotação pronta para visualizar' : 'Revisão pronta para concluir'}</strong><small>{comparativoGerado ? 'A área da cotação contém o botão para baixar ou salvar o PDF.' : 'Confira os campos dos dois lados; a cotação abre em uma área própria.'}</small></span></div>
           <button type="button" onClick={gerarOrcamento} disabled={gerando}>
-            {gerando ? <><LoaderCircle className="is-spinning" />Preparando…</> : <><Eye />Ver cotação</>}
+            {gerando ? <><LoaderCircle className="is-spinning" />Preparando…</> : <><Eye />Visualizar cotação</>}
           </button>
         </footer>
+        <OrcamentoPreview
+          html={previewHtml}
+          onFullscreen={() => setPreviewFullscreen(true)}
+          onDownload={baixarPdf}
+        />
+        <OrcamentoPreview
+          html={previewFullscreen ? previewHtml : ''}
+          fullscreen
+          onCloseFullscreen={() => setPreviewFullscreen(false)}
+          onDownload={baixarPdf}
+        />
       </>}
     </section>
   )

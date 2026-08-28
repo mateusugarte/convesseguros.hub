@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 
 import { ehLayoutPier, listarProdutosPier, parseCotacaoPier, textoAssistencia } from './orcamentoPierParser.js'
+import { extrairProdutosPierOcr } from './orcamentoPierOcr.js'
 import { ProdutoOrcamentoObrigatorioError } from './orcamentoProdutos.js'
 import { montarCategorias, validarCotacao, ESTADO_COBERTURA } from './orcamentoComparativo.js'
 
@@ -64,6 +65,38 @@ test('OCR ou revisão pode entregar os campos do produto sem trocar sua identida
   assert.equal(cot.indenizacao_integral.percentual_fipe, 100)
   assert.equal(cot.avisos_extracao.length, 0)
   assert.equal(montarCategorias(cot).categorias.find(c => c.key === 'carro_reserva')?.estado, ESTADO_COBERTURA.INCLUIDA)
+})
+
+test('OCR da pagina de produto Pier preenche premio, FIPE, terceiros e carro reserva', () => {
+  const ocr = `
+    Vigéncia anual PIER Personalizado Vigéncia anual PIER Completo
+    Valor da FIPE Valor da Cobertura Pier R$74.129,00 R$74.129,00 (100%)
+    Valor da FIPE Valor da Cobertura Pier R$74.129,00 R$74.129,00 (100%)
+    Danos Parciais Franquia: R$4.420,00 Danos Parciais Franquia: R$4.420,00
+    Danos fisicos a pessoas até R$150.000,00 Danos fisicos a pessoas até R$150.000,00
+    Danos a bens materiais até R$150.000,00 Danos a bens materiais até R$150.000,00
+    Danos morais até R$20.000,00 Danos morais até R$20.000,00
+    Assisténcias (200km) Assisténcias (km ilimitado)
+    Carro reserva Veiculo basico por 7 dias Carro reserva Veiculo basico por 7 dias
+    12x sem juros: Valor total: 12x sem juros: Valor total:
+    R$193,72 R$2.324,65 R$193,34 R$2.320,10
+  `
+  const dados = extrairProdutosPierOcr(ocr)
+  assert.equal(dados.personalizado.premio_total, 2324.65)
+  assert.equal(dados.completo.premio_total, 2320.10)
+  assert.equal(dados.personalizado.percentual_fipe, 100)
+  assert.match(dados.personalizado.premio_parcelado.join(' · '), /12x de R\$\s*193,72/)
+  assert.match(dados.personalizado.limite_terceiros, /R\$\s*150\.000,00 danos físicos/)
+  assert.match(dados.personalizado.limite_terceiros, /R\$\s*150\.000,00 danos materiais/)
+  assert.match(dados.personalizado.limite_terceiros, /R\$\s*20\.000,00 danos morais/)
+  assert.equal(dados.personalizado.carro_reserva, 'Veículo básico por 7 dias')
+
+  const cot = parse('personalizado', dados.personalizado)
+  assert.equal(cot.valores.premio_total, 2324.65)
+  assert.equal(cot.indenizacao_integral.percentual_fipe, 100)
+  assert.equal(cot.avisos_extracao.length, 0)
+  assert.equal(montarCategorias(cot).categorias.find(c => c.key === 'terceiros').estado, ESTADO_COBERTURA.INCLUIDA)
+  assert.equal(montarCategorias(cot).categorias.find(c => c.key === 'carro_reserva').estado, ESTADO_COBERTURA.INCLUIDA)
 })
 
 // O usuario definiu que carro reserva precisa mostrar a quantidade de dias.

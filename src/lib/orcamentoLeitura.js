@@ -18,13 +18,14 @@ const NAO_SUPORTADA = 'Leitura automática ainda não disponível para esta segu
 const DADOS_DO_DOCUMENTO = ['segurado', 'condutor_principal', 'veiculo', 'cotacao', 'vigencia']
 
 /** Executa o parser certo com as escolhas ja feitas pelo usuario. */
-async function parsear({ parser_id: parserId, itens, texto }, escolhas = {}) {
+async function parsear({ parser_id: parserId, itens, texto, dados_produtos: dadosProdutos }, escolhas = {}) {
+  const dadosProduto = escolhas.produto ? dadosProdutos?.[escolhas.produto] : null
   if (parserId === 'allianz') {
     const { parseCotacaoAllianz } = await import('./orcamentoAllianzParser.js')
     return parseCotacaoAllianz({ itens, texto, oferta: escolhas.oferta })
   }
   const { parseCotacaoPorSeguradora } = await import('./orcamentoSeguradoraParser.js')
-  return parseCotacaoPorSeguradora({ parser_id: parserId, itens, texto, ...escolhas })
+  return parseCotacaoPorSeguradora({ parser_id: parserId, itens, texto, ...escolhas, dadosProduto })
 }
 
 /**
@@ -55,9 +56,10 @@ export async function lerOrcamento(file, configuracao = {}) {
   }
 
   const catalogo = listarProdutosOrcamento({ texto, parser_id: parser.id })
+  const dadosProdutos = await dadosProdutosPorOcr(file, parser.id)
   const base = {
     arquivo: file.name, suportado: true, parser_id: parser.id,
-    seguradora: catalogo.seguradora, itens, texto, escolhas: {},
+    seguradora: catalogo.seguradora, itens, texto, escolhas: {}, dados_produtos: dadosProdutos,
   }
 
   if (!catalogo.requer_selecao) {
@@ -81,6 +83,17 @@ export async function lerOrcamento(file, configuracao = {}) {
         opcoes: opcoesProduto,
       },
     },
+  }
+}
+
+async function dadosProdutosPorOcr(file, parserId) {
+  if (parserId !== 'pier') return {}
+  try {
+    const { lerProdutosPierViaOcr } = await import('./orcamentoPierOcr.js')
+    return await lerProdutosPierViaOcr(file)
+  } catch (erro) {
+    console.warn('OCR Pier indisponível:', erro)
+    return {}
   }
 }
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlarmClock, BellPlus, CalendarClock, Check, CheckCircle2, Clock3,
@@ -8,6 +8,7 @@ import {
   atualizarAcompanhamentoCotacao, concluirAutoLembrete, criarAutoLembrete,
   getAutoCotacaoWorkflow, getAutoTags, registrarAutoInteracao,
 } from '../../lib/auto'
+import { DatePicker } from '../ui'
 
 const INTERACTION_TYPES = [
   { value: 'followup', label: 'Follow-up' },
@@ -19,12 +20,22 @@ const fmt = value => value ? new Date(value).toLocaleString('pt-BR', { dateStyle
 
 export default function AutoWorkflowPanel({ cotacao }) {
   const qc = useQueryClient()
+  const [organization, setOrganization] = useState({ proximoPasso: '', proximoPassoEm: '', observacoes: '' })
   const [interaction, setInteraction] = useState({ tipo: 'followup', observacao: '', proximoPasso: '', proximoPassoEm: '' })
   const [reminder, setReminder] = useState({ titulo: '', dataLembrete: '', avisarAntesDias: 1 })
   const [error, setError] = useState('')
   const workflowKey = ['auto-workflow', cotacao.id]
   const { data, isLoading, isError } = useQuery({ queryKey: workflowKey, queryFn: () => getAutoCotacaoWorkflow(cotacao.id) })
   const { data: tags = [] } = useQuery({ queryKey: ['auto-tags'], queryFn: getAutoTags })
+
+  useEffect(() => {
+    if (!data?.cotacao) return
+    setOrganization({
+      proximoPasso: data.cotacao.proximo_passo || '',
+      proximoPassoEm: data.cotacao.proximo_passo_em || '',
+      observacoes: data.cotacao.observacoes_operacionais || '',
+    })
+  }, [data?.cotacao?.proximo_passo, data?.cotacao?.proximo_passo_em, data?.cotacao?.observacoes_operacionais])
 
   const invalidate = async () => {
     await Promise.all([
@@ -135,13 +146,13 @@ export default function AutoWorkflowPanel({ cotacao }) {
       <div className="auto-workflow-grid">
         <article className="auto-workflow-card is-next">
           <header><CalendarClock /><div><span>Organização</span><strong>Próximo passo</strong></div></header>
-          <label><span>O que precisa acontecer?</span><input defaultValue={data?.cotacao?.proximo_passo || ''} id={`next-${cotacao.id}`} placeholder="Ex.: cobrar retorno da seguradora" /></label>
-          <label><span>Quando?</span><input defaultValue={data?.cotacao?.proximo_passo_em || ''} id={`next-date-${cotacao.id}`} type="date" /></label>
-          <label><span>Observações do cliente</span><textarea defaultValue={data?.cotacao?.observacoes_operacionais || ''} id={`notes-${cotacao.id}`} rows="3" placeholder="Preferências, contexto e pontos importantes…" /></label>
+          <label><span>O que precisa acontecer?</span><input value={organization.proximoPasso} onChange={event => setOrganization(current => ({ ...current, proximoPasso: event.target.value }))} placeholder="Ex.: cobrar retorno da seguradora" /></label>
+          <label><span>Quando?</span><DatePicker value={organization.proximoPassoEm} onChange={value => setOrganization(current => ({ ...current, proximoPassoEm: value }))} className="auto-workflow-date-picker" /></label>
+          <label><span>Observações do cliente</span><textarea value={organization.observacoes} onChange={event => setOrganization(current => ({ ...current, observacoes: event.target.value }))} rows="3" placeholder="Preferências, contexto e pontos importantes…" /></label>
           <button type="button" onClick={() => workflowMutation.mutate({
-            proximo_passo: document.getElementById(`next-${cotacao.id}`)?.value || null,
-            proximo_passo_em: document.getElementById(`next-date-${cotacao.id}`)?.value || null,
-            observacoes_operacionais: document.getElementById(`notes-${cotacao.id}`)?.value || null,
+            proximo_passo: organization.proximoPasso || null,
+            proximo_passo_em: organization.proximoPassoEm || null,
+            observacoes_operacionais: organization.observacoes || null,
           })}><Check />Salvar organização</button>
         </article>
 
@@ -150,7 +161,7 @@ export default function AutoWorkflowPanel({ cotacao }) {
           <form onSubmit={submitInteraction}>
             <div className="auto-workflow-type">{INTERACTION_TYPES.map(type => <button key={type.value} type="button" className={interaction.tipo === type.value ? 'is-active' : ''} onClick={() => setInteraction(current => ({ ...current, tipo: type.value }))}>{type.label}</button>)}</div>
             <textarea value={interaction.observacao} onChange={event => setInteraction(current => ({ ...current, observacao: event.target.value }))} rows="3" placeholder="O que foi conversado ou decidido?" />
-            <div className="auto-workflow-inline"><input value={interaction.proximoPasso} onChange={event => setInteraction(current => ({ ...current, proximoPasso: event.target.value }))} placeholder="Próximo passo (opcional)" /><input type="date" value={interaction.proximoPassoEm} onChange={event => setInteraction(current => ({ ...current, proximoPassoEm: event.target.value }))} /></div>
+            <div className="auto-workflow-inline"><input value={interaction.proximoPasso} onChange={event => setInteraction(current => ({ ...current, proximoPasso: event.target.value }))} placeholder="Próximo passo (opcional)" /><DatePicker value={interaction.proximoPassoEm} onChange={value => setInteraction(current => ({ ...current, proximoPassoEm: value }))} className="auto-workflow-date-picker" /></div>
             <button type="submit" disabled={interactionMutation.isPending}><Plus />Registrar no histórico</button>
           </form>
         </article>
@@ -167,7 +178,7 @@ export default function AutoWorkflowPanel({ cotacao }) {
           <header><BellPlus /><div><span>Alertas pessoais</span><strong>Novo lembrete</strong></div></header>
           <form onSubmit={submitReminder}>
             <input value={reminder.titulo} onChange={event => setReminder(current => ({ ...current, titulo: event.target.value }))} placeholder="Ex.: cobrar proposta assinada" />
-            <div className="auto-workflow-inline"><input type="date" value={reminder.dataLembrete} onChange={event => setReminder(current => ({ ...current, dataLembrete: event.target.value }))} /><select value={reminder.avisarAntesDias} onChange={event => setReminder(current => ({ ...current, avisarAntesDias: Number(event.target.value) }))}><option value="0">Avisar no dia</option><option value="1">1 dia antes + no dia</option><option value="2">2 dias antes</option><option value="7">7 dias antes</option></select></div>
+            <div className="auto-workflow-inline"><DatePicker value={reminder.dataLembrete} onChange={value => setReminder(current => ({ ...current, dataLembrete: value }))} className="auto-workflow-date-picker" /><select value={reminder.avisarAntesDias} onChange={event => setReminder(current => ({ ...current, avisarAntesDias: Number(event.target.value) }))}><option value="0">Avisar no dia</option><option value="1">1 dia antes + no dia</option><option value="2">2 dias antes</option><option value="7">7 dias antes</option></select></div>
             <button type="submit" disabled={reminderMutation.isPending}><AlarmClock />Criar lembrete</button>
           </form>
           <div className="auto-workflow-reminders">{data?.lembretes?.map(item => <div key={item.id} className={item.concluido_em ? 'is-done' : ''}><Clock3 /><span><strong>{item.titulo}</strong><small>{item.data_lembrete}{item.avisar_antes_dias === 1 ? ' · avisa na véspera' : ''}</small></span>{!item.concluido_em && <button type="button" title="Concluir" onClick={() => completeMutation.mutate(item.id)}><CheckCircle2 /></button>}</div>)}</div>

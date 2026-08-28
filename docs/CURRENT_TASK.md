@@ -58,6 +58,21 @@ texto; Azul/Itau/Mitsui/Suhai seguem exibindo tudo que extraem e deixando vazios
 os campos que os fixtures nao informam. Validado com suite focada, `npm test
 -- --runInBand` (551 testes) e `npm run build`.
 
+Revisao de fluxo em 28/08, apos novo teste do usuario: quando o PDF tem mais de
+um produto/oferta, a tela nao abre mais a revisao final com premio/coberturas em
+branco. O rodape do upload agora mostra "Escolha o produto antes da revisão" e
+o botao **Visualizar revisão** fica bloqueado ate a escolha. `AutoOrcamentoOfertas`
+tambem deixa a acao explicita como **Escolher e preencher**, para ficar claro
+que essa escolha inicia a aplicacao dos valores/coberturas do produto no
+formulario. Como protecao extra, se o operador ja estiver na revisao e ainda
+houver uma escolha pendente, o seletor aparece dentro da coluna. Os campos de
+data da revisao do comparativo passaram a usar o `DatePicker` padrao do sistema.
+Na mesma rodada, `AutoWorkflowPanel` deixou de ler os campos de organizacao por
+`document.getElementById` e passou a controlar os valores em estado React; os
+campos de proximo passo, follow-up e lembrete agora usam o mesmo `DatePicker`
+visual do sistema. Validado com suite focada de orcamento (76 testes), suite
+completa (551 testes) e `npm run build`.
+
 ---
 
 ## Extracao completa das cotacoes e limite de reboque (2026-08-27, Codex — CONCLUIDA)

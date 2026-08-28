@@ -279,8 +279,17 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
 - A revisao pode abrir com dados parciais para conferencia, mas nao com PDF
   ausente/lendo/sem parser valido. Se `cotacao.escolha_pendente` estiver ativa
   (Allianz/HDI/Pier/Suhai), o rodape do upload avisa que falta escolher
-  produto/oferta/franquia; a geracao final continua bloqueada por
-  `validarCotacao`, mas os dados ja extraidos aparecem para o operador revisar.
+  produto/oferta/franquia e o botao **Visualizar revisao** fica bloqueado ate a
+  escolha. Essa escolha e o gatilho que aplica premio, franquia e coberturas do
+  produto correto nos campos da revisao; nao escolher silenciosamente e
+  proposital para nao gerar comparativo com modalidade errada. Como protecao
+  extra, `ReviewColumn` tambem exibe `AutoOrcamentoOfertas` se uma escolha
+  pendente chegar ate a revisao. Os campos de data da revisao usam o `DatePicker`
+  padrao do sistema.
+- `AutoWorkflowPanel` tambem usa `DatePicker` nos prazos de proximo passo,
+  follow-up e lembretes, com os valores mantidos em estado React. Evitar voltar
+  para leitura por `document.getElementById`, porque isso torna o painel mais
+  fragil quando o componente for reutilizado em modais/cards.
 - Quando uma categoria tem texto extraido mas insuficiente para liberar o PDF,
   `montarCategorias` preserva `texto_extraido` e `camposDaCotacao` o mostra na
   revisao. Ex.: "carro reserva incluso conforme apolice" aparece para o usuario,

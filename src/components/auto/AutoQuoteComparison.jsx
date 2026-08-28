@@ -6,6 +6,7 @@ import {
 
 import { extrairDiasCarroReserva, montarCategorias, TEM_VALOR_MONETARIO } from '../../lib/orcamentoComparativo'
 import { aplicarRevisao, camposDaCotacao } from '../../lib/orcamentoLeitura'
+import { DatePicker } from '../ui'
 import AutoOrcamentoOfertas from './AutoOrcamentoOfertas'
 
 const ROLES = [
@@ -237,16 +238,31 @@ function ReviewField({ field, value, issue, onChange }) {
   return (
     <label className={`auto-comparison-review-field ${issue ? 'has-issue' : ''} ${field.critical ? 'is-critical' : ''}`}>
       <span>{field.label}{field.critical && <i>crítico</i>}</span>
-      {field.multiline ? <textarea {...props} rows="3" /> : <input {...props} type={field.type === 'date' ? 'date' : 'text'} inputMode={field.type === 'money' || field.type === 'number' ? 'decimal' : undefined} />}
+      {field.multiline
+        ? <textarea {...props} rows="3" />
+        : field.type === 'date'
+          ? <DatePicker value={value ?? ''} onChange={onChange} placeholder={issue ? 'Revisar data' : 'Selecionar data'} className="auto-comparison-date-picker" />
+          : <input {...props} type="text" inputMode={field.type === 'money' || field.type === 'number' ? 'decimal' : undefined} />}
       {issue && <small><AlertTriangle />Campo previsto para conferência obrigatória</small>}
     </label>
   )
 }
 
-function ReviewColumn({ role, side, issues, onPatch }) {
+function ReviewColumn({ role, side, issues, leitura, aplicando, onEscolherOferta, onPatch }) {
+  const escolha = leitura?.cotacao?.escolha_pendente
   return (
     <article className={`auto-comparison-review-column is-${role}`}>
       <header><span>{role === 'atual' ? 'Atual' : 'Concorrente'}</span><div><strong>{side.seguradora || 'Seguradora não definida'}</strong><small>{side.arquivo_nome || 'Preenchimento manual'}</small></div>{issues.length === 0 ? <CheckCircle2 className="is-valid" /> : <span className="auto-comparison-issue-count">{issues.length}</span>}</header>
+      {escolha && (
+        <div className="auto-comparison-review-choice">
+          <AutoOrcamentoOfertas
+            escolha={escolha}
+            escolhida={null}
+            onEscolher={onEscolherOferta}
+            disabled={aplicando}
+          />
+        </div>
+      )}
       <div className="auto-comparison-review-fields">{REVIEW_FIELDS.map(field => <ReviewField key={field.key} field={field} value={side.campos[field.key]} issue={issues.includes(field.key)} onChange={value => onPatch(field.key, value)} />)}</div>
     </article>
   )
@@ -286,7 +302,12 @@ export default function AutoQuoteComparison({ quote }) {
     if (leiturasPendentes.length) return `Revise o aviso de leitura de: ${leiturasPendentes.join(' e ')}.`
     return 'As duas leituras estão prontas para conferência.'
   })()
-  const podeAbrirRevisao = faltamArquivos.length === 0 && leiturasPendentes.length === 0 && !lendo.atual && !lendo.concorrente
+  const podeAbrirRevisao = faltamArquivos.length === 0 && escolhasPendentes.length === 0 && leiturasPendentes.length === 0 && !lendo.atual && !lendo.concorrente
+  const tituloRodapeUpload = escolhasPendentes.length
+    ? 'Escolha o produto antes da revisão'
+    : podeRevisar
+      ? 'Visual pronto para a conferência'
+      : 'Revisão aguardando leitura'
 
   async function chooseFile(role, file) {
     if (file && !parsers[role]) {
@@ -493,10 +514,21 @@ export default function AutoQuoteComparison({ quote }) {
             onEscolherOferta={indice => escolherOferta(key, indice)}
           />
         ))}</div>
-        <footer className="auto-comparison-footer"><div><FileText /><span><strong>{podeRevisar ? 'Visual pronto para a conferência' : 'Revisão parcial disponível'}</strong><small>{resumoUpload}</small></span></div><button type="button" onClick={() => setStep('review')} disabled={!podeAbrirRevisao}>Visualizar revisão <ArrowRight /></button></footer>
+        <footer className="auto-comparison-footer"><div><FileText /><span><strong>{tituloRodapeUpload}</strong><small>{resumoUpload}</small></span></div><button type="button" onClick={() => setStep('review')} disabled={!podeAbrirRevisao}>Visualizar revisão <ArrowRight /></button></footer>
       </> : <>
         <div className="auto-comparison-review-summary"><div><span>Pendências previstas</span><strong>{issueCount}</strong><small>{criticalCount} campo(s) crítico(s)</small></div><p><AlertTriangle />Franquia, indenização integral e cobertura não informada bloqueiam a geração — um comparativo com linha faltando chega ao cliente parecendo completo.</p><button type="button" onClick={() => setStep('upload')}><RefreshCw />Voltar ao upload</button></div>
-        <div className="auto-comparison-review-grid">{ROLES.map(({ key }) => <ReviewColumn key={key} role={key} side={sides[key]} issues={issues[key]} onPatch={(field, value) => patchField(key, field, value)} />)}</div>
+        <div className="auto-comparison-review-grid">{ROLES.map(({ key }) => (
+          <ReviewColumn
+            key={key}
+            role={key}
+            side={sides[key]}
+            issues={issues[key]}
+            leitura={leituras[key]}
+            aplicando={aplicando[key]}
+            onEscolherOferta={indice => escolherOferta(key, indice)}
+            onPatch={(field, value) => patchField(key, field, value)}
+          />
+        ))}</div>
         {erroGeracao && <div className="auto-comparison-review-summary is-error"><p><AlertTriangle />{erroGeracao}</p></div>}
         <footer className="auto-comparison-footer is-review">
           <div><CheckCircle2 /><span><strong>{comparativoGerado ? 'Cotação pronta para visualizar' : 'Revisão pronta para concluir'}</strong><small>{comparativoGerado ? 'A área da cotação contém o botão para baixar ou salvar o PDF.' : 'Confira os campos dos dois lados; a cotação abre em uma área própria.'}</small></span></div>

@@ -22,7 +22,7 @@ export default function AutoOrcamentoOfertas({ escolha, escolhida, onEscolher, d
         <AlertTriangle />
         <span>
           <strong>{escolha.label}</strong>
-          <small>Esta cotação apresenta {escolha.opcoes.length} {tipo}. Selecione a opção que será elaborada.</small>
+          <small>Esta cotação apresenta {escolha.opcoes.length} {tipo}. Clique em uma opção para iniciar a coleta dos valores e preencher a revisão.</small>
         </span>
       </header>
       <ul>
@@ -43,6 +43,7 @@ export default function AutoOrcamentoOfertas({ escolha, escolhida, onEscolher, d
                   {opcao.nome || opcao.label}
                 </span>
                 <strong>{moedaBr(opcao.premio_total)}</strong>
+                <span className="auto-comparison-oferta-action">{ativa ? 'Selecionado' : 'Escolher e preencher'}</span>
               </button>
             </li>
           )

@@ -752,6 +752,7 @@ export function montarCard(cotacao, { papel = 'atual' } = {}) {
   return {
     papel,
     seguradora: {
+      id: cot.seguradora?.id || null,
       nome: cot.seguradora?.nome || '',
       logo_url: cot.seguradora?.logo_url || '',
       cor,

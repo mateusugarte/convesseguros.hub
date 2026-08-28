@@ -8,6 +8,7 @@ import {
 import { extrairDiasCarroReserva, montarCategorias, TEM_VALOR_MONETARIO } from '../../lib/orcamentoComparativo'
 import { aplicarRevisao, camposDaCotacao } from '../../lib/orcamentoLeitura'
 import { getEntityImageUrl } from '../../lib/entityMedia'
+import { supabase } from '../../lib/supabase'
 import { DatePicker } from '../ui'
 import AutoOrcamentoOfertas from './AutoOrcamentoOfertas'
 
@@ -302,7 +303,7 @@ function ReviewColumn({ role, side, issues, leitura, aplicando, onEscolherOferta
   )
 }
 
-function OrcamentoPreview({ html, fullscreen = false, onFullscreen, onCloseFullscreen, onDownload }) {
+function OrcamentoPreview({ html, fullscreen = false, salvando = false, salvo = null, onFullscreen, onCloseFullscreen, onDownload, onSave }) {
   const iframeRef = useRef(null)
   if (!html) return null
 
@@ -315,6 +316,10 @@ function OrcamentoPreview({ html, fullscreen = false, onFullscreen, onCloseFulls
           <small>Confira o visual final; para salvar, use “Baixar PDF”.</small>
         </div>
         <div className="auto-comparison-preview-actions">
+          <button type="button" onClick={onSave} disabled={salvando}>
+            {salvando ? <LoaderCircle className="is-spinning" /> : <FileCheck2 />}
+            {salvo?.referencia ? `Salvo ${salvo.referencia}` : 'Salvar'}
+          </button>
           {fullscreen
             ? <button type="button" onClick={onCloseFullscreen}><X />Fechar tela cheia</button>
             : <button type="button" onClick={onFullscreen}><Maximize2 />Tela cheia</button>}
@@ -358,6 +363,8 @@ export default function AutoQuoteComparison({ quote }) {
   const [comparativoGerado, setComparativoGerado] = useState(null)
   const [previewHtml, setPreviewHtml] = useState('')
   const [previewFullscreen, setPreviewFullscreen] = useState(false)
+  const [salvandoOrcamento, setSalvandoOrcamento] = useState(false)
+  const [orcamentoSalvo, setOrcamentoSalvo] = useState(null)
   const issues = useMemo(() => Object.fromEntries(ROLES.map(({ key }) => [
     key,
     REVIEW_FIELDS
@@ -579,6 +586,7 @@ export default function AutoQuoteComparison({ quote }) {
     setComparativoGerado(null)
     setPreviewHtml('')
     setPreviewFullscreen(false)
+    setOrcamentoSalvo(null)
   }
 
   async function baixarPdf(iframeRef) {
@@ -590,6 +598,70 @@ export default function AutoQuoteComparison({ quote }) {
     await imagensCarregadas(janela)
     janela.focus()
     janela.print()
+  }
+
+  async function salvarOrcamento() {
+    if (!comparativoGerado) {
+      setErroGeracao('Gere a prévia antes de salvar o orçamento.')
+      return
+    }
+    if (orcamentoSalvo?.id) return
+
+    setSalvandoOrcamento(true)
+    setErroGeracao('')
+    try {
+      const ano = new Date().getFullYear()
+      const { data: numero, error: numeroError } = await supabase.rpc('proximo_numero_orcamento_auto', { p_ano: ano })
+      if (numeroError) throw numeroError
+      const sequencial = Array.isArray(numero) ? numero[0] : numero
+      if (!sequencial?.referencia) throw new Error('A RPC proximo_numero_orcamento_auto não retornou uma referência.')
+
+      const { data: userData } = await supabase.auth.getUser()
+      const payload = {
+        referencia: sequencial.referencia,
+        ano: sequencial.ano || ano,
+        sequencial: sequencial.sequencial,
+        cotacao_id: quote?.id || null,
+        cliente_id: quote?.cliente_id || null,
+        seguradora_atual_id: comparativoGerado.cards?.[0]?.seguradora?.id || null,
+        seguradora_outra_id: comparativoGerado.cards?.[1]?.seguradora?.id || null,
+        segurado_nome: comparativoGerado.cliente?.segurado || null,
+        veiculo: comparativoGerado.cliente?.veiculo || null,
+        placa: comparativoGerado.cliente?.placa || null,
+        tipo_operacao: comparativoGerado.cliente?.tipo_operacao || quote?.tipo || 'novo',
+        dados_atual: comparativoGerado.cards?.[0] || {},
+        dados_outra: comparativoGerado.cards?.[1] || {},
+        premio_total_atual: comparativoGerado.cards?.[0]?.valores?.total ?? null,
+        premio_total_outra: comparativoGerado.cards?.[1]?.valores?.total ?? null,
+        emitido_em: comparativoGerado.cabecalho?.emitido_em || new Date().toISOString().slice(0, 10),
+        validade_dias: comparativoGerado.cabecalho?.validade_dias || 5,
+        status: 'gerado',
+        criado_por: userData?.user?.id || null,
+      }
+
+      const { data, error } = await supabase
+        .from('auto_orcamentos')
+        .insert(payload)
+        .select('id, referencia')
+        .single()
+      if (error) throw error
+      setOrcamentoSalvo(data)
+      const atualizado = {
+        ...comparativoGerado,
+        cabecalho: { ...comparativoGerado.cabecalho, referencia: data.referencia },
+      }
+      const { montarHtmlOrcamento } = await import('../../lib/orcamentoComparativoHtml')
+      setComparativoGerado(atualizado)
+      setPreviewHtml(montarHtmlOrcamento(atualizado))
+    } catch (erro) {
+      const msg = String(erro?.message || erro)
+      const migrationHint = /auto_orcamentos|proximo_numero_orcamento_auto|schema cache|function/i.test(msg)
+        ? ' Verifique se a migration supabase/67_auto_orcamento_comparativo.sql já foi rodada.'
+        : ''
+      setErroGeracao(`Não foi possível salvar o orçamento: ${msg}.${migrationHint}`)
+    } finally {
+      setSalvandoOrcamento(false)
+    }
   }
 
   return (
@@ -642,14 +714,20 @@ export default function AutoQuoteComparison({ quote }) {
         </footer>
         <OrcamentoPreview
           html={previewHtml}
+          salvando={salvandoOrcamento}
+          salvo={orcamentoSalvo}
           onFullscreen={() => setPreviewFullscreen(true)}
           onDownload={baixarPdf}
+          onSave={salvarOrcamento}
         />
         <OrcamentoPreview
           html={previewFullscreen ? previewHtml : ''}
           fullscreen
+          salvando={salvandoOrcamento}
+          salvo={orcamentoSalvo}
           onCloseFullscreen={() => setPreviewFullscreen(false)}
           onDownload={baixarPdf}
+          onSave={salvarOrcamento}
         />
       </>}
     </section>

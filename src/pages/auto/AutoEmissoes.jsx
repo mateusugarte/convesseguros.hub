@@ -1401,7 +1401,12 @@ export default function AutoEmissoes() {
 
   const [dragging, setDragging] = useState(null)
   const [dragOver, setDragOver] = useState(null)
-  const [kanbanDensity, setKanbanDensity] = useState(() => localStorage.getItem('auto-kanban-density') || 'comfortable')
+  const [kanbanDensity, setKanbanDensity] = useState(() => {
+    const saved = localStorage.getItem('auto-kanban-density')
+    if (saved) return saved
+    if (typeof window !== 'undefined' && window.innerWidth < 1440) return 'compact'
+    return 'comfortable'
+  })
   const [modalResultado, setModalResultado] = useState(null)
   const [modalEmissao, setModalEmissao] = useState(null)
   const [detalhe, setDetalhe] = useState(null)

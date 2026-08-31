@@ -7,7 +7,6 @@ import {
   AutoBadge,
   AutoLoading,
   AutoPageHeader,
-  AutoPdfAutomation,
   AutoQuoteComparison,
   AutoQuoteSnapshot,
   AutoStatStrip,
@@ -15,17 +14,21 @@ import {
   AutoTypeBadge,
   AutoWorkflowPanel,
 } from '../../components/auto'
-import SeguradoraSelect from '../../components/SeguradoraSelect'
 import { calcularValorComissaoAuto, deletarCotacaoAuto, getCotacaoAutoPorId, atualizarCotacaoAuto } from '../../lib/auto'
 import { COTACAO_STATUS, formatDateTimeBR, formatMoney, toneClasses } from './autoShared'
 import { formatDecimalBRInput, parseDecimalBR } from '../../lib/numberInput'
-import { parseOrcamentoAuto } from '../../lib/autoPdfParser.js'
+import { mesclarOpcaoFinanceira, opcaoFinanceiraSincronizada } from '../../lib/autoQuoteFinancial'
 import { valorFormularioAuto } from '../../lib/autoFormPayload'
 import { useVoltar } from '../../hooks/useVoltar.js'
 
 function QuoteStatusBadge({ status }) {
   const meta = COTACAO_STATUS[status] || COTACAO_STATUS.aberta
   return <span className={`badge ${toneClasses(meta.tone)}`}>{meta.label}</span>
+}
+
+function formatMoneyOptional(value, fallback = 'Aguardando leitura') {
+  const parsed = parseDecimalBR(value)
+  return parsed === null ? fallback : formatMoney(parsed)
 }
 
 function DetailField({ label, value, onSave, type = 'text', rows, placeholder, readOnly = false, inputMode }) {
@@ -270,11 +273,7 @@ export default function AutoCotacaoDetalhe() {
   const [actionError, setActionError] = useState(null)
   const [tab, setTab] = useState(() => new URLSearchParams(location.search).get('tab') || 'resumo')
   const [copied, setCopied] = useState('')
-  const [pdfFile, setPdfFile] = useState(null)
-  const [pdfStatus, setPdfStatus] = useState('idle')
-  const [pdfResult, setPdfResult] = useState(null)
-  const [pdfError, setPdfError] = useState('')
-  const [pdfApplied, setPdfApplied] = useState(false)
+  const [opcoesFinanceirasComparativo, setOpcoesFinanceirasComparativo] = useState(null)
 
   const { data: cotacao, isLoading } = useQuery({
     queryKey: ['auto-cotacao', id],
@@ -297,16 +296,8 @@ export default function AutoCotacaoDetalhe() {
     },
   })
 
-  const { mutateAsync: salvarSeguradora } = useMutation({
-    mutationFn: async ({ field, value }) => {
-      const atual = cotacao?.[field] || {}
-      return atualizarCotacaoAuto(id, {
-        [field]: {
-          ...atual,
-          nome: value || null,
-        },
-      })
-    },
+  const { mutate: sincronizarOpcoesFinanceiras } = useMutation({
+    mutationFn: patch => atualizarCotacaoAuto(id, patch),
     onSuccess: async () => {
       setActionError(null)
       await qc.invalidateQueries({ queryKey: ['auto-cotacao', id] })
@@ -314,61 +305,9 @@ export default function AutoCotacaoDetalhe() {
       await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
     },
     onError: error => {
-      setActionError(error?.message || 'Erro ao salvar a seguradora.')
+      setActionError(error?.message || 'Erro ao sincronizar as seguradoras do comparativo.')
     },
   })
-
-  const { mutateAsync: aplicarPdf } = useMutation({
-    mutationFn: async () => {
-      const campos = pdfResult?.campos || {}
-      const cotada = pdfResult?.seguradora_cotada || {}
-      const patch = Object.entries(campos).reduce((next, [field, value]) => {
-        if (value !== null && value !== '') next[field] = value
-        return next
-      }, {})
-      if (Object.values(cotada).some(value => value !== null && value !== '')) {
-        patch.seguradora_preferencial = {
-          ...(cotacao?.seguradora_preferencial || {}),
-          ...cotada,
-          premio_total: cotada.valor_total || cotacao?.seguradora_preferencial?.premio_total || null,
-        }
-      }
-      return atualizarCotacaoAuto(id, patch)
-    },
-    onSuccess: async () => {
-      setPdfApplied(true)
-      setActionError(null)
-      await qc.invalidateQueries({ queryKey: ['auto-cotacao', id] })
-      await qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
-      await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
-      await qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
-    },
-    onError: error => setActionError(error?.message || 'Erro ao aplicar os dados do PDF.'),
-  })
-
-  async function handlePdf(file) {
-    setPdfFile(file)
-    setPdfResult(null)
-    setPdfError('')
-    setPdfApplied(false)
-    if (!file) {
-      setPdfStatus('idle')
-      return
-    }
-    const isPdf = file.type === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf')
-    if (!isPdf) {
-      setPdfStatus('attached')
-      return
-    }
-    setPdfStatus('reading')
-    try {
-      setPdfResult(await parseOrcamentoAuto(file))
-      setPdfStatus('ready')
-    } catch (error) {
-      setPdfError(error?.message || 'O conteúdo do orçamento não pôde ser extraído.')
-      setPdfStatus('error')
-    }
-  }
 
   const { mutateAsync: excluir, isPending: deleting } = useMutation({
     mutationFn: () => deletarCotacaoAuto(id),
@@ -386,12 +325,38 @@ export default function AutoCotacaoDetalhe() {
 
   useEffect(() => {
     setConfirmDelete(false)
+    setOpcoesFinanceirasComparativo(null)
   }, [id])
 
   useEffect(() => {
     const requested = new URLSearchParams(location.search).get('tab')
     if (requested && DETAIL_TABS.some(item => item.value === requested)) setTab(requested)
   }, [location.search])
+
+  const opcoesFinanceirasExibidas = useMemo(() => Object.fromEntries([
+    'seguradora_preferencial',
+    'seguradora_mais_barata',
+  ].map(field => [
+    field,
+    opcoesFinanceirasComparativo && !opcoesFinanceirasComparativo[field]
+      ? {}
+      : mesclarOpcaoFinanceira(cotacao?.[field], opcoesFinanceirasComparativo?.[field]),
+  ])), [cotacao, opcoesFinanceirasComparativo])
+
+  useEffect(() => {
+    if (!cotacao || !opcoesFinanceirasComparativo) return undefined
+
+    const patch = {}
+    for (const field of ['seguradora_preferencial', 'seguradora_mais_barata']) {
+      const derivada = opcoesFinanceirasComparativo[field]
+      if (!derivada?.nome || opcaoFinanceiraSincronizada(cotacao[field], derivada)) continue
+      patch[field] = mesclarOpcaoFinanceira(cotacao[field], derivada)
+    }
+    if (!Object.keys(patch).length) return undefined
+
+    const timer = window.setTimeout(() => sincronizarOpcoesFinanceiras(patch), 350)
+    return () => window.clearTimeout(timer)
+  }, [cotacao, opcoesFinanceirasComparativo, sincronizarOpcoesFinanceiras])
 
   // Volta para a tela de onde a cotacao foi aberta — Visao Geral, Pipeline,
   // ficha do cliente ou busca. A lista de cotacoes e so o ultimo recurso.
@@ -533,105 +498,86 @@ export default function AutoCotacaoDetalhe() {
           </DataCard>
 
           <DataCard className={tab === 'seguradoras' ? 'xl:col-span-2 auto-comparison-card' : 'hidden'} title="Orçamentos da cotação" subtitle="Dois PDFs, revisão obrigatória e dados prontos para o comparativo final">
-            <AutoQuoteComparison key={cotacao.id} quote={cotacao} />
-            <div className="auto-comparison-manual-divider"><span>Leitura atual preservada</span></div>
-            <div className="auto-comparison-legacy-tool">
-              <AutoPdfAutomation
-                mode="orcamento" file={pdfFile} status={pdfStatus} result={pdfResult} error={pdfError} applied={pdfApplied}
-                onFile={handlePdf} onApply={() => { void aplicarPdf().catch(() => {}) }}
-                onClear={() => { setPdfFile(null); setPdfStatus('idle'); setPdfResult(null); setPdfError(''); setPdfApplied(false) }}
-              />
-            </div>
-            <div className="auto-comparison-manual-divider"><span>Ajustes financeiros rápidos</span></div>
+            <AutoQuoteComparison
+              key={cotacao.id}
+              quote={cotacao}
+              onFinancialOptionsChange={setOpcoesFinanceirasComparativo}
+            />
+            <div className="auto-comparison-manual-divider"><span>Fechamento financeiro</span></div>
             <div className="grid gap-4 lg:grid-cols-2">
               {[
-                { key: 'seguradora_preferencial', title: 'Seguradora preferencial' },
-                { key: 'seguradora_mais_barata', title: 'Seguradora mais barata' },
+                { key: 'seguradora_preferencial', title: 'Seguradora preferencial', badge: 'Seguradora atual' },
+                { key: 'seguradora_mais_barata', title: 'Seguradora mais barata', badge: 'Menor prêmio total' },
               ].map(section => (
-                <div key={section.key} className="space-y-3 rounded-3xl border border-dark-border/60 bg-dark-surface2/20 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-dark-muted">{section.title}</p>
-                    <button
-                      type="button"
-                      onClick={() => { void salvarSeguradora({ field: section.key, value: '' }).catch(() => {}) }}
-                      className="text-xs text-dark-muted transition-colors hover:text-dark-text"
-                    >
-                      Limpar
-                    </button>
+                <div key={section.key} className="overflow-hidden rounded-3xl border border-dark-border/60 bg-white shadow-[0_16px_40px_rgba(15,42,78,0.06)]">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-dark-border/50 bg-gradient-to-br from-brand-accent/[0.08] via-white to-white p-4">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-dark-muted">{section.title}</p>
+                      <div className="mt-2 flex items-center gap-2 text-dark-text">
+                        <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e8efff] text-[#315dc5]"><ShieldCheck className="h-4 w-4" /></span>
+                        <strong className="text-base">{opcoesFinanceirasExibidas[section.key]?.nome || 'Aguardando comparação'}</strong>
+                      </div>
+                    </div>
+                    <span className="rounded-full border border-[#cbd9ff] bg-[#edf2ff] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#315dc5]">{section.badge}</span>
                   </div>
-                  <SeguradoraSelect
-                    value={cotacao?.[section.key]?.nome || ''}
-                    onChange={value => { void salvarSeguradora({ field: section.key, value }).catch(() => {}) }}
-                    produto="auto"
-                    placeholder="Selecionar seguradora"
-                  />
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-3 p-4 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-brand-accent/15 bg-brand-accent/[0.05] p-4 sm:col-span-2">
+                      <p className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted"><BadgeDollarSign className="h-3.5 w-3.5" /> Prêmio total do orçamento</p>
+                      <p className="mt-2 text-xl font-semibold text-dark-text">{formatMoneyOptional(opcoesFinanceirasExibidas[section.key]?.premio_total)}</p>
+                      <p className="mt-1 text-xs text-dark-muted">Preenchido automaticamente pela comparação revisada acima.</p>
+                    </div>
                     <DetailField
-                      label={<span className="inline-flex items-center gap-1.5"><BadgeDollarSign className="h-3.5 w-3.5" /> Premio total</span>}
+                      label={<span className="inline-flex items-center gap-1.5"><BadgeDollarSign className="h-3.5 w-3.5" /> Prêmio líquido</span>}
                       type="text"
                       inputMode="decimal"
                       placeholder="0,00"
-                      value={formatDecimalBRInput(cotacao?.[section.key]?.premio_total)}
+                      value={formatDecimalBRInput(opcoesFinanceirasExibidas[section.key]?.premio_liquido)}
                       onSave={value => salvarCampo({
                         field: section.key,
                         value: {
-                          ...(cotacao?.[section.key] || {}),
-                          premio_total: value === null ? null : parseDecimalBR(value),
-                        },
-                      })}
-                    />
-                    <DetailField
-                      label={<span className="inline-flex items-center gap-1.5"><BadgeDollarSign className="h-3.5 w-3.5" /> Premio liquido</span>}
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0,00"
-                      value={formatDecimalBRInput(cotacao?.[section.key]?.premio_liquido)}
-                      onSave={value => salvarCampo({
-                        field: section.key,
-                        value: {
-                          ...(cotacao?.[section.key] || {}),
+                          ...opcoesFinanceirasExibidas[section.key],
                           premio_liquido: value === null ? null : parseDecimalBR(value),
                         },
                       })}
                     />
                     <DetailField
-                      label={<span className="inline-flex items-center gap-1.5"><BadgeDollarSign className="h-3.5 w-3.5" /> % Comissao</span>}
+                      label={<span className="inline-flex items-center gap-1.5"><BadgeDollarSign className="h-3.5 w-3.5" /> % Comissão</span>}
                       type="text"
                       inputMode="decimal"
                       placeholder="0"
-                      value={formatDecimalBRInput(cotacao?.[section.key]?.pct_comissao)}
+                      value={formatDecimalBRInput(opcoesFinanceirasExibidas[section.key]?.pct_comissao)}
                       onSave={value => salvarCampo({
                         field: section.key,
                         value: {
-                          ...(cotacao?.[section.key] || {}),
+                          ...opcoesFinanceirasExibidas[section.key],
                           pct_comissao: value === null ? null : parseDecimalBR(value),
                         },
                       })}
                     />
                     <DetailField
-                      label={<span className="inline-flex items-center gap-1.5"><BadgeDollarSign className="h-3.5 w-3.5" /> Comissao ano passado</span>}
+                      label={<span className="inline-flex items-center gap-1.5"><BadgeDollarSign className="h-3.5 w-3.5" /> Comissão ano passado</span>}
                       type="text"
                       inputMode="decimal"
                       placeholder="0,00"
-                      value={formatDecimalBRInput(cotacao?.[section.key]?.comissao_ano_passado)}
+                      value={formatDecimalBRInput(opcoesFinanceirasExibidas[section.key]?.comissao_ano_passado)}
                       onSave={value => salvarCampo({
                         field: section.key,
                         value: {
-                          ...(cotacao?.[section.key] || {}),
+                          ...opcoesFinanceirasExibidas[section.key],
                           comissao_ano_passado: value === null ? null : parseDecimalBR(value),
                         },
                       })}
                     />
-                    <div className="rounded-2xl border border-brand-accent/15 bg-brand-accent/6 p-4 sm:col-span-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissao estimada</p>
+                    <div className="rounded-2xl border border-brand-accent/15 bg-brand-accent/[0.05] p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">Comissão estimada</p>
                       <p className="mt-2 text-sm font-semibold text-dark-text">
-                        {formatMoney(calcularValorComissaoAuto(cotacao?.[section.key]?.premio_liquido, cotacao?.[section.key]?.pct_comissao))}
+                        {formatMoney(calcularValorComissaoAuto(opcoesFinanceirasExibidas[section.key]?.premio_liquido, opcoesFinanceirasExibidas[section.key]?.pct_comissao))}
                       </p>
-                      {Number(cotacao?.[section.key]?.comissao_ano_passado) > 0 && (
+                      {Number(opcoesFinanceirasExibidas[section.key]?.comissao_ano_passado) > 0 && (
                         <p className="mt-1 text-xs text-dark-muted">
                           {(() => {
-                            const atual = calcularValorComissaoAuto(cotacao?.[section.key]?.premio_liquido, cotacao?.[section.key]?.pct_comissao)
-                            const anterior = Number(cotacao[section.key].comissao_ano_passado)
+                            const atual = calcularValorComissaoAuto(opcoesFinanceirasExibidas[section.key]?.premio_liquido, opcoesFinanceirasExibidas[section.key]?.pct_comissao)
+                            const anterior = Number(opcoesFinanceirasExibidas[section.key].comissao_ano_passado)
                             const diferenca = atual - anterior
                             const sinal = diferenca > 0 ? '+' : ''
                             return `vs. ano passado (${formatMoney(anterior)}): ${sinal}${formatMoney(diferenca)}`

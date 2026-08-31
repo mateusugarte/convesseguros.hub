@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { criarCotacaoOrcamento, montarComparativo } from './orcamentoComparativo.js'
-import { montarHtmlOrcamento, escapeHtml } from './orcamentoComparativoHtml.js'
+import { calcularEscalaImpressao, montarHtmlOrcamento, escapeHtml } from './orcamentoComparativoHtml.js'
 
 function cotacao(nome, patch = {}) {
   const c = criarCotacaoOrcamento()
@@ -72,8 +72,17 @@ test('preview e impressao compartilham exatamente o mesmo modelo oficial', () =>
   const doc = html()
   assert.ok(doc.includes('class="hero-orcamento"'))
   assert.ok(doc.includes('class="cliente-modelo"'))
+  assert.ok(doc.includes('class="pagina-conteudo"'))
   assert.ok(doc.includes('background:#edf3fa'))
   assert.ok(doc.includes('.pagina{width:210mm;height:297mm;min-height:297mm'))
+  assert.ok(doc.includes('transform:scale(var(--pdf-scale,1))'))
+  assert.ok(doc.includes('min-height:var(--pdf-layout-height,297mm)'))
+})
+
+test('escala de impressao preserva 100% quando cabe e reduz quando excede o A4', () => {
+  assert.equal(calcularEscalaImpressao(1000, 1120), 1)
+  assert.equal(calcularEscalaImpressao(1400, 1120, 0), 0.8)
+  assert.equal(calcularEscalaImpressao(0, 1120), 1)
 })
 
 test('as duas seguradoras entram com a cor de identidade, nao a do papel', () => {
@@ -97,6 +106,16 @@ test('seguradora sem logo cadastrada cai para o nome, sem furo no card', () => {
   const comp = montarComparativo({ atual: semLogo, outra: cotacao('Porto Seguro') })
   const doc = montarHtmlOrcamento(comp)
   assert.ok(doc.includes('<span class="fallback">Seguradora Nova</span>'))
+})
+
+test('Pier usa uma logo vetorial embutida mesmo sem URL cadastrada', () => {
+  const pier = cotacao('Pier Seguros')
+  pier.seguradora.logo_url = ''
+  const comp = montarComparativo({ atual: cotacao('HDI Seguros'), outra: pier })
+  const doc = montarHtmlOrcamento(comp)
+  assert.ok(doc.includes('data:image/svg+xml'))
+  assert.ok(doc.includes('aria-label%3D%22Pier%22'))
+  assert.ok(!doc.includes('<span class="fallback">Pier Seguros</span>'))
 })
 
 test('cobertura conhecida nao inclusa aparece na propria linha da tabela', () => {

@@ -1,5 +1,114 @@
 # CURRENT TASK
 
+## Pipeline AUTO sem atrito e rascunho de orcamento persistente (2026-08-31, Claude — CONCLUIDA)
+
+Responsavel: Claude Code. Solicitacao do usuario (3 pedidos em uma mensagem):
+
+1. Mover um card para "Cotacoes feitas" NAO pode mais abrir formulario — a informacao ja e
+   preenchida dentro do card.
+2. Melhorar a Pipeline: visualizacao, uso e produtividade, "separando mais mas deixando os
+   confortaveis", com foco em quem trabalha em notebook.
+3. O sistema de salvar cotacoes nao funciona: ao sair da tela, todo o trabalho do orcamento
+   comparativo (upload, leitura, revisao) e perdido.
+
+Causa dos itens 1 e 3:
+- `handleDrop` em `AutoEmissoes.jsx` abria `ModalResultado` para `cotacao_feita` porque
+  `resolveAutoEmissionStage` devolve `pendentes` quando `coluna === 'cotacao_feita'` e
+  `resultado` esta vazio — sem o modal o card voltava sozinho para a coluna anterior.
+- `AutoQuoteComparison` mantinha `sides`, `parsers`, `leituras` e `step` apenas em `useState`.
+  Sair da rota destruia o componente e com ele todo o trabalho; nada era gravado.
+
+## Alteracoes
+
+Novos modulos puros e testados:
+- `src/lib/autoQuoteDraft.js` + teste (19 casos) — serializa/restaura o workspace
+  do orcamento, grava no localStorage com fallback de cota e reconhece a coluna
+  ausente antes da migration 72.
+- `src/lib/autoPipelineBoard.js` + teste (13 casos) — ordem real do funil,
+  vizinha de etapa, somatorio por coluna e preferencias do quadro.
+
+Pipeline (`src/pages/auto/AutoEmissoes.jsx`):
+- `moverCardPipeline` substitui o antigo `handleDrop`. `cotacao_feita` grava o
+  resultado neutro `cotada` e move sem abrir nada; `proposta_transmitida` e
+  `apolice_emitida` seguem com formulario porque gravam transmissao e criam a
+  apolice.
+- Movimentacao otimista com toast de erro em `mover` e `marcarCotacaoFeita`.
+- Botoes `«`/`»` no card para avancar/voltar etapa sem arrastar. O card virou
+  `div[role=button]` porque botao dentro de botao e HTML invalido.
+- Colunas recolhiveis com trilho vertical que aceita drop, botao "Expandir N
+  coluna(s)" e marcacao na trilha de etapas.
+- Cabecalho da coluna mostra quantidade e soma de premio da etapa.
+- Densidade e colunas recolhidas persistidas entre visitas.
+
+Orcamento comparativo (`src/components/auto/AutoQuoteComparison.jsx`):
+- Hidratacao na abertura (local x servidor, vence o mais recente) e autosave com
+  debounce de 700ms, com flush em `beforeunload` e no unmount para nao perder a
+  ultima alteracao.
+- Indicador de estado do rascunho (salvando / salvo / so neste navegador / falha)
+  e botao Descartar.
+- `arquivos` derivado: lado restaurado vale como lado com PDF, senao a revisao
+  ficava bloqueada logo apos restaurar.
+- `salvarOrcamento` atualiza a linha existente em vez de alocar um segundo
+  CV-AAAA-NNNN; autoria preservada na atualizacao.
+
+Banco:
+- `supabase/72_auto_orcamento_rascunho.sql` (nova, NAO executada) — adiciona
+  `cotacoes_auto.orcamento_rascunho jsonb`. Idempotente, so acrescenta coluna
+  anulavel, nenhuma categoria nova de dado pessoal, RLS intocada. Enquanto nao
+  rodar, o rascunho funciona local.
+- `.gitignore` passa a versionar essa migration (o whitelist de `*.sql` estava
+  desatualizado desde a 67; as migrations 68 a 71 continuam nao rastreadas).
+
+Documentacao: `src/pages/auto/CONTEXT.md` ganhou a secao "Pipeline AUTO —
+movimentacao e leitura do quadro" e os paragrafos de rascunho no bloco do
+Orcamento Comparativo.
+
+Validacao: `npm test` 596/596 aprovados; `npm run build` concluido;
+`npm run check:page-contexts` sem regressao (segue apontando apenas
+`src/pages/comercial/GestaoComercial.jsx`, pendencia anterior a esta tarefa).
+
+Riscos remanescentes:
+- Sem a migration 72 o rascunho e por navegador: trocar de maquina no meio de
+  uma cotacao ainda perde o trabalho.
+- Um card movido para "Cotacoes feitas" pelo arraste fica com `resultado =
+  cotada`. A distincao aprovada/recusada continua sendo escolha humana, feita
+  dentro do card.
+
+Proximo passo sugerido: aprovar e rodar a migration 72 no SQL Editor.
+
+---
+
+## Historico
+
+## Auditoria completa de design e funcoes (2026-08-31, Claude — EM ANDAMENTO)
+
+Responsavel: Claude Code. Solicitacao do usuario: revisar o sistema por completo e listar o que
+precisa melhorar em design e em funcoes. Queixa principal: seletores ainda usam o widget nativo do
+navegador em varias telas, o que quebra a identidade visual do produto.
+
+Escopo desta etapa: apenas diagnostico. Nenhum arquivo de aplicacao foi alterado.
+
+Levantamento (medido em 2026-08-31):
+- 209 arquivos JS/JSX, ~64.8k linhas. `npm test` 559/559 aprovados. `npm run build` concluido em 6,08s.
+- 26 `<select>` nativos em 11 arquivos; 41 `input type="date"` em 14 arquivos; 6 `input type="month"`.
+- 3 implementacoes concorrentes de Select: `ui/Select.jsx` (portal, completo), `ui/FormFields.jsx`
+  (portal, sem busca/teclado) e o nativo. `ui/index.js` exporta o fraco como `Select` e o bom como
+  `PortalSelect`, o que faz novas telas adotarem o pior por padrao.
+- 7 usos de `window.alert/confirm/prompt`.
+- 8 arquivos orfaos (~1.621 linhas), incluindo as 5 paginas V1 de Auto substituidas pelas V2.
+- 11 arquivos CSS, 9.089 linhas, sem camada unica de controles de formulario.
+- 46 `useQuery` para 29 tratamentos de `isError`; 800 `<button>` para 93 `aria-label`.
+
+Entrega: relatorio de auditoria priorizado (P0/P1/P2) publicado como artifact, com evidencias por
+arquivo e linha e plano de correcao por bloco.
+
+Proximo responsavel: usuario decide. Recomendacao: P0-1 (padronizar Select) e P0-2 (DatePicker) sao
+tarefas de UI e cabem bem no Codex; P1 de tratamento de erro e limpeza de codigo morto cabem no Claude.
+
+Proximo passo sugerido: aprovar o bloco P0 e executar a substituicao dos 26 selects nativos.
+
+---
+
 ## Seletor de seguradora antes do upload e carro reserva com dias (2026-08-27, Codex — CONCLUIDA)
 
 Responsavel: Codex, Agente de Sistemas. Sintoma reportado pelo usuario: apos upload dos PDFs de

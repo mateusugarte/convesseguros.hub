@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
-import { ArrowLeft, ArrowRight, CalendarDays, Car, CheckCircle2, ChevronLeft, ChevronRight, FileText, Loader2, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, Upload, X, XCircle, Plus, History } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarDays, Car, CheckCircle2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, FileText, Loader2, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, Upload, X, XCircle, Plus, History } from 'lucide-react'
 import { endOfMonth, format, startOfMonth, startOfWeek } from 'date-fns'
 import {
   atualizarEmissaoAutoCompleta, atualizarTagsEmissao, calcularValorComissaoAuto, cancelarRenovacao, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
@@ -25,6 +25,10 @@ import { toNumber } from '../../lib/apolices'
 import { parseAutoHistoricoPlanilha, somarUmAno } from '../../lib/autoHistoricoImport.js'
 import { parseOrcamentoAuto, parsePropostaAuto } from '../../lib/autoPdfParser.js'
 import { AUTO_PIPELINE_STAGES, AUTO_TIPO_META, classificarRenovacoesPipeline, scoreCotacaoSuggestion } from '../../lib/autoOperational.js'
+import {
+  alternarColunaRecolhida, etapaVizinha, gravarPreferenciasPipeline,
+  lerPreferenciasPipeline, resumoFinanceiroEtapa,
+} from '../../lib/autoPipelineBoard.js'
 import { useOrigemAtual, useVoltar } from '../../hooks/useVoltar.js'
 const COLUNAS = [
   { id: 'pendentes', label: 'Cotações pendentes', hint: 'somente seguros novos ainda não cotados', tone: 'warning' },
@@ -471,7 +475,7 @@ function getEditFormInicial(emissao) {
   }
 }
 
-function CardEmissao({ emissao, onDragStart, onClick, tagsPorId }) {
+function CardEmissao({ emissao, onDragStart, onClick, onMover, tagsPorId }) {
   const cardTags = (emissao.tags ?? []).map(id => tagsPorId?.get(id)).filter(Boolean)
   const coluna = getEmissaoColuna(emissao)
   const colunaMeta = getColunaMeta(coluna)
@@ -491,6 +495,8 @@ function CardEmissao({ emissao, onDragStart, onClick, tagsPorId }) {
   const premio = apolice?.premio_liquido ?? emissao.premio_liquido ?? 0
   const comissao = apolice?.valor_comissao ?? emissao.valor_comissao ?? 0
   const prazo = vigenciaFim ? Math.ceil((new Date(`${vigenciaFim}T12:00:00`) - new Date()) / (1000 * 60 * 60 * 24)) : null
+  const etapaAnterior = etapaVizinha(coluna, -1)
+  const proximaEtapa = etapaVizinha(coluna, 1)
 
   let shellClass = 'border-brand-secondary/20 bg-white/90 shadow-[0_18px_40px_rgba(15,23,42,0.06)]'
   let accentClass = 'from-brand-secondary to-brand-accent'
@@ -505,14 +511,22 @@ function CardEmissao({ emissao, onDragStart, onClick, tagsPorId }) {
     accentClass = 'from-brand-accent to-brand-secondary'
   }
 
+  // Div com papel de botao, e nao <button>: os controles de avancar/voltar
+  // etapa moram dentro do card, e botao dentro de botao e HTML invalido.
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       draggable
       onDragStart={() => onDragStart(emissao)}
       onClick={() => onClick(emissao)}
+      onKeyDown={event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        event.preventDefault()
+        onClick(emissao)
+      }}
       title="Abrir detalhes da emissao"
-      className={['auto-kanban-card group relative flex min-h-[290px] w-full flex-col overflow-hidden rounded-[30px] border p-4 text-left transition-all hover:-translate-y-1 hover:shadow-[0_22px_48px_rgba(15,23,42,0.12)]', shellClass].join(' ')}
+      className={['auto-kanban-card group relative flex min-h-[290px] w-full cursor-pointer flex-col overflow-hidden rounded-[30px] border p-4 text-left transition-all hover:-translate-y-1 hover:shadow-[0_22px_48px_rgba(15,23,42,0.12)]', shellClass].join(' ')}
     >
       <div className={['absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r', accentClass].join(' ')} />
       <div className="flex items-start justify-between gap-3">
@@ -578,11 +592,36 @@ function CardEmissao({ emissao, onDragStart, onClick, tagsPorId }) {
         </div>
       </div>
 
-      <div className="mt-auto flex items-center justify-between pt-4 text-xs text-dark-muted">
-        <span>{colunaMeta.hint}</span>
+      <div className="mt-auto flex items-center justify-between gap-2 pt-4 text-xs text-dark-muted">
+        <span className="auto-kanban-card-hint">{colunaMeta.hint}</span>
         <span className="inline-flex items-center gap-1 font-semibold text-status-info">Abrir <ArrowRight className="h-3.5 w-3.5" /></span>
       </div>
-    </button>
+
+      {/* Avancar/voltar sem arrastar. Num notebook, arrastar um card por um
+          quadro que rola na horizontal e a acao mais custosa da tela; aqui um
+          clique faz o mesmo. `stopPropagation` impede que o clique tambem abra
+          o detalhe do card. */}
+      <span className="auto-kanban-card-move" role="group" aria-label="Mover de etapa">
+        <button
+          type="button"
+          disabled={!etapaAnterior}
+          title={etapaAnterior ? `Voltar para ${getColunaMeta(etapaAnterior).label}` : 'Primeira etapa do funil'}
+          aria-label={etapaAnterior ? `Voltar para ${getColunaMeta(etapaAnterior).label}` : 'Primeira etapa do funil'}
+          onClick={event => { event.stopPropagation(); if (etapaAnterior) onMover?.(emissao, etapaAnterior) }}
+        >
+          <ChevronsLeft />
+        </button>
+        <button
+          type="button"
+          disabled={!proximaEtapa}
+          title={proximaEtapa ? `Avançar para ${getColunaMeta(proximaEtapa).label}` : 'Última etapa do funil'}
+          aria-label={proximaEtapa ? `Avançar para ${getColunaMeta(proximaEtapa).label}` : 'Última etapa do funil'}
+          onClick={event => { event.stopPropagation(); if (proximaEtapa) onMover?.(emissao, proximaEtapa) }}
+        >
+          <ChevronsRight />
+        </button>
+      </span>
+    </div>
   )
 }
 
@@ -1401,12 +1440,18 @@ export default function AutoEmissoes() {
 
   const [dragging, setDragging] = useState(null)
   const [dragOver, setDragOver] = useState(null)
+  // Preferencias do quadro (densidade e colunas recolhidas) sao lidas uma vez e
+  // regravadas a cada mudanca: quem trabalha todo dia na Pipeline nao deve
+  // remontar a propria tela a cada visita.
+  const [preferenciasIniciais] = useState(() => lerPreferenciasPipeline())
   const [kanbanDensity, setKanbanDensity] = useState(() => {
-    const saved = localStorage.getItem('auto-kanban-density')
-    if (saved) return saved
-    if (typeof window !== 'undefined' && window.innerWidth < 1440) return 'compact'
-    return 'comfortable'
+    const salva = localStorage.getItem('auto-kanban-density') || preferenciasIniciais.densidade
+    if (salva === 'compact' || salva === 'comfortable') return salva
+    // Notebook de 1366/1440px nao cabe o card detalhado sem rolagem: o padrao
+    // ali e a coluna compacta.
+    return typeof window !== 'undefined' && window.innerWidth < 1440 ? 'compact' : 'comfortable'
   })
+  const [colunasRecolhidas, setColunasRecolhidas] = useState(preferenciasIniciais.recolhidas)
   const [modalResultado, setModalResultado] = useState(null)
   const [modalEmissao, setModalEmissao] = useState(null)
   const [detalhe, setDetalhe] = useState(null)
@@ -1451,7 +1496,8 @@ export default function AutoEmissoes() {
 
   useEffect(() => {
     localStorage.setItem('auto-kanban-density', kanbanDensity)
-  }, [kanbanDensity])
+    gravarPreferenciasPipeline({ densidade: kanbanDensity, recolhidas: colunasRecolhidas })
+  }, [kanbanDensity, colunasRecolhidas])
 
   const { data: emissoes = [] } = useQuery({
     queryKey: ['auto-emissoes', periodo, filtroInicio, filtroFim],
@@ -1481,9 +1527,30 @@ export default function AutoEmissoes() {
     enabled: Boolean(emissaoId),
   })
 
+  // Atualizacao otimista: o card precisa mudar de coluna no instante em que o
+  // usuario solta o mouse. Esperar o round-trip fazia o card "voltar" por um
+  // piscar e parecia que o arraste tinha falhado.
+  const aplicarColunaLocalmente = useCallback((id, patch) => {
+    qc.setQueriesData({ queryKey: ['auto-emissoes'] }, old =>
+      Array.isArray(old) ? old.map(item => (item.id === id ? { ...item, ...patch } : item)) : old)
+  }, [qc])
+
   const { mutate: mover } = useMutation({
     mutationFn: ({ id, coluna }) => moverEmissaoColuna(id, coluna),
-    onSuccess: () => Promise.all([
+    onMutate: ({ id, coluna }) => aplicarColunaLocalmente(id, { coluna }),
+    onError: error => toast({ type: 'error', title: 'Erro ao mover o card', message: error?.message || 'Tente novamente.' }),
+    onSettled: () => Promise.all([
+      qc.invalidateQueries({ queryKey: ['auto-emissoes'] }),
+      qc.invalidateQueries({ queryKey: ['auto-pendencias'] }),
+    ]),
+  })
+
+  // Passagem para "Cotacoes feitas" sem perguntar nada (ver `moverCardPipeline`).
+  const { mutate: marcarCotacaoFeita } = useMutation({
+    mutationFn: ({ id, payload }) => salvarResultadoCotacao(id, payload),
+    onMutate: ({ id, payload }) => aplicarColunaLocalmente(id, { coluna: 'cotacao_feita', resultado: payload.resultado }),
+    onError: error => toast({ type: 'error', title: 'Erro ao mover para Cotações feitas', message: error?.message || 'Tente novamente.' }),
+    onSettled: () => Promise.all([
       qc.invalidateQueries({ queryKey: ['auto-emissoes'] }),
       qc.invalidateQueries({ queryKey: ['auto-pendencias'] }),
     ]),
@@ -1926,16 +1993,53 @@ export default function AutoEmissoes() {
     setFiltroFim(toDateInput(endOfMonth(base)))
   }
 
+  /**
+   * Move um card de etapa — por arraste ou pelos botoes de avancar/voltar.
+   *
+   * "Cotacoes feitas" NAO abre mais formulario. O que ele pedia (resultado e
+   * seguradoras cotadas) ja e preenchido dentro do proprio card, no detalhe.
+   * O que a coluna precisa e apenas de um `resultado` gravado: sem ele
+   * `resolveAutoEmissionStage` devolve `pendentes` e o card volta sozinho para
+   * a coluna anterior. `cotada` e o resultado NEUTRO aceito pela migration 64
+   * exatamente para isso — nao afirma aprovacao nem recusa, so registra que a
+   * cotacao foi feita. Um resultado ja existente (aprovada/recusada) e
+   * preservado, e as seguradoras cotadas nunca sao zeradas pela movimentacao.
+   *
+   * "Proposta transmitida" e "Apolice emitida" continuam abrindo o formulario:
+   * sao as duas etapas que gravam a transmissao e criam a linha em
+   * `apolices_auto`. Sem numero, vigencia e premio nao existe apolice para o
+   * Financeiro e para a Renovacao lerem depois. Todas as demais etapas movem
+   * direto, sem perguntar nada.
+   */
+  function moverCardPipeline(item, colunaDestino) {
+    if (!item || !colunaDestino) return
+    if (getEmissaoColuna(item) === colunaDestino) return
+
+    if (colunaDestino === 'proposta_transmitida' || colunaDestino === 'apolice_emitida') {
+      setManualStage(colunaDestino)
+      setModalEmissao(item)
+      return
+    }
+    if (colunaDestino === 'cotacao_feita') {
+      marcarCotacaoFeita({
+        id: item.id,
+        payload: {
+          resultado: item.resultado || 'cotada',
+          seguradoras_cotadas: Array.isArray(item.seguradoras_cotadas) ? item.seguradoras_cotadas : [],
+        },
+      })
+      return
+    }
+    mover({ id: item.id, coluna: colunaDestino === 'pendentes' ? null : colunaDestino })
+  }
+
+  function alternarColuna(id) {
+    setColunasRecolhidas(atual => alternarColunaRecolhida(atual, id, COLUNAS.length))
+  }
+
   function handleDrop(colunaDestino) {
     if (!dragging) return
-    if (colunaDestino === 'cotacao_feita') {
-      setModalResultado(dragging)
-    } else if (colunaDestino === 'proposta_transmitida' || colunaDestino === 'apolice_emitida') {
-      setManualStage(colunaDestino)
-      setModalEmissao(dragging)
-    } else {
-      mover({ id: dragging.id, coluna: colunaDestino === 'pendentes' ? null : colunaDestino })
-    }
+    moverCardPipeline(dragging, colunaDestino)
     setDragging(null)
     setDragOver(null)
   }
@@ -2381,6 +2485,17 @@ export default function AutoEmissoes() {
                     <button type="button" className={kanbanDensity === 'compact' ? 'is-active' : ''} onClick={() => setKanbanDensity('compact')}>Compacta</button>
                   </div>
                 </div>
+                {colunasRecolhidas.length > 0 && (
+                  <button
+                    type="button"
+                    className="auto-pipeline-expand-all"
+                    onClick={() => setColunasRecolhidas([])}
+                    title="Reabrir todas as colunas recolhidas"
+                  >
+                    <ChevronsRight aria-hidden="true" />
+                    Expandir {colunasRecolhidas.length} coluna(s)
+                  </button>
+                )}
                 <div className="auto-pipeline-arrow-group">
                   <button type="button" onClick={() => scrollKanbanByColumn(-1)} disabled={!kanbanNavigation.canLeft} aria-label="Ver coluna anterior" title="Coluna anterior"><ChevronLeft /></button>
                   <span><strong>{kanbanNavigation.index + 1}</strong> de {KANBAN_STAGES.length}</span>
@@ -2402,8 +2517,16 @@ export default function AutoEmissoes() {
                 <button
                   key={stage.id}
                   type="button"
-                  onClick={() => scrollToKanbanColumn(index)}
-                  className={kanbanNavigation.index === index ? 'is-active' : ''}
+                  onClick={() => {
+                    // Clicar numa etapa recolhida abre a coluna antes de rolar:
+                    // rolar ate um trilho fechado nao mostra nada.
+                    if (colunasRecolhidas.includes(stage.id)) alternarColuna(stage.id)
+                    scrollToKanbanColumn(index)
+                  }}
+                  className={[
+                    kanbanNavigation.index === index ? 'is-active' : '',
+                    colunasRecolhidas.includes(stage.id) ? 'is-collapsed' : '',
+                  ].filter(Boolean).join(' ')}
                   style={{ '--stage-color': stage.color }}
                   aria-current={kanbanNavigation.index === index ? 'step' : undefined}
                 >
@@ -2467,11 +2590,67 @@ export default function AutoEmissoes() {
             })}
             {COLUNAS.map(coluna => {
               const cards = emissoesPipeline.filter(item => getEmissaoColuna(item) === coluna.id)
+              const posicao = String(KANBAN_STAGES.findIndex(stage => stage.id === coluna.id) + 1).padStart(2, '0')
+              const recolhida = colunasRecolhidas.includes(coluna.id)
+              const resumo = resumoFinanceiroEtapa(cards, item => {
+                const apolice = getApoliceVinculada(item)
+                return {
+                  premio: apolice?.premio_liquido ?? item.premio_liquido,
+                  comissao: apolice?.valor_comissao ?? item.valor_comissao,
+                }
+              })
+
+              // Coluna recolhida vira um trilho estreito que continua aceitando
+              // drop: quem escondeu "Aguardando vistoria" para ganhar espaco
+              // ainda precisa conseguir jogar um card la dentro.
+              if (recolhida) {
+                return (
+                  <div
+                    key={coluna.id}
+                    className={`auto-kanban-rail auto-column-tone-${coluna.tone} ${dragOver === coluna.id ? 'is-drop-target' : ''}`}
+                    onDragOver={e => { e.preventDefault(); setDragOver(coluna.id) }}
+                    onDrop={() => handleDrop(coluna.id)}
+                    onDragLeave={() => setDragOver(null)}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => alternarColuna(coluna.id)}
+                      title={`Expandir ${coluna.label}`}
+                      aria-label={`Expandir a coluna ${coluna.label} (${cards.length} itens)`}
+                    >
+                      <span className="auto-kanban-rail-index">{posicao}</span>
+                      <span className="auto-kanban-rail-label">{coluna.label}</span>
+                      <span className="auto-kanban-rail-count">{cards.length}</span>
+                      <ChevronsRight aria-hidden="true" />
+                    </button>
+                  </div>
+                )
+              }
+
               return (
                 <DataCard
                   key={coluna.id}
-                  title={<span className="auto-kanban-column-title"><span>{String(KANBAN_STAGES.findIndex(stage => stage.id === coluna.id) + 1).padStart(2, '0')}</span>{coluna.label}</span>}
-                  subtitle={`${cards.length} item(ns)`}
+                  title={(
+                    <span className="auto-kanban-column-title">
+                      <span>{posicao}</span>
+                      {coluna.label}
+                      <button
+                        type="button"
+                        className="auto-kanban-column-collapse"
+                        onClick={() => alternarColuna(coluna.id)}
+                        title={`Recolher ${coluna.label}`}
+                        aria-label={`Recolher a coluna ${coluna.label}`}
+                      >
+                        <ChevronsLeft aria-hidden="true" />
+                      </button>
+                    </span>
+                  )}
+                  subtitle={(
+                    <span className="auto-kanban-column-summary">
+                      <b>{resumo.total}</b> item(ns)
+                      {resumo.premio > 0 && <em>{formatMoney(resumo.premio)} em prêmio</em>}
+                    </span>
+                  )}
                   className={`auto-kanban-column auto-column-tone-${coluna.tone} w-[300px] shrink-0 snap-start ${dragOver === coluna.id ? 'ring-2 ring-brand-accent/20' : ''}`}
                   bodyClassName="pt-4"
                 >
@@ -2499,6 +2678,7 @@ export default function AutoEmissoes() {
                           emissao={item}
                           onDragStart={setDragging}
                           onClick={abrirDetalhe}
+                          onMover={moverCardPipeline}
                           tagsPorId={tagsPorId}
                         />
                       ))

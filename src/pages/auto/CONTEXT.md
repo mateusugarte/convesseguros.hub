@@ -221,6 +221,38 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   grafico mensal.
 - `AutoSinistrosV2` salva checklist e dossie no dispositivo e gera um resumo copiavel. Esses dados ainda nao sao enviados ao Supabase.
 
+## Pipeline AUTO — movimentacao e leitura do quadro (2026-08-31)
+
+- **Mover um card para "Cotacoes feitas" nao abre formulario.** O modal de
+  resultado saiu do arraste e continua so onde faz sentido: dentro do card, em
+  `Registrar resultado da cotacao`. A coluna precisa de um `resultado` gravado
+  porque `resolveAutoEmissionStage` devolve `pendentes` quando ele falta — o
+  card voltaria sozinho para a coluna anterior. `moverCardPipeline` grava o
+  resultado NEUTRO `cotada` (aceito desde a migration 64), preserva um
+  `aprovada`/`recusada` ja existente e nunca zera `seguradoras_cotadas`.
+  Continuam abrindo formulario apenas `proposta_transmitida` e
+  `apolice_emitida`, as duas etapas que gravam transmissao e criam a apolice.
+- Todo movimento e otimista (`aplicarColunaLocalmente`): o card muda de coluna
+  no instante do drop e so depois confirma no banco. Erro volta em toast e a
+  invalidacao corrige a posicao.
+- **Avancar/voltar etapa sem arrastar**: cada card tem os botoes `«` e `»`
+  (`auto-kanban-card-move`), que seguem `AUTO_EMISSION_STAGES` em
+  `src/lib/autoPipelineBoard.js`. Arrastar num quadro que rola na horizontal e
+  a acao mais cara da tela num notebook com trackpad.
+- **Colunas recolhiveis**: o cabecalho tem um botao que transforma a coluna num
+  trilho vertical de 3rem (`auto-kanban-rail`) que continua aceitando drop.
+  `alternarColunaRecolhida` nunca deixa recolher a ultima coluna visivel.
+  A trilha de etapas marca as recolhidas e expande ao ser clicada.
+- **Preferencias persistidas** (`lerPreferenciasPipeline`/`gravarPreferenciasPipeline`,
+  chave `conves:auto:pipeline-preferencias`): densidade e colunas recolhidas
+  voltam como o usuario deixou. A densidade compacta continua sendo o padrao
+  abaixo de 1440px de largura.
+- O cabecalho de cada coluna mostra `resumoFinanceiroEtapa`: quantidade e soma
+  de premio da etapa — responde "quanto tem parado aqui" sem abrir card.
+- CSS por ALTURA de tela (`max-height: 900px` e `780px`) encolhe o cabecalho da
+  Pipeline e a altura das colunas: em 1366x768 o quadro cabe junto com filtros
+  e barra de etapas sem a pagina inteira rolar na vertical.
+
 ## Orcamento Comparativo (2026-08-24, design do workspace entregue)
 
 - O nucleo vive em `src/lib/orcamentoComparativo.js` (dominio puro) e
@@ -258,6 +290,25 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   SO acrescentar sinonimos em `DICIONARIO_COBERTURAS`, nunca criar categoria.
 - A logo do card vem de `seguradoras.logo_url` (cadastro em Configuracoes),
   nunca recortada do PDF da cotacao. Sem logo, cai para o nome em serifada.
+- **O trabalho do workspace e salvo sozinho** (`src/lib/autoQuoteDraft.js`).
+  Antes de 31/08 `sides`, `parsers`, `leituras` e `step` viviam so em `useState`:
+  sair da rota destruia o componente e o upload, a leitura e a revisao ja
+  conferida iam junto. Agora cada alteracao vira um rascunho versionado com dois
+  destinos — `localStorage` (imediato, so neste navegador) e
+  `cotacoes_auto.orcamento_rascunho` (com debounce de 700ms, vale em qualquer
+  maquina, depende da migration 72). Ao reabrir, vence o mais recente. O `File`
+  do PDF nao e serializavel e nao vai para nenhum dos dois: o que volta e o nome
+  do arquivo e a cotacao ja extraida dele, que e o que a revisao consome —
+  reenviar o PDF so e necessario para TROCAR de arquivo. `arquivos` (derivado)
+  trata lado restaurado e lado com `File` na mao como equivalentes, senao a
+  revisao ficaria bloqueada logo depois de restaurar.
+- Sem a migration 72 nada quebra: `salvarRascunhoOrcamento` reconhece o erro de
+  coluna ausente (`ehColunaAusente`) e a tela segue so com o rascunho local,
+  dizendo isso no proprio indicador ("Salvo neste navegador").
+- Salvar o orcamento duas vezes ATUALIZA a mesma linha de `auto_orcamentos`. A
+  referencia `CV-AAAA-NNNN` fica guardada no rascunho; sem isso, corrigir um
+  campo e regerar a previa queimava um segundo numero da sequencia anual para o
+  mesmo cliente.
 - O contrato transversal dos 11 PDFs reais vive em
   `orcamentoParsersContrato.test.mjs`: premio, parcelamento, franquia,
   indenizacao integral, assistencia, carro reserva, vidros e terceiros precisam

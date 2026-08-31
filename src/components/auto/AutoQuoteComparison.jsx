@@ -1,12 +1,18 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AlertTriangle, ArrowRight, Check, CheckCircle2, ChevronDown, FileCheck2,
-  Download, Eye, FileText, LoaderCircle, Maximize2, RefreshCw, ShieldCheck,
-  Sparkles, UploadCloud, X,
+  AlertTriangle, ArrowRight, Check, CheckCircle2, ChevronDown, CloudOff, FileCheck2,
+  Download, Eye, FileText, History, LoaderCircle, Maximize2, RefreshCw, ShieldCheck,
+  Sparkles, Trash2, UploadCloud, X,
 } from 'lucide-react'
 
 import { extrairDiasCarroReserva, montarCategorias, TEM_VALOR_MONETARIO } from '../../lib/orcamentoComparativo'
 import { aplicarRevisao, camposDaCotacao } from '../../lib/orcamentoLeitura'
+import { derivarOpcoesFinanceirasComparativo } from '../../lib/autoQuoteFinancial'
+import {
+  gravarRascunhoLocal, lerRascunhoLocal, limparRascunhoLocal,
+  rascunhoMaisRecente, rascunhoTemTrabalho, restaurarRascunho, serializarRascunho,
+} from '../../lib/autoQuoteDraft'
+import { limparRascunhoOrcamento, salvarRascunhoOrcamento } from '../../lib/auto'
 import { getEntityImageUrl } from '../../lib/entityMedia'
 import { supabase } from '../../lib/supabase'
 import { DatePicker } from '../ui'
@@ -109,6 +115,74 @@ function imagensCarregadas(janela, limiteMs = 5000) {
   ])
 }
 
+function proximoFrame(janela) {
+  return new Promise(resolve => janela.requestAnimationFrame(() => janela.requestAnimationFrame(resolve)))
+}
+
+/** Prepara o mesmo documento do preview para caber inteiro em uma folha A4. */
+async function prepararImpressaoUmaPagina(janela) {
+  const pagina = janela.document.querySelector('.pagina')
+  const conteudo = janela.document.querySelector('.pagina-conteudo')
+  if (!pagina || !conteudo) return () => {}
+
+  pagina.classList.remove('is-pdf-compact')
+  pagina.style.removeProperty('--pdf-scale')
+  pagina.style.removeProperty('--pdf-layout-width')
+  pagina.style.removeProperty('--pdf-layout-height')
+  conteudo.style.removeProperty('width')
+  delete pagina.dataset.pdfScale
+  await proximoFrame(janela)
+
+  // No preview a pagina pode crescer com o conteudo. A altura-alvo precisa vir
+  // da proporcao fisica do A4, nao do clientHeight ja expandido.
+  const alturaPagina = pagina.clientWidth * (297 / 210)
+  if (conteudo.scrollHeight > alturaPagina) {
+    pagina.classList.add('is-pdf-compact')
+    await proximoFrame(janela)
+  }
+
+  const { calcularEscalaImpressao } = await import('../../lib/orcamentoComparativoHtml')
+  const alturaUtil = alturaPagina - 6
+
+  // O texto passa a quebrar menos quando a largura logica aumenta para
+  // compensar o zoom. Uma divisao simples superestimava a reducao e deixava um
+  // vazio grande no rodape. A busca abaixo encontra a MAIOR escala que ainda
+  // cabe, mantendo fontes e logos tão grandes quanto o A4 permite.
+  let menor = calcularEscalaImpressao(conteudo.scrollHeight, alturaPagina)
+  let maior = 1
+  const alturaFisica = async escala => {
+    conteudo.style.width = `${(100 / escala).toFixed(5)}%`
+    await proximoFrame(janela)
+    return conteudo.scrollHeight * escala
+  }
+
+  while (menor > 0.02 && await alturaFisica(menor) > alturaUtil) menor *= 0.8
+  for (let tentativa = 0; tentativa < 8; tentativa += 1) {
+    const meio = (menor + maior) / 2
+    if (await alturaFisica(meio) <= alturaUtil) menor = meio
+    else maior = meio
+  }
+
+  // 0,5% de respiro evita que arredondamentos do diálogo de impressão cortem
+  // a última linha em navegadores/níveis de zoom diferentes.
+  const escala = Math.min(1, menor * 0.995)
+  pagina.style.setProperty('--pdf-scale', escala.toFixed(5))
+  pagina.style.setProperty('--pdf-layout-width', `${(100 / escala).toFixed(5)}%`)
+  pagina.style.setProperty('--pdf-layout-height', `${(297 / escala).toFixed(5)}mm`)
+  conteudo.style.width = `${(100 / escala).toFixed(5)}%`
+  pagina.dataset.pdfScale = escala.toFixed(5)
+  await proximoFrame(janela)
+
+  return () => {
+    pagina.classList.remove('is-pdf-compact')
+    pagina.style.removeProperty('--pdf-scale')
+    pagina.style.removeProperty('--pdf-layout-width')
+    pagina.style.removeProperty('--pdf-layout-height')
+    conteudo.style.removeProperty('width')
+    delete pagina.dataset.pdfScale
+  }
+}
+
 function formatSize(bytes) {
   if (!bytes) return ''
   return bytes > 1024 * 1024
@@ -185,7 +259,7 @@ function UploadSlot({ role, side, file, leitura, lendo, erro, aplicando, segurad
         onDrop={event => { event.preventDefault(); setDragging(false); if (!uploadBloqueado) onFile(event.dataTransfer.files?.[0] || null) }}
       >
         {file
-          ? <><FileCheck2 /><span><strong>{file.name}</strong><small>{formatSize(file.size)} · {legendaArquivo(leitura, lendo)}</small></span></>
+          ? <><FileCheck2 /><span><strong>{file.name}</strong><small>{file.restaurado ? 'restaurado do rascunho' : formatSize(file.size)} · {legendaArquivo(leitura, lendo, file.restaurado)}</small></span></>
           : <><UploadCloud /><span><strong>{uploadBloqueado ? 'Escolha a seguradora primeiro' : 'Solte ou selecione o PDF'}</strong><small>Leitura automática forçada pela seguradora selecionada, com escolha de produto quando necessário</small></span></>}
       </button>
 
@@ -238,9 +312,9 @@ function ExtractionWarnings({ avisos = [] }) {
   )
 }
 
-function legendaArquivo(leitura, lendo) {
+function legendaArquivo(leitura, lendo, restaurado = false) {
   if (lendo) return 'lendo…'
-  if (!leitura) return 'aguardando leitura'
+  if (!leitura) return restaurado ? 'rascunho sem leitura — reenvie o PDF' : 'aguardando leitura'
   if (!leitura.suportado) return 'leitura automática indisponível'
   if (leitura.cotacao?.oferta) return `${leitura.seguradora} · oferta ${leitura.cotacao.oferta.nome}`
   if (leitura.cotacao?.produto_selecionado) return `${leitura.seguradora} · ${leitura.cotacao.produto_selecionado.label}`
@@ -346,25 +420,202 @@ function OrcamentoPreview({ html, fullscreen = false, salvando = false, salvo = 
   )
 }
 
-export default function AutoQuoteComparison({ quote }) {
-  const [step, setStep] = useState('upload')
+/** Estado do zero, semeado apenas pelo cadastro da cotacao. */
+function workspaceInicial(quote) {
+  const sides = { atual: sideFromQuote('atual', quote), concorrente: sideFromQuote('concorrente', quote) }
+  return {
+    step: 'upload',
+    sides,
+    parsers: { atual: parserInicial(sides.atual.seguradora), concorrente: parserInicial(sides.concorrente.seguradora) },
+    leituras: { atual: null, concorrente: null },
+    orcamento: null,
+    salvo_em: null,
+    restaurado: false,
+  }
+}
+
+/**
+ * Abre o workspace ja com o trabalho anterior dentro.
+ *
+ * Duas fontes: o rascunho local (grava a cada alteracao, so neste navegador) e
+ * `cotacoes_auto.orcamento_rascunho` (grava com debounce, vale em qualquer
+ * maquina). Vence o mais recente — quem trabalhou por ultimo mandou.
+ */
+function hidratarWorkspace(quote) {
+  const padrao = workspaceInicial(quote)
+  const bruto = rascunhoMaisRecente(lerRascunhoLocal(quote?.id), quote?.orcamento_rascunho)
+  if (!bruto || !rascunhoTemTrabalho(bruto)) return padrao
+  const restaurado = restaurarRascunho(bruto, { baseSides: padrao.sides })
+  return restaurado ? { ...restaurado, restaurado: true } : padrao
+}
+
+function horaCurta(iso) {
+  if (!iso) return ''
+  const data = new Date(iso)
+  if (Number.isNaN(data.getTime())) return ''
+  const hoje = new Date().toDateString() === data.toDateString()
+  const hora = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  return hoje ? hora : `${data.toLocaleDateString('pt-BR')} ${hora}`
+}
+
+function RascunhoStatus({ estado, onDescartar }) {
+  if (estado.salvando) {
+    return <span className="auto-comparison-draft is-saving"><LoaderCircle className="is-spinning" />Salvando trabalho…</span>
+  }
+  if (!estado.salvo_em) {
+    return <span className="auto-comparison-draft is-idle"><History />O trabalho é salvo sozinho</span>
+  }
+  // Tres estados diferentes, porque a diferenca entre eles muda o que a pessoa
+  // pode fazer: com o servidor ela troca de maquina; so com o local ela precisa
+  // terminar aqui; sem nenhum dos dois ela nao pode fechar a aba.
+  if (!estado.servidor && !estado.local) {
+    return <span className="auto-comparison-draft is-failed"><AlertTriangle />Não foi possível salvar — não feche a aba</span>
+  }
+  return (
+    <span className={`auto-comparison-draft ${estado.servidor ? 'is-saved' : 'is-local'}`}>
+      {estado.servidor ? <CheckCircle2 /> : <CloudOff />}
+      {estado.servidor ? `Salvo ${horaCurta(estado.salvo_em)}` : `Salvo neste navegador ${horaCurta(estado.salvo_em)}`}
+      <button type="button" onClick={onDescartar} title="Descartar o rascunho e recomeçar"><Trash2 />Descartar</button>
+    </span>
+  )
+}
+
+export default function AutoQuoteComparison({ quote, onFinancialOptionsChange }) {
+  const [inicial] = useState(() => hidratarWorkspace(quote))
+  const [step, setStep] = useState(inicial.step)
   const [files, setFiles] = useState({ atual: null, concorrente: null })
-  const [leituras, setLeituras] = useState({ atual: null, concorrente: null })
+  const [leituras, setLeituras] = useState(inicial.leituras)
   const [lendo, setLendo] = useState({ atual: false, concorrente: false })
   const [aplicando, setAplicando] = useState({ atual: false, concorrente: false })
   const [erros, setErros] = useState({ atual: '', concorrente: '' })
-  const [sides, setSides] = useState(() => ({ atual: sideFromQuote('atual', quote), concorrente: sideFromQuote('concorrente', quote) }))
-  const [parsers, setParsers] = useState(() => ({
-    atual: parserInicial(sideFromQuote('atual', quote).seguradora),
-    concorrente: parserInicial(sideFromQuote('concorrente', quote).seguradora),
-  }))
+  const [sides, setSides] = useState(inicial.sides)
+  const [parsers, setParsers] = useState(inicial.parsers)
+  const [rascunhoRestaurado, setRascunhoRestaurado] = useState(inicial.restaurado)
+  const [estadoRascunho, setEstadoRascunho] = useState({
+    salvando: false, salvo_em: inicial.salvo_em, servidor: false, local: false,
+  })
   const [gerando, setGerando] = useState(false)
   const [erroGeracao, setErroGeracao] = useState('')
   const [comparativoGerado, setComparativoGerado] = useState(null)
   const [previewHtml, setPreviewHtml] = useState('')
   const [previewFullscreen, setPreviewFullscreen] = useState(false)
   const [salvandoOrcamento, setSalvandoOrcamento] = useState(false)
-  const [orcamentoSalvo, setOrcamentoSalvo] = useState(null)
+  const [orcamentoSalvo, setOrcamentoSalvo] = useState(inicial.orcamento)
+  const opcoesFinanceiras = useMemo(() => derivarOpcoesFinanceirasComparativo({
+    atual: sides.atual,
+    concorrente: sides.concorrente,
+  }), [
+    sides.atual.seguradora,
+    sides.atual.campos.premio_total,
+    sides.concorrente.seguradora,
+    sides.concorrente.campos.premio_total,
+  ])
+
+  useEffect(() => {
+    onFinancialOptionsChange?.(opcoesFinanceiras)
+  }, [onFinancialOptionsChange, opcoesFinanceiras])
+
+  // ─── Salvamento automatico do trabalho ────────────────────────────────
+  // A queixa era direta: "ao sair fica tudo perdido". Cada alteracao vira um
+  // rascunho; o local grava sempre, o servidor grava quando a migration 72 ja
+  // rodou. Nada aqui exige clicar em salvar.
+  const rascunhoAtual = useMemo(
+    () => serializarRascunho({ step, sides, parsers, leituras, orcamento: orcamentoSalvo }),
+    [step, sides, parsers, leituras, orcamentoSalvo],
+  )
+  const conteudoRascunho = useMemo(
+    () => JSON.stringify({ step: rascunhoAtual.step, orcamento: rascunhoAtual.orcamento, lados: rascunhoAtual.lados }),
+    [rascunhoAtual],
+  )
+  const ultimoGravado = useRef(null)
+  // Reabrir a cotacao nao pode regravar sozinho um rascunho identico ao que
+  // acabou de ser restaurado: sem esta semente, toda visita gerava um write.
+  const semeouRestaurado = useRef(false)
+  // O que ainda nao chegou ao disco. Fechar a aba ou trocar de rota no meio do
+  // debounce perderia exatamente a ultima alteracao — a mais recente e a que
+  // mais dói. Este ref existe para o flush de saida encontra-la.
+  const rascunhoPendente = useRef(null)
+
+  useEffect(() => {
+    if (!semeouRestaurado.current) {
+      semeouRestaurado.current = true
+      if (inicial.restaurado) {
+        ultimoGravado.current = conteudoRascunho
+        return undefined
+      }
+    }
+    if (!rascunhoTemTrabalho(rascunhoAtual)) {
+      ultimoGravado.current = conteudoRascunho
+      return undefined
+    }
+    if (ultimoGravado.current === conteudoRascunho) return undefined
+
+    rascunhoPendente.current = rascunhoAtual
+    setEstadoRascunho(atual => ({ ...atual, salvando: true }))
+
+    const timer = window.setTimeout(async () => {
+      ultimoGravado.current = conteudoRascunho
+      rascunhoPendente.current = null
+      const local = gravarRascunhoLocal(quote?.id, rascunhoAtual)
+      let servidor = false
+      try {
+        servidor = (await salvarRascunhoOrcamento(quote?.id, rascunhoAtual)).persistido
+      } catch {
+        // Falha de rede ou RLS nao pode travar a digitacao: o rascunho local ja
+        // guardou o trabalho e a proxima alteracao tenta o servidor de novo.
+        servidor = false
+      }
+      setEstadoRascunho({ salvando: false, salvo_em: rascunhoAtual.salvo_em, servidor, local })
+    }, 700)
+
+    return () => window.clearTimeout(timer)
+  }, [conteudoRascunho, rascunhoAtual, quote?.id, inicial.restaurado])
+
+  // Saida da tela (navegacao ou fechar aba): grava o que estava no debounce.
+  // O local e sincrono e sempre da tempo; o servidor e best-effort.
+  useEffect(() => {
+    const flush = () => {
+      const pendente = rascunhoPendente.current
+      if (!pendente) return
+      rascunhoPendente.current = null
+      gravarRascunhoLocal(quote?.id, pendente)
+      salvarRascunhoOrcamento(quote?.id, pendente).catch(() => {})
+    }
+    window.addEventListener('beforeunload', flush)
+    return () => {
+      window.removeEventListener('beforeunload', flush)
+      flush()
+    }
+  }, [quote?.id])
+
+  function descartarRascunho() {
+    ultimoGravado.current = null
+    rascunhoPendente.current = null
+    limparRascunhoLocal(quote?.id)
+    limparRascunhoOrcamento(quote?.id).catch(() => {})
+    const limpo = workspaceInicial(quote)
+    setStep(limpo.step)
+    setSides(limpo.sides)
+    setParsers(limpo.parsers)
+    setLeituras(limpo.leituras)
+    setFiles({ atual: null, concorrente: null })
+    setErros({ atual: '', concorrente: '' })
+    setOrcamentoSalvo(null)
+    setRascunhoRestaurado(false)
+    setEstadoRascunho({ salvando: false, salvo_em: null, servidor: false, local: false })
+    invalidarPreview()
+  }
+
+  // Um lado esta "com arquivo" tanto com o File na mao quanto restaurado de um
+  // rascunho: a leitura ja extraida vale igual, e exigir reenviar o PDF so para
+  // reabrir a revisao seria refazer o trabalho que acabamos de salvar.
+  const arquivos = useMemo(() => Object.fromEntries(ROLES.map(({ key }) => [
+    key,
+    files[key] || (sides[key].arquivo_nome
+      ? { name: sides[key].arquivo_nome, size: 0, restaurado: true }
+      : null),
+  ])), [files, sides])
+
   const issues = useMemo(() => Object.fromEntries(ROLES.map(({ key }) => [
     key,
     REVIEW_FIELDS
@@ -373,9 +624,9 @@ export default function AutoQuoteComparison({ quote }) {
   ])), [sides])
   const issueCount = issues.atual.length + issues.concorrente.length
   const criticalCount = ROLES.reduce((total, { key }) => total + issues[key].filter(fieldKey => REVIEW_FIELDS.find(field => field.key === fieldKey)?.critical).length, 0)
-  const faltamArquivos = ROLES.filter(({ key }) => !files[key]).map(({ label }) => label)
+  const faltamArquivos = ROLES.filter(({ key }) => !arquivos[key]).map(({ label }) => label)
   const escolhasPendentes = ROLES.filter(({ key }) => leituras[key]?.cotacao?.escolha_pendente).map(({ label }) => label)
-  const leiturasPendentes = ROLES.filter(({ key }) => files[key] && !lendo[key] && !leituraDisponivelParaRevisao(leituras[key])).map(({ label }) => label)
+  const leiturasPendentes = ROLES.filter(({ key }) => arquivos[key] && !lendo[key] && !leituraDisponivelParaRevisao(leituras[key])).map(({ label }) => label)
   const podeRevisar = faltamArquivos.length === 0 && escolhasPendentes.length === 0 && leiturasPendentes.length === 0 && !lendo.atual && !lendo.concorrente
   const resumoUpload = (() => {
     if (lendo.atual || lendo.concorrente) return 'Aguarde a leitura automática terminar.'
@@ -582,11 +833,13 @@ export default function AutoQuoteComparison({ quote }) {
     setSides(current => ({ ...current, [role]: { ...current[role], campos: { ...current[role].campos, [field]: value } } }))
   }
 
+  // A previa e descartavel; o orcamento JA GRAVADO nao. Zerar `orcamentoSalvo`
+  // aqui fazia o proximo "Salvar" alocar um segundo CV-AAAA-NNNN para o mesmo
+  // orcamento, so porque o operador corrigiu um campo e regerou a previa.
   function invalidarPreview() {
     setComparativoGerado(null)
     setPreviewHtml('')
     setPreviewFullscreen(false)
-    setOrcamentoSalvo(null)
   }
 
   async function baixarPdf(iframeRef) {
@@ -596,6 +849,9 @@ export default function AutoQuoteComparison({ quote }) {
       return
     }
     await imagensCarregadas(janela)
+    if (janela.document.fonts?.ready) await janela.document.fonts.ready
+    const limparImpressao = await prepararImpressaoUmaPagina(janela)
+    janela.addEventListener('afterprint', limparImpressao, { once: true })
     janela.focus()
     janela.print()
   }
@@ -605,22 +861,25 @@ export default function AutoQuoteComparison({ quote }) {
       setErroGeracao('Gere a prévia antes de salvar o orçamento.')
       return
     }
-    if (orcamentoSalvo?.id) return
 
     setSalvandoOrcamento(true)
     setErroGeracao('')
     try {
+      // Regravar um orcamento ja numerado ATUALIZA a mesma linha. Alocar um
+      // numero novo a cada correcao entregaria dois CV diferentes para o mesmo
+      // cliente e quebraria a sequencia anual.
       const ano = new Date().getFullYear()
-      const { data: numero, error: numeroError } = await supabase.rpc('proximo_numero_orcamento_auto', { p_ano: ano })
-      if (numeroError) throw numeroError
-      const sequencial = Array.isArray(numero) ? numero[0] : numero
-      if (!sequencial?.referencia) throw new Error('A RPC proximo_numero_orcamento_auto não retornou uma referência.')
+      let sequencial = orcamentoSalvo?.id ? null : undefined
+      if (sequencial === undefined) {
+        const { data: numero, error: numeroError } = await supabase.rpc('proximo_numero_orcamento_auto', { p_ano: ano })
+        if (numeroError) throw numeroError
+        sequencial = Array.isArray(numero) ? numero[0] : numero
+        if (!sequencial?.referencia) throw new Error('A RPC proximo_numero_orcamento_auto não retornou uma referência.')
+      }
 
       const { data: userData } = await supabase.auth.getUser()
       const payload = {
-        referencia: sequencial.referencia,
-        ano: sequencial.ano || ano,
-        sequencial: sequencial.sequencial,
+        ...(sequencial ? { referencia: sequencial.referencia, ano: sequencial.ano || ano, sequencial: sequencial.sequencial } : {}),
         cotacao_id: quote?.id || null,
         cliente_id: quote?.cliente_id || null,
         seguradora_atual_id: comparativoGerado.cards?.[0]?.seguradora?.id || null,
@@ -636,14 +895,14 @@ export default function AutoQuoteComparison({ quote }) {
         emitido_em: comparativoGerado.cabecalho?.emitido_em || new Date().toISOString().slice(0, 10),
         validade_dias: comparativoGerado.cabecalho?.validade_dias || 5,
         status: 'gerado',
-        criado_por: userData?.user?.id || null,
+        // Autoria e do primeiro gravador: uma correcao feita por outra pessoa
+        // nao reescreve quem criou o orcamento.
+        ...(sequencial ? { criado_por: userData?.user?.id || null } : {}),
       }
 
-      const { data, error } = await supabase
-        .from('auto_orcamentos')
-        .insert(payload)
-        .select('id, referencia')
-        .single()
+      const { data, error } = orcamentoSalvo?.id
+        ? await supabase.from('auto_orcamentos').update(payload).eq('id', orcamentoSalvo.id).select('id, referencia').single()
+        : await supabase.from('auto_orcamentos').insert(payload).select('id, referencia').single()
       if (error) throw error
       setOrcamentoSalvo(data)
       const atualizado = {
@@ -666,7 +925,21 @@ export default function AutoQuoteComparison({ quote }) {
 
   return (
     <section className="auto-comparison-workspace">
-      <div className="auto-comparison-design-notice"><Sparkles /><span><strong>Leitura automática ativa por seguradora</strong><small>Quando o PDF traz mais de um produto, a leitura aguarda sua escolha. Nada é salvo nem gerado em PDF nesta etapa.</small></span></div>
+      <div className="auto-comparison-design-notice">
+        <Sparkles />
+        <span><strong>Leitura automática ativa por seguradora</strong><small>Quando o PDF traz mais de um produto, a leitura aguarda sua escolha. O trabalho é salvo sozinho — sair da tela não perde nada.</small></span>
+        <RascunhoStatus estado={estadoRascunho} onDescartar={descartarRascunho} />
+      </div>
+      {rascunhoRestaurado && (
+        <div className="auto-comparison-restored" role="status">
+          <History />
+          <span>
+            <strong>Trabalho anterior restaurado</strong>
+            <small>Revisão, seguradoras e leitura dos PDFs voltaram como estavam. Reenvie um PDF apenas se quiser trocar o arquivo.</small>
+          </span>
+          <button type="button" onClick={() => setRascunhoRestaurado(false)} aria-label="Fechar aviso"><X /></button>
+        </div>
+      )}
       <header className="auto-comparison-heading">
         <div className="auto-comparison-heading-icon"><Sparkles /></div>
         <div><span>Orçamento comparativo</span><h2>Envie, revise e compare sem sair da cotação</h2><p>Prêmio, parcelamento, franquia e coberturas são conferidos antes de abrir a cotação final.</p></div>
@@ -679,7 +952,7 @@ export default function AutoQuoteComparison({ quote }) {
             key={key}
             role={key}
             side={sides[key]}
-            file={files[key]}
+            file={arquivos[key]}
             leitura={leituras[key]}
             lendo={lendo[key]}
             erro={erros[key]}

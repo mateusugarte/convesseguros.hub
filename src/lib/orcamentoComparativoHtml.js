@@ -235,8 +235,12 @@ body{font-size:7.45pt;line-height:1.36;color:#102033}
 .pagina{
   --cur:#9c7328;--oth:#1c4a87;
   width:210mm;min-height:297mm;margin:7mm auto 18mm;padding:0;
-  display:flex;flex-direction:column;overflow:hidden;
+  display:block;overflow:hidden;
   background:#edf3fa;box-shadow:0 22px 70px rgba(8,25,46,.24)
+}
+.pagina-conteudo{
+  width:100%;min-height:297mm;display:flex;flex-direction:column;
+  transform-origin:top left
 }
 .hero-orcamento,.cliente-modelo,.aviso-divergencia,.modelo-secao,.diferenca-total{flex-shrink:0}
 
@@ -368,10 +372,39 @@ body{font-size:7.45pt;line-height:1.36;color:#102033}
 }
 .rodape::before{width:64mm;height:.7mm;margin-bottom:2mm;background:linear-gradient(90deg,var(--cur) 0 50%,var(--oth) 50% 100%)}
 
+/*
+ * Cotacoes com descricoes extensas (principalmente Vidros/Assistencia) recebem
+ * primeiro uma versao mais densa. Se ainda excederem o A4, o front calcula a
+ * escala residual. A compactacao conserva a leitura muito melhor do que
+ * reduzir a pagina inteira de uma vez.
+ */
+.pagina.is-pdf-compact .hero-orcamento{height:27mm;min-height:27mm;padding-top:5.4mm;padding-bottom:4mm}
+.pagina.is-pdf-compact .hero-orcamento .titulo{font-size:19pt}
+.pagina.is-pdf-compact .cliente-modelo .campo{padding-top:1.35mm;padding-bottom:1.4mm}
+.pagina.is-pdf-compact .modelo-secao{margin-top:8mm}
+.pagina.is-pdf-compact .modelo-secao.valores-secao{margin-top:3.5mm}
+.pagina.is-pdf-compact .modelo-secao-title{margin-bottom:3.2mm;font-size:12.6pt}
+.pagina.is-pdf-compact .tabela-head{min-height:9.8mm;padding-top:1.2mm;padding-bottom:1.2mm}
+.pagina.is-pdf-compact .tabela-cobertura,
+.pagina.is-pdf-compact .tabela-celula{min-height:9.2mm;padding:1.45mm 2.6mm}
+.pagina.is-pdf-compact .tabela-cobertura span{font-size:6.7pt}
+.pagina.is-pdf-compact .tabela-celula{font-size:6.65pt;line-height:1.25}
+.pagina.is-pdf-compact .valor-card-modelo-inner{padding:2.8mm 4.2mm 2.6mm}
+.pagina.is-pdf-compact .valor-card-modelo .marca-valor{margin-bottom:2.1mm}
+.pagina.is-pdf-compact .valor-card-modelo .valor-total{margin:1mm 0 2mm;font-size:17.5pt}
+.pagina.is-pdf-compact .valor-card-modelo .pagamentos{padding-top:1.8mm;gap:.9mm}
+.pagina.is-pdf-compact .valor-card-modelo .pagamento{font-size:6.25pt}
+.pagina.is-pdf-compact .diferenca-total{margin-top:3.3mm;padding-top:2.4mm;padding-bottom:2.4mm}
+.pagina.is-pdf-compact .rodape{padding-top:3.2mm;padding-bottom:2mm;font-size:5.35pt}
+
 @media print{
   html,body{width:210mm;height:297mm;min-height:297mm;background:#fff}
   .acoes-doc{display:none!important}
   .pagina{width:210mm;height:297mm;min-height:297mm;margin:0!important;box-shadow:none!important}
+  .pagina-conteudo{
+    width:var(--pdf-layout-width,100%);min-height:var(--pdf-layout-height,297mm);
+    transform:scale(var(--pdf-scale,1));transform-origin:top left
+  }
 }
 `
 
@@ -388,10 +421,37 @@ const ROTULO_PAPEL = { atual: 'Seguradora atual', outra: 'Outra seguradora' }
  * visivel, em vez de abrir um buraco branco no documento.
  */
 function selo(seguradora) {
-  const conteudo = seguradora.logo_url
-    ? `<img src="${escapeHtml(seguradora.logo_url)}" alt="${escapeHtml(seguradora.nome)}">`
+  const logoEmbutida = logoEmbutidaDaSeguradora(seguradora.nome)
+  const logo = logoEmbutida || seguradora.logo_url
+  const conteudo = logo
+    ? `<img src="${escapeHtml(logo)}" alt="${escapeHtml(seguradora.nome)}">`
     : `<span class="fallback">${escapeHtml(seguradora.nome)}</span>`
   return `<div class="selo-logo">${conteudo}</div>`
+}
+
+const LOGO_PIER = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 92" role="img" aria-label="Pier">
+    <text x="150" y="68" text-anchor="middle" font-family="Arial Black,Arial,sans-serif"
+      font-size="66" font-weight="900" letter-spacing="5" fill="#ff7599">PIER.</text>
+  </svg>
+`)}`
+
+function logoEmbutidaDaSeguradora(nome) {
+  const chave = String(nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  if (chave.includes('pier')) return LOGO_PIER
+  return ''
+}
+
+/**
+ * Calcula o ultimo ajuste necessario para a impressao caber em uma pagina.
+ * A pagina ja passou pelo modo compacto quando esta funcao e chamada.
+ */
+export function calcularEscalaImpressao(alturaConteudo, alturaPagina, folga = 6) {
+  const conteudo = Number(alturaConteudo)
+  const pagina = Number(alturaPagina)
+  const respiro = Math.max(0, Number(folga) || 0)
+  if (!(conteudo > 0) || !(pagina > 0)) return 1
+  return Math.min(1, Math.max(0.01, (pagina - respiro) / conteudo))
 }
 
 /**
@@ -657,6 +717,7 @@ ${comAcoes ? `<nav class="acoes-doc" aria-label="Ações da cotação">
   <div class="botoes"><button type="button" onclick="window.close()">Fechar</button><button class="primario" type="button" onclick="window.print()">Baixar PDF</button></div>
 </nav>` : ''}
 <div class="pagina" style="--cur:${escapeHtml(corAtual)};--oth:${escapeHtml(corOutra)}">
+ <div class="pagina-conteudo">
   <header class="hero-orcamento">
     <div class="marca"><img src="${escapeHtml(logoConves)}" alt="Convés Seguros"></div>
     <div class="hero-titulos">
@@ -705,6 +766,7 @@ ${comAcoes ? `<nav class="acoes-doc" aria-label="Ações da cotação">
     mudar até a emissão da apólice.
     <div class="contato">${escapeHtml(contato.razao)} · ${escapeHtml(contato.email)} · ${escapeHtml(contato.telefone)}</div>
   </footer>
+ </div>
 </div>
 </body>
 </html>`

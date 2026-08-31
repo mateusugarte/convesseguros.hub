@@ -1142,3 +1142,246 @@ html.dark .auto-workflow-prompt{background:linear-gradient(120deg,rgba(245,158,1
   background: rgba(239, 68, 68, 0.08);
 }
 .auto-comparison-review-summary.is-error p { color: #fca5a5; }
+
+/* ─── Rascunho do orcamento comparativo ────────────────────────────────
+   Estado de salvamento e aviso de restauracao. O operador precisa saber, sem
+   perguntar, se o trabalho ja esta em disco e ONDE: so no navegador ou tambem
+   no servidor (a diferenca importa quando ele troca de maquina). */
+.auto-comparison-design-notice { justify-content: space-between; flex-wrap: wrap; }
+.auto-comparison-design-notice > span { flex: 1 1 16rem; }
+
+.auto-comparison-draft {
+  display: inline-flex;
+  align-items: center;
+  gap: .38rem;
+  flex: 0 0 auto;
+  padding: .26rem .55rem;
+  border: 1px solid var(--auto-border);
+  border-radius: 99px;
+  background: rgb(var(--color-surface) / .8);
+  color: var(--auto-muted);
+  font-size: .52rem;
+  font-weight: 720;
+  white-space: nowrap;
+}
+.auto-comparison-draft > svg { width: .78rem; height: .78rem; flex: 0 0 auto; }
+.auto-comparison-draft.is-saving { border-color: rgba(53,99,233,.28); color: var(--auto-blue); }
+.auto-comparison-draft.is-saving .is-spinning { animation: auto-spin 1s linear infinite; }
+.auto-comparison-draft.is-saved { border-color: rgba(16,185,129,.32); background: rgba(16,185,129,.09); color: #0f8a63; }
+.auto-comparison-draft.is-local { border-color: rgba(245,158,11,.32); background: rgba(245,158,11,.09); color: var(--auto-amber); }
+.auto-comparison-draft > button {
+  display: inline-flex;
+  align-items: center;
+  gap: .22rem;
+  margin-left: .3rem;
+  padding-left: .42rem;
+  border-left: 1px solid currentColor;
+  color: inherit;
+  font: inherit;
+  opacity: .72;
+  transition: opacity .15s ease;
+}
+.auto-comparison-draft > button:hover { opacity: 1; }
+.auto-comparison-draft > button svg { width: .7rem; height: .7rem; }
+
+.auto-comparison-restored {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  margin: .6rem 1rem 0;
+  padding: .6rem .8rem;
+  border: 1px solid rgba(16,185,129,.3);
+  border-radius: 13px;
+  background: linear-gradient(110deg, rgba(16,185,129,.1), rgba(53,99,233,.05));
+}
+.auto-comparison-restored > svg { width: 1.4rem; height: 1.4rem; flex: 0 0 auto; padding: .3rem; border-radius: 8px; background: rgba(16,185,129,.14); color: #0f8a63; }
+.auto-comparison-restored > span { display: grid; min-width: 0; flex: 1; }
+.auto-comparison-restored strong { color: var(--auto-ink); font-size: .58rem; }
+.auto-comparison-restored small { margin-top: .1rem; color: var(--auto-muted); font-size: .5rem; line-height: 1.45; }
+.auto-comparison-restored > button { flex: 0 0 auto; color: var(--auto-muted); }
+.auto-comparison-restored > button svg { width: .85rem; height: .85rem; }
+
+@media (max-width: 720px) {
+  .auto-comparison-design-notice { align-items: flex-start; }
+  .auto-comparison-draft { margin-top: .3rem; }
+}
+
+/* ─── Pipeline AUTO: movimentacao sem arraste, colunas recolhiveis ──────
+   Tres problemas de quem passa o dia na Pipeline em um notebook:
+   arrastar card em quadro que rola na horizontal, nao caber todas as etapas na
+   tela, e nao saber quanto valor esta parado em cada etapa. */
+
+/* Avancar/voltar etapa direto no card. Aparece no hover e no foco de teclado;
+   em telas de toque fica sempre visivel, porque ali nao existe hover. */
+.auto-kanban-card-move {
+  position: absolute;
+  right: .6rem;
+  bottom: .5rem;
+  z-index: 4;
+  display: inline-flex;
+  gap: .2rem;
+  padding: .18rem;
+  border: 1px solid var(--auto-border);
+  border-radius: 9px;
+  background: rgb(var(--color-surface) / .97);
+  box-shadow: 0 6px 16px rgba(14, 31, 70, .12);
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity .15s ease, transform .15s ease;
+}
+.auto-kanban-card:hover .auto-kanban-card-move,
+.auto-kanban-card:focus-within .auto-kanban-card-move { opacity: 1; transform: translateY(0); }
+.auto-kanban-card-move button {
+  display: grid;
+  width: 1.5rem;
+  height: 1.5rem;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--auto-blue);
+  transition: background .14s ease, color .14s ease;
+}
+.auto-kanban-card-move button:hover:not(:disabled) { background: rgba(53, 99, 233, .12); }
+.auto-kanban-card-move button:disabled { color: var(--auto-border-strong); cursor: not-allowed; opacity: .55; }
+.auto-kanban-card-move svg { width: .82rem; height: .82rem; stroke-width: 2.3; }
+.auto-kanban-card:hover .auto-kanban-card-hint,
+.auto-kanban-card:focus-within .auto-kanban-card-hint { opacity: .35; }
+@media (hover: none) {
+  .auto-kanban-card-move { opacity: 1; transform: none; }
+}
+
+/* Cabecalho da coluna: recolher e somatorio da etapa. */
+.auto-kanban-column-title { flex: 1; }
+.auto-kanban-column-collapse {
+  display: grid;
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: 0 0 auto;
+  margin-left: auto;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--auto-muted);
+  opacity: 0;
+  transition: opacity .15s ease, background .15s ease, color .15s ease;
+}
+.auto-kanban-column:hover .auto-kanban-column-collapse,
+.auto-kanban-column-collapse:focus-visible { opacity: 1; }
+.auto-kanban-column-collapse:hover { background: rgb(var(--color-surface2)); color: var(--auto-ink); }
+.auto-kanban-column-collapse svg { width: .8rem; height: .8rem; }
+.auto-kanban-column-summary { display: inline-flex; align-items: center; gap: .38rem; }
+.auto-kanban-column-summary b { color: var(--auto-ink); font-weight: 800; }
+.auto-kanban-column-summary em {
+  padding: .1rem .34rem;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--auto-column-accent, var(--auto-blue)) 10%, transparent);
+  color: var(--auto-column-accent, var(--auto-blue));
+  font-style: normal;
+  font-weight: 760;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Coluna recolhida: trilho vertical estreito que ainda aceita drop. */
+.auto-kanban-rail {
+  --auto-column-accent: var(--auto-blue);
+  display: flex;
+  width: 3rem;
+  height: clamp(540px, 69dvh, 760px);
+  flex: 0 0 3rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--auto-column-accent) 20%, var(--auto-border));
+  border-radius: 22px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--auto-column-accent) 7%, rgb(var(--color-surface2))), rgb(var(--color-surface2) / .7));
+  scroll-snap-align: start;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.auto-kanban-rail.auto-column-tone-warning { --auto-column-accent: var(--auto-amber); }
+.auto-kanban-rail.auto-column-tone-secondary { --auto-column-accent: var(--auto-blue); }
+.auto-kanban-rail.auto-column-tone-accent { --auto-column-accent: var(--auto-cyan); }
+.auto-kanban-rail.auto-column-tone-success { --auto-column-accent: var(--auto-green); }
+.auto-kanban-rail.is-drop-target {
+  border-color: var(--auto-column-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--auto-column-accent) 12%, transparent);
+}
+.auto-kanban-rail > button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: .55rem;
+  padding: .8rem 0;
+  color: var(--auto-muted);
+  writing-mode: vertical-rl;
+}
+.auto-kanban-rail > button:hover { color: var(--auto-ink); }
+.auto-kanban-rail-index {
+  color: var(--auto-column-accent);
+  font-size: .5rem;
+  font-weight: 820;
+  writing-mode: horizontal-tb;
+}
+.auto-kanban-rail-label { font-size: .6rem; font-weight: 740; letter-spacing: .04em; white-space: nowrap; }
+.auto-kanban-rail-count {
+  display: grid;
+  min-width: 1.3rem;
+  height: 1.3rem;
+  place-items: center;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--auto-column-accent) 12%, transparent);
+  color: var(--auto-column-accent);
+  font-size: .53rem;
+  font-weight: 800;
+  writing-mode: horizontal-tb;
+}
+.auto-kanban-rail svg { width: .8rem; height: .8rem; margin-top: auto; writing-mode: horizontal-tb; }
+
+/* Trilha de etapas: marca as que estao recolhidas. */
+.auto-pipeline-stage-track > button.is-collapsed { opacity: .58; }
+.auto-pipeline-stage-track > button.is-collapsed > strong { text-decoration: line-through; text-decoration-thickness: 1px; }
+
+.auto-pipeline-expand-all {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  min-height: 32px;
+  padding: .35rem .6rem;
+  border: 1px solid rgba(53, 99, 233, .22);
+  border-radius: 10px;
+  background: rgba(53, 99, 233, .08);
+  color: var(--auto-blue);
+  font-size: .58rem;
+  font-weight: 740;
+  white-space: nowrap;
+  transition: background .14s ease;
+}
+.auto-pipeline-expand-all:hover { background: rgba(53, 99, 233, .14); }
+.auto-pipeline-expand-all svg { width: .8rem; height: .8rem; }
+
+/* Notebook: 1366x768 e 1440x900 sao as telas reais da operacao. O quadro
+   precisa caber junto com cabecalho, filtros e barra de etapas sem que a
+   pagina inteira comece a rolar na vertical. */
+@media (max-height: 900px) {
+  .auto-pipeline-command { gap: .62rem; padding: .72rem .85rem; }
+  .auto-pipeline-command-copy small { display: none; }
+  .auto-pipeline-stage-track > button { padding: .42rem .55rem; }
+  .auto-page .auto-kanban-column,
+  .auto-kanban-rail { height: clamp(360px, 62dvh, 620px); }
+  .auto-kanban-board.is-compact .auto-kanban-column { height: clamp(340px, 60dvh, 560px) !important; }
+}
+@media (max-height: 780px) {
+  .auto-pipeline-command-copy { display: none; }
+  .auto-page .auto-kanban-column,
+  .auto-kanban-rail { height: clamp(320px, 60dvh, 540px); }
+  .auto-kanban-board.is-compact .auto-kanban-column { height: clamp(300px, 58dvh, 500px) !important; }
+}
+.auto-comparison-draft.is-failed { border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.09); color: var(--auto-red); }
+
+/* Modo compacto escondia o subtitulo inteiro da coluna. O somatorio da etapa e
+   justamente o dado que o modo compacto nao pode perder — ele volta menor. */
+.auto-kanban-board.is-compact .auto-kanban-column > header p { display: block; padding-left: 1.7rem; font-size: .52rem !important; }
+.auto-kanban-board.is-compact .auto-kanban-column-summary { gap: .28rem; }
+.auto-kanban-board.is-compact .auto-kanban-rail { height: clamp(470px, 64dvh, 660px); }
+@media (max-height: 900px) {
+  .auto-kanban-board.is-compact .auto-kanban-rail { height: clamp(340px, 60dvh, 560px); }
+}
+@media (max-height: 780px) {
+  .auto-kanban-board.is-compact .auto-kanban-rail { height: clamp(300px, 58dvh, 500px); }
+}

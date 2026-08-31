@@ -26,6 +26,7 @@ Thumbs.db
 !supabase/65_auto_renovacoes_prazo_seguradoras.sql
 !supabase/66_auto_clientes_cpf_opcional_importacao.sql
 !supabase/67_auto_orcamento_comparativo.sql
+!supabase/72_auto_orcamento_rascunho.sql
 
 # Claude Code / Skills locais
 .claude/

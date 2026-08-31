@@ -5,6 +5,7 @@ import { calcularDataLimiteRenovacao, calcularValorComissaoAuto } from './autoCa
 import { planejarExclusaoGrupoAuto } from './autoExclusao.js'
 import { countAutoEmissionTypes, isRenovacaoSemCalculo, renewalStatusFields, resolveAutoEmissionStage } from './autoOperational.js'
 import { buildAutoPendingNotifications } from './autoPending.js'
+import { ehColunaAusente } from './autoQuoteDraft.js'
 import { isRenewalDateInMonth } from './autoRenewalImport.js'
 
 export { calcularValorComissaoAuto }
@@ -517,6 +518,36 @@ export async function atualizarCotacaoAuto(id, changes) {
     .maybeSingle()
   if (error) throw error
   return data
+}
+
+// Rascunho do orcamento comparativo (workspace de `AutoQuoteComparison`).
+//
+// A coluna `orcamento_rascunho` chega na migration 72. Enquanto ela nao for
+// executada, o PostgREST responde "Could not find the 'orcamento_rascunho'
+// column ... in the schema cache". Isso NAO e falha de gravacao: a tela ja
+// guardou tudo no localStorage e continua funcionando no mesmo navegador, entao
+// o retorno so informa que a copia entre dispositivos ainda nao existe. Mesma
+// estrategia ja usada pela verificacao de clientes quando a migration 71 falta.
+export async function salvarRascunhoOrcamento(cotacaoId, rascunho) {
+  if (!cotacaoId) return { persistido: false, motivo: 'sem-cotacao' }
+  const { error } = await supabase
+    .from('cotacoes_auto')
+    .update({ orcamento_rascunho: rascunho, updated_at: new Date().toISOString() })
+    .eq('id', cotacaoId)
+  if (!error) return { persistido: true }
+  if (ehColunaAusente(error)) return { persistido: false, motivo: 'migration-pendente' }
+  throw error
+}
+
+export async function limparRascunhoOrcamento(cotacaoId) {
+  if (!cotacaoId) return { persistido: false, motivo: 'sem-cotacao' }
+  const { error } = await supabase
+    .from('cotacoes_auto')
+    .update({ orcamento_rascunho: null, updated_at: new Date().toISOString() })
+    .eq('id', cotacaoId)
+  if (!error) return { persistido: true }
+  if (ehColunaAusente(error)) return { persistido: false, motivo: 'migration-pendente' }
+  throw error
 }
 
 export async function atualizarStatusCotacao(id, status) {

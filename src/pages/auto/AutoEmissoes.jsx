@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx'
 import { ArrowLeft, ArrowRight, CalendarDays, Car, CheckCircle2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, FileText, Loader2, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, Upload, X, XCircle, Plus, History } from 'lucide-react'
 import { endOfMonth, format, startOfMonth, startOfWeek } from 'date-fns'
 import {
-  atualizarEmissaoAutoCompleta, atualizarTagsEmissao, calcularValorComissaoAuto, cancelarRenovacao, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
+  atualizarEmissaoAutoCompleta, atualizarStatusRenovacao, atualizarTagsEmissao, calcularValorComissaoAuto, cancelarRenovacao, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
   emitirApoliceAuto, getApolicesAuto, getAutoTags, getEmissaoAuto, getEmissaoColuna, getEmissoesAuto, getRenovacoesPendentesSemCotacao,
   iniciarCotacaoRenovacao, importarApolicesAutoHistorico, moverEmissaoColuna,
   salvarPropostaPlanilhaAuto, salvarResultadoCotacao,
@@ -24,9 +24,9 @@ import { uploadDocumento } from '../../lib/documentos'
 import { toNumber } from '../../lib/apolices'
 import { parseAutoHistoricoPlanilha, somarUmAno } from '../../lib/autoHistoricoImport.js'
 import { parseOrcamentoAuto, parsePropostaAuto } from '../../lib/autoPdfParser.js'
-import { AUTO_PIPELINE_STAGES, AUTO_TIPO_META, classificarRenovacoesPipeline, scoreCotacaoSuggestion } from '../../lib/autoOperational.js'
+import { AUTO_PIPELINE_STAGES, AUTO_TIPO_META, renovacaoStageFields, resolveRenovacaoStage, scoreCotacaoSuggestion } from '../../lib/autoOperational.js'
 import {
-  alternarColunaRecolhida, etapaVizinha, gravarPreferenciasPipeline,
+  alternarColunaRecolhida, etapaVizinha, etapaVizinhaRenovacao, gravarPreferenciasPipeline,
   lerPreferenciasPipeline, resumoFinanceiroEtapa,
 } from '../../lib/autoPipelineBoard.js'
 import { useOrigemAtual, useVoltar } from '../../hooks/useVoltar.js'
@@ -390,6 +390,12 @@ function getColunaMeta(colunaId) {
   return COLUNAS.find(item => item.id === colunaId) || COLUNAS[0]
 }
 
+// `COLUNAS` so descreve as 6 etapas de emissao. A renovacao tambem passa pelas
+// duas colunas de renovacao, que so existem em `AUTO_PIPELINE_STAGES`.
+function getEtapaLabel(stageId) {
+  return AUTO_PIPELINE_STAGES.find(item => item.id === stageId)?.label || getColunaMeta(stageId).label
+}
+
 function normalizeSeguradorasCotadas(seguradoras) {
   const lista = Array.isArray(seguradoras) ? seguradoras : []
   const normalizadas = lista
@@ -498,16 +504,16 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, tagsPorId }) {
   const etapaAnterior = etapaVizinha(coluna, -1)
   const proximaEtapa = etapaVizinha(coluna, 1)
 
-  let shellClass = 'border-brand-secondary/20 bg-white/90 shadow-[0_18px_40px_rgba(15,23,42,0.06)]'
+  let shellClass = 'border-brand-secondary/20 bg-white/90 shadow-[0_10px_24px_rgba(15,23,42,0.05)]'
   let accentClass = 'from-brand-secondary to-brand-accent'
   if (isRecusada) {
-    shellClass = 'border-red-200 bg-red-50/90 shadow-[0_18px_40px_rgba(239,68,68,0.08)]'
+    shellClass = 'border-red-200 bg-red-50/90 shadow-[0_10px_24px_rgba(239,68,68,0.07)]'
     accentClass = 'from-red-400 to-red-500'
   } else if (isRenovacao) {
-    shellClass = 'border-status-success/20 bg-status-success/5 shadow-[0_18px_40px_rgba(34,197,94,0.08)]'
+    shellClass = 'border-status-success/20 bg-status-success/5 shadow-[0_10px_24px_rgba(34,197,94,0.07)]'
     accentClass = 'from-status-success to-brand-secondary'
   } else if (coluna === 'pendentes') {
-    shellClass = 'border-status-warning/20 bg-status-warning/5 shadow-[0_18px_40px_rgba(245,158,11,0.08)]'
+    shellClass = 'border-status-warning/20 bg-status-warning/5 shadow-[0_10px_24px_rgba(245,158,11,0.07)]'
     accentClass = 'from-brand-accent to-brand-secondary'
   }
 
@@ -526,19 +532,19 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, tagsPorId }) {
         onClick(emissao)
       }}
       title="Abrir detalhes da emissao"
-      className={['auto-kanban-card group relative flex min-h-[290px] w-full cursor-pointer flex-col overflow-hidden rounded-[30px] border p-4 text-left transition-all hover:-translate-y-1 hover:shadow-[0_22px_48px_rgba(15,23,42,0.12)]', shellClass].join(' ')}
+      className={['auto-kanban-card group relative flex w-full cursor-pointer flex-col overflow-hidden rounded-2xl border p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(15,23,42,0.10)]', shellClass].join(' ')}
     >
-      <div className={['absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r', accentClass].join(' ')} />
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-dark-surface px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">{colunaMeta.label}</span>
+      <div className={['absolute inset-x-0 top-0 h-1 bg-gradient-to-r', accentClass].join(' ')} />
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 space-y-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="rounded-full bg-dark-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">{colunaMeta.label}</span>
             <span className={tipoMeta.className}>{tipoMeta.label}</span>
-            {typeof prazo === 'number' && <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${prazo < 0 ? 'bg-red-100 text-red-600' : prazo <= 15 ? 'bg-status-warning/10 text-status-warning' : 'bg-dark-surface text-dark-muted'}`}>{prazo < 0 ? `${Math.abs(prazo)} dia(s) vencida` : `${prazo} dia(s) para vencer`}</span>}
+            {typeof prazo === 'number' && <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${prazo < 0 ? 'bg-red-100 text-red-600' : prazo <= 15 ? 'bg-status-warning/10 text-status-warning' : 'bg-dark-surface text-dark-muted'}`}>{prazo < 0 ? `${Math.abs(prazo)}d vencida` : `${prazo}d p/ vencer`}</span>}
           </div>
           <div>
-            <p className="truncate text-base font-semibold text-dark-text">{nome}</p>
-            <p className="mt-1 truncate text-sm text-dark-muted">{veiculo}</p>
+            <p className="truncate text-sm font-semibold text-dark-text">{nome}</p>
+            <p className="mt-0.5 truncate text-xs text-dark-muted">{veiculo}</p>
           </div>
           {cardTags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
@@ -554,45 +560,45 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, tagsPorId }) {
             </div>
           )}
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-2">
-          {isRecusada && <span className="rounded-full bg-red-100 px-2.5 py-1 text-[10px] font-semibold text-red-600">Recusada</span>}
-          {isEmitida && <span className="rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success">Emitida</span>}
-          {isAprovada && <span className="rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success">Aprovada</span>}
-          {isCotada && !isEmitida && <span className="rounded-full bg-brand-secondary/10 px-2.5 py-1 text-[10px] font-semibold text-status-info">Cotada</span>}
-          {!emissao.resultado && !isEmitida && <span className="rounded-full bg-dark-surface px-2.5 py-1 text-[10px] font-semibold text-dark-muted">Em andamento</span>}
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {isRecusada && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600">Recusada</span>}
+          {isEmitida && <span className="rounded-full bg-status-success/10 px-2 py-0.5 text-[10px] font-semibold text-status-success">Emitida</span>}
+          {isAprovada && <span className="rounded-full bg-status-success/10 px-2 py-0.5 text-[10px] font-semibold text-status-success">Aprovada</span>}
+          {isCotada && !isEmitida && <span className="rounded-full bg-brand-secondary/10 px-2 py-0.5 text-[10px] font-semibold text-status-info">Cotada</span>}
+          {!emissao.resultado && !isEmitida && <span className="rounded-full bg-dark-surface px-2 py-0.5 text-[10px] font-semibold text-dark-muted">Em andamento</span>}
         </div>
       </div>
 
-      <div className="mt-4 rounded-[26px] border border-white/70 bg-dark-surface/70 p-3">
-        <div className="flex items-center gap-3">
-          <SeguradoraBadge nome={seguradora} size="lg" />
+      <div className="mt-2 rounded-xl border border-white/70 bg-dark-surface/70 p-2">
+        <div className="flex items-center gap-2">
+          <SeguradoraBadge nome={seguradora} size="md" />
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-dark-text">{seguradora}</p>
-            <p className="truncate text-xs text-dark-muted">Placa {placa} · CPF {cpfEmissao(emissao)}</p>
+            <p className="truncate text-xs font-semibold text-dark-text">{seguradora}</p>
+            <p className="truncate text-[11px] text-dark-muted">Placa {placa} · CPF {cpfEmissao(emissao)}</p>
           </div>
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 rounded-[26px] border border-white/70 bg-white/70 p-3 text-xs text-dark-muted sm:grid-cols-2">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Vigência</p>
-          <p className="mt-1 text-sm font-medium text-dark-text">{emissao.vigencia_inicio ? formatDateBR(emissao.vigencia_inicio) : '—'} até {vigenciaFim ? formatDateBR(vigenciaFim) : '—'}</p>
+      <div className="mt-2 grid gap-x-2 gap-y-1.5 rounded-xl border border-white/70 bg-white/70 p-2 text-xs text-dark-muted sm:grid-cols-2">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-dark-muted">Vigência</p>
+          <p className="truncate text-xs font-medium text-dark-text">{emissao.vigencia_inicio ? formatDateBR(emissao.vigencia_inicio) : '—'} · {vigenciaFim ? formatDateBR(vigenciaFim) : '—'}</p>
         </div>
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Condutor</p>
-          <p className="mt-1 text-sm font-medium text-dark-text">{condutorEmissao(emissao)}</p>
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-dark-muted">Condutor</p>
+          <p className="truncate text-xs font-medium text-dark-text">{condutorEmissao(emissao)}</p>
         </div>
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Prêmio líquido</p>
-          <p className="mt-1 text-sm font-medium text-dark-text">{formatMoney(premio)}</p>
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-dark-muted">Prêmio líquido</p>
+          <p className="truncate text-xs font-medium text-dark-text">{formatMoney(premio)}</p>
         </div>
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Comissão</p>
-          <p className="mt-1 text-sm font-medium text-dark-text">{formatMoney(comissao)}</p>
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-dark-muted">Comissão</p>
+          <p className="truncate text-xs font-medium text-dark-text">{formatMoney(comissao)}</p>
         </div>
       </div>
 
-      <div className="mt-auto flex items-center justify-between gap-2 pt-4 text-xs text-dark-muted">
+      <div className="mt-auto flex items-center justify-between gap-2 pt-2 text-xs text-dark-muted">
         <span className="auto-kanban-card-hint">{colunaMeta.hint}</span>
         <span className="inline-flex items-center gap-1 font-semibold text-status-info">Abrir <ArrowRight className="h-3.5 w-3.5" /></span>
       </div>
@@ -625,12 +631,12 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, tagsPorId }) {
   )
 }
 
-// Card leve para a coluna virtual "Renovacoes": renovacoes ainda sem cotacao
-// vinculada (renovacoes_auto.cotacao_id nulo), fora do modelo de
-// emissoes_auto/cotacoes_auto que alimenta as demais colunas. Sem
-// drag-and-drop — "mover" essa renovacao significa iniciar a cotacao de
-// verdade, nao so trocar um rotulo.
-function CardRenovacaoPendente({ renovacao, onIniciarCotacao, onCancelar, iniciando, cancelando }) {
+// Card da renovacao no quadro. A renovacao vive em `renovacoes_auto`, fora do
+// modelo emissoes_auto/cotacoes_auto que alimenta as outras colunas, mas
+// circula pelo funil como qualquer outro card: arrastar grava o status na
+// propria linha e o card fica na coluna de destino. "Iniciar cotacao" continua
+// sendo o caminho separado para transformar a renovacao em cotacao de verdade.
+function CardRenovacaoPendente({ renovacao, onDragStart, onMover, onIniciarCotacao, onCancelar, iniciando, cancelando }) {
   const apolice = renovacao.apolices_auto || {}
   const nome = renovacao.clientes_auto?.nome_completo || apolice.nome_cliente || renovacao.nome_segurado_anterior || 'Segurado'
   const seguradora = renovacao.seguradora || apolice.seguradora || null
@@ -638,29 +644,37 @@ function CardRenovacaoPendente({ renovacao, onIniciarCotacao, onCancelar, inicia
   const urgenciaKey = getRenovacaoUrgencia({ dias, concluida: false, proximoMes: false })
   const urgencia = RENOVACAO_URGENCIA_META[urgenciaKey]
 
+  const coluna = resolveRenovacaoStage(renovacao)
+  const etapaAnterior = etapaVizinhaRenovacao(coluna, -1)
+  const proximaEtapa = etapaVizinhaRenovacao(coluna, 1)
+
   return (
-    <div className="auto-kanban-card relative flex w-full flex-col overflow-hidden rounded-[30px] border border-brand-accent/20 bg-brand-accent/5 p-4 text-left shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
-      <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-brand-accent to-brand-secondary" />
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-dark-surface px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Renovação</span>
+    <div
+      draggable
+      onDragStart={() => onDragStart?.(renovacao)}
+      className="auto-kanban-card relative flex w-full flex-col overflow-hidden rounded-2xl border border-brand-accent/20 bg-brand-accent/5 p-3 text-left shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
+    >
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-accent to-brand-secondary" />
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="rounded-full bg-dark-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Renovação</span>
         {typeof dias === 'number' && (
           <span className={`badge ${urgencia.badgeClass}`}>{formatDiasParaVencer(dias)}</span>
         )}
       </div>
-      <p className="mt-2 truncate text-base font-semibold text-dark-text">{nome}</p>
-      <div className="mt-3 flex items-center gap-3 rounded-[22px] border border-white/70 bg-white/70 p-3">
-        {seguradora ? <SeguradoraBadge nome={seguradora} size="md" /> : <span className="text-xs text-dark-muted">Seguradora não informada</span>}
-        <div className="min-w-0 text-xs text-dark-muted">
-          <p>Vencimento: {formatDateBR(renovacao.vigencia_fim)}</p>
-          {renovacao.data_limite_envio && <p>Limite p/ envio: {formatDateBR(renovacao.data_limite_envio)}</p>}
+      <p className="mt-1.5 truncate text-sm font-semibold text-dark-text">{nome}</p>
+      <div className="mt-2 flex items-center gap-2 rounded-xl border border-white/70 bg-white/70 p-2">
+        {seguradora ? <SeguradoraBadge nome={seguradora} size="sm" /> : <span className="text-[11px] text-dark-muted">Seguradora não informada</span>}
+        <div className="min-w-0 text-[11px] leading-snug text-dark-muted">
+          <p className="truncate">Vence {formatDateBR(renovacao.vigencia_fim)}</p>
+          {renovacao.data_limite_envio && <p className="truncate">Envio até {formatDateBR(renovacao.data_limite_envio)}</p>}
         </div>
       </div>
-      <div className="mt-4 flex flex-col gap-2">
+      <div className="mt-2 flex flex-col gap-1.5">
         <button
           type="button"
           onClick={() => onIniciarCotacao(renovacao.id)}
           disabled={iniciando}
-          className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-60"
+          className="btn-primary inline-flex items-center justify-center gap-2 px-3 py-1.5 text-xs disabled:opacity-60"
         >
           {iniciando ? 'Abrindo...' : (renovacao.cotacao_id ? 'Abrir cotação' : 'Iniciar cotação')}
         </button>
@@ -668,11 +682,35 @@ function CardRenovacaoPendente({ renovacao, onIniciarCotacao, onCancelar, inicia
           type="button"
           onClick={() => onCancelar(renovacao.id)}
           disabled={cancelando}
-          className="rounded-2xl border border-status-danger/30 bg-status-danger/5 px-3 py-2 text-xs font-semibold text-status-danger transition-colors hover:bg-status-danger/10 disabled:opacity-60"
+          className="rounded-xl border border-status-danger/30 bg-status-danger/5 px-3 py-1.5 text-[11px] font-semibold text-status-danger transition-colors hover:bg-status-danger/10 disabled:opacity-60"
         >
           Cancelar renovação
         </button>
       </div>
+
+      {/* Mesmo par de setas do card de emissao: arrastar num quadro que rola na
+          horizontal e caro no trackpad, e a renovacao agora percorre o mesmo
+          funil. */}
+      <span className="auto-kanban-card-move" role="group" aria-label="Mover de etapa">
+        <button
+          type="button"
+          disabled={!etapaAnterior}
+          title={etapaAnterior ? `Voltar para ${getEtapaLabel(etapaAnterior)}` : 'Primeira etapa do funil'}
+          aria-label={etapaAnterior ? `Voltar para ${getEtapaLabel(etapaAnterior)}` : 'Primeira etapa do funil'}
+          onClick={event => { event.stopPropagation(); if (etapaAnterior) onMover?.(renovacao, etapaAnterior) }}
+        >
+          <ChevronsLeft />
+        </button>
+        <button
+          type="button"
+          disabled={!proximaEtapa}
+          title={proximaEtapa ? `Avançar para ${getEtapaLabel(proximaEtapa)}` : 'Última etapa do funil'}
+          aria-label={proximaEtapa ? `Avançar para ${getEtapaLabel(proximaEtapa)}` : 'Última etapa do funil'}
+          onClick={event => { event.stopPropagation(); if (proximaEtapa) onMover?.(renovacao, proximaEtapa) }}
+        >
+          <ChevronsRight />
+        </button>
+      </span>
     </div>
   )
 }
@@ -1556,6 +1594,20 @@ export default function AutoEmissoes() {
     ]),
   })
 
+  // Arrastar renovacao NAO cria cotacao nem emissao: grava o status na propria
+  // linha de `renovacoes_auto` e o card passa a ser desenhado na coluna que
+  // aquele status aponta. Quem quer cotar de fato usa "Iniciar cotacao".
+  const { mutate: moverRenovacao } = useMutation({
+    mutationFn: ({ id, campos }) => atualizarStatusRenovacao(id, campos),
+    onMutate: async ({ id, campos }) => {
+      await qc.cancelQueries({ queryKey: ['auto-renovacoes-pendentes'] })
+      qc.setQueriesData({ queryKey: ['auto-renovacoes-pendentes'] }, old =>
+        Array.isArray(old) ? old.map(item => (item.id === id ? { ...item, ...campos } : item)) : old)
+    },
+    onError: error => toast({ type: 'error', title: 'Erro ao mover a renovação', message: error?.message || 'Tente novamente.' }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['auto-renovacoes-pendentes'] }),
+  })
+
   // As colunas virtuais de renovacao usam uma carteira mensal explicita e
   // independente do periodo das emissoes. Somente itens sem calculo concluido
   // entram nesta consulta.
@@ -1616,21 +1668,29 @@ export default function AutoEmissoes() {
     () => renovacoesPendentes.filter(matchesPipelineSearch),
     [renovacoesPendentes, matchesPipelineSearch],
   )
-  const renovacoesPorPrazo = useMemo(
-    () => classificarRenovacoesPipeline(renovacoesPipeline),
-    [renovacoesPipeline],
-  )
+  // As renovacoes deixaram de morar so nas duas colunas de prazo: cada uma cai
+  // na coluna que o proprio status aponta, do mesmo jeito que uma emissao.
+  const renovacoesPorColuna = useMemo(() => {
+    const mapa = new Map(KANBAN_STAGES.map(stage => [stage.id, []]))
+    renovacoesPipeline.forEach(item => {
+      const stage = resolveRenovacaoStage(item)
+      if (!mapa.has(stage)) mapa.set(stage, [])
+      mapa.get(stage).push(item)
+    })
+    return mapa
+  }, [renovacoesPipeline])
 
   const kanbanCounts = useMemo(() => {
     const counts = new Map(KANBAN_STAGES.map(stage => [stage.id, 0]))
-    counts.set('renovacoes', renovacoesPorPrazo.futuras.length)
-    counts.set('renovacoes_para_enviar', renovacoesPorPrazo.paraEnviar.length)
+    renovacoesPorColuna.forEach((items, stage) => {
+      counts.set(stage, (counts.get(stage) || 0) + items.length)
+    })
     emissoesPipeline.forEach(item => {
       const stage = getEmissaoColuna(item)
       counts.set(stage, (counts.get(stage) || 0) + 1)
     })
     return counts
-  }, [emissoesPipeline, renovacoesPorPrazo])
+  }, [emissoesPipeline, renovacoesPorColuna])
 
   const updateKanbanNavigation = useCallback(() => {
     const container = kanbanScrollRef.current
@@ -2037,9 +2097,26 @@ export default function AutoEmissoes() {
     setColunasRecolhidas(atual => alternarColunaRecolhida(atual, id, COLUNAS.length))
   }
 
+  /**
+   * Move a renovacao entre colunas gravando somente o status dela.
+   *
+   * `renovacaoStageFields` traduz a coluna para os tres campos de
+   * `renovacoes_auto`; soltar na coluna onde ela ja esta nao grava nada.
+   */
+  function moverRenovacaoPipeline(item, colunaDestino) {
+    if (!item || !colunaDestino) return
+    if (resolveRenovacaoStage(item) === colunaDestino) return
+    const campos = renovacaoStageFields(colunaDestino)
+    if (!campos) return
+    moverRenovacao({ id: item.id, campos })
+  }
+
+  // O quadro tem dois tipos de card e cada um grava numa tabela diferente, por
+  // isso o que esta sendo arrastado carrega o proprio tipo.
   function handleDrop(colunaDestino) {
     if (!dragging) return
-    moverCardPipeline(dragging, colunaDestino)
+    if (dragging.tipo === 'renovacao') moverRenovacaoPipeline(dragging.item, colunaDestino)
+    else moverCardPipeline(dragging.item, colunaDestino)
     setDragging(null)
     setDragOver(null)
   }
@@ -2551,9 +2628,10 @@ export default function AutoEmissoes() {
               aria-label="Quadro da Pipeline AUTO. Use as setas do teclado para mudar de coluna."
             >
             {[
-              { id: 'renovacoes', items: renovacoesPorPrazo.futuras, empty: 'Sem renovações futuras' },
-              { id: 'renovacoes_para_enviar', items: renovacoesPorPrazo.paraEnviar, empty: 'Nada atrasado para enviar' },
-            ].map(({ id, items, empty }) => {
+              { id: 'renovacoes', empty: 'Sem renovações futuras' },
+              { id: 'renovacoes_para_enviar', empty: 'Nada atrasado para enviar' },
+            ].map(({ id, empty }) => {
+              const items = renovacoesPorColuna.get(id) || []
               const stage = KANBAN_STAGES.find(item => item.id === id)
               const stageIndex = KANBAN_STAGES.findIndex(item => item.id === id)
               return (
@@ -2561,10 +2639,15 @@ export default function AutoEmissoes() {
                   key={id}
                   title={<span className="auto-kanban-column-title"><span>{String(stageIndex + 1).padStart(2, '0')}</span>{stage.label}</span>}
                   subtitle={`${items.length} item(ns) sem cálculo · ${pipelineMonthLabel(mesRenovacoes)}`}
-                  className={`auto-kanban-column auto-kanban-column-renewals w-[300px] shrink-0 snap-start ${id === 'renovacoes_para_enviar' ? 'is-urgent' : ''}`}
-                  bodyClassName="pt-4"
+                  className={`auto-kanban-column auto-kanban-column-renewals w-[300px] shrink-0 snap-start ${id === 'renovacoes_para_enviar' ? 'is-urgent' : ''} ${dragOver === id ? 'ring-2 ring-brand-accent/20' : ''}`}
+                  bodyClassName="pt-3"
                 >
-                  <div className="auto-kanban-dropzone min-h-[72vh] space-y-3">
+                  <div
+                    onDragOver={e => { e.preventDefault(); setDragOver(id) }}
+                    onDrop={() => handleDrop(id)}
+                    onDragLeave={() => setDragOver(null)}
+                    className="auto-kanban-dropzone min-h-[72vh] space-y-2"
+                  >
                     {isErrorRenovacoesPendentes ? (
                       <EmptyState icon={<XCircle className="w-6 h-6" />} title="Erro ao carregar renovações" description={errorRenovacoesPendentes?.message || 'Tente recarregar a página.'} className="py-8" />
                     ) : items.length === 0 ? (
@@ -2578,6 +2661,8 @@ export default function AutoEmissoes() {
                       <CardRenovacaoPendente
                         key={item.id}
                         renovacao={item}
+                        onDragStart={arrastada => setDragging({ tipo: 'renovacao', item: arrastada })}
+                        onMover={moverRenovacaoPipeline}
                         onIniciarCotacao={handleIniciarCotacaoRenovacao}
                         onCancelar={handleCancelarRenovacaoPendente}
                         iniciando={iniciandoCotacaoId === item.id}
@@ -2590,6 +2675,11 @@ export default function AutoEmissoes() {
             })}
             {COLUNAS.map(coluna => {
               const cards = emissoesPipeline.filter(item => getEmissaoColuna(item) === coluna.id)
+              // Renovacoes arrastadas para esta etapa. Elas nao entram em
+              // `cards` porque continuam sendo linhas de `renovacoes_auto` e
+              // nao alimentam o resumo financeiro da coluna.
+              const renovacoesNaColuna = renovacoesPorColuna.get(coluna.id) || []
+              const totalCards = cards.length + renovacoesNaColuna.length
               const posicao = String(KANBAN_STAGES.findIndex(stage => stage.id === coluna.id) + 1).padStart(2, '0')
               const recolhida = colunasRecolhidas.includes(coluna.id)
               const resumo = resumoFinanceiroEtapa(cards, item => {
@@ -2616,11 +2706,11 @@ export default function AutoEmissoes() {
                       type="button"
                       onClick={() => alternarColuna(coluna.id)}
                       title={`Expandir ${coluna.label}`}
-                      aria-label={`Expandir a coluna ${coluna.label} (${cards.length} itens)`}
+                      aria-label={`Expandir a coluna ${coluna.label} (${totalCards} itens)`}
                     >
                       <span className="auto-kanban-rail-index">{posicao}</span>
                       <span className="auto-kanban-rail-label">{coluna.label}</span>
-                      <span className="auto-kanban-rail-count">{cards.length}</span>
+                      <span className="auto-kanban-rail-count">{totalCards}</span>
                       <ChevronsRight aria-hidden="true" />
                     </button>
                   </div>
@@ -2647,20 +2737,33 @@ export default function AutoEmissoes() {
                   )}
                   subtitle={(
                     <span className="auto-kanban-column-summary">
-                      <b>{resumo.total}</b> item(ns)
+                      <b>{totalCards}</b> item(ns)
+                      {renovacoesNaColuna.length > 0 && <em>{renovacoesNaColuna.length} renovação(ões)</em>}
                       {resumo.premio > 0 && <em>{formatMoney(resumo.premio)} em prêmio</em>}
                     </span>
                   )}
                   className={`auto-kanban-column auto-column-tone-${coluna.tone} w-[300px] shrink-0 snap-start ${dragOver === coluna.id ? 'ring-2 ring-brand-accent/20' : ''}`}
-                  bodyClassName="pt-4"
+                  bodyClassName="pt-3"
                 >
                   <div
                     onDragOver={e => { e.preventDefault(); setDragOver(coluna.id) }}
                     onDrop={() => handleDrop(coluna.id)}
                     onDragLeave={() => setDragOver(null)}
-                    className="auto-kanban-dropzone min-h-[72vh] space-y-3"
+                    className="auto-kanban-dropzone min-h-[72vh] space-y-2"
                   >
-                    {cards.length === 0 ? (
+                    {renovacoesNaColuna.map(item => (
+                      <CardRenovacaoPendente
+                        key={`renovacao-${item.id}`}
+                        renovacao={item}
+                        onDragStart={arrastada => setDragging({ tipo: 'renovacao', item: arrastada })}
+                        onMover={moverRenovacaoPipeline}
+                        onIniciarCotacao={handleIniciarCotacaoRenovacao}
+                        onCancelar={handleCancelarRenovacaoPendente}
+                        iniciando={iniciandoCotacaoId === item.id}
+                        cancelando={cancelandoRenovacao}
+                      />
+                    ))}
+                    {totalCards === 0 ? (
                       <EmptyState
                         icon={<Car className="w-6 h-6" />}
                         title={termoPipeline ? 'Nenhum resultado nesta etapa' : (coluna.id === 'pendentes' ? 'Sem pendências' : 'Coluna vazia')}
@@ -2676,7 +2779,7 @@ export default function AutoEmissoes() {
                         <CardEmissao
                           key={item.id}
                           emissao={item}
-                          onDragStart={setDragging}
+                          onDragStart={arrastado => setDragging({ tipo: 'emissao', item: arrastado })}
                           onClick={abrirDetalhe}
                           onMover={moverCardPipeline}
                           tagsPorId={tagsPorId}

@@ -4,11 +4,14 @@ import './autoClientVerification.test.mjs'
 import {
   classificarRenovacoesPipeline,
   countAutoEmissionTypes,
+  isRenovacaoNoQuadro,
   isRenovacaoSemCalculo,
   parseRenovacoesPaste,
   renewalStatusFields,
   renewalStatusValue,
+  renovacaoStageFields,
   resolveAutoEmissionStage,
+  resolveRenovacaoStage,
   scoreCotacaoSuggestion,
   suggestRenewalClientByName,
 } from './autoOperational.js'
@@ -101,4 +104,71 @@ test('sugere cliente existente pelo nome apenas quando a correspondencia e unica
   assert.equal(suggestRenewalClientByName('Maria', clientes)?.id, '2')
   assert.equal(suggestRenewalClientByName('Jo', clientes), null)
   assert.equal(suggestRenewalClientByName('Ana', [{ id: '3', nome_completo: 'Ana Lima' }, { id: '4', nome_completo: 'Ana Souza' }]), null)
+})
+
+// ─── Renovacao arrastavel na Pipeline ──────────────────────────────────────
+
+test('renovacao sem status de trabalho fica nas colunas de renovacao, dividida pela data limite', () => {
+  assert.equal(resolveRenovacaoStage({ data_limite_envio: '2026-08-21' }, '2026-08-20'), 'renovacoes')
+  assert.equal(resolveRenovacaoStage({ data_limite_envio: '2026-08-20' }, '2026-08-20'), 'renovacoes_para_enviar')
+  assert.equal(resolveRenovacaoStage({ status_operacional: 'pendente', vigencia_fim: '2026-08-18' }, '2026-08-20'), 'renovacoes_para_enviar')
+})
+
+test('abrir a cotacao (cotando) nao tira a renovacao da coluna de renovacao', () => {
+  assert.equal(
+    resolveRenovacaoStage({ status_operacional: 'cotando', cotacao_id: 'c1', data_limite_envio: '2026-08-21' }, '2026-08-20'),
+    'renovacoes',
+  )
+})
+
+test('cada etapa do funil devolve a renovacao na coluna onde ela foi solta', () => {
+  const etapas = ['cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida']
+  for (const etapa of etapas) {
+    const campos = renovacaoStageFields(etapa)
+    assert.ok(campos, `${etapa} deveria ter campos`)
+    assert.equal(resolveRenovacaoStage({ ...campos, data_limite_envio: '2026-08-18' }, '2026-08-20'), etapa)
+  }
+})
+
+test('soltar em "Cotacoes pendentes" devolve a renovacao para o backlog pendente', () => {
+  const campos = renovacaoStageFields('pendentes')
+  assert.equal(campos.status_operacional, 'pendente')
+  assert.equal(resolveRenovacaoStage({ ...campos, data_limite_envio: '2026-08-21' }, '2026-08-20'), 'renovacoes')
+})
+
+test('aguardando vistoria e negociando gravam status validos e nao se confundem', () => {
+  const vistoria = renovacaoStageFields('aguardando_vistoria')
+  const negociando = renovacaoStageFields('negociando')
+  // Os dois usam o mesmo status_operacional; o que os separa e o status_cotacao.
+  assert.equal(vistoria.status_operacional, 'negociando')
+  assert.equal(negociando.status_operacional, 'negociando')
+  assert.notEqual(vistoria.status_cotacao, negociando.status_cotacao)
+  // Ambos precisam respeitar os CHECKs da tabela renovacoes_auto.
+  const operacionaisValidos = ['pendente', 'cotando', 'cotado', 'enviado', 'negociando', 'outra_corretora', 'renovado', 'cancelado']
+  const cotacaoValidos = ['nao_cotada', 'cotada_nao_enviada', 'cotada_enviada']
+  for (const etapa of ['renovacoes', 'renovacoes_para_enviar', 'pendentes', 'cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida']) {
+    const campos = renovacaoStageFields(etapa)
+    assert.ok(operacionaisValidos.includes(campos.status_operacional), `${etapa}: status_operacional invalido`)
+    assert.ok(cotacaoValidos.includes(campos.status_cotacao), `${etapa}: status_cotacao invalido`)
+  }
+  // Para as outras telas o negocio continua legivel como "aguardando retorno".
+  assert.equal(renewalStatusValue(vistoria), 'negociando')
+})
+
+test('coluna desconhecida nao grava nada', () => {
+  assert.equal(renovacaoStageFields('coluna_que_nao_existe'), null)
+})
+
+test('renovacao posicionada no funil continua no quadro em vez de sumir', () => {
+  // Era o bug: estes quatro estados fazem isRenovacaoSemCalculo devolver false,
+  // entao a renovacao sumia logo depois de ser arrastada.
+  for (const status_operacional of ['cotado', 'enviado', 'negociando', 'renovado']) {
+    assert.equal(isRenovacaoSemCalculo({ status_operacional }), false)
+    assert.equal(isRenovacaoNoQuadro({ status_operacional }), true)
+  }
+  // Saidas do funil continuam fora do quadro.
+  assert.equal(isRenovacaoNoQuadro({ status_operacional: 'outra_corretora' }), false)
+  assert.equal(isRenovacaoNoQuadro({ status_operacional: 'cancelado' }), false)
+  // E quem nunca foi trabalhado segue entrando.
+  assert.equal(isRenovacaoNoQuadro({ status_operacional: 'pendente', status_cotacao: 'nao_cotada' }), true)
 })

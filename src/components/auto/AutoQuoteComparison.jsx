@@ -23,9 +23,18 @@ const ROLES = [
   { key: 'concorrente', label: 'Outra seguradora', helper: 'Opção concorrente para comparação' },
 ]
 
+// As quatro marcas da familia Porto sao opcoes SEPARADAS. Elas compartilham o
+// layout do PDF, mas nao a identidade: o orcamento entregue ao cliente leva o
+// nome e a logo da seguradora escolhida aqui. Com a opcao agrupada
+// ("Porto / Azul / Itaú / Mitsui"), a marca do documento final dependia de
+// adivinhacao por texto — e um orcamento da Porto e um da Azul saiam os dois
+// como Azul Seguros.
 const SEGURADORAS_ORCAMENTO = [
   { id: 'allianz', label: 'Allianz' },
-  { id: 'porto_familia', label: 'Porto / Azul / Itaú / Mitsui' },
+  { id: 'porto', label: 'Porto Seguro' },
+  { id: 'azul', label: 'Azul Seguros' },
+  { id: 'itau', label: 'Itaú Seguros' },
+  { id: 'mitsui', label: 'Mitsui Sumitomo' },
   { id: 'bradesco', label: 'Bradesco' },
   { id: 'hdi', label: 'HDI' },
   { id: 'darwin', label: 'Darwin' },
@@ -38,7 +47,12 @@ const SEGURADORAS_ORCAMENTO = [
 function parserInicial(nome = '') {
   const n = String(nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
   if (n.includes('allianz')) return 'allianz'
-  if (n.includes('porto') || n.includes('azul') || n.includes('itau') || n.includes('mitsui')) return 'porto_familia'
+  // Antes da separacao das marcas, qualquer uma das quatro caia em
+  // 'porto_familia'. Agora cada nome aponta para a sua propria opcao.
+  if (n.includes('azul')) return 'azul'
+  if (n.includes('itau')) return 'itau'
+  if (n.includes('mitsui')) return 'mitsui'
+  if (n.includes('porto')) return 'porto'
   if (n.includes('bradesco')) return 'bradesco'
   if (n.includes('hdi')) return 'hdi'
   if (n.includes('darwin')) return 'darwin'
@@ -243,6 +257,12 @@ function UploadSlot({ role, side, file, leitura, lendo, erro, aplicando, segurad
           >
             <option value="">Escolher seguradora…</option>
             {SEGURADORAS_ORCAMENTO.map(seguradora => <option key={seguradora.id} value={seguradora.id}>{seguradora.label}</option>)}
+            {/* Rascunho gravado antes da separacao das marcas guardou o id
+                antigo 'porto_familia'. Sem esta opcao o select abriria vazio e
+                pareceria que a seguradora se perdeu. */}
+            {seguradoraParser && !SEGURADORAS_ORCAMENTO.some(item => item.id === seguradoraParser) && (
+              <option value={seguradoraParser}>Porto / Azul / Itaú / Mitsui (escolha a marca)</option>
+            )}
           </select>
           <ChevronDown />
         </div>
@@ -496,6 +516,7 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange })
   })
   const [gerando, setGerando] = useState(false)
   const [erroGeracao, setErroGeracao] = useState('')
+  const [seguradorasSemLogo, setSeguradorasSemLogo] = useState([])
   const [comparativoGerado, setComparativoGerado] = useState(null)
   const [previewHtml, setPreviewHtml] = useState('')
   const [previewFullscreen, setPreviewFullscreen] = useState(false)
@@ -770,7 +791,7 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange })
     setGerando(true)
     setErroGeracao('')
     try {
-      const [{ montarComparativo, casarSeguradora }, { montarHtmlOrcamento }, { fetchSeguradorasCatalog }] = await Promise.all([
+      const [{ montarComparativo, casarSeguradoraDetalhado }, { montarHtmlOrcamento }, { fetchSeguradorasCatalog }] = await Promise.all([
         import('../../lib/orcamentoComparativo'),
         import('../../lib/orcamentoComparativoHtml'),
         import('../../lib/seguradoras'),
@@ -782,18 +803,31 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange })
       // "a logo das seguradoras nao vai no PDF".
       const catalogo = await fetchSeguradorasCatalog().catch(() => [])
 
+      const semLogo = []
       const cotacaoDe = role => {
         const lida = leituras[role]?.cotacao
         if (!lida) return null
         const cot = aplicarRevisao(lida, sides[role].campos)
         const nome = sides[role].seguradora || cot.seguradora?.nome || ''
-        const meta = casarSeguradora(catalogo, nome)
+        const { seguradora: meta, precisao } = casarSeguradoraDetalhado(catalogo, nome)
+
+        // O nome do cadastro so substitui o escolhido quando o casamento foi
+        // EXATO ou por alias. Num casamento aproximado (por substring) o
+        // `nome_canonico` pode ser de outra empresa do grupo — "Porto Seguro"
+        // casa com "Porto Seguro Saude" — e trocar o nome ali entregaria ao
+        // cliente um orcamento com a seguradora errada. A logo e a cor ainda
+        // valem: sao do mesmo grupo.
+        const nomeFinal = (precisao === 'exata' || precisao === 'alias')
+          ? (meta?.nome_canonico || nome)
+          : nome
         const logoUrl = getEntityImageUrl(meta?.logo_path, meta?.logo_url || cot.seguradora?.logo_url || null) || ''
+        if (!logoUrl && nomeFinal) semLogo.push(nomeFinal)
+
         return {
           ...cot,
           seguradora: {
             ...cot.seguradora,
-            nome: meta?.nome_canonico || nome,
+            nome: nomeFinal,
             id: meta?.id ?? cot.seguradora?.id ?? null,
             logo_url: logoUrl,
             cor_destaque: meta?.cor_destaque || cot.seguradora?.cor_destaque || '',
@@ -821,6 +855,10 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange })
       const html = montarHtmlOrcamento(comparativo)
       setComparativoGerado(comparativo)
       setPreviewHtml(html)
+      // A logo vem do cadastro em Configuracoes, nunca do PDF da cotacao. Sem
+      // cadastro o card cai para o nome em serifada — o documento sai, mas o
+      // operador precisa saber por que a logo nao apareceu.
+      setSeguradorasSemLogo([...new Set(semLogo)])
     } catch (erro) {
       setErroGeracao(`Não foi possível gerar o orçamento: ${erro.message}`)
     } finally {
@@ -840,6 +878,7 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange })
     setComparativoGerado(null)
     setPreviewHtml('')
     setPreviewFullscreen(false)
+    setSeguradorasSemLogo([])
   }
 
   async function baixarPdf(iframeRef) {
@@ -979,6 +1018,14 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange })
           />
         ))}</div>
         {erroGeracao && <div className="auto-comparison-review-summary is-error"><p><AlertTriangle />{erroGeracao}</p></div>}
+        {seguradorasSemLogo.length > 0 && (
+          <div className="auto-comparison-review-summary is-warning" role="status">
+            <p>
+              <AlertTriangle />
+              Sem logo cadastrada para {seguradorasSemLogo.join(' e ')}. O orçamento sai com o nome no lugar da logo — cadastre a imagem em Configurações &gt; Seguradoras e gere de novo.
+            </p>
+          </div>
+        )}
         <footer className="auto-comparison-footer is-review">
           <div><CheckCircle2 /><span><strong>{comparativoGerado ? 'Cotação pronta para visualizar' : 'Revisão pronta para concluir'}</strong><small>{comparativoGerado ? 'A área da cotação contém o botão para baixar ou salvar o PDF.' : 'Confira os campos dos dois lados; a cotação abre em uma área própria.'}</small></span></div>
           <button type="button" onClick={gerarOrcamento} disabled={gerando}>

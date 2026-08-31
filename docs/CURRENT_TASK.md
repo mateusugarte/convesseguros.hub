@@ -1,80 +1,86 @@
 # CURRENT TASK
 
-## Pipeline AUTO sem atrito e rascunho de orcamento persistente (2026-08-31, Claude — CONCLUIDA)
+## Marca correta no orcamento da familia Porto (2026-08-31, Claude — CONCLUIDA)
 
-Responsavel: Claude Code. Solicitacao do usuario (3 pedidos em uma mensagem):
+Responsavel: Claude Code. Sintoma reportado pelo usuario: anexou um orcamento da Porto e um da
+Azul; a LEITURA saiu certa, mas na replicacao para o orcamento gerado as duas viraram
+"Azul Seguros". Pedido: separar a seguradora na selecao, uma para cada marca, e a logo da marca
+escolhida ir para o PDF gerado.
 
-1. Mover um card para "Cotacoes feitas" NAO pode mais abrir formulario — a informacao ja e
-   preenchida dentro do card.
-2. Melhorar a Pipeline: visualizacao, uso e produtividade, "separando mais mas deixando os
-   confortaveis", com foco em quem trabalha em notebook.
-3. O sistema de salvar cotacoes nao funciona: ao sair da tela, todo o trabalho do orcamento
-   comparativo (upload, leitura, revisao) e perdido.
+Causa: Porto, Azul, Itau e Mitsui dividiam UMA opcao no seletor ("Porto / Azul / Itau / Mitsui"),
+entao a marca do documento final vinha de `detectarMarca`, que varria o TEXTO INTEIRO do PDF
+procurando o nome da marca. Os quatro nomes aparecem em todo PDF da familia — "APOLICE PORTO, ITAU
+OU AZUL CANCELADA" na origem do bonus, "Desconto Correntista Itau", "Cartao Porto Bank" no
+parcelamento e o rodape da Porto em todas as paginas. Bug secundario encontrado no caminho:
+`/\bITA[UU]\b/` nunca casava com "ITAU TRADICIONAL" porque `\b` e ASCII e nao existe fronteira
+depois do "U" acentuado.
 
-Causa dos itens 1 e 3:
-- `handleDrop` em `AutoEmissoes.jsx` abria `ModalResultado` para `cotacao_feita` porque
-  `resolveAutoEmissionStage` devolve `pendentes` quando `coluna === 'cotacao_feita'` e
-  `resultado` esta vazio — sem o modal o card voltava sozinho para a coluna anterior.
-- `AutoQuoteComparison` mantinha `sides`, `parsers`, `leituras` e `step` apenas em `useState`.
-  Sair da rota destruia o componente e com ele todo o trabalho; nada era gravado.
+Alteracoes:
+- `orcamentoPortoParser.js`: `MARCAS_PORTO` exportado (porto, azul, itau, mitsui) com fim de
+  palavra `(?![\p{L}])`; deteccao por CINCO campos rotulados em ordem de confianca (`Segmento`,
+  cabecalho `Versao Condicoes Gerais`, codigo CG, sufixo do numero do orcamento, frase "marca
+  licenciada"); `evidenciasMarcaPorto`/`detectarMarcaDetalhado` expoem fonte e conflito;
+  `parseCotacaoPorto({ marca_id })` faz a escolha do operador vencer a deteccao e emite
+  `MARCA_DIVERGENTE`, `MARCA_AMBIGUA` e `MARCA_NAO_IDENTIFICADA` (nenhum bloqueia).
+- `orcamentoSeguradoraParser.js`: quatro parsers `apenas_selecao` para as marcas;
+  `porto_familia` mantido como id legado de auto-deteccao; `parsersSelecionaveisOrcamento()`.
+- `orcamentoComparativo.js`: `casarSeguradoraDetalhado` devolve a precisao do casamento
+  (exata/alias/aproximada).
+- `AutoQuoteComparison.jsx`: seletor com as quatro marcas; `parserInicial` mapeia cada nome para a
+  sua opcao; opcao de compatibilidade quando o rascunho guardou `porto_familia`; o nome do
+  cadastro so vence em casamento exato/alias; aviso de seguradora sem logo cadastrada.
 
-## Alteracoes
+Validacao: `npm test` 620/620 (24 casos novos, incluindo a regressao "cotacao da Porto nao vira
+Azul por causa das mencoes soltas no documento"); `npm run build` concluido.
 
-Novos modulos puros e testados:
-- `src/lib/autoQuoteDraft.js` + teste (19 casos) — serializa/restaura o workspace
-  do orcamento, grava no localStorage com fallback de cota e reconhece a coluna
-  ausente antes da migration 72.
-- `src/lib/autoPipelineBoard.js` + teste (13 casos) — ordem real do funil,
-  vizinha de etapa, somatorio por coluna e preferencias do quadro.
+Risco remanescente: nao existe PDF da Porto capturado em `documentos_automacao/orcamentos/`. O
+codigo CG da Porto ficou de fora do mapa em vez de ser adivinhado e o sufixo -0-1 esta mapeado
+como inferencia. Com a marca escolhida na tela isso nao afeta o resultado; para a auto-deteccao
+ficar tao travada quanto a das outras tres, falta anexar um orcamento da Porto e virar fixture.
 
-Pipeline (`src/pages/auto/AutoEmissoes.jsx`):
-- `moverCardPipeline` substitui o antigo `handleDrop`. `cotacao_feita` grava o
-  resultado neutro `cotada` e move sem abrir nada; `proposta_transmitida` e
-  `apolice_emitida` seguem com formulario porque gravam transmissao e criam a
-  apolice.
-- Movimentacao otimista com toast de erro em `mover` e `marcarCotacaoFeita`.
-- Botoes `«`/`»` no card para avancar/voltar etapa sem arrastar. O card virou
-  `div[role=button]` porque botao dentro de botao e HTML invalido.
-- Colunas recolhiveis com trilho vertical que aceita drop, botao "Expandir N
-  coluna(s)" e marcacao na trilha de etapas.
-- Cabecalho da coluna mostra quantidade e soma de premio da etapa.
-- Densidade e colunas recolhidas persistidas entre visitas.
+---
 
-Orcamento comparativo (`src/components/auto/AutoQuoteComparison.jsx`):
-- Hidratacao na abertura (local x servidor, vence o mais recente) e autosave com
-  debounce de 700ms, com flush em `beforeunload` e no unmount para nao perder a
-  ultima alteracao.
-- Indicador de estado do rascunho (salvando / salvo / so neste navegador / falha)
-  e botao Descartar.
-- `arquivos` derivado: lado restaurado vale como lado com PDF, senao a revisao
-  ficava bloqueada logo apos restaurar.
-- `salvarOrcamento` atualiza a linha existente em vez de alocar um segundo
-  CV-AAAA-NNNN; autoria preservada na atualizacao.
+## Pipeline AUTO: cards compactos e renovacao arrastavel (2026-08-31, Claude — CONCLUIDA)
 
-Banco:
-- `supabase/72_auto_orcamento_rascunho.sql` (nova, NAO executada) — adiciona
-  `cotacoes_auto.orcamento_rascunho jsonb`. Idempotente, so acrescenta coluna
-  anulavel, nenhuma categoria nova de dado pessoal, RLS intocada. Enquanto nao
-  rodar, o rascunho funciona local.
-- `.gitignore` passa a versionar essa migration (o whitelist de `*.sql` estava
-  desatualizado desde a 67; as migrations 68 a 71 continuam nao rastreadas).
+Responsavel: Claude Code. Pedido do usuario: compactar os cards da Pipeline para caber mais por
+coluna, e permitir arrastar cotacoes de renovacao livremente pelo funil, gravando o status
+(enviada, negociando, etc.) e mantendo o card apenas na coluna de destino.
 
-Documentacao: `src/pages/auto/CONTEXT.md` ganhou a secao "Pipeline AUTO —
-movimentacao e leitura do quadro" e os paragrafos de rascunho no bloco do
-Orcamento Comparativo.
+Decisoes do usuario (perguntadas antes de implementar):
+- Arrastar renovacao NAO cria cotacao nem emissao: a linha de `renovacoes_auto` continua a mesma e
+  so muda de status. "Iniciar cotacao" segue sendo o caminho para virar cotacao de verdade.
+- "Aguardando vistoria ou rastreador" aceita renovacao e e tratada como negociacao.
 
-Validacao: `npm test` 596/596 aprovados; `npm run build` concluido;
-`npm run check:page-contexts` sem regressao (segue apontando apenas
-`src/pages/comercial/GestaoComercial.jsx`, pendencia anterior a esta tarefa).
+Causa do bug estrutural encontrado: `getRenovacoesPendentesSemCotacao` filtrava por
+`isRenovacaoSemCalculo`, que responde `false` para 'cotado', 'enviado', 'negociando' e 'renovado' —
+exatamente os estados que o arrasto grava. Sem corrigir isso, a renovacao sumiria do quadro no
+instante em que fosse posicionada.
 
-Riscos remanescentes:
-- Sem a migration 72 o rascunho e por navegador: trocar de maquina no meio de
-  uma cotacao ainda perde o trabalho.
-- Um card movido para "Cotacoes feitas" pelo arraste fica com `resultado =
-  cotada`. A distincao aprovada/recusada continua sendo escolha humana, feita
-  dentro do card.
+Entrega:
+- `autoOperational.js`: `RENOVACAO_STAGE_STATUS`, `renovacaoStageFields`, `resolveRenovacaoStage` e
+  `isRenovacaoNoQuadro`. "Aguardando vistoria" nao tem status proprio na tabela; e identificada pelo
+  par (`negociando` + `cotada_nao_enviada`), valido pelos dois CHECKs e sem uso em outro caminho,
+  o que evita migration. Nenhuma alteracao de schema, RLS ou auth foi feita.
+- `auto.js`: a consulta do quadro passa a usar `isRenovacaoNoQuadro`; 'outra_corretora' e 'cancelado'
+  seguem fora.
+- `autoPipelineBoard.js`: `AUTO_RENEWAL_STAGES` e `etapaVizinhaRenovacao` para as setas do card.
+- `AutoEmissoes.jsx`: renovacoes distribuidas por coluna (`renovacoesPorColuna`), colunas de
+  renovacao aceitam drop, colunas de emissao renderizam renovacoes, `dragging` passou a carregar o
+  tipo do card, mutation `moverRenovacao` com update otimista.
+- Compactacao: `min-h-[290px]` removido do card de emissao (era o maior desperdicio de altura),
+  paddings/raios/tipografia reduzidos nos dois cards. Em `auto-ui.css`, os `min-height` de 252px e
+  176px/138px viraram `0` e os seletores de densidade compacta foram religados as classes novas.
 
-Proximo passo sugerido: aprovar e rodar a migration 72 no SQL Editor.
+Validacao: `npm run build` concluido. `npm test` 602/603. A unica falha
+(`orcamentoSeguradoraParser`, esperava 'porto_familia' e recebeu 'porto') vem de alteracoes nao
+commitadas em `orcamentoPortoParser.js`/`orcamentoSeguradoraParser.js`/`AutoQuoteComparison.jsx`
+que apareceram na arvore durante a tarefa e NAO foram feitas por mim — nao toquei nesses arquivos.
+`classificarRenovacoesPipeline` ficou sem uso na aplicacao (segue exportada e testada).
+
+Pendencia herdada da tarefa anterior, interrompida pelo usuario e NAO executada: botao de gerar PDF
+do orcamento e logo da seguradora nos cards da tela de orcamento comparativo.
+
+Proximo passo sugerido: validar o quadro com dados reais e retomar a pendencia do PDF/logos.
 
 ---
 

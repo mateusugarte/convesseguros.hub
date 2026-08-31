@@ -2,7 +2,7 @@
 // modulo independente mantido pelo Claude e deve ser registrada pela camada de
 // integracao sem alterar este arquivo.
 
-import { ehLayoutPorto, parseCotacaoPorto, detectarMarca } from './orcamentoPortoParser.js'
+import { ehLayoutPorto, parseCotacaoPorto, detectarMarca, MARCAS_PORTO, marcaPortoPorId } from './orcamentoPortoParser.js'
 import { ehLayoutBradesco, parseCotacaoBradesco } from './orcamentoBradescoParser.js'
 import { ehLayoutHdi, listarProdutosHdi, parseCotacaoHdi } from './orcamentoHdiParser.js'
 import { ehLayoutDarwin, parseCotacaoDarwin } from './orcamentoDarwinParser.js'
@@ -17,8 +17,36 @@ const produtoUnico = (seguradora, label = 'Produto cotado') => ({
   produtos: [{ id: 'unico', label }],
 })
 
+/**
+ * As quatro marcas da familia Porto sao parsers SEPARADOS na selecao.
+ *
+ * Elas compartilham o mesmo layout, mas nao a mesma identidade: o orcamento que
+ * chega ao cliente leva o nome e a LOGO da seguradora escolhida. Enquanto as
+ * quatro moravam numa opcao unica ("Porto / Azul / Itau / Mitsui"), a marca do
+ * documento final dependia de adivinhacao por texto — e foi assim que uma
+ * cotacao da Porto e uma da Azul sairam as duas como Azul Seguros. Agora o
+ * operador escolhe qual das quatro, e essa escolha vence a deteccao.
+ *
+ * `detectar` continua sendo o layout da familia inteira: quando ninguem
+ * escolheu nada, qualquer uma reconhece o PDF e a marca vem dos campos.
+ */
+const PARSERS_FAMILIA_PORTO = MARCAS_PORTO.map(marca => ({
+  id: marca.id,
+  // `apenas_selecao`: existem para quem ESCOLHEU a marca. A deteccao automatica
+  // as ignora e cai em `porto_familia`, senao qualquer PDF da familia seria
+  // rotulado com a primeira marca da lista — trocar uma adivinhacao por outra.
+  apenas_selecao: true,
+  nome: () => marcaPortoPorId(marca.id).nome,
+  detectar: ehLayoutPorto,
+  listarProdutos: () => produtoUnico(marcaPortoPorId(marca.id).nome),
+  parse: entrada => parseCotacaoPorto({ ...entrada, marca_id: marca.id }),
+}))
+
 export const PARSERS_ORCAMENTO_AUTO = [
+  ...PARSERS_FAMILIA_PORTO,
   {
+    // Id antigo da opcao agrupada. Continua valendo para rascunhos e leituras
+    // ja gravados com ele: sem marca escolhida, a marca vem dos campos do PDF.
     id: 'porto_familia',
     nome: texto => detectarMarca(texto)?.nome || 'Porto Seguro',
     detectar: ehLayoutPorto,
@@ -68,7 +96,12 @@ export function parserOrcamentoPorId(id) {
 }
 
 export function detectarParserOrcamento({ texto = '' } = {}) {
-  return PARSERS_ORCAMENTO_AUTO.find(parser => parser.detectar(texto)) || null
+  return PARSERS_ORCAMENTO_AUTO.find(parser => !parser.apenas_selecao && parser.detectar(texto)) || null
+}
+
+/** Opcoes oferecidas ao operador no seletor de seguradora do PDF. */
+export function parsersSelecionaveisOrcamento() {
+  return PARSERS_ORCAMENTO_AUTO.filter(parser => parser.id !== 'porto_familia')
 }
 
 export function listarProdutosOrcamento({ texto = '', parser_id: parserId = '' } = {}) {

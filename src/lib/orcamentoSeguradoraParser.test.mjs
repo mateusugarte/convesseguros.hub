@@ -8,7 +8,7 @@ import fs from 'node:fs'
 
 import {
   detectarParserOrcamento, listarProdutosOrcamento, parseCotacaoPorSeguradora, parserOrcamentoPorId,
-  LayoutOrcamentoNaoReconhecidoError,
+  parsersSelecionaveisOrcamento, LayoutOrcamentoNaoReconhecidoError,
 } from './orcamentoSeguradoraParser.js'
 import { ProdutoOrcamentoObrigatorioError } from './orcamentoProdutos.js'
 
@@ -20,9 +20,48 @@ test('detecta todos os layouts sob responsabilidade deste módulo', () => {
     bradesco: 'bradesco', hdi: 'hdi', darwin: 'darwin',
     pier: 'pier', suhai: 'suhai', yelum: 'yelum', tokio: 'tokio',
   }
+  // A deteccao automatica cai no layout da familia, nao numa das quatro marcas:
+  // sem escolha do operador, quem diz a marca sao os campos do PDF.
   assert.equal(detectarParserOrcamento(porto())?.id, 'porto_familia')
   for (const [arquivo, id] of Object.entries(esperados)) {
     assert.equal(detectarParserOrcamento(fixture(arquivo))?.id, id, arquivo)
+  }
+})
+
+test('as quatro marcas da familia Porto sao selecionaveis uma a uma', () => {
+  const selecionaveis = parsersSelecionaveisOrcamento().map(parser => parser.id)
+  for (const id of ['porto', 'azul', 'itau', 'mitsui']) {
+    assert.ok(selecionaveis.includes(id), `${id} deveria aparecer no seletor`)
+  }
+  // O id agrupado antigo continua funcionando por compatibilidade, mas saiu do
+  // seletor: era ele que deixava a marca do documento final por conta do texto.
+  assert.equal(selecionaveis.includes('porto_familia'), false)
+  assert.ok(parserOrcamentoPorId('porto_familia'))
+})
+
+// O seletor da tela repete os ids aqui em vez de importar este modulo: importar
+// puxaria os dez parsers (e o pdfjs por tabela) para o bundle principal, que e
+// justamente o que os imports dinamicos de `orcamentoLeitura.js` evitam. O teste
+// abaixo e o que impede as duas listas de divergirem em silencio — um id so no
+// parser ficaria inalcancavel, e um id so na tela quebraria o upload.
+test('todo parser selecionavel tem opcao no seletor da tela', () => {
+  const tela = fs.readFileSync(new URL('../components/auto/AutoQuoteComparison.jsx', import.meta.url), 'utf8')
+  const bloco = tela.match(/const SEGURADORAS_ORCAMENTO = \[([\s\S]*?)\]/)
+  assert.ok(bloco, 'SEGURADORAS_ORCAMENTO nao encontrado na tela')
+  const idsNaTela = [...bloco[1].matchAll(/id:\s*'([^']+)'/g)].map(m => m[1])
+
+  // 'allianz' vive fora deste modulo (parser proprio, mantido a parte).
+  const idsNoParser = ['allianz', ...parsersSelecionaveisOrcamento().map(parser => parser.id)]
+  assert.deepEqual([...idsNaTela].sort(), [...idsNoParser].sort())
+})
+
+test('a marca escolhida no seletor manda no nome que vai para o orcamento', () => {
+  const pdfDaAzul = porto()
+  for (const [id, nome] of Object.entries({
+    porto: 'Porto Seguro', azul: 'Azul Seguros', itau: 'Itaú Seguros', mitsui: 'Mitsui Sumitomo Seguros',
+  })) {
+    assert.equal(listarProdutosOrcamento({ ...pdfDaAzul, parser_id: id }).seguradora, nome)
+    assert.equal(parseCotacaoPorSeguradora({ ...pdfDaAzul, parser_id: id }).seguradora.nome, nome)
   }
 })
 

@@ -22,13 +22,136 @@ import { criarCotacaoOrcamento, detectarTipoOperacao, humanizarCobertura } from 
 
 export const CNPJ_EMISSOR_PORTO = '61.198.164/0001-60'
 
-/** Marcas que emitem por este layout. A ordem importa: a mais especifica primeiro. */
-const MARCAS = [
-  { id: 'mitsui', nome: 'Mitsui Sumitomo Seguros', padrao: /MITSUI\s+SUMITOMO/i },
-  { id: 'azul', nome: 'Azul Seguros', padrao: /\bAZUL\s+(?:TRADICIONAL|SEGURO)/i },
-  { id: 'itau', nome: 'Itaú Seguros', padrao: /\bITA[ÚU]\s+TRADICIONAL/i },
-  { id: 'porto', nome: 'Porto Seguro', padrao: /PORTO\s+SEGURO/i },
+/**
+ * Marcas que emitem por este layout.
+ *
+ * Os padroes abaixo NUNCA sao aplicados ao documento inteiro. Eles rodam apenas
+ * sobre o valor de um campo rotulado (`Segmento`, cabecalho de Condicoes
+ * Gerais), porque o documento inteiro cita as quatro marcas o tempo todo:
+ * "APOLICE PORTO, ITAU OU AZUL CANCELADA" na origem do bonus, "Desconto
+ * Correntista Itau" nos descontos, "Cartao Porto Bank" no parcelamento e o
+ * rodape da Porto em todas as paginas. Foi essa varredura solta que fez uma
+ * cotacao da Porto ser lida como Azul.
+ */
+// O fim da palavra usa `(?![\p{L}])` em vez de `\b`: `\b` e ASCII, e depois do
+// "Ú" de ITAÚ nao existe fronteira ASCII nenhuma — `/\bITA[ÚU]\b/` nao casa com
+// "ITAÚ TRADICIONAL". O inicio pode seguir com `\b` porque as quatro marcas
+// comecam com letra ASCII.
+export const MARCAS_PORTO = [
+  { id: 'porto', nome: 'Porto Seguro', padrao: /\bPORTO(?![\p{L}])/iu },
+  { id: 'azul', nome: 'Azul Seguros', padrao: /\bAZUL(?![\p{L}])/iu },
+  { id: 'itau', nome: 'Itaú Seguros', padrao: /\bITA[ÚU](?![\p{L}])/iu },
+  { id: 'mitsui', nome: 'Mitsui Sumitomo Seguros', padrao: /\bMITSUI(?![\p{L}])/iu },
 ]
+
+const MARCAS = MARCAS_PORTO
+
+export function marcaPortoPorId(id) {
+  const alvo = String(id || '').trim().toLowerCase()
+  return MARCAS_PORTO.find(marca => marca.id === alvo) || null
+}
+
+/**
+ * Marca lida do valor de UM campo, e nao do documento.
+ *
+ * A ordem aqui e a mais especifica primeiro: o Segmento da Mitsui e "MITSUI
+ * SUMITOMO SEGUROS" e o da Azul e "AZUL TRADICIONAL" — nenhum dos dois cita
+ * outra marca, entao qualquer ordem serviria; manter a busca explicita evita
+ * depender disso.
+ */
+function marcaEmCampo(valor) {
+  const texto = String(valor || '')
+  if (!texto.trim()) return null
+  for (const marca of [...MARCAS_PORTO].reverse()) {
+    if (marca.padrao.test(texto)) return marca
+  }
+  return null
+}
+
+// ─── Campos que identificam a marca ────────────────────────────────────
+// Medidos nos PDFs reais de 25/08/2026 (fixtures `porto-familia.json`).
+// Cada fonte le UM campo rotulado; nenhuma varre o documento.
+
+/** "SEGURO Tipo de Operação SEGURO NOVO Segmento AZUL TRADICIONAL Sucursal" */
+function marcaPeloSegmento(texto) {
+  const campo = texto.match(/Segmento\s+(.{2,60}?)\s+Sucursal/i)
+  return campo ? marcaEmCampo(campo[1]) : null
+}
+
+/** "Versão Condições Gerais: CG023 AZUL TRADICIONAL e PROTEÇÃO COMBINADA" */
+function marcaPelasCondicoesGerais(texto) {
+  const campo = texto.match(/Vers[ãa]o\s+Condi[çc][õo]es\s+Gerais:\s*CG\s*\d+\s+(.{2,60}?)\s+e\s+PROTE[ÇC][ÃA]O\s+COMBINADA/i)
+  return campo ? marcaEmCampo(campo[1]) : null
+}
+
+// O codigo CG identifica o produto e, com ele, a marca. Medidos: CG023 Azul,
+// CG024 Mitsui, CG071 Itau. O da Porto ainda nao foi capturado — por isso ele
+// nao esta aqui, em vez de ser adivinhado.
+const CODIGO_CG_POR_MARCA = { '023': 'azul', '024': 'mitsui', '071': 'itau' }
+
+function marcaPeloCodigoCG(texto) {
+  const campo = texto.match(/Vers[ãa]o\s+Condi[çc][õo]es\s+Gerais:\s*CG\s*(\d{2,4})/i)
+  return campo ? marcaPortoPorId(CODIGO_CG_POR_MARCA[campo[1].padStart(3, '0')]) : null
+}
+
+// O numero do orcamento e o mesmo para as quatro marcas, mudando so o sufixo:
+// a corretora pede um calculo e recebe as quatro variantes numeradas -0-1 a
+// -0-4. Medidos: -0-2 Itau, -0-3 Mitsui, -0-4 Azul. O -0-1 e o unico membro da
+// familia que sobra, mas segue como INFERENCIA ate um PDF da Porto confirmar —
+// por isso esta fonte tem prioridade baixa e a escolha do operador vence.
+const SUFIXO_ORCAMENTO_POR_MARCA = { 1: 'porto', 2: 'itau', 3: 'mitsui', 4: 'azul' }
+
+function marcaPeloNumeroOrcamento(texto) {
+  const campo = texto.match(/Or[çc]amento:\s*\d{4,}-\d+-(\d+)/i)
+  return campo ? marcaPortoPorId(SUFIXO_ORCAMENTO_POR_MARCA[Number(campo[1])]) : null
+}
+
+/** "Azul Seguro Auto é uma marca licenciada para uso da Porto Seguro..." */
+function marcaPelaMarcaLicenciada(texto) {
+  const campo = texto.match(/([A-Za-zÀ-ú]{3,20})\s+Seguro\s+Auto\s+[ée]\s+uma\s+marca\s+licenciada/i)
+  return campo ? marcaEmCampo(campo[1]) : null
+}
+
+/**
+ * Fontes em ordem de confianca. `Segmento` vem primeiro porque e o campo que a
+ * propria Porto usa para dizer qual produto foi cotado.
+ */
+const FONTES_MARCA = [
+  { id: 'segmento', ler: marcaPeloSegmento },
+  { id: 'condicoes_gerais', ler: marcaPelasCondicoesGerais },
+  { id: 'codigo_cg', ler: marcaPeloCodigoCG },
+  { id: 'numero_orcamento', ler: marcaPeloNumeroOrcamento },
+  { id: 'marca_licenciada', ler: marcaPelaMarcaLicenciada },
+]
+
+/**
+ * Todas as evidencias de marca encontradas, por fonte.
+ *
+ * Existe separado de `detectarMarca` para que a divergencia entre campos vire
+ * aviso na revisao em vez de escolha silenciosa: se o Segmento diz Porto e o
+ * codigo CG diz Azul, alguem precisa olhar.
+ */
+export function evidenciasMarcaPorto(texto) {
+  const t = String(texto || '')
+  return FONTES_MARCA
+    .map(fonte => ({ fonte: fonte.id, marca: fonte.ler(t) }))
+    .filter(item => item.marca)
+}
+
+export function detectarMarcaDetalhado(texto) {
+  const evidencias = evidenciasMarcaPorto(texto)
+  const escolhida = evidencias[0] || null
+  const divergentes = [...new Set(evidencias.map(item => item.marca.id))]
+
+  return {
+    marca: escolhida?.marca || null,
+    fonte: escolhida?.fonte || null,
+    evidencias,
+    // Duas leituras confiaveis discordando e sinal de PDF fora do padrao —
+    // ou de um campo que mudou de formato do lado da Porto.
+    conflito: divergentes.length > 1 ? divergentes : null,
+  }
+}
 
 const CABECALHO_TABELA = {
   lmi: 'LMI (indenização)',
@@ -51,12 +174,21 @@ export function ehLayoutPorto(texto) {
   return t.replace(/[^\d]/g, '').includes(cnpj)
 }
 
+/**
+ * Marca do documento.
+ *
+ * Quando nenhum campo aponta uma marca licenciada mas o layout e desta familia,
+ * a resposta e Porto Seguro: a Porto e a dona do layout, e Azul, Itau e Mitsui
+ * so aparecem aqui quando se anunciam em campo proprio. Antes desta versao a
+ * funcao varria o documento inteiro, e como o rodape da Porto e as mencoes a
+ * "AZUL"/"ITAU" existem em TODOS os PDFs da familia, uma cotacao da Porto podia
+ * sair identificada como Azul.
+ */
 export function detectarMarca(texto) {
   const t = String(texto || '')
-  for (const marca of MARCAS) {
-    if (marca.padrao.test(t)) return marca
-  }
-  return null
+  const { marca } = detectarMarcaDetalhado(t)
+  if (marca) return marca
+  return ehLayoutPorto(t) ? marcaPortoPorId('porto') : null
 }
 
 // ─── Numeros ───────────────────────────────────────────────────────────
@@ -302,9 +434,15 @@ export function extrairAdicionais(texto) {
  *
  * `seguradoraMeta` vem do cadastro: logo e cor SEMPRE do cadastro, nunca do PDF.
  */
-export function parseCotacaoPorto({ itens = [], texto = '', seguradoraMeta = null } = {}) {
+export function parseCotacaoPorto({ itens = [], texto = '', marca_id: marcaId = '', seguradoraMeta = null } = {}) {
   const linhas = agruparLinhas(itens)
-  const marca = detectarMarca(texto)
+  // A marca escolhida pelo operador VENCE a deteccao, mesma regra que ja vale
+  // para `parser_id` contra a deteccao de layout: quem esta com o PDF na tela
+  // sabe de qual das quatro empresas ele e. A deteccao continua rodando para
+  // apontar divergencia na revisao.
+  const escolhida = marcaPortoPorId(marcaId)
+  const detectada = detectarMarcaDetalhado(texto)
+  const marca = escolhida || detectada.marca || (ehLayoutPorto(texto) ? marcaPortoPorId('porto') : null)
   const cot = criarCotacaoOrcamento()
 
   cot.seguradora = {
@@ -313,6 +451,8 @@ export function parseCotacaoPorto({ itens = [], texto = '', seguradoraMeta = nul
     logo_url: seguradoraMeta?.logo_url || '',
     cor_destaque: seguradoraMeta?.cor_destaque || '',
   }
+  cot.marca_detectada = detectada.marca?.id || null
+  cot.avisos_extracao = avisosDaMarca({ escolhida, detectada })
 
   const numero = texto.match(/Or[çc]amento:\s*([\d-]+)/i)
   const validade = texto.match(/Or[çc]amento v[áa]lido[\s\S]{0,60}?(\d{2}\/\d{2}\/\d{4})/i)
@@ -397,6 +537,45 @@ export const humanizar = humanizarCobertura
 
 function moedaBR(valor) {
   return `R$ ${Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+/**
+ * Avisos sobre a identificacao da marca.
+ *
+ * Nenhum deles bloqueia a geracao: a marca escolhida pelo operador manda, e o
+ * aviso existe para ele CONFERIR, nao para travar. O caso que interessa e o
+ * silencioso — escolher Porto e o PDF anunciar Azul em campo proprio significa
+ * que o arquivo errado foi anexado naquele lado.
+ */
+function avisosDaMarca({ escolhida, detectada }) {
+  const avisos = []
+
+  if (escolhida && detectada.marca && detectada.marca.id !== escolhida.id) {
+    avisos.push({
+      code: 'MARCA_DIVERGENTE',
+      mensagem: `Você selecionou ${escolhida.nome}, mas o PDF se identifica como ${detectada.marca.nome} (campo ${detectada.fonte}). Confirme se o arquivo anexado é o certo.`,
+      bloqueia: false,
+    })
+  }
+
+  if (detectada.conflito) {
+    const nomes = detectada.conflito.map(id => marcaPortoPorId(id)?.nome || id).join(' e ')
+    avisos.push({
+      code: 'MARCA_AMBIGUA',
+      mensagem: `Os campos deste PDF apontam marcas diferentes (${nomes}). Confirme a seguradora antes de gerar o orçamento.`,
+      bloqueia: false,
+    })
+  }
+
+  if (!escolhida && !detectada.marca) {
+    avisos.push({
+      code: 'MARCA_NAO_IDENTIFICADA',
+      mensagem: 'Nenhum campo deste PDF identifica a marca. Selecione a seguradora certa (Porto, Azul, Itaú ou Mitsui) antes de gerar o orçamento.',
+      bloqueia: false,
+    })
+  }
+
+  return avisos
 }
 
 function paraIso(br) {

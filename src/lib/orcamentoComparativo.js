@@ -384,23 +384,38 @@ export function corDaSeguradora(seguradora, papel = 'atual') {
  * LONGO que esteja contido no outro (nos dois sentidos). O mais longo primeiro
  * evita que "Itau Seguros" case com um cadastro generico "Seguros".
  */
-export function casarSeguradora(catalogo = [], nome) {
+/**
+ * Igual a `casarSeguradora`, mas diz COMO casou.
+ *
+ * A diferenca importa para o nome que vai no documento: em 'exata' e 'alias' o
+ * cadastro esta falando da mesma empresa e o `nome_canonico` dele pode mandar.
+ * Em 'aproximada' o casamento e por substring — "Porto Seguro" casa com
+ * "Porto Seguro Saude" — e adotar o `nome_canonico` ali trocaria a seguradora
+ * do orcamento do cliente. Nesse caso so a logo e a cor sao aproveitadas.
+ */
+export function casarSeguradoraDetalhado(catalogo = [], nome) {
   const alvo = normalizarTexto(nome)
-  if (!alvo) return null
+  if (!alvo) return { seguradora: null, precisao: null }
 
   const lista = (catalogo || []).filter(Boolean)
   const exata = lista.find(seg => normalizarTexto(seg.nome_canonico) === alvo)
-  if (exata) return exata
+  if (exata) return { seguradora: exata, precisao: 'exata' }
 
   const porAlias = lista.find(seg => (seg.aliases || []).some(a => normalizarTexto(a) === alvo))
-  if (porAlias) return porAlias
+  if (porAlias) return { seguradora: porAlias, precisao: 'alias' }
 
   const candidatos = lista
     .map(seg => ({ seg, chave: normalizarTexto(seg.nome_canonico) }))
     .filter(({ chave }) => chave && (alvo.includes(chave) || chave.includes(alvo)))
     .sort((a, b) => b.chave.length - a.chave.length)
 
-  return candidatos[0]?.seg || null
+  return candidatos[0]
+    ? { seguradora: candidatos[0].seg, precisao: 'aproximada' }
+    : { seguradora: null, precisao: null }
+}
+
+export function casarSeguradora(catalogo = [], nome) {
+  return casarSeguradoraDetalhado(catalogo, nome).seguradora
 }
 
 function hexParaRgb(hex) {

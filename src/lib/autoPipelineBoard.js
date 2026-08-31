@@ -28,6 +28,28 @@ export function etapaVizinha(stageId, direcao) {
   return AUTO_EMISSION_STAGES[alvo] ?? null
 }
 
+// Ordem do funil para uma RENOVACAO. Aqui a coluna de renovacao e uma etapa de
+// verdade — o comeco do funil dela — e nao uma coluna virtual como e para a
+// emissao. `renovacoes_para_enviar` fica de fora porque nao e um estado que se
+// escolhe: as duas colunas gravam "pendente" e a data limite decide em qual das
+// duas o card aparece.
+export const AUTO_RENEWAL_STAGES = [
+  'renovacoes',
+  'cotacao_feita',
+  'negociando',
+  'aguardando_vistoria',
+  'proposta_transmitida',
+  'apolice_emitida',
+]
+
+export function etapaVizinhaRenovacao(stageId, direcao) {
+  const atual = stageId === 'renovacoes_para_enviar' ? 'renovacoes' : stageId
+  const indice = AUTO_RENEWAL_STAGES.indexOf(atual)
+  if (indice < 0) return null
+  const alvo = indice + (direcao >= 0 ? 1 : -1)
+  return AUTO_RENEWAL_STAGES[alvo] ?? null
+}
+
 /**
  * Somatorio financeiro de uma coluna.
  *

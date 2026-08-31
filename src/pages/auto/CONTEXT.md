@@ -289,7 +289,40 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   marketing escritos de formas diferentes por cada cia. Seguradora nova deve
   SO acrescentar sinonimos em `DICIONARIO_COBERTURAS`, nunca criar categoria.
 - A logo do card vem de `seguradoras.logo_url` (cadastro em Configuracoes),
-  nunca recortada do PDF da cotacao. Sem logo, cai para o nome em serifada.
+  nunca recortada do PDF da cotacao. Sem logo, cai para o nome em serifada — e a
+  tela avisa quais seguradoras estao sem logo cadastrada depois de gerar.
+- **Porto, Azul, Itau e Mitsui sao QUATRO opcoes separadas no seletor**
+  (2026-08-31). As quatro compartilham o layout do PDF, mas nao a identidade: o
+  orcamento entregue ao cliente leva o nome e a logo da marca escolhida. Com a
+  opcao agrupada ("Porto / Azul / Itau / Mitsui") a marca do documento final
+  dependia de adivinhacao por texto, e um orcamento da Porto e um da Azul saiam
+  os dois como Azul Seguros. Agora a escolha do operador vence a deteccao —
+  mesma regra que ja valia para `parser_id` contra a deteccao de layout.
+  `PARSERS_FAMILIA_PORTO` marca essas entradas com `apenas_selecao`, entao a
+  deteccao automatica continua caindo em `porto_familia` (id antigo, mantido
+  para rascunhos e leituras ja gravadas) em vez de rotular qualquer PDF com a
+  primeira marca da lista. `parsersSelecionaveisOrcamento()` e a fonte da lista,
+  travada contra `SEGURADORAS_ORCAMENTO` da tela por teste.
+- **`detectarMarca` le campos, nunca o documento inteiro.** Os quatro nomes
+  aparecem em TODO PDF da familia: "APOLICE PORTO, ITAU OU AZUL CANCELADA" na
+  origem do bonus, "Desconto Correntista Itau", "Cartao Porto Bank" no
+  parcelamento e o rodape da Porto em todas as paginas. A leitura usa cinco
+  campos rotulados, em ordem de confianca: `Segmento`, o cabecalho `Versao
+  Condicoes Gerais`, o codigo CG (023 Azul, 024 Mitsui, 071 Itau), o sufixo do
+  numero do orcamento (-0-2 Itau, -0-3 Mitsui, -0-4 Azul) e a frase "marca
+  licenciada". Layout da familia sem nenhuma marca em campo proprio e Porto, a
+  dona do layout. Campos discordando viram aviso `MARCA_AMBIGUA`; escolher uma
+  marca diferente da anunciada pelo PDF vira `MARCA_DIVERGENTE` — os dois nao
+  bloqueiam, existem para o operador conferir se anexou o arquivo certo.
+- Nao ha fixture de PDF da Porto ainda (`documentos_automacao/orcamentos/` tem
+  AZUL, ITAU e MITSUI). O codigo CG e o sufixo da Porto seguem desconhecidos: o
+  sufixo -0-1 esta mapeado como inferencia (e o unico membro da familia que
+  sobra) e o codigo CG dela ficou de fora em vez de ser adivinhado.
+- `casarSeguradoraDetalhado` informa COMO o cadastro casou. O `nome_canonico` do
+  cadastro so substitui o nome escolhido em casamento exato ou por alias; em
+  casamento aproximado (substring) apenas logo e cor sao aproveitadas — senao
+  "Porto Seguro" casando com "Porto Seguro Saude" trocaria a seguradora do
+  orcamento do cliente.
 - **O trabalho do workspace e salvo sozinho** (`src/lib/autoQuoteDraft.js`).
   Antes de 31/08 `sides`, `parsers`, `leituras` e `step` viviam so em `useState`:
   sair da rota destruia o componente e o upload, a leitura e a revisao ja

@@ -3,7 +3,7 @@ import { limparNomeSegurado, normalizeCompareText, somarUmAno } from './autoHist
 import { normalizePolicyImportIdentity, policyImportHasVehicleData, policyImportPipelineStage, policyImportRelationshipReady } from './autoPolicyImport.js'
 import { calcularDataLimiteRenovacao, calcularValorComissaoAuto } from './autoCalc.js'
 import { planejarExclusaoGrupoAuto } from './autoExclusao.js'
-import { countAutoEmissionTypes, isRenovacaoSemCalculo, renewalStatusFields, resolveAutoEmissionStage } from './autoOperational.js'
+import { countAutoEmissionTypes, isRenovacaoNoQuadro, renewalStatusFields, resolveAutoEmissionStage } from './autoOperational.js'
 import { buildAutoPendingNotifications } from './autoPending.js'
 import { ehColunaAusente } from './autoQuoteDraft.js'
 import { isRenewalDateInMonth } from './autoRenewalImport.js'
@@ -1239,7 +1239,11 @@ export async function getRenovacoesPendentesSemCotacao(mes) {
 
   const { data, error } = await q
   if (error) throw error
-  return (data ?? []).filter(isRenovacaoSemCalculo)
+  // Nao basta "sem calculo": a renovacao arrastada para Negociando/Proposta/
+  // Emitida tem status operacional preenchido e sumiria do quadro exatamente
+  // depois de ser posicionada. `isRenovacaoNoQuadro` mantem quem esta em
+  // alguma coluna da Pipeline e continua descartando as saidas do funil.
+  return (data ?? []).filter(isRenovacaoNoQuadro)
 }
 
 export async function atualizarStatusRenovacao(id, campos) {

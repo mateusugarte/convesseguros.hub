@@ -113,6 +113,88 @@ export function renewalStatusValue(item = {}) {
   return 'pendente'
 }
 
+/**
+ * Colunas da Pipeline AUTO onde uma renovacao pode parar e o status que cada
+ * uma grava em `renovacoes_auto`.
+ *
+ * A renovacao NAO vira cotacao ao ser arrastada: continua sendo a mesma linha
+ * de `renovacoes_auto`, so muda de status. Quem quer cotar de verdade usa o
+ * botao "Iniciar cotacao" do card, que e o caminho que cria cotacao e emissao.
+ *
+ * `pendentes` ("Cotacoes pendentes") volta a renovacao para o estado pendente
+ * de proposito: aquela coluna e, por desenho, so de seguro novo ainda nao
+ * cotado (`emissoesPipeline` filtra por `tipo === 'novo'`), e "pendente" e
+ * exatamente o que a renovacao passa a ser. O card reaparece na coluna de
+ * renovacao correspondente a data limite dela.
+ */
+export const RENOVACAO_STAGE_STATUS = {
+  renovacoes: 'pendente',
+  renovacoes_para_enviar: 'pendente',
+  pendentes: 'pendente',
+  cotacao_feita: 'cotada',
+  negociando: 'negociando',
+  aguardando_vistoria: 'negociando',
+  proposta_transmitida: 'enviada',
+  apolice_emitida: 'renovada',
+}
+
+// Volta de `status_operacional` para a coluna. So os estados que o arrasto
+// grava aparecem aqui: 'cotando' (que vem do botao "Iniciar cotacao") fica de
+// fora de proposito, para que abrir a cotacao continue deixando o card na
+// coluna de renovacao como sempre esteve.
+const STAGE_POR_OPERACIONAL = {
+  cotado: 'cotacao_feita',
+  enviado: 'proposta_transmitida',
+  negociando: 'negociando',
+  renovado: 'apolice_emitida',
+}
+
+/**
+ * Campos gravados ao soltar a renovacao numa coluna.
+ *
+ * "Aguardando vistoria ou rastreador" nao tem status proprio em
+ * `renovacoes_auto`. O par (`negociando` + `cotada_nao_enviada`) e valido pelos
+ * dois CHECKs da tabela, nao e produzido por nenhum outro caminho do sistema e
+ * por isso identifica a coluna sem precisar de migration. Para as outras telas
+ * o negocio segue aparecendo como "Aguardando retorno", que e o que ele e.
+ */
+export function renovacaoStageFields(stageId) {
+  const status = RENOVACAO_STAGE_STATUS[stageId]
+  if (!status) return null
+  const fields = renewalStatusFields(status)
+  if (stageId === 'aguardando_vistoria') return { ...fields, status_cotacao: 'cotada_nao_enviada' }
+  return fields
+}
+
+/** Coluna da Pipeline onde a renovacao deve ser desenhada. */
+export function resolveRenovacaoStage(item = {}, today = new Date().toISOString().slice(0, 10)) {
+  const operational = normalizeText(item?.status_operacional).replace(/\s+/g, '_')
+  const stage = STAGE_POR_OPERACIONAL[operational]
+  if (stage === 'negociando') {
+    return item?.status_cotacao === 'cotada_nao_enviada' ? 'aguardando_vistoria' : 'negociando'
+  }
+  if (stage) return stage
+
+  // Pendente (ou qualquer estado sem coluna propria) continua dividido pela
+  // data limite de envio, como antes do arrasto existir.
+  const limite = item?.data_limite_envio || item?.vigencia_fim || ''
+  return limite && limite <= today ? 'renovacoes_para_enviar' : 'renovacoes'
+}
+
+/**
+ * A renovacao ainda pertence ao quadro?
+ *
+ * Sem isto o card sumia ao ser arrastado: `isRenovacaoSemCalculo` responde
+ * `false` para 'cotado', 'enviado', 'negociando' e 'renovado', que sao
+ * justamente os estados que o arrasto grava. "Outra corretora" e "cancelado"
+ * continuam fora — sao saidas do funil, nao colunas dele.
+ */
+export function isRenovacaoNoQuadro(item = {}) {
+  if (isRenovacaoSemCalculo(item)) return true
+  const operational = normalizeText(item?.status_operacional).replace(/\s+/g, '_')
+  return Boolean(STAGE_POR_OPERACIONAL[operational])
+}
+
 export function parseRenovacoesPaste(text, monthRef) {
   const fallbackDate = monthLastDay(monthRef)
   const lines = String(text || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean)

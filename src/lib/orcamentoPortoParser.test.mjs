@@ -4,7 +4,8 @@ import fs from 'node:fs'
 
 import { agruparLinhas, celulaEm, colunasPeloCabecalho, fatiar } from './pdfLayout.js'
 import {
-  parseCotacaoPorto, ehLayoutPorto, detectarMarca, extrairCoberturas,
+  parseCotacaoPorto, ehLayoutPorto, detectarMarca, detectarMarcaDetalhado,
+  evidenciasMarcaPorto, marcaPortoPorId, MARCAS_PORTO, extrairCoberturas,
   extrairIndenizacaoIntegral, extrairValores, extrairAdicionais,
   extrairPagamento, moeda, percentual, humanizar,
 } from './orcamentoPortoParser.js'
@@ -253,4 +254,133 @@ test('a logo e a cor vem do cadastro, nunca do PDF', () => {
 test('sem cadastro, cai para a marca lida do PDF em vez de ficar vazio', () => {
   assert.equal(parse('MITSUI').seguradora.nome, 'Mitsui Sumitomo Seguros')
   assert.equal(parse('MITSUI').seguradora.logo_url, '')
+})
+
+
+// ─── Identificacao da marca dentro da familia Porto ────────────────────
+//
+// Bug de 31/08/2026 relatado pelo usuario: uma cotacao da Porto e uma da Azul
+// anexadas juntas sairam as duas como Azul Seguros no orcamento gerado. A causa
+// era a varredura do documento INTEIRO em busca do nome da marca — e os quatro
+// nomes aparecem em todos os PDFs da familia (origem do bonus "APOLICE PORTO,
+// ITAU OU AZUL CANCELADA", "Desconto Correntista Itau", "Cartao Porto Bank" e o
+// rodape da Porto em todas as paginas).
+
+const CABECALHO_PORTO = 'Orçamento de Seguro Auto CNPJ: 61.198.164.0001/60 - Porto Seguro Orçamento válido'
+
+/** Documento sintetico da familia, com os campos que identificam a marca. */
+function documentoFamilia({ segmento, cg, sufixo, ruido = '' }) {
+  return [
+    CABECALHO_PORTO,
+    `Orçamento: 6065143265-0-${sufixo} 08/09/2026 Realizado em 24/08/2026`,
+    `Versão Condições Gerais: ${cg} ${segmento} e PROTEÇÃO COMBINADA v1.0`,
+    'SEGURO Tipo de Operação SEGURO NOVO',
+    `Segmento ${segmento} Sucursal - - - Apólice Item Bônus`,
+    ruido,
+  ].join(' ')
+}
+
+test('cada marca da familia e identificada pelo proprio campo Segmento', () => {
+  for (const [nome, marca] of Object.entries({ AZUL: 'azul', ITAU: 'itau', MITSUI: 'mitsui' })) {
+    assert.equal(detectarMarca(FX[nome].texto)?.id, marca, `${nome} deveria ser ${marca}`)
+  }
+})
+
+test('cotacao da Porto nao vira Azul por causa das mencoes soltas no documento', () => {
+  // Todo o ruido abaixo existe nos PDFs reais desta familia e era o que fazia a
+  // deteccao antiga apontar Azul, Itau ou Mitsui num documento da Porto.
+  const ruido = [
+    'Origem do Bônus APÓLICE PORTO, ITAÚ OU AZUL CANCELADA',
+    'Desconto Correntista Itaú: 5.00% Desconto Cartão Porto Bank - Proponente: 10.00%',
+    'TODAS CARTÃO DE CRÉDITO PORTO BANK (EXISTENTE)',
+    'Azul Seguro Auto e Itaú Seguro Auto são marcas licenciadas do grupo.',
+    'Mitsui Sumitomo Seguros S.A. integra o mesmo grupo segurador.',
+  ].join(' ')
+  const porto = documentoFamilia({ segmento: 'PORTO SEGURO AUTO', cg: 'CG022', sufixo: 1, ruido })
+
+  assert.equal(detectarMarca(porto)?.id, 'porto')
+  assert.equal(detectarMarca(porto)?.nome, 'Porto Seguro')
+})
+
+test('a marca vem do campo, nao da ordem em que as marcas aparecem no texto', () => {
+  const azul = documentoFamilia({
+    segmento: 'AZUL TRADICIONAL', cg: 'CG023', sufixo: 4,
+    ruido: 'PORTO SEGURO MITSUI SUMITOMO ITAÚ TRADICIONAL citados antes no rodapé.',
+  })
+  assert.equal(detectarMarca(azul)?.id, 'azul')
+})
+
+test('layout da familia sem nenhuma marca em campo cai na dona do layout', () => {
+  // Porto e a emissora do layout; Azul, Itau e Mitsui so aparecem quando se
+  // anunciam em campo proprio.
+  const semMarca = `${CABECALHO_PORTO} Segmento TRADICIONAL Sucursal - - -`
+  assert.equal(detectarMarca(semMarca)?.id, 'porto')
+})
+
+test('documento de outro layout continua sem marca', () => {
+  assert.equal(detectarMarca('Cotação Tokio Marine Seguradora'), null)
+  assert.equal(detectarMarca(''), null)
+})
+
+test('ITAU casa mesmo com o acento no fim da palavra', () => {
+  // `\b` e ASCII: nao existe fronteira depois do "Ú", entao /\bITAÚ\b/ falha.
+  assert.equal(marcaPortoPorId('itau').padrao.test('ITAÚ TRADICIONAL'), true)
+  assert.equal(marcaPortoPorId('itau').padrao.test('ITAU TRADICIONAL'), true)
+  // Continua sem casar no meio de outra palavra.
+  assert.equal(marcaPortoPorId('itau').padrao.test('ITAUNENSE'), false)
+})
+
+test('as cinco fontes concordam nos PDFs reais das tres marcas capturadas', () => {
+  for (const nome of MARCAS) {
+    const evidencias = evidenciasMarcaPorto(FX[nome].texto)
+    assert.ok(evidencias.length >= 3, `${nome} deveria ter varias evidencias`)
+    assert.equal(detectarMarcaDetalhado(FX[nome].texto).conflito, null)
+  }
+})
+
+test('campos discordando viram conflito em vez de escolha silenciosa', () => {
+  const torto = documentoFamilia({ segmento: 'PORTO SEGURO AUTO', cg: 'CG023', sufixo: 4 })
+  const detalhe = detectarMarcaDetalhado(torto)
+  assert.equal(detalhe.marca.id, 'porto')        // Segmento manda
+  assert.deepEqual(detalhe.conflito, ['porto', 'azul'])
+})
+
+// ─── Marca escolhida pelo operador ─────────────────────────────────────
+
+test('a marca escolhida vence a deteccao e define a seguradora do orcamento', () => {
+  const cot = parseCotacaoPorto({ itens: FX.AZUL.itens, texto: FX.AZUL.texto, marca_id: 'porto' })
+  assert.equal(cot.seguradora.nome, 'Porto Seguro')
+})
+
+test('escolher marca diferente da anunciada avisa, mas nao bloqueia', () => {
+  const cot = parseCotacaoPorto({ itens: FX.AZUL.itens, texto: FX.AZUL.texto, marca_id: 'itau' })
+  const aviso = cot.avisos_extracao.find(a => a.code === 'MARCA_DIVERGENTE')
+  assert.ok(aviso, 'deveria avisar a divergencia')
+  assert.equal(aviso.bloqueia, false)
+  assert.match(aviso.mensagem, /Itaú Seguros/)
+  assert.match(aviso.mensagem, /Azul Seguros/)
+})
+
+test('escolher a marca que o PDF anuncia nao gera aviso nenhum', () => {
+  const cot = parseCotacaoPorto({ itens: FX.AZUL.itens, texto: FX.AZUL.texto, marca_id: 'azul' })
+  assert.deepEqual(cot.avisos_extracao, [])
+  assert.equal(cot.seguradora.nome, 'Azul Seguros')
+})
+
+test('sem marca escolhida a leitura continua valendo, como antes', () => {
+  const cot = parseCotacaoPorto({ itens: FX.MITSUI.itens, texto: FX.MITSUI.texto })
+  assert.equal(cot.seguradora.nome, 'Mitsui Sumitomo Seguros')
+  assert.equal(cot.marca_detectada, 'mitsui')
+  assert.deepEqual(cot.avisos_extracao, [])
+})
+
+test('marca_id invalido e ignorado em vez de zerar a seguradora', () => {
+  const cot = parseCotacaoPorto({ itens: FX.AZUL.itens, texto: FX.AZUL.texto, marca_id: 'seguradora-inexistente' })
+  assert.equal(cot.seguradora.nome, 'Azul Seguros')
+})
+
+test('as quatro marcas da familia estao disponiveis para escolha', () => {
+  assert.deepEqual(MARCAS_PORTO.map(m => m.id), ['porto', 'azul', 'itau', 'mitsui'])
+  assert.equal(marcaPortoPorId('PORTO').nome, 'Porto Seguro')
+  assert.equal(marcaPortoPorId(''), null)
 })

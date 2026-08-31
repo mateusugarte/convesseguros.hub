@@ -218,6 +218,163 @@ body{
 }
 `
 
+/*
+ * Camada visual do modelo oficial (orcamentoVIVIANWARZEELIMA).
+ *
+ * O template antigo continua acima apenas para preservar os estilos dos
+ * pequenos componentes reutilizados. Estas regras definem a pagina final e
+ * prevalecem tanto no preview quanto na impressao. Assim a visualizacao e o
+ * PDF baixado passam pelo mesmo documento, sem uma segunda versao do layout.
+ */
+const CSS_MODELO_OFICIAL = `
+html,body{
+  width:100%;min-height:100%;margin:0;background:#dce5ef;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact;
+}
+body{font-size:7.45pt;line-height:1.36;color:#102033}
+.pagina{
+  --cur:#9c7328;--oth:#1c4a87;
+  width:210mm;min-height:297mm;margin:7mm auto 18mm;padding:0;
+  display:flex;flex-direction:column;overflow:hidden;
+  background:#edf3fa;box-shadow:0 22px 70px rgba(8,25,46,.24)
+}
+.hero-orcamento,.cliente-modelo,.aviso-divergencia,.modelo-secao,.diferenca-total{flex-shrink:0}
+
+/* faixa superior: a cor da direita acompanha a seguradora atual */
+.hero-orcamento{
+  position:relative;height:29mm;min-height:29mm;padding:6.3mm 13mm 5mm;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10mm;
+  color:#fff;background:
+    linear-gradient(112deg,#0d3159 0%,#0a203a 58%,color-mix(in srgb,var(--cur) 58%,#08172a) 100%);
+  overflow:hidden
+}
+.hero-orcamento::after{
+  content:'';position:absolute;right:-14mm;top:-18mm;width:58mm;height:58mm;
+  border:8mm solid rgba(255,255,255,.028);transform:rotate(18deg)
+}
+.hero-orcamento .marca{
+  position:relative;z-index:1;display:flex;align-items:center;justify-content:center;
+  width:21mm;height:15mm;min-width:21mm;min-height:15mm;padding:1.8mm 2.5mm;
+  border:0;border-radius:2.3mm;background:#fff;box-shadow:0 7px 18px rgba(0,0,0,.16)
+}
+.hero-orcamento .marca img{max-width:16mm;max-height:11.4mm}
+.hero-titulos{position:relative;z-index:1;flex:1;text-align:right;padding-top:.2mm}
+.hero-kicker{
+  display:block;margin-bottom:1.2mm;font-family:var(--mono);font-size:6.5pt;
+  letter-spacing:2.2pt;text-transform:uppercase;color:rgba(255,255,255,.62)
+}
+.hero-orcamento .titulo{
+  font-family:var(--serif);font-size:20.5pt;font-weight:700;line-height:1;
+  letter-spacing:-.35pt;color:#fff;white-space:nowrap
+}
+.hero-orcamento .meta{
+  margin-top:2.3mm;font-family:var(--mono);font-size:6.5pt;letter-spacing:.65pt;
+  text-transform:uppercase;color:rgba(255,255,255,.67)
+}
+.hero-orcamento .meta span+span::before{color:rgba(255,255,255,.35)}
+
+/* ficha sobreposta: mesmas duas linhas e divisorias do modelo */
+.cliente-modelo{
+  position:relative;z-index:2;margin:-4.2mm 13mm 0;border-radius:2.7mm;
+  background:#fff;box-shadow:0 7px 18px rgba(16,31,51,.12);overflow:hidden
+}
+.cliente-linha{display:grid;align-items:stretch}
+.cliente-linha.superior{grid-template-columns:1.18fr 1.18fr .75fr}
+.cliente-linha.inferior{grid-template-columns:1.74fr 1fr;border-top:1px solid #d4deea}
+.cliente-modelo .campo{min-width:0;padding:1.9mm 5.8mm 2mm}
+.cliente-modelo .campo+.campo{border-left:1px solid #d4deea}
+.cliente-modelo .rotulo{margin-bottom:.75mm;color:#7b8fa6;font-size:5.6pt;letter-spacing:1.05pt}
+.cliente-modelo .valor{font-size:9pt;font-weight:750;line-height:1.2;color:#102033}
+.cliente-modelo .valor small{font-size:7.35pt;font-weight:500;color:#344a64}
+.cliente-linha.superior .valor{font-size:8.55pt}
+.cliente-linha.inferior .campo{padding-top:1.45mm;padding-bottom:1.55mm}
+.cliente-linha.inferior .campo:first-child .valor{font-size:8.7pt;line-height:1.08}
+.cliente-linha.inferior .campo:first-child .valor small{display:block;margin-top:.35mm;font-size:7pt;line-height:1.04}
+.cliente-modelo .campo.tipo{display:flex;flex-direction:column;align-items:flex-start}
+.cliente-modelo .selo-tipo{border-radius:1mm;padding:2mm 3.6mm;background:#0d2036;font-size:6.6pt}
+
+.aviso-divergencia{
+  margin:3.2mm 13mm 0;padding:2.4mm 3.6mm;border-left:2.2pt solid #b98318;
+  background:rgba(255,248,230,.92);color:#77530d;font-size:7.1pt
+}
+
+/* secoes compactas para manter o modelo em uma pagina A4 */
+.modelo-secao{margin:12.5mm 13mm 0}
+.modelo-secao.valores-secao{margin-top:5.7mm}
+.modelo-secao-title{
+  gap:2.5mm;margin-bottom:5mm;font-size:13.7pt;line-height:1;color:#102033
+}
+.modelo-secao-title i{width:6.2mm;height:6.2mm;font-size:7.7pt;background:#0d2036}
+
+.tabela-comparativo{
+  grid-template-columns:44mm minmax(0,1fr) minmax(0,1fr);
+  border-radius:2.7mm;background:#e5edf7;box-shadow:0 10px 28px rgba(16,31,51,.075)
+}
+.tabela-head{
+  min-height:11.8mm;padding:1.8mm 3.5mm;display:flex;align-items:center;
+  background:#e4edf8;font-size:5.9pt;letter-spacing:1.25pt
+}
+.tabela-head.seguradora{
+  gap:3.2mm;padding:1.7mm 3.2mm;
+  background:linear-gradient(110deg,var(--cor),color-mix(in srgb,var(--cor) 78%,#0c2037));
+  color:var(--cor-texto)
+}
+.tabela-head.seguradora strong{font-size:6.2pt;letter-spacing:1.05pt;line-height:1.25}
+.tabela-head .selo-logo{
+  min-width:31mm;min-height:7.9mm;padding:.8mm 2.2mm;border-radius:1.6mm;
+  box-shadow:0 3px 9px rgba(0,0,0,.2)
+}
+.tabela-head .selo-logo img{max-width:28mm;max-height:5.8mm}
+.tabela-head .fallback{font-size:8pt}
+.tabela-cobertura,.tabela-celula{
+  min-height:11.5mm;padding:2.2mm 3.1mm;border-top:1px solid #d0dceb
+}
+.tabela-cobertura{gap:2.5mm;background:#e6effa;font-weight:800}
+.tabela-cobertura .bolha{
+  width:6.3mm;height:6.3mm;background:#fff;color:#0d2036;
+  box-shadow:0 2px 7px rgba(16,31,51,.12)
+}
+.tabela-cobertura .bolha .ic{width:3.25mm;height:3.25mm}
+.tabela-cobertura span{font-size:7.15pt;line-height:1.2}
+.tabela-celula{background:#eaf1f8;color:#455b75;font-size:7.25pt;line-height:1.34}
+.tabela-celula strong{color:#102033}
+.tabela-celula mark{
+  margin:0 .2mm;padding:0 .65mm;border-radius:.7mm;background:#fff1b8;
+  color:#102033;font-weight:850
+}
+
+.valores-grid{gap:4mm}
+.valor-card-modelo{border-radius:2.6mm;box-shadow:0 9px 25px rgba(16,31,51,.1)}
+.valor-card-modelo::before{height:1.15mm}
+.valor-card-modelo-inner{padding:3.7mm 5mm 3.4mm}
+.valor-card-modelo .marca-valor{gap:3mm;margin-bottom:3.2mm}
+.valor-card-modelo .marca-valor .selo-logo{min-width:26mm;min-height:8mm;padding:.8mm 1.4mm}
+.valor-card-modelo .marca-valor .selo-logo img{max-width:24mm;max-height:5.8mm}
+.valor-card-modelo .marca-valor span{font-size:6.3pt;letter-spacing:1.25pt}
+.valor-card-modelo .valor-total-label{font-size:5.9pt;letter-spacing:1.05pt}
+.valor-card-modelo .valor-total{margin:1.2mm 0 2.6mm;font-size:18.8pt;letter-spacing:.9pt}
+.valor-card-modelo .pagamentos{padding-top:2.5mm;gap:1.25mm}
+.valor-card-modelo .pagamento{font-size:6.8pt;line-height:1.28}
+.valor-card-modelo .pagamento .ic{width:3.2mm;height:3.2mm;margin-top:.2mm}
+.valor-card-modelo .rodape-card{padding-top:2mm;font-size:5.85pt;line-height:1.28}
+.diferenca-total{
+  margin:4.8mm 13mm 0;padding:3mm 4.8mm;border-radius:2.4mm;background:#0d2036
+}
+.diferenca-total span{font-size:6.25pt;letter-spacing:1.4pt}
+.diferenca-total strong{font-size:14pt;letter-spacing:1pt}
+.rodape{
+  margin:auto 13mm 0;padding:5.5mm 0 2.8mm;border:0;
+  color:#7d91a9;font-size:5.8pt;line-height:1.42
+}
+.rodape::before{width:64mm;height:.7mm;margin-bottom:2mm;background:linear-gradient(90deg,var(--cur) 0 50%,var(--oth) 50% 100%)}
+
+@media print{
+  html,body{width:210mm;height:297mm;min-height:297mm;background:#fff}
+  .acoes-doc{display:none!important}
+  .pagina{width:210mm;height:297mm;min-height:297mm;margin:0!important;box-shadow:none!important}
+}
+`
+
 // ─── Blocos ────────────────────────────────────────────────────────────
 
 const ROTULO_PAPEL = { atual: 'Seguradora atual', outra: 'Outra seguradora' }
@@ -419,7 +576,7 @@ function blocoPagamentoModelo(card) {
   return `<article class="valor-card-modelo" style="${estilo}">
     <div class="valor-card-modelo-inner">
       <div class="marca-valor">${selo(s)}<span>${escapeHtml(s.nome || 'Seguradora')}</span></div>
-      <div class="valor-total-label">${card.papel === 'atual' ? 'Valor total à vista' : 'Valor total (com IOF)'}</div>
+      <div class="valor-total-label">Valor total (com IOF)</div>
       <div class="valor-total">${escapeHtml(card.valores.total_formatado || '—')}</div>
       ${pagamentos ? `<div class="pagamentos">${pagamentos}</div>` : ''}
       ${card.rodape ? `<div class="rodape-card"><b>Condições Gerais:</b> <i>${escapeHtml(card.rodape)}</i></div>` : ''}
@@ -472,6 +629,14 @@ export function montarHtmlOrcamento(comparativo, { logoConves = '/conves-logo.pn
   const veiculoLinha2 = [cliente.ano_modelo, cliente.placa ? `Placa ${cliente.placa}` : '']
     .filter(Boolean).join(' · ')
 
+  const seguradoDetalhe = cliente.segurado_documento ? `CPF ${cliente.segurado_documento}` : ''
+  const condutorDetalhe = [
+    cliente.condutor_documento ? `CPF ${cliente.condutor_documento}` : '',
+    cliente.condutor_nascimento ? `nasc. ${cliente.condutor_nascimento}` : '',
+  ].filter(Boolean).join(' · ')
+  const corAtual = cards?.[0]?.seguradora?.cor || '#9c7328'
+  const corOutra = cards?.[1]?.seguradora?.cor || '#1c4a87'
+
   // Divergencia entre os dois PDFs vira aviso IMPRESSO, nao so alerta de tela:
   // se o corretor gerou assim mesmo, quem le o documento precisa saber.
   const aviso = divergencias.length
@@ -484,36 +649,47 @@ export function montarHtmlOrcamento(comparativo, { logoConves = '/conves-logo.pn
 <head>
 <meta charset="utf-8">
 <title>Orçamento Comparativo${cabecalho.referencia ? ` ${escapeHtml(cabecalho.referencia)}` : ''}</title>
-<style>${CSS}</style>
+<style>${CSS}${CSS_MODELO_OFICIAL}</style>
 </head>
 <body>
 ${comAcoes ? `<nav class="acoes-doc" aria-label="Ações da cotação">
   <div><strong>Cotação pronta para conferência</strong><span>Revise o documento e baixe uma cópia em PDF.</span></div>
   <div class="botoes"><button type="button" onclick="window.close()">Fechar</button><button class="primario" type="button" onclick="window.print()">Baixar PDF</button></div>
 </nav>` : ''}
-<div class="pagina">
-  <div class="barra-topo"></div>
-
-  <header class="cabecalho">
+<div class="pagina" style="--cur:${escapeHtml(corAtual)};--oth:${escapeHtml(corOutra)}">
+  <header class="hero-orcamento">
     <div class="marca"><img src="${escapeHtml(logoConves)}" alt="Convés Seguros"></div>
-    <div class="titulo-bloco">
-      <h1 class="titulo"><span class="estrela">★</span>Orçamento Comparativo de Seguro Auto</h1>
+    <div class="hero-titulos">
+      <span class="hero-kicker">Convés Corretora de Seguros</span>
+      <h1 class="titulo">Orçamento Comparativo</h1>
       <div class="meta">${meta}</div>
     </div>
   </header>
 
-  <section class="cliente">
-    <div class="campo">
-      <span class="rotulo">Segurado</span>
-      <div class="valor">${escapeHtml(cliente.segurado || '—')}</div>
+  <section class="cliente-modelo">
+    <div class="cliente-linha superior">
+      <div class="campo">
+        <span class="rotulo">Segurado</span>
+        <div class="valor">${escapeHtml(cliente.segurado || '—')}${seguradoDetalhe ? ` <small>· ${escapeHtml(seguradoDetalhe)}</small>` : ''}</div>
+      </div>
+      <div class="campo">
+        <span class="rotulo">Condutor principal</span>
+        <div class="valor">${escapeHtml(cliente.condutor || cards?.[0]?.identificacao?.condutor || '—')}${condutorDetalhe ? ` <small>· ${escapeHtml(condutorDetalhe)}</small>` : ''}</div>
+      </div>
+      <div class="campo tipo">
+        <span class="rotulo">Tipo de cotação</span>
+        <span class="selo-tipo">${escapeHtml(cliente.tipo_operacao_label || '—')}</span>
+      </div>
     </div>
-    <div class="campo">
-      <span class="rotulo">Veículo</span>
-      <div class="valor">${escapeHtml(cliente.veiculo || '—')}${veiculoLinha2 ? `<small>${escapeHtml(veiculoLinha2)}</small>` : ''}</div>
-    </div>
-    <div class="campo tipo">
-      <span class="rotulo">Tipo de cotação</span>
-      <span class="selo-tipo">${escapeHtml(cliente.tipo_operacao_label || '—')}</span>
+    <div class="cliente-linha inferior">
+      <div class="campo veiculo">
+        <span class="rotulo">Veículo</span>
+        <div class="valor">${escapeHtml(cliente.veiculo || '—')}${veiculoLinha2 ? `<small>${escapeHtml(veiculoLinha2)}</small>` : ''}</div>
+      </div>
+      <div class="campo">
+        <span class="rotulo">CEP de pernoite</span>
+        <div class="valor">${escapeHtml(cliente.cep_pernoite || cards?.[0]?.identificacao?.cep_pernoite || '—')}</div>
+      </div>
     </div>
   </section>
 

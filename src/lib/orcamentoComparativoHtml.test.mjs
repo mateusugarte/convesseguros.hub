@@ -44,7 +44,8 @@ test('documento sai completo e com o cabecalho preenchido', () => {
   const doc = html()
   assert.ok(doc.startsWith('<!doctype html>'))
   assert.ok(doc.trimEnd().endsWith('</html>'))
-  assert.ok(doc.includes('Orçamento Comparativo de Seguro Auto'))
+  assert.ok(doc.includes('Orçamento Comparativo'))
+  assert.ok(doc.includes('Convés Corretora de Seguros'))
   assert.ok(doc.includes('CV-2026-0817'))
   assert.ok(doc.includes('24/08/2026'))
   assert.ok(doc.includes('Válido por 5 dias'))
@@ -58,11 +59,21 @@ test('area de visualizacao oferece baixar PDF sem poluir a impressao', () => {
   assert.ok(doc.includes('.acoes-doc{display:none!important}'))
 })
 
-test('a barra do cliente traz segurado, veiculo com placa e o selo do tipo', () => {
+test('a ficha do cliente traz segurado, condutor, veiculo, CEP e o selo do tipo', () => {
   const doc = html()
   assert.ok(doc.includes('Priscila Cunha dos Santos'))
+  assert.ok(doc.includes('Aguinosvan A. dos Santos'))
   assert.ok(doc.includes('Placa GAO-1151'))
+  assert.ok(doc.includes('04849-015'))
   assert.ok(doc.includes('>Renovação</span>'))
+})
+
+test('preview e impressao compartilham exatamente o mesmo modelo oficial', () => {
+  const doc = html()
+  assert.ok(doc.includes('class="hero-orcamento"'))
+  assert.ok(doc.includes('class="cliente-modelo"'))
+  assert.ok(doc.includes('background:#edf3fa'))
+  assert.ok(doc.includes('.pagina{width:210mm;height:297mm;min-height:297mm'))
 })
 
 test('as duas seguradoras entram com a cor de identidade, nao a do papel', () => {

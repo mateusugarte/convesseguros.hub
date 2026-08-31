@@ -95,6 +95,21 @@ test('cobertura conhecida nao inclusa aparece na propria linha da tabela', () =>
   assert.ok(doc.includes('Não contratado nesta cotação.'))
 })
 
+test('danos a terceiros e franquia destacam os valores criticos', () => {
+  const doc = html({
+    coberturas: [{
+      nome_padronizado: 'Danos a terceiros',
+      categoria: 'terceiros',
+      incluida: true,
+      valor_lmi: null,
+      observacoes: 'R$ 150.000,00 danos materiais + R$ 150.000,00 danos corporais + R$ 5.000,00 danos morais.',
+    }],
+    valores: { ...cotacao('x').valores, franquia: 6704.93, franquia_tipo: 'Reduzida' },
+  })
+  assert.ok(doc.includes('<mark>R$ 150.000,00</mark>'))
+  assert.ok(doc.replace(/\u00a0/g, ' ').includes('<mark>R$ 6.704,93</mark>'))
+})
+
 test('parcelamento aceita array e string com quebras, uma linha cada', () => {
   const linhas = ['Em até 12x sem juros no cartão', '1x à vista com 5% de desconto']
   const doc = html({ valores: { ...cotacao('x').valores, premio_parcelado: linhas } })

@@ -8,7 +8,7 @@ import {
   extrairOfertas, extrairParcelamento, textoParcelamento, extrairFranquia,
   legendaAsteriscos, expandirSigla, moeda,
 } from './orcamentoAllianzParser.js'
-import { montarCategorias, validarCotacao, ESTADO_COBERTURA } from './orcamentoComparativo.js'
+import { montarCategorias, validarCotacao, ESTADO_COBERTURA, ehCoberturaForaDoQuadroComparativo } from './orcamentoComparativo.js'
 
 // Fixture do PDF real recebido em 25/08/2026 (`documentos_automacao/orçamentos/ALLIANZ.pdf`),
 // cotacao 493446723, VW Fox 2012, 6 paginas.
@@ -151,13 +151,14 @@ test('expandirSigla troca a sigla pelo que o documento diz que ela significa', (
 // "responsabilidade civil" e "app*** - morte" nao contem "app morte" — as tres
 // coberturas caiam sem classificacao e disparavam aviso na revisao em toda
 // cotacao Allianz. Aviso que sempre aparece deixa de ser lido.
-test('REGRESSAO: as tres coberturas com sigla sao classificadas', () => {
+test('REGRESSAO: siglas entram na categoria correta ou saem do quadro sem alerta falso', () => {
   const cot = parse('Completo')
   const por = nome => cot.coberturas.find(c => c.nome_original_seguradora.includes(nome))
   assert.equal(por('Danos Materiais').categoria, 'terceiros')
   assert.equal(por('Gastos com Defesa').categoria, 'terceiros')
-  assert.equal(por('Morte').categoria, 'adicional')
-  assert.equal(cot.coberturas.every(c => c.categoria), true, 'nenhuma cobertura sem categoria')
+  assert.equal(por('Morte').categoria, null)
+  assert.equal(ehCoberturaForaDoQuadroComparativo(por('Morte').nome_original_seguradora), true)
+  assert.ok(!validarCotacao(cot).pendencias.some(p => /Cobertura não classificada/.test(p.label)))
 })
 
 // ─── Campos escalares ──────────────────────────────────────────────────

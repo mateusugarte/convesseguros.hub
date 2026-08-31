@@ -207,14 +207,14 @@ body{
 .modelo-secao{margin:17mm 12mm 0}.modelo-secao-title{display:flex;align-items:center;gap:3mm;margin-bottom:7mm;font-family:var(--serif);font-size:15pt;font-weight:800;letter-spacing:-.25pt}.modelo-secao-title i{display:grid;width:7.3mm;height:7.3mm;place-items:center;border-radius:50%;background:var(--tinta);color:#fff;font-family:var(--sans);font-size:9pt;font-style:normal;font-weight:800}
 .tabela-comparativo{display:grid;grid-template-columns:50mm 1fr 1fr;overflow:hidden;border-radius:2.8mm;background:#e5edf7;box-shadow:0 16px 42px rgba(16,31,51,.09)}
 .tabela-head{min-height:18mm;padding:3mm 4mm;background:#dfe9f5;color:#7f91a8;font-family:var(--mono);font-size:6.6pt;font-weight:800;letter-spacing:1.4pt;text-transform:uppercase}.tabela-head.seguradora{display:flex;align-items:center;gap:4mm;background:linear-gradient(120deg,var(--cor),color-mix(in srgb,var(--cor) 78%,#101f33));color:var(--cor-texto)}.tabela-head.seguradora strong{font-size:7.2pt;letter-spacing:1.25pt}.tabela-head .selo-logo{min-width:31mm;min-height:12mm;padding:1.6mm 2.6mm;border-radius:1.7mm;box-shadow:0 3px 9px rgba(0,0,0,.18)}.tabela-head .selo-logo img{max-height:8mm;max-width:29mm}.tabela-head .fallback{font-size:8.4pt}
-.tabela-cobertura,.tabela-celula{min-height:18mm;padding:3.2mm 4mm;border-top:1px solid #d2deeb}.tabela-cobertura{display:flex;align-items:center;gap:3mm;background:#e7f0fa;font-weight:800}.tabela-cobertura .bolha{width:7.5mm;height:7.5mm;background:#fff;color:var(--tinta);box-shadow:0 3px 8px rgba(16,31,51,.1)}.tabela-cobertura .bolha .ic{width:3.8mm;height:3.8mm}.tabela-cobertura span{font-size:8.2pt;line-height:1.25}.tabela-celula{background:#eaf1f8;color:#46586f;font-size:8.5pt;line-height:1.42}.tabela-celula strong{color:#102033;font-weight:850}.tabela-celula.is-empty{color:#8090a3;font-style:italic}.tabela-celula.is-negative{color:#8d3c32;background:#f6e9e6}
+.tabela-cobertura,.tabela-celula{min-height:18mm;padding:3.2mm 4mm;border-top:1px solid #d2deeb}.tabela-cobertura{display:flex;align-items:center;gap:3mm;background:#e7f0fa;font-weight:800}.tabela-cobertura .bolha{width:7.5mm;height:7.5mm;background:#fff;color:var(--tinta);box-shadow:0 3px 8px rgba(16,31,51,.1)}.tabela-cobertura .bolha .ic{width:3.8mm;height:3.8mm}.tabela-cobertura span{font-size:8.2pt;line-height:1.25}.tabela-celula{background:#eaf1f8;color:#46586f;font-size:8.5pt;line-height:1.42}.tabela-celula strong{color:#102033;font-weight:850}.tabela-celula mark{display:inline-block;margin:.25mm .3mm;padding:.15mm 1mm;border-radius:1mm;background:#fff4cd;color:#0f2137;font-weight:850;box-decoration-break:clone;-webkit-box-decoration-break:clone}.tabela-celula.is-empty{color:#8090a3;font-style:italic}.tabela-celula.is-negative{color:#8d3c32;background:#f6e9e6}
 .valores-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6mm}.valor-card-modelo{position:relative;overflow:hidden;border-radius:3mm;background:#fff;box-shadow:0 14px 40px rgba(16,31,51,.11)}.valor-card-modelo::before{content:'';display:block;height:1.3mm;background:var(--cor)}.valor-card-modelo-inner{padding:6mm 7mm}.valor-card-modelo .marca-valor{display:flex;align-items:center;gap:4mm;margin-bottom:7mm}.valor-card-modelo .marca-valor .selo-logo{min-width:29mm;min-height:10mm;padding:1.2mm 2mm;box-shadow:none}.valor-card-modelo .marca-valor .selo-logo img{max-height:7mm;max-width:27mm}.valor-card-modelo .marca-valor span{font-family:var(--mono);font-size:7.8pt;font-weight:800;letter-spacing:1.8pt;color:#8ca0b7;text-transform:uppercase}.valor-card-modelo .valor-total-label{font-family:var(--mono);font-size:7pt;font-weight:800;letter-spacing:1.2pt;color:#8ca0b7;text-transform:uppercase}.valor-card-modelo .valor-total{margin:2.5mm 0 4mm;font-family:var(--mono);font-size:23pt;font-weight:800;letter-spacing:1.5pt;color:var(--tinta)}.valor-card-modelo .pagamentos{margin:0;padding:4mm 0 0;border-top:1px solid #d6e0eb;gap:2.1mm}.valor-card-modelo .pagamento{font-size:8pt;color:#445870}.valor-card-modelo .pagamento .ic{color:#7e91a8}.valor-card-modelo .rodape-card{padding:3.5mm 0 0;color:#718399;font-size:7.1pt}
 .diferenca-total{display:flex;align-items:center;justify-content:space-between;gap:10mm;margin:7mm 12mm 0;padding:4.2mm 7mm;border-radius:2.8mm;background:#0d2036;color:#fff}.diferenca-total span{font-family:var(--mono);font-size:7.5pt;letter-spacing:2pt;text-transform:uppercase;color:#aab8c9}.diferenca-total strong{font-family:var(--mono);font-size:17pt;letter-spacing:1.5pt}
 .rodape::before{content:'';display:block;width:86mm;height:1mm;margin:0 auto 3mm;background:linear-gradient(90deg,#9c7328 0 50%,#1c4a87 50% 100%)}
 @media print{
-  html,body{background:#fff}
+  html,body{width:210mm;min-height:297mm;background:#fff}
   .acoes-doc{display:none!important}
-  .pagina{margin:0;box-shadow:none}
+  .pagina{margin:0!important;box-shadow:none!important}
 }
 `
 
@@ -363,6 +363,12 @@ function textoCategoriaTabela(card, categoria) {
   return { texto: item.texto || 'Não oferecido nesta cotação', classe: item.texto ? '' : ' is-empty' }
 }
 
+function destacarValoresImportantes(texto, categoriaKey) {
+  const seguro = escapeHtml(texto)
+  if (!['terceiros', 'franquia'].includes(categoriaKey)) return seguro
+  return seguro.replace(/(R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2}|\d{1,3}(?:\.\d{3})+)(%?)/g, '<mark>$&</mark>')
+}
+
 function blocoTabelaCoberturas(cards) {
   const [atual, outra] = cards
   const cabecalho = card => {
@@ -382,8 +388,8 @@ function blocoTabelaCoberturas(cards) {
         <div class="bolha">${icone(categoria.icone)}</div>
         <span>${escapeHtml(categoria.label)}</span>
       </div>
-      <div class="tabela-celula${celAtual.classe}">${escapeHtml(celAtual.texto)}</div>
-      <div class="tabela-celula${celOutra.classe}">${escapeHtml(celOutra.texto)}</div>`
+      <div class="tabela-celula${celAtual.classe}">${destacarValoresImportantes(celAtual.texto, categoria.key)}</div>
+      <div class="tabela-celula${celOutra.classe}">${destacarValoresImportantes(celOutra.texto, categoria.key)}</div>`
   }).join('')
 
   return `<section class="modelo-secao">

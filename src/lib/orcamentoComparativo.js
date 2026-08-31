@@ -180,6 +180,28 @@ export function ehBeneficioPagamento(...fontes) {
   ].some(termo => texto.includes(termo))
 }
 
+/**
+ * Coberturas que aparecem em algumas cotações, mas não pertencem ao quadro
+ * comparativo fixo aprovado para envio ao cliente.
+ *
+ * Antes elas caiam em "Benefícios adicionais" por omissão, o que poluía o
+ * orçamento com itens que não eram benefício de pagamento. Agora ficam fora do
+ * modelo e também não geram alerta falso de "não classificada" na revisão.
+ */
+export function ehCoberturaForaDoQuadroComparativo(...fontes) {
+  const texto = normalizarTexto(fontes.flat(Infinity).filter(Boolean).join(' '))
+  if (!texto) return false
+  return [
+    'app morte',
+    'app invalidez',
+    'app invalidez permanente',
+    'acidentes pessoais passageiros',
+    'acidentes pessoais',
+    'morte',
+    'invalidez permanente',
+  ].some(termo => texto.includes(termo))
+}
+
 // ─── Schema da cotacao (spec secao 5) ──────────────────────────────────
 
 export function criarCoberturaVazia(patch = {}) {
@@ -929,7 +951,7 @@ export function validarCotacao(cotacao) {
   for (const cobertura of cot.coberturas || []) {
     const nome = cobertura.nome_padronizado || cobertura.nome_original_seguradora
     if (!nome) continue
-    if (!cobertura.categoria && !classificarCobertura(nome)) {
+    if (!cobertura.categoria && !classificarCobertura(nome) && !ehCoberturaForaDoQuadroComparativo(nome, cobertura.observacoes)) {
       pendencias.push({
         caminho: `coberturas.${nome}`,
         label: `Cobertura não classificada: "${nome}"`,

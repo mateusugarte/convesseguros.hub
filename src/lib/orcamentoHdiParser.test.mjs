@@ -8,7 +8,10 @@ import {
   colunasGarantias, extrairParcelamento, textoParcelamento, moeda, listarProdutosHdi,
 } from './orcamentoHdiParser.js'
 import { ProdutoOrcamentoObrigatorioError } from './orcamentoProdutos.js'
-import { montarCategorias, validarCotacao, humanizarCobertura, ESTADO_COBERTURA } from './orcamentoComparativo.js'
+import {
+  montarCategorias, validarCotacao, humanizarCobertura, ESTADO_COBERTURA,
+  ehCoberturaForaDoQuadroComparativo,
+} from './orcamentoComparativo.js'
 
 // Fixture do PDF real recebido em 25/08/2026 (`documentos_automacao/orçamentos/HDI.pdf`).
 const FX = JSON.parse(fs.readFileSync(new URL('./__fixtures__/hdi.json', import.meta.url)))
@@ -267,9 +270,10 @@ test('a cotacao HDI preenche as 7 categorias e pode ser gerada', () => {
   assert.equal(validarCotacao(cot).podeGerar, true)
 })
 
-test('APP e classificada de proposito, nao por omissao', () => {
-  // Cobertura que cai em "adicional" por FALTA de classificacao dispara o aviso
-  // de "nao classificada". Um aviso que sempre aparece deixa de ser lido.
+test('APP fica fora do quadro comparativo, sem cair em beneficios adicionais', () => {
+  // APP nao deve aparecer em "Beneficios adicionais" no orçamento do cliente,
+  // mas tambem nao deve disparar um alerta falso a cada cotacao HDI.
+  assert.equal(ehCoberturaForaDoQuadroComparativo('APP MORTE'), true)
   const v = validarCotacao(parse())
   assert.ok(!v.pendencias.some(p => /não classificada/.test(p.label)), JSON.stringify(v.pendencias))
 })

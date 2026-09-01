@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { clientPatchFromQuotePatch } from './autoQuoteClientSync.js'
 import { limparNomeSegurado, normalizeCompareText, somarUmAno } from './autoHistoricoImport.js'
 import { normalizePolicyImportIdentity, policyImportHasVehicleData, policyImportPipelineStage, policyImportRelationshipReady } from './autoPolicyImport.js'
 import { calcularDataLimiteRenovacao, calcularValorComissaoAuto } from './autoCalc.js'
@@ -502,7 +503,7 @@ export async function criarCotacaoAuto(payload) {
 export async function getCotacaoAutoPorId(id) {
   const { data, error } = await supabase
     .from('cotacoes_auto')
-    .select('*')
+    .select('*, clientes_auto(*)')
     .eq('id', id)
     .maybeSingle()
   if (error) throw error
@@ -516,6 +517,70 @@ export async function atualizarCotacaoAuto(id, changes) {
     .eq('id', id)
     .select()
     .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+// Persiste os dados de segurado/condutor/veiculo que vieram da leitura do PDF.
+// O planejamento de conflitos acontece antes, na interface; este metodo recebe
+// apenas campos vazios ou substituicoes que o usuario confirmou.
+export async function sincronizarDadosExtraidosCotacaoAuto(id, changes = {}) {
+  if (!id || !Object.keys(changes).length) return null
+
+  const { data: atual, error: atualError } = await supabase
+    .from('cotacoes_auto')
+    .select('id, cliente_id, nome_cliente, cpf_cliente')
+    .eq('id', id)
+    .single()
+  if (atualError) throw atualError
+
+  const quotePatch = { ...changes, updated_at: new Date().toISOString() }
+  const clientPatch = clientPatchFromQuotePatch(changes)
+  if (clientPatch.cpf) clientPatch.cpf = normalizeCpf(clientPatch.cpf)
+  let clienteId = isUuid(atual.cliente_id) ? atual.cliente_id : null
+
+  // Uma cotacao sem vinculo passa a pertencer ao cliente identificado pelo
+  // CPF. Sem CPF mantemos os dados na cotacao, evitando criar duplicatas por
+  // nome parecido.
+  if (!clienteId && clientPatch.cpf) {
+    const { data: existente, error: buscarError } = await supabase
+      .from('clientes_auto')
+      .select('id')
+      .eq('cpf', clientPatch.cpf)
+      .maybeSingle()
+    if (buscarError) throw buscarError
+
+    if (existente?.id) {
+      clienteId = existente.id
+    } else {
+      const nome = clientPatch.nome_completo || changes.nome_cliente || atual.nome_cliente
+      if (nome) {
+        const { data: criado, error: criarError } = await supabase
+          .from('clientes_auto')
+          .insert({ nome_completo: nome, cpf: clientPatch.cpf })
+          .select('id')
+          .single()
+        if (criarError) throw criarError
+        clienteId = criado.id
+      }
+    }
+  }
+
+  if (clienteId && Object.keys(clientPatch).length) {
+    const { error: clienteError } = await supabase
+      .from('clientes_auto')
+      .update(clientPatch)
+      .eq('id', clienteId)
+    if (clienteError) throw clienteError
+    quotePatch.cliente_id = clienteId
+  }
+
+  const { data, error } = await supabase
+    .from('cotacoes_auto')
+    .update(quotePatch)
+    .eq('id', id)
+    .select('*, clientes_auto(*)')
+    .single()
   if (error) throw error
   return data
 }

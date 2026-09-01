@@ -51,6 +51,48 @@ export function filterAutoPipelineEmissions(items = [], view = 'outros') {
   return items.filter(item => isAutoRenewalEmission(item) === renewalView)
 }
 
+function firstRelated(value) {
+  return Array.isArray(value) ? value[0] : value
+}
+
+/**
+ * Data que define em qual competencia mensal o card aparece na Pipeline.
+ *
+ * - Renovacao acompanha a vigencia, mesmo que a cotacao tenha sido criada no
+ *   mes anterior.
+ * - Proposta/vistoria acompanha a transmissao.
+ * - Apolice emitida acompanha a emissao (com transmissao como fallback).
+ * - Cotacao ainda em trabalho acompanha a criacao da propria cotacao.
+ */
+export function getAutoPipelineReferenceDate(item = {}) {
+  const cotacao = item.cotacoes_auto || item.cotacao || {}
+  const apolice = firstRelated(item.apolices_auto) || {}
+  const stage = resolveAutoEmissionStage(item)
+
+  if (isAutoRenewalEmission(item)) {
+    return item.vigencia_inicio || apolice.vigencia_inicio || cotacao.vigencia_inicio
+      || item.data_transmissao || item.created_at || cotacao.created_at || ''
+  }
+
+  if (stage === 'apolice_emitida') {
+    return apolice.data_emissao || item.data_emissao || item.data_transmissao
+      || apolice.created_at || item.created_at || cotacao.created_at || ''
+  }
+
+  if (['aguardando_vistoria', 'proposta_transmitida'].includes(stage)) {
+    return item.data_transmissao || apolice.data_emissao || item.updated_at
+      || item.created_at || cotacao.created_at || ''
+  }
+
+  return cotacao.created_at || item.created_at || item.updated_at || ''
+}
+
+export function isAutoPipelineItemInMonth(item, monthRef) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(monthRef || ''))) return false
+  const referenceDate = String(getAutoPipelineReferenceDate(item) || '')
+  return referenceDate.slice(0, 7) === monthRef
+}
+
 export const AUTO_TIPO_META = {
   novo: { label: 'Seguro novo', className: 'auto-type-tag is-new' },
   renovacao: { label: 'Renovação', className: 'auto-type-tag is-renewal' },

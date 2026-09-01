@@ -26,11 +26,11 @@ import { parseAutoHistoricoPlanilha, somarUmAno } from '../../lib/autoHistoricoI
 import { parseOrcamentoAuto, parsePropostaAuto } from '../../lib/autoPdfParser.js'
 import {
   AUTO_OTHER_PIPELINE_STAGES, AUTO_PIPELINE_STAGES, AUTO_RENEWAL_PIPELINE_STAGES, AUTO_TIPO_META,
-  filterAutoPipelineEmissions, renovacaoStageFields, resolveRenovacaoStage, scoreCotacaoSuggestion,
+  filterAutoPipelineEmissions, isAutoPipelineItemInMonth, renovacaoStageFields, resolveRenovacaoStage, scoreCotacaoSuggestion,
 } from '../../lib/autoOperational.js'
 import {
   alternarColunaRecolhida, etapaVizinha, etapaVizinhaRenovacao, gravarPreferenciasPipeline,
-  lerPreferenciasPipeline, resumoFinanceiroEtapa,
+  isProposalTransmissionStage, lerPreferenciasPipeline, requiresAutoEmissionRegistration, resumoFinanceiroEtapa,
 } from '../../lib/autoPipelineBoard.js'
 import { useOrigemAtual, useVoltar } from '../../hooks/useVoltar.js'
 const COLUNAS = [
@@ -45,14 +45,6 @@ const COLUNAS = [
 const PIPELINE_VIEWS = [
   { id: 'renovacoes', label: 'Renovações', description: 'Carteira, cálculos e acompanhamento até a emissão', icon: RefreshCw },
   { id: 'outros', label: 'Novos e endossos', description: 'Cotações novas, endossos e propostas em andamento', icon: Car },
-]
-
-const PERIOD_OPTIONS = [
-  { value: 'todos', label: 'Todos' },
-  { value: 'dia', label: 'Dia' },
-  { value: 'semana', label: 'Semana' },
-  { value: 'mes', label: 'Mes' },
-  { value: 'custom', label: 'Personalizado' },
 ]
 
 const FORM_EMISSAO_VAZIO = {
@@ -1341,7 +1333,11 @@ function PropostaTransmitidaFields({ form, onChange, valorComissao, tipo }) {
     <div className="rounded-3xl border border-brand-accent/20 bg-brand-accent/5 p-4">
       <div className="mb-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-status-info">Mesmos campos da planilha</p>
-        <p className="mt-1 text-xs text-dark-muted">Registre a transmissão agora; número da apólice e veículo continuam opcionais.</p>
+        <p className="mt-1 text-xs text-dark-muted">
+          {form.coluna === 'aguardando_vistoria'
+            ? 'Registre a transmissão; a proposta ficará aguardando a vistoria ou a instalação do rastreador.'
+            : 'Registre a transmissão agora; número da apólice e veículo continuam opcionais.'}
+        </p>
       </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <CampoTexto label="Transmissão" campo="data_transmissao" type="date" value={form.data_transmissao} onChange={onChange} />
@@ -1568,14 +1564,35 @@ export default function AutoEmissoes() {
     if (kanbanScrollRef.current) kanbanScrollRef.current.scrollLeft = 0
   }, [pipelineView])
 
+  // A planilha de emissoes tambem permite classificar um card. Quando a etapa
+  // escolhida exige registro, ela encaminha o item para esta tela e o mesmo
+  // formulario da Pipeline abre automaticamente — sem existir um atalho que
+  // apenas troque o status e deixe os dados obrigatorios para tras.
+  useEffect(() => {
+    const request = location.state?.autoEmissionRegistration
+    if (!request?.item || !requiresAutoEmissionRegistration(request.stage)) return
+
+    setManualStage(request.stage)
+    setModalEmissao(request.item)
+
+    const nextState = { ...(location.state || {}) }
+    delete nextState.autoEmissionRegistration
+    navigate(
+      { pathname: location.pathname, search: location.search },
+      { replace: true, state: nextState },
+    )
+  }, [location.pathname, location.search, location.state, navigate])
+
   useEffect(() => {
     localStorage.setItem('auto-kanban-density', kanbanDensity)
     gravarPreferenciasPipeline({ densidade: kanbanDensity, recolhidas: colunasRecolhidas })
   }, [kanbanDensity, colunasRecolhidas])
 
   const { data: emissoes = [] } = useQuery({
-    queryKey: ['auto-emissoes', periodo, filtroInicio, filtroFim],
-    queryFn: () => getEmissoesAuto({ inicio: filtroInicio || undefined, fim: filtroFim || undefined }),
+    queryKey: ['auto-emissoes', isGestaoRoute ? 'pipeline' : periodo, isGestaoRoute ? '' : filtroInicio, isGestaoRoute ? '' : filtroFim],
+    queryFn: () => getEmissoesAuto(isGestaoRoute
+      ? {}
+      : { inicio: filtroInicio || undefined, fim: filtroFim || undefined }),
   })
 
   const { data: autoTags = [] } = useQuery({
@@ -1691,14 +1708,18 @@ export default function AutoEmissoes() {
     ].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR').includes(termoPipeline)
   }, [termoPipeline])
 
+  const emissoesDoMesPipeline = useMemo(
+    () => emissoes.filter(item => isAutoPipelineItemInMonth(item, mesRenovacoes)),
+    [emissoes, mesRenovacoes],
+  )
   const emissoesPipeline = useMemo(
-    () => filterAutoPipelineEmissions(emissoes, pipelineView).filter(item => {
+    () => filterAutoPipelineEmissions(emissoesDoMesPipeline, pipelineView).filter(item => {
       if (!matchesPipelineSearch(item)) return false
       if (getEmissaoColuna(item) !== 'pendentes') return true
       const tipo = item.cotacoes_auto?.tipo || item.tipo
       return tipo === 'novo'
     }),
-    [emissoes, matchesPipelineSearch, pipelineView],
+    [emissoesDoMesPipeline, matchesPipelineSearch, pipelineView],
   )
   const renovacoesPipeline = useMemo(
     () => pipelineView === 'renovacoes' ? renovacoesPendentes.filter(matchesPipelineSearch) : [],
@@ -1729,12 +1750,12 @@ export default function AutoEmissoes() {
   }, [emissoesPipeline, kanbanStages, renovacoesPorColuna])
 
   const pipelineViewCounts = useMemo(() => ({
-    renovacoes: filterAutoPipelineEmissions(emissoes, 'renovacoes').filter(item => getEmissaoColuna(item) !== 'pendentes').length + renovacoesPendentes.length,
-    outros: filterAutoPipelineEmissions(emissoes, 'outros').filter(item => {
+    renovacoes: filterAutoPipelineEmissions(emissoesDoMesPipeline, 'renovacoes').filter(item => getEmissaoColuna(item) !== 'pendentes').length + renovacoesPendentes.length,
+    outros: filterAutoPipelineEmissions(emissoesDoMesPipeline, 'outros').filter(item => {
       if (getEmissaoColuna(item) !== 'pendentes') return true
       return (item.cotacoes_auto?.tipo || item.tipo) === 'novo'
     }).length,
-  }), [emissoes, renovacoesPendentes])
+  }), [emissoesDoMesPipeline, renovacoesPendentes])
 
   const updateKanbanNavigation = useCallback(() => {
     const container = kanbanScrollRef.current
@@ -1939,6 +1960,7 @@ export default function AutoEmissoes() {
   // Endosso nao passa por cotacao com seguradoras aprovadas, entao o campo
   // Seguradora fica livre para digitacao nesse caso.
   const tipoEmissaoModal = modalEmissao?.cotacoes_auto?.tipo || modalEmissao?.tipo || 'novo'
+  const modalRegistraProposta = isProposalTransmissionStage(form.coluna)
 
   function setField(campo, valor) {
     setForm(current => {
@@ -2068,14 +2090,6 @@ export default function AutoEmissoes() {
       toast({ type: 'error', title: 'Erro ao ler planilha', message: error?.message || 'Arquivo invalido ou fora do modelo esperado.' })
     }
   }
-  function handlePeriodoChange(value) {
-    setPeriodo(value)
-    if (value === 'custom') return
-    const range = getPeriodoRange(value)
-    setFiltroInicio(range.inicio)
-    setFiltroFim(range.fim)
-  }
-
   function handleMesRenovacoesChange(value) {
     const next = validMonthRef(value)
     setMesRenovacoes(next)
@@ -2109,17 +2123,16 @@ export default function AutoEmissoes() {
    * cotacao foi feita. Um resultado ja existente (aprovada/recusada) e
    * preservado, e as seguradoras cotadas nunca sao zeradas pela movimentacao.
    *
-   * "Proposta transmitida" e "Apolice emitida" continuam abrindo o formulario:
-   * sao as duas etapas que gravam a transmissao e criam a linha em
-   * `apolices_auto`. Sem numero, vigencia e premio nao existe apolice para o
-   * Financeiro e para a Renovacao lerem depois. Todas as demais etapas movem
-   * direto, sem perguntar nada.
+   * "Aguardando vistoria", "Proposta transmitida" e "Apolice emitida" abrem
+   * o formulario. Vistoria ja significa que a proposta foi transmitida e, por
+   * isso, coleta os mesmos dados operacionais e financeiros da proposta. A
+   * apolice emitida ainda exige os dados e o documento finais.
    */
   function moverCardPipeline(item, colunaDestino) {
     if (!item || !colunaDestino) return
     if (getEmissaoColuna(item) === colunaDestino) return
 
-    if (colunaDestino === 'proposta_transmitida' || colunaDestino === 'apolice_emitida') {
+    if (requiresAutoEmissionRegistration(colunaDestino)) {
       setManualStage(colunaDestino)
       setModalEmissao(item)
       return
@@ -2574,41 +2587,18 @@ export default function AutoEmissoes() {
 
           <FilterBar>
             <div className="auto-pipeline-context-filter">
-              {pipelineView === 'renovacoes' ? (
-                <>
-                  <label className="renewal-month-picker">
-                    <CalendarDays />
-                    <span>Mês da carteira</span>
-                    <input type="month" value={mesRenovacoes} onChange={event => handleMesRenovacoesChange(event.target.value)} />
-                  </label>
-                  <div className="auto-pipeline-filter-note">
-                    <RefreshCw />
-                    <span><strong>Carteira de {pipelineMonthLabel(mesRenovacoes)}</strong><small>O mês filtra a fila inicial; negociações já iniciadas continuam visíveis até a conclusão.</small></span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <span className="auto-pipeline-filter-label"><CalendarDays /> Período dos negócios</span>
-                  <div className="auto-pipeline-period-options">
-                    {PERIOD_OPTIONS.map(option => {
-                      const active = periodo === option.value
-                      return (
-                        <button key={option.value} type="button" onClick={() => handlePeriodoChange(option.value)} className={active ? 'is-active' : ''}>
-                          {option.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  {periodo === 'custom' && (
-                    <div className="auto-pipeline-date-range" aria-label="Intervalo personalizado">
-                      <label><span>De</span><DatePicker value={filtroInicio} onChange={setFiltroInicio} className="auto-date-picker" /></label>
-                      <span className="auto-pipeline-date-separator">até</span>
-                      <label><span>Até</span><DatePicker value={filtroFim} onChange={setFiltroFim} className="auto-date-picker" /></label>
-                    </div>
-                  )}
-                  {periodo !== 'custom' && filtroInicio && filtroFim && <span className="auto-pipeline-range-summary">{formatDateBR(filtroInicio)} até {formatDateBR(filtroFim)}</span>}
-                </>
-              )}
+              <label className="renewal-month-picker">
+                <CalendarDays />
+                <span>Mês da pipeline</span>
+                <input type="month" value={mesRenovacoes} onChange={event => handleMesRenovacoesChange(event.target.value)} />
+              </label>
+              <div className="auto-pipeline-filter-note">
+                {pipelineView === 'renovacoes' ? <RefreshCw /> : <Car />}
+                <span>
+                  <strong>Operação de {pipelineMonthLabel(mesRenovacoes)}</strong>
+                  <small>Somente cotações, propostas e apólices desta competência aparecem no quadro.</small>
+                </span>
+              </div>
             </div>
           </FilterBar>
 
@@ -2961,7 +2951,7 @@ export default function AutoEmissoes() {
         />
       )}
 
-      {/* Modal: emitir apolice (drag para proposta/apolice) */}
+      {/* Modal: transmitir proposta, aguardar vistoria ou emitir apolice */}
       {modalEmissao && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="modal-backdrop" onClick={() => { setModalEmissao(null); setForm(FORM_EMISSAO_VAZIO); setEmissaoDocumento(null); if (emissaoFileRef.current) emissaoFileRef.current.value = '' }} />
@@ -2975,7 +2965,7 @@ export default function AutoEmissoes() {
                     Emissao selecionada
                   </div>
                   <h2 className="mt-4 text-2xl font-semibold text-dark-text">
-                    {form.coluna === 'proposta_transmitida' ? 'Registrar proposta' : 'Emitir apólice'}
+                    {modalRegistraProposta ? 'Registrar proposta' : 'Emitir apólice'}
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-dark-muted">{modalEmissaoResumo?.cliente}</p>
 
@@ -3013,10 +3003,10 @@ export default function AutoEmissoes() {
                 <div className="mb-5 flex items-start justify-between gap-4">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dark-muted">
-                      {form.coluna === 'proposta_transmitida' ? 'Dados da proposta' : 'Dados da apólice'}
+                      {modalRegistraProposta ? 'Dados da proposta' : 'Dados da apólice'}
                     </p>
                     <h3 className="mt-2 text-xl font-semibold text-dark-text">
-                      {form.coluna === 'proposta_transmitida' ? 'Registrar transmissão' : 'Preencher e confirmar emissão'}
+                      {modalRegistraProposta ? 'Registrar transmissão' : 'Preencher e confirmar emissão'}
                     </h3>
                   </div>
                   <button
@@ -3030,7 +3020,7 @@ export default function AutoEmissoes() {
                 <div className="space-y-4">
                   <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
                     <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Etapa da transmissão</p>
-                    <div className="grid gap-2 md:grid-cols-2">
+                    <div className="grid gap-2 md:grid-cols-3">
                       <button
                         type="button"
                         onClick={() => setForm(current => ({ ...current, coluna: 'proposta_transmitida' }))}
@@ -3043,6 +3033,19 @@ export default function AutoEmissoes() {
                       >
                         Proposta transmitida
                         <span className="mt-1 block text-[11px] font-normal text-dark-muted">Envio inicial, sem apólice finalizada.</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setForm(current => ({ ...current, coluna: 'aguardando_vistoria' }))}
+                        className={
+                          'rounded-2xl border px-3 py-2 text-left text-xs font-semibold transition-colors ' +
+                          (form.coluna === 'aguardando_vistoria'
+                            ? 'border-status-warning bg-status-warning/10 text-status-warning'
+                            : 'border-dark-border bg-dark-surface/70 text-dark-muted hover:border-status-warning/40 hover:text-dark-text')
+                        }
+                      >
+                        Aguardando vistoria ou rastreador
+                        <span className="mt-1 block text-[11px] font-normal text-dark-muted">Proposta transmitida, aguardando validação operacional.</span>
                       </button>
                       <button
                         type="button"
@@ -3075,7 +3078,7 @@ export default function AutoEmissoes() {
                       </div>
                     )}
                   </div>
-                  {form.coluna === 'proposta_transmitida' ? (
+                  {modalRegistraProposta ? (
                     <PropostaTransmitidaFields
                       form={form}
                       onChange={setField}

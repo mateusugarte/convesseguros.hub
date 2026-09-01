@@ -3,11 +3,14 @@ import assert from 'node:assert/strict'
 
 import {
   AUTO_EMISSION_STAGES,
+  AUTO_PROPOSAL_TRANSMISSION_STAGES,
   PREFERENCIAS_PIPELINE_PADRAO,
   alternarColunaRecolhida,
   etapaVizinha,
   gravarPreferenciasPipeline,
+  isProposalTransmissionStage,
   lerPreferenciasPipeline,
+  requiresAutoEmissionRegistration,
   resumoFinanceiroEtapa,
 } from './autoPipelineBoard.js'
 
@@ -46,6 +49,26 @@ test('coluna virtual de renovacao nao entra na navegacao de etapas', () => {
   assert.equal(etapaVizinha('renovacoes', 1), null)
   assert.equal(etapaVizinha('renovacoes_para_enviar', -1), null)
   assert.equal(etapaVizinha(undefined, 1), null)
+})
+
+test('vistoria e proposta transmitida compartilham o formulario de transmissao', () => {
+  assert.deepEqual(AUTO_PROPOSAL_TRANSMISSION_STAGES, [
+    'aguardando_vistoria',
+    'proposta_transmitida',
+  ])
+  assert.equal(isProposalTransmissionStage('aguardando_vistoria'), true)
+  assert.equal(isProposalTransmissionStage('proposta_transmitida'), true)
+  assert.equal(isProposalTransmissionStage('negociando'), false)
+  assert.equal(isProposalTransmissionStage('apolice_emitida'), false)
+  assert.equal(isProposalTransmissionStage(null), false)
+})
+
+test('toda classificacao final exige o formulario de registro', () => {
+  assert.equal(requiresAutoEmissionRegistration('aguardando_vistoria'), true)
+  assert.equal(requiresAutoEmissionRegistration('proposta_transmitida'), true)
+  assert.equal(requiresAutoEmissionRegistration('apolice_emitida'), true)
+  assert.equal(requiresAutoEmissionRegistration('cotacao_feita'), false)
+  assert.equal(requiresAutoEmissionRegistration('negociando'), false)
 })
 
 // ─── resumo financeiro ───────────────────────────────────────────────────

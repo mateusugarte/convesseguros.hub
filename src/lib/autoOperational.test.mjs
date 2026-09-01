@@ -7,6 +7,8 @@ import {
   classificarRenovacoesPipeline,
   countAutoEmissionTypes,
   filterAutoPipelineEmissions,
+  getAutoPipelineReferenceDate,
+  isAutoPipelineItemInMonth,
   isAutoRenewalEmission,
   isRenovacaoNoQuadro,
   isRenovacaoSemCalculo,
@@ -42,6 +44,45 @@ test('cada emissao aparece em apenas uma das pipelines', () => {
   assert.equal(isAutoRenewalEmission(items[2]), true)
   assert.deepEqual(filterAutoPipelineEmissions(items, 'renovacoes').map(item => item.id), ['renovacao-cotacao', 'renovacao-emissao'])
   assert.deepEqual(filterAutoPipelineEmissions(items, 'outros').map(item => item.id), ['novo', 'endosso'])
+})
+
+test('pipeline limita cotacoes e apolices a competencia mensal selecionada', () => {
+  const cotacao = {
+    coluna: 'cotacao_feita',
+    created_at: '2026-07-30T12:00:00Z',
+    cotacoes_auto: { created_at: '2026-08-02T12:00:00Z' },
+  }
+  const proposta = {
+    coluna: 'aguardando_vistoria',
+    created_at: '2026-08-20T12:00:00Z',
+    data_transmissao: '2026-09-01',
+  }
+  const apolice = {
+    coluna: 'proposta_transmitida',
+    data_transmissao: '2026-08-28',
+    apolices_auto: [{ data_emissao: '2026-09-03' }],
+  }
+
+  assert.equal(getAutoPipelineReferenceDate(cotacao), '2026-08-02T12:00:00Z')
+  assert.equal(getAutoPipelineReferenceDate(proposta), '2026-09-01')
+  assert.equal(getAutoPipelineReferenceDate(apolice), '2026-09-03')
+  assert.equal(isAutoPipelineItemInMonth(cotacao, '2026-08'), true)
+  assert.equal(isAutoPipelineItemInMonth(cotacao, '2026-09'), false)
+  assert.equal(isAutoPipelineItemInMonth(proposta, '2026-09'), true)
+  assert.equal(isAutoPipelineItemInMonth(apolice, '2026-09'), true)
+})
+
+test('renovacao acompanha o mes da vigencia, nao o mes em que foi cotada', () => {
+  const renovacao = {
+    tipo: 'renovacao',
+    coluna: 'cotacao_feita',
+    created_at: '2026-08-10T12:00:00Z',
+    vigencia_inicio: '2026-09-05',
+  }
+  assert.equal(getAutoPipelineReferenceDate(renovacao), '2026-09-05')
+  assert.equal(isAutoPipelineItemInMonth(renovacao, '2026-09'), true)
+  assert.equal(isAutoPipelineItemInMonth(renovacao, '2026-08'), false)
+  assert.equal(isAutoPipelineItemInMonth(renovacao, 'setembro'), false)
 })
 
 test('contabiliza seguro novo, renovação e endosso separadamente', () => {

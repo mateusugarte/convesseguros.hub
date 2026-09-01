@@ -20,6 +20,26 @@ export const AUTO_EMISSION_STAGES = [
   'apolice_emitida',
 ]
 
+// As duas etapas abaixo representam uma proposta que ja foi transmitida.
+// "Aguardando vistoria" e uma condicao operacional posterior ao envio, nao
+// uma cotacao ainda em negociacao; por isso ela precisa coletar e preservar os
+// mesmos dados financeiros e de vigencia da coluna Proposta transmitida.
+export const AUTO_PROPOSAL_TRANSMISSION_STAGES = [
+  'aguardando_vistoria',
+  'proposta_transmitida',
+]
+
+export function isProposalTransmissionStage(stageId) {
+  return AUTO_PROPOSAL_TRANSMISSION_STAGES.includes(stageId)
+}
+
+// Qualquer entrada nestas etapas precisa passar pelo formulario de registro;
+// nenhuma tela deve conseguir apenas trocar a coluna e deixar a transmissao
+// ou a apolice sem os dados operacionais correspondentes.
+export function requiresAutoEmissionRegistration(stageId) {
+  return isProposalTransmissionStage(stageId) || stageId === 'apolice_emitida'
+}
+
 /** Etapa imediatamente antes (-1) ou depois (+1). `null` nas pontas. */
 export function etapaVizinha(stageId, direcao) {
   const indice = AUTO_EMISSION_STAGES.indexOf(stageId)

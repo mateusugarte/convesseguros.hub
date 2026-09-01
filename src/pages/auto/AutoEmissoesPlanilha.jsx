@@ -10,6 +10,7 @@ import {
   salvarPropostaPlanilhaAuto,
 } from '../../lib/auto'
 import { AUTO_PIPELINE_STAGES, AUTO_TIPO_META, scoreCotacaoSuggestion } from '../../lib/autoOperational'
+import { requiresAutoEmissionRegistration } from '../../lib/autoPipelineBoard.js'
 import { useToast } from '../../contexts/ToastContext'
 import { EmptyState, PageHeader } from '../../components/ui'
 import OperationalSpreadsheet from '../../components/auto/OperationalSpreadsheet'
@@ -106,7 +107,16 @@ export default function AutoEmissoesPlanilha() {
   }, [rows, search, insurer, type, status, sort])
 
   const updateStatus = (row, next) => {
-    if (['cotacao_feita', 'proposta_transmitida', 'apolice_emitida'].includes(next)) {
+    if (requiresAutoEmissionRegistration(next)) {
+      const pipeline = (row.cotacoes_auto?.tipo || row.tipo) === 'renovacao' ? 'renovacoes' : 'outros'
+      const params = new URLSearchParams({ mes: month, pipeline })
+      navigate(`/auto/gestao?${params.toString()}`, {
+        state: { autoEmissionRegistration: { item: row, stage: next } },
+      })
+      toast({ type: 'info', title: 'Complete o registro', message: 'Preencha os dados solicitados para confirmar esta classificação.' })
+      return
+    }
+    if (next === 'cotacao_feita') {
       navigate(`/auto/emissoes/${row.id}`)
       toast({ type: 'info', title: 'Complete a movimentação', message: 'Esta etapa exige os mesmos dados e validações da Pipeline.' })
       return

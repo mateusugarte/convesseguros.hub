@@ -65,7 +65,17 @@ test('a ficha do cliente traz segurado, condutor, veiculo, CEP e o selo do tipo'
   assert.ok(doc.includes('Aguinosvan A. dos Santos'))
   assert.ok(doc.includes('Placa GAO-1151'))
   assert.ok(doc.includes('04849-015'))
+  assert.ok(doc.includes('>Utilização</span>'))
+  assert.ok(doc.includes('>Particular</div>'))
   assert.ok(doc.includes('>Renovação</span>'))
+})
+
+test('modelo aprovado mostra preços antes das coberturas', () => {
+  const doc = html()
+  assert.ok(doc.includes('Proposta personalizada'))
+  assert.ok(doc.includes('Duas opções de proteção.'))
+  assert.ok(doc.includes('Perfil considerado nesta cotação'))
+  assert.ok(doc.indexOf('class="valores-grid"') < doc.indexOf('class="tabela-comparativo"'))
 })
 
 test('preview e impressao compartilham exatamente o mesmo modelo oficial', () => {
@@ -73,10 +83,19 @@ test('preview e impressao compartilham exatamente o mesmo modelo oficial', () =>
   assert.ok(doc.includes('class="hero-orcamento"'))
   assert.ok(doc.includes('class="cliente-modelo"'))
   assert.ok(doc.includes('class="pagina-conteudo"'))
-  assert.ok(doc.includes('background:#edf3fa'))
+  assert.ok(doc.includes('background:linear-gradient(180deg,#f7faff'))
   assert.ok(doc.includes('.pagina{width:210mm;height:297mm;min-height:297mm'))
   assert.ok(doc.includes('transform:scale(var(--pdf-scale,1))'))
   assert.ok(doc.includes('min-height:var(--pdf-layout-height,297mm)'))
+})
+
+test('titulos e valores usam tipografia corporativa de exibicao', () => {
+  const doc = html()
+  assert.ok(doc.includes("--display:'Avenir Next','Avenir','SF Pro Display'"))
+  assert.ok(doc.includes('.hero-orcamento .titulo{'))
+  assert.ok(doc.includes('font-family:var(--display);font-size:18.8pt'))
+  assert.ok(doc.includes('.modelo-secao-title{'))
+  assert.ok(doc.includes('.valor-card-modelo .valor-total{'))
 })
 
 test('escala de impressao preserva 100% quando cabe e reduz quando excede o A4', () => {
@@ -125,7 +144,7 @@ test('cobertura conhecida nao inclusa aparece na propria linha da tabela', () =>
   assert.ok(doc.includes('Não contratado nesta cotação.'))
 })
 
-test('danos a terceiros e franquia destacam os valores criticos', () => {
+test('danos a terceiros e franquia destacam valores com a cor de cada seguradora', () => {
   const doc = html({
     coberturas: [{
       nome_padronizado: 'Danos a terceiros',
@@ -136,8 +155,12 @@ test('danos a terceiros e franquia destacam os valores criticos', () => {
     }],
     valores: { ...cotacao('x').valores, franquia: 6704.93, franquia_tipo: 'Reduzida' },
   })
-  assert.ok(doc.includes('<mark>R$ 150.000,00</mark>'))
-  assert.ok(doc.replace(/\u00a0/g, ' ').includes('<mark>R$ 6.704,93</mark>'))
+  assert.ok(doc.includes('<span class="valor-destaque">R$ 150.000,00</span>'))
+  assert.ok(doc.replace(/\u00a0/g, ' ').includes('<span class="valor-destaque">R$ 6.704,93</span>'))
+  assert.ok(doc.includes('class="tabela-celula coluna-atual" style="--accent:#956e26"'))
+  assert.ok(doc.includes('class="tabela-celula coluna-outra" style="--accent:#1b4782"'))
+  assert.ok(!doc.includes('<mark>'))
+  assert.ok(!doc.includes('background:#fff1b8'))
 })
 
 test('parcelamento aceita array e string com quebras, uma linha cada', () => {

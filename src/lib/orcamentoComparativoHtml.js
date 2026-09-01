@@ -93,6 +93,7 @@ const CSS = `
   --alerta-bg:#f6e9e6;
   --alerta:#9a3a2b;
   --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif;
+  --display:'Avenir Next','Avenir','SF Pro Display','Helvetica Neue',Arial,sans-serif;
   --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --mono:'SFMono-Regular',Menlo,Consolas,'Liberation Mono','Courier New',monospace;
 }
@@ -207,7 +208,7 @@ body{
 .modelo-secao{margin:17mm 12mm 0}.modelo-secao-title{display:flex;align-items:center;gap:3mm;margin-bottom:7mm;font-family:var(--serif);font-size:15pt;font-weight:800;letter-spacing:-.25pt}.modelo-secao-title i{display:grid;width:7.3mm;height:7.3mm;place-items:center;border-radius:50%;background:var(--tinta);color:#fff;font-family:var(--sans);font-size:9pt;font-style:normal;font-weight:800}
 .tabela-comparativo{display:grid;grid-template-columns:50mm 1fr 1fr;overflow:hidden;border-radius:2.8mm;background:#e5edf7;box-shadow:0 16px 42px rgba(16,31,51,.09)}
 .tabela-head{min-height:18mm;padding:3mm 4mm;background:#dfe9f5;color:#7f91a8;font-family:var(--mono);font-size:6.6pt;font-weight:800;letter-spacing:1.4pt;text-transform:uppercase}.tabela-head.seguradora{display:flex;align-items:center;gap:4mm;background:linear-gradient(120deg,var(--cor),color-mix(in srgb,var(--cor) 78%,#101f33));color:var(--cor-texto)}.tabela-head.seguradora strong{font-size:7.2pt;letter-spacing:1.25pt}.tabela-head .selo-logo{min-width:31mm;min-height:12mm;padding:1.6mm 2.6mm;border-radius:1.7mm;box-shadow:0 3px 9px rgba(0,0,0,.18)}.tabela-head .selo-logo img{max-height:8mm;max-width:29mm}.tabela-head .fallback{font-size:8.4pt}
-.tabela-cobertura,.tabela-celula{min-height:18mm;padding:3.2mm 4mm;border-top:1px solid #d2deeb}.tabela-cobertura{display:flex;align-items:center;gap:3mm;background:#e7f0fa;font-weight:800}.tabela-cobertura .bolha{width:7.5mm;height:7.5mm;background:#fff;color:var(--tinta);box-shadow:0 3px 8px rgba(16,31,51,.1)}.tabela-cobertura .bolha .ic{width:3.8mm;height:3.8mm}.tabela-cobertura span{font-size:8.2pt;line-height:1.25}.tabela-celula{background:#eaf1f8;color:#46586f;font-size:8.5pt;line-height:1.42}.tabela-celula strong{color:#102033;font-weight:850}.tabela-celula mark{display:inline-block;margin:.25mm .3mm;padding:.15mm 1mm;border-radius:1mm;background:#fff4cd;color:#0f2137;font-weight:850;box-decoration-break:clone;-webkit-box-decoration-break:clone}.tabela-celula.is-empty{color:#8090a3;font-style:italic}.tabela-celula.is-negative{color:#8d3c32;background:#f6e9e6}
+.tabela-cobertura,.tabela-celula{min-height:18mm;padding:3.2mm 4mm;border-top:1px solid #d2deeb}.tabela-cobertura{display:flex;align-items:center;gap:3mm;background:#e7f0fa;font-weight:800}.tabela-cobertura .bolha{width:7.5mm;height:7.5mm;background:#fff;color:var(--tinta);box-shadow:0 3px 8px rgba(16,31,51,.1)}.tabela-cobertura .bolha .ic{width:3.8mm;height:3.8mm}.tabela-cobertura span{font-size:8.2pt;line-height:1.25}.tabela-celula{background:#eaf1f8;color:#46586f;font-size:8.5pt;line-height:1.42}.tabela-celula strong{color:#102033;font-weight:850}.tabela-celula.is-empty{color:#8090a3;font-style:italic}.tabela-celula.is-negative{color:#8d3c32;background:#f6e9e6}
 .valores-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6mm}.valor-card-modelo{position:relative;overflow:hidden;border-radius:3mm;background:#fff;box-shadow:0 14px 40px rgba(16,31,51,.11)}.valor-card-modelo::before{content:'';display:block;height:1.3mm;background:var(--cor)}.valor-card-modelo-inner{padding:6mm 7mm}.valor-card-modelo .marca-valor{display:flex;align-items:center;gap:4mm;margin-bottom:7mm}.valor-card-modelo .marca-valor .selo-logo{min-width:29mm;min-height:10mm;padding:1.2mm 2mm;box-shadow:none}.valor-card-modelo .marca-valor .selo-logo img{max-height:7mm;max-width:27mm}.valor-card-modelo .marca-valor span{font-family:var(--mono);font-size:7.8pt;font-weight:800;letter-spacing:1.8pt;color:#8ca0b7;text-transform:uppercase}.valor-card-modelo .valor-total-label{font-family:var(--mono);font-size:7pt;font-weight:800;letter-spacing:1.2pt;color:#8ca0b7;text-transform:uppercase}.valor-card-modelo .valor-total{margin:2.5mm 0 4mm;font-family:var(--mono);font-size:23pt;font-weight:800;letter-spacing:1.5pt;color:var(--tinta)}.valor-card-modelo .pagamentos{margin:0;padding:4mm 0 0;border-top:1px solid #d6e0eb;gap:2.1mm}.valor-card-modelo .pagamento{font-size:8pt;color:#445870}.valor-card-modelo .pagamento .ic{color:#7e91a8}.valor-card-modelo .rodape-card{padding:3.5mm 0 0;color:#718399;font-size:7.1pt}
 .diferenca-total{display:flex;align-items:center;justify-content:space-between;gap:10mm;margin:7mm 12mm 0;padding:4.2mm 7mm;border-radius:2.8mm;background:#0d2036;color:#fff}.diferenca-total span{font-family:var(--mono);font-size:7.5pt;letter-spacing:2pt;text-transform:uppercase;color:#aab8c9}.diferenca-total strong{font-family:var(--mono);font-size:17pt;letter-spacing:1.5pt}
 .rodape::before{content:'';display:block;width:86mm;height:1mm;margin:0 auto 3mm;background:linear-gradient(90deg,#9c7328 0 50%,#1c4a87 50% 100%)}
@@ -236,7 +237,8 @@ body{font-size:7.45pt;line-height:1.36;color:#102033}
   --cur:#9c7328;--oth:#1c4a87;
   width:210mm;min-height:297mm;margin:7mm auto 18mm;padding:0;
   display:block;overflow:hidden;
-  background:#edf3fa;box-shadow:0 22px 70px rgba(8,25,46,.24)
+  background:linear-gradient(180deg,#f7faff 0%,#edf3fa 44%,#f4f8fc 100%);
+  box-shadow:0 22px 70px rgba(8,25,46,.24)
 }
 .pagina-conteudo{
   width:100%;min-height:297mm;display:flex;flex-direction:column;
@@ -251,6 +253,10 @@ body{font-size:7.45pt;line-height:1.36;color:#102033}
   color:#fff;background:
     linear-gradient(112deg,#0d3159 0%,#0a203a 58%,color-mix(in srgb,var(--cur) 58%,#08172a) 100%);
   overflow:hidden
+}
+.hero-orcamento::before{
+  content:'';position:absolute;inset:auto 0 0;height:1.2mm;
+  background:linear-gradient(90deg,var(--cur) 0 49.5%,rgba(255,255,255,.3) 49.5% 50.5%,var(--oth) 50.5% 100%)
 }
 .hero-orcamento::after{
   content:'';position:absolute;right:-14mm;top:-18mm;width:58mm;height:58mm;
@@ -268,8 +274,8 @@ body{font-size:7.45pt;line-height:1.36;color:#102033}
   letter-spacing:2.2pt;text-transform:uppercase;color:rgba(255,255,255,.62)
 }
 .hero-orcamento .titulo{
-  font-family:var(--serif);font-size:20.5pt;font-weight:700;line-height:1;
-  letter-spacing:-.35pt;color:#fff;white-space:nowrap
+  font-family:var(--display);font-size:18.8pt;font-weight:700;line-height:1;
+  letter-spacing:-.7pt;color:#fff;white-space:nowrap
 }
 .hero-orcamento .meta{
   margin-top:2.3mm;font-family:var(--mono);font-size:6.5pt;letter-spacing:.65pt;
@@ -280,7 +286,8 @@ body{font-size:7.45pt;line-height:1.36;color:#102033}
 /* ficha sobreposta: mesmas duas linhas e divisorias do modelo */
 .cliente-modelo{
   position:relative;z-index:2;margin:-4.2mm 13mm 0;border-radius:2.7mm;
-  background:#fff;box-shadow:0 7px 18px rgba(16,31,51,.12);overflow:hidden
+  border:1px solid rgba(160,178,199,.32);background:#fff;
+  box-shadow:0 7px 20px rgba(16,31,51,.12);overflow:hidden
 }
 .cliente-linha{display:grid;align-items:stretch}
 .cliente-linha.superior{grid-template-columns:1.18fr 1.18fr .75fr}
@@ -288,7 +295,10 @@ body{font-size:7.45pt;line-height:1.36;color:#102033}
 .cliente-modelo .campo{min-width:0;padding:1.9mm 5.8mm 2mm}
 .cliente-modelo .campo+.campo{border-left:1px solid #d4deea}
 .cliente-modelo .rotulo{margin-bottom:.75mm;color:#7b8fa6;font-size:5.6pt;letter-spacing:1.05pt}
-.cliente-modelo .valor{font-size:9pt;font-weight:750;line-height:1.2;color:#102033}
+.cliente-modelo .valor{
+  font-family:var(--display);font-size:9pt;font-weight:700;line-height:1.18;
+  letter-spacing:-.08pt;color:#102033
+}
 .cliente-modelo .valor small{font-size:7.35pt;font-weight:500;color:#344a64}
 .cliente-linha.superior .valor{font-size:8.55pt}
 .cliente-linha.inferior .campo{padding-top:1.45mm;padding-bottom:1.55mm}
@@ -306,17 +316,24 @@ body{font-size:7.45pt;line-height:1.36;color:#102033}
 .modelo-secao{margin:12.5mm 13mm 0}
 .modelo-secao.valores-secao{margin-top:5.7mm}
 .modelo-secao-title{
-  gap:2.5mm;margin-bottom:5mm;font-size:13.7pt;line-height:1;color:#102033
+  position:relative;gap:2.5mm;margin-bottom:5mm;
+  font-family:var(--display);font-size:12.8pt;font-weight:700;line-height:1;
+  letter-spacing:-.35pt;color:#102033
 }
 .modelo-secao-title i{width:6.2mm;height:6.2mm;font-size:7.7pt;background:#0d2036}
+.modelo-secao-title::after{
+  content:'';height:1px;flex:1;margin-left:2mm;
+  background:linear-gradient(90deg,#ccd8e6 0%,rgba(204,216,230,0) 100%)
+}
 
 .tabela-comparativo{
   grid-template-columns:44mm minmax(0,1fr) minmax(0,1fr);
-  border-radius:2.7mm;background:#e5edf7;box-shadow:0 10px 28px rgba(16,31,51,.075)
+  border:1px solid #d5e0ec;border-radius:2.7mm;background:#fff;
+  box-shadow:0 12px 30px rgba(16,31,51,.085)
 }
 .tabela-head{
   min-height:11.8mm;padding:1.8mm 3.5mm;display:flex;align-items:center;
-  background:#e4edf8;font-size:5.9pt;letter-spacing:1.25pt
+  background:#f2f6fb;color:#6e829a;font-size:5.9pt;letter-spacing:1.25pt
 }
 .tabela-head.seguradora{
   gap:3.2mm;padding:1.7mm 3.2mm;
@@ -331,24 +348,37 @@ body{font-size:7.45pt;line-height:1.36;color:#102033}
 .tabela-head .selo-logo img{max-width:28mm;max-height:5.8mm}
 .tabela-head .fallback{font-size:8pt}
 .tabela-cobertura,.tabela-celula{
-  min-height:11.5mm;padding:2.2mm 3.1mm;border-top:1px solid #d0dceb
+  min-height:11.5mm;padding:2.2mm 3.1mm;border-top:1px solid #d8e2ed
 }
-.tabela-cobertura{gap:2.5mm;background:#e6effa;font-weight:800}
+.tabela-cobertura{gap:2.5mm;background:#f2f6fb;font-weight:800}
 .tabela-cobertura .bolha{
-  width:6.3mm;height:6.3mm;background:#fff;color:#0d2036;
-  box-shadow:0 2px 7px rgba(16,31,51,.12)
+  width:6.3mm;height:6.3mm;border:1px solid #d7e2ee;background:#fff;color:#0d2036;
+  box-shadow:0 2px 7px rgba(16,31,51,.09)
 }
 .tabela-cobertura .bolha .ic{width:3.25mm;height:3.25mm}
 .tabela-cobertura span{font-size:7.15pt;line-height:1.2}
-.tabela-celula{background:#eaf1f8;color:#455b75;font-size:7.25pt;line-height:1.34}
+.tabela-celula{
+  position:relative;background:#fff;color:#455b75;font-size:7.25pt;line-height:1.34
+}
+.tabela-celula:nth-child(6n+5),.tabela-celula:nth-child(6n+6){background:#f8fafc}
+.tabela-celula.coluna-atual{border-left:1.1mm solid color-mix(in srgb,var(--accent) 35%,#e6edf5)}
+.tabela-celula.coluna-outra{border-left:1.1mm solid color-mix(in srgb,var(--accent) 35%,#e6edf5)}
 .tabela-celula strong{color:#102033}
-.tabela-celula mark{
-  margin:0 .2mm;padding:0 .65mm;border-radius:.7mm;background:#fff1b8;
-  color:#102033;font-weight:850
+.tabela-celula .valor-destaque{
+  display:inline-block;margin:.05mm .18mm;padding:.08mm .75mm;border-radius:.8mm;
+  border:1px solid color-mix(in srgb,var(--accent) 34%,transparent);
+  background:color-mix(in srgb,var(--accent) 9%,#fff);
+  color:color-mix(in srgb,var(--accent) 70%,#102033);font-weight:900;
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+  box-shadow:0 1px 3px color-mix(in srgb,var(--accent) 11%,transparent)
 }
 
 .valores-grid{gap:4mm}
-.valor-card-modelo{border-radius:2.6mm;box-shadow:0 9px 25px rgba(16,31,51,.1)}
+.valor-card-modelo{
+  border:1px solid #d9e3ee;border-radius:2.6mm;
+  background:linear-gradient(145deg,#fff 0%,color-mix(in srgb,var(--cor) 4%,#fff) 100%);
+  box-shadow:0 9px 25px rgba(16,31,51,.1)
+}
 .valor-card-modelo::before{height:1.15mm}
 .valor-card-modelo-inner{padding:3.7mm 5mm 3.4mm}
 .valor-card-modelo .marca-valor{gap:3mm;margin-bottom:3.2mm}
@@ -356,16 +386,29 @@ body{font-size:7.45pt;line-height:1.36;color:#102033}
 .valor-card-modelo .marca-valor .selo-logo img{max-width:24mm;max-height:5.8mm}
 .valor-card-modelo .marca-valor span{font-size:6.3pt;letter-spacing:1.25pt}
 .valor-card-modelo .valor-total-label{font-size:5.9pt;letter-spacing:1.05pt}
-.valor-card-modelo .valor-total{margin:1.2mm 0 2.6mm;font-size:18.8pt;letter-spacing:.9pt}
+.valor-card-modelo .valor-total{
+  margin:1.2mm 0 2.6mm;font-family:var(--display);font-size:18.8pt;
+  font-weight:700;letter-spacing:-.35pt;
+  color:color-mix(in srgb,var(--cor) 68%,#102033);font-variant-numeric:tabular-nums
+}
 .valor-card-modelo .pagamentos{padding-top:2.5mm;gap:1.25mm}
 .valor-card-modelo .pagamento{font-size:6.8pt;line-height:1.28}
 .valor-card-modelo .pagamento .ic{width:3.2mm;height:3.2mm;margin-top:.2mm}
 .valor-card-modelo .rodape-card{padding-top:2mm;font-size:5.85pt;line-height:1.28}
 .diferenca-total{
-  margin:4.8mm 13mm 0;padding:3mm 4.8mm;border-radius:2.4mm;background:#0d2036
+  position:relative;overflow:hidden;margin:4.8mm 13mm 0;padding:3mm 4.8mm;
+  border:1px solid rgba(255,255,255,.08);border-radius:2.4mm;
+  background:linear-gradient(105deg,#0d2036 0%,#132b47 100%);
+  box-shadow:0 8px 22px rgba(13,32,54,.15)
+}
+.diferenca-total::before{
+  content:'';position:absolute;inset:0 auto 0 0;width:1.3mm;
+  background:linear-gradient(180deg,var(--cur),var(--oth))
 }
 .diferenca-total span{font-size:6.25pt;letter-spacing:1.4pt}
-.diferenca-total strong{font-size:14pt;letter-spacing:1pt}
+.diferenca-total strong{
+  font-family:var(--display);font-size:14pt;font-weight:700;letter-spacing:-.15pt
+}
 .rodape{
   margin:auto 13mm 0;padding:5.5mm 0 2.8mm;border:0;
   color:#7d91a9;font-size:5.8pt;line-height:1.42
@@ -379,11 +422,11 @@ body{font-size:7.45pt;line-height:1.36;color:#102033}
  * reduzir a pagina inteira de uma vez.
  */
 .pagina.is-pdf-compact .hero-orcamento{height:27mm;min-height:27mm;padding-top:5.4mm;padding-bottom:4mm}
-.pagina.is-pdf-compact .hero-orcamento .titulo{font-size:19pt}
+.pagina.is-pdf-compact .hero-orcamento .titulo{font-size:17.8pt}
 .pagina.is-pdf-compact .cliente-modelo .campo{padding-top:1.35mm;padding-bottom:1.4mm}
 .pagina.is-pdf-compact .modelo-secao{margin-top:8mm}
 .pagina.is-pdf-compact .modelo-secao.valores-secao{margin-top:3.5mm}
-.pagina.is-pdf-compact .modelo-secao-title{margin-bottom:3.2mm;font-size:12.6pt}
+.pagina.is-pdf-compact .modelo-secao-title{margin-bottom:3.2mm;font-size:12pt}
 .pagina.is-pdf-compact .tabela-head{min-height:9.8mm;padding-top:1.2mm;padding-bottom:1.2mm}
 .pagina.is-pdf-compact .tabela-cobertura,
 .pagina.is-pdf-compact .tabela-celula{min-height:9.2mm;padding:1.45mm 2.6mm}
@@ -406,6 +449,137 @@ body{font-size:7.45pt;line-height:1.36;color:#102033}
     transform:scale(var(--pdf-scale,1));transform-origin:top left
   }
 }
+`
+
+/*
+ * Modelo comercial aprovado em 01/09/2026.
+ *
+ * Esta camada substitui somente a apresentacao. A estrutura de dados, a
+ * validacao e a leitura dos PDFs continuam exatamente nas funcoes existentes.
+ * Preview e download recebem o mesmo HTML para nunca divergirem.
+ */
+const CSS_MODELO_APROVADO = `
+html,body{background:#e7edf2}
+body{font-family:var(--sans);font-size:7.5pt;line-height:1.38;color:#142437}
+.pagina{
+  --navy:#102842;--navy-2:#173956;--soft:#f4f7f9;--line-soft:#d9e3eb;
+  position:relative;width:210mm;min-height:297mm;margin:7mm auto 18mm;
+  overflow:hidden;background:#fff;box-shadow:0 22px 70px rgba(8,25,46,.2)
+}
+.pagina::before{
+  content:'';position:absolute;z-index:0;left:0;top:0;bottom:0;width:4mm;
+  background:linear-gradient(180deg,var(--navy) 0 82%,var(--cur) 82% 91%,var(--oth) 91% 100%)
+}
+.pagina::after{
+  content:'';position:absolute;z-index:0;right:-30mm;top:-35mm;width:84mm;height:84mm;
+  border-radius:50%;border:15mm solid #f2f6f8
+}
+.pagina-conteudo{
+  position:relative;z-index:1;width:100%;min-height:297mm;padding:9mm 12mm 6.5mm 15mm;
+  display:flex;flex-direction:column;transform-origin:top left
+}
+.hero-orcamento{
+  position:relative;height:auto;min-height:18mm;padding:0;display:grid;
+  grid-template-columns:29mm 1fr auto;align-items:center;gap:7mm;
+  overflow:visible;color:#142437;background:none
+}
+.hero-orcamento::before,.hero-orcamento::after{content:none}
+.hero-orcamento .marca{
+  display:flex;width:27mm;height:18mm;min-width:27mm;min-height:18mm;padding:2mm 3mm;
+  align-items:center;justify-content:center;border:1px solid var(--line-soft);
+  border-radius:3mm;background:#fff;box-shadow:0 5px 16px rgba(16,40,66,.08)
+}
+.hero-orcamento .marca img{max-width:20mm;max-height:13mm}
+.hero-titulos{padding:0;text-align:left}
+.hero-kicker{
+  margin:0 0 1mm;font-family:var(--sans);font-size:5.8pt;font-weight:800;
+  letter-spacing:2.1pt;text-transform:uppercase;color:#8292a3
+}
+.hero-orcamento .titulo{
+  font-family:var(--display);font-size:19.5pt;font-weight:700;line-height:1;
+  letter-spacing:-.7pt;color:var(--navy);white-space:nowrap
+}
+.documento-orcamento{text-align:right;color:#728295;font-size:6.5pt;line-height:1.65}
+.documento-orcamento .doc-pill{
+  display:inline-block;margin-bottom:1.2mm;padding:1mm 2.1mm;border:1px solid #dce5ec;
+  border-radius:99px;background:#fff;font-size:5.3pt;font-weight:800;
+  letter-spacing:1pt;text-transform:uppercase;color:#65778a
+}
+.documento-orcamento .meta{margin:0;font-family:var(--sans);font-size:6.5pt;letter-spacing:0;text-transform:none;color:#728295}
+.documento-orcamento .meta span{display:block}.documento-orcamento .meta span:first-child{font-family:var(--display);font-size:8pt;font-weight:700;color:#142437}
+.documento-orcamento .meta span+span::before{content:none}
+.promessa-orcamento{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:10mm;
+  margin-top:6mm;padding-bottom:3.8mm;border-bottom:1px solid var(--line-soft)
+}
+.promessa-orcamento h2{
+  max-width:105mm;font-family:var(--display);font-size:14.6pt;line-height:1.12;
+  font-weight:650;letter-spacing:-.35pt;color:var(--navy)
+}
+.promessa-orcamento p{max-width:59mm;text-align:right;color:#6d7f91;font-size:7pt}
+.cliente-modelo{
+  position:relative;z-index:2;margin:4mm 0 0;border:1px solid var(--line-soft);
+  border-radius:3mm;background:#fff;box-shadow:0 6px 18px rgba(16,40,66,.055);overflow:hidden
+}
+.perfil-titulo{
+  display:flex;align-items:center;justify-content:space-between;padding:1.8mm 4mm;
+  background:linear-gradient(90deg,var(--navy),var(--navy-2));color:#fff
+}
+.perfil-titulo strong{font-size:5.7pt;letter-spacing:1.35pt;text-transform:uppercase}
+.perfil-titulo span{font-size:5.5pt;color:#bdcbd7}
+.cliente-linha.superior{grid-template-columns:1.05fr 1.25fr .55fr}
+.cliente-linha.inferior{grid-template-columns:1.55fr .55fr .6fr;border-top:1px solid var(--line-soft);background:var(--soft)}
+.cliente-modelo .campo{min-width:0;padding:2.1mm 4mm}
+.cliente-modelo .campo+.campo{border-left:1px solid var(--line-soft)}
+.cliente-modelo .rotulo{margin-bottom:.55mm;font-size:5.2pt;font-weight:850;letter-spacing:1.25pt;color:#8494a4}
+.cliente-modelo .valor{font-family:var(--display);font-size:8pt;font-weight:700;line-height:1.18;letter-spacing:0;color:#142437}
+.cliente-modelo .valor small{display:block;margin-top:.4mm;font-family:var(--sans);font-size:6.1pt;font-weight:400;color:#687b8e}
+.cliente-modelo .campo.tipo{display:block}.cliente-modelo .selo-tipo{display:inline-flex;width:max-content;padding:1.45mm 2.5mm;border-radius:1.3mm;background:var(--navy);font-size:6pt;letter-spacing:1.1pt}
+.aviso-divergencia{margin:3mm 0 0;padding:2.2mm 3.4mm;border-radius:1.5mm}
+.modelo-secao{margin:5.5mm 0 0}.modelo-secao.valores-secao{margin-top:4.8mm}
+.modelo-secao-title{gap:3mm;margin-bottom:2.8mm;font-size:11.4pt;letter-spacing:-.25pt;color:var(--navy)}
+.modelo-secao-title i{width:6mm;height:6mm;font-size:6.7pt;background:var(--navy)}
+.modelo-secao-title::after{margin-left:1mm;background:linear-gradient(90deg,#ced8e1,transparent)}
+.valores-grid{gap:4.5mm}
+.valor-card-modelo{
+  position:relative;border:1px solid var(--line-soft);border-radius:3.3mm;
+  background:linear-gradient(145deg,#fff 0%,color-mix(in srgb,var(--cor) 4%,#fff) 100%);
+  box-shadow:0 10px 25px rgba(16,40,66,.08)
+}
+.valor-card-modelo::before{position:absolute;left:0;top:0;bottom:0;width:1.5mm;height:auto;background:var(--cor)}
+.valor-card-modelo-inner{padding:3.6mm 5.5mm 3.5mm 7mm}
+.valor-card-modelo .marca-valor{display:flex;align-items:center;justify-content:space-between;gap:4mm;margin:0}
+.valor-card-modelo .marca-valor>span{display:inline-flex;align-items:center;gap:1mm;font-size:5.4pt;font-weight:850;letter-spacing:1.25pt;color:#8090a1}
+.valor-card-modelo .marca-valor>span::before{content:'';width:1.6mm;height:1.6mm;border-radius:50%;background:var(--cor)}
+.valor-card-modelo .marca-valor .selo-logo{min-width:31mm;height:8.5mm;min-height:8.5mm;padding:1mm 2mm;border:1px solid color-mix(in srgb,var(--cor) 25%,#dfe6ec);border-radius:2mm;background:#fff;box-shadow:none}
+.valor-card-modelo .marca-valor .selo-logo img{max-width:28mm;max-height:6mm}
+.valor-card-modelo .marca-valor .fallback{font-family:var(--display);font-size:10pt;font-weight:750;color:var(--cor)}
+.valor-card-modelo .valor-total-label{margin-top:2.7mm;font-size:5.3pt;letter-spacing:1.2pt;color:#8a98a7}
+.valor-card-modelo .valor-total{margin:.65mm 0 2.7mm;font-size:20.5pt;line-height:1;letter-spacing:-.55pt;color:color-mix(in srgb,var(--cor) 80%,#102842)}
+.valor-card-modelo .pagamentos{display:flex;flex-direction:row;flex-wrap:wrap;gap:1.4mm 4mm;padding-top:2.4mm;border-top:1px solid var(--line-soft)}
+.valor-card-modelo .pagamento{flex:1 1 45%;min-width:0;font-size:6.35pt;line-height:1.28;color:#536578}
+.valor-card-modelo .pagamento .ic{width:3mm;height:3mm;color:#6e8194}
+.valor-card-modelo .rodape-card{padding-top:1.6mm;font-size:5.25pt;color:#7b8b9b}
+.tabela-comparativo{grid-template-columns:42mm minmax(0,1fr) minmax(0,1fr);border:1px solid var(--line-soft);border-radius:3mm;background:#fff;box-shadow:none}
+.tabela-head{min-height:auto;padding:1.9mm 3.2mm;background:var(--soft);font-size:5.25pt;letter-spacing:1.15pt;color:#7b8b9b}
+.tabela-head.seguradora{gap:2mm;padding:1.3mm 3.2mm;background:var(--soft);color:var(--cor)}
+.tabela-head.seguradora strong{font-size:5.25pt;letter-spacing:1.15pt;color:var(--cor)}
+.tabela-head .selo-logo{min-width:19mm;min-height:5.5mm;padding:.4mm 1mm;border:0;background:transparent;box-shadow:none}
+.tabela-head .selo-logo img{max-width:18mm;max-height:4.4mm}.tabela-head .fallback{font-size:6.5pt;color:var(--cor)}
+.tabela-cobertura,.tabela-celula{min-height:10.5mm;padding:1.9mm 3.2mm;border-top:1px solid var(--line-soft)}
+.tabela-cobertura{gap:2.6mm;background:#f8fafb}.tabela-cobertura .bolha{width:5.7mm;height:5.7mm;border:1px solid #d6e0e8;box-shadow:0 2px 6px rgba(16,40,66,.07)}
+.tabela-cobertura .bolha .ic{width:3mm;height:3mm}.tabela-cobertura span{font-size:6.8pt}
+.tabela-celula{background:#fff;font-size:6.6pt;line-height:1.3;color:#4e6277}
+.tabela-celula:nth-child(6n+5),.tabela-celula:nth-child(6n+6){background:#fff}
+.tabela-celula.coluna-atual,.tabela-celula.coluna-outra{border-left:.8mm solid color-mix(in srgb,var(--accent) 34%,#fff)}
+.tabela-celula .valor-destaque{padding:.05mm .65mm;border:0;border-radius:.8mm;background:color-mix(in srgb,var(--accent) 10%,#fff);color:color-mix(in srgb,var(--accent) 80%,#102842);box-shadow:none}
+.diferenca-total{display:grid;grid-template-columns:1.2fr .8fr;gap:0;margin:4mm 0 0;padding:0;border:0;border-radius:2.7mm;background:var(--navy);box-shadow:0 7px 18px rgba(16,40,66,.12)}
+.diferenca-total::before{content:none}.diferenca-total>div{padding:3mm 4.5mm}.diferenca-total>div+div{border-left:1px solid rgba(255,255,255,.16)}
+.diferenca-total span{display:block;font-family:var(--sans);font-size:5.3pt;font-weight:850;letter-spacing:1.2pt;color:#a9bacb}
+.diferenca-total p{margin-top:.7mm;font-size:6.8pt;color:#d7e0e8}.diferenca-total strong{display:block;font-size:13.5pt;line-height:1;text-align:right;color:#fff}.diferenca-total small{display:block;margin-top:.6mm;text-align:right;color:#aebdcb}
+.rodape{margin:auto 0 0;padding:3.7mm 0 0;border-top:1px solid var(--line-soft);font-size:5.45pt;line-height:1.4;color:#8493a2}.rodape::before{content:none}.rodape .contato{float:right;margin-top:0;text-align:right;color:#5e7082}
+.pagina.is-pdf-compact .hero-orcamento{height:auto;min-height:16mm;padding:0}.pagina.is-pdf-compact .hero-orcamento .titulo{font-size:18.2pt}.pagina.is-pdf-compact .promessa-orcamento{margin-top:4mm}.pagina.is-pdf-compact .cliente-modelo .campo{padding:1.5mm 3.5mm}.pagina.is-pdf-compact .modelo-secao{margin-top:4mm}.pagina.is-pdf-compact .modelo-secao.valores-secao{margin-top:3.5mm}.pagina.is-pdf-compact .tabela-head{min-height:auto}.pagina.is-pdf-compact .tabela-cobertura,.pagina.is-pdf-compact .tabela-celula{min-height:9mm;padding:1.35mm 2.7mm}.pagina.is-pdf-compact .valor-card-modelo-inner{padding:2.8mm 4.5mm 2.7mm 6mm}.pagina.is-pdf-compact .valor-card-modelo .valor-total{font-size:18pt}
+@media print{.pagina-conteudo{padding:9mm 12mm 6.5mm 15mm}}
 `
 
 // ─── Blocos ────────────────────────────────────────────────────────────
@@ -583,7 +757,10 @@ function textoCategoriaTabela(card, categoria) {
 function destacarValoresImportantes(texto, categoriaKey) {
   const seguro = escapeHtml(texto)
   if (!['terceiros', 'franquia'].includes(categoriaKey)) return seguro
-  return seguro.replace(/(R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2}|\d{1,3}(?:\.\d{3})+)(%?)/g, '<mark>$&</mark>')
+  return seguro.replace(
+    /(R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2}|\d{1,3}(?:\.\d{3})+)(%?)/g,
+    '<span class="valor-destaque">$&</span>',
+  )
 }
 
 function blocoTabelaCoberturas(cards) {
@@ -593,7 +770,6 @@ function blocoTabelaCoberturas(cards) {
     const estilo = `--cor:${s.cor};--cor-texto:${s.cor_texto}`
     return `<div class="tabela-head seguradora" style="${estilo}">
       ${selo(s)}
-      <strong>${escapeHtml(ROTULO_PAPEL[card.papel] || 'Seguradora')}</strong>
     </div>`
   }
 
@@ -605,8 +781,8 @@ function blocoTabelaCoberturas(cards) {
         <div class="bolha">${icone(categoria.icone)}</div>
         <span>${escapeHtml(categoria.label)}</span>
       </div>
-      <div class="tabela-celula${celAtual.classe}">${destacarValoresImportantes(celAtual.texto, categoria.key)}</div>
-      <div class="tabela-celula${celOutra.classe}">${destacarValoresImportantes(celOutra.texto, categoria.key)}</div>`
+      <div class="tabela-celula coluna-atual${celAtual.classe}" style="--accent:${escapeHtml(atual.seguradora.cor)}">${destacarValoresImportantes(celAtual.texto, categoria.key)}</div>
+      <div class="tabela-celula coluna-outra${celOutra.classe}" style="--accent:${escapeHtml(outra.seguradora.cor)}">${destacarValoresImportantes(celOutra.texto, categoria.key)}</div>`
   }).join('')
 
   return `<section class="modelo-secao">
@@ -635,7 +811,7 @@ function blocoPagamentoModelo(card) {
 
   return `<article class="valor-card-modelo" style="${estilo}">
     <div class="valor-card-modelo-inner">
-      <div class="marca-valor">${selo(s)}<span>${escapeHtml(s.nome || 'Seguradora')}</span></div>
+      <div class="marca-valor"><span>${escapeHtml(ROTULO_PAPEL[card.papel] || 'Cotação')}</span>${selo(s)}</div>
       <div class="valor-total-label">Valor total (com IOF)</div>
       <div class="valor-total">${escapeHtml(card.valores.total_formatado || '—')}</div>
       ${pagamentos ? `<div class="pagamentos">${pagamentos}</div>` : ''}
@@ -646,7 +822,6 @@ function blocoPagamentoModelo(card) {
 
 function blocoValoresCondicoes(cards) {
   return `<section class="modelo-secao valores-secao">
-    <h2 class="modelo-secao-title"><i>2</i><span>Valores e condições de pagamento</span></h2>
     <div class="valores-grid">
       ${cards.map(blocoPagamentoModelo).join('')}
     </div>
@@ -657,8 +832,8 @@ function blocoDiferenca(cards) {
   const valores = cards.map(card => Number(card.valores?.total)).filter(Number.isFinite)
   if (valores.length !== 2) return ''
   return `<div class="diferenca-total">
-    <span>Diferença entre os valores totais das duas propostas</span>
-    <strong>${escapeHtml(formatarMoeda(Math.abs(valores[0] - valores[1])))}</strong>
+    <div><span>Resumo financeiro</span><p>Os valores refletem as condições apresentadas em cada cotação e podem mudar até a emissão.</p></div>
+    <div><span>Diferença entre as propostas</span><strong>${escapeHtml(formatarMoeda(Math.abs(valores[0] - valores[1])))}</strong><small>no prêmio total</small></div>
   </div>`
 }
 
@@ -709,7 +884,7 @@ export function montarHtmlOrcamento(comparativo, { logoConves = '/conves-logo.pn
 <head>
 <meta charset="utf-8">
 <title>Orçamento Comparativo${cabecalho.referencia ? ` ${escapeHtml(cabecalho.referencia)}` : ''}</title>
-<style>${CSS}${CSS_MODELO_OFICIAL}</style>
+<style>${CSS}${CSS_MODELO_OFICIAL}${CSS_MODELO_APROVADO}</style>
 </head>
 <body>
 ${comAcoes ? `<nav class="acoes-doc" aria-label="Ações da cotação">
@@ -722,12 +897,18 @@ ${comAcoes ? `<nav class="acoes-doc" aria-label="Ações da cotação">
     <div class="marca"><img src="${escapeHtml(logoConves)}" alt="Convés Seguros"></div>
     <div class="hero-titulos">
       <span class="hero-kicker">Convés Corretora de Seguros</span>
-      <h1 class="titulo">Orçamento Comparativo</h1>
-      <div class="meta">${meta}</div>
+      <h1 class="titulo">Comparativo Seguro Auto</h1>
     </div>
+    <div class="documento-orcamento"><span class="doc-pill">Proposta personalizada</span><div class="meta">${meta}</div></div>
   </header>
 
+  <section class="promessa-orcamento">
+    <h2>Duas opções de proteção.<br>Uma escolha mais clara.</h2>
+    <p>Comparamos preço, perfil do risco e coberturas para você decidir com segurança e tranquilidade.</p>
+  </section>
+
   <section class="cliente-modelo">
+    <div class="perfil-titulo"><strong>Perfil considerado nesta cotação</strong><span>Confira os dados antes de decidir</span></div>
     <div class="cliente-linha superior">
       <div class="campo">
         <span class="rotulo">Segurado</span>
@@ -748,6 +929,10 @@ ${comAcoes ? `<nav class="acoes-doc" aria-label="Ações da cotação">
         <div class="valor">${escapeHtml(cliente.veiculo || '—')}${veiculoLinha2 ? `<small>${escapeHtml(veiculoLinha2)}</small>` : ''}</div>
       </div>
       <div class="campo">
+        <span class="rotulo">Utilização</span>
+        <div class="valor">${escapeHtml(cards?.[0]?.identificacao?.uso || cards?.[1]?.identificacao?.uso || '—')}</div>
+      </div>
+      <div class="campo">
         <span class="rotulo">CEP de pernoite</span>
         <div class="valor">${escapeHtml(cliente.cep_pernoite || cards?.[0]?.identificacao?.cep_pernoite || '—')}</div>
       </div>
@@ -756,8 +941,8 @@ ${comAcoes ? `<nav class="acoes-doc" aria-label="Ações da cotação">
 
   ${aviso}
 
-  ${blocoTabelaCoberturas(cards)}
   ${blocoValoresCondicoes(cards)}
+  ${blocoTabelaCoberturas(cards)}
   ${blocoDiferenca(cards)}
 
   <footer class="rodape">

@@ -310,6 +310,34 @@ test('a marca vem do campo, nao da ordem em que as marcas aparecem no texto', ()
   assert.equal(detectarMarca(azul)?.id, 'azul')
 })
 
+test('cabecalho Azul operado pela Porto continua sendo Azul', () => {
+  const azul = [
+    CABECALHO_PORTO,
+    'azul OPERADO PELA PortoSeguro Orçamento de Seguro Auto',
+    'AZUL TRADICIONAL e PROTEÇÃO COMBINADA',
+    // O sufixo e deliberadamente igual ao do exemplo que antes gerava conflito.
+    'Orçamento: 6065143265-0-1',
+  ].join(' ')
+  const detalhe = detectarMarcaDetalhado(azul)
+  assert.equal(detalhe.marca?.id, 'azul')
+  assert.equal(detalhe.fonte, 'produto_cabecalho')
+  assert.equal(detalhe.conflito, null)
+})
+
+test('cabecalho Porto Auto Senior nao vira Azul pelo numero do orcamento', () => {
+  const porto = [
+    CABECALHO_PORTO,
+    'PortoSeguro Orçamento de Seguro Auto',
+    'AUTO SÊNIOR e PROTEÇÃO COMBINADA',
+    // -0-4 era tratado como Azul; o produto visível no cabeçalho deve vencer.
+    'Orçamento: 6065143265-0-4',
+  ].join(' ')
+  const detalhe = detectarMarcaDetalhado(porto)
+  assert.equal(detalhe.marca?.id, 'porto')
+  assert.equal(detalhe.fonte, 'produto_cabecalho')
+  assert.equal(detalhe.conflito, null)
+})
+
 test('layout da familia sem nenhuma marca em campo cai na dona do layout', () => {
   // Porto e a emissora do layout; Azul, Itau e Mitsui so aparecem quando se
   // anunciam em campo proprio.

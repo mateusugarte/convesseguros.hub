@@ -2,8 +2,12 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import './autoClientVerification.test.mjs'
 import {
+  AUTO_OTHER_PIPELINE_STAGES,
+  AUTO_RENEWAL_PIPELINE_STAGES,
   classificarRenovacoesPipeline,
   countAutoEmissionTypes,
+  filterAutoPipelineEmissions,
+  isAutoRenewalEmission,
   isRenovacaoNoQuadro,
   isRenovacaoSemCalculo,
   parseRenovacoesPaste,
@@ -15,6 +19,30 @@ import {
   scoreCotacaoSuggestion,
   suggestRenewalClientByName,
 } from './autoOperational.js'
+
+test('separa as etapas da pipeline de renovacoes das demais operacoes', () => {
+  assert.deepEqual(
+    AUTO_RENEWAL_PIPELINE_STAGES.map(stage => stage.id),
+    ['renovacoes', 'renovacoes_para_enviar', 'cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida'],
+  )
+  assert.deepEqual(
+    AUTO_OTHER_PIPELINE_STAGES.map(stage => stage.id),
+    ['pendentes', 'cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida'],
+  )
+})
+
+test('cada emissao aparece em apenas uma das pipelines', () => {
+  const items = [
+    { id: 'novo', tipo: 'novo' },
+    { id: 'endosso', cotacoes_auto: { tipo: 'endosso' } },
+    { id: 'renovacao-cotacao', cotacoes_auto: { tipo: 'renovacao' } },
+    { id: 'renovacao-emissao', tipo: 'novo', eh_renovacao: true },
+  ]
+
+  assert.equal(isAutoRenewalEmission(items[2]), true)
+  assert.deepEqual(filterAutoPipelineEmissions(items, 'renovacoes').map(item => item.id), ['renovacao-cotacao', 'renovacao-emissao'])
+  assert.deepEqual(filterAutoPipelineEmissions(items, 'outros').map(item => item.id), ['novo', 'endosso'])
+})
 
 test('contabiliza seguro novo, renovação e endosso separadamente', () => {
   assert.deepEqual(countAutoEmissionTypes([

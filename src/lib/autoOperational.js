@@ -35,6 +35,22 @@ export const AUTO_PIPELINE_STAGES = [
   { id: 'apolice_emitida', label: 'Apólice emitida', shortLabel: 'Emitida', color: '#0f766e' },
 ]
 
+// Renovações e novos negócios usam os mesmos status persistidos, mas são duas
+// mesas operacionais diferentes. Manter listas explícitas impede que cards e
+// contadores dos dois fluxos voltem a se misturar na interface.
+export const AUTO_RENEWAL_PIPELINE_STAGES = AUTO_PIPELINE_STAGES.filter(stage => stage.id !== 'pendentes')
+export const AUTO_OTHER_PIPELINE_STAGES = AUTO_PIPELINE_STAGES.filter(stage => !['renovacoes', 'renovacoes_para_enviar'].includes(stage.id))
+
+export function isAutoRenewalEmission(item = {}) {
+  const tipo = item?.cotacoes_auto?.tipo || item?.tipo
+  return tipo === 'renovacao' || item?.eh_renovacao === true
+}
+
+export function filterAutoPipelineEmissions(items = [], view = 'outros') {
+  const renewalView = view === 'renovacoes'
+  return items.filter(item => isAutoRenewalEmission(item) === renewalView)
+}
+
 export const AUTO_TIPO_META = {
   novo: { label: 'Seguro novo', className: 'auto-type-tag is-new' },
   renovacao: { label: 'Renovação', className: 'auto-type-tag is-renewal' },

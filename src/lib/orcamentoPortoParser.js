@@ -113,15 +113,34 @@ function marcaPelaMarcaLicenciada(texto) {
 }
 
 /**
+ * Titulo comercial impresso ao lado da logo no topo do orçamento.
+ *
+ * A Azul mostra as duas marcas ("Azul · operado pela Porto Seguro"), mas o
+ * produto continua identificado como AZUL TRADICIONAL. A Porto mostra apenas
+ * Porto Seguro e usa AUTO SENIOR. Esses nomes de produto são mais confiáveis
+ * que o sufixo do número do orçamento, que já apareceu repetido entre marcas.
+ */
+function marcaPeloProdutoCabecalho(texto) {
+  const t = String(texto || '')
+  if (/\bAZUL\s+TRADICIONAL\s+e\s+PROTE[ÇC][ÃA]O\s+COMBINADA/i.test(t)) return marcaPortoPorId('azul')
+  if (/\bAUTO\s+S[ÊE]NIOR\s+e\s+PROTE[ÇC][ÃA]O\s+COMBINADA/i.test(t)) return marcaPortoPorId('porto')
+  return null
+}
+
+/**
  * Fontes em ordem de confianca. `Segmento` vem primeiro porque e o campo que a
  * propria Porto usa para dizer qual produto foi cotado.
  */
 const FONTES_MARCA = [
-  { id: 'segmento', ler: marcaPeloSegmento },
-  { id: 'condicoes_gerais', ler: marcaPelasCondicoesGerais },
-  { id: 'codigo_cg', ler: marcaPeloCodigoCG },
-  { id: 'numero_orcamento', ler: marcaPeloNumeroOrcamento },
-  { id: 'marca_licenciada', ler: marcaPelaMarcaLicenciada },
+  { id: 'produto_cabecalho', ler: marcaPeloProdutoCabecalho, confiavel: true },
+  { id: 'segmento', ler: marcaPeloSegmento, confiavel: true },
+  { id: 'condicoes_gerais', ler: marcaPelasCondicoesGerais, confiavel: true },
+  { id: 'codigo_cg', ler: marcaPeloCodigoCG, confiavel: true },
+  // O número e a frase de licenciamento ajudam em layouts antigos, mas não
+  // podem contradizer o produto: Azul cita Porto como operadora e o sufixo do
+  // número deixou de ser exclusivo por marca nos PDFs recebidos em 31/08/2026.
+  { id: 'numero_orcamento', ler: marcaPeloNumeroOrcamento, confiavel: false },
+  { id: 'marca_licenciada', ler: marcaPelaMarcaLicenciada, confiavel: false },
 ]
 
 /**
@@ -134,14 +153,16 @@ const FONTES_MARCA = [
 export function evidenciasMarcaPorto(texto) {
   const t = String(texto || '')
   return FONTES_MARCA
-    .map(fonte => ({ fonte: fonte.id, marca: fonte.ler(t) }))
+    .map(fonte => ({ fonte: fonte.id, marca: fonte.ler(t), confiavel: fonte.confiavel }))
     .filter(item => item.marca)
 }
 
 export function detectarMarcaDetalhado(texto) {
   const evidencias = evidenciasMarcaPorto(texto)
-  const escolhida = evidencias[0] || null
-  const divergentes = [...new Set(evidencias.map(item => item.marca.id))]
+  const confiaveis = evidencias.filter(item => item.confiavel)
+  const consideradas = confiaveis.length ? confiaveis : evidencias
+  const escolhida = consideradas[0] || null
+  const divergentes = [...new Set(consideradas.map(item => item.marca.id))]
 
   return {
     marca: escolhida?.marca || null,

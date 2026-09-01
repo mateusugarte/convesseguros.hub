@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle, ArrowRight, Check, CheckCircle2, ChevronDown, CloudOff, FileCheck2,
-  Download, Eye, FileText, History, LoaderCircle, Maximize2, RefreshCw, ShieldCheck,
+  Download, FileText, History, LoaderCircle, Maximize2, RefreshCw, ShieldCheck,
   Sparkles, Trash2, UploadCloud, X,
 } from 'lucide-react'
 
@@ -16,6 +16,7 @@ import { limparRascunhoOrcamento, salvarRascunhoOrcamento } from '../../lib/auto
 import { getEntityImageUrl } from '../../lib/entityMedia'
 import { supabase } from '../../lib/supabase'
 import { DatePicker } from '../ui'
+import SeguradoraBadge from '../SeguradoraBadge'
 import AutoOrcamentoOfertas from './AutoOrcamentoOfertas'
 
 const ROLES = [
@@ -248,7 +249,11 @@ function UploadSlot({ role, side, file, leitura, lendo, erro, aplicando, segurad
       <div className="auto-comparison-insurer">
         <label htmlFor={`seguradora-orcamento-${role}`}>Seguradora do PDF</label>
         <div className="auto-comparison-insurer-preview">
-          <span><ShieldCheck /><strong>{side.seguradora || 'Selecione antes do upload'}</strong></span>
+          <span>
+            {side.seguradora
+              ? <SeguradoraBadge nome={side.seguradora} size="md" />
+              : <><ShieldCheck /><strong>Selecione antes do upload</strong></>}
+          </span>
           <select
             id={`seguradora-orcamento-${role}`}
             value={seguradoraParser}
@@ -371,7 +376,14 @@ function ReviewColumn({ role, side, issues, leitura, aplicando, onEscolherOferta
   const escolha = leitura?.cotacao?.escolha_pendente
   return (
     <article className={`auto-comparison-review-column is-${role}`}>
-      <header><span>{role === 'atual' ? 'Atual' : 'Concorrente'}</span><div><strong>{side.seguradora || 'Seguradora não definida'}</strong><small>{side.arquivo_nome || 'Preenchimento manual'}</small></div>{issues.length === 0 ? <CheckCircle2 className="is-valid" /> : <span className="auto-comparison-issue-count">{issues.length}</span>}</header>
+      <header>
+        <span>{role === 'atual' ? 'Atual' : 'Concorrente'}</span>
+        <div className="auto-comparison-review-insurer">
+          {side.seguradora && <SeguradoraBadge nome={side.seguradora} size="md" showName={false} />}
+          <span><strong>{side.seguradora || 'Seguradora não definida'}</strong><small>{side.arquivo_nome || 'Preenchimento manual'}</small></span>
+        </div>
+        {issues.length === 0 ? <CheckCircle2 className="is-valid" /> : <span className="auto-comparison-issue-count">{issues.length}</span>}
+      </header>
       {escolha && (
         <div className="auto-comparison-review-choice">
           <div className="auto-comparison-review-choice-warning">
@@ -1027,9 +1039,9 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange })
           </div>
         )}
         <footer className="auto-comparison-footer is-review">
-          <div><CheckCircle2 /><span><strong>{comparativoGerado ? 'Cotação pronta para visualizar' : 'Revisão pronta para concluir'}</strong><small>{comparativoGerado ? 'A área da cotação contém o botão para baixar ou salvar o PDF.' : 'Confira os campos dos dois lados; a cotação abre em uma área própria.'}</small></span></div>
+          <div><CheckCircle2 /><span><strong>{comparativoGerado ? 'PDF do orçamento pronto' : 'Revisão pronta para gerar o PDF'}</strong><small>{comparativoGerado ? 'A prévia abaixo contém os botões para baixar ou salvar o PDF.' : 'Confira os campos dos dois lados e gere o documento final.'}</small></span></div>
           <button type="button" onClick={gerarOrcamento} disabled={gerando}>
-            {gerando ? <><LoaderCircle className="is-spinning" />Preparando…</> : <><Eye />Visualizar cotação</>}
+            {gerando ? <><LoaderCircle className="is-spinning" />Gerando PDF…</> : <><FileCheck2 />Gerar PDF do orçamento</>}
           </button>
         </footer>
         <OrcamentoPreview

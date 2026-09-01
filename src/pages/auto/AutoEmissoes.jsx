@@ -24,7 +24,10 @@ import { uploadDocumento } from '../../lib/documentos'
 import { toNumber } from '../../lib/apolices'
 import { parseAutoHistoricoPlanilha, somarUmAno } from '../../lib/autoHistoricoImport.js'
 import { parseOrcamentoAuto, parsePropostaAuto } from '../../lib/autoPdfParser.js'
-import { AUTO_PIPELINE_STAGES, AUTO_TIPO_META, renovacaoStageFields, resolveRenovacaoStage, scoreCotacaoSuggestion } from '../../lib/autoOperational.js'
+import {
+  AUTO_OTHER_PIPELINE_STAGES, AUTO_PIPELINE_STAGES, AUTO_RENEWAL_PIPELINE_STAGES, AUTO_TIPO_META,
+  filterAutoPipelineEmissions, renovacaoStageFields, resolveRenovacaoStage, scoreCotacaoSuggestion,
+} from '../../lib/autoOperational.js'
 import {
   alternarColunaRecolhida, etapaVizinha, etapaVizinhaRenovacao, gravarPreferenciasPipeline,
   lerPreferenciasPipeline, resumoFinanceiroEtapa,
@@ -39,7 +42,10 @@ const COLUNAS = [
   { id: 'apolice_emitida', label: 'Apólice emitida', hint: 'apólice finalizada com documento', tone: 'accent' },
 ]
 
-const KANBAN_STAGES = AUTO_PIPELINE_STAGES
+const PIPELINE_VIEWS = [
+  { id: 'renovacoes', label: 'Renovações', description: 'Carteira, cálculos e acompanhamento até a emissão', icon: RefreshCw },
+  { id: 'outros', label: 'Novos e endossos', description: 'Cotações novas, endossos e propostas em andamento', icon: Car },
+]
 
 const PERIOD_OPTIONS = [
   { value: 'todos', label: 'Todos' },
@@ -501,7 +507,10 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, tagsPorId }) {
   const premio = apolice?.premio_liquido ?? emissao.premio_liquido ?? 0
   const comissao = apolice?.valor_comissao ?? emissao.valor_comissao ?? 0
   const prazo = vigenciaFim ? Math.ceil((new Date(`${vigenciaFim}T12:00:00`) - new Date()) / (1000 * 60 * 60 * 24)) : null
-  const etapaAnterior = etapaVizinha(coluna, -1)
+  // Quando a renovacao ja virou emissao, voltar de "Cotacao feita" para o
+  // backlog exigiria alterar a linha de renovacoes_auto, nao a emissao. Por
+  // isso esta e a primeira etapa movel deste tipo de card.
+  const etapaAnterior = isRenovacao && coluna === 'cotacao_feita' ? null : etapaVizinha(coluna, -1)
   const proximaEtapa = etapaVizinha(coluna, 1)
 
   let shellClass = 'border-brand-secondary/20 bg-white/90 shadow-[0_10px_24px_rgba(15,23,42,0.05)]'
@@ -1473,6 +1482,16 @@ export default function AutoEmissoes() {
   const toast = useToast()
   const { user } = useAuth()
   const isGestaoRoute = location.pathname.startsWith('/auto/gestao')
+  const [pipelineView, setPipelineView] = useState(() => {
+    const queryView = new URLSearchParams(location.search).get('pipeline')
+    if (['renovacoes', 'outros'].includes(queryView)) return queryView
+    try {
+      const saved = window.localStorage.getItem('conves:auto:pipeline-view')
+      return ['renovacoes', 'outros'].includes(saved) ? saved : 'renovacoes'
+    } catch {
+      return 'renovacoes'
+    }
+  })
   const periodoInicial = isGestaoRoute ? 'todos' : 'mes'
   const initialRange = useMemo(() => getPeriodoRange(periodoInicial), [periodoInicial])
 
@@ -1531,6 +1550,23 @@ export default function AutoEmissoes() {
   const [filtroTipoEmissoes, setFiltroTipoEmissoes] = useState('todos')
   const [filtroStatusEmissoes, setFiltroStatusEmissoes] = useState('todos')
   const [filtroResponsavelEmissoes, setFiltroResponsavelEmissoes] = useState('todos')
+
+  const kanbanStages = pipelineView === 'renovacoes'
+    ? AUTO_RENEWAL_PIPELINE_STAGES
+    : AUTO_OTHER_PIPELINE_STAGES
+  const colunasRecolhidasAtivas = colunasRecolhidas.filter(id => kanbanStages.some(stage => stage.id === id))
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('conves:auto:pipeline-view', pipelineView)
+    } catch {
+      // Preferencia opcional: a Pipeline continua funcional sem storage.
+    }
+    setDragging(null)
+    setDragOver(null)
+    setKanbanNavigation({ index: 0, canLeft: false, canRight: true })
+    if (kanbanScrollRef.current) kanbanScrollRef.current.scrollLeft = 0
+  }, [pipelineView])
 
   useEffect(() => {
     localStorage.setItem('auto-kanban-density', kanbanDensity)
@@ -1656,32 +1692,32 @@ export default function AutoEmissoes() {
   }, [termoPipeline])
 
   const emissoesPipeline = useMemo(
-    () => emissoes.filter(item => {
+    () => filterAutoPipelineEmissions(emissoes, pipelineView).filter(item => {
       if (!matchesPipelineSearch(item)) return false
       if (getEmissaoColuna(item) !== 'pendentes') return true
       const tipo = item.cotacoes_auto?.tipo || item.tipo
       return tipo === 'novo'
     }),
-    [emissoes, matchesPipelineSearch],
+    [emissoes, matchesPipelineSearch, pipelineView],
   )
   const renovacoesPipeline = useMemo(
-    () => renovacoesPendentes.filter(matchesPipelineSearch),
-    [renovacoesPendentes, matchesPipelineSearch],
+    () => pipelineView === 'renovacoes' ? renovacoesPendentes.filter(matchesPipelineSearch) : [],
+    [renovacoesPendentes, matchesPipelineSearch, pipelineView],
   )
   // As renovacoes deixaram de morar so nas duas colunas de prazo: cada uma cai
   // na coluna que o proprio status aponta, do mesmo jeito que uma emissao.
   const renovacoesPorColuna = useMemo(() => {
-    const mapa = new Map(KANBAN_STAGES.map(stage => [stage.id, []]))
+    const mapa = new Map(kanbanStages.map(stage => [stage.id, []]))
     renovacoesPipeline.forEach(item => {
       const stage = resolveRenovacaoStage(item)
       if (!mapa.has(stage)) mapa.set(stage, [])
       mapa.get(stage).push(item)
     })
     return mapa
-  }, [renovacoesPipeline])
+  }, [kanbanStages, renovacoesPipeline])
 
   const kanbanCounts = useMemo(() => {
-    const counts = new Map(KANBAN_STAGES.map(stage => [stage.id, 0]))
+    const counts = new Map(kanbanStages.map(stage => [stage.id, 0]))
     renovacoesPorColuna.forEach((items, stage) => {
       counts.set(stage, (counts.get(stage) || 0) + items.length)
     })
@@ -1690,7 +1726,15 @@ export default function AutoEmissoes() {
       counts.set(stage, (counts.get(stage) || 0) + 1)
     })
     return counts
-  }, [emissoesPipeline, renovacoesPorColuna])
+  }, [emissoesPipeline, kanbanStages, renovacoesPorColuna])
+
+  const pipelineViewCounts = useMemo(() => ({
+    renovacoes: filterAutoPipelineEmissions(emissoes, 'renovacoes').filter(item => getEmissaoColuna(item) !== 'pendentes').length + renovacoesPendentes.length,
+    outros: filterAutoPipelineEmissions(emissoes, 'outros').filter(item => {
+      if (getEmissaoColuna(item) !== 'pendentes') return true
+      return (item.cotacoes_auto?.tipo || item.tipo) === 'novo'
+    }).length,
+  }), [emissoes, renovacoesPendentes])
 
   const updateKanbanNavigation = useCallback(() => {
     const container = kanbanScrollRef.current
@@ -2094,7 +2138,7 @@ export default function AutoEmissoes() {
   }
 
   function alternarColuna(id) {
-    setColunasRecolhidas(atual => alternarColunaRecolhida(atual, id, COLUNAS.length))
+    setColunasRecolhidas(atual => alternarColunaRecolhida(atual, id, kanbanStages.length))
   }
 
   /**
@@ -2400,13 +2444,19 @@ export default function AutoEmissoes() {
   }
 
   return (
-    <div className="auto-page space-y-6 animate-fade-in">
+    <div className={`auto-page space-y-6 animate-fade-in ${isGestaoRoute ? 'auto-pipeline-page' : ''}`}>
+      {!isGestaoRoute && (
       <PageHeader
         eyebrow="Modulo auto"
-        title={isGestaoRoute ? 'Pipeline Auto' : 'Apólices e emissões'}
+        title={isGestaoRoute
+          ? (pipelineView === 'renovacoes' ? 'Pipeline de renovações' : 'Pipeline de novos seguros e endossos')
+          : 'Apólices e emissões'}
         description={isGestaoRoute
-          ? 'Acompanhe cada negócio da cotação até a apólice, com contexto e prioridade.'
+          ? (pipelineView === 'renovacoes'
+            ? 'Organize a carteira do vencimento à emissão, sem misturar o trabalho com seguros novos.'
+            : 'Acompanhe cotações novas e endossos até a apólice, em uma mesa exclusiva.')
           : 'Consulte emissões recentes, documentos e toda a carteira de apólices Auto.'}
+        className={isGestaoRoute ? 'auto-pipeline-page-header' : ''}
         actions={(
           <div className="flex flex-wrap gap-2">
             <button
@@ -2415,13 +2465,11 @@ export default function AutoEmissoes() {
             >
               {isGestaoRoute ? 'Ver apólices e emissões' : 'Abrir Pipeline'}
             </button>
-            <button
-              onClick={() => navigate('/auto/emissoes/planilha?subir=1')}
-              className="btn-secondary inline-flex items-center gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              Subir apólices
-            </button>
+            {!isGestaoRoute && (
+              <button onClick={() => navigate('/auto/emissoes/planilha?subir=1')} className="btn-secondary inline-flex items-center gap-2">
+                <Upload className="h-4 w-4" /> Subir apólices
+              </button>
+            )}
             <input
               ref={importHistoricoFileRef}
               type="file"
@@ -2429,23 +2477,26 @@ export default function AutoEmissoes() {
               onChange={handleImportHistorico}
               className="hidden"
             />
-            <button
-              onClick={() => importHistoricoFileRef.current?.click()}
-              disabled={isImportingHistorico}
-              className="btn-secondary inline-flex items-center gap-2 disabled:opacity-50"
-            >
-              {isImportingHistorico ? <Loader2 className="h-4 w-4 animate-spin" /> : <History className="h-4 w-4" />}
-              Importar historico (renovacoes)
-            </button>
+            {(!isGestaoRoute || pipelineView === 'renovacoes') && (
+              <button onClick={() => importHistoricoFileRef.current?.click()} disabled={isImportingHistorico} className="btn-secondary inline-flex items-center gap-2 disabled:opacity-50">
+                {isImportingHistorico ? <Loader2 className="h-4 w-4 animate-spin" /> : <History className="h-4 w-4" />}
+                Importar histórico
+              </button>
+            )}
+            {isGestaoRoute && pipelineView === 'renovacoes' && (
+              <button onClick={() => navigate(`/auto/renovacoes/planilha?mes=${mesRenovacoes}`)} className="btn-secondary">
+                Abrir planilha
+              </button>
+            )}
             <button onClick={() => navigate('/auto/cotacoes')} className="btn-primary">
-              Nova cotacao
+              Nova cotação
             </button>
-            <button onClick={() => { const today = new Date().toISOString().slice(0, 10); setManualMode('novo'); setManualForm({ ...FORM_MANUAL_VAZIO, data_emissao: today, data_transmissao: today }); setManualDocumento(null); setManualOpen(true) }} className="btn-primary">
-              Nova emissao
-            </button>
-            <button onClick={() => setShowApolices(true)} className="btn-secondary">
-              Consultar apolices emitidas
-            </button>
+            {(!isGestaoRoute || pipelineView === 'outros') && (
+              <button onClick={() => { const today = new Date().toISOString().slice(0, 10); setManualMode('novo'); setManualForm({ ...FORM_MANUAL_VAZIO, data_emissao: today, data_transmissao: today }); setManualDocumento(null); setManualOpen(true) }} className="btn-primary">
+                Nova emissão
+              </button>
+            )}
+            {!isGestaoRoute && <button onClick={() => setShowApolices(true)} className="btn-secondary">Consultar apólices emitidas</button>}
           </div>
         )}
         stats={isGestaoRoute ? undefined : (
@@ -2457,6 +2508,7 @@ export default function AutoEmissoes() {
           </>
         )}
       />
+      )}
       {importHistoricoResumo && (
         <DataCard className="border-status-warning/25 bg-status-warning/5" bodyClassName="p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -2476,56 +2528,86 @@ export default function AutoEmissoes() {
       )}
       {isGestaoRoute ? (
         <>
+          <section className="auto-pipeline-view-switch" aria-label="Escolher pipeline operacional">
+            <div className="auto-pipeline-view-switch-copy">
+              <span>Mesas de trabalho</span>
+              <strong>Escolha o fluxo que deseja operar agora</strong>
+              <small>Cada negócio aparece em uma única pipeline, com contadores e etapas independentes.</small>
+            </div>
+            <div className="auto-pipeline-view-options" role="tablist" aria-label="Pipelines do setor Auto">
+              {PIPELINE_VIEWS.map(option => {
+                const Icon = option.icon
+                const active = pipelineView === option.id
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    className={active ? 'is-active' : ''}
+                    onClick={() => setPipelineView(option.id)}
+                  >
+                    <span><Icon /></span>
+                    <div><strong>{option.label}</strong><small>{option.description}</small></div>
+                    <b>{pipelineViewCounts[option.id]}</b>
+                  </button>
+                )
+              })}
+            </div>
+            <div className="auto-pipeline-quick-actions">
+              <button onClick={() => navigate('/auto/emissoes')} className="btn-secondary">Apólices</button>
+              {pipelineView === 'renovacoes' && (
+                <>
+                  <input ref={importHistoricoFileRef} type="file" accept=".xlsx,.xls" onChange={handleImportHistorico} className="hidden" />
+                  <button onClick={() => importHistoricoFileRef.current?.click()} disabled={isImportingHistorico} className="btn-secondary disabled:opacity-50">
+                    {isImportingHistorico ? 'Importando…' : 'Importar histórico'}
+                  </button>
+                  <button onClick={() => navigate(`/auto/renovacoes/planilha?mes=${mesRenovacoes}`)} className="btn-secondary">Planilha</button>
+                </>
+              )}
+              <button onClick={() => navigate('/auto/cotacoes')} className="btn-primary">Nova cotação</button>
+              {pipelineView === 'outros' && (
+                <button onClick={() => { const today = new Date().toISOString().slice(0, 10); setManualMode('novo'); setManualForm({ ...FORM_MANUAL_VAZIO, data_emissao: today, data_transmissao: today }); setManualDocumento(null); setManualOpen(true) }} className="btn-primary">Nova emissão</button>
+              )}
+            </div>
+          </section>
+
           <FilterBar>
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="renewal-month-picker">
-                <CalendarDays />
-                <span>Mês das renovações</span>
-                <input type="month" value={mesRenovacoes} onChange={event => handleMesRenovacoesChange(event.target.value)} />
-              </label>
-              <span className="auto-pipeline-filter-label"><CalendarDays /> Período das emissões</span>
-              <div className="inline-flex flex-wrap rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-1 shadow-sm">
-                {PERIOD_OPTIONS.map(option => {
-                  const active = periodo === option.value
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => handlePeriodoChange(option.value)}
-                      className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
-                        active ? 'bg-dark-text text-white shadow-sm' : 'text-dark-muted hover:text-dark-text'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  )
-                })}
-              </div>
-              {periodo === 'custom' && (
-                <div className="auto-pipeline-date-range" aria-label="Intervalo personalizado">
-                  <label>
-                    <span>De</span>
-                    <DatePicker value={filtroInicio} onChange={setFiltroInicio} className="auto-date-picker" />
+            <div className="auto-pipeline-context-filter">
+              {pipelineView === 'renovacoes' ? (
+                <>
+                  <label className="renewal-month-picker">
+                    <CalendarDays />
+                    <span>Mês da carteira</span>
+                    <input type="month" value={mesRenovacoes} onChange={event => handleMesRenovacoesChange(event.target.value)} />
                   </label>
-                  <span className="auto-pipeline-date-separator">até</span>
-                  <label>
-                    <span>Até</span>
-                    <DatePicker value={filtroFim} onChange={setFiltroFim} className="auto-date-picker" />
-                  </label>
-                </div>
-              )}
-              {periodo !== 'custom' && filtroInicio && filtroFim && (
-                <span className="text-xs text-dark-muted">
-                  {formatDateBR(filtroInicio)} ate {formatDateBR(filtroFim)}
-                </span>
-              )}
-              {(filtroInicio || filtroFim || periodo !== 'semana') && (
-                <button
-                  onClick={() => handlePeriodoChange('semana')}
-                  className="rounded-2xl border border-dark-border px-3 py-2 text-xs text-dark-muted hover:border-brand-accent/40 hover:text-dark-text"
-                >
-                  Voltar para semana
-                </button>
+                  <div className="auto-pipeline-filter-note">
+                    <RefreshCw />
+                    <span><strong>Carteira de {pipelineMonthLabel(mesRenovacoes)}</strong><small>O mês filtra a fila inicial; negociações já iniciadas continuam visíveis até a conclusão.</small></span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <span className="auto-pipeline-filter-label"><CalendarDays /> Período dos negócios</span>
+                  <div className="auto-pipeline-period-options">
+                    {PERIOD_OPTIONS.map(option => {
+                      const active = periodo === option.value
+                      return (
+                        <button key={option.value} type="button" onClick={() => handlePeriodoChange(option.value)} className={active ? 'is-active' : ''}>
+                          {option.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {periodo === 'custom' && (
+                    <div className="auto-pipeline-date-range" aria-label="Intervalo personalizado">
+                      <label><span>De</span><DatePicker value={filtroInicio} onChange={setFiltroInicio} className="auto-date-picker" /></label>
+                      <span className="auto-pipeline-date-separator">até</span>
+                      <label><span>Até</span><DatePicker value={filtroFim} onChange={setFiltroFim} className="auto-date-picker" /></label>
+                    </div>
+                  )}
+                  {periodo !== 'custom' && filtroInicio && filtroFim && <span className="auto-pipeline-range-summary">{formatDateBR(filtroInicio)} até {formatDateBR(filtroFim)}</span>}
+                </>
               )}
             </div>
           </FilterBar>
@@ -2533,10 +2615,10 @@ export default function AutoEmissoes() {
           <section className="auto-pipeline-command" aria-label="Navegação da Pipeline AUTO">
             <div className="auto-pipeline-command-main">
               <div className="auto-pipeline-command-copy">
-                <span className="auto-pipeline-command-icon"><Car /></span>
+                <span className="auto-pipeline-command-icon">{pipelineView === 'renovacoes' ? <RefreshCw /> : <Car />}</span>
                 <div>
-                  <strong>Jornada da operação</strong>
-                  <small>Use as setas ou escolha uma etapa para navegar sem rolagem manual.</small>
+                  <strong>{pipelineView === 'renovacoes' ? 'Jornada das renovações' : 'Jornada de novos seguros e endossos'}</strong>
+                  <small>Use a busca, as setas ou clique numa etapa para trabalhar sem rolagem manual.</small>
                 </div>
               </div>
               <div className="auto-pipeline-command-actions">
@@ -2562,7 +2644,7 @@ export default function AutoEmissoes() {
                     <button type="button" className={kanbanDensity === 'compact' ? 'is-active' : ''} onClick={() => setKanbanDensity('compact')}>Compacta</button>
                   </div>
                 </div>
-                {colunasRecolhidas.length > 0 && (
+                {colunasRecolhidasAtivas.length > 0 && (
                   <button
                     type="button"
                     className="auto-pipeline-expand-all"
@@ -2570,12 +2652,12 @@ export default function AutoEmissoes() {
                     title="Reabrir todas as colunas recolhidas"
                   >
                     <ChevronsRight aria-hidden="true" />
-                    Expandir {colunasRecolhidas.length} coluna(s)
+                    Expandir {colunasRecolhidasAtivas.length} coluna(s)
                   </button>
                 )}
                 <div className="auto-pipeline-arrow-group">
                   <button type="button" onClick={() => scrollKanbanByColumn(-1)} disabled={!kanbanNavigation.canLeft} aria-label="Ver coluna anterior" title="Coluna anterior"><ChevronLeft /></button>
-                  <span><strong>{kanbanNavigation.index + 1}</strong> de {KANBAN_STAGES.length}</span>
+                  <span><strong>{kanbanNavigation.index + 1}</strong> de {kanbanStages.length}</span>
                   <button type="button" onClick={() => scrollKanbanByColumn(1)} disabled={!kanbanNavigation.canRight} aria-label="Ver próxima coluna" title="Próxima coluna"><ChevronRight /></button>
                 </div>
               </div>
@@ -2589,8 +2671,8 @@ export default function AutoEmissoes() {
                 <button type="button" onClick={() => setBuscaPipeline('')}>Mostrar tudo</button>
               </div>
             )}
-            <div className="auto-pipeline-stage-track">
-              {KANBAN_STAGES.map((stage, index) => (
+            <div className="auto-pipeline-stage-track" style={{ '--pipeline-columns': kanbanStages.length }}>
+              {kanbanStages.map((stage, index) => (
                 <button
                   key={stage.id}
                   type="button"
@@ -2627,13 +2709,13 @@ export default function AutoEmissoes() {
               className={`auto-kanban-board is-${kanbanDensity} relative -mx-1 flex gap-4 overflow-x-auto pb-3 pt-1 px-1 snap-x snap-mandatory md:snap-proximity`}
               aria-label="Quadro da Pipeline AUTO. Use as setas do teclado para mudar de coluna."
             >
-            {[
+            {pipelineView === 'renovacoes' && [
               { id: 'renovacoes', empty: 'Sem renovações futuras' },
               { id: 'renovacoes_para_enviar', empty: 'Nada atrasado para enviar' },
             ].map(({ id, empty }) => {
               const items = renovacoesPorColuna.get(id) || []
-              const stage = KANBAN_STAGES.find(item => item.id === id)
-              const stageIndex = KANBAN_STAGES.findIndex(item => item.id === id)
+              const stage = kanbanStages.find(item => item.id === id)
+              const stageIndex = kanbanStages.findIndex(item => item.id === id)
               return (
                 <DataCard
                   key={id}
@@ -2673,14 +2755,14 @@ export default function AutoEmissoes() {
                 </DataCard>
               )
             })}
-            {COLUNAS.map(coluna => {
+            {COLUNAS.filter(coluna => pipelineView !== 'renovacoes' || coluna.id !== 'pendentes').map(coluna => {
               const cards = emissoesPipeline.filter(item => getEmissaoColuna(item) === coluna.id)
               // Renovacoes arrastadas para esta etapa. Elas nao entram em
               // `cards` porque continuam sendo linhas de `renovacoes_auto` e
               // nao alimentam o resumo financeiro da coluna.
-              const renovacoesNaColuna = renovacoesPorColuna.get(coluna.id) || []
+              const renovacoesNaColuna = pipelineView === 'renovacoes' ? (renovacoesPorColuna.get(coluna.id) || []) : []
               const totalCards = cards.length + renovacoesNaColuna.length
-              const posicao = String(KANBAN_STAGES.findIndex(stage => stage.id === coluna.id) + 1).padStart(2, '0')
+              const posicao = String(kanbanStages.findIndex(stage => stage.id === coluna.id) + 1).padStart(2, '0')
               const recolhida = colunasRecolhidas.includes(coluna.id)
               const resumo = resumoFinanceiroEtapa(cards, item => {
                 const apolice = getApoliceVinculada(item)
@@ -3533,6 +3615,3 @@ export default function AutoEmissoes() {
     </div>
   )
 }
-
-
-

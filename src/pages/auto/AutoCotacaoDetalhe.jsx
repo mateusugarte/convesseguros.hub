@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Activity, BadgeDollarSign, CalendarDays, Car, Check, ClipboardCheck, Copy, FileSearch, Gauge, Pencil, ShieldCheck, UserRound, X, Mail, Heart, Phone, Trash2 } from 'lucide-react'
 import { DataCard, EmptyState } from '../../components/ui'
+import SeguradoraBadge from '../../components/SeguradoraBadge'
 import {
   AutoBadge,
   AutoLoading,
@@ -513,9 +514,10 @@ export default function AutoCotacaoDetalhe() {
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-dark-border/50 bg-gradient-to-br from-brand-accent/[0.08] via-white to-white p-4">
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-dark-muted">{section.title}</p>
-                      <div className="mt-2 flex items-center gap-2 text-dark-text">
-                        <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e8efff] text-[#315dc5]"><ShieldCheck className="h-4 w-4" /></span>
-                        <strong className="text-base">{opcoesFinanceirasExibidas[section.key]?.nome || 'Aguardando comparação'}</strong>
+                      <div className="mt-2 flex min-h-9 items-center text-dark-text">
+                        {opcoesFinanceirasExibidas[section.key]?.nome
+                          ? <SeguradoraBadge nome={opcoesFinanceirasExibidas[section.key].nome} size="lg" className="font-semibold" />
+                          : <strong className="text-base">Aguardando comparação</strong>}
                       </div>
                     </div>
                     <span className="rounded-full border border-[#cbd9ff] bg-[#edf2ff] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#315dc5]">{section.badge}</span>

@@ -111,7 +111,7 @@ export function Select({
         <div
           ref={dropRef}
           className="glass-panel animate-fade-in py-1"
-          style={{ position: 'fixed', zIndex: 300, ...pos, maxHeight: 240, overflowY: 'auto' }}
+          style={{ position: 'fixed', zIndex: 12000, ...pos, maxHeight: 240, overflowY: 'auto' }}
         >
           {options.map(opt => {
             const optionValue = typeof opt === 'object' ? opt.value : opt

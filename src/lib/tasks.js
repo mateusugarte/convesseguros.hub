@@ -9,6 +9,12 @@ export const TASK_PRIORITIES = {
 
 const ALERT_WINDOW_MINUTES = 60
 
+const TASK_PRODUCT_LABELS = {
+  residencial_pf: 'Fiança residencial',
+  comercial_pf: 'Fiança comercial PF',
+  pessoa_juridica: 'Fiança empresarial',
+}
+
 export function pad2(value) {
   return String(value).padStart(2, '0')
 }
@@ -157,16 +163,22 @@ export async function searchTaskEntities(term) {
   if (q.length < 2) return []
   const pattern = `%${q}%`
   const requests = [
-    supabase.from('fichas').select('id, nome_interessado, nome_empresa, cpf, cnpj').or(`nome_interessado.ilike.${pattern},nome_empresa.ilike.${pattern},cpf.ilike.${pattern},cnpj.ilike.${pattern}`).limit(8),
+    supabase.from('fichas').select('id, nome_interessado, nome_empresa, cpf, cnpj, produto').or(`nome_interessado.ilike.${pattern},nome_empresa.ilike.${pattern},cpf.ilike.${pattern},cnpj.ilike.${pattern}`).limit(8),
     supabase.from('clientes_auto').select('id, nome_completo, cpf').or(`nome_completo.ilike.${pattern},cpf.ilike.${pattern}`).limit(8),
-    supabase.from('apolices').select('id, numero_apolice, nome_interessado, nome_empresa, seguradora').or(`numero_apolice.ilike.${pattern},nome_interessado.ilike.${pattern},nome_empresa.ilike.${pattern}`).limit(8),
+    supabase.from('apolices').select('id, numero_apolice, nome_interessado, nome_empresa, seguradora, produto').or(`numero_apolice.ilike.${pattern},nome_interessado.ilike.${pattern},nome_empresa.ilike.${pattern}`).limit(8),
     supabase.from('apolices_auto').select('id, numero_apolice, nome_cliente, seguradora').or(`numero_apolice.ilike.${pattern},nome_cliente.ilike.${pattern}`).limit(8),
   ]
   const [fichas, autoClients, policies, autoPolicies] = await Promise.all(requests)
   return [
-    ...(fichas.data || []).map(row => ({ entity_type: 'client', entity_source: 'fichas', entity_id: row.id, entity_label: row.nome_interessado || row.nome_empresa || 'Cliente', entity_detail: row.cpf || row.cnpj || 'Fiança' })),
-    ...(autoClients.data || []).map(row => ({ entity_type: 'client', entity_source: 'clientes_auto', entity_id: row.id, entity_label: row.nome_completo || 'Cliente Auto', entity_detail: row.cpf || 'Seguro Auto' })),
-    ...(policies.data || []).map(row => ({ entity_type: 'policy', entity_source: 'apolices', entity_id: row.id, entity_label: `Apólice ${row.numero_apolice || ''}`.trim(), entity_detail: [row.nome_interessado || row.nome_empresa, row.seguradora].filter(Boolean).join(' · ') })),
-    ...(autoPolicies.data || []).map(row => ({ entity_type: 'policy', entity_source: 'apolices_auto', entity_id: row.id, entity_label: `Apólice ${row.numero_apolice || ''}`.trim(), entity_detail: [row.nome_cliente, row.seguradora].filter(Boolean).join(' · ') })),
+    ...(fichas.data || []).map(row => {
+      const product = TASK_PRODUCT_LABELS[row.produto] || 'Seguro Fiança'
+      return { entity_type: 'client', entity_source: 'fichas', entity_id: row.id, entity_label: row.nome_interessado || row.nome_empresa || 'Cliente', entity_product: product, entity_detail: [product, row.cpf || row.cnpj].filter(Boolean).join(' · ') }
+    }),
+    ...(autoClients.data || []).map(row => ({ entity_type: 'client', entity_source: 'clientes_auto', entity_id: row.id, entity_label: row.nome_completo || 'Cliente Auto', entity_product: 'Seguro Auto', entity_detail: ['Seguro Auto', row.cpf].filter(Boolean).join(' · ') })),
+    ...(policies.data || []).map(row => {
+      const product = TASK_PRODUCT_LABELS[row.produto] || 'Seguro Fiança'
+      return { entity_type: 'policy', entity_source: 'apolices', entity_id: row.id, entity_label: `Apólice ${row.numero_apolice || ''}`.trim(), entity_product: product, entity_detail: [product, row.nome_interessado || row.nome_empresa, row.seguradora].filter(Boolean).join(' · ') }
+    }),
+    ...(autoPolicies.data || []).map(row => ({ entity_type: 'policy', entity_source: 'apolices_auto', entity_id: row.id, entity_label: `Apólice ${row.numero_apolice || ''}`.trim(), entity_product: 'Seguro Auto', entity_detail: ['Seguro Auto', row.nome_cliente, row.seguradora].filter(Boolean).join(' · ') })),
   ]
 }

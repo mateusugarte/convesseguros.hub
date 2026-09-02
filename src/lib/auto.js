@@ -572,52 +572,88 @@ export async function sincronizarDadosExtraidosCotacaoAuto(id, changes = {}) {
   const quotePatch = { ...changes, updated_at: new Date().toISOString() }
   const clientPatch = clientPatchFromQuotePatch(changes)
   if (clientPatch.cpf) clientPatch.cpf = normalizeCpf(clientPatch.cpf)
-  let clienteId = isUuid(atual.cliente_id) ? atual.cliente_id : null
 
-  // Uma cotacao sem vinculo passa a pertencer ao cliente identificado pelo
-  // CPF. Sem CPF mantemos os dados na cotacao, evitando criar duplicatas por
-  // nome parecido.
-  if (!clienteId && clientPatch.cpf) {
-    const { data: existente, error: buscarError } = await supabase
-      .from('clientes_auto')
-      .select('id')
-      .eq('cpf', clientPatch.cpf)
-      .maybeSingle()
-    if (buscarError) throw buscarError
-
-    if (existente?.id) {
-      clienteId = existente.id
-    } else {
-      const nome = clientPatch.nome_completo || changes.nome_cliente || atual.nome_cliente
-      if (nome) {
-        const { data: criado, error: criarError } = await supabase
-          .from('clientes_auto')
-          .insert({ nome_completo: nome, cpf: clientPatch.cpf })
-          .select('id')
-          .single()
-        if (criarError) throw criarError
-        clienteId = criado.id
-      }
-    }
-  }
-
-  if (clienteId && Object.keys(clientPatch).length) {
-    const { error: clienteError } = await supabase
-      .from('clientes_auto')
-      .update(clientPatch)
-      .eq('id', clienteId)
-    if (clienteError) throw clienteError
-    quotePatch.cliente_id = clienteId
-  }
-
-  const { data, error } = await supabase
+  // A cotacao e a fonte operacional desta tela. Ela precisa ser preenchida
+  // mesmo quando a sincronizacao secundaria do cadastro mestre encontra um
+  // CPF duplicado, uma politica de acesso ou outro conflito entre clientes.
+  // Antes o cliente era atualizado primeiro: qualquer erro ali abortava tudo e
+  // CPF, veiculo e CEP continuavam vazios na cotacao.
+  const { data: cotacaoAtualizada, error: cotacaoError } = await supabase
     .from('cotacoes_auto')
     .update(quotePatch)
     .eq('id', id)
     .select('*, clientes_auto(*)')
     .single()
-  if (error) throw error
-  return data
+  if (cotacaoError) throw cotacaoError
+
+  let clienteId = isUuid(cotacaoAtualizada.cliente_id || atual.cliente_id)
+    ? (cotacaoAtualizada.cliente_id || atual.cliente_id)
+    : null
+  const clienteIdOriginal = clienteId
+  let avisoCliente = ''
+
+  // Uma cotacao sem vinculo passa a pertencer ao cliente identificado pelo
+  // CPF. A busca acontece mesmo quando ja existe vinculo: se o CPF extraido
+  // pertence a outro cadastro confirmado, religamos a cotacao em vez de tentar
+  // duplicar esse CPF no cliente antigo.
+  let clienteDoCpf = null
+  if (clientPatch.cpf) {
+    const { data: existente, error: buscarError } = await supabase
+      .from('clientes_auto')
+      .select('id, nome_completo, cpf')
+      .eq('cpf', clientPatch.cpf)
+      .maybeSingle()
+    if (buscarError) avisoCliente = buscarError.message || 'Não foi possível localizar o cliente pelo CPF.'
+    clienteDoCpf = existente || null
+    if (clienteDoCpf?.id) clienteId = clienteDoCpf.id
+  }
+
+  if (!clienteId && clientPatch.cpf && !avisoCliente) {
+    const nome = clientPatch.nome_completo || changes.nome_cliente || atual.nome_cliente
+    if (nome) {
+      const { data: criado, error: criarError } = await supabase
+        .from('clientes_auto')
+        .insert({ nome_completo: nome, cpf: clientPatch.cpf })
+        .select('id')
+        .single()
+      if (criarError) avisoCliente = criarError.message || 'Não foi possível criar o cliente identificado no PDF.'
+      else clienteId = criado?.id || null
+    }
+  }
+
+  const clientPatchSeguro = { ...clientPatch }
+  // Encontrar outro cadastro pelo CPF autoriza o vínculo, não autoriza trocar
+  // silenciosamente o nome que já existe nele. A cotação guarda o texto do PDF
+  // e a verificação de clientes continua sendo o lugar de unificar divergências.
+  if (clienteDoCpf?.id && clienteDoCpf.id !== clienteIdOriginal) {
+    if (clienteDoCpf.nome_completo) delete clientPatchSeguro.nome_completo
+    if (clienteDoCpf.cpf) delete clientPatchSeguro.cpf
+  }
+
+  if (clienteId && Object.keys(clientPatchSeguro).length && !avisoCliente) {
+    const { error: clienteError } = await supabase
+      .from('clientes_auto')
+      .update(clientPatchSeguro)
+      .eq('id', clienteId)
+    if (clienteError) avisoCliente = clienteError.message || 'Não foi possível atualizar o cadastro mestre do cliente.'
+  }
+
+  if (clienteId && clienteId !== cotacaoAtualizada.cliente_id) {
+    const { data: religada, error: religarError } = await supabase
+      .from('cotacoes_auto')
+      .update({ cliente_id: clienteId, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('*, clientes_auto(*)')
+      .single()
+    if (!religarError && religada) {
+      return avisoCliente ? { ...religada, aviso_sincronizacao_cliente: avisoCliente } : religada
+    }
+    if (religarError) avisoCliente = avisoCliente || religarError.message || 'Não foi possível vincular o cliente identificado.'
+  }
+
+  return avisoCliente
+    ? { ...cotacaoAtualizada, aviso_sincronizacao_cliente: avisoCliente }
+    : cotacaoAtualizada
 }
 
 // Rascunho do orcamento comparativo (workspace de `AutoQuoteComparison`).

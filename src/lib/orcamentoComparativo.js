@@ -236,7 +236,7 @@ export function criarCotacaoOrcamento(patch = {}) {
     valores: {
       premio_liquido: null, iof: null, premio_total: null,
       premio_parcelado: '', descontos_aplicados: [],
-      franquia: null, franquia_tipo: '',
+      franquia: null, franquia_tipo: '', franquia_nao_aplicavel: false,
     },
     // Fato critico e explicito — nunca derivado do texto das coberturas.
     // `null` = o corretor ainda nao confirmou; a revisao trava nisso.
@@ -627,7 +627,9 @@ export function textoColisao(cotacao) {
     const pct = integral.percentual_fipe != null ? `${integral.percentual_fipe}% da tabela FIPE` : 'conforme a apólice'
     frase = `Indenização integral do veículo: inclusa a ${pct}.`
   } else if (integral.incluida === false) {
-    frase = 'Indenização integral do veículo: não possui (somente parcial, com franquia).'
+    frase = cotacao?.valores?.franquia_nao_aplicavel
+      ? 'Indenização integral do veículo: não possui neste produto.'
+      : 'Indenização integral do veículo: não possui (somente parcial, com franquia).'
   } else {
     // null nunca vira texto — a validacao impede gerar o PDF nesse estado.
     frase = ''
@@ -829,6 +831,7 @@ export function montarCard(cotacao, { papel = 'atual' } = {}) {
 
 function textoFranquia(cotacao, itens) {
   const valores = cotacao?.valores || {}
+  if (valores.franquia_nao_aplicavel) return ''
   const partes = []
   if (valores.franquia_tipo) partes.push(valores.franquia_tipo)
   if (valores.franquia != null) partes.push(formatarMoeda(valores.franquia))
@@ -924,6 +927,7 @@ export function validarCotacao(cotacao) {
 
   for (const campo of CAMPOS_CRITICOS) {
     if (escolha && DEPENDEM_DA_ESCOLHA.includes(campo.caminho)) continue
+    if (cot.valores?.franquia_nao_aplicavel && ['valores.franquia', 'valores.franquia_tipo'].includes(campo.caminho)) continue
     if (vazio(lerCaminho(cot, campo.caminho))) {
       pendencias.push({ ...campo, severidade: SEVERIDADE.CRITICO, bloqueia: true })
     }

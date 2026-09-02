@@ -4,8 +4,9 @@ import fs from 'node:fs'
 
 import { agruparLinhas } from './pdfLayout.js'
 import {
-  ehLayoutSuhai, extrairCoberturasSuhai, extrairPagamentoSuhai,
-  listarProdutosSuhai, parseCotacaoSuhai,
+  colunasSuhai, ehLayoutSuhai, extrairCoberturasSuhai, extrairPagamentoSuhai,
+  listarProdutosSuhai, parseCotacaoSuhai, PRODUTOS_SUHAI_5_COLUNAS,
+  produtosSuhaiDoTexto,
 } from './orcamentoSuhaiParser.js'
 import { ProdutoOrcamentoObrigatorioError } from './orcamentoProdutos.js'
 import { montarCategorias, validarCotacao, ESTADO_COBERTURA } from './orcamentoComparativo.js'
@@ -30,11 +31,76 @@ test('expõe os quatro produtos do PDF e não escolhe silenciosamente', () => {
 })
 
 test('cada produto lê seu próprio prêmio e franquia', () => {
-  assert.equal(parse('roubo_furto').valores.premio_total, 2056.80)
+  const rouboFurto = parse('roubo_furto')
+  assert.equal(rouboFurto.valores.premio_total, 2056.80)
+  assert.equal(rouboFurto.valores.franquia, null)
+  assert.equal(rouboFurto.valores.franquia_nao_aplicavel, true)
   assert.equal(parse('roubo_furto_pt').valores.premio_total, 2324.93)
   assert.equal(parse('compreensiva').valores.premio_total, 2457.79)
   assert.equal(parse('compreensiva').valores.franquia, 2294.25)
+  assert.equal(parse('compreensiva').valores.franquia_nao_aplicavel, false)
   assert.equal(parse('terceiros').valores.premio_total, 1502.87)
+})
+
+test('produto não compreensivo informa que a franquia não se aplica e não cria pendência falsa', () => {
+  const cot = parse('roubo_furto')
+  const caminhos = validarCotacao(cot).pendencias.map(p => p.caminho)
+  const franquia = montarCategorias(cot).categorias.find(c => c.key === 'franquia')
+  assert.equal(franquia.estado, ESTADO_COBERTURA.NAO_INCLUIDA)
+  assert.match(franquia.texto, /n[ãa]o se aplica/i)
+  assert.equal(caminhos.includes('valores.franquia'), false)
+  assert.equal(caminhos.includes('valores.franquia_tipo'), false)
+})
+
+test('reconhece a nova grade Suhai de cinco opções sem confundir o PDF antigo', () => {
+  assert.equal(produtosSuhaiDoTexto(FX.texto).length, 4)
+  const moderno = 'OPÇÕES Roubo + Furto | Roubo + Furto + PT Colisão | Roubo + Furto + RCF | Roubo + Furto + PTCol(*) + RCF | Terceiros RCF'
+  assert.deepEqual(
+    listarProdutosSuhai(moderno).produtos.map(p => p.id),
+    ['roubo_furto', 'roubo_furto_pt', 'roubo_furto_rcf', 'roubo_furto_pt_rcf', 'terceiros'],
+  )
+})
+
+test('na grade de cinco opções usa o prêmio total da coluna escolhida e o valor de danos materiais decide o RCF', () => {
+  const itens = []
+  const add = (texto, x, y) => itens.push({ texto, x, y, pagina: 2 })
+  const lmiX = [120, 220, 320, 420, 520]
+  const premioX = [165, 265, 365, 465, 565]
+  const totalX = [180, 280, 380, 480, 580]
+  lmiX.forEach((x, i) => {
+    add('LMI', x, 730)
+    add('Prêmio', premioX[i], 730)
+    add(['3.579,11', '4.070,93', '4.086,94', '4.578,76', '737,11'][i], totalX[i], 590)
+    add(['3.843,25', '4.371,36', '4.388,56', '4.916,67', '791,51'][i], totalX[i], 575)
+  })
+  add('Prêmio líquido', 10, 590)
+  add('Prêmio total, com IOF', 10, 575)
+  add('1', 100, 400)
+  add('4.388,56', 140, 400)
+  add('4.388,56', 190, 400)
+  add('0,000000', 240, 400)
+  add('2', 100, 380)
+  add('2.194,28', 140, 380)
+  add('4.388,56', 190, 380)
+  add('0,000000', 240, 380)
+  add('RCF - Danos Materiais', 10, 665)
+  ;['Não Contratado', 'Não Contratado', '25.000,00', '25.000,00', '25.000,00'].forEach((valor, i) => add(valor, lmiX[i], 665))
+
+  const agrupadas = agruparLinhas(itens)
+  const colunas = colunasSuhai(agrupadas, 5)
+  assert.equal(colunas.length, 5)
+  const semRcf = extrairCoberturasSuhai(agrupadas, 'roubo_furto', PRODUTOS_SUHAI_5_COLUNAS, colunas)
+  const comRcf = extrairCoberturasSuhai(agrupadas, 'roubo_furto_rcf', PRODUTOS_SUHAI_5_COLUNAS, colunas)
+  assert.equal(semRcf.find(c => /Danos Materiais/.test(c.nome_original_seguradora)).incluida, false)
+  assert.equal(comRcf.find(c => /Danos Materiais/.test(c.nome_original_seguradora)).valor_lmi, 25000)
+
+  const texto = 'SUHAI SEGURADORA CNPJ 16.825.255/0001-23 OPÇÕES Roubo + Furto + PTCol(*) + RCF Terceiros RCF'
+  const cot = parseCotacaoSuhai({ itens, texto, produto: 'roubo_furto_rcf' })
+  assert.equal(cot.valores.premio_total, 4388.56)
+  assert.equal(cot.valores.premio_liquido, 4086.94)
+  assert.deepEqual(cot.valores.premio_parcelado, ['Até 2x de R$ 2.194,28 sem juros'])
+  assert.equal(cot.valores.franquia, null)
+  assert.equal(cot.valores.franquia_nao_aplicavel, true)
 })
 
 test('colunas não misturam coberturas entre produtos', () => {

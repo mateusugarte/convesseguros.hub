@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Activity, AlertTriangle, BadgeDollarSign, CalendarDays, Car, Check, ClipboardCheck, Copy, FileSearch, Gauge, Pencil, ShieldCheck, UserRound, X, Mail, Heart, Phone, Trash2 } from 'lucide-react'
@@ -311,23 +311,47 @@ export default function AutoCotacaoDetalhe() {
       setActionError(error?.message || 'Erro ao sincronizar as seguradoras do comparativo.')
     },
   })
+  // A segunda seguradora pode terminar a leitura antes do refetch causado pela
+  // primeira. Este espelho incorpora imediatamente o que acabou de ser salvo,
+  // evitando planejar a segunda sincronização contra uma cotação antiga.
+  const cotacaoSyncRef = useRef(null)
+  useEffect(() => {
+    if (cotacao) cotacaoSyncRef.current = cotacao
+  }, [cotacao])
 
-  const { mutate: sincronizarDadosExtraidos, isPending: sincronizandoDadosExtraidos } = useMutation({
+  const { mutateAsync: sincronizarDadosExtraidos, isPending: sincronizandoDadosExtraidos } = useMutation({
     mutationFn: patch => sincronizarDadosExtraidosCotacaoAuto(id, patch),
-    onSuccess: async () => {
-      setActionError(null)
+    onSuccess: async data => {
+      if (data) {
+        cotacaoSyncRef.current = data
+        qc.setQueryData(['auto-cotacao', id], data)
+      }
+      setActionError(data?.aviso_sincronizacao_cliente
+        ? `Os dados foram salvos na cotação, mas o cadastro do cliente precisa de conferência: ${data.aviso_sincronizacao_cliente}`
+        : null)
       await qc.invalidateQueries({ queryKey: ['auto-cotacao', id] })
       await qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
       await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
       await qc.invalidateQueries({ queryKey: ['auto-clientes-carteira'] })
     },
-    onError: error => setActionError(error?.message || 'Erro ao sincronizar os dados extraídos do PDF.'),
+    onError: async error => {
+      setActionError(error?.message || 'Erro ao sincronizar os dados extraídos do PDF.')
+      await qc.invalidateQueries({ queryKey: ['auto-cotacao', id] })
+    },
   })
 
-  const handleExtractedClientData = useCallback(({ role, seguradora, fields }) => {
-    if (!cotacao || !fields) return
-    const plan = planExtractedQuoteClientSync(cotacao, fields)
-    if (Object.keys(plan.automaticPatch).length) sincronizarDadosExtraidos(plan.automaticPatch)
+  const handleExtractedClientData = useCallback(async ({ role, seguradora, fields }) => {
+    const base = cotacaoSyncRef.current || cotacao
+    if (!base || !fields) return
+    const plan = planExtractedQuoteClientSync(base, fields)
+    if (Object.keys(plan.automaticPatch).length) {
+      // Atualiza a tela antes do round-trip e aguarda a persistência. Assim o
+      // upload só aparece concluído quando CPF, veículo, CEP e risco realmente
+      // chegaram à cotação — uma falha deixa de passar silenciosamente.
+      cotacaoSyncRef.current = { ...base, ...plan.automaticPatch }
+      qc.setQueryData(['auto-cotacao', id], current => current ? { ...current, ...plan.automaticPatch } : current)
+      await sincronizarDadosExtraidos(plan.automaticPatch)
+    }
     if (!plan.conflicts.length) return
 
     setExtractedConflict(current => {
@@ -341,17 +365,22 @@ export default function AutoCotacaoDetalhe() {
         choices: Object.fromEntries(plan.conflicts.map(item => [item.field, 'current'])),
       }
     })
-  }, [cotacao, sincronizarDadosExtraidos])
+  }, [cotacao, id, qc, sincronizarDadosExtraidos])
 
-  const confirmarDadosExtraidos = useCallback(() => {
+  const confirmarDadosExtraidos = useCallback(async () => {
     if (!extractedConflict) return
     const patch = Object.fromEntries(
       extractedConflict.conflicts
         .filter(item => extractedConflict.choices[item.field] === 'extracted')
         .map(item => [item.field, item.extracted]),
     )
-    if (Object.keys(patch).length) sincronizarDadosExtraidos(patch)
-    setExtractedConflict(null)
+    try {
+      if (Object.keys(patch).length) await sincronizarDadosExtraidos(patch)
+      setExtractedConflict(null)
+    } catch {
+      // A mutation já apresenta a mensagem e mantém o modal aberto para o
+      // usuário tentar novamente sem perder as escolhas.
+    }
   }, [extractedConflict, sincronizarDadosExtraidos])
 
   const { mutateAsync: excluir, isPending: deleting } = useMutation({

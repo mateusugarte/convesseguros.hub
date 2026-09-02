@@ -12,6 +12,7 @@ export const AUTO_QUOTE_CLIENT_FIELD_MAP = {
   veiculo_placa: { target: 'placa', label: 'Placa' },
   veiculo_uso: { target: 'uso_veiculo', label: 'Uso do veículo' },
   veiculo_cep_pernoite: { target: 'cep_pernoite', label: 'CEP de pernoite' },
+  veiculo_condutor_18_25: { target: 'jovens_18_26', label: 'Condutor de 18 a 25 anos' },
   veiculo_tipo_residencia: { target: 'tipo_residencia', label: 'Tipo de residência' },
   veiculo_passagem_leilao: { target: 'passagem_leilao', label: 'Passagem por leilão' },
   veiculo_financiado: { target: 'veiculo_financiado', label: 'Financiado / alienado' },

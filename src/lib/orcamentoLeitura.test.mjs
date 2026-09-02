@@ -26,6 +26,8 @@ const CHAVES_DA_REVISAO = [
 ]
 
 const CHAVES_INTERNAS_RISCO = [
+  'franquia_nao_aplicavel',
+  'veiculo_condutor_18_25',
   'veiculo_tipo_residencia', 'veiculo_passagem_leilao', 'veiculo_financiado',
   'veiculo_kit_gas', 'veiculo_blindagem', 'veiculo_isento_imposto',
   'veiculo_garagem_residencia', 'veiculo_garagem_trabalho', 'veiculo_garagem_estudo',

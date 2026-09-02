@@ -122,7 +122,8 @@ const REVIEW_FIELDS = [
   { key: 'nao_inclusos', label: 'Não incluso nesta cotação', multiline: true },
 ]
 
-function campoPendente(field, value) {
+function campoPendente(field, value, campos = {}) {
+  if (campos.franquia_nao_aplicavel && (field.key === 'franquia' || field.key === 'franquia_tipo')) return false
   const texto = String(value ?? '').trim()
   if (!texto) return true
   if (field.key === 'danos_terceiros') {
@@ -386,11 +387,11 @@ function leituraDisponivelParaRevisao(leitura) {
 function camposFinanceirosAplicados(campos = {}) {
   return campos.premio_total !== '' && campos.premio_total != null
     && String(campos.premio_parcelado || '').trim()
-    && campos.franquia !== '' && campos.franquia != null
+    && (campos.franquia_nao_aplicavel || (campos.franquia !== '' && campos.franquia != null))
 }
 
-function ReviewField({ field, value, issue, onChange }) {
-  const props = { value: value ?? '', onChange: event => onChange(event.target.value), placeholder: issue ? 'Revisar / preencher' : 'Não informado' }
+function ReviewField({ field, value, issue, onChange, readOnly = false }) {
+  const props = { value: value ?? '', onChange: event => onChange(event.target.value), readOnly, placeholder: issue ? 'Revisar / preencher' : 'Não informado' }
   return (
     <label className={`auto-comparison-review-field ${issue ? 'has-issue' : ''} ${field.critical ? 'is-critical' : ''}`}>
       <span>{field.label}{field.critical && <i>crítico</i>}</span>
@@ -435,7 +436,10 @@ function ReviewColumn({ role, meta, side, issues, leitura, aplicando, onEscolher
       )}
       {!escolha && <>
         {leitura?.cotacao?.avisos_extracao?.length > 0 && <ExtractionWarnings avisos={leitura.cotacao.avisos_extracao} />}
-        <div className="auto-comparison-review-fields">{REVIEW_FIELDS.map(field => <ReviewField key={field.key} field={field} value={side.campos[field.key]} issue={issues.includes(field.key)} onChange={value => onPatch(field.key, value)} />)}</div>
+        <div className="auto-comparison-review-fields">{REVIEW_FIELDS.map(field => {
+          const franquiaNaoAplicavel = side.campos.franquia_nao_aplicavel && (field.key === 'franquia' || field.key === 'franquia_tipo')
+          return <ReviewField key={field.key} field={field} value={franquiaNaoAplicavel ? 'Não se aplica' : side.campos[field.key]} issue={issues.includes(field.key)} readOnly={franquiaNaoAplicavel} onChange={value => onPatch(field.key, value)} />
+        })}</div>
       </>}
     </article>
   )
@@ -688,7 +692,7 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
   const issues = useMemo(() => Object.fromEntries(roles.map(role => [
     role,
     REVIEW_FIELDS
-      .filter(field => (field.required || field.critical) && campoPendente(field, sides[role]?.campos?.[field.key]))
+      .filter(field => (field.required || field.critical) && campoPendente(field, sides[role]?.campos?.[field.key], sides[role]?.campos))
       .map(field => field.key),
   ])), [roles, sides])
   const issueCount = roles.reduce((total, role) => total + (issues[role]?.length || 0), 0)
@@ -735,7 +739,7 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
       // veiculo, numero e vigencia nao dependem do produto e ja foram lidos.
       // Antes a revisao ficava inteira em branco ate a escolha e parecia leitura
       // falhada — `camposDaCotacao` ja devolve vazio no que depende do produto.
-      if (leitura?.cotacao) aplicarCotacao(role, leitura)
+      if (leitura?.cotacao) await aplicarCotacao(role, leitura)
     } catch (erro) {
       setErros(current => ({ ...current, [role]: `Não foi possível ler o PDF: ${erro.message}` }))
     } finally {
@@ -776,7 +780,7 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
       const campos = camposDaCotacao(comOpcoes.cotacao, { montarCategorias })
       if (comOpcoes.cotacao?.escolha_pendente) {
         setLeituras(current => ({ ...current, [role]: comOpcoes }))
-        aplicarCamposCotacao(role, comOpcoes, campos)
+        await aplicarCamposCotacao(role, comOpcoes, campos)
         return
       }
       if (!camposFinanceirosAplicados(campos)) {
@@ -787,7 +791,7 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
         }))
       }
       setLeituras(current => ({ ...current, [role]: comOpcoes }))
-      aplicarCamposCotacao(role, comOpcoes, campos)
+      await aplicarCamposCotacao(role, comOpcoes, campos)
     } catch (erro) {
       setErros(current => ({ ...current, [role]: `Não foi possível aplicar a opção: ${erro.message}` }))
     } finally {
@@ -795,12 +799,12 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
     }
   }
 
-  function aplicarCotacao(role, leitura) {
+  async function aplicarCotacao(role, leitura) {
     const campos = camposDaCotacao(leitura.cotacao, { montarCategorias })
-    aplicarCamposCotacao(role, leitura, campos)
+    await aplicarCamposCotacao(role, leitura, campos)
   }
 
-  function aplicarCamposCotacao(role, leitura, campos) {
+  async function aplicarCamposCotacao(role, leitura, campos) {
     if (!campos) return
     // So o que o PDF realmente afirma sobrescreve. Espalhar `campos` inteiro
     // apagava com string vazia o que veio do cadastro da cotacao — era assim que
@@ -817,11 +821,20 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
         campos: { ...current[role].campos, ...lidos },
       },
     }))
-    onExtractedClientData?.({
-      role,
-      seguradora: leitura.cotacao.seguradora?.nome || '',
-      fields: lidos,
-    })
+    try {
+      await onExtractedClientData?.({
+        role,
+        seguradora: leitura.cotacao.seguradora?.nome || '',
+        fields: lidos,
+      })
+    } catch (erro) {
+      // A leitura continua disponível para revisão, mas não escondemos uma
+      // falha de persistência como se tudo tivesse sido salvo.
+      setErros(current => ({
+        ...current,
+        [role]: `O PDF foi lido, mas os dados cadastrais não foram gravados na cotação: ${erro.message}`,
+      }))
+    }
   }
 
   /**

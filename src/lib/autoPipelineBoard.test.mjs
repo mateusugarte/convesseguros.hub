@@ -127,6 +127,13 @@ test('grava e le a densidade e as colunas recolhidas', () => {
   })
 })
 
+test('preserva o novo modo horizontal da pipeline', () => {
+  comStorage(() => {
+    assert.equal(gravarPreferenciasPipeline({ densidade: 'horizontal', recolhidas: [] }), true)
+    assert.deepEqual(lerPreferenciasPipeline(), { densidade: 'horizontal', recolhidas: [] })
+  })
+})
+
 test('preferencia corrompida cai no padrao em vez de quebrar o quadro', () => {
   comStorage(memoria => {
     memoria.set('conves:auto:pipeline-preferencias', '{isso nao e json')

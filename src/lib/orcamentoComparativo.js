@@ -225,6 +225,9 @@ export function criarCotacaoOrcamento(patch = {}) {
     veiculo: {
       marca_modelo: '', ano_modelo: '', placa: '', uso: '',
       cep_pernoite: '', condutor_18_25: null,
+      tipo_residencia: '', passagem_leilao: '', financiado: '', kit_gas: '',
+      blindagem: '', isento_imposto: '', garagem_residencia: '',
+      garagem_trabalho: '', garagem_estudo: '',
     },
     assistencia_24h: {
       limite_reboque_km: null,

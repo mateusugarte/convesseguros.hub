@@ -82,6 +82,15 @@ const REVIEW_FIELDS = [
   { key: 'veiculo_placa', label: 'Placa' },
   { key: 'veiculo_uso', label: 'Uso do veículo' },
   { key: 'veiculo_cep_pernoite', label: 'CEP de pernoite' },
+  { key: 'veiculo_tipo_residencia', label: 'Tipo de residência' },
+  { key: 'veiculo_passagem_leilao', label: 'Passagem por leilão' },
+  { key: 'veiculo_financiado', label: 'Financiado / alienado' },
+  { key: 'veiculo_kit_gas', label: 'Kit gás' },
+  { key: 'veiculo_blindagem', label: 'Blindagem' },
+  { key: 'veiculo_isento_imposto', label: 'Isenção de imposto' },
+  { key: 'veiculo_garagem_residencia', label: 'Garagem na residência' },
+  { key: 'veiculo_garagem_trabalho', label: 'Garagem no trabalho' },
+  { key: 'veiculo_garagem_estudo', label: 'Garagem no local de estudo' },
   { key: 'numero', label: 'Número da cotação' },
   { key: 'validade', label: 'Validade', type: 'date' },
   { key: 'vigencia_inicio', label: 'Início da vigência', type: 'date' },
@@ -512,7 +521,7 @@ function RascunhoStatus({ estado, onDescartar }) {
   )
 }
 
-export default function AutoQuoteComparison({ quote, onFinancialOptionsChange }) {
+export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, onExtractedClientData }) {
   const [inicial] = useState(() => hidratarWorkspace(quote))
   const [step, setStep] = useState(inicial.step)
   const [files, setFiles] = useState({ atual: null, concorrente: null })
@@ -780,6 +789,11 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange })
         campos: { ...current[role].campos, ...lidos },
       },
     }))
+    onExtractedClientData?.({
+      role,
+      seguradora: leitura.cotacao.seguradora?.nome || '',
+      fields: lidos,
+    })
   }
 
   /**

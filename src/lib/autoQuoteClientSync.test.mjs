@@ -15,6 +15,15 @@ const extracted = {
   veiculo_placa: 'RNB0B53',
   veiculo_uso: 'Particular',
   veiculo_cep_pernoite: '04917-020',
+  veiculo_tipo_residencia: 'Apartamento',
+  veiculo_passagem_leilao: 'Não',
+  veiculo_financiado: 'Sim',
+  veiculo_kit_gas: 'Não',
+  veiculo_blindagem: 'Não',
+  veiculo_isento_imposto: 'Não',
+  veiculo_garagem_residencia: 'Sim',
+  veiculo_garagem_trabalho: 'Não',
+  veiculo_garagem_estudo: 'Não',
   vigencia_inicio: '2026-09-03',
 }
 
@@ -27,6 +36,15 @@ test('traduz somente dados pessoais e do risco extraidos do PDF', () => {
     placa: 'RNB0B53',
     uso_veiculo: 'Particular',
     cep_pernoite: '04917-020',
+    tipo_residencia: 'Apartamento',
+    passagem_leilao: 'Não',
+    veiculo_financiado: 'Sim',
+    possui_kit_gas: 'Não',
+    possui_blindagem: 'Não',
+    isento_imposto: 'Não',
+    garagem_residencia: 'Sim',
+    garagem_trabalho: 'Não',
+    garagem_estudo: 'Não',
     vigencia_inicio: '2026-09-03',
   })
 })

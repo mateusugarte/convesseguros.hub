@@ -479,7 +479,7 @@ function getEditFormInicial(emissao) {
   }
 }
 
-function CardEmissao({ emissao, onDragStart, onClick, onMover, tagsPorId }) {
+function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao, tagsPorId }) {
   const cardTags = (emissao.tags ?? []).map(id => tagsPorId?.get(id)).filter(Boolean)
   const coluna = getEmissaoColuna(emissao)
   const colunaMeta = getColunaMeta(coluna)
@@ -599,6 +599,15 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, tagsPorId }) {
         </div>
       </div>
 
+      <button
+        type="button"
+        onClick={event => { event.stopPropagation(); onIniciarEmissao?.(emissao) }}
+        className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-brand-accent/25 bg-brand-accent/8 px-3 py-2 text-xs font-semibold text-status-info transition hover:border-brand-accent/45 hover:bg-brand-accent/12"
+      >
+        <FileText className="h-3.5 w-3.5" />
+        {isEmitida ? 'Editar emissão' : 'Iniciar emissão'}
+      </button>
+
       <div className="mt-auto flex items-center justify-between gap-2 pt-2 text-xs text-dark-muted">
         <span className="auto-kanban-card-hint">{colunaMeta.hint}</span>
         <span className="inline-flex items-center gap-1 font-semibold text-status-info">Abrir <ArrowRight className="h-3.5 w-3.5" /></span>
@@ -637,7 +646,7 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, tagsPorId }) {
 // circula pelo funil como qualquer outro card: arrastar grava o status na
 // propria linha e o card fica na coluna de destino. "Iniciar cotacao" continua
 // sendo o caminho separado para transformar a renovacao em cotacao de verdade.
-function CardRenovacaoPendente({ renovacao, onDragStart, onMover, onIniciarCotacao, onCancelar, iniciando, cancelando }) {
+function CardRenovacaoPendente({ renovacao, onDragStart, onMover, onIniciarCotacao, onIniciarEmissao, onCancelar, iniciando, cancelando }) {
   const apolice = renovacao.apolices_auto || {}
   const nome = renovacao.clientes_auto?.nome_completo || apolice.nome_cliente || renovacao.nome_segurado_anterior || 'Segurado'
   const seguradora = renovacao.seguradora || apolice.seguradora || null
@@ -679,6 +688,11 @@ function CardRenovacaoPendente({ renovacao, onDragStart, onMover, onIniciarCotac
         >
           {iniciando ? 'Abrindo...' : (renovacao.cotacao_id ? 'Abrir cotação' : 'Iniciar cotação')}
         </button>
+        {renovacao.cotacao_id && <button
+          type="button"
+          onClick={() => onIniciarEmissao?.(renovacao)}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-brand-accent/30 bg-white/80 px-3 py-1.5 text-xs font-semibold text-status-info transition-colors hover:bg-brand-accent/8"
+        ><FileText className="h-3.5 w-3.5" />Iniciar emissão</button>}
         <button
           type="button"
           onClick={() => onCancelar(renovacao.id)}
@@ -1498,11 +1512,12 @@ export default function AutoEmissoes() {
   // remontar a propria tela a cada visita.
   const [preferenciasIniciais] = useState(() => lerPreferenciasPipeline())
   const [kanbanDensity, setKanbanDensity] = useState(() => {
-    const salva = localStorage.getItem('auto-kanban-density') || preferenciasIniciais.densidade
-    if (salva === 'compact' || salva === 'comfortable') return salva
-    // Notebook de 1366/1440px nao cabe o card detalhado sem rolagem: o padrao
-    // ali e a coluna compacta.
-    return typeof window !== 'undefined' && window.innerWidth < 1440 ? 'compact' : 'comfortable'
+    const salva = localStorage.getItem('auto-kanban-layout-v2')
+    if (['compact', 'comfortable', 'horizontal'].includes(salva)) return salva
+    // A nova mesa horizontal mostra cada etapa como uma faixa de trabalho e os
+    // cards lado a lado. E o padrao inclusive para quem tinha a densidade
+    // antiga salva, pois a chave v2 marca a mudanca de modelo solicitada.
+    return 'horizontal'
   })
   const [colunasRecolhidas, setColunasRecolhidas] = useState(preferenciasIniciais.recolhidas)
   const [modalResultado, setModalResultado] = useState(null)
@@ -1584,7 +1599,7 @@ export default function AutoEmissoes() {
   }, [location.pathname, location.search, location.state, navigate])
 
   useEffect(() => {
-    localStorage.setItem('auto-kanban-density', kanbanDensity)
+    localStorage.setItem('auto-kanban-layout-v2', kanbanDensity)
     gravarPreferenciasPipeline({ densidade: kanbanDensity, recolhidas: colunasRecolhidas })
   }, [kanbanDensity, colunasRecolhidas])
 
@@ -1763,6 +1778,7 @@ export default function AutoEmissoes() {
     const columns = Array.from(container.querySelectorAll('.auto-kanban-column'))
     if (!columns.length) return
 
+    if (kanbanDensity === 'horizontal') return
     const firstOffset = columns[0].offsetLeft
     const currentLeft = container.scrollLeft
     let nearestIndex = 0
@@ -1786,7 +1802,7 @@ export default function AutoEmissoes() {
         ? previous
         : next
     ))
-  }, [])
+  }, [kanbanDensity])
 
   const scrollToKanbanColumn = useCallback((requestedIndex) => {
     const container = kanbanScrollRef.current
@@ -1794,10 +1810,15 @@ export default function AutoEmissoes() {
     const columns = Array.from(container.querySelectorAll('.auto-kanban-column'))
     if (!columns.length) return
     const index = Math.max(0, Math.min(requestedIndex, columns.length - 1))
+    if (kanbanDensity === 'horizontal') {
+      columns[index].scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setKanbanNavigation({ index, canLeft: index > 0, canRight: index < columns.length - 1 })
+      return
+    }
     const firstOffset = columns[0].offsetLeft
     container.scrollTo({ left: columns[index].offsetLeft - firstOffset, behavior: 'smooth' })
     setKanbanNavigation(previous => ({ ...previous, index }))
-  }, [])
+  }, [kanbanDensity])
 
   const scrollKanbanByColumn = useCallback((direction) => {
     scrollToKanbanColumn(kanbanNavigation.index + direction)
@@ -2148,6 +2169,27 @@ export default function AutoEmissoes() {
       return
     }
     mover({ id: item.id, coluna: colunaDestino === 'pendentes' ? null : colunaDestino })
+  }
+
+  function iniciarEmissaoPipeline(item) {
+    if (!item) return
+    const atual = getEmissaoColuna(item)
+    setManualStage(requiresAutoEmissionRegistration(atual) ? atual : 'proposta_transmitida')
+    setModalEmissao(item)
+  }
+
+  function iniciarEmissaoRenovacao(renovacao) {
+    // A renovação pertence ao mês pela vigência, mas o card técnico da emissão
+    // pode ter sido criado antes. Procurar na lista completa evita transformar
+    // o filtro mensal em um falso bloqueio para iniciar a transmissão.
+    const emissao = emissoes.find(item => (
+      (item.cotacao_id || item.cotacoes_auto?.id) === renovacao?.cotacao_id
+    ))
+    if (!emissao) {
+      toast({ type: 'info', title: 'Cotação ainda sem emissão', message: 'Abra a cotação e conclua o cálculo antes de iniciar a transmissão.' })
+      return
+    }
+    iniciarEmissaoPipeline(emissao)
   }
 
   function alternarColuna(id) {
@@ -2632,6 +2674,7 @@ export default function AutoEmissoes() {
                   <div>
                     <button type="button" className={kanbanDensity === 'comfortable' ? 'is-active' : ''} onClick={() => setKanbanDensity('comfortable')}>Detalhada</button>
                     <button type="button" className={kanbanDensity === 'compact' ? 'is-active' : ''} onClick={() => setKanbanDensity('compact')}>Compacta</button>
+                    <button type="button" className={kanbanDensity === 'horizontal' ? 'is-active' : ''} onClick={() => setKanbanDensity('horizontal')}>Horizontal</button>
                   </div>
                 </div>
                 {colunasRecolhidasAtivas.length > 0 && (
@@ -2697,7 +2740,7 @@ export default function AutoEmissoes() {
                 if (event.key === 'ArrowRight') { event.preventDefault(); scrollKanbanByColumn(1) }
               }}
               className={`auto-kanban-board is-${kanbanDensity} relative -mx-1 flex gap-4 overflow-x-auto pb-3 pt-1 px-1 snap-x snap-mandatory md:snap-proximity`}
-              aria-label="Quadro da Pipeline AUTO. Use as setas do teclado para mudar de coluna."
+              aria-label={kanbanDensity === 'horizontal' ? 'Pipeline AUTO horizontal por faixas de trabalho.' : 'Quadro da Pipeline AUTO. Use as setas do teclado para mudar de coluna.'}
             >
             {pipelineView === 'renovacoes' && [
               { id: 'renovacoes', empty: 'Sem renovações futuras' },
@@ -2736,6 +2779,7 @@ export default function AutoEmissoes() {
                         onDragStart={arrastada => setDragging({ tipo: 'renovacao', item: arrastada })}
                         onMover={moverRenovacaoPipeline}
                         onIniciarCotacao={handleIniciarCotacaoRenovacao}
+                        onIniciarEmissao={iniciarEmissaoRenovacao}
                         onCancelar={handleCancelarRenovacaoPendente}
                         iniciando={iniciandoCotacaoId === item.id}
                         cancelando={cancelandoRenovacao}
@@ -2830,6 +2874,7 @@ export default function AutoEmissoes() {
                         onDragStart={arrastada => setDragging({ tipo: 'renovacao', item: arrastada })}
                         onMover={moverRenovacaoPipeline}
                         onIniciarCotacao={handleIniciarCotacaoRenovacao}
+                        onIniciarEmissao={iniciarEmissaoRenovacao}
                         onCancelar={handleCancelarRenovacaoPendente}
                         iniciando={iniciandoCotacaoId === item.id}
                         cancelando={cancelandoRenovacao}
@@ -2854,6 +2899,7 @@ export default function AutoEmissoes() {
                           onDragStart={arrastado => setDragging({ tipo: 'emissao', item: arrastado })}
                           onClick={abrirDetalhe}
                           onMover={moverCardPipeline}
+                          onIniciarEmissao={iniciarEmissaoPipeline}
                           tagsPorId={tagsPorId}
                         />
                       ))

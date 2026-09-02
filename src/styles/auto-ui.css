@@ -1385,6 +1385,112 @@ html.dark .auto-workflow-prompt{background:linear-gradient(120deg,rgba(245,158,1
 @media (max-height: 780px) {
   .auto-kanban-board.is-compact .auto-kanban-rail { height: clamp(300px, 58dvh, 500px); }
 }
+
+/* Mesa horizontal: cada etapa vira uma faixa e os cards correm lado a lado.
+   Isso elimina a rolagem de colunas gigantes no notebook, deixa o nome da
+   etapa sempre visivel e permite comparar mais negocios da mesma fase. */
+.auto-kanban-board.is-horizontal {
+  display: flex !important;
+  flex-direction: column;
+  gap: .68rem !important;
+  margin-inline: 0 !important;
+  padding: .15rem 0 .75rem !important;
+  overflow: visible;
+  scroll-snap-type: none;
+}
+.auto-kanban-board.is-horizontal + .auto-kanban-edge-nav,
+.auto-kanban-shell:has(.auto-kanban-board.is-horizontal) > .auto-kanban-edge-nav { display: none; }
+.auto-kanban-board.is-horizontal .auto-kanban-column {
+  display: grid !important;
+  grid-template-columns: minmax(178px, 218px) minmax(0, 1fr);
+  width: 100% !important;
+  height: auto !important;
+  min-height: 176px;
+  flex: none !important;
+  border-radius: 20px !important;
+  scroll-snap-align: none;
+}
+.auto-kanban-board.is-horizontal .auto-kanban-column > header {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  padding: .9rem !important;
+  border-right: 1px solid color-mix(in srgb, var(--auto-column-accent) 16%, var(--auto-border)) !important;
+  border-bottom: 0 !important;
+}
+.auto-kanban-board.is-horizontal .auto-kanban-column > header::before {
+  inset: 0 auto 0 0;
+  width: 4px;
+  height: auto;
+}
+.auto-kanban-board.is-horizontal .auto-kanban-column > header p {
+  margin-top: .45rem !important;
+  padding-left: 0 !important;
+  line-height: 1.45;
+}
+.auto-kanban-board.is-horizontal .auto-kanban-column-title {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.auto-kanban-board.is-horizontal .auto-kanban-column-collapse { opacity: 1; }
+.auto-kanban-board.is-horizontal .auto-kanban-column-summary {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.auto-kanban-board.is-horizontal .auto-kanban-column > .relative {
+  min-width: 0;
+  padding: .68rem !important;
+  overflow: hidden;
+}
+.auto-kanban-board.is-horizontal .auto-kanban-dropzone {
+  display: flex;
+  min-height: 150px !important;
+  align-items: stretch;
+  gap: .6rem;
+  padding: .1rem .15rem .4rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--auto-column-accent) 32%, transparent) transparent;
+}
+.auto-kanban-board.is-horizontal .auto-kanban-dropzone > .auto-kanban-card {
+  width: 272px !important;
+  min-width: 272px;
+  max-width: 272px;
+  flex: 0 0 272px;
+}
+.auto-kanban-board.is-horizontal .auto-kanban-dropzone > .ops-empty-state {
+  width: 100%;
+  min-width: min(100%, 420px);
+  align-self: stretch;
+}
+.auto-kanban-board.is-horizontal .auto-kanban-rail {
+  width: 100%;
+  height: 46px;
+  flex: none;
+  border-radius: 15px;
+}
+.auto-kanban-board.is-horizontal .auto-kanban-rail > button {
+  flex-direction: row;
+  padding: .55rem .8rem;
+  writing-mode: horizontal-tb;
+}
+.auto-kanban-board.is-horizontal .auto-kanban-rail-label { writing-mode: horizontal-tb; }
+.auto-kanban-board.is-horizontal .auto-kanban-rail svg { margin-top: 0; margin-left: auto; }
+@media (max-width: 780px) {
+  .auto-kanban-board.is-horizontal .auto-kanban-column { grid-template-columns: 1fr; }
+  .auto-kanban-board.is-horizontal .auto-kanban-column > header {
+    border-right: 0 !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--auto-column-accent) 16%, var(--auto-border)) !important;
+  }
+  .auto-kanban-board.is-horizontal .auto-kanban-dropzone > .auto-kanban-card {
+    width: min(82vw, 280px) !important;
+    min-width: min(82vw, 280px);
+    max-width: min(82vw, 280px);
+    flex-basis: min(82vw, 280px);
+  }
+}
 .auto-comparison-review-summary.is-warning { border-color: rgba(245,158,11,.45); background: rgba(245,158,11,.08); }
 .auto-comparison-review-summary.is-warning p { color: var(--auto-amber); }
 .auto-comparison-review-column>header>.auto-comparison-review-insurer { display:flex; align-items:center; gap:.45rem; min-width:0; }

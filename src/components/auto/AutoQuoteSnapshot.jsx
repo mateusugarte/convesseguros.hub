@@ -51,18 +51,18 @@ export default function AutoQuoteSnapshot({ quote = {}, emission = {}, policy = 
   const client = quote.clientes_auto || emission.clientes_auto || policy.clientes_auto || {}
   const commission = first(emission.valor_comissao, policy.valor_comissao)
   const premium = first(emission.premio_liquido, policy.premio_liquido, current.premio_liquido)
-  const tipoResidencia = valorFormularioAuto(quote, 'tipo_residencia')
-  const passagemLeilao = valorFormularioAuto(quote, 'passagem_leilao')
+  const tipoResidencia = first(quote.tipo_residencia, valorFormularioAuto(quote, 'tipo_residencia'))
+  const passagemLeilao = first(quote.passagem_leilao, valorFormularioAuto(quote, 'passagem_leilao'))
 
   return (
     <div className="auto-quote-snapshot">
       <Section icon={UserRound} title="Segurado e contato" subtitle="Identidade associada a esta cotação">
         <SnapshotValue label="Nome do segurado" value={first(client.nome_completo, quote.nome_cliente, emission.nome_cliente, policy.nome_cliente)} highlight />
-        <SnapshotValue label="CPF / CNPJ" value={first(quote.cpf_cliente, emission.cpf_cliente, policy.cpf_cliente)} mono />
-        <SnapshotValue label="Celular" value={first(quote.celular_cliente, emission.celular_cliente, policy.celular_cliente)} />
-        <SnapshotValue label="E-mail" value={quote.email_cliente} />
-        <SnapshotValue label="Estado civil" value={quote.estado_civil_cliente} />
-        <SnapshotValue label="Profissão" value={quote.profissao_cliente} />
+        <SnapshotValue label="CPF / CNPJ" value={first(client.cpf, quote.cpf_cliente, emission.cpf_cliente, policy.cpf_cliente)} mono />
+        <SnapshotValue label="Celular" value={first(client.celular, client.telefone, quote.celular_cliente, emission.celular_cliente, policy.celular_cliente)} />
+        <SnapshotValue label="E-mail" value={first(client.email, quote.email_cliente)} />
+        <SnapshotValue label="Estado civil" value={first(client.estado_civil, quote.estado_civil_cliente)} />
+        <SnapshotValue label="Profissão" value={first(client.profissao, quote.profissao_cliente)} />
       </Section>
 
       <Section icon={Car} title="Veículo e utilização" subtitle="Risco específico deste momento">

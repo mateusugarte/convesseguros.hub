@@ -6,7 +6,7 @@ import { AlertTriangle, ArrowLeft, ArrowRight, CalendarClock, Check, CheckCircle
 import {
   criarRenovacoesEmLote,
   getAutoRenovacaoMesStatus,
-  getClientesAutoParaVinculo,
+  getClientesAutoComVeiculos,
   getRenovacoesAuto,
   marcarMesRenovacaoConcluido,
   puxarRenovacoesDoSistema,
@@ -19,7 +19,7 @@ import { EmptyState, PageHeader } from '../../components/ui'
 import OperationalSpreadsheet from '../../components/auto/OperationalSpreadsheet'
 import RenewalInsuredEditor from '../../components/auto/RenewalInsuredEditor'
 import { calcularDataLimiteRenovacao } from './autoShared'
-import { parseRenovacoesPaste, suggestRenewalClientByName } from '../../lib/autoOperational'
+import { parseRenovacoesPaste, renewalClientMatchesByName, suggestRenewalClientByName } from '../../lib/autoOperational'
 
 const STATUS_OPTIONS = [
   { value: 'pendente', label: 'Pendente' }, { value: 'em_andamento', label: 'Cotando' },
@@ -59,6 +59,7 @@ function newDraft(index, month, values = {}) {
 }
 function blankRows(month, count = 12) { return Array.from({ length: count }, (_, index) => newDraft(index, month)) }
 function findSuggestion(row, clients) { return row.cliente_id || row.link_decision === 'custom' ? null : suggestRenewalClientByName(row.nome_cliente, clients) }
+function exactClientMatches(row, clients) { return renewalClientMatchesByName(row.nome_cliente, clients) }
 function sheetNameForMonth(names, monthRef) {
   const [year, month] = monthRef.split('-').map(Number)
   const monthName = normalize(new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'long' }))
@@ -90,7 +91,7 @@ export default function AutoRenovacoesPuxar() {
   const [showLinkReview, setShowLinkReview] = useState(false)
   const uploadRef = useRef(null)
 
-  const { data: clients = [] } = useQuery({ queryKey: ['auto-clientes-vinculo-renovacoes'], queryFn: getClientesAutoParaVinculo, staleTime: 60_000 })
+  const { data: clients = [] } = useQuery({ queryKey: ['auto-clientes-vinculo-renovacoes'], queryFn: getClientesAutoComVeiculos, staleTime: 60_000 })
   const { data: existing = [], isLoading, isError, error } = useQuery({ queryKey: ['auto-renovacoes', 'mes_atual', month], queryFn: () => getRenovacoesAuto({ periodo: 'mes_atual', mes: month }) })
   const { data: monthStatus } = useQuery({ queryKey: ['auto-renovacao-mes-status-unico', month], queryFn: async () => (await getAutoRenovacaoMesStatus([month]))[month] || null })
 
@@ -108,7 +109,11 @@ export default function AutoRenovacoesPuxar() {
   const filledRows = useMemo(() => draftRows.filter(row => String(row.nome_cliente || '').trim()), [draftRows])
   const invalidRows = useMemo(() => filledRows.filter(row => renewalDraftIssue(row, month)), [filledRows, month])
   const validRows = useMemo(() => filledRows.filter(row => !renewalDraftIssue(row, month)), [filledRows, month])
-  const pendingLinks = useMemo(() => validRows.filter(row => findSuggestion(row, clients) && !row.cliente_id && row.link_decision !== 'custom'), [validRows, clients])
+  const pendingLinks = useMemo(() => validRows.filter(row => {
+    const exact = exactClientMatches(row, clients)
+    if (exact.length) return !row.cliente_id || !String(row.identificacao_veiculo || '').trim()
+    return Boolean(findSuggestion(row, clients) && !row.cliente_id && row.link_decision !== 'custom')
+  }), [validRows, clients])
   const readyRows = useMemo(() => validRows.filter(row => !pendingLinks.includes(row)), [validRows, pendingLinks])
   const saveMutation = useMutation({
     mutationFn: () => criarRenovacoesEmLote(month, validRows),
@@ -144,12 +149,23 @@ export default function AutoRenovacoesPuxar() {
     setDraftRows(rows => rows.map(row => grouped.has(row._id) ? { ...row, ...grouped.get(row._id) } : row))
   }
   const linkClient = (row, client) => updateRow(row._id, { cliente_id: client.id, cliente_nome: client.nome_completo, nome_cliente: client.nome_completo, link_decision: 'existing' })
-  const keepCustom = row => updateRow(row._id, { cliente_id: '', cliente_nome: '', link_decision: 'custom' })
+  const keepCustom = row => {
+    if (exactClientMatches(row, clients).length) {
+      setShowLinkReview(true)
+      toast({ type: 'warning', title: 'Cliente já cadastrado', message: 'Selecione o cadastro correspondente e informe o veículo desta renovação.' })
+      return
+    }
+    updateRow(row._id, { cliente_id: '', cliente_nome: '', link_decision: 'custom' })
+  }
   const linkAllSuggested = () => setDraftRows(rows => rows.map(row => {
     const suggestion = findSuggestion(row, clients)
     return suggestion ? { ...row, cliente_id: suggestion.id, cliente_nome: suggestion.nome_completo, nome_cliente: suggestion.nome_completo, link_decision: 'existing' } : row
   }))
-  const keepAllCustom = () => setDraftRows(rows => rows.map(row => findSuggestion(row, clients) ? { ...row, cliente_id: '', cliente_nome: '', link_decision: 'custom' } : row))
+  const keepAllCustom = () => setDraftRows(rows => rows.map(row => (
+    findSuggestion(row, clients) && !exactClientMatches(row, clients).length
+      ? { ...row, cliente_id: '', cliente_nome: '', link_decision: 'custom' }
+      : row
+  )))
 
   const handleSave = () => {
     if (invalidRows.length) {
@@ -186,7 +202,7 @@ export default function AutoRenovacoesPuxar() {
     { field: 'status', label: 'Status', type: 'select', editable: true, width: 132, options: STATUS_OPTIONS },
     { field: 'data_limite_envio', label: 'Limite automático', type: 'date', width: 142, consumePaste: true },
     { field: 'pct_comissao_anterior', label: 'Comissão passada %', type: 'number', step: '0.01', editable: true, width: 145, parse: value => value === '' ? null : Number(value) },
-    { key: 'link', label: 'Vínculo com cliente', width: 290, render: row => { const suggestion = findSuggestion(row, clients); if (row.cliente_id) return <div className="renewal-link-status is-linked"><UserCheck /><span><strong>Vinculado</strong><small>{row.cliente_nome || row.nome_cliente}</small></span><button onClick={() => setEditingRow(row)}>Trocar</button></div>; if (suggestion && row.link_decision !== 'custom') return <div className="renewal-link-suggestion"><span><strong>Cliente encontrado</strong><small>{suggestion.nome_completo} · {suggestion.cpf || 'sem CPF'}</small></span><button className="is-accept" onClick={() => linkClient(row, suggestion)}><Check />Vincular</button><button onClick={() => keepCustom(row)}>Não</button></div>; return <button className="renewal-link-search" onClick={() => setEditingRow(row)}><Search />{row.link_decision === 'custom' ? 'Nome personalizado · alterar' : 'Pesquisar cliente existente'}</button> } },
+    { key: 'link', label: 'Vínculo com cliente', width: 310, render: row => { const suggestion = findSuggestion(row, clients); const exact = exactClientMatches(row, clients); if (row.cliente_id) return <div className={`renewal-link-status is-linked ${!String(row.identificacao_veiculo || '').trim() && exact.length ? 'is-warning' : ''}`}><UserCheck /><span><strong>{!String(row.identificacao_veiculo || '').trim() && exact.length ? 'Informe o veículo' : 'Vinculado'}</strong><small>{row.cliente_nome || row.nome_cliente}</small></span><button onClick={() => setEditingRow(row)}>Trocar</button></div>; if (exact.length > 1) return <button className="renewal-link-search is-warning" onClick={() => { setShowLinkReview(true); setEditingRow(row) }}><AlertTriangle />{exact.length} cadastros com este nome · selecionar</button>; if (suggestion && row.link_decision !== 'custom') return <div className="renewal-link-suggestion"><span><strong>Cliente encontrado</strong><small>{suggestion.nome_completo} · {suggestion.cpf || 'sem CPF'}</small></span><button className="is-accept" onClick={() => linkClient(row, suggestion)}><Check />Vincular</button>{!exact.length && <button onClick={() => keepCustom(row)}>Não</button>}</div>; return <button className="renewal-link-search" onClick={() => setEditingRow(row)}><Search />{row.link_decision === 'custom' ? 'Nome personalizado · alterar' : 'Pesquisar cliente existente'}</button> } },
     { key: 'remove', label: '', width: 50, render: row => <button className="ops-sheet-icon-button is-danger" title="Remover linha" onClick={() => setDraftRows(rows => rows.filter(item => item._id !== row._id))}><Trash2 /></button> },
   ], [clients])
 
@@ -260,7 +276,7 @@ export default function AutoRenovacoesPuxar() {
 
     {pendingLinks.length > 0 && <section className={`renewal-link-review ${showLinkReview ? 'is-open' : ''}`}>
       <header><div><span><Link2 /></span><div><strong>Encontramos {pendingLinks.length} possível(is) cliente(s) existente(s)</strong><small>Confirme o vínculo ou mantenha o nome avulso. Nada é anexado automaticamente.</small></div></div><div><button onClick={keepAllCustom}>Manter todos avulsos</button><button className="is-primary" onClick={linkAllSuggested}><UserCheck />Vincular todos sugeridos</button><button className="is-toggle" onClick={() => setShowLinkReview(value => !value)}>{showLinkReview ? 'Recolher' : 'Revisar um a um'}</button></div></header>
-      {showLinkReview && <div className="renewal-link-review-grid">{pendingLinks.map(row => { const suggestion = findSuggestion(row, clients); return <article key={row._id}><span><UsersRound /></span><div><small>Nome colado</small><strong>{row.nome_cliente}</strong><p>Possível cadastro: <b>{suggestion?.nome_completo}</b>{suggestion?.cpf ? ` · ${suggestion.cpf}` : ''}</p></div><button onClick={() => keepCustom(row)}>Não vincular</button><button className="is-accept" onClick={() => linkClient(row, suggestion)}><Check />É o mesmo cliente</button></article> })}</div>}
+      {showLinkReview && <div className="renewal-link-review-grid">{pendingLinks.map(row => { const exact = exactClientMatches(row, clients); const candidates = exact.length ? exact : [findSuggestion(row, clients)].filter(Boolean); return <article key={row._id}><span><UsersRound /></span><div><small>Nome recebido</small><strong>{row.nome_cliente}</strong>{exact.length > 0 && <p><b>Cliente já cadastrado.</b> Selecione o cadastro e informe qual veículo está renovando.</p>}<label className="mt-2 block"><small>Veículo desta renovação</small><input className="mt-1 w-full rounded-lg border border-dark-border px-3 py-2" value={row.identificacao_veiculo || ''} onChange={event => updateRow(row._id, { identificacao_veiculo: event.target.value })} placeholder="Ex.: HR-V · placa ABC1D23" /></label><div className="mt-2 flex flex-wrap gap-2">{candidates.map(client => <button key={client.id} className={row.cliente_id === client.id ? 'is-accept' : ''} onClick={() => linkClient(row, client)}><UserCheck />{client.nome_completo}<small>{client.veiculos?.length ? ` · ${client.veiculos.map(v => v.modelo_veiculo || v.placa).filter(Boolean).slice(0, 2).join(', ')}` : ' · sem veículo anterior'}</small></button>)}</div></div>{!exact.length && <button onClick={() => keepCustom(row)}>Não vincular</button>}<button className="is-accept" disabled={!row.cliente_id || !String(row.identificacao_veiculo || '').trim()} onClick={() => updateRow(row._id, { link_decision: 'existing' })}><Check />Confirmar vínculo</button></article> })}</div>}
     </section>}
 
     <section className="ops-sheet-workspace renewal-builder-workspace">

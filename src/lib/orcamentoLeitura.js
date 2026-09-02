@@ -20,12 +20,16 @@ const DADOS_DO_DOCUMENTO = ['segurado', 'condutor_principal', 'veiculo', 'cotaca
 /** Executa o parser certo com as escolhas ja feitas pelo usuario. */
 async function parsear({ parser_id: parserId, itens, texto, dados_produtos: dadosProdutos }, escolhas = {}) {
   const dadosProduto = escolhas.produto ? dadosProdutos?.[escolhas.produto] : null
+  let cotacao
   if (parserId === 'allianz') {
     const { parseCotacaoAllianz } = await import('./orcamentoAllianzParser.js')
-    return parseCotacaoAllianz({ itens, texto, oferta: escolhas.oferta })
+    cotacao = parseCotacaoAllianz({ itens, texto, oferta: escolhas.oferta })
+  } else {
+    const { parseCotacaoPorSeguradora } = await import('./orcamentoSeguradoraParser.js')
+    cotacao = parseCotacaoPorSeguradora({ parser_id: parserId, itens, texto, ...escolhas, dadosProduto })
   }
-  const { parseCotacaoPorSeguradora } = await import('./orcamentoSeguradoraParser.js')
-  return parseCotacaoPorSeguradora({ parser_id: parserId, itens, texto, ...escolhas, dadosProduto })
+  const { aplicarRiscoVeiculoExtraido } = await import('./orcamentoRiscoVeiculo.js')
+  return aplicarRiscoVeiculoExtraido(cotacao, texto)
 }
 
 /**
@@ -197,6 +201,15 @@ export function camposDaCotacao(cotacao, { montarCategorias }) {
     veiculo_placa: cotacao.veiculo?.placa || '',
     veiculo_uso: cotacao.veiculo?.uso || '',
     veiculo_cep_pernoite: cotacao.veiculo?.cep_pernoite || '',
+    veiculo_tipo_residencia: cotacao.veiculo?.tipo_residencia || '',
+    veiculo_passagem_leilao: cotacao.veiculo?.passagem_leilao || '',
+    veiculo_financiado: cotacao.veiculo?.financiado || '',
+    veiculo_kit_gas: cotacao.veiculo?.kit_gas || '',
+    veiculo_blindagem: cotacao.veiculo?.blindagem || '',
+    veiculo_isento_imposto: cotacao.veiculo?.isento_imposto || '',
+    veiculo_garagem_residencia: cotacao.veiculo?.garagem_residencia || '',
+    veiculo_garagem_trabalho: cotacao.veiculo?.garagem_trabalho || '',
+    veiculo_garagem_estudo: cotacao.veiculo?.garagem_estudo || '',
 
     numero: cotacao.cotacao?.numero || '',
     validade: cotacao.cotacao?.validade || '',

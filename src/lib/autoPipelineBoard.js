@@ -100,7 +100,7 @@ export const PREFERENCIAS_PIPELINE_PADRAO = {
 }
 
 function normalizarPreferencias(bruto) {
-  const densidade = bruto?.densidade === 'compact' ? 'compact' : 'comfortable'
+  const densidade = ['compact', 'comfortable', 'horizontal'].includes(bruto?.densidade) ? bruto.densidade : 'comfortable'
   const recolhidas = Array.isArray(bruto?.recolhidas)
     ? [...new Set(bruto.recolhidas.filter(id => typeof id === 'string' && id))]
     : []

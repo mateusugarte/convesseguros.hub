@@ -20,6 +20,7 @@ import {
   resolveRenovacaoStage,
   scoreCotacaoSuggestion,
   suggestRenewalClientByName,
+  renewalClientMatchesByName,
 } from './autoOperational.js'
 
 test('separa as etapas da pipeline de renovacoes das demais operacoes', () => {
@@ -173,6 +174,15 @@ test('sugere cliente existente pelo nome apenas quando a correspondencia e unica
   assert.equal(suggestRenewalClientByName('Maria', clientes)?.id, '2')
   assert.equal(suggestRenewalClientByName('Jo', clientes), null)
   assert.equal(suggestRenewalClientByName('Ana', [{ id: '3', nome_completo: 'Ana Lima' }, { id: '4', nome_completo: 'Ana Souza' }]), null)
+})
+
+test('lista todos os cadastros com o mesmo nome para impedir renovacao avulsa duplicada', () => {
+  const matches = renewalClientMatchesByName('José da Silva', [
+    { id: '1', nome_completo: 'JOSE DA SILVA' },
+    { id: '2', nome_completo: 'José da Silva' },
+    { id: '3', nome_completo: 'José Silva Filho' },
+  ])
+  assert.deepEqual(matches.map(item => item.id), ['1', '2'])
 })
 
 // ─── Renovacao arrastavel na Pipeline ──────────────────────────────────────

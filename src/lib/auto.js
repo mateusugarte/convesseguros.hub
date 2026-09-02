@@ -110,7 +110,7 @@ const APOLICE_AUTO_COLUMNS = 'id, emissao_id, cliente_id, seguradora, numero_apo
 
 const EMISSAO_AUTO_COLUMNS = 'id, cotacao_id, cliente_id, tipo, coluna, data_transmissao, tipo_producao, responsavel, emissor, nome_cliente, cpf_cliente, celular_cliente, condutor_nome, condutor_cpf, modelo_veiculo, placa, seguradora, numero_apolice, vigencia_inicio, vigencia_fim, premio_liquido, pct_comissao, valor_comissao, forma_pagamento, parcelamento, tem_repasse, pct_repasse, nome_repasse, valor_repasse, resultado, seguradoras_cotadas, renovacao_premio_liquido_ano_anterior, renovacao_comissao_ano_anterior, renovacao_premio_liquido_ano_atual, renovacao_comissao_ano_atual, renovacao_diferenca_premio_liquido, renovacao_diferenca_comissao, created_at, updated_at'
 
-const COTACAO_AUTO_COLUMNS = 'id, cliente_id, tipo, origem_lead, nome_cliente, cpf_cliente, celular_cliente, email_cliente, estado_civil_cliente, profissao_cliente, condutor_nome, condutor_cpf, estado_civil_condutor, cep_pernoite, uso_veiculo, garagem_residencia, garagem_trabalho, garagem_estudo, jovens_18_26, modelo_veiculo, placa, veiculo_financiado, possui_kit_gas, possui_blindagem, isento_imposto, seguradora_preferencial, seguradora_mais_barata, vigencia_inicio, vigencia_fim, status, created_at, updated_at'
+const COTACAO_AUTO_COLUMNS = 'id, cliente_id, tipo, origem_lead, nome_cliente, cpf_cliente, celular_cliente, email_cliente, estado_civil_cliente, profissao_cliente, condutor_nome, condutor_cpf, estado_civil_condutor, cep_pernoite, uso_veiculo, tipo_residencia, passagem_leilao, garagem_residencia, garagem_trabalho, garagem_estudo, jovens_18_26, modelo_veiculo, placa, veiculo_financiado, possui_kit_gas, possui_blindagem, isento_imposto, seguradora_preferencial, seguradora_mais_barata, vigencia_inicio, vigencia_fim, status, created_at, updated_at'
 
 const RENOVACAO_AUTO_COLUMNS = 'id, apolice_id, cliente_id, seguradora, outra_seguradora, identificacao_veiculo, vigencia_fim, data_limite_envio, pct_comissao_anterior, status_cotacao, status_renovacao, created_at'
 
@@ -313,6 +313,21 @@ async function resolverClienteAutoId(payload = {}, { exigirIdentificacao = true 
     return existente.id
   }
 
+  // Um CPF novo com um nome já cadastrado não deve criar silenciosamente um
+  // segundo cliente. O operador precisa escolher o cadastro existente (e o
+  // veículo correto) ou confirmar depois, pela verificação, que são pessoas
+  // diferentes.
+  const { data: homonimos, error: homonimosError } = await supabase
+    .from('clientes_auto')
+    .select('id, nome_completo')
+    .ilike('nome_completo', nomeCompleto)
+    .limit(2)
+
+  if (homonimosError) throw homonimosError
+  if (homonimos?.length) {
+    throw new Error(`Já existe um cliente chamado ${homonimos[0].nome_completo}. Selecione o cadastro existente e informe o veículo antes de continuar.`)
+  }
+
   const { data, error } = await supabase
     .from('clientes_auto')
     .insert({
@@ -381,6 +396,18 @@ export async function buscarClientePorCpf(cpf) {
 }
 
 export async function criarClienteAuto(payload) {
+  const nome = String(payload?.nome_completo || '').trim()
+  if (nome) {
+    const { data: mesmoNome, error: nomeError } = await supabase
+      .from('clientes_auto')
+      .select('id, nome_completo')
+      .ilike('nome_completo', nome)
+      .limit(1)
+    if (nomeError) throw nomeError
+    if (mesmoNome?.length) {
+      throw new Error('Já existe um cliente com este nome. Selecione o cadastro existente e informe o veículo antes de continuar.')
+    }
+  }
   const { data, error } = await supabase
     .from('clientes_auto')
     .insert(payload)
@@ -447,7 +474,13 @@ export async function criarCotacaoAuto(payload) {
         p_payload: payload.payload_origem || {},
       })
       .single()
-    if (error) throw error
+    if (error) {
+      const detalhe = `${error.message || ''} ${error.details || ''}`
+      if (detalhe.includes('AUTO_CLIENTE_NOME_DUPLICADO')) {
+        throw new Error('Já existe um cliente com este nome. Selecione o cadastro existente e confirme o veículo antes de criar a cotação.')
+      }
+      throw error
+    }
     return data
   }
 
@@ -475,6 +508,8 @@ export async function criarCotacaoAuto(payload) {
       'estado_civil_condutor',
       'cep_pernoite',
       'uso_veiculo',
+      'tipo_residencia',
+      'passagem_leilao',
       'garagem_residencia',
       'garagem_trabalho',
       'garagem_estudo',
@@ -1386,6 +1421,19 @@ export async function criarRenovacoesEmLote(mesRef, rows = []) {
     throw new Error(`${datasInvalidas.length} renovacao(oes) possui(em) vencimento invalido ou fora do mes selecionado. Corrija as datas destacadas antes de salvar.`)
   }
 
+  const clientes = await getClientesAutoParaVinculo()
+  const nomeNormalizado = value => normalizeCompareText(String(value || '').replace(/\b(?:da|das|de|do|dos|e)\b/gi, ' '))
+  for (const row of rows) {
+    const iguais = clientes.filter(cliente => nomeNormalizado(cliente.nome_completo) === nomeNormalizado(row.nome_cliente))
+    if (!iguais.length) continue
+    if (!row.cliente_id || !iguais.some(cliente => cliente.id === row.cliente_id)) {
+      throw new Error(`O cliente ${row.nome_cliente} já existe. Selecione o cadastro correto antes de gravar a renovação.`)
+    }
+    if (!String(row.identificacao_veiculo || '').trim()) {
+      throw new Error(`Informe o veículo da renovação de ${row.nome_cliente}.`)
+    }
+  }
+
   const { inicio, fim } = getRangeFromMonthRef(mesRef)
   const { data: existentes, error: existentesError } = await supabase
     .from('renovacoes_auto')
@@ -1802,6 +1850,21 @@ export async function salvarAutoClientVerification({ clienteAId, clienteBId, dec
   }
   removeLocalClientVerification(cliente_a_id, cliente_b_id)
   return { ...data, persistence: 'database' }
+}
+
+export async function mesclarClientesAuto({ principalId, duplicadoId }) {
+  if (!principalId || !duplicadoId || principalId === duplicadoId) throw new Error('Selecione qual cadastro deve ser mantido.')
+  const { data, error } = await supabase.rpc('mesclar_clientes_auto', {
+    p_principal: principalId,
+    p_duplicado: duplicadoId,
+  })
+  if (error) {
+    if (error?.code === 'PGRST202' || String(error?.message || '').includes('mesclar_clientes_auto')) {
+      throw new Error('A função de unificação ainda não está instalada. Execute a migration 73 no Supabase.')
+    }
+    throw error
+  }
+  return data
 }
 
 // Cria uma renovacao pendente direto pelo formulario "Criar manualmente" do

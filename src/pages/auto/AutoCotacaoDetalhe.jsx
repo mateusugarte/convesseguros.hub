@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Activity, BadgeDollarSign, CalendarDays, Car, Check, ClipboardCheck, Copy, FileSearch, Gauge, Pencil, ShieldCheck, UserRound, X, Mail, Heart, Phone, Trash2 } from 'lucide-react'
+import { Activity, AlertTriangle, BadgeDollarSign, CalendarDays, Car, Check, ClipboardCheck, Copy, FileSearch, Gauge, Pencil, ShieldCheck, UserRound, X, Mail, Heart, Phone, Trash2 } from 'lucide-react'
 import { DataCard, EmptyState } from '../../components/ui'
 import SeguradoraBadge from '../../components/SeguradoraBadge'
 import {
@@ -15,11 +15,12 @@ import {
   AutoTypeBadge,
   AutoWorkflowPanel,
 } from '../../components/auto'
-import { calcularValorComissaoAuto, deletarCotacaoAuto, getCotacaoAutoPorId, atualizarCotacaoAuto } from '../../lib/auto'
+import { calcularValorComissaoAuto, deletarCotacaoAuto, getCotacaoAutoPorId, atualizarCotacaoAuto, sincronizarDadosExtraidosCotacaoAuto } from '../../lib/auto'
 import { COTACAO_STATUS, formatDateTimeBR, formatMoney, toneClasses } from './autoShared'
 import { formatDecimalBRInput, parseDecimalBR } from '../../lib/numberInput'
 import { mesclarOpcaoFinanceira, opcaoFinanceiraSincronizada } from '../../lib/autoQuoteFinancial'
 import { valorFormularioAuto } from '../../lib/autoFormPayload'
+import { planExtractedQuoteClientSync } from '../../lib/autoQuoteClientSync.js'
 import { useVoltar } from '../../hooks/useVoltar.js'
 
 function QuoteStatusBadge({ status }) {
@@ -275,6 +276,7 @@ export default function AutoCotacaoDetalhe() {
   const [tab, setTab] = useState(() => new URLSearchParams(location.search).get('tab') || 'resumo')
   const [copied, setCopied] = useState('')
   const [opcoesFinanceirasComparativo, setOpcoesFinanceirasComparativo] = useState(null)
+  const [extractedConflict, setExtractedConflict] = useState(null)
 
   const { data: cotacao, isLoading } = useQuery({
     queryKey: ['auto-cotacao', id],
@@ -309,6 +311,48 @@ export default function AutoCotacaoDetalhe() {
       setActionError(error?.message || 'Erro ao sincronizar as seguradoras do comparativo.')
     },
   })
+
+  const { mutate: sincronizarDadosExtraidos, isPending: sincronizandoDadosExtraidos } = useMutation({
+    mutationFn: patch => sincronizarDadosExtraidosCotacaoAuto(id, patch),
+    onSuccess: async () => {
+      setActionError(null)
+      await qc.invalidateQueries({ queryKey: ['auto-cotacao', id] })
+      await qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
+      await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
+      await qc.invalidateQueries({ queryKey: ['auto-clientes-carteira'] })
+    },
+    onError: error => setActionError(error?.message || 'Erro ao sincronizar os dados extraídos do PDF.'),
+  })
+
+  const handleExtractedClientData = useCallback(({ role, seguradora, fields }) => {
+    if (!cotacao || !fields) return
+    const plan = planExtractedQuoteClientSync(cotacao, fields)
+    if (Object.keys(plan.automaticPatch).length) sincronizarDadosExtraidos(plan.automaticPatch)
+    if (!plan.conflicts.length) return
+
+    setExtractedConflict(current => {
+      // A seguradora atual e a referencia principal. Se os dois PDFs forem
+      // lidos quase juntos, ela vence uma divergencia concorrente ainda aberta.
+      if (current?.role === 'atual' && role !== 'atual') return current
+      return {
+        role,
+        seguradora,
+        conflicts: plan.conflicts,
+        choices: Object.fromEntries(plan.conflicts.map(item => [item.field, 'current'])),
+      }
+    })
+  }, [cotacao, sincronizarDadosExtraidos])
+
+  const confirmarDadosExtraidos = useCallback(() => {
+    if (!extractedConflict) return
+    const patch = Object.fromEntries(
+      extractedConflict.conflicts
+        .filter(item => extractedConflict.choices[item.field] === 'extracted')
+        .map(item => [item.field, item.extracted]),
+    )
+    if (Object.keys(patch).length) sincronizarDadosExtraidos(patch)
+    setExtractedConflict(null)
+  }, [extractedConflict, sincronizarDadosExtraidos])
 
   const { mutateAsync: excluir, isPending: deleting } = useMutation({
     mutationFn: () => deletarCotacaoAuto(id),
@@ -503,6 +547,7 @@ export default function AutoCotacaoDetalhe() {
               key={cotacao.id}
               quote={cotacao}
               onFinancialOptionsChange={setOpcoesFinanceirasComparativo}
+              onExtractedClientData={handleExtractedClientData}
             />
             <div className="auto-comparison-manual-divider"><span>Fechamento financeiro</span></div>
             <div className="grid gap-4 lg:grid-cols-2">
@@ -669,6 +714,58 @@ export default function AutoCotacaoDetalhe() {
           </DataCard>
         </div>
       </div>
+
+      {extractedConflict && (
+        <div className="fixed inset-0 z-[85] flex items-center justify-center px-4 py-6">
+          <div className="modal-backdrop" onClick={() => setExtractedConflict(null)} />
+          <section className="relative z-10 max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-[28px] border border-dark-border/70 bg-white shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="auto-extracted-conflict-title">
+            <header className="flex items-start gap-4 border-b border-dark-border/60 bg-gradient-to-br from-status-warning/10 via-white to-brand-accent/5 p-5 md:p-6">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-status-warning/15 text-status-warning"><AlertTriangle className="h-5 w-5" /></span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-warning">Dados diferentes encontrados</p>
+                <h2 id="auto-extracted-conflict-title" className="mt-1 text-xl font-semibold text-dark-text">O PDF trouxe informações diferentes do cadastro</h2>
+                <p className="mt-1 text-sm text-dark-muted">Escolha campo a campo o que deve permanecer. Nada será substituído sem sua confirmação{extractedConflict.seguradora ? ` · leitura ${extractedConflict.seguradora}` : ''}.</p>
+              </div>
+              <button type="button" onClick={() => setExtractedConflict(null)} className="rounded-full p-2 text-dark-muted transition-colors hover:bg-dark-border/40" aria-label="Fechar"><X className="h-5 w-5" /></button>
+            </header>
+
+            <div className="max-h-[58vh] space-y-3 overflow-y-auto p-5 md:p-6">
+              {extractedConflict.conflicts.map(item => (
+                <article key={item.field} className="rounded-2xl border border-dark-border/70 bg-dark-surface2/25 p-3">
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">{item.label}</p>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {[
+                      { value: 'current', eyebrow: 'Manter cadastro atual', content: item.current },
+                      { value: 'extracted', eyebrow: 'Usar informação do PDF', content: item.extracted },
+                    ].map(option => {
+                      const selected = extractedConflict.choices[item.field] === option.value
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setExtractedConflict(current => ({ ...current, choices: { ...current.choices, [item.field]: option.value } }))}
+                          className={`flex min-h-20 items-start gap-3 rounded-xl border p-3 text-left transition-colors ${selected ? 'border-brand-accent bg-brand-accent/8' : 'border-dark-border bg-white hover:border-brand-accent/35'}`}
+                        >
+                          <span className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border ${selected ? 'border-brand-accent bg-brand-accent text-white' : 'border-dark-border text-transparent'}`}><Check className="h-3 w-3" /></span>
+                          <span className="min-w-0"><small className="block text-[9px] font-semibold uppercase tracking-[0.12em] text-dark-muted">{option.eyebrow}</small><strong className="mt-1 block break-words text-sm text-dark-text">{option.content}</strong></span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-dark-border/60 bg-dark-surface2/35 px-5 py-4 md:px-6">
+              <p className="text-xs text-dark-muted">Campos vazios já foram preenchidos automaticamente.</p>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setExtractedConflict(null)} className="btn-secondary">Cancelar</button>
+                <button type="button" onClick={confirmarDadosExtraidos} disabled={sincronizandoDadosExtraidos} className="btn-primary disabled:opacity-50">{sincronizandoDadosExtraidos ? 'Salvando…' : 'Confirmar escolhas'}</button>
+              </div>
+            </footer>
+          </section>
+        </div>
+      )}
 
       {confirmDelete && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center px-4">

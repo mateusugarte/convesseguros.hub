@@ -345,3 +345,11 @@ export function suggestRenewalClientByName(nameValue, clients = []) {
   const close = normalized.filter(entry => entry.name.startsWith(name) || name.startsWith(entry.name))
   return close.length === 1 ? close[0].client : null
 }
+
+export function renewalClientMatchesByName(nameValue, clients = []) {
+  const name = normalizeText(nameValue).replace(/[^a-z0-9]+/g, ' ').trim()
+  if (name.length < 3) return []
+  return clients.filter(client => (
+    normalizeText(client?.nome_completo).replace(/[^a-z0-9]+/g, ' ').trim() === name
+  ))
+}

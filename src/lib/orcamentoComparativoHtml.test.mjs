@@ -78,6 +78,19 @@ test('modelo aprovado mostra preços antes das coberturas', () => {
   assert.ok(doc.indexOf('class="valores-grid"') < doc.indexOf('class="tabela-comparativo"'))
 })
 
+test('modelo inclui uma terceira opção de seguro novo no mesmo comparativo', () => {
+  const primeira = cotacao('Tokio Marine')
+  const segunda = cotacao('Porto Seguro')
+  const terceira = cotacao('HDI Seguros')
+  for (const item of [primeira, segunda, terceira]) item.cotacao.tipo_operacao = 'novo'
+  const doc = montarHtmlOrcamento(montarComparativo({ atual: primeira, outra: segunda, adicionais: [terceira] }))
+
+  assert.ok(doc.includes('3 opções de proteção.'))
+  assert.ok(doc.includes('data-options="3"'))
+  assert.ok(doc.includes('Opção 3'))
+  assert.ok(doc.includes('HDI Seguros'))
+})
+
 test('preview e impressao compartilham exatamente o mesmo modelo oficial', () => {
   const doc = html()
   assert.ok(doc.includes('class="hero-orcamento"'))
@@ -157,8 +170,8 @@ test('danos a terceiros e franquia destacam valores com a cor de cada seguradora
   })
   assert.ok(doc.includes('<span class="valor-destaque">R$ 150.000,00</span>'))
   assert.ok(doc.replace(/\u00a0/g, ' ').includes('<span class="valor-destaque">R$ 6.704,93</span>'))
-  assert.ok(doc.includes('class="tabela-celula coluna-atual" style="--accent:#956e26"'))
-  assert.ok(doc.includes('class="tabela-celula coluna-outra" style="--accent:#1b4782"'))
+  assert.ok(doc.includes('class="tabela-celula" style="--accent:#956e26"'))
+  assert.ok(doc.includes('class="tabela-celula" style="--accent:#1b4782"'))
   assert.ok(!doc.includes('<mark>'))
   assert.ok(!doc.includes('background:#fff1b8'))
 })
@@ -179,7 +192,7 @@ test('divergencia entre os dois PDFs vira aviso impresso no documento', () => {
   const comp = montarComparativo({ atual: cotacao('Tokio Marine'), outra })
   const doc = montarHtmlOrcamento(comp)
   assert.ok(doc.includes('<div class="aviso-divergencia">'))
-  assert.ok(doc.includes('as duas cotações divergem em'))
+  assert.ok(doc.includes('as cotações divergem em'))
   assert.ok(doc.includes('placa'))
 })
 

@@ -31,6 +31,12 @@ function textoLimpo(value) {
   return String(value ?? '').trim()
 }
 
+function papeisDoWorkspace({ roles, sides } = {}) {
+  const informados = Array.isArray(roles) ? roles : Object.keys(sides || {})
+  const validos = informados.filter(role => typeof role === 'string' && /^[a-z0-9_]+$/i.test(role))
+  return [...new Set([...LADOS_ORCAMENTO, ...validos])]
+}
+
 /**
  * Guarda so o que a revisao e a geracao do comparativo consomem depois.
  * `ofertas` fica junto porque o seletor de produto/oferta continua visivel
@@ -54,13 +60,15 @@ function serializarLeitura(leitura) {
  * voltar a tela e salvar de novo queimaria um segundo numero CV-AAAA-NNNN para
  * o mesmo orcamento.
  */
-export function serializarRascunho({ step, sides, parsers, leituras, orcamento } = {}) {
+export function serializarRascunho({ step, roles, sides, parsers, leituras, orcamento } = {}) {
+  const papeis = papeisDoWorkspace({ roles, sides })
   return {
     versao: RASCUNHO_VERSAO,
     salvo_em: new Date().toISOString(),
     step: step === 'review' ? 'review' : 'upload',
     orcamento: orcamento?.id ? { id: orcamento.id, referencia: orcamento.referencia || '' } : null,
-    lados: Object.fromEntries(LADOS_ORCAMENTO.map(role => [role, {
+    ordem: papeis,
+    lados: Object.fromEntries(papeis.map(role => [role, {
       seguradora: textoLimpo(sides?.[role]?.seguradora),
       arquivo_nome: textoLimpo(sides?.[role]?.arquivo_nome),
       parser_id: textoLimpo(parsers?.[role]),
@@ -79,7 +87,7 @@ export function serializarRascunho({ step, sides, parsers, leituras, orcamento }
  */
 export function rascunhoTemTrabalho(rascunho) {
   if (!rascunho?.lados) return false
-  return LADOS_ORCAMENTO.some(role => {
+  return papeisDoWorkspace({ roles: rascunho.ordem, sides: rascunho.lados }).some(role => {
     const lado = rascunho.lados[role]
     return Boolean(lado?.arquivo_nome || lado?.leitura?.cotacao || lado?.parser_id)
   })
@@ -88,9 +96,11 @@ export function rascunhoTemTrabalho(rascunho) {
 /** Remove o volume: usado quando o localStorage estoura a cota. */
 export function rascunhoSemLeituras(rascunho) {
   if (!rascunho?.lados) return rascunho
+  const papeis = papeisDoWorkspace({ roles: rascunho.ordem, sides: rascunho.lados })
   return {
     ...rascunho,
-    lados: Object.fromEntries(LADOS_ORCAMENTO.map(role => [role, {
+    ordem: papeis,
+    lados: Object.fromEntries(papeis.map(role => [role, {
       ...(rascunho.lados[role] || {}),
       leitura: null,
     }])),
@@ -112,8 +122,9 @@ export function restaurarRascunho(bruto, { baseSides } = {}) {
   const sides = {}
   const parsers = {}
   const leituras = {}
+  const roles = papeisDoWorkspace({ roles: bruto.ordem, sides: bruto.lados })
 
-  for (const role of LADOS_ORCAMENTO) {
+  for (const role of roles) {
     const lado = bruto.lados[role] || {}
     const base = baseSides?.[role] || { seguradora: '', arquivo_nome: '', campos: {} }
     const camposGravados = Object.fromEntries(
@@ -133,6 +144,7 @@ export function restaurarRascunho(bruto, { baseSides } = {}) {
     step: bruto.step === 'review' ? 'review' : 'upload',
     salvo_em: bruto.salvo_em || null,
     orcamento: bruto.orcamento?.id ? bruto.orcamento : null,
+    roles,
     sides,
     parsers,
     leituras,

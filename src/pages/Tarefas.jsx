@@ -9,6 +9,7 @@ import {
   FileCheck2, Link2, ListChecks, Loader2, NotebookPen, Pencil, Plus,
   RotateCcw, Search, Trash2, UserRound, UsersRound, X, Sparkles,
   Target, Flame, CalendarCheck2, ArrowUpRight,
+  CalendarClock, UserCheck, Paperclip, Lightbulb,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -210,55 +211,98 @@ function TaskEditor({ open, task, links, profiles, isAdmin, userId, onClose, onS
     <Modal
       isOpen={open}
       onClose={onClose}
-      title={form.id ? 'Editar tarefa' : isAdmin ? 'Nova tarefa ou atribuição' : 'Nova tarefa'}
-      subtitle="Organize o trabalho com contexto, prioridade e um prazo claro."
+      title={form.id ? 'Editar tarefa' : form.owner_id !== userId ? 'Atribuir nova tarefa' : 'Criar nova tarefa'}
+      subtitle="Transforme uma pendência em um próximo passo claro e acionável."
       maxWidth="xl"
+      footer={(
+        <div className="task-editor-actions">
+          <div className="task-editor-footer-copy"><CheckCircle2 /><span><strong>Pronto para organizar</strong><small>Você poderá editar todos os detalhes depois.</small></span></div>
+          <div><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button type="submit" form="task-editor-form" loading={saving} disabled={!form.title.trim()} iconLeft={<Check />} iconRight={<ArrowUpRight />}>{form.id ? 'Salvar alterações' : form.owner_id !== userId ? 'Atribuir tarefa' : 'Criar tarefa'}</Button></div>
+        </div>
+      )}
     >
-      <form className="task-editor" onSubmit={submit}>
+      <form id="task-editor-form" className="task-editor" onSubmit={submit}>
         <div className="task-editor-grid">
           <div className="task-editor-fields">
-            <Input label="Tarefa" value={form.title} onChange={event => patch('title', event.target.value)} placeholder="Ex.: Retornar cotação para o cliente" maxLength={180} autoFocus />
-            <Textarea label="Descrição" value={form.description || ''} onChange={event => patch('description', event.target.value)} placeholder="O que precisa ser feito?" rows={3} />
-            <Textarea label="Notas e observações" value={form.notes || ''} onChange={event => patch('notes', event.target.value)} placeholder="Detalhes, contexto, próximos passos..." rows={4} />
+            <section className="task-editor-section task-editor-brief">
+              <div className="task-editor-section-heading">
+                <span><ListChecks /></span>
+                <div><strong>O que precisa ser feito?</strong><small>Escreva de forma curta e objetiva</small></div>
+                <b>01</b>
+              </div>
+              <div className="task-editor-section-body">
+                <Input label="Título da tarefa" value={form.title} onChange={event => patch('title', event.target.value)} placeholder="Ex.: Retornar cotação para o cliente" maxLength={180} autoFocus />
+                <div className="task-editor-text-grid">
+                  <Textarea label="Descrição" value={form.description || ''} onChange={event => patch('description', event.target.value)} placeholder="Descreva o resultado esperado..." rows={4} />
+                  <Textarea label="Notas e observações" value={form.notes || ''} onChange={event => patch('notes', event.target.value)} placeholder="Contexto, cuidados e próximos passos..." rows={4} />
+                </div>
+              </div>
+            </section>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Input label="Dia" type="date" value={form.task_date} onChange={event => patch('task_date', event.target.value)} />
-              <Input label="Horário limite" type="time" value={form.due_time || ''} onChange={event => patch('due_time', event.target.value)} description="Opcional" />
-              <Select label="Prioridade" value={form.priority} onChange={value => patch('priority', value)} options={Object.entries(TASK_PRIORITIES).map(([value, item]) => ({ value, label: item.label }))} />
-            </div>
+            <section className="task-editor-section task-editor-schedule">
+              <div className="task-editor-section-heading">
+                <span><CalendarClock /></span>
+                <div><strong>Agenda e prioridade</strong><small>Defina quando e com qual urgência</small></div>
+                <b>02</b>
+              </div>
+              <div className="task-editor-section-body task-editor-schedule-grid">
+                <Input label="Dia planejado" type="date" value={form.task_date} onChange={event => patch('task_date', event.target.value)} />
+                <Input label="Horário limite" type="time" value={form.due_time || ''} onChange={event => patch('due_time', event.target.value)} description="Opcional" />
+                <Select label="Nível de prioridade" value={form.priority} onChange={value => patch('priority', value)} options={Object.entries(TASK_PRIORITIES).map(([value, item]) => ({ value, label: item.label }))} />
+              </div>
+            </section>
 
             {isAdmin && !form.id && (
-              <Select
-                label="Responsável"
-                value={form.owner_id}
-                onChange={value => patch('owner_id', value)}
-                options={profiles.map(item => ({ value: item.id, label: item.id === userId ? `${item.nome} (eu)` : item.nome }))}
-                description="Administradores podem colocar a tarefa diretamente na agenda de outro usuário."
-              />
+              <section className="task-editor-section task-editor-owner">
+                <div className="task-editor-section-heading">
+                  <span><UserCheck /></span>
+                  <div><strong>Responsável</strong><small>Escolha em qual agenda a tarefa será criada</small></div>
+                  <b>03</b>
+                </div>
+                <div className="task-editor-section-body">
+                  <Select
+                    label="Atribuir para"
+                    value={form.owner_id}
+                    onChange={value => patch('owner_id', value)}
+                    options={profiles.map(item => ({ value: item.id, label: item.id === userId ? `${item.nome} (eu)` : item.nome }))}
+                    description="O usuário receberá esta tarefa diretamente na agenda pessoal."
+                  />
+                </div>
+              </section>
             )}
           </div>
 
           <aside className="task-link-picker">
-            <div className="task-link-picker-title"><Link2 /><div><strong>Anexar contexto</strong><small>Clientes ou apólices</small></div></div>
+            <div className="task-link-picker-title"><span><Paperclip /></span><div><strong>Anexar contexto</strong><small>Conecte clientes ou apólices</small></div><b>{selectedLinks.length}</b></div>
             <div className="task-link-search">
               <Search />
               <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Nome, CPF ou nº da apólice" />
               {searching && <Loader2 className="animate-spin" />}
             </div>
             {results.length > 0 && (
-              <div className="task-link-results">
-                {results.map(result => (
-                  <button key={`${result.entity_source}-${result.entity_id}`} type="button" onClick={() => addLink(result)}>
-                    {result.entity_type === 'policy' ? <FileCheck2 /> : <UserRound />}
-                    <span><strong>{result.entity_label}</strong>{result.entity_product && <em>{result.entity_product}</em>}<small>{result.entity_detail?.split(' · ').filter(part => part !== result.entity_product).join(' · ')}</small></span>
-                    <Plus />
-                  </button>
-                ))}
+              <div className="task-link-results-wrap">
+                <div className="task-link-results-label"><span>Resultados encontrados</span><b>{results.length}</b></div>
+                <div className="task-link-results">
+                  {results.map(result => (
+                    <button key={`${result.entity_source}-${result.entity_id}`} type="button" onClick={() => addLink(result)}>
+                      {result.entity_type === 'policy' ? <FileCheck2 /> : <UserRound />}
+                      <span><strong>{result.entity_label}</strong>{result.entity_product && <em>{result.entity_product}</em>}<small>{result.entity_detail?.split(' · ').filter(part => part !== result.entity_product).join(' · ')}</small></span>
+                      <Plus />
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             <div className="task-selected-links">
-              {selectedLinks.length === 0 ? (
-                <p>Pesquise para anexar um cliente ou uma apólice a esta tarefa.</p>
+              {selectedLinks.length === 0 && search.trim().length < 2 ? (
+                <div className="task-link-empty">
+                  <div className="task-link-empty-visual"><span><UserRound /></span><span><Link2 /></span><span><FileCheck2 /></span></div>
+                  <strong>Dê contexto à tarefa</strong>
+                  <p>Vincule o trabalho ao cliente ou à apólice certa para chegar aos dados em um clique.</p>
+                  <div><Lightbulb /><span>Digite pelo menos 2 caracteres para pesquisar.</span></div>
+                </div>
+              ) : selectedLinks.length === 0 && !searching && results.length === 0 ? (
+                <div className="task-link-no-results"><Search /><strong>Nenhum resultado encontrado</strong><p>Tente buscar por outro nome, CPF ou número.</p></div>
               ) : selectedLinks.map(link => (
                 <div key={`${link.entity_source}-${link.entity_id}`}>
                   {link.entity_type === 'policy' ? <FileCheck2 /> : <UserRound />}
@@ -270,10 +314,6 @@ function TaskEditor({ open, task, links, profiles, isAdmin, userId, onClose, onS
           </aside>
         </div>
 
-        <div className="task-editor-actions">
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" loading={saving} disabled={!form.title.trim()} iconLeft={<Check />}>{form.id ? 'Salvar alterações' : form.owner_id !== userId ? 'Atribuir tarefa' : 'Criar tarefa'}</Button>
-        </div>
       </form>
     </Modal>
   )

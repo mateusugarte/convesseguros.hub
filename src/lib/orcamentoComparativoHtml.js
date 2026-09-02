@@ -209,7 +209,9 @@ body{
 .tabela-comparativo{display:grid;grid-template-columns:50mm 1fr 1fr;overflow:hidden;border-radius:2.8mm;background:#e5edf7;box-shadow:0 16px 42px rgba(16,31,51,.09)}
 .tabela-head{min-height:18mm;padding:3mm 4mm;background:#dfe9f5;color:#7f91a8;font-family:var(--mono);font-size:6.6pt;font-weight:800;letter-spacing:1.4pt;text-transform:uppercase}.tabela-head.seguradora{display:flex;align-items:center;gap:4mm;background:linear-gradient(120deg,var(--cor),color-mix(in srgb,var(--cor) 78%,#101f33));color:var(--cor-texto)}.tabela-head.seguradora strong{font-size:7.2pt;letter-spacing:1.25pt}.tabela-head .selo-logo{min-width:31mm;min-height:12mm;padding:1.6mm 2.6mm;border-radius:1.7mm;box-shadow:0 3px 9px rgba(0,0,0,.18)}.tabela-head .selo-logo img{max-height:8mm;max-width:29mm}.tabela-head .fallback{font-size:8.4pt}
 .tabela-cobertura,.tabela-celula{min-height:18mm;padding:3.2mm 4mm;border-top:1px solid #d2deeb}.tabela-cobertura{display:flex;align-items:center;gap:3mm;background:#e7f0fa;font-weight:800}.tabela-cobertura .bolha{width:7.5mm;height:7.5mm;background:#fff;color:var(--tinta);box-shadow:0 3px 8px rgba(16,31,51,.1)}.tabela-cobertura .bolha .ic{width:3.8mm;height:3.8mm}.tabela-cobertura span{font-size:8.2pt;line-height:1.25}.tabela-celula{background:#eaf1f8;color:#46586f;font-size:8.5pt;line-height:1.42}.tabela-celula strong{color:#102033;font-weight:850}.tabela-celula.is-empty{color:#8090a3;font-style:italic}.tabela-celula.is-negative{color:#8d3c32;background:#f6e9e6}
+.tabela-comparativo[data-options="3"] .tabela-head,.tabela-comparativo[data-options="3"] .tabela-cobertura,.tabela-comparativo[data-options="3"] .tabela-celula{padding-left:2.2mm;padding-right:2.2mm}.tabela-comparativo[data-options="3"] .tabela-celula{font-size:7.2pt;line-height:1.34}.tabela-comparativo[data-options="4"] .tabela-head,.tabela-comparativo[data-options="4"] .tabela-cobertura,.tabela-comparativo[data-options="4"] .tabela-celula{padding-left:1.5mm;padding-right:1.5mm}.tabela-comparativo[data-options="4"] .tabela-celula{font-size:6.2pt;line-height:1.26}.tabela-comparativo[data-options="4"] .tabela-cobertura span{font-size:7pt}
 .valores-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6mm}.valor-card-modelo{position:relative;overflow:hidden;border-radius:3mm;background:#fff;box-shadow:0 14px 40px rgba(16,31,51,.11)}.valor-card-modelo::before{content:'';display:block;height:1.3mm;background:var(--cor)}.valor-card-modelo-inner{padding:6mm 7mm}.valor-card-modelo .marca-valor{display:flex;align-items:center;gap:4mm;margin-bottom:7mm}.valor-card-modelo .marca-valor .selo-logo{min-width:29mm;min-height:10mm;padding:1.2mm 2mm;box-shadow:none}.valor-card-modelo .marca-valor .selo-logo img{max-height:7mm;max-width:27mm}.valor-card-modelo .marca-valor span{font-family:var(--mono);font-size:7.8pt;font-weight:800;letter-spacing:1.8pt;color:#8ca0b7;text-transform:uppercase}.valor-card-modelo .valor-total-label{font-family:var(--mono);font-size:7pt;font-weight:800;letter-spacing:1.2pt;color:#8ca0b7;text-transform:uppercase}.valor-card-modelo .valor-total{margin:2.5mm 0 4mm;font-family:var(--mono);font-size:23pt;font-weight:800;letter-spacing:1.5pt;color:var(--tinta)}.valor-card-modelo .pagamentos{margin:0;padding:4mm 0 0;border-top:1px solid #d6e0eb;gap:2.1mm}.valor-card-modelo .pagamento{font-size:8pt;color:#445870}.valor-card-modelo .pagamento .ic{color:#7e91a8}.valor-card-modelo .rodape-card{padding:3.5mm 0 0;color:#718399;font-size:7.1pt}
+.valores-grid[data-options="3"],.valores-grid[data-options="4"]{gap:3mm}.valores-grid[data-options="3"] .valor-card-modelo-inner,.valores-grid[data-options="4"] .valor-card-modelo-inner{padding:4mm}.valores-grid[data-options="3"] .valor-total{font-size:17pt}.valores-grid[data-options="4"] .valor-total{font-size:14pt}.valores-grid[data-options="3"] .pagamento,.valores-grid[data-options="4"] .pagamento{font-size:6.5pt}
 .diferenca-total{display:flex;align-items:center;justify-content:space-between;gap:10mm;margin:7mm 12mm 0;padding:4.2mm 7mm;border-radius:2.8mm;background:#0d2036;color:#fff}.diferenca-total span{font-family:var(--mono);font-size:7.5pt;letter-spacing:2pt;text-transform:uppercase;color:#aab8c9}.diferenca-total strong{font-family:var(--mono);font-size:17pt;letter-spacing:1.5pt}
 .rodape::before{content:'';display:block;width:86mm;height:1mm;margin:0 auto 3mm;background:linear-gradient(90deg,#9c7328 0 50%,#1c4a87 50% 100%)}
 @media print{
@@ -584,7 +586,7 @@ body{font-family:var(--sans);font-size:7.5pt;line-height:1.38;color:#142437}
 
 // ─── Blocos ────────────────────────────────────────────────────────────
 
-const ROTULO_PAPEL = { atual: 'Seguradora atual', outra: 'Outra seguradora' }
+const ROTULO_PAPEL = { atual: 'Seguradora atual', outra: 'Outra seguradora', opcao_1: 'Opção 1', opcao_2: 'Opção 2', opcao_3: 'Opção 3', opcao_4: 'Opção 4' }
 
 /**
  * Selo branco com a logo da seguradora.
@@ -764,7 +766,6 @@ function destacarValoresImportantes(texto, categoriaKey) {
 }
 
 function blocoTabelaCoberturas(cards) {
-  const [atual, outra] = cards
   const cabecalho = card => {
     const s = card.seguradora
     const estilo = `--cor:${s.cor};--cor-texto:${s.cor_texto}`
@@ -774,23 +775,22 @@ function blocoTabelaCoberturas(cards) {
   }
 
   const linhas = CATEGORIAS_COBERTURA.map(categoria => {
-    const celAtual = textoCategoriaTabela(atual, categoria)
-    const celOutra = textoCategoriaTabela(outra, categoria)
     return `
       <div class="tabela-cobertura">
         <div class="bolha">${icone(categoria.icone)}</div>
         <span>${escapeHtml(categoria.label)}</span>
       </div>
-      <div class="tabela-celula coluna-atual${celAtual.classe}" style="--accent:${escapeHtml(atual.seguradora.cor)}">${destacarValoresImportantes(celAtual.texto, categoria.key)}</div>
-      <div class="tabela-celula coluna-outra${celOutra.classe}" style="--accent:${escapeHtml(outra.seguradora.cor)}">${destacarValoresImportantes(celOutra.texto, categoria.key)}</div>`
+      ${cards.map(card => {
+        const celula = textoCategoriaTabela(card, categoria)
+        return `<div class="tabela-celula${celula.classe}" style="--accent:${escapeHtml(card.seguradora.cor)}">${destacarValoresImportantes(celula.texto, categoria.key)}</div>`
+      }).join('')}`
   }).join('')
 
   return `<section class="modelo-secao">
     <h2 class="modelo-secao-title"><i>1</i><span>Coberturas comparadas</span></h2>
-    <div class="tabela-comparativo">
+    <div class="tabela-comparativo" data-options="${cards.length}" style="grid-template-columns:${cards.length > 2 ? '42mm' : '50mm'} repeat(${cards.length},minmax(0,1fr))">
       <div class="tabela-head">Cobertura</div>
-      ${cabecalho(atual)}
-      ${cabecalho(outra)}
+      ${cards.map(cabecalho).join('')}
       ${linhas}
     </div>
   </section>`
@@ -822,7 +822,7 @@ function blocoPagamentoModelo(card) {
 
 function blocoValoresCondicoes(cards) {
   return `<section class="modelo-secao valores-secao">
-    <div class="valores-grid">
+    <div class="valores-grid" data-options="${cards.length}" style="grid-template-columns:repeat(${cards.length},minmax(0,1fr))">
       ${cards.map(blocoPagamentoModelo).join('')}
     </div>
   </section>`
@@ -830,10 +830,10 @@ function blocoValoresCondicoes(cards) {
 
 function blocoDiferenca(cards) {
   const valores = cards.map(card => Number(card.valores?.total)).filter(Number.isFinite)
-  if (valores.length !== 2) return ''
+  if (valores.length < 2) return ''
   return `<div class="diferenca-total">
     <div><span>Resumo financeiro</span><p>Os valores refletem as condições apresentadas em cada cotação e podem mudar até a emissão.</p></div>
-    <div><span>Diferença entre as propostas</span><strong>${escapeHtml(formatarMoeda(Math.abs(valores[0] - valores[1])))}</strong><small>no prêmio total</small></div>
+    <div><span>${valores.length === 2 ? 'Diferença entre as propostas' : 'Diferença entre menor e maior'}</span><strong>${escapeHtml(formatarMoeda(Math.max(...valores) - Math.min(...valores)))}</strong><small>no prêmio total</small></div>
   </div>`
 }
 
@@ -872,10 +872,10 @@ export function montarHtmlOrcamento(comparativo, { logoConves = '/conves-logo.pn
   const corAtual = cards?.[0]?.seguradora?.cor || '#9c7328'
   const corOutra = cards?.[1]?.seguradora?.cor || '#1c4a87'
 
-  // Divergencia entre os dois PDFs vira aviso IMPRESSO, nao so alerta de tela:
+  // Divergencia entre os PDFs vira aviso IMPRESSO, nao so alerta de tela:
   // se o corretor gerou assim mesmo, quem le o documento precisa saber.
   const aviso = divergencias.length
-    ? `<div class="aviso-divergencia"><b>Atenção:</b> as duas cotações divergem em
+    ? `<div class="aviso-divergencia"><b>Atenção:</b> as cotações divergem em
        ${escapeHtml(divergencias.map(d => d.label.toLowerCase()).join(', '))}. Confira antes de enviar ao cliente.</div>`
     : ''
 
@@ -903,7 +903,7 @@ ${comAcoes ? `<nav class="acoes-doc" aria-label="Ações da cotação">
   </header>
 
   <section class="promessa-orcamento">
-    <h2>Duas opções de proteção.<br>Uma escolha mais clara.</h2>
+    <h2>${cards.length === 2 ? 'Duas opções' : `${cards.length} opções`} de proteção.<br>Uma escolha mais clara.</h2>
     <p>Comparamos preço, perfil do risco e coberturas para você decidir com segurança e tranquilidade.</p>
   </section>
 

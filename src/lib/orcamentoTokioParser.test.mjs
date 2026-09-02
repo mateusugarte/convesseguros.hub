@@ -4,7 +4,9 @@ import fs from 'node:fs'
 
 import { agruparLinhas } from './pdfLayout.js'
 import {
-  ehLayoutTokio, extrairCoberturasTokio, extrairPagamentoTokio, parseCotacaoTokio,
+  ehLayoutTokio, extrairCarroReservaTokio, extrairCoberturasTokio,
+  extrairFranquiaTokio, extrairIndenizacaoIntegralTokio,
+  extrairPagamentoTokio, parseCotacaoTokio,
 } from './orcamentoTokioParser.js'
 import { ESTADO_COBERTURA, montarCategorias, validarCotacao } from './orcamentoComparativo.js'
 
@@ -70,10 +72,58 @@ test('totais e franquia batem com a cotação', () => {
   assert.equal(valores.franquia_tipo, '50% da Básica')
 })
 
+test('REGRESSÃO: franquia e indenização são encontradas mesmo quando mudam de página e posição', () => {
+  const refluido = [
+    {
+      pagina: 2,
+      y: 196,
+      texto: 'Indenização Parcial do Veículo R$ 5.187,00 (50% da Básica)',
+      celulas: [
+        { x: 40, texto: 'Indenização Parcial do Veículo' },
+        { x: 390, texto: 'R$ 5.187,00 (50% da Básica)' },
+      ],
+    },
+    {
+      pagina: 2,
+      y: 182,
+      texto: 'Indenização Integral do Veículo Não Possui',
+      celulas: [
+        { x: 40, texto: 'Indenização Integral do Veículo' },
+        { x: 390, texto: 'Não Possui' },
+      ],
+    },
+  ]
+  assert.deepEqual(extrairFranquiaTokio(refluido), { valor: 5187, tipo: '50% da Básica' })
+  assert.deepEqual(extrairIndenizacaoIntegralTokio(refluido), {
+    incluida: false,
+    percentual_fipe: null,
+    observacao: '',
+  })
+})
+
+test('REGRESSÃO: carro reserva usa a quantidade real de diárias, sem valor fixo', () => {
+  const servicos = [
+    {
+      pagina: 3,
+      y: 671,
+      texto: 'Logomarca do serviço Carro reserva',
+      celulas: [{ x: 401, texto: 'Carro reserva' }],
+    },
+    {
+      pagina: 3,
+      y: 663,
+      texto: '15 diárias Básico (Mecânico)',
+      celulas: [{ x: 401, texto: '15 diárias Básico (Mecânico)' }],
+    },
+  ]
+  assert.equal(extrairCarroReservaTokio(servicos), '15 diárias Básico (Mecânico)')
+})
+
 test('carro reserva e vidros vêm da página de serviços', () => {
   const cot = parse()
   assert.match(cot.coberturas.find(c => c.categoria === 'carro_reserva').observacoes, /7 diárias/i)
   assert.match(cot.coberturas.find(c => c.categoria === 'vidros').observacoes, /Parabrisa R\$\s*365,00/i)
+  assert.equal(cot.assistencia_24h.limite_reboque_km, 300)
 })
 
 test('todas as categorias obrigatórias são resolvidas e a cotação pode ser gerada', () => {
@@ -94,4 +144,3 @@ test('logo e cor são lidas do cadastro', () => {
   assert.equal(cot.seguradora.id, 't1')
   assert.equal(cot.seguradora.logo_url, '/t.svg')
 })
-

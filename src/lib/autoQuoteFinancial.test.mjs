@@ -41,6 +41,17 @@ test('nao escolhe a mais barata antes de existirem os dois premios', () => {
   assert.equal(opcoes.seguradora_mais_barata, null)
 })
 
+test('considera opções adicionais ao identificar o menor prêmio', () => {
+  const resultado = derivarOpcoesFinanceirasComparativo({
+    atual: { seguradora: 'HDI', campos: { premio_total: 2690 } },
+    concorrente: { seguradora: 'Tokio', campos: { premio_total: 2450 } },
+    opcoes: [{ seguradora: 'Porto', campos: { premio_total: 2190 } }],
+  })
+
+  assert.equal(resultado.seguradora_mais_barata.nome, 'Porto')
+  assert.equal(resultado.seguradora_mais_barata.origem, 'opcao_3')
+})
+
 test('campos digitados permanecem para a mesma seguradora e nao vazam para outra', () => {
   const salva = { nome: 'HDI Seguros', premio_total: 2700, premio_liquido: 2500, pct_comissao: 20 }
 

@@ -1036,12 +1036,13 @@ export function formatarReferencia(ano, sequencial) {
 
 export const VALIDADE_PADRAO_DIAS = 5
 
-export function montarComparativo({ atual, outra, referencia = '', emitidoEm = '', validadeDias = VALIDADE_PADRAO_DIAS } = {}) {
+export function montarComparativo({ atual, outra, adicionais = [], referencia = '', emitidoEm = '', validadeDias = VALIDADE_PADRAO_DIAS } = {}) {
   const cotAtual = atual || criarCotacaoOrcamento()
   const cotOutra = outra || criarCotacaoOrcamento()
-
-  const validacaoAtual = validarCotacao(cotAtual)
-  const validacaoOutra = validarCotacao(cotOutra)
+  const cotacoes = [cotAtual, cotOutra, ...(Array.isArray(adicionais) ? adicionais.filter(Boolean) : [])]
+  const validacoes = cotacoes.map(validarCotacao)
+  const validacaoAtual = validacoes[0]
+  const validacaoOutra = validacoes[1]
 
   // A barra do cliente e unica para os dois cards: e o MESMO segurado e o MESMO
   // veiculo nas duas cotacoes. Quando as duas cotacoes discordam, a da esquerda
@@ -1050,14 +1051,19 @@ export function montarComparativo({ atual, outra, referencia = '', emitidoEm = '
   const divergencias = []
   const conferir = (caminho, label) => {
     const a = normalizarTexto(lerCaminho(cotAtual, caminho))
-    const b = normalizarTexto(lerCaminho(cotOutra, caminho))
-    if (a && b && a !== b) divergencias.push({ caminho, label, atual: lerCaminho(cotAtual, caminho), outra: lerCaminho(cotOutra, caminho) })
+    cotacoes.slice(1).forEach((cotacao, index) => {
+      const b = normalizarTexto(lerCaminho(cotacao, caminho))
+      if (a && b && a !== b) divergencias.push({ caminho, label, atual: lerCaminho(cotAtual, caminho), outra: lerCaminho(cotacao, caminho), opcao: index + 2 })
+    })
   }
   conferir('segurado.nome', 'Nome do segurado')
   conferir('veiculo.placa', 'Placa')
   conferir('veiculo.marca_modelo', 'Veículo')
 
-  const cards = [montarCard(cotAtual, { papel: 'atual' }), montarCard(cotOutra, { papel: 'outra' })]
+  const seguroNovo = cotAtual.cotacao?.tipo_operacao === 'novo'
+  const cards = cotacoes.map((cotacao, index) => montarCard(cotacao, {
+    papel: seguroNovo ? `opcao_${index + 1}` : index === 0 ? 'atual' : index === 1 ? 'outra' : `opcao_${index + 1}`,
+  }))
 
   // Duas seguradoras da mesma familia de cor deixam o comparativo ilegivel: a
   // faixa colorida e o unico sinal que diz de relance qual card e de quem. Nao
@@ -1084,17 +1090,17 @@ export function montarComparativo({ atual, outra, referencia = '', emitidoEm = '
       validade_dias: validadeDias,
     },
     cliente: {
-      segurado: cotAtual.segurado?.nome || cotOutra.segurado?.nome || '',
-      segurado_documento: cotAtual.segurado?.cpf_cnpj || cotOutra.segurado?.cpf_cnpj || '',
-      condutor: cotAtual.condutor_principal?.nome || cotOutra.condutor_principal?.nome || '',
-      condutor_documento: cotAtual.condutor_principal?.cpf || cotOutra.condutor_principal?.cpf || '',
-      condutor_nascimento: formatarDataBR(cotAtual.condutor_principal?.data_nascimento || cotOutra.condutor_principal?.data_nascimento),
-      veiculo: cotAtual.veiculo?.marca_modelo || cotOutra.veiculo?.marca_modelo || '',
-      ano_modelo: cotAtual.veiculo?.ano_modelo || cotOutra.veiculo?.ano_modelo || '',
-      placa: cotAtual.veiculo?.placa || cotOutra.veiculo?.placa || '',
-      cep_pernoite: cotAtual.veiculo?.cep_pernoite || cotOutra.veiculo?.cep_pernoite || '',
-      tipo_operacao: cotAtual.cotacao?.tipo_operacao || cotOutra.cotacao?.tipo_operacao || '',
-      tipo_operacao_label: rotuloTipoOperacao(cotAtual.cotacao?.tipo_operacao || cotOutra.cotacao?.tipo_operacao),
+      segurado: cotacoes.find(c => c.segurado?.nome)?.segurado?.nome || '',
+      segurado_documento: cotacoes.find(c => c.segurado?.cpf_cnpj)?.segurado?.cpf_cnpj || '',
+      condutor: cotacoes.find(c => c.condutor_principal?.nome)?.condutor_principal?.nome || '',
+      condutor_documento: cotacoes.find(c => c.condutor_principal?.cpf)?.condutor_principal?.cpf || '',
+      condutor_nascimento: formatarDataBR(cotacoes.find(c => c.condutor_principal?.data_nascimento)?.condutor_principal?.data_nascimento),
+      veiculo: cotacoes.find(c => c.veiculo?.marca_modelo)?.veiculo?.marca_modelo || '',
+      ano_modelo: cotacoes.find(c => c.veiculo?.ano_modelo)?.veiculo?.ano_modelo || '',
+      placa: cotacoes.find(c => c.veiculo?.placa)?.veiculo?.placa || '',
+      cep_pernoite: cotacoes.find(c => c.veiculo?.cep_pernoite)?.veiculo?.cep_pernoite || '',
+      tipo_operacao: cotacoes.find(c => c.cotacao?.tipo_operacao)?.cotacao?.tipo_operacao || '',
+      tipo_operacao_label: rotuloTipoOperacao(cotacoes.find(c => c.cotacao?.tipo_operacao)?.cotacao?.tipo_operacao),
     },
     cards,
     divergencias,
@@ -1102,7 +1108,8 @@ export function montarComparativo({ atual, outra, referencia = '', emitidoEm = '
     validacao: {
       atual: validacaoAtual,
       outra: validacaoOutra,
-      podeGerar: validacaoAtual.podeGerar && validacaoOutra.podeGerar,
+      itens: validacoes,
+      podeGerar: validacoes.every(validacao => validacao.podeGerar),
     },
   }
 }

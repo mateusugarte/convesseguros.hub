@@ -52,6 +52,23 @@ test('serializacao nunca perde um lado, mesmo com workspace vazio', () => {
   assert.equal(rascunho.lados.atual.leitura, null)
 })
 
+test('preserva opções adicionais escolhidas pelo corretor', () => {
+  const extra = { seguradora: 'Porto Seguro', arquivo_nome: 'porto.pdf', campos: { premio_total: 2500 } }
+  const rascunho = serializarRascunho({
+    ...workspace(),
+    roles: ['atual', 'concorrente', 'opcao_3'],
+    sides: { ...workspace().sides, opcao_3: extra },
+    parsers: { ...workspace().parsers, opcao_3: 'porto' },
+    leituras: { ...workspace().leituras, opcao_3: { suportado: true, cotacao: { numero: '789' } } },
+  })
+  const restaurado = restaurarRascunho(rascunho, { baseSides: workspace().sides })
+
+  assert.deepEqual(restaurado.roles, ['atual', 'concorrente', 'opcao_3'])
+  assert.equal(restaurado.sides.opcao_3.seguradora, 'Porto Seguro')
+  assert.equal(restaurado.parsers.opcao_3, 'porto')
+  assert.equal(restaurado.leituras.opcao_3.cotacao.numero, '789')
+})
+
 test('step invalido cai para upload em vez de gravar lixo', () => {
   assert.equal(serializarRascunho({ step: 'qualquer' }).step, 'upload')
 })

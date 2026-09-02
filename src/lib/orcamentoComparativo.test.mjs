@@ -457,6 +457,23 @@ test('comparativo monta dois cards e a barra unica do cliente', () => {
   assert.equal(comp.validacao.podeGerar, true)
 })
 
+test('seguro novo aceita opções adicionais sem inventar seguradora atual', () => {
+  const primeira = cotacaoCompleta()
+  const segunda = cotacaoCompleta()
+  const terceira = cotacaoCompleta()
+  primeira.cotacao.tipo_operacao = 'novo'
+  segunda.cotacao.tipo_operacao = 'novo'
+  terceira.cotacao.tipo_operacao = 'novo'
+  segunda.seguradora = { id: 'p', nome: 'Porto Seguro', logo_url: '', cor_destaque: '' }
+  terceira.seguradora = { id: 'h', nome: 'HDI Seguros', logo_url: '', cor_destaque: '' }
+
+  const comp = montarComparativo({ atual: primeira, outra: segunda, adicionais: [terceira] })
+  assert.equal(comp.cards.length, 3)
+  assert.deepEqual(comp.cards.map(card => card.papel), ['opcao_1', 'opcao_2', 'opcao_3'])
+  assert.equal(comp.validacao.itens.length, 3)
+  assert.equal(comp.validacao.podeGerar, true)
+})
+
 test('comparativo aponta divergencia de placa entre os dois PDFs', () => {
   // Upload trocado: duas cotacoes de veiculos diferentes no mesmo comparativo.
   const atual = cotacaoCompleta()

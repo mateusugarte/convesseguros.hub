@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle, ArrowRight, Check, CheckCircle2, ChevronDown, CloudOff, FileCheck2,
-  Download, FileText, History, LoaderCircle, Maximize2, RefreshCw, ShieldCheck,
+  Download, FileText, History, LoaderCircle, Maximize2, Plus, RefreshCw, ShieldCheck,
   Sparkles, Trash2, UploadCloud, X,
 } from 'lucide-react'
 
@@ -19,10 +19,33 @@ import { DatePicker } from '../ui'
 import SeguradoraBadge from '../SeguradoraBadge'
 import AutoOrcamentoOfertas from './AutoOrcamentoOfertas'
 
-const ROLES = [
+const BASE_ROLES = [
   { key: 'atual', label: 'Seguradora atual', helper: 'Referência atual ou primeira opção' },
   { key: 'concorrente', label: 'Outra seguradora', helper: 'Opção concorrente para comparação' },
 ]
+const MAX_OPCOES = 4
+const CORES_OPCOES = ['#956e26', '#1b4782', '#0f766e', '#7c3aed']
+
+function metaDoPapel(role, index, tipo) {
+  const seguroNovo = (tipo || 'novo') === 'novo'
+  if (seguroNovo) {
+    return {
+      key: role,
+      label: `Opção ${index + 1}`,
+      shortLabel: `Opção ${index + 1}`,
+      helper: index === 0 ? 'Primeira alternativa para o cliente' : 'Alternativa adicional para comparação',
+      accent: CORES_OPCOES[index % CORES_OPCOES.length],
+    }
+  }
+  const base = BASE_ROLES[index]
+  return {
+    key: role,
+    label: base?.label || `Outra opção ${index}`,
+    shortLabel: index === 0 ? 'Atual' : `Opção ${index + 1}`,
+    helper: base?.helper || 'Alternativa adicional para comparação',
+    accent: CORES_OPCOES[index % CORES_OPCOES.length],
+  }
+}
 
 // As quatro marcas da familia Porto sao opcoes SEPARADAS. Elas compartilham o
 // layout do PDF, mas nao a identidade: o orcamento entregue ao cliente leva o
@@ -82,15 +105,6 @@ const REVIEW_FIELDS = [
   { key: 'veiculo_placa', label: 'Placa' },
   { key: 'veiculo_uso', label: 'Uso do veículo' },
   { key: 'veiculo_cep_pernoite', label: 'CEP de pernoite' },
-  { key: 'veiculo_tipo_residencia', label: 'Tipo de residência' },
-  { key: 'veiculo_passagem_leilao', label: 'Passagem por leilão' },
-  { key: 'veiculo_financiado', label: 'Financiado / alienado' },
-  { key: 'veiculo_kit_gas', label: 'Kit gás' },
-  { key: 'veiculo_blindagem', label: 'Blindagem' },
-  { key: 'veiculo_isento_imposto', label: 'Isenção de imposto' },
-  { key: 'veiculo_garagem_residencia', label: 'Garagem na residência' },
-  { key: 'veiculo_garagem_trabalho', label: 'Garagem no trabalho' },
-  { key: 'veiculo_garagem_estudo', label: 'Garagem no local de estudo' },
   { key: 'numero', label: 'Número da cotação' },
   { key: 'validade', label: 'Validade', type: 'date' },
   { key: 'vigencia_inicio', label: 'Início da vigência', type: 'date' },
@@ -223,7 +237,17 @@ function formatSize(bytes) {
  * exigir digitacao de algo que o sistema tem.
  */
 function sideFromQuote(role, quote) {
-  const option = role === 'atual' ? quote?.seguradora_preferencial : quote?.seguradora_mais_barata
+  // Seguro novo não possui seguradora "atual". Começar os slots vazios evita
+  // transformar uma preferência antiga do cadastro em escolha automática para
+  // uma oportunidade nova. Renovação mantém atual x concorrente.
+  const seguroNovo = (quote?.tipo || 'novo') === 'novo'
+  const option = seguroNovo
+    ? null
+    : role === 'atual'
+      ? quote?.seguradora_preferencial
+      : role === 'concorrente'
+        ? quote?.seguradora_mais_barata
+        : null
   return {
     seguradora: option?.nome || '',
     arquivo_nome: '',
@@ -247,14 +271,13 @@ function sideFromQuote(role, quote) {
   }
 }
 
-function UploadSlot({ role, side, file, leitura, lendo, erro, aplicando, seguradoraParser, onParser, onFile, onEscolherOferta }) {
+function UploadSlot({ role, meta, side, file, leitura, lendo, erro, aplicando, seguradoraParser, onParser, onFile, onEscolherOferta, onRemove }) {
   const inputRef = useRef(null)
   const [dragging, setDragging] = useState(false)
-  const meta = ROLES.find(item => item.key === role)
   const uploadBloqueado = !seguradoraParser
   return (
-    <article className={`auto-comparison-upload is-${role} ${dragging ? 'is-dragging' : ''} ${file ? 'is-ready' : ''}`}>
-      <header><span className="auto-comparison-role">{meta.label}</span><small>{meta.helper}</small></header>
+    <article className={`auto-comparison-upload is-${role} ${dragging ? 'is-dragging' : ''} ${file ? 'is-ready' : ''}`} style={{ '--comparison-accent': meta.accent }}>
+      <header><span className="auto-comparison-role">{meta.label}</span><small>{meta.helper}</small>{onRemove && <button type="button" className="auto-comparison-remove-option" onClick={onRemove} title={`Remover ${meta.label}`} aria-label={`Remover ${meta.label}`}><X /></button>}</header>
       <div className="auto-comparison-insurer">
         <label htmlFor={`seguradora-orcamento-${role}`}>Seguradora do PDF</label>
         <div className="auto-comparison-insurer-preview">
@@ -381,12 +404,12 @@ function ReviewField({ field, value, issue, onChange }) {
   )
 }
 
-function ReviewColumn({ role, side, issues, leitura, aplicando, onEscolherOferta, onPatch }) {
+function ReviewColumn({ role, meta, side, issues, leitura, aplicando, onEscolherOferta, onPatch }) {
   const escolha = leitura?.cotacao?.escolha_pendente
   return (
-    <article className={`auto-comparison-review-column is-${role}`}>
+    <article className={`auto-comparison-review-column is-${role}`} style={{ '--comparison-accent': meta.accent }}>
       <header>
-        <span>{role === 'atual' ? 'Atual' : 'Concorrente'}</span>
+        <span>{meta.shortLabel}</span>
         <div className="auto-comparison-review-insurer">
           {side.seguradora && <SeguradoraBadge nome={side.seguradora} size="md" showName={false} />}
           <span><strong>{side.seguradora || 'Seguradora não definida'}</strong><small>{side.arquivo_nome || 'Preenchimento manual'}</small></span>
@@ -463,8 +486,10 @@ function OrcamentoPreview({ html, fullscreen = false, salvando = false, salvo = 
 
 /** Estado do zero, semeado apenas pelo cadastro da cotacao. */
 function workspaceInicial(quote) {
+  const roles = ['atual', 'concorrente']
   const sides = { atual: sideFromQuote('atual', quote), concorrente: sideFromQuote('concorrente', quote) }
   return {
+    roles,
     step: 'upload',
     sides,
     parsers: { atual: parserInicial(sides.atual.seguradora), concorrente: parserInicial(sides.concorrente.seguradora) },
@@ -523,8 +548,9 @@ function RascunhoStatus({ estado, onDescartar }) {
 
 export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, onExtractedClientData }) {
   const [inicial] = useState(() => hidratarWorkspace(quote))
+  const [roles, setRoles] = useState(inicial.roles || ['atual', 'concorrente'])
   const [step, setStep] = useState(inicial.step)
-  const [files, setFiles] = useState({ atual: null, concorrente: null })
+  const [files, setFiles] = useState(() => Object.fromEntries((inicial.roles || ['atual', 'concorrente']).map(role => [role, null])))
   const [leituras, setLeituras] = useState(inicial.leituras)
   const [lendo, setLendo] = useState({ atual: false, concorrente: false })
   const [aplicando, setAplicando] = useState({ atual: false, concorrente: false })
@@ -543,15 +569,15 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
   const [previewFullscreen, setPreviewFullscreen] = useState(false)
   const [salvandoOrcamento, setSalvandoOrcamento] = useState(false)
   const [orcamentoSalvo, setOrcamentoSalvo] = useState(inicial.orcamento)
+  const roleMetas = useMemo(
+    () => roles.map((role, index) => metaDoPapel(role, index, quote?.tipo)),
+    [roles, quote?.tipo],
+  )
   const opcoesFinanceiras = useMemo(() => derivarOpcoesFinanceirasComparativo({
     atual: sides.atual,
     concorrente: sides.concorrente,
-  }), [
-    sides.atual.seguradora,
-    sides.atual.campos.premio_total,
-    sides.concorrente.seguradora,
-    sides.concorrente.campos.premio_total,
-  ])
+    opcoes: roles.slice(2).map(role => sides[role]),
+  }), [roles, sides])
 
   useEffect(() => {
     onFinancialOptionsChange?.(opcoesFinanceiras)
@@ -562,8 +588,8 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
   // rascunho; o local grava sempre, o servidor grava quando a migration 72 ja
   // rodou. Nada aqui exige clicar em salvar.
   const rascunhoAtual = useMemo(
-    () => serializarRascunho({ step, sides, parsers, leituras, orcamento: orcamentoSalvo }),
-    [step, sides, parsers, leituras, orcamentoSalvo],
+    () => serializarRascunho({ step, roles, sides, parsers, leituras, orcamento: orcamentoSalvo }),
+    [step, roles, sides, parsers, leituras, orcamentoSalvo],
   )
   const conteudoRascunho = useMemo(
     () => JSON.stringify({ step: rascunhoAtual.step, orcamento: rascunhoAtual.orcamento, lados: rascunhoAtual.lados }),
@@ -636,12 +662,13 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
     limparRascunhoLocal(quote?.id)
     limparRascunhoOrcamento(quote?.id).catch(() => {})
     const limpo = workspaceInicial(quote)
+    setRoles(limpo.roles)
     setStep(limpo.step)
     setSides(limpo.sides)
     setParsers(limpo.parsers)
     setLeituras(limpo.leituras)
-    setFiles({ atual: null, concorrente: null })
-    setErros({ atual: '', concorrente: '' })
+    setFiles(Object.fromEntries(limpo.roles.map(role => [role, null])))
+    setErros(Object.fromEntries(limpo.roles.map(role => [role, ''])))
     setOrcamentoSalvo(null)
     setRascunhoRestaurado(false)
     setEstadoRascunho({ salvando: false, salvo_em: null, servidor: false, local: false })
@@ -651,33 +678,34 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
   // Um lado esta "com arquivo" tanto com o File na mao quanto restaurado de um
   // rascunho: a leitura ja extraida vale igual, e exigir reenviar o PDF so para
   // reabrir a revisao seria refazer o trabalho que acabamos de salvar.
-  const arquivos = useMemo(() => Object.fromEntries(ROLES.map(({ key }) => [
-    key,
-    files[key] || (sides[key].arquivo_nome
-      ? { name: sides[key].arquivo_nome, size: 0, restaurado: true }
+  const arquivos = useMemo(() => Object.fromEntries(roles.map(role => [
+    role,
+    files[role] || (sides[role]?.arquivo_nome
+      ? { name: sides[role].arquivo_nome, size: 0, restaurado: true }
       : null),
-  ])), [files, sides])
+  ])), [files, roles, sides])
 
-  const issues = useMemo(() => Object.fromEntries(ROLES.map(({ key }) => [
-    key,
+  const issues = useMemo(() => Object.fromEntries(roles.map(role => [
+    role,
     REVIEW_FIELDS
-      .filter(field => (field.required || field.critical) && campoPendente(field, sides[key].campos[field.key]))
+      .filter(field => (field.required || field.critical) && campoPendente(field, sides[role]?.campos?.[field.key]))
       .map(field => field.key),
-  ])), [sides])
-  const issueCount = issues.atual.length + issues.concorrente.length
-  const criticalCount = ROLES.reduce((total, { key }) => total + issues[key].filter(fieldKey => REVIEW_FIELDS.find(field => field.key === fieldKey)?.critical).length, 0)
-  const faltamArquivos = ROLES.filter(({ key }) => !arquivos[key]).map(({ label }) => label)
-  const escolhasPendentes = ROLES.filter(({ key }) => leituras[key]?.cotacao?.escolha_pendente).map(({ label }) => label)
-  const leiturasPendentes = ROLES.filter(({ key }) => arquivos[key] && !lendo[key] && !leituraDisponivelParaRevisao(leituras[key])).map(({ label }) => label)
-  const podeRevisar = faltamArquivos.length === 0 && escolhasPendentes.length === 0 && leiturasPendentes.length === 0 && !lendo.atual && !lendo.concorrente
+  ])), [roles, sides])
+  const issueCount = roles.reduce((total, role) => total + (issues[role]?.length || 0), 0)
+  const criticalCount = roles.reduce((total, role) => total + (issues[role] || []).filter(fieldKey => REVIEW_FIELDS.find(field => field.key === fieldKey)?.critical).length, 0)
+  const faltamArquivos = roleMetas.filter(({ key }) => !arquivos[key]).map(({ label }) => label)
+  const escolhasPendentes = roleMetas.filter(({ key }) => leituras[key]?.cotacao?.escolha_pendente).map(({ label }) => label)
+  const leiturasPendentes = roleMetas.filter(({ key }) => arquivos[key] && !lendo[key] && !leituraDisponivelParaRevisao(leituras[key])).map(({ label }) => label)
+  const algumaLeituraAtiva = roles.some(role => lendo[role])
+  const podeRevisar = faltamArquivos.length === 0 && escolhasPendentes.length === 0 && leiturasPendentes.length === 0 && !algumaLeituraAtiva
   const resumoUpload = (() => {
-    if (lendo.atual || lendo.concorrente) return 'Aguarde a leitura automática terminar.'
+    if (algumaLeituraAtiva) return 'Aguarde a leitura automática terminar.'
     if (faltamArquivos.length) return `Envie o PDF de: ${faltamArquivos.join(' e ')}.`
     if (escolhasPendentes.length) return `Escolha produto/oferta para coletar prêmio, parcelamento, franquia e coberturas de: ${escolhasPendentes.join(' e ')}.`
     if (leiturasPendentes.length) return `Revise o aviso de leitura de: ${leiturasPendentes.join(' e ')}.`
-    return 'As duas leituras estão prontas para conferência.'
+    return `${roles.length} leituras prontas para conferência.`
   })()
-  const podeAbrirRevisao = faltamArquivos.length === 0 && escolhasPendentes.length === 0 && leiturasPendentes.length === 0 && !lendo.atual && !lendo.concorrente
+  const podeAbrirRevisao = podeRevisar
   const tituloRodapeUpload = escolhasPendentes.length
     ? 'Escolha o produto antes da revisão'
     : podeRevisar
@@ -851,6 +879,13 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
 
         return {
           ...cot,
+          // O tipo da oportunidade no sistema define os papéis do comparativo.
+          // Em seguro novo não existe "seguradora atual", mesmo que um PDF
+          // isolado traga linguagem de renovação em alguma página reutilizada.
+          cotacao: {
+            ...cot.cotacao,
+            tipo_operacao: quote?.tipo || cot.cotacao?.tipo_operacao || '',
+          },
           seguradora: {
             ...cot.seguradora,
             nome: nomeFinal,
@@ -861,17 +896,18 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
         }
       }
 
-      const atual = cotacaoDe('atual')
-      const outra = cotacaoDe('concorrente')
-      if (!atual || !outra) {
-        setErroGeracao('Envie e leia os dois PDFs antes de gerar o comparativo.')
+      const cotacoes = roles.map(cotacaoDe)
+      if (cotacoes.some(cotacao => !cotacao)) {
+        setErroGeracao('Envie e leia todos os PDFs adicionados antes de gerar o comparativo.')
         return
       }
 
       const hoje = new Date().toISOString().slice(0, 10)
-      const comparativo = montarComparativo({ atual, outra, emitidoEm: hoje })
+      const [atual, outra, ...adicionais] = cotacoes
+      const comparativo = montarComparativo({ atual, outra, adicionais, emitidoEm: hoje })
       if (!comparativo.validacao.podeGerar) {
-        const motivos = [...comparativo.validacao.atual.pendencias, ...comparativo.validacao.outra.pendencias]
+        const motivos = (comparativo.validacao.itens || [comparativo.validacao.atual, comparativo.validacao.outra])
+          .flatMap(validacao => validacao?.pendencias || [])
           .filter(p => p.bloqueia !== false)
           .map(p => p.label || p.caminho)
         setErroGeracao(`Faltam dados obrigatórios: ${[...new Set(motivos)].join(' · ')}`)
@@ -895,6 +931,36 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
   function patchField(role, field, value) {
     invalidarPreview()
     setSides(current => ({ ...current, [role]: { ...current[role], campos: { ...current[role].campos, [field]: value } } }))
+  }
+
+  function adicionarOpcao() {
+    if (roles.length >= MAX_OPCOES) return
+    let numero = 3
+    while (roles.includes(`opcao_${numero}`)) numero += 1
+    const role = `opcao_${numero}`
+    invalidarPreview()
+    setRoles(current => [...current, role])
+    setSides(current => ({ ...current, [role]: sideFromQuote(role, quote) }))
+    setParsers(current => ({ ...current, [role]: '' }))
+    setLeituras(current => ({ ...current, [role]: null }))
+    setFiles(current => ({ ...current, [role]: null }))
+    setLendo(current => ({ ...current, [role]: false }))
+    setAplicando(current => ({ ...current, [role]: false }))
+    setErros(current => ({ ...current, [role]: '' }))
+  }
+
+  function removerOpcao(role) {
+    if (!roles.slice(2).includes(role)) return
+    const semPapel = current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== role))
+    invalidarPreview()
+    setRoles(current => current.filter(key => key !== role))
+    setSides(semPapel)
+    setParsers(semPapel)
+    setLeituras(semPapel)
+    setFiles(semPapel)
+    setLendo(semPapel)
+    setAplicando(semPapel)
+    setErros(semPapel)
   }
 
   // A previa e descartavel; o orcamento JA GRAVADO nao. Zerar `orcamentoSalvo`
@@ -954,7 +1020,10 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
         placa: comparativoGerado.cliente?.placa || null,
         tipo_operacao: comparativoGerado.cliente?.tipo_operacao || quote?.tipo || 'novo',
         dados_atual: comparativoGerado.cards?.[0] || {},
-        dados_outra: comparativoGerado.cards?.[1] || {},
+        dados_outra: {
+          ...(comparativoGerado.cards?.[1] || {}),
+          opcoes_extras: comparativoGerado.cards?.slice(2) || [],
+        },
         premio_total_atual: comparativoGerado.cards?.[0]?.valores?.total ?? null,
         premio_total_outra: comparativoGerado.cards?.[1]?.valores?.total ?? null,
         emitido_em: comparativoGerado.cabecalho?.emitido_em || new Date().toISOString().slice(0, 10),
@@ -1012,35 +1081,44 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
       </header>
       <div className="auto-comparison-operation"><label><span>Tipo da cotação</span><select value={quote?.tipo || 'novo'} disabled><option value="novo">Seguro novo</option><option value="renovacao">Renovação</option><option value="endosso">Endosso</option></select></label><div><ShieldCheck /><span><strong>Revisão obrigatória ativa</strong><small>Campos ausentes ou sem valor bloqueiam a cotação final.</small></span></div></div>
       {step === 'upload' ? <>
-        <div className="auto-comparison-upload-grid">{ROLES.map(({ key }) => (
+        <div className="auto-comparison-upload-grid" style={{ '--comparison-columns': Math.min(roles.length, 3) }}>{roleMetas.map(meta => (
           <UploadSlot
-            key={key}
-            role={key}
-            side={sides[key]}
-            file={arquivos[key]}
-            leitura={leituras[key]}
-            lendo={lendo[key]}
-            erro={erros[key]}
-            aplicando={aplicando[key]}
-            seguradoraParser={parsers[key]}
-            onParser={parserId => escolherParser(key, parserId)}
-            onFile={file => chooseFile(key, file)}
-            onEscolherOferta={indice => escolherOferta(key, indice)}
+            key={meta.key}
+            role={meta.key}
+            meta={meta}
+            side={sides[meta.key]}
+            file={arquivos[meta.key]}
+            leitura={leituras[meta.key]}
+            lendo={lendo[meta.key]}
+            erro={erros[meta.key]}
+            aplicando={aplicando[meta.key]}
+            seguradoraParser={parsers[meta.key]}
+            onParser={parserId => escolherParser(meta.key, parserId)}
+            onFile={file => chooseFile(meta.key, file)}
+            onEscolherOferta={indice => escolherOferta(meta.key, indice)}
+            onRemove={roles.indexOf(meta.key) >= 2 ? () => removerOpcao(meta.key) : null}
           />
         ))}</div>
+        {(quote?.tipo || 'novo') === 'novo' && (
+          <div className="auto-comparison-option-actions">
+            <span>{roles.length} opção(ões) no comparativo</span>
+            <button type="button" onClick={adicionarOpcao} disabled={roles.length >= MAX_OPCOES}><Plus />Adicionar opção</button>
+          </div>
+        )}
         <footer className="auto-comparison-footer"><div><FileText /><span><strong>{tituloRodapeUpload}</strong><small>{resumoUpload}</small></span></div><button type="button" onClick={() => setStep('review')} disabled={!podeAbrirRevisao}>Visualizar revisão <ArrowRight /></button></footer>
       </> : <>
         <div className="auto-comparison-review-summary"><div><span>Pendências previstas</span><strong>{issueCount}</strong><small>{criticalCount} campo(s) crítico(s)</small></div><p><AlertTriangle />Franquia, indenização integral e cobertura não informada bloqueiam a geração — um comparativo com linha faltando chega ao cliente parecendo completo.</p><button type="button" onClick={() => setStep('upload')}><RefreshCw />Voltar ao upload</button></div>
-        <div className="auto-comparison-review-grid">{ROLES.map(({ key }) => (
+        <div className="auto-comparison-review-grid" style={{ '--comparison-columns': Math.min(roles.length, 3) }}>{roleMetas.map(meta => (
           <ReviewColumn
-            key={key}
-            role={key}
-            side={sides[key]}
-            issues={issues[key]}
-            leitura={leituras[key]}
-            aplicando={aplicando[key]}
-            onEscolherOferta={indice => escolherOferta(key, indice)}
-            onPatch={(field, value) => patchField(key, field, value)}
+            key={meta.key}
+            role={meta.key}
+            meta={meta}
+            side={sides[meta.key]}
+            issues={issues[meta.key]}
+            leitura={leituras[meta.key]}
+            aplicando={aplicando[meta.key]}
+            onEscolherOferta={indice => escolherOferta(meta.key, indice)}
+            onPatch={(field, value) => patchField(meta.key, field, value)}
           />
         ))}</div>
         {erroGeracao && <div className="auto-comparison-review-summary is-error"><p><AlertTriangle />{erroGeracao}</p></div>}

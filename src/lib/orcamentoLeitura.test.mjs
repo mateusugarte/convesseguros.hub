@@ -12,21 +12,23 @@ const campos = oferta => camposDaCotacao(
   { montarCategorias },
 )
 
-// As chaves espelham `REVIEW_FIELDS` em `AutoQuoteComparison.jsx`. O teste existe
-// para o dia em que alguem renomear um campo la e a revisao passar a mostrar
-// "Não informado" num campo que o parser preencheu — falha silenciosa, porque a
-// tela continuaria funcionando e so o dado sumiria.
+// As chaves visiveis espelham `REVIEW_FIELDS` em `AutoQuoteComparison.jsx`.
+// Dados detalhados de risco continuam na ponte para atualizar o cadastro, mas
+// não devem poluir o quadro de revisão do orçamento.
 const CHAVES_DA_REVISAO = [
   'segurado_nome', 'segurado_cpf',
   'condutor_nome', 'condutor_cpf', 'condutor_estado_civil',
   'veiculo_modelo', 'veiculo_ano', 'veiculo_placa', 'veiculo_uso', 'veiculo_cep_pernoite',
-  'veiculo_tipo_residencia', 'veiculo_passagem_leilao', 'veiculo_financiado',
-  'veiculo_kit_gas', 'veiculo_blindagem', 'veiculo_isento_imposto',
-  'veiculo_garagem_residencia', 'veiculo_garagem_trabalho', 'veiculo_garagem_estudo',
   'numero', 'validade', 'vigencia_inicio', 'vigencia_fim',
   'premio_total', 'premio_parcelado',
   'franquia', 'franquia_tipo', 'indenizacao_integral',
   'assistencia', 'limite_reboque_km', 'carro_reserva', 'vidros', 'danos_terceiros', 'nao_inclusos',
+]
+
+const CHAVES_INTERNAS_RISCO = [
+  'veiculo_tipo_residencia', 'veiculo_passagem_leilao', 'veiculo_financiado',
+  'veiculo_kit_gas', 'veiculo_blindagem', 'veiculo_isento_imposto',
+  'veiculo_garagem_residencia', 'veiculo_garagem_trabalho', 'veiculo_garagem_estudo',
 ]
 
 // `premio_liquido` e `iof` saem de proposito: sao controle interno da emissao e
@@ -46,8 +48,11 @@ test('REGRESSAO: leva segurado, condutor e veiculo do PDF para a revisao', () =>
   assert.ok(c.veiculo_modelo, 'veiculo deveria vir preenchido')
 })
 
-test('preenche exatamente os campos que a coluna de revisao mostra', () => {
-  assert.deepEqual(Object.keys(campos('Completo')).sort(), [...CHAVES_DA_REVISAO].sort())
+test('preenche os campos da revisão e preserva risco somente para sincronização interna', () => {
+  assert.deepEqual(
+    Object.keys(campos('Completo')).sort(),
+    [...CHAVES_DA_REVISAO, ...CHAVES_INTERNAS_RISCO].sort(),
+  )
 })
 
 test('leva os valores da cotacao para a revisao', () => {

@@ -27,15 +27,16 @@ function opcaoDoLado(side, origem) {
  * Traduz os dois lados revisados do comparativo para o fechamento financeiro.
  * A seguradora preferencial nunca e inferida pelo preco: ela e sempre a atual.
  */
-export function derivarOpcoesFinanceirasComparativo({ atual, concorrente } = {}) {
+export function derivarOpcoesFinanceirasComparativo({ atual, concorrente, opcoes = [] } = {}) {
   const preferencial = opcaoDoLado(atual, 'atual')
-  const alternativa = opcaoDoLado(concorrente, 'concorrente')
-  const comPremio = [preferencial, alternativa]
+  const alternativas = [opcaoDoLado(concorrente, 'concorrente'), ...opcoes.map((opcao, index) => opcaoDoLado(opcao, `opcao_${index + 3}`))]
+    .filter(Boolean)
+  const comPremio = [preferencial, ...alternativas]
     .filter(opcao => opcao && Number.isFinite(opcao.premio_total))
 
   // "Mais barata" so existe depois que os dois totais podem ser comparados.
   // Escolher o unico PDF ja lido marcaria uma vencedora antes da hora.
-  const maisBarata = comPremio.length === 2
+  const maisBarata = comPremio.length >= 2
     ? comPremio.reduce((menor, opcao) => opcao.premio_total < menor.premio_total ? opcao : menor)
     : null
 

@@ -811,6 +811,13 @@ export function montarCard(cotacao, { papel = 'atual' } = {}) {
       cor_clara: tomClaro(cor),
       cor_texto: contrasteSobre(cor),
     },
+    // Alguns PDFs (em especial a Suhai) reúnem produtos materialmente
+    // diferentes na mesma cotação. O produto escolhido precisa acompanhar o
+    // card até o documento final; antes ele existia no parser, mas se perdia
+    // nesta transformação e o cliente via apenas o nome da seguradora.
+    produto: cot.produto_selecionado
+      ? { id: cot.produto_selecionado.id || '', label: cot.produto_selecionado.label || '' }
+      : null,
     identificacao: {
       condutor: cot.condutor_principal?.nome || '',
       cep_pernoite: cot.veiculo?.cep_pernoite || '',

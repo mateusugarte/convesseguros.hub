@@ -551,8 +551,11 @@ body{font-family:var(--sans);font-size:7.5pt;line-height:1.38;color:#142437}
 .valor-card-modelo::before{position:absolute;left:0;top:0;bottom:0;width:1.5mm;height:auto;background:var(--cor)}
 .valor-card-modelo-inner{padding:3.6mm 5.5mm 3.5mm 7mm}
 .valor-card-modelo .marca-valor{display:flex;align-items:center;justify-content:space-between;gap:4mm;margin:0}
-.valor-card-modelo .marca-valor>span{display:inline-flex;align-items:center;gap:1mm;font-size:5.4pt;font-weight:850;letter-spacing:1.25pt;color:#8090a1}
-.valor-card-modelo .marca-valor>span::before{content:'';width:1.6mm;height:1.6mm;border-radius:50%;background:var(--cor)}
+.valor-card-modelo .marca-contexto{display:flex;min-width:0;flex-direction:column;align-items:flex-start;gap:.7mm}
+.valor-card-modelo .marca-contexto>span{display:inline-flex;align-items:center;gap:1mm;font-size:5.4pt;font-weight:850;letter-spacing:1.25pt;color:#8090a1;text-transform:uppercase}
+.valor-card-modelo .marca-contexto>span::before{content:'';width:1.6mm;height:1.6mm;border-radius:50%;background:var(--cor)}
+.produto-suhai{display:inline-flex;max-width:58mm;align-items:center;gap:1.2mm;padding:.75mm 1.5mm;border:1px solid color-mix(in srgb,var(--cor) 24%,#dce5ec);border-radius:99px;background:color-mix(in srgb,var(--cor) 7%,#fff);font-family:var(--display);font-size:6.1pt;font-weight:750;line-height:1.15;color:color-mix(in srgb,var(--cor) 82%,#102842)}
+.produto-suhai::before{content:'Produto';font-family:var(--sans);font-size:4.5pt;font-weight:850;letter-spacing:.7pt;text-transform:uppercase;color:#788a9b}
 .valor-card-modelo .marca-valor .selo-logo{min-width:31mm;height:8.5mm;min-height:8.5mm;padding:1mm 2mm;border:1px solid color-mix(in srgb,var(--cor) 25%,#dfe6ec);border-radius:2mm;background:#fff;box-shadow:none}
 .valor-card-modelo .marca-valor .selo-logo img{max-width:28mm;max-height:6mm}
 .valor-card-modelo .marca-valor .fallback{font-family:var(--display);font-size:10pt;font-weight:750;color:var(--cor)}
@@ -566,6 +569,8 @@ body{font-family:var(--sans);font-size:7.5pt;line-height:1.38;color:#142437}
 .tabela-head{min-height:auto;padding:1.9mm 3.2mm;background:var(--soft);font-size:5.25pt;letter-spacing:1.15pt;color:#7b8b9b}
 .tabela-head.seguradora{gap:2mm;padding:1.3mm 3.2mm;background:var(--soft);color:var(--cor)}
 .tabela-head.seguradora strong{font-size:5.25pt;letter-spacing:1.15pt;color:var(--cor)}
+.tabela-head .cabecalho-seguradora{display:flex;min-width:0;flex-direction:column;align-items:flex-start;gap:.65mm}
+.tabela-head .produto-suhai-mini{max-width:100%;overflow:hidden;text-overflow:ellipsis;font-family:var(--display);font-size:4.65pt;font-weight:800;letter-spacing:0;text-transform:none;white-space:nowrap;color:color-mix(in srgb,var(--cor) 82%,#102842)}
 .tabela-head .selo-logo{min-width:19mm;min-height:5.5mm;padding:.4mm 1mm;border:0;background:transparent;box-shadow:none}
 .tabela-head .selo-logo img{max-width:18mm;max-height:4.4mm}.tabela-head .fallback{font-size:6.5pt;color:var(--cor)}
 .tabela-cobertura,.tabela-celula{min-height:10.5mm;padding:1.9mm 3.2mm;border-top:1px solid var(--line-soft)}
@@ -616,6 +621,12 @@ function logoEmbutidaDaSeguradora(nome) {
   const chave = String(nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
   if (chave.includes('pier')) return LOGO_PIER
   return ''
+}
+
+function produtoSuhai(card) {
+  const nome = String(card?.seguradora?.nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  if (!nome.includes('suhai')) return ''
+  return String(card?.produto?.label || '').trim()
 }
 
 /**
@@ -769,8 +780,12 @@ function blocoTabelaCoberturas(cards) {
   const cabecalho = card => {
     const s = card.seguradora
     const estilo = `--cor:${s.cor};--cor-texto:${s.cor_texto}`
+    const produto = produtoSuhai(card)
     return `<div class="tabela-head seguradora" style="${estilo}">
-      ${selo(s)}
+      <div class="cabecalho-seguradora">
+        ${selo(s)}
+        ${produto ? `<span class="produto-suhai-mini">Produto: ${escapeHtml(produto)}</span>` : ''}
+      </div>
     </div>`
   }
 
@@ -799,6 +814,7 @@ function blocoTabelaCoberturas(cards) {
 function blocoPagamentoModelo(card) {
   const s = card.seguradora
   const estilo = `--cor:${s.cor}`
+  const produto = produtoSuhai(card)
   const linhas = Array.isArray(card.valores.parcelamento)
     ? card.valores.parcelamento
     : String(card.valores.parcelamento || '').split('\n')
@@ -811,7 +827,13 @@ function blocoPagamentoModelo(card) {
 
   return `<article class="valor-card-modelo" style="${estilo}">
     <div class="valor-card-modelo-inner">
-      <div class="marca-valor"><span>${escapeHtml(ROTULO_PAPEL[card.papel] || 'Cotação')}</span>${selo(s)}</div>
+      <div class="marca-valor">
+        <div class="marca-contexto">
+          <span>${escapeHtml(ROTULO_PAPEL[card.papel] || 'Cotação')}</span>
+          ${produto ? `<strong class="produto-suhai">${escapeHtml(produto)}</strong>` : ''}
+        </div>
+        ${selo(s)}
+      </div>
       <div class="valor-total-label">Valor total (com IOF)</div>
       <div class="valor-total">${escapeHtml(card.valores.total_formatado || '—')}</div>
       ${pagamentos ? `<div class="pagamentos">${pagamentos}</div>` : ''}

@@ -150,6 +150,19 @@ test('Pier usa uma logo vetorial embutida mesmo sem URL cadastrada', () => {
   assert.ok(!doc.includes('<span class="fallback">Pier Seguros</span>'))
 })
 
+test('Suhai mostra no PDF o produto escolhido e usa a logo cadastrada', () => {
+  const suhai = cotacao('Suhai Seguradora')
+  suhai.seguradora.logo_url = 'https://cdn.conves.test/seguradoras/suhai-cadastrada.svg'
+  suhai.produto_selecionado = { id: 'roubo_furto_rcf', label: 'Roubo + Furto + RCF' }
+  const comp = montarComparativo({ atual: suhai, outra: cotacao('Porto Seguro') })
+  const doc = montarHtmlOrcamento(comp)
+
+  assert.equal(comp.cards[0].produto.label, 'Roubo + Furto + RCF')
+  assert.ok(doc.includes('src="https://cdn.conves.test/seguradoras/suhai-cadastrada.svg"'))
+  assert.ok(doc.includes('<strong class="produto-suhai">Roubo + Furto + RCF</strong>'))
+  assert.ok(doc.includes('<span class="produto-suhai-mini">Produto: Roubo + Furto + RCF</span>'))
+})
+
 test('cobertura conhecida nao inclusa aparece na propria linha da tabela', () => {
   assert.ok(!html().includes('Não contratado nesta cotação.'))
   const doc = html({ nao_incluso: [{ titulo: 'Carro reserva', detalhe: 'Não contratado nesta cotação.' }] })

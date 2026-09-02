@@ -17,7 +17,9 @@ import {
   Sun, Moon, Shield, TrendingUp,
   ChevronDown, FolderOpen, Calendar, RefreshCw, Car, Coins,
   GraduationCap, ClipboardList,
+  ListTodo, AlarmClock,
 } from 'lucide-react'
+import { fetchTaskAlertSummary } from '../lib/tasks'
 
 const AutoWorkspaceBar = lazy(() => import('./auto/AutoWorkspaceBar'))
 const FiancaWorkspaceBar = lazy(() => import('./fianca/FiancaWorkspaceBar'))
@@ -158,6 +160,7 @@ export default function Layout() {
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [hideWorkspaceTopbar, setHideWorkspaceTopbar] = useState(false)
+  const [taskAlerts, setTaskAlerts] = useState({ count: 0, overdue: 0, soon: 0 })
   const [expandedItems, setExpandedItems] = useState(() => {
     const initial = new Set()
     if (location.pathname.startsWith('/fichas')) initial.add('/fichas')
@@ -236,6 +239,26 @@ export default function Layout() {
     if (!user) return
     fetchContagemAbertaOrcamentista(user.id).then(setAbertasCount)
   }, [user])
+
+  useEffect(() => {
+    if (!user?.id) { setTaskAlerts({ count: 0, overdue: 0, soon: 0 }); return undefined }
+    let active = true
+    const load = () => fetchTaskAlertSummary(user.id)
+      .then(summary => { if (active) setTaskAlerts(summary) })
+      .catch(() => { if (active) setTaskAlerts({ count: 0, overdue: 0, soon: 0 }) })
+    load()
+    const interval = window.setInterval(load, 60_000)
+    window.addEventListener('focus', load)
+    const channel = supabase.channel(`layout-tarefas-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, load)
+      .subscribe()
+    return () => {
+      active = false
+      window.clearInterval(interval)
+      window.removeEventListener('focus', load)
+      supabase.removeChannel(channel)
+    }
+  }, [user?.id])
 
   // O store comercial carrega 5 tabelas inteiras (leads, vendas, eventos,
   // jornadas, scripts) sem paginação — só vale a pena buscar quando o
@@ -499,6 +522,22 @@ export default function Layout() {
               <small>Fichas, apólices e clientes</small>
             </span>
             <kbd className="shell-sidebar-detail" aria-hidden={!showSidebarDetails}>Ctrl K</kbd>
+          </button>
+          <button
+            type="button"
+            className={`shell-sidebar-command shell-tasks-command ${location.pathname.startsWith('/tarefas') ? 'is-active' : ''} ${taskAlerts.count > 0 ? 'has-alert' : ''}`}
+            onClick={() => navigate('/tarefas')}
+            data-label="Minhas tarefas"
+            aria-label={`Ver minhas tarefas${taskAlerts.count ? `, ${taskAlerts.count} com prazo em atenção` : ''}`}
+          >
+            <ListTodo aria-hidden="true" />
+            <span className="shell-sidebar-detail" aria-hidden={!showSidebarDetails}>
+              <strong>Minhas tarefas</strong>
+              <small>{taskAlerts.count > 0 ? `${taskAlerts.count} prazo${taskAlerts.count > 1 ? 's' : ''} em atenção` : 'Agenda e prioridades'}</small>
+            </span>
+            {taskAlerts.count > 0 && (
+              <b className="shell-task-alert-badge"><AlarmClock />{taskAlerts.count > 9 ? '9+' : taskAlerts.count}</b>
+            )}
           </button>
         </div>
 

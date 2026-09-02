@@ -11,6 +11,7 @@ import './styles/modal-ui.css'
 import './styles/kanban-ui.css'
 import './styles/report-finance-ui.css'
 import './styles/fianca-ui.css'
+import './styles/tasks-ui.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

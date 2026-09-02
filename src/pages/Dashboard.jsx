@@ -29,6 +29,7 @@ import {
   Target, TrendingUp, Users, Zap,
 } from 'lucide-react'
 import { DataCard, EmptyState, MetricCard, Button, PortalSelect } from '../components/ui'
+import TaskDashboardAlert from '../components/TaskDashboardAlert'
 
 const LS_KEY = 'dashboard-periodo'
 const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -499,6 +500,8 @@ export default function Dashboard() {
           </div>
         </div>
       </section>
+
+      <TaskDashboardAlert />
 
       <section className="hub-launchpad" aria-label="Atalhos para áreas operacionais">
         <header>
@@ -1144,4 +1147,3 @@ export default function Dashboard() {
     </div>
   )
 }
-

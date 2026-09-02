@@ -28,6 +28,7 @@ Thumbs.db
 !supabase/67_auto_orcamento_comparativo.sql
 !supabase/72_auto_orcamento_rascunho.sql
 !supabase/73_auto_clientes_unificacao_risco.sql
+!supabase/74_tarefas_pessoais.sql
 
 # Claude Code / Skills locais
 .claude/

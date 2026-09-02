@@ -68,6 +68,7 @@ const Vendas             = lazy(() => import('./pages/comercial/Vendas'))
 const Calendario         = lazy(() => import('./pages/comercial/Calendario'))
 const Jornadas           = lazy(() => import('./pages/comercial/Jornadas'))
 const Configuracoes      = lazy(() => import('./pages/Configuracoes'))
+const Tarefas            = lazy(() => import('./pages/Tarefas'))
 const AutoPdfConfigLista       = lazy(() => import('./pages/config/AutoPdfConfigLista'))
 const AutoPdfConfigSeguradora  = lazy(() => import('./pages/config/AutoPdfConfigSeguradora'))
 
@@ -155,6 +156,7 @@ function AppRoutes() {
           <Route path="comercial/calendario" element={<Calendario />} />
           <Route path="comercial/jornadas"   element={<Jornadas />} />
           <Route path="configuracoes"        element={<Configuracoes />} />
+          <Route path="tarefas"              element={<Tarefas />} />
           {/* Configuracao da leitura de PDF por seguradora (setor Auto) */}
           <Route path="configuracoes/auto/cotacoes"                element={<AutoPdfConfigLista tipo="cotacao" />} />
           <Route path="configuracoes/auto/cotacoes/:seguradoraId"  element={<AutoPdfConfigSeguradora tipo="cotacao" />} />

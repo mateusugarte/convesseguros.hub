@@ -33,13 +33,14 @@ export const AUTO_PIPELINE_STAGES = [
   { id: 'aguardando_vistoria', label: 'Aguardando vistoria ou rastreador', shortLabel: 'Vistoria/rastreador', color: '#a855f7' },
   { id: 'proposta_transmitida', label: 'Proposta transmitida', shortLabel: 'Proposta', color: '#10b981' },
   { id: 'apolice_emitida', label: 'Apólice emitida', shortLabel: 'Emitida', color: '#0f766e' },
+  { id: 'nao_renovou', label: 'Não renovou', shortLabel: 'Não renovou', color: '#dc2626' },
 ]
 
 // Renovações e novos negócios usam os mesmos status persistidos, mas são duas
 // mesas operacionais diferentes. Manter listas explícitas impede que cards e
 // contadores dos dois fluxos voltem a se misturar na interface.
 export const AUTO_RENEWAL_PIPELINE_STAGES = AUTO_PIPELINE_STAGES.filter(stage => stage.id !== 'pendentes')
-export const AUTO_OTHER_PIPELINE_STAGES = AUTO_PIPELINE_STAGES.filter(stage => !['renovacoes', 'renovacoes_para_enviar'].includes(stage.id))
+export const AUTO_OTHER_PIPELINE_STAGES = AUTO_PIPELINE_STAGES.filter(stage => !['renovacoes', 'renovacoes_para_enviar', 'nao_renovou'].includes(stage.id))
 
 export function isAutoRenewalEmission(item = {}) {
   const tipo = item?.cotacoes_auto?.tipo || item?.tipo
@@ -194,6 +195,7 @@ export const RENOVACAO_STAGE_STATUS = {
   aguardando_vistoria: 'negociando',
   proposta_transmitida: 'enviada',
   apolice_emitida: 'renovada',
+  nao_renovou: 'nao_renovada',
 }
 
 // Volta de `status_operacional` para a coluna. So os estados que o arrasto
@@ -205,6 +207,7 @@ const STAGE_POR_OPERACIONAL = {
   enviado: 'proposta_transmitida',
   negociando: 'negociando',
   renovado: 'apolice_emitida',
+  cancelado: 'nao_renovou',
 }
 
 /**
@@ -244,8 +247,8 @@ export function resolveRenovacaoStage(item = {}, today = new Date().toISOString(
  *
  * Sem isto o card sumia ao ser arrastado: `isRenovacaoSemCalculo` responde
  * `false` para 'cotado', 'enviado', 'negociando' e 'renovado', que sao
- * justamente os estados que o arrasto grava. "Outra corretora" e "cancelado"
- * continuam fora — sao saidas do funil, nao colunas dele.
+ * justamente os estados que o arrasto grava. "Cancelado" agora possui a
+ * coluna explicita "Nao renovou"; apenas "Outra corretora" continua fora.
  */
 export function isRenovacaoNoQuadro(item = {}) {
   if (isRenovacaoSemCalculo(item)) return true

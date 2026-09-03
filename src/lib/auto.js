@@ -4,7 +4,7 @@ import { limparNomeSegurado, normalizeCompareText, somarUmAno } from './autoHist
 import { normalizePolicyImportIdentity, policyImportHasVehicleData, policyImportPipelineStage, policyImportRelationshipReady } from './autoPolicyImport.js'
 import { calcularDataLimiteRenovacao, calcularValorComissaoAuto } from './autoCalc.js'
 import { planejarExclusaoGrupoAuto } from './autoExclusao.js'
-import { countAutoEmissionTypes, isRenovacaoNoQuadro, renewalStatusFields, resolveAutoEmissionStage } from './autoOperational.js'
+import { countAutoEmissionTypes, isRenovacaoNoQuadro, renovacaoStageFields, renewalStatusFields, resolveAutoEmissionStage } from './autoOperational.js'
 import { buildAutoPendingNotifications } from './autoPending.js'
 import { ehColunaAusente } from './autoQuoteDraft.js'
 import { isRenewalDateInMonth } from './autoRenewalImport.js'
@@ -894,11 +894,25 @@ export async function getApoliceAutoDetalhe(id) {
 }
 
 export async function moverEmissaoColuna(id, coluna) {
-  const { error } = await supabase
+  const { data: emissao, error } = await supabase
     .from('emissoes_auto')
     .update({ coluna, updated_at: new Date().toISOString() })
     .eq('id', id)
+    .select('cotacao_id')
+    .single()
   if (error) throw error
+
+  // Uma renovacao que ja possui cotacao e representada por `emissoes_auto`,
+  // mas seu desfecho tambem precisa ficar registrado na linha original. Isso
+  // evita que "Nao renovou" reapareca como pendencia em outras telas.
+  const camposRenovacao = renovacaoStageFields(coluna)
+  if (emissao?.cotacao_id && camposRenovacao) {
+    const { error: renovacaoError } = await supabase
+      .from('renovacoes_auto')
+      .update({ ...camposRenovacao, updated_at: new Date().toISOString() })
+      .eq('cotacao_id', emissao.cotacao_id)
+    if (renovacaoError) throw renovacaoError
+  }
 }
 
 // Salva uma linha da grade de Transmissoes. Selecionar uma cotacao apenas
@@ -1437,7 +1451,6 @@ export async function getRenovacoesPendentesSemCotacao(mes) {
   let q = supabase
     .from('renovacoes_auto')
     .select(RENOVACAO_LISTA_SELECT)
-    .neq('status_renovacao', 'nao_renovada')
     .is('cotada_em', null)
     .order('vigencia_fim', { ascending: true })
 
@@ -1451,7 +1464,7 @@ export async function getRenovacoesPendentesSemCotacao(mes) {
   // Nao basta "sem calculo": a renovacao arrastada para Negociando/Proposta/
   // Emitida tem status operacional preenchido e sumiria do quadro exatamente
   // depois de ser posicionada. `isRenovacaoNoQuadro` mantem quem esta em
-  // alguma coluna da Pipeline e continua descartando as saidas do funil.
+  // alguma coluna da Pipeline, inclusive a saida visivel "Nao renovou".
   return (data ?? []).filter(isRenovacaoNoQuadro)
 }
 

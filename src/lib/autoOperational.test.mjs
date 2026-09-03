@@ -26,7 +26,7 @@ import {
 test('separa as etapas da pipeline de renovacoes das demais operacoes', () => {
   assert.deepEqual(
     AUTO_RENEWAL_PIPELINE_STAGES.map(stage => stage.id),
-    ['renovacoes', 'renovacoes_para_enviar', 'cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida'],
+    ['renovacoes', 'renovacoes_para_enviar', 'cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida', 'nao_renovou'],
   )
   assert.deepEqual(
     AUTO_OTHER_PIPELINE_STAGES.map(stage => stage.id),
@@ -201,7 +201,7 @@ test('abrir a cotacao (cotando) nao tira a renovacao da coluna de renovacao', ()
 })
 
 test('cada etapa do funil devolve a renovacao na coluna onde ela foi solta', () => {
-  const etapas = ['cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida']
+  const etapas = ['cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida', 'nao_renovou']
   for (const etapa of etapas) {
     const campos = renovacaoStageFields(etapa)
     assert.ok(campos, `${etapa} deveria ter campos`)
@@ -225,7 +225,7 @@ test('aguardando vistoria e negociando gravam status validos e nao se confundem'
   // Ambos precisam respeitar os CHECKs da tabela renovacoes_auto.
   const operacionaisValidos = ['pendente', 'cotando', 'cotado', 'enviado', 'negociando', 'outra_corretora', 'renovado', 'cancelado']
   const cotacaoValidos = ['nao_cotada', 'cotada_nao_enviada', 'cotada_enviada']
-  for (const etapa of ['renovacoes', 'renovacoes_para_enviar', 'pendentes', 'cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida']) {
+  for (const etapa of ['renovacoes', 'renovacoes_para_enviar', 'pendentes', 'cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida', 'nao_renovou']) {
     const campos = renovacaoStageFields(etapa)
     assert.ok(operacionaisValidos.includes(campos.status_operacional), `${etapa}: status_operacional invalido`)
     assert.ok(cotacaoValidos.includes(campos.status_cotacao), `${etapa}: status_cotacao invalido`)
@@ -245,9 +245,10 @@ test('renovacao posicionada no funil continua no quadro em vez de sumir', () => 
     assert.equal(isRenovacaoSemCalculo({ status_operacional }), false)
     assert.equal(isRenovacaoNoQuadro({ status_operacional }), true)
   }
-  // Saidas do funil continuam fora do quadro.
+  // "Nao renovou" agora e uma saida visivel; somente outra corretora fica fora.
   assert.equal(isRenovacaoNoQuadro({ status_operacional: 'outra_corretora' }), false)
-  assert.equal(isRenovacaoNoQuadro({ status_operacional: 'cancelado' }), false)
+  assert.equal(isRenovacaoNoQuadro({ status_operacional: 'cancelado' }), true)
+  assert.equal(resolveRenovacaoStage({ status_operacional: 'cancelado' }), 'nao_renovou')
   // E quem nunca foi trabalhado segue entrando.
   assert.equal(isRenovacaoNoQuadro({ status_operacional: 'pendente', status_cotacao: 'nao_cotada' }), true)
 })

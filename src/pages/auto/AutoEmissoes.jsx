@@ -49,7 +49,12 @@ const COLUNAS = [
   { id: 'aguardando_vistoria', label: 'Aguardando vistoria ou rastreador', hint: 'dependem de vistoria ou instalação', tone: 'warning' },
   { id: 'proposta_transmitida', label: 'Proposta transmitida', hint: 'proposta enviada para a seguradora', tone: 'success' },
   { id: 'apolice_emitida', label: 'Apólice emitida', hint: 'apólice finalizada com documento', tone: 'accent' },
+  { id: 'nao_renovou', label: 'Não renovou', hint: 'cliente que decidiu não renovar', tone: 'danger' },
 ]
+
+const colunasPorTipo = tipo => (tipo === 'renovacao'
+  ? COLUNAS
+  : COLUNAS.filter(coluna => coluna.id !== 'nao_renovou'))
 
 const PIPELINE_VIEWS = [
   { id: 'renovacoes', label: 'Renovações', description: 'Carteira, cálculos e acompanhamento até a emissão', icon: RefreshCw },
@@ -401,8 +406,8 @@ function getColunaMeta(colunaId) {
   return COLUNAS.find(item => item.id === colunaId) || COLUNAS[0]
 }
 
-// `COLUNAS` so descreve as 6 etapas de emissao. A renovacao tambem passa pelas
-// duas colunas de renovacao, que so existem em `AUTO_PIPELINE_STAGES`.
+// `COLUNAS` descreve as etapas persistidas dos cards. A renovacao tambem passa
+// pelas duas colunas de prazo, que so existem em `AUTO_PIPELINE_STAGES`.
 function getEtapaLabel(stageId) {
   return AUTO_PIPELINE_STAGES.find(item => item.id === stageId)?.label || getColunaMeta(stageId).label
 }
@@ -508,6 +513,7 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao,
   const isEmitida = coluna === 'apolice_emitida'
   const isTransmitida = coluna === 'proposta_transmitida'
   const isAguardandoOperacao = coluna === 'aguardando_vistoria'
+  const isNaoRenovou = coluna === 'nao_renovou'
   const isAprovada = emissao.resultado === 'aprovada' && !isEmitida
   const isCotada = emissao.resultado === 'cotada'
   const nome = nomeEmissao(emissao)
@@ -527,7 +533,7 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao,
 
   let shellClass = 'border-brand-secondary/20 bg-white/90 shadow-[0_10px_24px_rgba(15,23,42,0.05)]'
   let accentClass = 'from-brand-secondary to-brand-accent'
-  if (isRecusada) {
+  if (isRecusada || isNaoRenovou) {
     shellClass = 'border-red-200 bg-red-50/90 shadow-[0_10px_24px_rgba(239,68,68,0.07)]'
     accentClass = 'from-red-400 to-red-500'
   } else if (coluna === 'proposta_transmitida') {
@@ -597,6 +603,7 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao,
           {isEmitida && <span className="rounded-full bg-status-success/10 px-2 py-0.5 text-[10px] font-semibold text-status-success">Emitida</span>}
           {isTransmitida && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Transmitida</span>}
           {isAguardandoOperacao && <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">Pós-transmissão</span>}
+          {isNaoRenovou && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">Não renovou</span>}
           {isAprovada && !isTransmitida && !isAguardandoOperacao && <span className="rounded-full bg-status-success/10 px-2 py-0.5 text-[10px] font-semibold text-status-success">Aprovada</span>}
           {isCotada && !isEmitida && !isTransmitida && !isAguardandoOperacao && <span className="rounded-full bg-brand-secondary/10 px-2 py-0.5 text-[10px] font-semibold text-status-info">Cotada</span>}
           {!emissao.resultado && !isEmitida && !isTransmitida && !isAguardandoOperacao && <span className="rounded-full bg-dark-surface px-2 py-0.5 text-[10px] font-semibold text-dark-muted">Em andamento</span>}
@@ -681,14 +688,14 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao,
         </div>
       </div>
 
-      <button
+      {!isNaoRenovou && <button
         type="button"
         onClick={event => { event.stopPropagation(); onIniciarEmissao?.(emissao) }}
         className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-brand-accent/25 bg-brand-accent/8 px-3 py-2 text-xs font-semibold text-status-info transition hover:border-brand-accent/45 hover:bg-brand-accent/12"
       >
         <FileText className="h-3.5 w-3.5" />
         {isEmitida ? 'Editar emissão' : 'Iniciar emissão'}
-      </button>
+      </button>}
 
       <div className="mt-auto flex items-center justify-between gap-2 pt-2 text-xs text-dark-muted">
         <span className="auto-kanban-card-hint">{colunaMeta.hint}</span>
@@ -737,6 +744,7 @@ function CardRenovacaoPendente({ renovacao, onDragStart, onMover, onIniciarCotac
   const urgencia = RENOVACAO_URGENCIA_META[urgenciaKey]
 
   const coluna = resolveRenovacaoStage(renovacao)
+  const isNaoRenovou = coluna === 'nao_renovou'
   const etapaAnterior = etapaVizinhaRenovacao(coluna, -1)
   const proximaEtapa = etapaVizinhaRenovacao(coluna, 1)
 
@@ -744,11 +752,12 @@ function CardRenovacaoPendente({ renovacao, onDragStart, onMover, onIniciarCotac
     <div
       draggable
       onDragStart={() => onDragStart?.(renovacao)}
-      className="auto-kanban-card relative flex w-full flex-col overflow-hidden rounded-2xl border border-brand-accent/20 bg-brand-accent/5 p-3 text-left shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
+      className={`auto-kanban-card relative flex w-full flex-col overflow-hidden rounded-2xl border p-3 text-left shadow-[0_10px_24px_rgba(15,23,42,0.05)] ${isNaoRenovou ? 'border-red-200 bg-red-50/90' : 'border-brand-accent/20 bg-brand-accent/5'}`}
     >
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-accent to-brand-secondary" />
+      <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${isNaoRenovou ? 'from-red-400 to-red-600' : 'from-brand-accent to-brand-secondary'}`} />
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="rounded-full bg-dark-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Renovação</span>
+        {isNaoRenovou && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">Não renovou</span>}
         {typeof dias === 'number' && (
           <span className={`badge ${urgencia.badgeClass}`}>{formatDiasParaVencer(dias)}</span>
         )}
@@ -761,7 +770,7 @@ function CardRenovacaoPendente({ renovacao, onDragStart, onMover, onIniciarCotac
           {renovacao.data_limite_envio && <p className="truncate">Envio até {formatDateBR(renovacao.data_limite_envio)}</p>}
         </div>
       </div>
-      <div className="mt-2 flex flex-col gap-1.5">
+      {!isNaoRenovou && <div className="mt-2 flex flex-col gap-1.5">
         <button
           type="button"
           onClick={() => onIniciarCotacao(renovacao.id)}
@@ -781,9 +790,9 @@ function CardRenovacaoPendente({ renovacao, onDragStart, onMover, onIniciarCotac
           disabled={cancelando}
           className="rounded-xl border border-status-danger/30 bg-status-danger/5 px-3 py-1.5 text-[11px] font-semibold text-status-danger transition-colors hover:bg-status-danger/10 disabled:opacity-60"
         >
-          Cancelar renovação
+          Marcar como não renovou
         </button>
-      </div>
+      </div>}
 
       {/* Mesmo par de setas do card de emissao: arrastar num quadro que rola na
           horizontal e caro no trackpad, e a renovacao agora percorre o mesmo
@@ -1537,7 +1546,7 @@ function PlanilhaEmissoes({ items, onSave, onOpen, onEdit, onMove, saving }) {
             <td><input form="nova-linha-emissao" value={draft.responsavel} onChange={e => set('responsavel', e.target.value)} /></td>
             <td><select form="nova-linha-emissao" value={draft.tipo} onChange={e => set('tipo', e.target.value)}><option value="novo">NOVO</option><option value="renovacao">RENOVAÇÃO</option><option value="endosso">ENDOSSO</option></select></td>
             <td><input form="nova-linha-emissao" value={draft.emissor} onChange={e => set('emissor', e.target.value)} /></td>
-            <td><select form="nova-linha-emissao" value={draft.coluna} onChange={e => set('coluna', e.target.value)}>{COLUNAS.map(coluna => <option key={coluna.id} value={coluna.id}>{coluna.label}</option>)}</select></td>
+            <td><select form="nova-linha-emissao" value={draft.coluna} onChange={e => set('coluna', e.target.value)}>{colunasPorTipo(draft.tipo).map(coluna => <option key={coluna.id} value={coluna.id}>{coluna.label}</option>)}</select></td>
             <td><form id="nova-linha-emissao" onSubmit={submit}><button className="auto-sheet-save" disabled={saving || !draft.nome_cliente.trim()}>{saving ? 'Salvando…' : draft.emissao_id ? 'Vincular' : 'Adicionar'}</button></form></td>
           </tr>
           {items.map(item => {
@@ -1550,7 +1559,7 @@ function PlanilhaEmissoes({ items, onSave, onOpen, onEdit, onMove, saving }) {
               <td>{item.modelo_veiculo || item.cotacoes_auto?.modelo_veiculo || '—'}</td><td>{item.parcelamento || '—'}</td><td>{seguradoraEmissao(item)}</td>
               <td>{formatMoney(item.premio_liquido)}</td><td>{item.pct_comissao ?? '—'}{item.pct_comissao != null ? '%' : ''}</td><td>{formatMoney(item.valor_comissao)}</td><td>{formatMoney(item.valor_repasse)}</td>
               <td>{item.responsavel || '—'}</td><td><span className={meta.className}>{meta.label}</span></td><td>{item.emissor || '—'}</td>
-              <td><select value={getEmissaoColuna(item)} onChange={e => onMove(item, e.target.value)}>{COLUNAS.map(coluna => <option key={coluna.id} value={coluna.id}>{coluna.label}</option>)}</select></td>
+              <td><select value={getEmissaoColuna(item)} onChange={e => onMove(item, e.target.value)}>{colunasPorTipo(tipo).map(coluna => <option key={coluna.id} value={coluna.id}>{coluna.label}</option>)}</select></td>
               <td className="auto-sheet-actions"><button onClick={() => onEdit(item)}>Editar</button></td>
             </tr>
           })}
@@ -1946,12 +1955,15 @@ export default function AutoEmissoes() {
 
   const { mutateAsync: cancelarRenovacaoAsync, isPending: cancelandoRenovacao } = useMutation({
     mutationFn: ({ id, motivo }) => cancelarRenovacao(id, motivo),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['auto-renovacoes-pendentes'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['auto-renovacoes-pendentes'] })
+      toast({ type: 'success', title: 'Renovação encerrada', message: 'O card foi movido para Não renovou.' })
+    },
     onError: err => toast({ type: 'error', title: 'Erro ao cancelar renovação', message: err?.message || 'Tente novamente.' }),
   })
 
   function handleCancelarRenovacaoPendente(id) {
-    const motivo = window.prompt('Motivo do cancelamento (opcional):')
+    const motivo = window.prompt('Por que o cliente não renovou? (opcional):')
     if (motivo === null) return
     cancelarRenovacaoAsync({ id, motivo: motivo || null })
   }
@@ -2898,7 +2910,7 @@ export default function AutoEmissoes() {
                 </DataCard>
               )
             })}
-            {COLUNAS.filter(coluna => pipelineView !== 'renovacoes' || coluna.id !== 'pendentes').map(coluna => {
+            {COLUNAS.filter(coluna => kanbanStages.some(stage => stage.id === coluna.id)).map(coluna => {
               const cards = emissoesPipeline.filter(item => getEmissaoColuna(item) === coluna.id)
               // Renovacoes arrastadas para esta etapa. Elas nao entram em
               // `cards` porque continuam sendo linhas de `renovacoes_auto` e

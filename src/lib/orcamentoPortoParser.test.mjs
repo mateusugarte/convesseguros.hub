@@ -92,6 +92,57 @@ test('REGRESSAO: franquia e premio nao podem sair trocados', () => {
   assert.equal(cot.valores.franquia, 3600)
 })
 
+test('REGRESSAO: layout Porto novo sem variação e depreciação mantém as coberturas', () => {
+  const novo = agruparLinhas([
+    { pagina: 1, y: 302, x: 40, texto: 'Coberturas e serviços automóvel' },
+    { pagina: 1, y: 286, x: 29, texto: 'Descrição' },
+    { pagina: 1, y: 286, x: 253, texto: 'LMI (indenização)' },
+    { pagina: 1, y: 286, x: 364, texto: 'Franquia' },
+    { pagina: 1, y: 286, x: 493, texto: 'Valor do Prêmio' },
+    { pagina: 1, y: 274, x: 29, texto: 'Compreensiva (Colisão, Incêndio, Roubo ou' },
+    { pagina: 1, y: 274, x: 250, texto: '100.00%' },
+    { pagina: 1, y: 274, x: 362, texto: 'R$ 4.045,00 (50% da' },
+    { pagina: 1, y: 274, x: 510, texto: 'R$ 3.769,28' },
+    { pagina: 1, y: 263, x: 29, texto: 'Furto) - Valor de mercado' },
+    { pagina: 1, y: 263, x: 362, texto: 'Obrigatória)' },
+    { pagina: 1, y: 251, x: 29, texto: 'RCF-V Danos Corporais' },
+    { pagina: 1, y: 251, x: 250, texto: 'R$ 50.000,00' },
+    { pagina: 1, y: 251, x: 362, texto: '-' },
+    { pagina: 1, y: 251, x: 525, texto: 'R$ 41,44' },
+    { pagina: 2, y: 633, x: 40, texto: 'Coberturas e serviços residencial' },
+  ])
+  const coberturas = extrairCoberturas(novo)
+  assert.equal(coberturas.length, 2)
+  assert.match(coberturas[0].nome_original_seguradora, /Furto\) - Valor de mercado$/)
+  assert.equal(coberturas[0].franquia, 4045)
+  assert.equal(coberturas[0].premio, 3769.28)
+  assert.equal(coberturas[1].valor_lmi, 50000)
+})
+
+test('layout Porto novo lê totais e parcelamento pelas coordenadas', () => {
+  const layout = agruparLinhas([
+    { pagina: 2, y: 280, x: 403, texto: 'Valor líquido' },
+    { pagina: 2, y: 280, x: 516, texto: 'R$ 5.231,56' },
+    { pagina: 2, y: 266, x: 443, texto: 'IOF' },
+    { pagina: 2, y: 266, x: 512, texto: '+ R$ 386,09' },
+    { pagina: 2, y: 253, x: 412, texto: 'Valor total' },
+    { pagina: 2, y: 253, x: 513, texto: 'R$ 5.617,65' },
+    { pagina: 3, y: 553, x: 39, texto: 'TODAS CARTÃO DE CRÉDITO - DEMAIS BANDEIRAS' },
+    { pagina: 3, y: 537, x: 42, texto: '1x' },
+    { pagina: 3, y: 537, x: 444, texto: '10x' },
+    { pagina: 3, y: 510, x: 30, texto: '5.336,74' },
+    { pagina: 3, y: 510, x: 439, texto: '561,76' },
+    { pagina: 3, y: 114, x: 39, texto: 'BOLETO' },
+    { pagina: 3, y: 95, x: 64, texto: 'À vista' },
+    { pagina: 3, y: 95, x: 144, texto: 'R$ 5.617,65' },
+  ])
+  assert.deepEqual(extrairValores('', layout), { premio_liquido: 5231.56, iof: 386.09, premio_total: 5617.65 })
+  assert.deepEqual(extrairPagamento('', layout), [
+    'Cartão de crédito: até 10x de R$ 561,76 sem juros',
+    'Boleto: à vista R$ 5.617,65',
+  ])
+})
+
 // ─── Identificacao do layout ───────────────────────────────────────────
 
 test('reconhece a familia pelo CNPJ do emissor, nao pelo nome da marca', () => {

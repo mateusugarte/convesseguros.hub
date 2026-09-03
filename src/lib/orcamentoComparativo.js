@@ -570,7 +570,7 @@ function textoBrutoItens(itens = []) {
 
 export function extrairLimiteReboqueKm(...fontes) {
   const texto = fontes.flat(Infinity).filter(Boolean).join(' ')
-  if (/(?:guincho|reboque)[^.\n;]{0,120}?(?:sem limite de?\s*(?:km|quilometragem)|km ilimitado|ilimitad[oa])|(?:sem limite de?\s*(?:km|quilometragem)|km ilimitado|ilimitad[oa])[^.\n;]{0,120}?(?:guincho|reboque)/i.test(texto)) {
+  if (/(?:assist[êe]ncia|guincho|reboque)[^.\n;]{0,120}?(?:sem limite de?\s*(?:km|quilometragem)|km ilimitado|ilimitad[oa])|(?:sem limite de?\s*(?:km|quilometragem)|km ilimitado|ilimitad[oa])[^.\n;]{0,120}?(?:assist[êe]ncia|guincho|reboque)/i.test(texto)) {
     return 'Sem limite de KM'
   }
   const pares = [

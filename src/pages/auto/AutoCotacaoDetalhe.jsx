@@ -333,6 +333,7 @@ export default function AutoCotacaoDetalhe() {
       await qc.invalidateQueries({ queryKey: ['auto-cotacoes-todas'] })
       await qc.invalidateQueries({ queryKey: ['auto-cotacoes'] })
       await qc.invalidateQueries({ queryKey: ['auto-clientes-carteira'] })
+      await qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
     },
     onError: async error => {
       setActionError(error?.message || 'Erro ao sincronizar os dados extraídos do PDF.')

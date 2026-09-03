@@ -6,7 +6,7 @@ import { agruparLinhas } from './pdfLayout.js'
 import {
   ehLayoutTokio, extrairCarroReservaTokio, extrairCoberturasTokio,
   extrairFranquiaTokio, extrairIndenizacaoIntegralTokio,
-  extrairPagamentoTokio, parseCotacaoTokio,
+  extrairPagamentoTokio, listarProdutosTokio, parseCotacaoTokio,
 } from './orcamentoTokioParser.js'
 import { ESTADO_COBERTURA, montarCategorias, validarCotacao } from './orcamentoComparativo.js'
 
@@ -17,6 +17,35 @@ const parse = () => parseCotacaoTokio(FX)
 test('reconhece o layout pela marca e pelo processo SUSEP de Auto', () => {
   assert.equal(ehLayoutTokio(FX.texto), true)
   assert.equal(ehLayoutTokio('Tokio Marine Seguro Fiança'), false)
+})
+
+test('layout Tokio com duas opções exige escolha e preserva os nomes dos produtos', () => {
+  const catalogo = listarProdutosTokio(
+    'Escolha o produto ideal para você:  Utilitário Carga   Utilitário Proteção Mensal  Valor Referenciado (VMR)',
+  )
+  assert.equal(catalogo.requer_selecao, true)
+  assert.deepEqual(catalogo.produtos.map(p => p.label), ['Utilitário Carga', 'Utilitário Proteção Mensal'])
+})
+
+test('REGRESSÃO: duas colunas Tokio não trocam LMI pelo prêmio vizinho', () => {
+  const novo = agruparLinhas([
+    { pagina: 2, y: 437, x: 269, texto: 'Cobertura (LMI)' },
+    { pagina: 2, y: 437, x: 353, texto: 'Prêmio Líquido' },
+    { pagina: 2, y: 437, x: 432, texto: 'Cobertura (LMI)' },
+    { pagina: 2, y: 437, x: 516, texto: 'Prêmio Líquido' },
+    { pagina: 2, y: 379, x: 34, texto: 'RCF-V - Danos Materiais' },
+    { pagina: 2, y: 379, x: 273, texto: 'R$ 150.000,00' },
+    { pagina: 2, y: 379, x: 362, texto: 'R$ 803,55' },
+    { pagina: 2, y: 379, x: 438, texto: 'R$ 25.000,00' },
+    { pagina: 2, y: 379, x: 525, texto: 'R$ 705,61' },
+    { pagina: 2, y: 189, x: 34, texto: 'Prêmio Líquido total' },
+    { pagina: 2, y: 189, x: 359, texto: 'R$ 3.236,37' },
+    { pagina: 2, y: 189, x: 522, texto: 'R$ 2.565,27' },
+  ])
+  assert.equal(extrairCoberturasTokio(novo, 0)[0].valor_lmi, 150000)
+  assert.equal(extrairCoberturasTokio(novo, 0)[0].premio, 803.55)
+  assert.equal(extrairCoberturasTokio(novo, 1)[0].valor_lmi, 25000)
+  assert.equal(extrairCoberturasTokio(novo, 1)[0].premio, 705.61)
 })
 
 test('extrai coberturas contratadas e negativas explícitas', () => {
@@ -123,7 +152,8 @@ test('carro reserva e vidros vêm da página de serviços', () => {
   const cot = parse()
   assert.match(cot.coberturas.find(c => c.categoria === 'carro_reserva').observacoes, /7 diárias/i)
   assert.match(cot.coberturas.find(c => c.categoria === 'vidros').observacoes, /Parabrisa R\$\s*365,00/i)
-  assert.equal(cot.assistencia_24h.limite_reboque_km, 300)
+  // O quadro de serviços explicita 200 km padrão + 300 km adicional = 500 km.
+  assert.equal(cot.assistencia_24h.limite_reboque_km, 500)
 })
 
 test('todas as categorias obrigatórias são resolvidas e a cotação pode ser gerada', () => {

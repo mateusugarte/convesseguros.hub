@@ -274,7 +274,21 @@ function buildRenewalComparisonPayload(payload = {}, premioLiquidoAtual = 0, com
 }
 
 async function resolverClienteAutoId(payload = {}, { exigirIdentificacao = true } = {}) {
-  if (isUuid(payload.cliente_id)) return payload.cliente_id
+  if (isUuid(payload.cliente_id)) {
+    const linkedPatch = {
+      ...(payload.nome_cliente || payload.nome_completo || payload.nome ? { nome_completo: payload.nome_cliente || payload.nome_completo || payload.nome } : {}),
+      ...(normalizeCpf(payload.cpf_cliente || payload.cpf) ? { cpf: normalizeCpf(payload.cpf_cliente || payload.cpf) } : {}),
+      ...(payload.celular_cliente || payload.celular ? { celular: payload.celular_cliente || payload.celular } : {}),
+      ...(payload.email_cliente || payload.email ? { email: payload.email_cliente || payload.email } : {}),
+      ...(payload.estado_civil_cliente || payload.estado_civil ? { estado_civil: payload.estado_civil_cliente || payload.estado_civil } : {}),
+      ...(payload.profissao_cliente || payload.profissao ? { profissao: payload.profissao_cliente || payload.profissao } : {}),
+    }
+    if (Object.keys(linkedPatch).length) {
+      const { error } = await supabase.from('clientes_auto').update(linkedPatch).eq('id', payload.cliente_id)
+      if (error) throw error
+    }
+    return payload.cliente_id
+  }
 
   const cpf = normalizeCpf(payload.cpf_cliente || payload.cpf)
   if (!cpf) {
@@ -592,6 +606,28 @@ export async function sincronizarDadosExtraidosCotacaoAuto(id, changes = {}) {
   const clienteIdOriginal = clienteId
   let avisoCliente = ''
 
+  const sincronizarCardEmissao = async clienteFinalId => {
+    const emissionPatch = pickDefined(changes, [
+      'nome_cliente',
+      'cpf_cliente',
+      'celular_cliente',
+      'condutor_nome',
+      'condutor_cpf',
+      'modelo_veiculo',
+      'placa',
+      'vigencia_inicio',
+      'vigencia_fim',
+    ])
+    if (clienteFinalId) emissionPatch.cliente_id = clienteFinalId
+    if (!Object.keys(emissionPatch).length) return
+
+    const { error: emissaoError } = await supabase
+      .from('emissoes_auto')
+      .update({ ...emissionPatch, updated_at: new Date().toISOString() })
+      .eq('cotacao_id', id)
+    if (emissaoError) throw emissaoError
+  }
+
   // Uma cotacao sem vinculo passa a pertencer ao cliente identificado pelo
   // CPF. A busca acontece mesmo quando ja existe vinculo: se o CPF extraido
   // pertence a outro cadastro confirmado, religamos a cotacao em vez de tentar
@@ -646,10 +682,13 @@ export async function sincronizarDadosExtraidosCotacaoAuto(id, changes = {}) {
       .select('*, clientes_auto(*)')
       .single()
     if (!religarError && religada) {
+      await sincronizarCardEmissao(clienteId)
       return avisoCliente ? { ...religada, aviso_sincronizacao_cliente: avisoCliente } : religada
     }
     if (religarError) avisoCliente = avisoCliente || religarError.message || 'Não foi possível vincular o cliente identificado.'
   }
+
+  await sincronizarCardEmissao(clienteId)
 
   return avisoCliente
     ? { ...cotacaoAtualizada, aviso_sincronizacao_cliente: avisoCliente }
@@ -939,7 +978,10 @@ export async function salvarResultadoCotacao(id, { resultado, seguradoras_cotada
 }
 
 export async function atualizarEmissaoAutoCompleta(payload) {
-  const clienteId = await resolverClienteAutoId(payload)
+  // Emissão não depende de CPF. Quando já existe cliente vinculado ele é
+  // preservado; sem CPF e sem vínculo a proposta continua válida e pode ser
+  // identificada pelo nome, como acontece nas linhas importadas da planilha.
+  const clienteId = await resolverClienteAutoId(payload, { exigirIdentificacao: false })
   const premioLiquido = parseFloat(payload.premio_liquido) || 0
   const pctComissao = parseFloat(payload.pct_comissao) || 0
   const valorComissao = calcularValorComissaoAuto(premioLiquido, pctComissao)
@@ -1074,7 +1116,7 @@ export async function deletarEmissaoAuto(id) {
 
 // Apolices
 export async function emitirApoliceAuto(payload) {
-  const clienteId = await resolverClienteAutoId(payload)
+  const clienteId = await resolverClienteAutoId(payload, { exigirIdentificacao: false })
   const premioLiquido = parseFloat(payload.premio_liquido) || 0
   const pctComissao = parseFloat(payload.pct_comissao) || 0
   const valorComissao = calcularValorComissaoAuto(premioLiquido, pctComissao)
@@ -1088,6 +1130,7 @@ export async function emitirApoliceAuto(payload) {
     : null
 
   const colunaDestino = payload.coluna || 'apolice_emitida'
+  let emissaoAtualizada = { id: payload.emissao_id, coluna: colunaDestino }
   if (payload.emissao_id) {
     const emissaoUpdate = {
       coluna: colunaDestino,
@@ -1116,6 +1159,7 @@ export async function emitirApoliceAuto(payload) {
       pct_repasse: payload.tem_repasse ? parseFloat(payload.pct_repasse) || null : null,
       nome_repasse: payload.tem_repasse ? payload.nome_repasse || null : null,
       valor_repasse: payload.tem_repasse ? valorRepasse : null,
+      ...(Array.isArray(payload.tags) ? { tags: payload.tags } : {}),
       ...comparativoRenovacao,
       updated_at: new Date().toISOString(),
     }
@@ -1131,9 +1175,32 @@ export async function emitirApoliceAuto(payload) {
         .eq('id', payload.emissao_id))
     }
     if (emissaoError) throw emissaoError
+    emissaoAtualizada = { id: payload.emissao_id, ...emissaoUpdate }
   }
 
-  if (colunaDestino !== 'apolice_emitida') return { emissao: { id: payload.emissao_id }, apolice: null }
+  // O formulário de emissão também é uma oportunidade de completar a ficha.
+  // Propagar somente valores informados mantém cotação, card e cliente com a
+  // mesma identidade sem transformar o CPF em requisito de transmissão.
+  if (payload.cotacao_id) {
+    const cotacaoPatch = Object.fromEntries(Object.entries(pickDefined(payload, [
+      'nome_cliente', 'cpf_cliente', 'celular_cliente', 'condutor_nome',
+      'condutor_cpf', 'modelo_veiculo', 'placa', 'vigencia_inicio', 'vigencia_fim',
+    ])).filter(([, value]) => value !== null && value !== ''))
+    if (Object.keys(cotacaoPatch).length) {
+      const { error: cotacaoError } = await supabase
+        .from('cotacoes_auto')
+        .update({ ...cotacaoPatch, updated_at: new Date().toISOString() })
+        .eq('id', payload.cotacao_id)
+      if (cotacaoError) throw cotacaoError
+    }
+  }
+
+  if (colunaDestino !== 'apolice_emitida') {
+    return {
+      emissao: emissaoAtualizada,
+      apolice: null,
+    }
+  }
 
   if (payloadComTipoDerivado.tipo === 'endosso' && payload.cotacao_id) {
     const { data: endosso, error: endossoError } = await supabase
@@ -1198,7 +1265,7 @@ export async function emitirApoliceAuto(payload) {
 }
 
 export async function criarEmissaoManualAuto(payload) {
-  const clienteId = await resolverClienteAutoId(payload)
+  const clienteId = await resolverClienteAutoId(payload, { exigirIdentificacao: false })
   const premioLiquido = parseFloat(payload.premio_liquido) || 0
   const pctComissao = parseFloat(payload.pct_comissao) || 0
   const valorComissao = calcularValorComissaoAuto(premioLiquido, pctComissao)
@@ -1207,11 +1274,12 @@ export async function criarEmissaoManualAuto(payload) {
     ? valorComissao * parseFloat(payload.pct_repasse)
     : null
 
+  const colunaDestino = payload.coluna || 'proposta_transmitida'
   const emissaoPayload = {
     cotacao_id: null,
     cliente_id: clienteId,
     tipo: payload.tipo || 'novo',
-    coluna: 'proposta_transmitida',
+    coluna: colunaDestino,
     data_transmissao: payload.data_transmissao || payload.data_emissao || null,
     tipo_producao: payload.tipo_producao || null,
     responsavel: payload.responsavel || null,
@@ -1254,6 +1322,11 @@ export async function criarEmissaoManualAuto(payload) {
       .single())
   }
   if (emissaoError) throw emissaoError
+
+  // Uma proposta transmitida (inclusive aguardando vistoria/rastreador) ainda
+  // não é apólice. Antes o cadastro manual sempre tentava inserir uma apólice,
+  // esbarrava na vigência obrigatória e dava a impressão de que nada mudou.
+  if (colunaDestino !== 'apolice_emitida') return { emissao, apolice: null }
 
   const apolicePayload = {
     emissao_id: emissao.id,

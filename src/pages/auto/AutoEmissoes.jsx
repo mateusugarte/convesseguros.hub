@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
-import { ArrowLeft, ArrowRight, CalendarDays, Car, CheckCircle2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, FileText, Loader2, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, Upload, X, XCircle, Plus, History } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarDays, Car, Check, CheckCircle2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, FileText, Loader2, Palette, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, Upload, X, XCircle, Plus, History } from 'lucide-react'
 import { endOfMonth, format, startOfMonth, startOfWeek } from 'date-fns'
 import {
   atualizarEmissaoAutoCompleta, atualizarStatusRenovacao, atualizarTagsEmissao, calcularValorComissaoAuto, cancelarRenovacao, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
@@ -32,6 +32,15 @@ import {
   alternarColunaRecolhida, etapaVizinha, etapaVizinhaRenovacao, gravarPreferenciasPipeline,
   isProposalTransmissionStage, lerPreferenciasPipeline, requiresAutoEmissionRegistration, resumoFinanceiroEtapa,
 } from '../../lib/autoPipelineBoard.js'
+import {
+  AUTO_CARD_COLORS,
+  autoEmissionRequirementLabel,
+  getAutoCardColor,
+  getAutoEmissionRequirement,
+  resolveAutoEmissionDestination,
+  setAutoCardColor,
+  setAutoEmissionRequirement,
+} from '../../lib/autoCardCustomization.js'
 import { useOrigemAtual, useVoltar } from '../../hooks/useVoltar.js'
 const COLUNAS = [
   { id: 'pendentes', label: 'Cotações pendentes', hint: 'somente seguros novos ainda não cotados', tone: 'warning' },
@@ -64,6 +73,7 @@ const FORM_EMISSAO_VAZIO = {
   vigencia_inicio: '',
   vigencia_fim: '',
   coluna: 'proposta_transmitida',
+  pendencia_emissao: 'nenhuma',
   premio_liquido: '',
   pct_comissao: '',
   forma_pagamento: '',
@@ -98,6 +108,7 @@ const FORM_MANUAL_VAZIO = {
   vigencia_inicio: '',
   vigencia_fim: '',
   coluna: 'proposta_transmitida',
+  pendencia_emissao: 'nenhuma',
   premio_liquido: '',
   pct_comissao: '',
   tem_repasse: false,
@@ -160,6 +171,7 @@ const FORM_EDICAO_VAZIO = {
   vigencia_inicio: '',
   vigencia_fim: '',
   coluna: 'proposta_transmitida',
+  pendencia_emissao: 'nenhuma',
   premio_liquido: '',
   pct_comissao: '',
   forma_pagamento: '',
@@ -330,6 +342,7 @@ function getFormEmissaoInicial(emissao) {
 
   return {
     ...FORM_EMISSAO_VAZIO,
+    pendencia_emissao: getAutoEmissionRequirement(emissao?.tags),
     nome_cliente: emissao?.nome_cliente || c.nome_cliente || c.nome_interessado || '',
     cpf_cliente: emissao?.cpf_cliente || c.cpf_cliente || '',
     celular_cliente: emissao?.celular_cliente || c.celular_cliente || '',
@@ -430,6 +443,7 @@ function getEditFormInicial(emissao) {
     apolice_id: apolice?.id || '',
     tipo: ['novo', 'renovacao', 'endosso'].includes(c.tipo || emissao?.tipo) ? (c.tipo || emissao?.tipo) : 'novo',
     coluna: getEmissaoColuna(emissao),
+    pendencia_emissao: getAutoEmissionRequirement(emissao?.tags),
     resultado: emissao?.resultado || '',
     nome_cliente: nomeCliente,
     cpf_cliente: cpfCliente,
@@ -479,8 +493,12 @@ function getEditFormInicial(emissao) {
   }
 }
 
-function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao, tagsPorId }) {
+function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao, onCardColor, tagsPorId }) {
+  const [showColors, setShowColors] = useState(false)
   const cardTags = (emissao.tags ?? []).map(id => tagsPorId?.get(id)).filter(Boolean)
+  const cardColor = getAutoCardColor(emissao.tags)
+  const emissionRequirement = getAutoEmissionRequirement(emissao.tags)
+  const requirementLabel = autoEmissionRequirementLabel(emissionRequirement)
   const coluna = getEmissaoColuna(emissao)
   const colunaMeta = getColunaMeta(coluna)
   const tipo = emissao.cotacoes_auto?.tipo || emissao.tipo
@@ -488,6 +506,8 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao,
   const tipoMeta = AUTO_TIPO_META[tipo] || AUTO_TIPO_META.novo
   const isRecusada = emissao.resultado === 'recusada'
   const isEmitida = coluna === 'apolice_emitida'
+  const isTransmitida = coluna === 'proposta_transmitida'
+  const isAguardandoOperacao = coluna === 'aguardando_vistoria'
   const isAprovada = emissao.resultado === 'aprovada' && !isEmitida
   const isCotada = emissao.resultado === 'cotada'
   const nome = nomeEmissao(emissao)
@@ -510,6 +530,12 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao,
   if (isRecusada) {
     shellClass = 'border-red-200 bg-red-50/90 shadow-[0_10px_24px_rgba(239,68,68,0.07)]'
     accentClass = 'from-red-400 to-red-500'
+  } else if (coluna === 'proposta_transmitida') {
+    shellClass = 'border-emerald-300/70 bg-emerald-50/95 shadow-[0_12px_28px_rgba(16,185,129,0.12)]'
+    accentClass = 'from-emerald-500 to-teal-500'
+  } else if (coluna === 'aguardando_vistoria') {
+    shellClass = 'border-violet-200 bg-violet-50/90 shadow-[0_10px_24px_rgba(124,58,237,0.08)]'
+    accentClass = 'from-violet-500 to-fuchsia-500'
   } else if (isRenovacao) {
     shellClass = 'border-status-success/20 bg-status-success/5 shadow-[0_10px_24px_rgba(34,197,94,0.07)]'
     accentClass = 'from-status-success to-brand-secondary'
@@ -534,8 +560,13 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao,
       }}
       title="Abrir detalhes da emissao"
       className={['auto-kanban-card group relative flex w-full cursor-pointer flex-col overflow-hidden rounded-2xl border p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(15,23,42,0.10)]', shellClass].join(' ')}
+      style={cardColor ? {
+        borderColor: `${cardColor}66`,
+        background: `linear-gradient(145deg, ${cardColor}20 0%, #ffffff 72%)`,
+        boxShadow: `0 12px 28px ${cardColor}18`,
+      } : undefined}
     >
-      <div className={['absolute inset-x-0 top-0 h-1 bg-gradient-to-r', accentClass].join(' ')} />
+      <div className={['absolute inset-x-0 top-0 h-1 bg-gradient-to-r', accentClass].join(' ')} style={cardColor ? { background: cardColor } : undefined} />
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 space-y-1.5">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -564,10 +595,61 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao,
         <div className="flex shrink-0 flex-col items-end gap-1">
           {isRecusada && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600">Recusada</span>}
           {isEmitida && <span className="rounded-full bg-status-success/10 px-2 py-0.5 text-[10px] font-semibold text-status-success">Emitida</span>}
-          {isAprovada && <span className="rounded-full bg-status-success/10 px-2 py-0.5 text-[10px] font-semibold text-status-success">Aprovada</span>}
-          {isCotada && !isEmitida && <span className="rounded-full bg-brand-secondary/10 px-2 py-0.5 text-[10px] font-semibold text-status-info">Cotada</span>}
-          {!emissao.resultado && !isEmitida && <span className="rounded-full bg-dark-surface px-2 py-0.5 text-[10px] font-semibold text-dark-muted">Em andamento</span>}
+          {isTransmitida && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Transmitida</span>}
+          {isAguardandoOperacao && <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">Pós-transmissão</span>}
+          {isAprovada && !isTransmitida && !isAguardandoOperacao && <span className="rounded-full bg-status-success/10 px-2 py-0.5 text-[10px] font-semibold text-status-success">Aprovada</span>}
+          {isCotada && !isEmitida && !isTransmitida && !isAguardandoOperacao && <span className="rounded-full bg-brand-secondary/10 px-2 py-0.5 text-[10px] font-semibold text-status-info">Cotada</span>}
+          {!emissao.resultado && !isEmitida && !isTransmitida && !isAguardandoOperacao && <span className="rounded-full bg-dark-surface px-2 py-0.5 text-[10px] font-semibold text-dark-muted">Em andamento</span>}
         </div>
+      </div>
+
+      <div className="relative mt-2 flex items-center justify-between gap-2">
+        {requirementLabel ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-100/80 px-2 py-1 text-[10px] font-semibold text-violet-700">
+            <ShieldCheck className="h-3 w-3" />
+            {requirementLabel}
+          </span>
+        ) : <span />}
+        <button
+          type="button"
+          className="inline-flex h-7 items-center gap-1 rounded-lg border border-dark-border/70 bg-white/85 px-2 text-[10px] font-semibold text-dark-muted transition hover:border-brand-accent/50 hover:text-status-info"
+          onClick={event => { event.stopPropagation(); setShowColors(value => !value) }}
+          aria-label="Alterar cor do card"
+          title="Cor organizacional"
+        >
+          <Palette className="h-3.5 w-3.5" /> Cor
+        </button>
+        {showColors && (
+          <div className="absolute right-0 top-9 z-30 w-52 rounded-2xl border border-dark-border/70 bg-white p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)]" onClick={event => event.stopPropagation()}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Cor do card</p>
+            <div className="mt-2 grid grid-cols-4 gap-2">
+              {AUTO_CARD_COLORS.map(color => (
+                <button
+                  key={color}
+                  type="button"
+                  className="grid h-8 w-8 place-items-center rounded-full border-2 border-white shadow ring-1 ring-dark-border/60"
+                  style={{ background: color }}
+                  onClick={() => { onCardColor?.(emissao, color); setShowColors(false) }}
+                  aria-label={`Usar cor ${color}`}
+                >
+                  {cardColor === color && <Check className="h-4 w-4 text-white" />}
+                </button>
+              ))}
+            </div>
+            <label className="mt-3 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-dark-border/60 px-2.5 py-2 text-[11px] font-semibold text-dark-text">
+              Personalizada
+              <input
+                type="color"
+                value={cardColor || '#10B981'}
+                onChange={event => onCardColor?.(emissao, event.target.value)}
+                className="h-7 w-9 cursor-pointer rounded border-0 bg-transparent p-0"
+              />
+            </label>
+            <button type="button" className="mt-2 w-full rounded-xl px-2 py-1.5 text-[11px] font-semibold text-dark-muted hover:bg-dark-surface" onClick={() => { onCardColor?.(emissao, ''); setShowColors(false) }}>
+              Usar cor automática do status
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="mt-2 rounded-xl border border-white/70 bg-dark-surface/70 p-2">
@@ -1357,6 +1439,7 @@ function PropostaTransmitidaFields({ form, onChange, valorComissao, tipo }) {
         <CampoTexto label="Transmissão" campo="data_transmissao" type="date" value={form.data_transmissao} onChange={onChange} />
         <CampoTexto label="Vigência" campo="vigencia_inicio" type="date" value={form.vigencia_inicio} onChange={onChange} />
         <CampoTexto label="Segurado" campo="nome_cliente" value={form.nome_cliente} onChange={onChange} />
+        <CampoTexto label="CPF do segurado (opcional)" campo="cpf_cliente" value={form.cpf_cliente} onChange={onChange} />
         <CampoTexto label="Qnt. de parcelas" campo="parcelamento" value={form.parcelamento} onChange={onChange} placeholder="Ex.: 10x" />
         <CampoTexto label="Seguradora" campo="seguradora" value={form.seguradora} onChange={onChange} />
         <CampoTexto label="Prêmio líquido" campo="premio_liquido" value={form.premio_liquido} onChange={onChange} inputMode="decimal" />
@@ -1886,15 +1969,32 @@ export default function AutoEmissoes() {
 
   const { mutateAsync: emitirAsync, isPending } = useMutation({
     mutationFn: payload => emitirApoliceAuto(payload),
-    onSuccess: () => {
+    onMutate: payload => {
+      if (!payload.emissao_id) return
+      aplicarColunaLocalmente(payload.emissao_id, {
+        ...payload,
+        coluna: payload.coluna,
+        valor_comissao: payload.valor_comissao,
+      })
+    },
+    onSuccess: (_data, payload) => {
       qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
       qc.invalidateQueries({ queryKey: ['auto-renovacoes'] })
       qc.invalidateQueries({ queryKey: ['auto-dashboard-metrics'] })
+      qc.invalidateQueries({ queryKey: ['auto-clientes-carteira'] })
+      toast({
+        type: 'success',
+        title: payload.coluna === 'apolice_emitida' ? 'Apólice registrada' : 'Proposta transmitida',
+        message: payload.coluna === 'aguardando_vistoria'
+          ? 'O card foi movido para a pendência operacional selecionada.'
+          : 'As informações foram salvas e o card já foi atualizado.',
+      })
       setModalEmissao(null)
       setForm(FORM_EMISSAO_VAZIO)
     },
     onError: error => {
       toast({ type: 'error', title: 'Erro ao salvar a emissão', message: error?.message || 'Verifique os dados informados.' })
+      qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
     },
   })
 
@@ -2288,8 +2388,15 @@ export default function AutoEmissoes() {
       setEmissaoPdfApplied(false)
       return
     }
-    setForm({ ...getFormEmissaoInicial(modalEmissao), coluna: manualStage })
-  }, [modalEmissao])
+    const initial = getFormEmissaoInicial(modalEmissao)
+    setForm({
+      ...initial,
+      coluna: manualStage,
+      pendencia_emissao: manualStage === 'aguardando_vistoria' && initial.pendencia_emissao === 'nenhuma'
+        ? 'vistoria'
+        : initial.pendencia_emissao,
+    })
+  }, [manualStage, modalEmissao])
 
   useEffect(() => {
     if (manualOpen) return
@@ -2328,6 +2435,8 @@ export default function AutoEmissoes() {
       }
 
   function handleEmitir() {
+    const colunaDestino = resolveAutoEmissionDestination(form.coluna, form.pendencia_emissao)
+    const tags = setAutoEmissionRequirement(modalEmissao.tags, form.pendencia_emissao)
     emitirAsync({
       emissao_id: modalEmissao.id,
       cotacao_id: modalEmissao.cotacao_id || null,
@@ -2360,11 +2469,10 @@ export default function AutoEmissoes() {
       pct_repasse: form.tem_repasse ? toNumber(form.pct_repasse) : null,
       nome_repasse: form.tem_repasse ? form.nome_repasse : null,
       valor_repasse: form.tem_repasse ? valorRepasse : null,
-      coluna: form.coluna || 'proposta_transmitida',
+      coluna: colunaDestino,
+      tags,
       documento_apolice: emissaoDocumento,
       user_id: user?.id || null,
-    }).then(() => {
-      mover({ id: modalEmissao.id, coluna: form.coluna || 'proposta_transmitida' })
     }).catch(() => {})
   }
 
@@ -2410,6 +2518,7 @@ export default function AutoEmissoes() {
             }
       ),
       tipo_producao: 'individual',
+      coluna: manualForm.coluna || 'proposta_transmitida',
     })
   }
 
@@ -2463,8 +2572,8 @@ export default function AutoEmissoes() {
   const precisaDocumentoApoliceManual = manualMode !== 'editar' && manualForm.coluna === 'apolice_emitida'
 
   const modalEmissaoResumo = modalEmissao ? {
-    cliente: modalEmissao.cotacoes_auto?.nome_cliente || modalEmissao.cotacoes_auto?.cpf_cliente || '—',
-    cpf: modalEmissao.cotacoes_auto?.cpf_cliente || '—',
+    cliente: modalEmissao.nome_cliente || modalEmissao.cotacoes_auto?.nome_cliente || modalEmissao.cpf_cliente || modalEmissao.cotacoes_auto?.cpf_cliente || '—',
+    cpf: modalEmissao.cpf_cliente || modalEmissao.cotacoes_auto?.cpf_cliente || 'Não informado (opcional)',
     veiculo: modalEmissao.cotacoes_auto?.modelo_veiculo || 'Modelo nao informado',
     placa: modalEmissao.cotacoes_auto?.placa || 'Sem placa',
     tipo: (modalEmissao.cotacoes_auto?.tipo || modalEmissao.tipo) === 'renovacao' ? 'Renovacao' : 'Novo',
@@ -2900,6 +3009,7 @@ export default function AutoEmissoes() {
                           onClick={abrirDetalhe}
                           onMover={moverCardPipeline}
                           onIniciarEmissao={iniciarEmissaoPipeline}
+                          onCardColor={(card, color) => salvarTagsEmissao({ id: card.id, tags: setAutoCardColor(card.tags, color) })}
                           tagsPorId={tagsPorId}
                         />
                       ))
@@ -3065,39 +3175,41 @@ export default function AutoEmissoes() {
 
                 <div className="space-y-4">
                   <div className="rounded-3xl border border-dark-border/70 bg-dark-surface2/40 p-4">
-                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Etapa da transmissão</p>
-                    <div className="grid gap-2 md:grid-cols-3">
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Próximo passo após transmitir</p>
+                    <p className="mb-3 text-xs text-dark-muted">A transmissão fica verde. Se houver pendência, o sistema posiciona o card automaticamente em vistoria/rastreador.</p>
+                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                      {[
+                        { value: 'nenhuma', title: 'Sem pendência', description: 'Proposta transmitida', tone: 'success' },
+                        { value: 'vistoria', title: 'Precisa de vistoria', description: 'Aguardar vistoria', tone: 'warning' },
+                        { value: 'rastreador', title: 'Instalar rastreador', description: 'Aguardar instalação', tone: 'warning' },
+                        { value: 'vistoria_rastreador', title: 'Vistoria + rastreador', description: 'Aguardar os dois', tone: 'warning' },
+                      ].map(option => {
+                        const selected = form.coluna !== 'apolice_emitida' && form.pendencia_emissao === option.value
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setForm(current => ({
+                              ...current,
+                              pendencia_emissao: option.value,
+                              coluna: option.value === 'nenhuma' ? 'proposta_transmitida' : 'aguardando_vistoria',
+                            }))}
+                            className={`rounded-2xl border px-3 py-2.5 text-left text-xs font-semibold transition-all ${selected
+                              ? (option.tone === 'success'
+                                ? 'border-emerald-400 bg-emerald-50 text-emerald-700 shadow-sm'
+                                : 'border-violet-300 bg-violet-50 text-violet-700 shadow-sm')
+                              : 'border-dark-border bg-dark-surface/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text'}`}
+                          >
+                            <span className="flex items-center justify-between gap-2">{option.title}{selected && <Check className="h-3.5 w-3.5" />}</span>
+                            <span className="mt-1 block text-[11px] font-normal opacity-75">{option.description}</span>
+                          </button>
+                        )
+                      })}
                       <button
                         type="button"
-                        onClick={() => setForm(current => ({ ...current, coluna: 'proposta_transmitida' }))}
+                        onClick={() => setForm(current => ({ ...current, coluna: 'apolice_emitida', pendencia_emissao: 'nenhuma' }))}
                         className={
-                          'rounded-2xl border px-3 py-2 text-left text-xs font-semibold transition-colors ' +
-                          (form.coluna === 'proposta_transmitida'
-                            ? 'border-brand-accent bg-brand-accent/10 text-status-info'
-                            : 'border-dark-border bg-dark-surface/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text')
-                        }
-                      >
-                        Proposta transmitida
-                        <span className="mt-1 block text-[11px] font-normal text-dark-muted">Envio inicial, sem apólice finalizada.</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setForm(current => ({ ...current, coluna: 'aguardando_vistoria' }))}
-                        className={
-                          'rounded-2xl border px-3 py-2 text-left text-xs font-semibold transition-colors ' +
-                          (form.coluna === 'aguardando_vistoria'
-                            ? 'border-status-warning bg-status-warning/10 text-status-warning'
-                            : 'border-dark-border bg-dark-surface/70 text-dark-muted hover:border-status-warning/40 hover:text-dark-text')
-                        }
-                      >
-                        Aguardando vistoria ou rastreador
-                        <span className="mt-1 block text-[11px] font-normal text-dark-muted">Proposta transmitida, aguardando validação operacional.</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setForm(current => ({ ...current, coluna: 'apolice_emitida' }))}
-                        className={
-                          'rounded-2xl border px-3 py-2 text-left text-xs font-semibold transition-colors ' +
+                          'rounded-2xl border px-3 py-2.5 text-left text-xs font-semibold transition-colors sm:col-span-2 xl:col-span-4 ' +
                           (form.coluna === 'apolice_emitida'
                             ? 'border-status-success bg-status-success/10 text-status-success'
                             : 'border-dark-border bg-dark-surface/70 text-dark-muted hover:border-brand-accent/40 hover:text-dark-text')
@@ -3470,7 +3582,7 @@ export default function AutoEmissoes() {
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <CampoTexto label="Nome do segurado" campo="nome_cliente" value={manualForm.nome_cliente} onChange={setManualField} />
-                    <CampoTexto label="CPF do segurado" campo="cpf_cliente" value={manualForm.cpf_cliente} onChange={setManualField} />
+                    <CampoTexto label="CPF do segurado (opcional)" campo="cpf_cliente" value={manualForm.cpf_cliente} onChange={setManualField} />
                     <CampoTexto label="Celular" campo="celular_cliente" value={manualForm.celular_cliente} onChange={setManualField} />
                     <CampoTexto label="Modelo do veiculo" campo="modelo_veiculo" value={manualForm.modelo_veiculo} onChange={setManualField} />
                     <CampoTexto label="Placa" campo="placa" value={manualForm.placa} onChange={setManualField} />
@@ -3624,7 +3736,6 @@ export default function AutoEmissoes() {
                       onClick={handleCreateManual}
                       disabled={isManualSubmitting
                         || !manualForm.nome_cliente
-                        || !manualForm.cpf_cliente
                         || !manualForm.celular_cliente
                         || !manualForm.condutor_nome
                         || !manualForm.seguradora
@@ -3653,7 +3764,7 @@ export default function AutoEmissoes() {
           onClose={() => setDetalhe(null)}
           onAbrirCotacao={() => abrirCotacaoCompleta(detalhe)}
           onRegistrarResultado={(em) => { setDetalhe(null); setModalResultado(em) }}
-          onEmitirApolice={(em) => { setDetalhe(null); setModalEmissao(em) }}
+          onEmitirApolice={(em) => { setDetalhe(null); iniciarEmissaoPipeline(em) }}
           onEditar={abrirEditor}
           onExcluir={handleExcluir}
           isDeleting={isDeleting}

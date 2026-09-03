@@ -9,7 +9,7 @@ import { ehLayoutDarwin, parseCotacaoDarwin } from './orcamentoDarwinParser.js'
 import { ehLayoutPier, listarProdutosPier, parseCotacaoPier } from './orcamentoPierParser.js'
 import { ehLayoutSuhai, listarProdutosSuhai, parseCotacaoSuhai } from './orcamentoSuhaiParser.js'
 import { ehLayoutYelum, parseCotacaoYelum } from './orcamentoYelumParser.js'
-import { ehLayoutTokio, parseCotacaoTokio } from './orcamentoTokioParser.js'
+import { ehLayoutTokio, listarProdutosTokio, parseCotacaoTokio } from './orcamentoTokioParser.js'
 
 const produtoUnico = (seguradora, label = 'Produto cotado') => ({
   seguradora,
@@ -79,7 +79,7 @@ export const PARSERS_ORCAMENTO_AUTO = [
   },
   {
     id: 'tokio', nome: () => 'Tokio Marine', detectar: ehLayoutTokio,
-    listarProdutos: () => produtoUnico('Tokio Marine'), parse: entrada => parseCotacaoTokio(entrada),
+    listarProdutos: listarProdutosTokio, parse: entrada => parseCotacaoTokio({ ...entrada, produto: entrada.produto }),
   },
 ]
 

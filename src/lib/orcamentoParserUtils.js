@@ -112,3 +112,20 @@ export function textoNaColuna(linha, x, tolerancia = 45) {
     .sort((a, b) => Math.abs(a.x - x) - Math.abs(b.x - x))
   return candidatas[0]?.texto || ''
 }
+
+/** Versao textual de `celulaNaFaixa`: nunca invade a coluna vizinha. */
+export function textoNaFaixaDaColuna(linha, x, {
+  anterior = null, proxima = null, antes = 80, depois = 80,
+} = {}) {
+  if (!linha || !Number.isFinite(Number(x))) return ''
+  const centro = Number(x)
+  const limiteEsquerdo = Number.isFinite(Number(anterior))
+    ? (Number(anterior) + centro) / 2
+    : centro - antes
+  const limiteDireito = Number.isFinite(Number(proxima))
+    ? (centro + Number(proxima)) / 2
+    : centro + depois
+  return (linha.celulas || [])
+    .filter(c => c.x >= limiteEsquerdo && c.x < limiteDireito)
+    .sort((a, b) => Math.abs(a.x - centro) - Math.abs(b.x - centro))[0]?.texto || ''
+}

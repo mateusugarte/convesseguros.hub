@@ -6,7 +6,7 @@ import {
   classificarCobertura, criarCotacaoOrcamento, humanizarCobertura,
 } from './orcamentoComparativo.js'
 import {
-  formatarMoeda, moeda, paraIso, percentual, textoNaColuna, valorAbaixoRotulo,
+  formatarMoeda, moeda, paraIso, percentual, textoNaColuna, textoNaFaixaDaColuna, valorAbaixoRotulo,
 } from './orcamentoParserUtils.js'
 
 export const CNPJ_YELUM = '61.550.141/0001-72'
@@ -34,9 +34,9 @@ export function extrairCoberturasYelum(linhas) {
     const nomeCelula = linha.celulas.find(c => c.x < 100 && COBERTURAS.some(p => p.test(c.texto)))
     if (!nomeCelula) continue
     const nome = nomeCelula.texto.replace(/\s+E$/i, ' E ESTÉTICOS').trim()
-    const lmiTexto = textoNaColuna(linha, 352, 80)
-    const premio = moeda(textoNaColuna(linha, 452, 70))
-    const franquia = moeda(textoNaColuna(linha, 550, 80))
+    const lmiTexto = textoNaFaixaDaColuna(linha, 352, { proxima: 452, antes: 80 })
+    const premio = moeda(textoNaFaixaDaColuna(linha, 452, { anterior: 352, proxima: 550 }))
+    const franquia = moeda(textoNaFaixaDaColuna(linha, 550, { anterior: 452, depois: 80 }))
     const categoria = classificarCobertura(nome)
     resultado.push({
       nome_original_seguradora: nome,

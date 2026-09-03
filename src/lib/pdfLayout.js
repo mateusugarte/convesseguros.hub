@@ -70,6 +70,30 @@ export function celulaEm(linha, x, { antes = 30, depois = 60 } = {}) {
 }
 
 /**
+ * Celula confinada a uma coluna real da tabela.
+ *
+ * Diferente de uma simples busca por proximidade, os pontos medios entre os
+ * cabecalhos viram limites intransponiveis. Assim, se o LMI estiver vazio, a
+ * busca devolve vazio em vez de atravessar para a coluna de premio.
+ */
+export function celulaNaFaixa(linha, x, {
+  anterior = null, proxima = null, antes = 80, depois = 80,
+} = {}) {
+  if (!linha || !Number.isFinite(Number(x))) return ''
+  const centro = Number(x)
+  const limiteEsquerdo = Number.isFinite(Number(anterior))
+    ? (Number(anterior) + centro) / 2
+    : centro - antes
+  const limiteDireito = Number.isFinite(Number(proxima))
+    ? (centro + Number(proxima)) / 2
+    : centro + depois
+  const candidatas = (linha.celulas || [])
+    .filter(c => c.x >= limiteEsquerdo && c.x < limiteDireito)
+    .sort((a, b) => Math.abs(a.x - centro) - Math.abs(b.x - centro))
+  return candidatas[0]?.texto || ''
+}
+
+/**
  * Posicao X de cada coluna, lida do proprio cabecalho da tabela.
  *
  * Deliberadamente nao ha X fixo em lugar nenhum deste projeto: Azul, Itau e

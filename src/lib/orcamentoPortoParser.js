@@ -17,7 +17,7 @@
 // familia so listam o que foi contratado, entao silencio aqui e mesmo silencio,
 // nao ausencia de cobertura.
 
-import { agruparLinhas, celulaEm, colunasPeloCabecalho, fatiar } from './pdfLayout.js'
+import { agruparLinhas, celulaEm, celulaNaFaixa, colunasPeloCabecalho, fatiar } from './pdfLayout.js'
 import {
   criarCotacaoOrcamento, detectarTipoOperacao, extrairLimiteReboqueKm, humanizarCobertura,
 } from './orcamentoComparativo.js'
@@ -302,7 +302,8 @@ export function extrairCoberturas(linhas) {
     if (!primeira || primeira.x > colunas.lmi - 60) continue   // nome fica a esquerda
 
     const texto = primeira.texto
-    const premio = moeda(celulaEm(linha, colunas.premio))
+    const colunaAntesPremio = colunas.depreciacao || colunas.variacao || colunas.franquia
+    const premio = moeda(celulaNaFaixa(linha, colunas.premio, { anterior: colunaAntesPremio }))
 
     if (premio == null) {
       // Linha sem valor: ou e o resto do nome da cobertura anterior, ou e o
@@ -320,15 +321,15 @@ export function extrairCoberturas(linhas) {
 
     if (ehRuido(texto)) { ultima = null; continue }
 
-    const lmiTexto = celulaEm(linha, colunas.lmi)
+    const lmiTexto = celulaNaFaixa(linha, colunas.lmi, { proxima: colunas.franquia })
     ultima = {
       nome_original_seguradora: texto,
       nome_padronizado: '',
       grupo: rotuloGrupo,
       valor_lmi: moeda(lmiTexto),
       lmi_percentual: percentual(lmiTexto),
-      franquia: moeda(celulaEm(linha, colunas.franquia)),
-      franquia_tipo: celulaEm(linha, colunas.franquia).match(/\(([^)]+)\)/)?.[1]?.trim() || '',
+      franquia: moeda(celulaNaFaixa(linha, colunas.franquia, { anterior: colunas.lmi, proxima: colunas.variacao || colunas.depreciacao || colunas.premio })),
+      franquia_tipo: celulaNaFaixa(linha, colunas.franquia, { anterior: colunas.lmi, proxima: colunas.variacao || colunas.depreciacao || colunas.premio }).match(/\(([^)]+)\)/)?.[1]?.trim() || '',
       premio,
       incluida: true,
       observacoes: '',

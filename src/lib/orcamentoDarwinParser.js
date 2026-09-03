@@ -7,7 +7,7 @@ import {
   classificarCobertura, criarCotacaoOrcamento, detectarTipoOperacao, humanizarCobertura,
 } from './orcamentoComparativo.js'
 import {
-  formatarCep, formatarMoeda, moeda, paraIso, percentual, textoNaColuna, valorAbaixoRotulo,
+  formatarCep, formatarMoeda, moeda, paraIso, percentual, textoNaColuna, textoNaFaixaDaColuna, valorAbaixoRotulo,
 } from './orcamentoParserUtils.js'
 
 export const CNPJ_DARWIN = '44.187.990/0001-94'
@@ -46,8 +46,8 @@ export function extrairCoberturasDarwin(linhas) {
 
     const vizinhas = pagina.filter(l => Math.abs(l.y - linha.y) <= 16)
     const celulas = vizinhas.flatMap(l => l.celulas)
-    const lmiTexto = textoNaColuna({ celulas }, xLmi, 180)
-    const premioTexto = textoNaColuna({ celulas }, xPremio, 180)
+    const lmiTexto = textoNaFaixaDaColuna({ celulas }, xLmi, { proxima: xPremio, antes: 180 })
+    const premioTexto = textoNaFaixaDaColuna({ celulas }, xPremio, { anterior: xLmi, depois: 180 })
     const incluida = !/n[ãa]o contratad/i.test(lmiTexto)
     const nome = nomeCelula.texto.trim()
 

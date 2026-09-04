@@ -113,6 +113,12 @@ const EMISSAO_AUTO_COLUMNS = 'id, cotacao_id, cliente_id, tipo, coluna, data_tra
 const COTACAO_AUTO_COLUMNS = 'id, cliente_id, tipo, origem_lead, nome_cliente, cpf_cliente, celular_cliente, email_cliente, estado_civil_cliente, profissao_cliente, condutor_nome, condutor_cpf, estado_civil_condutor, cep_pernoite, uso_veiculo, tipo_residencia, passagem_leilao, garagem_residencia, garagem_trabalho, garagem_estudo, jovens_18_26, modelo_veiculo, placa, veiculo_financiado, possui_kit_gas, possui_blindagem, isento_imposto, seguradora_preferencial, seguradora_mais_barata, vigencia_inicio, vigencia_fim, status, created_at, updated_at'
 
 const RENOVACAO_AUTO_COLUMNS = 'id, apolice_id, cliente_id, seguradora, outra_seguradora, identificacao_veiculo, vigencia_fim, data_limite_envio, pct_comissao_anterior, status_cotacao, status_renovacao, created_at'
+const AUTO_PROPOSTA_TRANSMITIDA_COLUNAS = new Set(['proposta_transmitida', 'aguardando_vistoria'])
+
+function resultadoEmissaoParaColuna(coluna, atual = null) {
+  if (atual) return atual
+  return AUTO_PROPOSTA_TRANSMITIDA_COLUNAS.has(coluna) || coluna === 'apolice_emitida' ? 'aprovada' : null
+}
 
 function pickDefined(source, fields) {
   return fields.reduce((acc, field) => {
@@ -983,6 +989,7 @@ export async function salvarPropostaPlanilhaAuto(payload) {
     tem_repasse: valorRepasse !== null && valorRepasse !== 0,
     responsavel: payload.responsavel || null,
     emissor: payload.emissor || null,
+    resultado: resultadoEmissaoParaColuna(payload.coluna || 'proposta_transmitida', payload.resultado || null),
     updated_at: new Date().toISOString(),
   }
 
@@ -1048,7 +1055,7 @@ export async function atualizarEmissaoAutoCompleta(payload) {
     tipo_producao: payload.tipo_producao || null,
     responsavel: payload.responsavel || null,
     emissor: payload.emissor || null,
-    resultado: payload.resultado || null,
+    resultado: resultadoEmissaoParaColuna(payload.coluna, payload.resultado || null),
     seguradoras_cotadas: Array.isArray(payload.seguradoras_cotadas) ? payload.seguradoras_cotadas : [],
     nome_cliente: payload.nome_cliente || null,
     cpf_cliente: payload.cpf_cliente || null,
@@ -1183,6 +1190,7 @@ export async function emitirApoliceAuto(payload) {
   if (payload.emissao_id) {
     const emissaoUpdate = {
       coluna: colunaDestino,
+      resultado: resultadoEmissaoParaColuna(colunaDestino, payload.resultado || null),
       cliente_id: clienteId,
       data_transmissao: payload.data_transmissao || null,
       tipo_producao: payload.tipo_producao || null,
@@ -1329,6 +1337,7 @@ export async function criarEmissaoManualAuto(payload) {
     cliente_id: clienteId,
     tipo: payload.tipo || 'novo',
     coluna: colunaDestino,
+    resultado: resultadoEmissaoParaColuna(colunaDestino, payload.resultado || null),
     data_transmissao: payload.data_transmissao || payload.data_emissao || null,
     tipo_producao: payload.tipo_producao || null,
     responsavel: payload.responsavel || null,

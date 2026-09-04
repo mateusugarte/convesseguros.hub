@@ -514,6 +514,7 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao,
   const isEmitida = coluna === 'apolice_emitida'
   const isTransmitida = coluna === 'proposta_transmitida'
   const isAguardandoOperacao = coluna === 'aguardando_vistoria'
+  const isProposta = isProposalTransmissionStage(coluna)
   const isNaoRenovou = coluna === 'nao_renovou'
   const isAprovada = emissao.resultado === 'aprovada' && !isEmitida
   const isCotada = emissao.resultado === 'cotada'
@@ -689,13 +690,21 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao,
         </div>
       </div>
 
-      {!isNaoRenovou && <button
+      {!isNaoRenovou && !isProposta && <button
         type="button"
         onClick={event => { event.stopPropagation(); onIniciarEmissao?.(emissao) }}
         className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-brand-accent/25 bg-brand-accent/8 px-3 py-2 text-xs font-semibold text-status-info transition hover:border-brand-accent/45 hover:bg-brand-accent/12"
       >
         <FileText className="h-3.5 w-3.5" />
         {isEmitida ? 'Editar emissão' : 'Iniciar emissão'}
+      </button>}
+      {isProposta && <button
+        type="button"
+        onClick={event => { event.stopPropagation(); onClick?.(emissao) }}
+        className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-300/60 bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-[0_10px_24px_rgba(16,185,129,0.18)] transition hover:bg-emerald-700"
+      >
+        <ShieldCheck className="h-3.5 w-3.5" />
+        Entrar na proposta
       </button>}
 
       <div className="mt-auto flex items-center justify-between gap-2 pt-2 text-xs text-dark-muted">
@@ -1451,7 +1460,15 @@ function PropostaTransmitidaFields({ form, onChange, valorComissao, tipo }) {
         <CampoTexto label="Segurado" campo="nome_cliente" value={form.nome_cliente} onChange={onChange} />
         <CampoTexto label="CPF do segurado (opcional)" campo="cpf_cliente" value={form.cpf_cliente} onChange={onChange} />
         <CampoTexto label="Qnt. de parcelas" campo="parcelamento" value={form.parcelamento} onChange={onChange} placeholder="Ex.: 10x" />
-        <CampoTexto label="Seguradora" campo="seguradora" value={form.seguradora} onChange={onChange} />
+        <div>
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Seguradora</label>
+          <SeguradoraSelect
+            value={form.seguradora}
+            onChange={value => onChange('seguradora', value)}
+            produto="auto"
+            placeholder="Selecionar seguradora"
+          />
+        </div>
         <CampoTexto label="Prêmio líquido" campo="premio_liquido" value={form.premio_liquido} onChange={onChange} inputMode="decimal" />
         <CampoTexto label="% Comissão" campo="pct_comissao" value={form.pct_comissao} onChange={onChange} inputMode="decimal" />
         <CampoTexto label="Valor da comissão" campo="valor_comissao" value={valorComissao ? formatMoney(valorComissao) : ''} onChange={onChange} disabled />
@@ -2486,6 +2503,7 @@ export default function AutoEmissoes() {
       parcelamento: form.parcelamento,
       tipo_producao: form.tipo_producao,
       responsavel: form.tipo_producao === 'individual' ? form.responsavel : null,
+      resultado: 'aprovada',
       eh_renovacao: form.eh_renovacao,
       ...renovacaoComparativo,
       tem_repasse: form.tem_repasse,

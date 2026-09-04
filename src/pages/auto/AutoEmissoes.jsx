@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx'
 import { ArrowLeft, ArrowRight, CalendarDays, Car, Check, CheckCircle2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, FileText, Loader2, Palette, PencilLine, RefreshCw, Search, ShieldCheck, Trash2, Upload, X, XCircle, Plus, History } from 'lucide-react'
 import { endOfMonth, format, startOfMonth, startOfWeek } from 'date-fns'
 import {
-  atualizarEmissaoAutoCompleta, atualizarStatusRenovacao, atualizarTagsEmissao, calcularValorComissaoAuto, cancelarRenovacao, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
+  atualizarEmissaoAutoCompleta, atualizarStatusRenovacao, atualizarTagsEmissao, atualizarTagsRenovacao, calcularValorComissaoAuto, cancelarRenovacao, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
   emitirApoliceAuto, getApolicesAuto, getAutoTags, getEmissaoAuto, getEmissaoColuna, getEmissoesAuto, getRenovacoesPendentesSemCotacao,
   iniciarCotacaoRenovacao, importarApolicesAutoHistorico, moverEmissaoColuna,
   salvarPropostaPlanilhaAuto, salvarResultadoCotacao,
@@ -580,7 +580,7 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao,
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="rounded-full bg-dark-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">{colunaMeta.label}</span>
             <span className={tipoMeta.className}>{tipoMeta.label}</span>
-            {typeof prazo === 'number' && <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${prazo < 0 ? 'bg-red-100 text-red-600' : prazo <= 15 ? 'bg-status-warning/10 text-status-warning' : 'bg-dark-surface text-dark-muted'}`}>{prazo < 0 ? `${Math.abs(prazo)}d vencida` : `${prazo}d p/ vencer`}</span>}
+            {!isProposta && !isEmitida && typeof prazo === 'number' && <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${prazo < 0 ? 'bg-red-100 text-red-600' : prazo <= 15 ? 'bg-status-warning/10 text-status-warning' : 'bg-dark-surface text-dark-muted'}`}>{prazo < 0 ? `${Math.abs(prazo)}d vencida` : `${prazo}d p/ vencer`}</span>}
           </div>
           <div>
             <p className="truncate text-sm font-semibold text-dark-text">{nome}</p>
@@ -745,34 +745,112 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao,
 // circula pelo funil como qualquer outro card: arrastar grava o status na
 // propria linha e o card fica na coluna de destino. "Iniciar cotacao" continua
 // sendo o caminho separado para transformar a renovacao em cotacao de verdade.
-function CardRenovacaoPendente({ renovacao, onDragStart, onMover, onIniciarCotacao, onIniciarEmissao, onCancelar, iniciando, cancelando }) {
+function CardRenovacaoPendente({ renovacao, onDragStart, onMover, onIniciarCotacao, onIniciarEmissao, onCancelar, onCardColor, tagsPorId, iniciando, cancelando }) {
+  const [showColors, setShowColors] = useState(false)
   const apolice = renovacao.apolices_auto || {}
   const nome = renovacao.clientes_auto?.nome_completo || apolice.nome_cliente || renovacao.nome_segurado_anterior || 'Segurado'
   const seguradora = renovacao.seguradora || apolice.seguradora || null
+  const cardTags = (renovacao.tags ?? []).map(id => tagsPorId?.get(id)).filter(Boolean)
+  const cardColor = getAutoCardColor(renovacao.tags)
   const dias = diasParaVencer(renovacao.vigencia_fim)
   const urgenciaKey = getRenovacaoUrgencia({ dias, concluida: false, proximoMes: false })
   const urgencia = RENOVACAO_URGENCIA_META[urgenciaKey]
 
   const coluna = resolveRenovacaoStage(renovacao)
   const isNaoRenovou = coluna === 'nao_renovou'
+  const isProposta = isProposalTransmissionStage(coluna)
+  const exibirPrazoRenovacao = ['renovacoes', 'renovacoes_para_enviar', 'cotacao_iniciada', 'cotacao_feita', 'negociando'].includes(coluna)
   const etapaAnterior = etapaVizinhaRenovacao(coluna, -1)
   const proximaEtapa = etapaVizinhaRenovacao(coluna, 1)
+  const shellClass = isNaoRenovou
+    ? 'border-red-200 bg-red-50/90'
+    : isProposta
+      ? 'border-emerald-300/70 bg-emerald-50/95 shadow-[0_12px_28px_rgba(16,185,129,0.12)]'
+      : 'border-brand-accent/20 bg-brand-accent/5'
+  const accentClass = isNaoRenovou
+    ? 'from-red-400 to-red-600'
+    : isProposta
+      ? 'from-emerald-500 to-teal-500'
+      : 'from-brand-accent to-brand-secondary'
 
   return (
     <div
       draggable
       onDragStart={() => onDragStart?.(renovacao)}
-      className={`auto-kanban-card relative flex w-full flex-col overflow-hidden rounded-2xl border p-3 text-left shadow-[0_10px_24px_rgba(15,23,42,0.05)] ${isNaoRenovou ? 'border-red-200 bg-red-50/90' : 'border-brand-accent/20 bg-brand-accent/5'}`}
+      className={`auto-kanban-card relative flex w-full flex-col overflow-hidden rounded-2xl border p-3 text-left shadow-[0_10px_24px_rgba(15,23,42,0.05)] ${shellClass}`}
+      style={cardColor ? {
+        borderColor: `${cardColor}66`,
+        background: `linear-gradient(145deg, ${cardColor}20 0%, #ffffff 72%)`,
+        boxShadow: `0 12px 28px ${cardColor}18`,
+      } : undefined}
     >
-      <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${isNaoRenovou ? 'from-red-400 to-red-600' : 'from-brand-accent to-brand-secondary'}`} />
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="rounded-full bg-dark-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Renovação</span>
-        {isNaoRenovou && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">Não renovou</span>}
-        {typeof dias === 'number' && (
-          <span className={`badge ${urgencia.badgeClass}`}>{formatDiasParaVencer(dias)}</span>
+      <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accentClass}`} style={cardColor ? { background: cardColor } : undefined} />
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 space-y-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="rounded-full bg-dark-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Renovação</span>
+            {isProposta && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Proposta transmitida</span>}
+            {isNaoRenovou && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">Não renovou</span>}
+            {exibirPrazoRenovacao && typeof dias === 'number' && (
+              <span className={`badge ${urgencia.badgeClass}`}>{formatDiasParaVencer(dias)}</span>
+            )}
+          </div>
+          <p className="truncate text-sm font-semibold text-dark-text">{nome}</p>
+          {cardTags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {cardTags.map(tag => (
+                <span
+                  key={tag.id}
+                  className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                  style={{ background: `${tag.cor}18`, color: tag.cor }}
+                >
+                  {tag.nome}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          className="inline-flex h-7 shrink-0 items-center gap-1 rounded-lg border border-dark-border/70 bg-white/85 px-2 text-[10px] font-semibold text-dark-muted transition hover:border-brand-accent/50 hover:text-status-info"
+          onClick={event => { event.stopPropagation(); setShowColors(value => !value) }}
+          aria-label="Alterar cor do card"
+          title="Cor organizacional"
+        >
+          <Palette className="h-3.5 w-3.5" /> Cor
+        </button>
+        {showColors && (
+          <div className="absolute right-3 top-11 z-30 w-52 rounded-2xl border border-dark-border/70 bg-white p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)]" onClick={event => event.stopPropagation()}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-dark-muted">Cor do card</p>
+            <div className="mt-2 grid grid-cols-4 gap-2">
+              {AUTO_CARD_COLORS.map(color => (
+                <button
+                  key={color}
+                  type="button"
+                  className="grid h-8 w-8 place-items-center rounded-full border-2 border-white shadow ring-1 ring-dark-border/60"
+                  style={{ background: color }}
+                  onClick={() => { onCardColor?.(renovacao, color); setShowColors(false) }}
+                  aria-label={`Usar cor ${color}`}
+                >
+                  {cardColor === color && <Check className="h-4 w-4 text-white" />}
+                </button>
+              ))}
+            </div>
+            <label className="mt-3 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-dark-border/60 px-2.5 py-2 text-[11px] font-semibold text-dark-text">
+              Personalizada
+              <input
+                type="color"
+                value={cardColor || '#10B981'}
+                onChange={event => onCardColor?.(renovacao, event.target.value)}
+                className="h-7 w-9 cursor-pointer rounded border-0 bg-transparent p-0"
+              />
+            </label>
+            <button type="button" className="mt-2 w-full rounded-xl px-2 py-1.5 text-[11px] font-semibold text-dark-muted hover:bg-dark-surface" onClick={() => { onCardColor?.(renovacao, ''); setShowColors(false) }}>
+              Usar cor automática do status
+            </button>
+          </div>
         )}
       </div>
-      <p className="mt-1.5 truncate text-sm font-semibold text-dark-text">{nome}</p>
       <div className="mt-2 flex items-center gap-2 rounded-xl border border-white/70 bg-white/70 p-2">
         {seguradora ? <SeguradoraBadge nome={seguradora} size="sm" /> : <span className="text-[11px] text-dark-muted">Seguradora não informada</span>}
         <div className="min-w-0 text-[11px] leading-snug text-dark-muted">
@@ -781,27 +859,29 @@ function CardRenovacaoPendente({ renovacao, onDragStart, onMover, onIniciarCotac
         </div>
       </div>
       {!isNaoRenovou && <div className="mt-2 flex flex-col gap-1.5">
-        <button
-          type="button"
-          onClick={() => onIniciarCotacao(renovacao.id)}
-          disabled={iniciando}
-          className="btn-primary inline-flex items-center justify-center gap-2 px-3 py-1.5 text-xs disabled:opacity-60"
-        >
-          {iniciando ? 'Abrindo...' : (renovacao.cotacao_id ? 'Abrir cotação' : 'Iniciar cotação')}
-        </button>
+        {!isProposta && <button
+            type="button"
+            onClick={() => onIniciarCotacao(renovacao.id)}
+            disabled={iniciando}
+            className="btn-primary inline-flex items-center justify-center gap-2 px-3 py-1.5 text-xs disabled:opacity-60"
+          >
+            {iniciando ? 'Abrindo...' : (renovacao.cotacao_id ? 'Abrir cotação' : 'Iniciar cotação')}
+          </button>}
         {renovacao.cotacao_id && <button
           type="button"
           onClick={() => onIniciarEmissao?.(renovacao)}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-brand-accent/30 bg-white/80 px-3 py-1.5 text-xs font-semibold text-status-info transition-colors hover:bg-brand-accent/8"
-        ><FileText className="h-3.5 w-3.5" />Iniciar emissão</button>}
-        <button
+          className={isProposta
+            ? 'inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-300/60 bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-[0_10px_24px_rgba(16,185,129,0.18)] transition hover:bg-emerald-700'
+            : 'inline-flex items-center justify-center gap-2 rounded-xl border border-brand-accent/30 bg-white/80 px-3 py-1.5 text-xs font-semibold text-status-info transition-colors hover:bg-brand-accent/8'}
+        >{isProposta ? <ShieldCheck className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}{isProposta ? 'Entrar na proposta' : 'Iniciar emissão'}</button>}
+        {!isProposta && <button
           type="button"
           onClick={() => onCancelar(renovacao.id)}
           disabled={cancelando}
           className="rounded-xl border border-status-danger/30 bg-status-danger/5 px-3 py-1.5 text-[11px] font-semibold text-status-danger transition-colors hover:bg-status-danger/10 disabled:opacity-60"
         >
           Marcar como não renovou
-        </button>
+        </button>}
       </div>}
 
       {/* Mesmo par de setas do card de emissao: arrastar num quadro que rola na
@@ -1737,6 +1817,17 @@ export default function AutoEmissoes() {
     onSettled: () => qc.invalidateQueries({ queryKey: ['auto-emissoes'] }),
   })
 
+  const { mutate: salvarTagsRenovacao } = useMutation({
+    mutationFn: ({ id, tags }) => atualizarTagsRenovacao(id, tags),
+    onMutate: async ({ id, tags }) => {
+      await qc.cancelQueries({ queryKey: ['auto-renovacoes-pendentes'] })
+      qc.setQueriesData({ queryKey: ['auto-renovacoes-pendentes'] }, old =>
+        Array.isArray(old) ? old.map(item => (item.id === id ? { ...item, tags } : item)) : old)
+    },
+    onError: error => toast({ type: 'error', title: 'Erro ao alterar a cor', message: error?.message || 'Tente novamente.' }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['auto-renovacoes-pendentes'] }),
+  })
+
   const { data: emissaoDaRota, isLoading: isLoadingEmissao } = useQuery({
     queryKey: ['auto-emissao', emissaoId],
     queryFn: () => getEmissaoAuto(emissaoId),
@@ -2345,6 +2436,22 @@ export default function AutoEmissoes() {
   function moverRenovacaoPipeline(item, colunaDestino) {
     if (!item || !colunaDestino) return
     if (resolveRenovacaoStage(item) === colunaDestino) return
+    if (requiresAutoEmissionRegistration(colunaDestino)) {
+      if (!item.cotacao_id) {
+        toast({ type: 'info', title: 'Inicie a cotação primeiro', message: 'Para transmitir proposta ou emitir apólice, a renovação precisa ter uma cotação vinculada.' })
+        return
+      }
+      const emissao = emissoes.find(registro => (
+        (registro.cotacao_id || registro.cotacoes_auto?.id) === item.cotacao_id
+      ))
+      if (!emissao) {
+        toast({ type: 'info', title: 'Cotação ainda sem emissão', message: 'Abra a cotação e conclua o cálculo antes de registrar a transmissão.' })
+        return
+      }
+      setManualStage(colunaDestino)
+      setModalEmissao(emissao)
+      return
+    }
     const campos = renovacaoStageFields(colunaDestino)
     if (!campos) return
     moverRenovacao({ id: item.id, campos })
@@ -2931,6 +3038,8 @@ export default function AutoEmissoes() {
                         onIniciarCotacao={handleIniciarCotacaoRenovacao}
                         onIniciarEmissao={iniciarEmissaoRenovacao}
                         onCancelar={handleCancelarRenovacaoPendente}
+                        onCardColor={(card, color) => salvarTagsRenovacao({ id: card.id, tags: setAutoCardColor(card.tags, color) })}
+                        tagsPorId={tagsPorId}
                         iniciando={iniciandoCotacaoId === item.id}
                         cancelando={cancelandoRenovacao}
                       />
@@ -3026,6 +3135,8 @@ export default function AutoEmissoes() {
                         onIniciarCotacao={handleIniciarCotacaoRenovacao}
                         onIniciarEmissao={iniciarEmissaoRenovacao}
                         onCancelar={handleCancelarRenovacaoPendente}
+                        onCardColor={(card, color) => salvarTagsRenovacao({ id: card.id, tags: setAutoCardColor(card.tags, color) })}
+                        tagsPorId={tagsPorId}
                         iniciando={iniciandoCotacaoId === item.id}
                         cancelando={cancelandoRenovacao}
                       />

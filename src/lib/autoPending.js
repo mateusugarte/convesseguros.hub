@@ -2,6 +2,7 @@ import { renewalStatusValue } from './autoOperational.js'
 
 const FINAL_RENEWAL_STATUSES = new Set(['renovada', 'nao_renovada', 'outra_corretora'])
 const SENT_RENEWAL_STATUSES = new Set(['enviada', 'negociando', ...FINAL_RENEWAL_STATUSES])
+const TRANSMITTED_EMISSION_STAGES = new Set(['proposta_transmitida', 'aguardando_vistoria', 'apolice_emitida'])
 const PRIORITY_WEIGHT = { critical: 0, high: 1, normal: 2 }
 
 function dateOnly(value) {
@@ -135,6 +136,7 @@ export function buildAutoPendingNotifications({ renovacoes = [], emissoes = [], 
     const lastUpdate = dateOnly(item.ultimo_followup_em || item.updated_at || item.created_at)
     const staleDays = Math.max(0, daysBetween(lastUpdate, referenceDay))
     const name = personName(item)
+    const jaTransmitida = TRANSMITTED_EMISSION_STAGES.has(stage)
 
     if (['pendente', 'aberta'].includes(status) && !stage && staleDays >= 1) {
       notifications.push({
@@ -154,7 +156,7 @@ export function buildAutoPendingNotifications({ renovacoes = [], emissoes = [], 
     }
 
     const nextDate = dateOnly(item.proximo_passo_em)
-    if (!['convertida', 'perdida'].includes(status) && nextDate && nextDate <= referenceDay) {
+    if (!jaTransmitida && !['convertida', 'perdida'].includes(status) && nextDate && nextDate <= referenceDay) {
       const meta = deadlineMeta(nextDate, referenceDay)
       notifications.push({
         id: `proximo_passo_cotacao:${item.id}`,

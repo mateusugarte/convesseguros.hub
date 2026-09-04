@@ -76,6 +76,31 @@ test('próximo passo vencido vira follow-up e cotação com emissão não duplic
   assert.equal(result[0].title, 'Cobrar documentos')
 })
 
+test('cotação com proposta transmitida deixa de apitar como cotação comum', () => {
+  const result = buildAutoPendingNotifications({
+    today,
+    cotacoes: [{
+      id: 'c-transmitida',
+      nome_cliente: 'Priscila Cunha',
+      status: 'aberta',
+      updated_at: '2026-08-18',
+      proximo_passo: 'Enviar cotação',
+      proximo_passo_em: today,
+      emissoes_auto: [{ coluna: 'proposta_transmitida' }],
+    }],
+    emissoes: [{
+      id: 'e-transmitida',
+      cotacao_id: 'c-transmitida',
+      nome_cliente: 'Priscila Cunha',
+      coluna: 'proposta_transmitida',
+      data_transmissao: today,
+      apolices_auto: [],
+    }],
+  })
+  assert.deepEqual(result.map(item => item.kind), ['coletar_apolice'])
+  assert.equal(result[0].subject, 'Priscila Cunha')
+})
+
 test('não pede coleta quando a proposta já possui apólice vinculada', () => {
   const result = buildAutoPendingNotifications({
     today,

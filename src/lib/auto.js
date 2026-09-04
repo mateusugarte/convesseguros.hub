@@ -385,6 +385,17 @@ async function concluirCotacaoEVincularRenovacao(cotacaoId) {
   if (renovacaoError) throw renovacaoError
 }
 
+async function sincronizarRenovacaoPorEtapaCotacao(cotacaoId, coluna) {
+  if (!cotacaoId) return
+  const campos = renovacaoStageFields(coluna)
+  if (!campos) return
+  const { error } = await supabase
+    .from('renovacoes_auto')
+    .update({ ...campos, updated_at: new Date().toISOString() })
+    .eq('cotacao_id', cotacaoId)
+  if (error) throw error
+}
+
 export function getEmissaoColuna(item) {
   return resolveAutoEmissionStage(item)
 }
@@ -1015,6 +1026,7 @@ export async function salvarPropostaPlanilhaAuto(payload) {
       })
       .eq('id', body.cotacao_id)
     if (cotacaoError) throw cotacaoError
+    await sincronizarRenovacaoPorEtapaCotacao(body.cotacao_id, body.coluna)
   }
 
   return result.data
@@ -1139,6 +1151,7 @@ export async function atualizarEmissaoAutoCompleta(payload) {
       .update(cotacaoPayload)
       .eq('id', payload.cotacao_id)
     if (cotacaoError) throw cotacaoError
+    await sincronizarRenovacaoPorEtapaCotacao(payload.cotacao_id, emissaoPayload.coluna)
   }
 
   const salvarApolice = payload.coluna === 'apolice_emitida' || payload.criar_apolice || payload.apolice_id
@@ -1253,6 +1266,7 @@ export async function emitirApoliceAuto(payload) {
   }
 
   if (colunaDestino !== 'apolice_emitida') {
+    await sincronizarRenovacaoPorEtapaCotacao(payload.cotacao_id, colunaDestino)
     return {
       emissao: emissaoAtualizada,
       apolice: null,
@@ -1520,6 +1534,14 @@ export async function atualizarStatusRenovacao(id, campos) {
   const { error } = await supabase
     .from('renovacoes_auto')
     .update(patch)
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function atualizarTagsRenovacao(id, tags) {
+  const { error } = await supabase
+    .from('renovacoes_auto')
+    .update({ tags: Array.isArray(tags) ? tags : [], updated_at: new Date().toISOString() })
     .eq('id', id)
   if (error) throw error
 }
@@ -3044,21 +3066,24 @@ export async function atualizarAutoTag(id, changes) {
 }
 
 // Remove a etiqueta predefinida e limpa a referencia em qualquer card que a
-// esteja usando, para nao deixar ids orfaos em emissoes_auto.tags.
+// esteja usando, para nao deixar ids orfaos nos cards do Auto.
 export async function excluirAutoTag(id) {
-  const { data: emissoesComTag, error: buscaError } = await supabase
-    .from('emissoes_auto')
-    .select('id, tags')
-    .contains('tags', [id])
-  if (buscaError) throw buscaError
+  const tabelas = ['emissoes_auto', 'renovacoes_auto']
+  for (const tabela of tabelas) {
+    const { data: cardsComTag, error: buscaError } = await supabase
+      .from(tabela)
+      .select('id, tags')
+      .contains('tags', [id])
+    if (buscaError) throw buscaError
 
-  for (const emissao of emissoesComTag ?? []) {
-    const tagsRestantes = (emissao.tags ?? []).filter(tagId => tagId !== id)
-    const { error: updateError } = await supabase
-      .from('emissoes_auto')
-      .update({ tags: tagsRestantes })
-      .eq('id', emissao.id)
-    if (updateError) throw updateError
+    for (const card of cardsComTag ?? []) {
+      const tagsRestantes = (card.tags ?? []).filter(tagId => tagId !== id)
+      const { error: updateError } = await supabase
+        .from(tabela)
+        .update({ tags: tagsRestantes })
+        .eq('id', card.id)
+      if (updateError) throw updateError
+    }
   }
 
   const { error } = await supabase.from('auto_tags').delete().eq('id', id)

@@ -224,6 +224,7 @@ export function getMesAlvoRenovacao(hoje = new Date(), statusPorMes = {}, avisoD
 
 export const RENOVACAO_AREA_STATUS_META = {
   puxado: { label: 'Puxado', tone: 'muted' },
+  cotacao_iniciada: { label: 'Cotação iniciada', tone: 'accent' },
   cotacao_feita: { label: 'Cotação feita', tone: 'secondary' },
   negociando: { label: 'Negociando', tone: 'accent' },
   aguardando_vistoria: { label: 'Aguardando vistoria', tone: 'warning' },
@@ -246,7 +247,7 @@ export function getRenovacaoAreaStatus(renovacao, hojeISO = new Date().toISOStri
   if (!cotacao) return vencida ? 'vencido' : 'puxado'
 
   const emissao = Array.isArray(cotacao.emissoes_auto) ? cotacao.emissoes_auto[0] : cotacao.emissoes_auto
-  const coluna = emissao?.coluna || 'pendentes'
+  const coluna = emissao?.coluna || (cotacao.status === 'aberta' ? 'cotacao_iniciada' : 'pendentes')
   if (coluna === 'pendentes') return vencida ? 'vencido' : 'puxado'
   if (coluna === 'apolice_emitida') return 'renovado'
   return coluna

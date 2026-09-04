@@ -15,7 +15,7 @@ import {
   AutoTypeBadge,
   AutoWorkflowPanel,
 } from '../../components/auto'
-import { calcularValorComissaoAuto, deletarCotacaoAuto, getCotacaoAutoPorId, atualizarCotacaoAuto, sincronizarDadosExtraidosCotacaoAuto } from '../../lib/auto'
+import { calcularValorComissaoAuto, deletarCotacaoAuto, getCotacaoAutoPorId, atualizarCotacaoAuto, marcarCotacaoAutoIniciada, sincronizarDadosExtraidosCotacaoAuto } from '../../lib/auto'
 import { COTACAO_STATUS, formatDateTimeBR, formatMoney, toneClasses } from './autoShared'
 import { formatDecimalBRInput, parseDecimalBR } from '../../lib/numberInput'
 import { mesclarOpcaoFinanceira, opcaoFinanceiraSincronizada } from '../../lib/autoQuoteFinancial'
@@ -315,9 +315,19 @@ export default function AutoCotacaoDetalhe() {
   // primeira. Este espelho incorpora imediatamente o que acabou de ser salvo,
   // evitando planejar a segunda sincronização contra uma cotação antiga.
   const cotacaoSyncRef = useRef(null)
+  const cotacaoIniciadaRef = useRef('')
   useEffect(() => {
     if (cotacao) cotacaoSyncRef.current = cotacao
   }, [cotacao])
+
+  useEffect(() => {
+    if (!cotacao?.id || !['pendente', 'aberta'].includes(cotacao.status) || cotacaoIniciadaRef.current === cotacao.id) return
+    cotacaoIniciadaRef.current = cotacao.id
+    qc.setQueryData(['auto-cotacao', id], current => current ? { ...current, status: 'aberta' } : current)
+    marcarCotacaoAutoIniciada(cotacao.id)
+      .then(() => qc.invalidateQueries({ queryKey: ['auto-emissoes'] }))
+      .catch(error => setActionError(error?.message || 'Não foi possível marcar a cotação como iniciada.'))
+  }, [cotacao?.id, cotacao?.status, id, qc])
 
   const { mutateAsync: sincronizarDadosExtraidos, isPending: sincronizandoDadosExtraidos } = useMutation({
     mutationFn: patch => sincronizarDadosExtraidosCotacaoAuto(id, patch),

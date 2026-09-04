@@ -18,7 +18,7 @@ import {
   validarCotacao,
   formatarReferencia,
   formatarMoeda,
-  normalizarTexto, casarSeguradora, textoTerceiros, extrairLimiteReboqueKm, extrairDiasCarroReserva,
+  normalizarTexto, normalizarIndenizacaoIntegral, casarSeguradora, textoTerceiros, textoVidros, extrairLimiteReboqueKm, extrairDiasCarroReserva,
 } from './orcamentoComparativo.js'
 
 // ─── Dicionario de coberturas ──────────────────────────────────────────
@@ -186,6 +186,39 @@ test('indenizacao integral inclusa nomeia o percentual da FIPE', () => {
   const cot = criarCotacaoOrcamento()
   cot.indenizacao_integral = { incluida: true, percentual_fipe: 100, observacao: '' }
   assert.match(textoColisao(cot), /inclusa a 100% da tabela FIPE/)
+})
+
+test('normaliza percentual do casco e preserva a base correta', () => {
+  const cot = criarCotacaoOrcamento()
+  cot.coberturas = [{
+    categoria: 'colisao',
+    incluida: true,
+    nome_original_seguradora: 'Casco compreensivo',
+    observacoes: 'Perda total com indenização integral de 100% do casco.',
+  }]
+  const normalizada = normalizarIndenizacaoIntegral(cot)
+  assert.equal(normalizada.indenizacao_integral.incluida, true)
+  assert.equal(normalizada.indenizacao_integral.percentual_fipe, 100)
+  assert.equal(normalizada.indenizacao_integral.base_calculo, 'casco')
+  assert.match(textoColisao(normalizada), /100% do casco/)
+})
+
+test('normaliza valor determinado sem exigir percentual da FIPE', () => {
+  const cot = cotacaoCompleta()
+  cot.indenizacao_integral = { incluida: true, percentual_fipe: null, observacao: 'Indenização por valor determinado.' }
+  const normalizada = normalizarIndenizacaoIntegral(cot)
+  assert.equal(normalizada.indenizacao_integral.base_calculo, 'valor_determinado')
+  assert.equal(validarCotacao(normalizada).bloqueios.some(item => item.caminho === 'indenizacao_integral.percentual_fipe'), false)
+})
+
+test('vidros mostra plano e pecas cobertas sem valores de franquia', () => {
+  const texto = textoVidros([{
+    nome_original_seguradora: 'HDI Auto Vidros',
+    observacoes: 'Vidros com franquia de R$ 420,00. Para-brisa, vidro traseiro, farol e retrovisor com franquia própria.',
+  }])
+  assert.match(texto, /HDI Auto Vidros/)
+  assert.match(texto, /para-brisa/)
+  assert.doesNotMatch(texto, /R\$|420|franquia/i)
 })
 
 test('indenizacao integral ausente e dita com todas as letras', () => {

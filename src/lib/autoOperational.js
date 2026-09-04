@@ -28,6 +28,7 @@ export const AUTO_PIPELINE_STAGES = [
   { id: 'renovacoes', label: 'Renovações', shortLabel: 'Renovações', color: '#0ea5a4' },
   { id: 'renovacoes_para_enviar', label: 'Renovações para enviar hoje', shortLabel: 'Enviar hoje', color: '#f59e0b' },
   { id: 'pendentes', label: 'Cotações pendentes', shortLabel: 'Pendentes', color: '#f97316' },
+  { id: 'cotacao_iniciada', label: 'Cotações iniciadas', shortLabel: 'Iniciadas', color: '#7c3aed' },
   { id: 'cotacao_feita', label: 'Cotações feitas', shortLabel: 'Feitas', color: '#3563e9' },
   { id: 'negociando', label: 'Negociando', shortLabel: 'Negociando', color: '#38bdf8' },
   { id: 'aguardando_vistoria', label: 'Aguardando vistoria ou rastreador', shortLabel: 'Vistoria/rastreador', color: '#a855f7' },
@@ -114,7 +115,11 @@ export function resolveAutoEmissionStage(item = {}) {
   if (hasLinkedPolicy) return 'apolice_emitida'
 
   const raw = typeof item?.coluna === 'string' ? item.coluna.trim() : ''
-  if (!raw || raw === 'pendente') return 'pendentes'
+  if (!raw || raw === 'pendente') {
+    return item?.cotacoes_auto?.status === 'aberta' || item?.cotacao?.status === 'aberta'
+      ? 'cotacao_iniciada'
+      : 'pendentes'
+  }
   if (raw === 'emitida') return 'apolice_emitida'
   if (raw === 'cotacao_feita' && !item?.resultado) return 'pendentes'
   return raw
@@ -190,6 +195,7 @@ export const RENOVACAO_STAGE_STATUS = {
   renovacoes: 'pendente',
   renovacoes_para_enviar: 'pendente',
   pendentes: 'pendente',
+  cotacao_iniciada: 'em_andamento',
   cotacao_feita: 'cotada',
   negociando: 'negociando',
   aguardando_vistoria: 'negociando',
@@ -198,11 +204,11 @@ export const RENOVACAO_STAGE_STATUS = {
   nao_renovou: 'nao_renovada',
 }
 
-// Volta de `status_operacional` para a coluna. So os estados que o arrasto
-// grava aparecem aqui: 'cotando' (que vem do botao "Iniciar cotacao") fica de
-// fora de proposito, para que abrir a cotacao continue deixando o card na
-// coluna de renovacao como sempre esteve.
+// Volta de `status_operacional` para a coluna. `cotando` possui uma etapa
+// explicita: iniciar o trabalho nao pode fazer o card desaparecer nem continuar
+// parecendo uma renovacao ainda intocada.
 const STAGE_POR_OPERACIONAL = {
+  cotando: 'cotacao_iniciada',
   cotado: 'cotacao_feita',
   enviado: 'proposta_transmitida',
   negociando: 'negociando',

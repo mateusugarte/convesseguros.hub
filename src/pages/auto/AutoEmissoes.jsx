@@ -44,6 +44,7 @@ import {
 import { useOrigemAtual, useVoltar } from '../../hooks/useVoltar.js'
 const COLUNAS = [
   { id: 'pendentes', label: 'Cotações pendentes', hint: 'somente seguros novos ainda não cotados', tone: 'warning' },
+  { id: 'cotacao_iniciada', label: 'Cotações iniciadas', hint: 'cálculo aberto e em preparação', tone: 'started' },
   { id: 'cotacao_feita', label: 'Cotações feitas', hint: 'seguro novo, renovação ou endosso identificados pela etiqueta', tone: 'secondary' },
   { id: 'negociando', label: 'Negociando', hint: 'em tratativa com cliente', tone: 'accent' },
   { id: 'aguardando_vistoria', label: 'Aguardando vistoria ou rastreador', hint: 'dependem de vistoria ou instalação', tone: 'warning' },
@@ -1819,14 +1820,22 @@ export default function AutoEmissoes() {
     () => emissoes.filter(item => isAutoPipelineItemInMonth(item, mesRenovacoes)),
     [emissoes, mesRenovacoes],
   )
+  const cotacoesRepresentadasPorRenovacao = useMemo(
+    () => new Set(renovacoesPendentes.map(item => item.cotacao_id).filter(Boolean)),
+    [renovacoesPendentes],
+  )
   const emissoesPipeline = useMemo(
     () => filterAutoPipelineEmissions(emissoesDoMesPipeline, pipelineView).filter(item => {
       if (!matchesPipelineSearch(item)) return false
+      // A linha de renovacao e o card da emissao apontam para a mesma cotacao.
+      // Enquanto a renovacao ainda esta na carteira operacional, desenhar os
+      // dois duplicaria o negocio justamente na nova coluna "Iniciadas".
+      if (pipelineView === 'renovacoes' && cotacoesRepresentadasPorRenovacao.has(item.cotacao_id)) return false
       if (getEmissaoColuna(item) !== 'pendentes') return true
       const tipo = item.cotacoes_auto?.tipo || item.tipo
       return tipo === 'novo'
     }),
-    [emissoesDoMesPipeline, matchesPipelineSearch, pipelineView],
+    [cotacoesRepresentadasPorRenovacao, emissoesDoMesPipeline, matchesPipelineSearch, pipelineView],
   )
   const renovacoesPipeline = useMemo(
     () => pipelineView === 'renovacoes' ? renovacoesPendentes.filter(matchesPipelineSearch) : [],
@@ -1857,12 +1866,14 @@ export default function AutoEmissoes() {
   }, [emissoesPipeline, kanbanStages, renovacoesPorColuna])
 
   const pipelineViewCounts = useMemo(() => ({
-    renovacoes: filterAutoPipelineEmissions(emissoesDoMesPipeline, 'renovacoes').filter(item => getEmissaoColuna(item) !== 'pendentes').length + renovacoesPendentes.length,
+    renovacoes: filterAutoPipelineEmissions(emissoesDoMesPipeline, 'renovacoes').filter(item => (
+      getEmissaoColuna(item) !== 'pendentes' && !cotacoesRepresentadasPorRenovacao.has(item.cotacao_id)
+    )).length + renovacoesPendentes.length,
     outros: filterAutoPipelineEmissions(emissoesDoMesPipeline, 'outros').filter(item => {
       if (getEmissaoColuna(item) !== 'pendentes') return true
       return (item.cotacoes_auto?.tipo || item.tipo) === 'novo'
     }).length,
-  }), [emissoesDoMesPipeline, renovacoesPendentes])
+  }), [cotacoesRepresentadasPorRenovacao, emissoesDoMesPipeline, renovacoesPendentes])
 
   const updateKanbanNavigation = useCallback(() => {
     const container = kanbanScrollRef.current

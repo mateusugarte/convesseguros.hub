@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 
 import { extrairDiasCarroReserva, montarCategorias, TEM_VALOR_MONETARIO } from '../../lib/orcamentoComparativo'
-import { aplicarRevisao, camposDaCotacao } from '../../lib/orcamentoLeitura'
+import { aplicarRevisao, CAMPOS_COMUNS_REVISAO, camposDaCotacao, unificarCamposComuns } from '../../lib/orcamentoLeitura'
 import { derivarOpcoesFinanceirasComparativo } from '../../lib/autoQuoteFinancial'
 import {
   gravarRascunhoLocal, lerRascunhoLocal, limparRascunhoLocal,
@@ -94,21 +94,23 @@ function parserInicial(nome = '') {
 // controle interno, conferidos na emissao; nao saem no orcamento do cliente, e
 // pedir revisao humana deles gastava a atencao que deve ir para franquia e
 // cobertura.
-const REVIEW_FIELDS = [
+const SHARED_REVIEW_FIELDS = [
   { key: 'segurado_nome', label: 'Segurado', required: true },
   { key: 'segurado_cpf', label: 'CPF/CNPJ do segurado' },
   { key: 'condutor_nome', label: 'Condutor principal' },
   { key: 'condutor_cpf', label: 'CPF do condutor' },
-  { key: 'condutor_estado_civil', label: 'Estado civil do condutor' },
   { key: 'veiculo_modelo', label: 'Veículo', required: true },
   { key: 'veiculo_ano', label: 'Ano/modelo' },
   { key: 'veiculo_placa', label: 'Placa' },
   { key: 'veiculo_uso', label: 'Uso do veículo' },
   { key: 'veiculo_cep_pernoite', label: 'CEP de pernoite' },
-  { key: 'numero', label: 'Número da cotação' },
-  { key: 'validade', label: 'Validade', type: 'date' },
   { key: 'vigencia_inicio', label: 'Início da vigência', type: 'date' },
   { key: 'vigencia_fim', label: 'Fim da vigência', type: 'date' },
+]
+
+const REVIEW_FIELDS = [
+  { key: 'numero', label: 'Número da cotação' },
+  { key: 'validade', label: 'Validade', type: 'date' },
   { key: 'premio_total', label: 'Prêmio total', type: 'money', required: true },
   { key: 'premio_parcelado', label: 'Parcelamento', required: true },
   { key: 'franquia', label: 'Franquia', type: 'money', critical: true },
@@ -133,6 +135,34 @@ function campoPendente(field, value, campos = {}) {
     return !/^n[ãa]o\b/i.test(texto) && !extrairDiasCarroReserva(texto)
   }
   return false
+}
+
+function SharedReviewPanel({ campos, issues, onPatch }) {
+  return (
+    <section className="auto-comparison-shared-review">
+      <header>
+        <span><ShieldCheck /></span>
+        <div>
+          <strong>Dados unificados do segurado e do risco</strong>
+          <small>Preencha uma vez. O sistema replica automaticamente nos cálculos que não trouxeram o dado.</small>
+        </div>
+        {issues.length === 0
+          ? <span className="is-complete"><CheckCircle2 />Conferido</span>
+          : <span className="is-pending"><AlertTriangle />{issues.length} pendência(s)</span>}
+      </header>
+      <div className="auto-comparison-shared-fields">
+        {SHARED_REVIEW_FIELDS.map(field => (
+          <ReviewField
+            key={field.key}
+            field={field}
+            value={campos[field.key]}
+            issue={issues.includes(field.key)}
+            onChange={value => onPatch(field.key, value)}
+          />
+        ))}
+      </div>
+    </section>
+  )
 }
 
 /**
@@ -257,7 +287,6 @@ function sideFromQuote(role, quote) {
       segurado_cpf: quote?.cpf_cliente || '',
       condutor_nome: quote?.condutor_nome || '',
       condutor_cpf: quote?.condutor_cpf || '',
-      condutor_estado_civil: quote?.estado_civil_condutor || '',
       veiculo_modelo: quote?.modelo_veiculo || '',
       veiculo_ano: '',
       veiculo_placa: quote?.placa || '',
@@ -689,13 +718,23 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
       : null),
   ])), [files, roles, sides])
 
+  const camposUnificados = useMemo(() => {
+    const porPapel = Object.fromEntries(roles.map(role => [role, sides[role]?.campos || {}]))
+    const sincronizados = unificarCamposComuns(porPapel, roles)
+    const principal = sincronizados[roles[0]] || {}
+    return Object.fromEntries(CAMPOS_COMUNS_REVISAO.map(campo => [campo, principal[campo] ?? '']))
+  }, [roles, sides])
+  const sharedIssues = useMemo(() => SHARED_REVIEW_FIELDS
+    .filter(field => field.required && campoPendente(field, camposUnificados[field.key], camposUnificados))
+    .map(field => field.key), [camposUnificados])
+
   const issues = useMemo(() => Object.fromEntries(roles.map(role => [
     role,
     REVIEW_FIELDS
       .filter(field => (field.required || field.critical) && campoPendente(field, sides[role]?.campos?.[field.key], sides[role]?.campos))
       .map(field => field.key),
   ])), [roles, sides])
-  const issueCount = roles.reduce((total, role) => total + (issues[role]?.length || 0), 0)
+  const issueCount = sharedIssues.length + roles.reduce((total, role) => total + (issues[role]?.length || 0), 0)
   const criticalCount = roles.reduce((total, role) => total + (issues[role] || []).filter(fieldKey => REVIEW_FIELDS.find(field => field.key === fieldKey)?.critical).length, 0)
   const faltamArquivos = roleMetas.filter(({ key }) => !arquivos[key]).map(({ label }) => label)
   const escolhasPendentes = roleMetas.filter(({ key }) => leituras[key]?.cotacao?.escolha_pendente).map(({ label }) => label)
@@ -813,14 +852,24 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
     const lidos = Object.fromEntries(
       Object.entries(campos).filter(([, valor]) => valor !== '' && valor != null),
     )
-    setSides(current => ({
-      ...current,
-      [role]: {
-        ...current[role],
-        seguradora: leitura.cotacao.seguradora?.nome || current[role].seguradora,
-        campos: { ...current[role].campos, ...lidos },
-      },
-    }))
+    setSides(current => {
+      const atualizado = {
+        ...current,
+        [role]: {
+          ...current[role],
+          seguradora: leitura.cotacao.seguradora?.nome || current[role].seguradora,
+          campos: { ...current[role].campos, ...lidos },
+        },
+      }
+      const sincronizados = unificarCamposComuns(
+        Object.fromEntries(roles.map(papel => [papel, atualizado[papel]?.campos || {}])),
+        [role, ...roles.filter(papel => papel !== role)],
+      )
+      return Object.fromEntries(Object.entries(atualizado).map(([papel, side]) => [
+        papel,
+        { ...side, campos: sincronizados[papel] || side.campos },
+      ]))
+    })
     try {
       await onExtractedClientData?.({
         role,
@@ -944,6 +993,14 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
   function patchField(role, field, value) {
     invalidarPreview()
     setSides(current => ({ ...current, [role]: { ...current[role], campos: { ...current[role].campos, [field]: value } } }))
+  }
+
+  function patchSharedField(field, value) {
+    invalidarPreview()
+    setSides(current => Object.fromEntries(Object.entries(current).map(([role, side]) => [
+      role,
+      { ...side, campos: { ...side.campos, [field]: value } },
+    ])))
   }
 
   function adicionarOpcao() {
@@ -1121,6 +1178,7 @@ export default function AutoQuoteComparison({ quote, onFinancialOptionsChange, o
         <footer className="auto-comparison-footer"><div><FileText /><span><strong>{tituloRodapeUpload}</strong><small>{resumoUpload}</small></span></div><button type="button" onClick={() => setStep('review')} disabled={!podeAbrirRevisao}>Visualizar revisão <ArrowRight /></button></footer>
       </> : <>
         <div className="auto-comparison-review-summary"><div><span>Pendências previstas</span><strong>{issueCount}</strong><small>{criticalCount} campo(s) crítico(s)</small></div><p><AlertTriangle />Franquia, indenização integral e cobertura não informada bloqueiam a geração — um comparativo com linha faltando chega ao cliente parecendo completo.</p><button type="button" onClick={() => setStep('upload')}><RefreshCw />Voltar ao upload</button></div>
+        <SharedReviewPanel campos={camposUnificados} issues={sharedIssues} onPatch={patchSharedField} />
         <div className="auto-comparison-review-grid" style={{ '--comparison-columns': Math.min(roles.length, 3) }}>{roleMetas.map(meta => (
           <ReviewColumn
             key={meta.key}

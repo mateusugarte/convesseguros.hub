@@ -28,6 +28,9 @@ async function parsear({ parser_id: parserId, itens, texto, dados_produtos: dado
     const { parseCotacaoPorSeguradora } = await import('./orcamentoSeguradoraParser.js')
     cotacao = parseCotacaoPorSeguradora({ parser_id: parserId, itens, texto, ...escolhas, dadosProduto })
   }
+  const { normalizarIndenizacaoIntegral, protegerCoberturasContraPremio } = await import('./orcamentoComparativo.js')
+  cotacao = protegerCoberturasContraPremio(cotacao)
+  cotacao = normalizarIndenizacaoIntegral(cotacao)
   const { aplicarRiscoVeiculoExtraido } = await import('./orcamentoRiscoVeiculo.js')
   return aplicarRiscoVeiculoExtraido(cotacao, texto)
 }
@@ -155,6 +158,34 @@ export async function aplicarEscolha(leitura, valor) {
 // uma vez por produto.
 const ESCOLHA_DE_PRODUTO = new Set(['produto', 'oferta'])
 
+// Dados que descrevem o mesmo risco nos dois PDFs. A tela os mostra uma unica
+// vez e espelha qualquer valor encontrado para os lados em que o documento nao
+// o imprimiu. Numero da cotacao, validade, premio e coberturas ficam fora: sao
+// particulares de cada seguradora.
+export const CAMPOS_COMUNS_REVISAO = [
+  'segurado_nome', 'segurado_cpf', 'condutor_nome', 'condutor_cpf',
+  'veiculo_modelo', 'veiculo_ano', 'veiculo_placa', 'veiculo_uso',
+  'veiculo_cep_pernoite', 'vigencia_inicio', 'vigencia_fim',
+]
+
+const preenchido = valor => valor !== '' && valor != null && String(valor).trim() !== ''
+
+/** Preenche somente lacunas; nunca apaga uma divergencia que precisa ser vista. */
+export function unificarCamposComuns(camposPorPapel = {}, ordem = Object.keys(camposPorPapel)) {
+  const fonte = {}
+  for (const campo of CAMPOS_COMUNS_REVISAO) {
+    const papel = ordem.find(chave => preenchido(camposPorPapel[chave]?.[campo]))
+    if (papel) fonte[campo] = camposPorPapel[papel][campo]
+  }
+  return Object.fromEntries(Object.entries(camposPorPapel).map(([papel, campos]) => [
+    papel,
+    {
+      ...(campos || {}),
+      ...Object.fromEntries(Object.entries(fonte).filter(([campo]) => !preenchido(campos?.[campo]))),
+    },
+  ]))
+}
+
 /**
  * Cotacao extraida -> campos da coluna de revisao.
  *
@@ -195,7 +226,8 @@ export function camposDaCotacao(cotacao, { montarCategorias }) {
     segurado_cpf: cotacao.segurado?.cpf_cnpj || '',
     condutor_nome: cotacao.condutor_principal?.nome || '',
     condutor_cpf: cotacao.condutor_principal?.cpf || '',
-    condutor_estado_civil: cotacao.condutor_principal?.estado_civil || '',
+    // Estado civil continua disponivel no cadastro operacional, mas nao entra
+    // na revisao nem no orcamento entregue ao cliente.
     veiculo_modelo: cotacao.veiculo?.marca_modelo || '',
     veiculo_ano: cotacao.veiculo?.ano_modelo || '',
     veiculo_placa: cotacao.veiculo?.placa || '',
@@ -241,7 +273,16 @@ export function camposDaCotacao(cotacao, { montarCategorias }) {
 function textoIndenizacao(integral) {
   if (!integral || integral.incluida == null) return ''
   if (integral.incluida === false) return 'Não inclusa'
-  if (integral.percentual_fipe != null) return `Inclusa — ${String(integral.percentual_fipe).replace('.', ',')}% da FIPE`
+  const percentual = integral.percentual_fipe != null ? `${String(integral.percentual_fipe).replace('.', ',')}%` : ''
+  const base = integral.base_calculo === 'casco'
+    ? 'do casco'
+    : integral.base_calculo === 'veiculo'
+      ? 'do veículo'
+      : integral.base_calculo === 'valor_determinado'
+        ? 'por valor determinado'
+        : 'da FIPE'
+  if (percentual) return `Inclusa — ${percentual} ${base}`
+  if (integral.base_calculo === 'valor_determinado') return 'Inclusa — por valor determinado'
   return ''
 }
 
@@ -284,7 +325,6 @@ export function aplicarRevisao(cotacao, campos = {}) {
       ...cotacao.condutor_principal,
       nome: preferir(c.condutor_nome, cotacao.condutor_principal?.nome || ''),
       cpf: preferir(c.condutor_cpf, cotacao.condutor_principal?.cpf || ''),
-      estado_civil: preferir(c.condutor_estado_civil, cotacao.condutor_principal?.estado_civil || ''),
     },
     veiculo: {
       ...cotacao.veiculo,
@@ -334,6 +374,15 @@ export function aplicarRevisao(cotacao, campos = {}) {
       percentual_fipe: percentual
         ? Number(percentual[1].replace(',', '.'))
         : (/^n[ãa]o\b/i.test(integral) ? null : cotacao.indenizacao_integral?.percentual_fipe ?? null),
+      base_calculo: /casco/i.test(integral)
+        ? 'casco'
+        : /valor determinado|valor fixo/i.test(integral)
+          ? 'valor_determinado'
+          : /ve[ií]culo/i.test(integral) && !/fipe/i.test(integral)
+            ? 'veiculo'
+            : /fipe/i.test(integral)
+              ? 'fipe'
+              : cotacao.indenizacao_integral?.base_calculo || '',
       observacao: integral,
     }
   }

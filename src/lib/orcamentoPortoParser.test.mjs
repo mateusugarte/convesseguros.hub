@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 
-import { agruparLinhas, celulaEm, colunasPeloCabecalho, fatiar } from './pdfLayout.js'
+import { agruparLinhas, celulaEm, celulaNaFaixa, colunasPeloCabecalho, fatiar } from './pdfLayout.js'
 import {
   parseCotacaoPorto, ehLayoutPorto, detectarMarca, detectarMarcaDetalhado,
   evidenciasMarcaPorto, marcaPortoPorId, MARCAS_PORTO, extrairCoberturas,
@@ -61,6 +61,14 @@ test('celulaEm pega a celula sob a coluna, nao a vizinha', () => {
   ])
   assert.equal(celulaEm(linha, 348), 'R$ 3.600,00')   // coluna Franquia
   assert.equal(celulaEm(linha, 522), 'R$ 1.320,61')   // coluna Premio
+})
+
+test('coluna LMI vazia nunca herda o premio da coluna seguinte', () => {
+  const [linha] = agruparLinhas([
+    { texto: 'R$ 803,55', x: 522, y: 100, pagina: 1 },
+  ])
+  assert.equal(celulaNaFaixa(linha, 265, { proxima: 522 }), '')
+  assert.equal(celulaNaFaixa(linha, 522, { anterior: 265 }), 'R$ 803,55')
 })
 
 // ─── Numeros ───────────────────────────────────────────────────────────

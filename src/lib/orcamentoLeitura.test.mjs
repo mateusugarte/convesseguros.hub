@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 
-import { aplicarEscolha, aplicarRevisao, camposDaCotacao } from './orcamentoLeitura.js'
+import { aplicarEscolha, aplicarRevisao, camposDaCotacao, unificarCamposComuns } from './orcamentoLeitura.js'
 import { parseCotacaoAllianz } from './orcamentoAllianzParser.js'
 import { montarCategorias, criarCotacaoOrcamento } from './orcamentoComparativo.js'
 
@@ -17,7 +17,7 @@ const campos = oferta => camposDaCotacao(
 // não devem poluir o quadro de revisão do orçamento.
 const CHAVES_DA_REVISAO = [
   'segurado_nome', 'segurado_cpf',
-  'condutor_nome', 'condutor_cpf', 'condutor_estado_civil',
+  'condutor_nome', 'condutor_cpf',
   'veiculo_modelo', 'veiculo_ano', 'veiculo_placa', 'veiculo_uso', 'veiculo_cep_pernoite',
   'numero', 'validade', 'vigencia_inicio', 'vigencia_fim',
   'premio_total', 'premio_parcelado',
@@ -55,6 +55,25 @@ test('preenche os campos da revisão e preserva risco somente para sincronizaç�
     Object.keys(campos('Completo')).sort(),
     [...CHAVES_DA_REVISAO, ...CHAVES_INTERNAS_RISCO].sort(),
   )
+})
+
+test('unifica os dados comuns que somente um dos PDFs conseguiu imprimir', () => {
+  const lados = unificarCamposComuns({
+    atual: { segurado_nome: 'Ana', segurado_cpf: '123', veiculo_placa: '' },
+    concorrente: { segurado_nome: '', segurado_cpf: '', veiculo_placa: 'ABC1D23' },
+  }, ['atual', 'concorrente'])
+  assert.equal(lados.atual.veiculo_placa, 'ABC1D23')
+  assert.equal(lados.concorrente.segurado_nome, 'Ana')
+  assert.equal(lados.concorrente.segurado_cpf, '123')
+})
+
+test('unificacao nao sobrescreve divergencia entre os documentos', () => {
+  const lados = unificarCamposComuns({
+    atual: { veiculo_placa: 'ABC1D23' },
+    concorrente: { veiculo_placa: 'XYZ9K87' },
+  })
+  assert.equal(lados.atual.veiculo_placa, 'ABC1D23')
+  assert.equal(lados.concorrente.veiculo_placa, 'XYZ9K87')
 })
 
 test('leva os valores da cotacao para a revisao', () => {

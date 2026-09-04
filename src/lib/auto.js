@@ -733,6 +733,32 @@ export async function atualizarStatusCotacao(id, status) {
   if (error) throw error
 }
 
+// Abrir o workspace significa que a cotacao saiu da fila intocada e entrou em
+// preparacao. A coluna propria evita que o card suma entre "Pendente" e
+// "Cotacao feita". O status `aberta` e mantido como fallback para ambientes
+// em que a migration 76 ainda nao foi executada.
+export async function marcarCotacaoAutoIniciada(id) {
+  if (!id) return { persistido: false }
+  const agora = new Date().toISOString()
+  const { error: cotacaoError } = await supabase
+    .from('cotacoes_auto')
+    .update({ status: 'aberta', updated_at: agora })
+    .eq('id', id)
+    .in('status', ['pendente', 'aberta'])
+  if (cotacaoError) throw cotacaoError
+
+  const { error: emissaoError } = await supabase
+    .from('emissoes_auto')
+    .update({ coluna: 'cotacao_iniciada', updated_at: agora })
+    .eq('cotacao_id', id)
+    .is('coluna', null)
+  if (!emissaoError) return { persistido: true }
+  if (emissaoError.code === '23514' || /emissoes_auto_coluna_check/i.test(String(emissaoError.message || ''))) {
+    return { persistido: false, motivo: 'migration-76-pendente' }
+  }
+  throw emissaoError
+}
+
 async function selecionarPorIds(tabela, colunas, coluna, ids) {
   if (!ids.length) return []
   const { data, error } = await supabase.from(tabela).select(colunas).in(coluna, ids)
@@ -901,6 +927,15 @@ export async function moverEmissaoColuna(id, coluna) {
     .select('cotacao_id')
     .single()
   if (error) throw error
+
+  if (emissao?.cotacao_id && (coluna == null || coluna === 'cotacao_iniciada')) {
+    const { error: cotacaoError } = await supabase
+      .from('cotacoes_auto')
+      .update({ status: coluna === 'cotacao_iniciada' ? 'aberta' : 'pendente', updated_at: new Date().toISOString() })
+      .eq('id', emissao.cotacao_id)
+      .in('status', ['pendente', 'aberta'])
+    if (cotacaoError) throw cotacaoError
+  }
 
   // Uma renovacao que ja possui cotacao e representada por `emissoes_auto`,
   // mas seu desfecho tambem precisa ficar registrado na linha original. Isso
@@ -1444,9 +1479,9 @@ export async function getAutoPendingNotifications({ today } = {}) {
 }
 
 // Renovações operacionais ainda não concluídas. Inclui as que já tiveram a
-// cotação iniciada para que permaneçam nas duas primeiras colunas do Pipeline
-// até a cotação ser marcada como feita; isso impede renovação de cair em
-// "Cotações pendentes", etapa reservada a seguro novo.
+// cotação iniciada para ocuparem a etapa explicita "Cotações iniciadas" até o
+// cálculo ser marcado como feito; "Cotações pendentes" continua reservada a
+// seguro novo ainda intocado.
 export async function getRenovacoesPendentesSemCotacao(mes) {
   let q = supabase
     .from('renovacoes_auto')

@@ -13,6 +13,7 @@
 // card para la nao existe — "avancar" uma renovacao significa iniciar a cotacao.
 export const AUTO_EMISSION_STAGES = [
   'pendentes',
+  'cotacao_iniciada',
   'cotacao_feita',
   'negociando',
   'aguardando_vistoria',
@@ -55,6 +56,7 @@ export function etapaVizinha(stageId, direcao) {
 // duas o card aparece.
 export const AUTO_RENEWAL_STAGES = [
   'renovacoes',
+  'cotacao_iniciada',
   'cotacao_feita',
   'negociando',
   'aguardando_vistoria',

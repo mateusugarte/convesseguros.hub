@@ -26,11 +26,11 @@ import {
 test('separa as etapas da pipeline de renovacoes das demais operacoes', () => {
   assert.deepEqual(
     AUTO_RENEWAL_PIPELINE_STAGES.map(stage => stage.id),
-    ['renovacoes', 'renovacoes_para_enviar', 'cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida', 'nao_renovou'],
+    ['renovacoes', 'renovacoes_para_enviar', 'cotacao_iniciada', 'cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida', 'nao_renovou'],
   )
   assert.deepEqual(
     AUTO_OTHER_PIPELINE_STAGES.map(stage => stage.id),
-    ['pendentes', 'cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida'],
+    ['pendentes', 'cotacao_iniciada', 'cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida'],
   )
 })
 
@@ -96,6 +96,11 @@ test('apólice vinculada sempre encerra a emissão como apólice emitida', () =>
   assert.equal(resolveAutoEmissionStage({ coluna: 'proposta_transmitida', apolices_auto: [{ id: 'ap-1' }] }), 'apolice_emitida')
   assert.equal(resolveAutoEmissionStage({ coluna: 'proposta_transmitida', apolices_auto: [] }), 'proposta_transmitida')
   assert.equal(resolveAutoEmissionStage({ coluna: 'apolice_emitida', resultado: null }), 'apolice_emitida')
+})
+
+test('cotacao aberta fica visivel na etapa de cotacoes iniciadas', () => {
+  assert.equal(resolveAutoEmissionStage({ coluna: null, cotacoes_auto: { status: 'aberta' } }), 'cotacao_iniciada')
+  assert.equal(resolveAutoEmissionStage({ coluna: 'cotacao_iniciada', cotacoes_auto: { status: 'pendente' } }), 'cotacao_iniciada')
 })
 
 test('separa renovacoes futuras das que ja precisam ser enviadas', () => {
@@ -193,15 +198,15 @@ test('renovacao sem status de trabalho fica nas colunas de renovacao, dividida p
   assert.equal(resolveRenovacaoStage({ status_operacional: 'pendente', vigencia_fim: '2026-08-18' }, '2026-08-20'), 'renovacoes_para_enviar')
 })
 
-test('abrir a cotacao (cotando) nao tira a renovacao da coluna de renovacao', () => {
+test('abrir a cotacao move a renovacao para a coluna de cotacoes iniciadas', () => {
   assert.equal(
     resolveRenovacaoStage({ status_operacional: 'cotando', cotacao_id: 'c1', data_limite_envio: '2026-08-21' }, '2026-08-20'),
-    'renovacoes',
+    'cotacao_iniciada',
   )
 })
 
 test('cada etapa do funil devolve a renovacao na coluna onde ela foi solta', () => {
-  const etapas = ['cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida', 'nao_renovou']
+  const etapas = ['cotacao_iniciada', 'cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida', 'nao_renovou']
   for (const etapa of etapas) {
     const campos = renovacaoStageFields(etapa)
     assert.ok(campos, `${etapa} deveria ter campos`)
@@ -225,7 +230,7 @@ test('aguardando vistoria e negociando gravam status validos e nao se confundem'
   // Ambos precisam respeitar os CHECKs da tabela renovacoes_auto.
   const operacionaisValidos = ['pendente', 'cotando', 'cotado', 'enviado', 'negociando', 'outra_corretora', 'renovado', 'cancelado']
   const cotacaoValidos = ['nao_cotada', 'cotada_nao_enviada', 'cotada_enviada']
-  for (const etapa of ['renovacoes', 'renovacoes_para_enviar', 'pendentes', 'cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida', 'nao_renovou']) {
+  for (const etapa of ['renovacoes', 'renovacoes_para_enviar', 'pendentes', 'cotacao_iniciada', 'cotacao_feita', 'negociando', 'aguardando_vistoria', 'proposta_transmitida', 'apolice_emitida', 'nao_renovou']) {
     const campos = renovacaoStageFields(etapa)
     assert.ok(operacionaisValidos.includes(campos.status_operacional), `${etapa}: status_operacional invalido`)
     assert.ok(cotacaoValidos.includes(campos.status_cotacao), `${etapa}: status_cotacao invalido`)

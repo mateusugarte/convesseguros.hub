@@ -177,10 +177,12 @@ test('danos morais rende o texto dos tres limites de terceiros', () => {
   assert.match(terceiros.texto, /5\.000,00 danos morais/)
 })
 
-test('vidros traz a franquia por peca, como no modelo validado', () => {
+test('vidros traz o plano e o que cobre sem expor franquia por peca', () => {
   const vidros = montarCategorias(parse()).categorias.find(c => c.key === 'vidros')
-  assert.match(vidros.texto, /para-brisa R\$ 314,00/)
-  assert.match(vidros.texto, /lateral R\$ 233,00/)
+  assert.match(vidros.texto, /Vidro Protegido Plus/)
+  assert.match(vidros.texto, /para-brisa/)
+  assert.match(vidros.texto, /vidros laterais/)
+  assert.doesNotMatch(vidros.texto, /R\$|314|233|franquia/i)
 })
 
 test('blindagem nao contratada vira exclusao declarada, nao silencio', () => {

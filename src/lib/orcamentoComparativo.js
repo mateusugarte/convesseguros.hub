@@ -240,7 +240,7 @@ export function criarCotacaoOrcamento(patch = {}) {
     },
     // Fato critico e explicito — nunca derivado do texto das coberturas.
     // `null` = o corretor ainda nao confirmou; a revisao trava nisso.
-    indenizacao_integral: { incluida: null, percentual_fipe: null, observacao: '' },
+    indenizacao_integral: { incluida: null, percentual_fipe: null, base_calculo: '', observacao: '' },
     // Preenchido pelo parser quando o PDF cota MAIS DE UM produto e nao diz qual
     // vale — a cotacao Allianz traz seis ofertas, a HDI traz duas modalidades.
     // `{ campo, label, opcoes }`. Enquanto estiver setado, a geracao trava: o
@@ -253,6 +253,109 @@ export function criarCotacaoOrcamento(patch = {}) {
     nao_incluso: [],
     condicoes_gerais: { referencia: '', anexada_em: '' },
     ...patch,
+  }
+}
+
+function emCentavos(valor) {
+  const numero = Number(valor)
+  return Number.isFinite(numero) ? Math.round(numero * 100) : null
+}
+
+/**
+ * Ultima barreira contra a troca entre LMI e premio da cobertura.
+ *
+ * Alguns geradores deixam o LMI vazio, mas mantem o premio da linha. Se um
+ * parser baseado em coordenadas atravessar a divisoria, os dois campos acabam
+ * com exatamente o mesmo valor. Nesse caso e mais seguro deixar a cobertura
+ * pendente para revisao do que mostrar ao cliente um limite falso.
+ */
+export function protegerCoberturasContraPremio(cotacao) {
+  if (!cotacao || !Array.isArray(cotacao.coberturas)) return cotacao
+  const rejeitadas = []
+  const coberturas = cotacao.coberturas.map(cobertura => {
+    const premio = emCentavos(cobertura?.premio)
+    const lmi = emCentavos(cobertura?.valor_lmi)
+    if (premio == null || premio <= 0 || lmi == null || lmi !== premio) return cobertura
+
+    const nome = cobertura.nome_padronizado || cobertura.nome_original_seguradora || 'Cobertura'
+    rejeitadas.push(nome)
+    return {
+      ...cobertura,
+      valor_lmi: null,
+      lmi_texto: '',
+      observacoes: '',
+      lmi_rejeitado_por_premio: true,
+    }
+  })
+
+  if (!rejeitadas.length) return cotacao
+  const existentes = Array.isArray(cotacao.avisos_extracao) ? cotacao.avisos_extracao : []
+  const code = 'PREMIO_NAO_E_COBERTURA'
+  const avisos_extracao = existentes.some(aviso => aviso?.code === code)
+    ? existentes
+    : [...existentes, {
+        code,
+        mensagem: `A leitura descartou valor(es) de prêmio que apareceram na coluna de cobertura: ${rejeitadas.join(', ')}. Confira o LMI na revisão.`,
+        bloqueia: true,
+      }]
+  return { ...cotacao, coberturas, avisos_extracao }
+}
+
+/**
+ * Normaliza as maneiras mais comuns usadas pelas seguradoras para descrever a
+ * indenizacao integral. O percentual continua no campo legado
+ * `percentual_fipe` por compatibilidade, mas `base_calculo` registra se o PDF
+ * falou em FIPE, casco/veiculo ou valor determinado.
+ *
+ * A regra nao inventa cobertura: quando o texto nao afirma inclusao, exclusao
+ * ou percentual, o estado continua `null` e a revisao humana permanece ativa.
+ */
+export function normalizarIndenizacaoIntegral(cotacao) {
+  if (!cotacao) return cotacao
+  const atual = cotacao.indenizacao_integral || {}
+  const fontes = [
+    atual.observacao,
+    ...(cotacao.coberturas || [])
+      .filter(c => c?.categoria === 'colisao' || classificarCobertura(c?.nome_padronizado || c?.nome_original_seguradora) === 'colisao')
+      .flatMap(c => [c?.nome_padronizado, c?.nome_original_seguradora, c?.observacoes, c?.lmi_texto]),
+  ].filter(Boolean).join(' ')
+  const normalizado = normalizarTexto(fontes)
+
+  const negada = /(?:indenizacao integral|perda total)[^.;\n]{0,55}(?:nao (?:possui|inclus|contrat)|sem cobertura)/i.test(normalizado)
+    || /(?:nao (?:possui|inclus|contrat)|sem cobertura)[^.;\n]{0,55}(?:indenizacao integral|perda total)/i.test(normalizado)
+  if (atual.incluida === false || negada) {
+    return {
+      ...cotacao,
+      indenizacao_integral: { ...atual, incluida: false, percentual_fipe: null, base_calculo: atual.base_calculo || '' },
+    }
+  }
+
+  const percentual = fontes.match(/(\d{1,3}(?:[.,]\d+)?)\s*%[^.;\n]{0,34}?(?:tabela\s*)?(fipe|casco|ve[ií]culo|valor\s+de\s+mercado\s+referenciad[oa])/i)
+    || fontes.match(/(?:fipe|casco|ve[ií]culo|valor\s+de\s+mercado\s+referenciad[oa])[^.;\n]{0,34}?(\d{1,3}(?:[.,]\d+)?)\s*%/i)
+  const percentualAtual = atual.percentual_fipe == null ? null : Number(atual.percentual_fipe)
+  const percentualLido = percentual ? Number(percentual[1].replace(',', '.')) : null
+  const pct = Number.isFinite(percentualAtual) ? percentualAtual : (Number.isFinite(percentualLido) ? percentualLido : null)
+
+  let base = atual.base_calculo || ''
+  const fonteBase = normalizarTexto(percentual?.[2] || normalizado)
+  if (!base && fonteBase.includes('casco')) base = 'casco'
+  else if (!base && /valor determinado|valor fixo/.test(normalizado)) base = 'valor_determinado'
+  else if (!base && (fonteBase.includes('fipe') || fonteBase.includes('valor de mercado referenciado'))) base = 'fipe'
+  else if (!base && fonteBase.includes('veiculo')) base = 'veiculo'
+  if (!base && pct != null) base = 'fipe'
+
+  const inclusaPeloTexto = /indenizacao integral|perda total|100\s*%[^.;\n]{0,24}(?:fipe|casco|veiculo)/i.test(normalizado)
+    || /valor determinado|valor fixo/i.test(normalizado)
+  const incluida = atual.incluida === true || pct != null || inclusaPeloTexto ? true : atual.incluida ?? null
+
+  return {
+    ...cotacao,
+    indenizacao_integral: {
+      ...atual,
+      incluida,
+      percentual_fipe: pct,
+      base_calculo: base,
+    },
   }
 }
 
@@ -624,8 +727,18 @@ export function textoColisao(cotacao) {
   const integral = cotacao?.indenizacao_integral || {}
   let frase
   if (integral.incluida === true) {
-    const pct = integral.percentual_fipe != null ? `${integral.percentual_fipe}% da tabela FIPE` : 'conforme a apólice'
-    frase = `Indenização integral do veículo: inclusa a ${pct}.`
+    const percentual = integral.percentual_fipe != null ? `${integral.percentual_fipe}%` : ''
+    const base = integral.base_calculo === 'casco'
+      ? 'do casco'
+      : integral.base_calculo === 'veiculo'
+        ? 'do veículo'
+        : integral.base_calculo === 'valor_determinado'
+          ? 'por valor determinado'
+          : 'da tabela FIPE'
+    const regra = percentual ? `${percentual} ${base}` : (integral.base_calculo === 'valor_determinado' ? base : 'conforme a apólice')
+    frase = integral.base_calculo === 'valor_determinado' && !percentual
+      ? `Indenização integral do veículo: inclusa ${regra}.`
+      : `Indenização integral do veículo: inclusa a ${regra}.`
   } else if (integral.incluida === false) {
     frase = cotacao?.valores?.franquia_nao_aplicavel
       ? 'Indenização integral do veículo: não possui neste produto.'
@@ -644,6 +757,38 @@ export function textoColisao(cotacao) {
     : integral.observacao
 
   return [...base, observacao, frase].filter(Boolean).join(' ')
+}
+
+const PECAS_VIDROS = [
+  ['para-brisa', /para[ -]?brisa|parabrisa/i],
+  ['vidros laterais', /vidros? latera(?:l|is)|\blateral\b/i],
+  ['vidro traseiro', /vidro traseiro|vigia\/?traseiro|\bvigia\b/i],
+  ['faróis', /far[oó]is?|xenon|matrix/i],
+  ['lanternas', /lanternas?/i],
+  ['retrovisores', /retrovisores?/i],
+  ['teto solar', /teto solar/i],
+  ['máquina de vidro', /m[aá]quina de vidro/i],
+]
+
+/**
+ * A linha "Vidros" vende o plano e o que ele cobre. Valores por peca sao
+ * participacoes/franquias do sinistro e nao devem poluir o comparativo.
+ */
+export function textoVidros(itens = []) {
+  const fontes = itens.flatMap(item => [
+    item?.nome_padronizado,
+    item?.nome_original_seguradora,
+    item?.observacoes,
+  ]).filter(Boolean)
+  const bruto = fontes.join(' ')
+  if (!bruto) return ''
+
+  const nomesPlano = itens.flatMap(item => [item?.nome_padronizado, item?.nome_original_seguradora])
+    .map(humanizarCobertura)
+    .filter(nome => nome && !/^vidros?(?: completo)?$/i.test(nome) && !/^(?:para[ -]?brisa|far[oó]is?|lanternas?|retrovisores?)$/i.test(nome))
+  const plano = [...new Set(nomesPlano)][0] || 'Plano de vidros'
+  const pecas = PECAS_VIDROS.filter(([, padrao]) => padrao.test(bruto)).map(([rotulo]) => rotulo)
+  return pecas.length ? `${plano} — cobre ${pecas.join(', ')}.` : plano
 }
 
 /**
@@ -748,6 +893,7 @@ export function montarCategorias(cotacao) {
     else if (meta.key === 'terceiros') texto = textoTerceiros(itens)
     else if (meta.key === 'assistencia') texto = textoAssistencia(cot, itens)
     else if (meta.key === 'carro_reserva') texto = textoCarroReserva(itens)
+    else if (meta.key === 'vidros') texto = textoVidros(itens)
     // `nome_original_seguradora` fecha a cadeia de propósito. Sem ele, uma
     // cobertura extraida sem observacao e sem nome padronizado — que e como o
     // parser da familia Porto entrega, com o nome cru da seguradora — produzia
@@ -914,6 +1060,17 @@ export function validarCotacao(cotacao) {
   const cot = cotacao || {}
   const pendencias = []
 
+  for (const cobertura of cot.coberturas || []) {
+    if (!cobertura?.lmi_rejeitado_por_premio) continue
+    const nome = cobertura.nome_padronizado || cobertura.nome_original_seguradora || 'Cobertura'
+    pendencias.push({
+      caminho: `coberturas.${nome}.valor_lmi`,
+      label: `${humanizarCobertura(nome)} — confira o limite; o valor encontrado era o prêmio da cobertura`,
+      severidade: SEVERIDADE.CRITICO,
+      bloqueia: true,
+    })
+  }
+
   // Escolha de produto pendente: o premio, as coberturas, a indenizacao integral
   // e o parcelamento dependem TODOS da opcao escolhida, e nenhum deles existe
   // ainda. Cobrar cada um separadamente daria oito pendencias para um problema
@@ -959,7 +1116,11 @@ export function validarCotacao(cotacao) {
       severidade: SEVERIDADE.CRITICO,
       bloqueia: true,
     })
-  } else if (cot.indenizacao_integral.incluida === true && cot.indenizacao_integral.percentual_fipe == null) {
+  } else if (
+    cot.indenizacao_integral.incluida === true
+    && cot.indenizacao_integral.percentual_fipe == null
+    && cot.indenizacao_integral.base_calculo !== 'valor_determinado'
+  ) {
     pendencias.push({
       caminho: 'indenizacao_integral.percentual_fipe',
       label: 'Percentual da FIPE da indenização integral',

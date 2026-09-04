@@ -10,6 +10,7 @@ import { ehLayoutPier, listarProdutosPier, parseCotacaoPier } from './orcamentoP
 import { ehLayoutSuhai, listarProdutosSuhai, parseCotacaoSuhai } from './orcamentoSuhaiParser.js'
 import { ehLayoutYelum, parseCotacaoYelum } from './orcamentoYelumParser.js'
 import { ehLayoutTokio, listarProdutosTokio, parseCotacaoTokio } from './orcamentoTokioParser.js'
+import { protegerCoberturasContraPremio } from './orcamentoComparativo.js'
 
 const produtoUnico = (seguradora, label = 'Produto cotado') => ({
   seguradora,
@@ -113,5 +114,5 @@ export function listarProdutosOrcamento({ texto = '', parser_id: parserId = '' }
 export function parseCotacaoPorSeguradora(entrada = {}) {
   const parser = entrada.parser_id ? parserOrcamentoPorId(entrada.parser_id) : detectarParserOrcamento(entrada)
   if (!parser) throw new LayoutOrcamentoNaoReconhecidoError()
-  return parser.parse(entrada)
+  return protegerCoberturasContraPremio(parser.parse(entrada))
 }

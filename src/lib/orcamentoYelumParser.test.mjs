@@ -24,6 +24,16 @@ test('extrai as sete coberturas contratadas', () => {
   assert.equal(coberturas.find(c => /DANOS MATERIAIS/i.test(c.nome_original_seguradora))?.valor_lmi, 150000)
 })
 
+test('LMI ausente nao usa o premio da cobertura como limite', () => {
+  const linhasSemLmi = agruparLinhas([
+    { pagina: 1, y: 350, x: 60, texto: 'DANOS MATERIAIS' },
+    { pagina: 1, y: 350, x: 452, texto: 'R$ 367,67' },
+  ])
+  const [cobertura] = extrairCoberturasYelum(linhasSemLmi)
+  assert.equal(cobertura.valor_lmi, null)
+  assert.equal(cobertura.premio, 367.67)
+})
+
 test('preserva Danos Morais e Estéticos mesmo com o nome quebrado em duas linhas', () => {
   const moral = extrairCoberturasYelum(linhas()).find(c => /MORAIS/i.test(c.nome_original_seguradora))
   assert.match(moral.nome_original_seguradora, /ESTÉTICOS/)

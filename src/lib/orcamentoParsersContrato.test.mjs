@@ -12,7 +12,7 @@ import { parseCotacaoSuhai } from './orcamentoSuhaiParser.js'
 import { parseCotacaoTokio } from './orcamentoTokioParser.js'
 import { parseCotacaoYelum } from './orcamentoYelumParser.js'
 import {
-  ESTADO_COBERTURA, extrairDiasCarroReserva, montarCategorias, TEM_VALOR_MONETARIO, validarCotacao,
+  ESTADO_COBERTURA, extrairDiasCarroReserva, montarCategorias, protegerCoberturasContraPremio, TEM_VALOR_MONETARIO, validarCotacao,
 } from './orcamentoComparativo.js'
 
 const fixture = nome => JSON.parse(fs.readFileSync(new URL(`./__fixtures__/${nome}.json`, import.meta.url)))
@@ -31,6 +31,34 @@ const COTACOES_REAIS = [
   ['Tokio', parseCotacaoTokio(fixture('tokio'))],
   ['Yelum', parseCotacaoYelum(fixture('yelum'))],
 ]
+
+test('nunca usa o premio da linha como limite da cobertura', () => {
+  const cotacao = protegerCoberturasContraPremio({
+    ...parseCotacaoDarwin(fixture('darwin')),
+    coberturas: [{
+      nome_original_seguradora: 'Danos Materiais',
+      categoria: 'terceiros',
+      incluida: true,
+      valor_lmi: 803.55,
+      premio: 803.55,
+      observacoes: 'Danos Materiais: R$ 803,55',
+    }],
+  })
+
+  assert.equal(cotacao.coberturas[0].valor_lmi, null)
+  assert.equal(cotacao.coberturas[0].observacoes, '')
+  assert.equal(cotacao.coberturas[0].lmi_rejeitado_por_premio, true)
+  assert.ok(cotacao.avisos_extracao.some(aviso => aviso.code === 'PREMIO_NAO_E_COBERTURA' && aviso.bloqueia))
+  assert.ok(validarCotacao(cotacao).bloqueios.some(item => item.caminho.includes('Danos Materiais')))
+})
+
+test('preserva LMI verdadeiro quando ele e diferente do premio da cobertura', () => {
+  const cotacao = protegerCoberturasContraPremio({
+    coberturas: [{ valor_lmi: 150000, premio: 803.55, observacoes: 'R$ 150.000,00' }],
+  })
+  assert.equal(cotacao.coberturas[0].valor_lmi, 150000)
+  assert.equal(cotacao.coberturas[0].observacoes, 'R$ 150.000,00')
+})
 
 test('contrato comum cobre todos os PDFs reais sem ocultar campo ausente', () => {
   for (const [nome, cotacao] of COTACOES_REAIS) {

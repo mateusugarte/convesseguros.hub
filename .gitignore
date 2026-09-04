@@ -30,6 +30,7 @@ Thumbs.db
 !supabase/73_auto_clientes_unificacao_risco.sql
 !supabase/74_tarefas_pessoais.sql
 !supabase/75_auto_pipeline_nao_renovou.sql
+!supabase/76_auto_pipeline_cotacoes_iniciadas.sql
 
 # Claude Code / Skills locais
 .claude/

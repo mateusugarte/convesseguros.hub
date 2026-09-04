@@ -33,7 +33,8 @@ function comStorage(executar) {
 // ─── navegacao entre etapas ──────────────────────────────────────────────
 
 test('avanca e volta uma etapa na ordem real do funil', () => {
-  assert.equal(etapaVizinha('pendentes', 1), 'cotacao_feita')
+  assert.equal(etapaVizinha('pendentes', 1), 'cotacao_iniciada')
+  assert.equal(etapaVizinha('cotacao_iniciada', 1), 'cotacao_feita')
   assert.equal(etapaVizinha('cotacao_feita', 1), 'negociando')
   assert.equal(etapaVizinha('proposta_transmitida', 1), 'apolice_emitida')
   assert.equal(etapaVizinha('negociando', -1), 'cotacao_feita')

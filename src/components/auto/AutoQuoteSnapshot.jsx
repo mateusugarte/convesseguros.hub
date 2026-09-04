@@ -8,19 +8,9 @@ import {
   UserRound,
 } from 'lucide-react'
 import { formatDateBR, formatMoney } from '../../pages/auto/autoShared'
-import { valorFormularioAuto } from '../../lib/autoFormPayload'
 
 function first(...values) {
   return values.find(value => value !== null && value !== undefined && value !== '') ?? ''
-}
-
-function yesNo(value) {
-  if (value === null || value === undefined || value === '') return 'Não informado'
-  if (typeof value === 'boolean') return value ? 'Sim' : 'Não'
-  const normalized = String(value).trim().toLowerCase()
-  if (['sim', 's', 'true', '1'].includes(normalized)) return 'Sim'
-  if (['nao', 'não', 'n', 'false', '0'].includes(normalized)) return 'Não'
-  return String(value)
 }
 
 function date(value) {
@@ -51,9 +41,6 @@ export default function AutoQuoteSnapshot({ quote = {}, emission = {}, policy = 
   const client = quote.clientes_auto || emission.clientes_auto || policy.clientes_auto || {}
   const commission = first(emission.valor_comissao, policy.valor_comissao)
   const premium = first(emission.premio_liquido, policy.premio_liquido, current.premio_liquido)
-  const tipoResidencia = first(quote.tipo_residencia, valorFormularioAuto(quote, 'tipo_residencia'))
-  const passagemLeilao = first(quote.passagem_leilao, valorFormularioAuto(quote, 'passagem_leilao'))
-
   return (
     <div className="auto-quote-snapshot">
       <Section icon={UserRound} title="Segurado e contato" subtitle="Identidade associada a esta cotação">
@@ -61,34 +48,21 @@ export default function AutoQuoteSnapshot({ quote = {}, emission = {}, policy = 
         <SnapshotValue label="CPF / CNPJ" value={first(client.cpf, quote.cpf_cliente, emission.cpf_cliente, policy.cpf_cliente)} mono />
         <SnapshotValue label="Celular" value={first(client.celular, client.telefone, quote.celular_cliente, emission.celular_cliente, policy.celular_cliente)} />
         <SnapshotValue label="E-mail" value={first(client.email, quote.email_cliente)} />
-        <SnapshotValue label="Estado civil" value={first(client.estado_civil, quote.estado_civil_cliente)} />
-        <SnapshotValue label="Profissão" value={first(client.profissao, quote.profissao_cliente)} />
       </Section>
 
       <Section icon={Car} title="Veículo e utilização" subtitle="Risco específico deste momento">
         <SnapshotValue label="Marca / modelo" value={first(emission.modelo_veiculo, policy.modelo_veiculo, quote.modelo_veiculo)} highlight />
         <SnapshotValue label="Placa" value={first(emission.placa, policy.placa, quote.placa)} mono />
         <SnapshotValue label="Uso do veículo" value={quote.uso_veiculo} />
-        <SnapshotValue label="Tipo de residência" value={tipoResidencia} />
-        <SnapshotValue label="Passagem por leilão" value={yesNo(passagemLeilao)} />
-        <SnapshotValue label="Financiado / alienado" value={yesNo(quote.veiculo_financiado)} />
-        <SnapshotValue label="Kit gás" value={yesNo(quote.possui_kit_gas)} />
-        <SnapshotValue label="Blindagem" value={yesNo(quote.possui_blindagem)} />
-        <SnapshotValue label="Isenção de imposto" value={yesNo(quote.isento_imposto)} />
       </Section>
 
       <Section icon={Contact} title="Condutor principal" subtitle="Perfil considerado na análise">
         <SnapshotValue label="Nome" value={first(emission.condutor_nome, policy.condutor_nome, quote.condutor_nome, quote.nome_cliente)} highlight />
         <SnapshotValue label="CPF" value={first(emission.condutor_cpf, policy.condutor_cpf, quote.condutor_cpf)} mono />
-        <SnapshotValue label="Estado civil" value={quote.estado_civil_condutor} />
-        <SnapshotValue label="Condutor de 18 a 26 anos" value={yesNo(quote.jovens_18_26)} />
       </Section>
 
       <Section icon={MapPinHouse} title="Local e proteção" subtitle="Informações complementares do risco">
         <SnapshotValue label="CEP de pernoite" value={quote.cep_pernoite} mono />
-        <SnapshotValue label="Garagem na residência" value={yesNo(quote.garagem_residencia)} />
-        <SnapshotValue label="Garagem no trabalho" value={yesNo(quote.garagem_trabalho)} />
-        <SnapshotValue label="Garagem no local de estudo" value={yesNo(quote.garagem_estudo)} />
       </Section>
 
       <Section icon={CalendarDays} title="Vigência e origem" subtitle="Datas e contexto da oportunidade">

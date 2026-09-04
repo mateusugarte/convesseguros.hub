@@ -81,10 +81,12 @@ export function celulaNaFaixa(linha, x, {
 } = {}) {
   if (!linha || !Number.isFinite(Number(x))) return ''
   const centro = Number(x)
-  const limiteEsquerdo = Number.isFinite(Number(anterior))
+  const temAnterior = anterior !== null && anterior !== '' && Number.isFinite(Number(anterior))
+  const temProxima = proxima !== null && proxima !== '' && Number.isFinite(Number(proxima))
+  const limiteEsquerdo = temAnterior
     ? (Number(anterior) + centro) / 2
     : centro - antes
-  const limiteDireito = Number.isFinite(Number(proxima))
+  const limiteDireito = temProxima
     ? (centro + Number(proxima)) / 2
     : centro + depois
   const candidatas = (linha.celulas || [])

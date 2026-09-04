@@ -221,17 +221,24 @@ operacionais de agosto/2026, acrescidas do campo Veiculo.
   grafico mensal.
 - `AutoSinistrosV2` salva checklist e dossie no dispositivo e gera um resumo copiavel. Esses dados ainda nao sao enviados ao Supabase.
 
-## Pipeline AUTO — movimentacao e leitura do quadro (2026-08-31)
+## Pipeline AUTO — movimentacao e leitura do quadro (2026-09-04)
 
-- **Mover um card para "Cotacoes feitas" nao abre formulario.** O modal de
-  resultado saiu do arraste e continua so onde faz sentido: dentro do card, em
-  `Registrar resultado da cotacao`. A coluna precisa de um `resultado` gravado
-  porque `resolveAutoEmissionStage` devolve `pendentes` quando ele falta — o
-  card voltaria sozinho para a coluna anterior. `moverCardPipeline` grava o
-  resultado NEUTRO `cotada` (aceito desde a migration 64), preserva um
-  `aprovada`/`recusada` ja existente e nunca zera `seguradoras_cotadas`.
-  Continuam abrindo formulario apenas `proposta_transmitida` e
-  `apolice_emitida`, as duas etapas que gravam transmissao e criam a apolice.
+- **A `coluna` gravada e a UNICA fonte da verdade da etapa do card.** O conceito
+  de `resultado` aprovada/recusada foi REMOVIDO do fluxo Auto (2026-09-04). Ate
+  entao `resolveAutoEmissionStage` devolvia `pendentes` para um card em
+  `cotacao_feita` sem `resultado`: o usuario transmitia a cotacao, o banco
+  gravava a coluna nova e a tela redesenhava o card na coluna anterior. Nenhuma
+  tela le mais `emissoes_auto.resultado`; nenhuma escrita nova o preenche.
+- **Nenhum movimento e bloqueado por formulario.** `moverCardPipeline` persiste
+  a coluna PRIMEIRO e so depois abre o modal de transmissao
+  (`proposta_transmitida` / `aguardando_vistoria`). `apolice_emitida` continua
+  exigindo o formulario antes, porque cria a apolice.
+- O antigo `salvarResultadoCotacao` virou `registrarCotacaoFeita(id, {
+  seguradoras_cotadas })`: grava a coluna `cotacao_feita` e as seguradoras
+  cotadas, sem tocar em `resultado`.
+- A coluna `emissoes_auto.resultado` permanece no banco e no SELECT por causa
+  dos registros antigos, e a RPC `marcar_renovacao_auto_cotada` ainda grava
+  `cotada` — sem efeito na tela.
 - Todo movimento e otimista (`aplicarColunaLocalmente`): o card muda de coluna
   no instante do drop e so depois confirma no banco. Erro volta em toast e a
   invalidacao corrige a posicao.

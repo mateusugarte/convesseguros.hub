@@ -136,7 +136,6 @@ export default function AutoApoliceDetalheV2() {
           apolice_id: apolice.id,
           cotacao_id: emissao.cotacao_id || emissao.cotacoes_auto?.id || null,
           coluna: emissao.coluna || 'apolice_emitida',
-          resultado: emissao.resultado || null,
           criar_apolice: true,
         })
       }
@@ -157,8 +156,6 @@ export default function AutoApoliceDetalheV2() {
     const emissao = apolice.emissoes_auto || {}
     const coluna = getEmissaoColuna({ ...emissao, apolices_auto: [apolice] })
     if (coluna === 'apolice_emitida') return 'Apólice emitida'
-    if (emissao.resultado === 'recusada') return 'Recusada'
-    if (emissao.resultado === 'aprovada') return 'Aprovada'
     const labels = {
       pendentes: 'Pendente',
       cotacao_feita: 'Cotação feita',

@@ -1,5 +1,40 @@
 # CURRENT TASK
 
+## Pipeline AUTO: fim do resultado aprovada/recusada (2026-09-04, Claude — CONCLUIDA)
+
+Responsavel: Claude Code. Sintoma reportado pelo usuario: "estou transmitindo cotacoes e elas NAO
+ATUALIZAM, permanecem no MESMO LUGAR, NA MESMA COLUNA".
+
+Causa: `resolveAutoEmissionStage` tinha a regra `if (raw === 'cotacao_feita' && !item.resultado)
+return 'pendentes'`. O usuario arrastava o card, o banco gravava a coluna nova, mas a tela
+recalculava a etapa a partir de `resultado` (aprovada/recusada) e desenhava o card na coluna
+anterior. Como quase nenhuma escrita preenchia `resultado`, o card "voltava" sozinho.
+
+Decisao do usuario: remover por completo o conceito de resultado aprovada/recusada do setor Auto.
+A `coluna` gravada passa a ser a UNICA fonte da verdade da etapa do card.
+
+Alteracoes:
+- `autoOperational.js`: removida a regra de etapa por `resultado`; `scoreCotacaoSuggestion` nao
+  pontua mais `resultado === 'aprovada'`.
+- `auto.js`: helper `resultadoEmissaoParaColuna` e `AUTO_PROPOSTA_TRANSMITIDA_COLUNAS` removidos;
+  nenhuma escrita nova preenche `resultado` (salvarPropostaPlanilhaAuto,
+  atualizarEmissaoAutoCompleta, emitirApoliceAuto, criarEmissaoManualAuto, importacao de
+  planilha). `salvarResultadoCotacao` virou `registrarCotacaoFeita(id, { seguradoras_cotadas })`.
+- `AutoEmissoes.jsx`: arraste persiste a coluna IMEDIATAMENTE e so depois abre o modal de
+  transmissao; modal de resultado virou modal de seguradoras cotadas; `isAprovada`/`isRecusada`
+  fora dos cards.
+- `AutoEmissoesPlanilha.jsx`: `updateStatus` sem o gate de resultado.
+- `AutoApoliceDetalhe.jsx` / `AutoApoliceDetalheV2.jsx`: nao leem mais `emissao.resultado`.
+- `autoOperational.test.mjs`: teste de regressao garantindo que `cotacao_feita` sem `resultado`
+  permanece em `cotacao_feita`.
+
+A coluna `emissoes_auto.resultado` continua existindo no banco (registros antigos) e no SELECT,
+mas nenhuma tela decide nada com base nela. A RPC `marcar_renovacao_auto_cotada` ainda grava
+`cotada` por compatibilidade — inofensivo.
+
+Verificacao: `npm test` 666/666 passando, `npm run build` OK.
+
+
 ## Marca correta no orcamento da familia Porto (2026-08-31, Claude — CONCLUIDA)
 
 Responsavel: Claude Code. Sintoma reportado pelo usuario: anexou um orcamento da Porto e um da

@@ -10,7 +10,6 @@ import {
   salvarPropostaPlanilhaAuto,
 } from '../../lib/auto'
 import { AUTO_PIPELINE_STAGES, AUTO_TIPO_META, scoreCotacaoSuggestion } from '../../lib/autoOperational'
-import { requiresAutoEmissionRegistration } from '../../lib/autoPipelineBoard.js'
 import { useToast } from '../../contexts/ToastContext'
 import { EmptyState, PageHeader } from '../../components/ui'
 import OperationalSpreadsheet from '../../components/auto/OperationalSpreadsheet'
@@ -106,22 +105,22 @@ export default function AutoEmissoesPlanilha() {
     })
   }, [rows, search, insurer, type, status, sort])
 
+  // Trocar o status na grade GRAVA o status. Antes, transmissao e apolice
+  // mandavam o usuario para outra tela e "cotacao feita" abria o detalhe sem
+  // salvar nada — a linha voltava para o status antigo e parecia travada.
+  // Somente "Apolice emitida" continua indo para o formulario da Pipeline,
+  // porque essa etapa cria a apolice, e nao apenas move o card.
   const updateStatus = (row, next) => {
-    if (requiresAutoEmissionRegistration(next)) {
+    if (next === 'apolice_emitida') {
       const pipeline = (row.cotacoes_auto?.tipo || row.tipo) === 'renovacao' ? 'renovacoes' : 'outros'
       const params = new URLSearchParams({ mes: month, pipeline })
       navigate(`/auto/gestao?${params.toString()}`, {
         state: { autoEmissionRegistration: { item: row, stage: next } },
       })
-      toast({ type: 'info', title: 'Complete o registro', message: 'Preencha os dados solicitados para confirmar esta classificação.' })
+      toast({ type: 'info', title: 'Complete o registro da apólice', message: 'Informe número, vigência e valores para emitir.' })
       return
     }
-    if (next === 'cotacao_feita') {
-      navigate(`/auto/emissoes/${row.id}`)
-      toast({ type: 'info', title: 'Complete a movimentação', message: 'Esta etapa exige os mesmos dados e validações da Pipeline.' })
-      return
-    }
-    saveCellMutation.mutate({ row, fields: { coluna: next } })
+    saveCellMutation.mutate({ row, fields: { coluna: next === 'pendentes' ? null : next } })
   }
   const columns = useMemo(() => [
     { field: 'data_transmissao', label: 'Transmissão', type: 'date', editable: true, sortable: true, width: 124 },

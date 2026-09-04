@@ -98,6 +98,15 @@ test('apólice vinculada sempre encerra a emissão como apólice emitida', () =>
   assert.equal(resolveAutoEmissionStage({ coluna: 'apolice_emitida', resultado: null }), 'apolice_emitida')
 })
 
+test('a coluna gravada define a etapa mesmo sem resultado aprovada/recusada', () => {
+  // Regressao: 'cotacao_feita' sem `resultado` voltava para 'pendentes' e o
+  // card transmitido continuava desenhado na coluna antiga.
+  assert.equal(resolveAutoEmissionStage({ coluna: 'cotacao_feita' }), 'cotacao_feita')
+  assert.equal(resolveAutoEmissionStage({ coluna: 'cotacao_feita', resultado: null }), 'cotacao_feita')
+  assert.equal(resolveAutoEmissionStage({ coluna: 'proposta_transmitida', resultado: null }), 'proposta_transmitida')
+  assert.equal(resolveAutoEmissionStage({ coluna: 'negociando', resultado: 'recusada' }), 'negociando')
+})
+
 test('cotacao aberta fica visivel na etapa de cotacoes iniciadas', () => {
   assert.equal(resolveAutoEmissionStage({ coluna: null, cotacoes_auto: { status: 'aberta' } }), 'cotacao_iniciada')
   assert.equal(resolveAutoEmissionStage({ coluna: 'cotacao_iniciada', cotacoes_auto: { status: 'pendente' } }), 'cotacao_iniciada')

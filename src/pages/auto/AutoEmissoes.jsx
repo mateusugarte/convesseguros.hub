@@ -8,7 +8,7 @@ import {
   atualizarEmissaoAutoCompleta, atualizarStatusRenovacao, atualizarTagsEmissao, atualizarTagsRenovacao, calcularValorComissaoAuto, cancelarRenovacao, criarEmissaoManualAuto, deletarCotacaoAuto, deletarEmissaoAuto,
   emitirApoliceAuto, getApolicesAuto, getAutoTags, getEmissaoAuto, getEmissaoColuna, getEmissoesAuto, getRenovacoesPendentesSemCotacao,
   iniciarCotacaoRenovacao, importarApolicesAutoHistorico, moverEmissaoColuna,
-  salvarPropostaPlanilhaAuto, salvarResultadoCotacao,
+  salvarPropostaPlanilhaAuto, registrarCotacaoFeita,
 } from '../../lib/auto'
 import { PageHeader, MetricCard, DataCard, DatePicker, FilterBar, EmptyState } from '../../components/ui'
 import { AutoPdfAutomation, AutoQuoteSnapshot } from '../../components/auto'
@@ -145,7 +145,6 @@ const FORM_EDICAO_VAZIO = {
   cotacao_id: '',
   apolice_id: '',
   tipo: 'novo',
-  resultado: '',
   nome_cliente: '',
   cpf_cliente: '',
   celular_cliente: '',
@@ -269,13 +268,11 @@ function getSeguradorasAprovadas(emissao) {
     .filter(seg => seg.nome)
 }
 
-// Ao arrastar um card para "Cotacao feita" pela primeira vez, o modal de
-// resultado abria sempre em branco - o usuario tinha que redigitar a
-// seguradora e os valores que ja estavam preenchidos na cotacao (seguradora
-// preferencial, ou a mais barata na falta dela - mesma ordem de prioridade
-// usada em getFormEmissaoInicial/seguradoraEmissao). Se a emissao ja tem um
-// resultado registrado (reabrindo o modal depois de "Editar"), usa esse
-// resultado em vez de voltar a copiar da cotacao.
+// O modal de seguradoras cotadas abria sempre em branco - o usuario tinha que
+// redigitar a seguradora e os valores que ja estavam preenchidos na cotacao
+// (seguradora preferencial, ou a mais barata na falta dela - mesma ordem de
+// prioridade usada em getFormEmissaoInicial/seguradoraEmissao). Se a emissao ja
+// tem seguradoras registradas, usa essas em vez de copiar da cotacao.
 function getSeguradorasResultadoInicial(emissao) {
   const jaRegistradas = getSeguradorasAprovadas(emissao)
   if (jaRegistradas.length > 0) {
@@ -450,7 +447,6 @@ function getEditFormInicial(emissao) {
     tipo: ['novo', 'renovacao', 'endosso'].includes(c.tipo || emissao?.tipo) ? (c.tipo || emissao?.tipo) : 'novo',
     coluna: getEmissaoColuna(emissao),
     pendencia_emissao: getAutoEmissionRequirement(emissao?.tags),
-    resultado: emissao?.resultado || '',
     nome_cliente: nomeCliente,
     cpf_cliente: cpfCliente,
     celular_cliente: emissao?.celular_cliente || apolice?.celular_cliente || c.celular_cliente || '',
@@ -510,14 +506,11 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao,
   const tipo = emissao.cotacoes_auto?.tipo || emissao.tipo
   const isRenovacao = tipo === 'renovacao'
   const tipoMeta = AUTO_TIPO_META[tipo] || AUTO_TIPO_META.novo
-  const isRecusada = emissao.resultado === 'recusada'
   const isEmitida = coluna === 'apolice_emitida'
   const isTransmitida = coluna === 'proposta_transmitida'
   const isAguardandoOperacao = coluna === 'aguardando_vistoria'
   const isProposta = isProposalTransmissionStage(coluna)
   const isNaoRenovou = coluna === 'nao_renovou'
-  const isAprovada = emissao.resultado === 'aprovada' && !isEmitida
-  const isCotada = emissao.resultado === 'cotada'
   const nome = nomeEmissao(emissao)
   const apolice = getApoliceVinculada(emissao)
   const veiculo = emissao.modelo_veiculo || apolice?.modelo_veiculo || emissao.cotacoes_auto?.modelo_veiculo || 'Modelo nao informado'
@@ -535,7 +528,7 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao,
 
   let shellClass = 'border-brand-secondary/20 bg-white/90 shadow-[0_10px_24px_rgba(15,23,42,0.05)]'
   let accentClass = 'from-brand-secondary to-brand-accent'
-  if (isRecusada || isNaoRenovou) {
+  if (isNaoRenovou) {
     shellClass = 'border-red-200 bg-red-50/90 shadow-[0_10px_24px_rgba(239,68,68,0.07)]'
     accentClass = 'from-red-400 to-red-500'
   } else if (coluna === 'proposta_transmitida') {
@@ -601,14 +594,11 @@ function CardEmissao({ emissao, onDragStart, onClick, onMover, onIniciarEmissao,
           )}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
-          {isRecusada && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600">Recusada</span>}
           {isEmitida && <span className="rounded-full bg-status-success/10 px-2 py-0.5 text-[10px] font-semibold text-status-success">Emitida</span>}
           {isTransmitida && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Transmitida</span>}
           {isAguardandoOperacao && <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">Pós-transmissão</span>}
           {isNaoRenovou && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">Não renovou</span>}
-          {isAprovada && !isTransmitida && !isAguardandoOperacao && <span className="rounded-full bg-status-success/10 px-2 py-0.5 text-[10px] font-semibold text-status-success">Aprovada</span>}
-          {isCotada && !isEmitida && !isTransmitida && !isAguardandoOperacao && <span className="rounded-full bg-brand-secondary/10 px-2 py-0.5 text-[10px] font-semibold text-status-info">Cotada</span>}
-          {!emissao.resultado && !isEmitida && !isTransmitida && !isAguardandoOperacao && <span className="rounded-full bg-dark-surface px-2 py-0.5 text-[10px] font-semibold text-dark-muted">Em andamento</span>}
+          {!isEmitida && !isTransmitida && !isAguardandoOperacao && !isNaoRenovou && <span className="rounded-full bg-dark-surface px-2 py-0.5 text-[10px] font-semibold text-dark-muted">Em andamento</span>}
         </div>
       </div>
 
@@ -913,7 +903,7 @@ function CardRenovacaoPendente({ renovacao, onDragStart, onMover, onIniciarCotac
 
 // ─── Modal Detalhe ─────────────────────────────────────────────────────
 
-function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, onEmitirApolice, onEditar, onExcluir, isDeleting, page = false, tagsAtivas = [], onSalvarTags }) {
+function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarSeguradoras, onEmitirApolice, onEditar, onExcluir, isDeleting, page = false, tagsAtivas = [], onSalvarTags }) {
   const c = emissao.cotacoes_auto || {}
   const apolice = getApoliceVinculada(emissao)
   const temCotacao = Boolean(emissao.cotacoes_auto?.id || emissao.cotacao_id)
@@ -922,7 +912,6 @@ function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, 
   const tipo = tipoRaw === 'renovacao' ? 'Renovação' : tipoRaw === 'endosso' ? 'Endosso' : 'Seguro novo'
   const seguradoras = Array.isArray(emissao.seguradoras_cotadas) ? emissao.seguradoras_cotadas : []
   const seguradoraAtual = emissao.seguradora || apolice?.seguradora || c.seguradora_preferencial?.nome || c.seguradora_mais_barata?.nome || ''
-  const etapaAtual = emissao.resultado === 'aprovada' ? 'Cotacao aprovada' : emissao.resultado === 'recusada' ? 'Cotacao recusada' : emissao.resultado === 'cotada' ? 'Cotacao feita' : 'Aguardando resultado'
   const colunaAtual = getColunaMeta(getEmissaoColuna(emissao)).label
 
   return (
@@ -936,7 +925,6 @@ function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, 
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-dark-surface px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">{colunaAtual}</span>
                   <span className={tipoRaw === 'renovacao' ? 'rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success' : 'rounded-full bg-brand-secondary/10 px-2.5 py-1 text-[10px] font-semibold text-status-info'}>{tipo}</span>
-                  {emissao.resultado && <span className={emissao.resultado === 'aprovada' ? 'rounded-full bg-status-success/10 px-2.5 py-1 text-[10px] font-semibold text-status-success' : emissao.resultado === 'recusada' ? 'rounded-full bg-red-100 px-2.5 py-1 text-[10px] font-semibold text-red-600' : 'rounded-full bg-brand-secondary/10 px-2.5 py-1 text-[10px] font-semibold text-status-info'}>{emissao.resultado === 'aprovada' ? 'Aprovada' : emissao.resultado === 'recusada' ? 'Recusada' : 'Cotada'}</span>}
                 </div>
                 <h2 className="mt-4 truncate text-2xl font-semibold text-dark-text">{nome}</h2>
                 <p className="mt-2 text-sm text-dark-muted">{emissao.modelo_veiculo || c.modelo_veiculo || 'Veiculo nao informado'}{(emissao.placa || c.placa) ? ` · Placa ${emissao.placa || c.placa}` : ''}</p>
@@ -1006,7 +994,7 @@ function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, 
           <aside className="bg-dark-surface/75 p-6 md:p-7">
             <div className="rounded-[30px] border border-dark-border/70 bg-white/90 p-5">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dark-muted">Resumo operacional</p>
-              <p className="mt-2 text-lg font-semibold text-dark-text">{etapaAtual}</p>
+              <p className="mt-2 text-lg font-semibold text-dark-text">{colunaAtual}</p>
               <div className="mt-4 space-y-3 text-sm text-dark-muted">
                 <div className="rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-3">Coluna atual: <span className="font-semibold text-dark-text">{colunaAtual}</span></div>
                 <div className="rounded-2xl border border-dark-border/60 bg-dark-surface/70 p-3">Tipo: <span className="font-semibold text-dark-text">{tipo}</span></div>
@@ -1024,9 +1012,9 @@ function ModalDetalhe({ emissao, onClose, onAbrirCotacao, onRegistrarResultado, 
                   {isDeleting ? 'Excluindo...' : 'Excluir emissao'} <Trash2 className="h-4 w-4" />
                 </button>
                 {temCotacao && onAbrirCotacao && <button type="button" onClick={onAbrirCotacao} className="btn-secondary w-full text-xs">Editar no workspace da cotação</button>}
-                <button type="button" onClick={() => onRegistrarResultado?.(emissao)} className="w-full rounded-2xl border border-brand-secondary/20 bg-dark-surface/75 px-4 py-3 text-left transition-colors hover:border-brand-secondary/40 hover:bg-white">
-                  <p className="text-sm font-semibold text-dark-text">Registrar resultado da cotacao</p>
-                  <p className="mt-1 text-xs text-dark-muted">Aprovacao, recusa e seguradoras cotadas.</p>
+                <button type="button" onClick={() => onRegistrarSeguradoras?.(emissao)} className="w-full rounded-2xl border border-brand-secondary/20 bg-dark-surface/75 px-4 py-3 text-left transition-colors hover:border-brand-secondary/40 hover:bg-white">
+                  <p className="text-sm font-semibold text-dark-text">Registrar seguradoras cotadas</p>
+                  <p className="mt-1 text-xs text-dark-muted">Valores por seguradora e leitura do PDF do orcamento.</p>
                 </button>
                 <button type="button" onClick={() => onEmitirApolice?.(emissao)} className="w-full rounded-2xl border border-status-success/20 bg-status-success/5 px-4 py-3 text-left transition-colors hover:border-status-success/40 hover:bg-status-success/10">
                   <p className="text-sm font-semibold text-dark-text">Seguir para emissao</p>
@@ -1199,10 +1187,14 @@ function FormSeguradora({ seg, idx, onChange, onRemove, showRemove }) {
   )
 }
 
-// ─── Modal Resultado da Cotacao ────────────────────────────────────────
+// ─── Modal Seguradoras Cotadas ─────────────────────────────────────────
+//
+// Este modal registrava "aprovada / recusada". O resultado nao existe mais: a
+// etapa do negocio e a coluna onde o card esta. O que sobrou aqui e o que
+// realmente era usado — as seguradoras cotadas, com valores e a leitura do PDF
+// do orcamento — e salvar tambem move o card para "Cotacoes feitas".
 
-function ModalResultado({ emissao, onClose, onSave, isSaving }) {
-  const [resultado, setResultado] = useState('aprovada')
+function ModalSeguradorasCotadas({ emissao, onClose, onSave, isSaving }) {
   const [seguradoras, setSeguradoras] = useState(() => getSeguradorasResultadoInicial(emissao))
   const [pdfFile, setPdfFile] = useState(null)
   const [pdfStatus, setPdfStatus] = useState('idle')
@@ -1215,11 +1207,7 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
   const herdouDaCotacao = getSeguradorasAprovadas(emissao).length === 0
     && Boolean(c.seguradora_preferencial?.nome || c.seguradora_mais_barata?.nome)
 
-  const canSave = resultado === 'recusada' || (
-    resultado === 'aprovada' &&
-    seguradoras.length > 0 &&
-    seguradoras.every(s => s.nome.trim() !== '')
-  )
+  const canSave = seguradoras.length > 0 && seguradoras.every(s => s.nome.trim() !== '')
 
   function updateSeg(idx, campo, valor) {
     setSeguradoras(prev => prev.map((s, i) => i === idx ? { ...s, [campo]: valor } : s))
@@ -1273,18 +1261,17 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
   }
 
   function handleSave() {
-    const seguradasFinal = resultado === 'aprovada'
-      ? seguradoras.map(s => ({
-          nome: s.nome,
-          valor_total: toNumber(s.valor_total) || 0,
-          premio_liquido: toNumber(s.premio_liquido) || 0,
-          pct_comissao: toNumber(s.pct_comissao) || 0,
-          valor_comissao: calcularValorComissaoAuto(toNumber(s.premio_liquido) || 0, toNumber(s.pct_comissao) || 0),
-          parcelamentos: s.parcelamentos,
-          forma_pagamento: s.forma_pagamento,
-        }))
-      : []
-    onSave(emissao.id, { resultado, seguradoras_cotadas: seguradasFinal })
+    onSave(emissao.id, {
+      seguradoras_cotadas: seguradoras.map(s => ({
+        nome: s.nome,
+        valor_total: toNumber(s.valor_total) || 0,
+        premio_liquido: toNumber(s.premio_liquido) || 0,
+        pct_comissao: toNumber(s.pct_comissao) || 0,
+        valor_comissao: calcularValorComissaoAuto(toNumber(s.premio_liquido) || 0, toNumber(s.pct_comissao) || 0),
+        parcelamentos: s.parcelamentos,
+        forma_pagamento: s.forma_pagamento,
+      })),
+    })
   }
 
   return (
@@ -1293,7 +1280,7 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
       <div className="relative z-10 glass-modal w-full max-w-2xl rounded-[32px] p-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-info">Resultado da cotacao</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-status-info">Seguradoras cotadas</p>
             <h2 className="mt-2 text-xl font-semibold text-dark-text">{nome}</h2>
             <p className="mt-1 text-sm text-dark-muted">
               {c.modelo_veiculo || 'Veiculo nao informado'}
@@ -1305,80 +1292,46 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
           </button>
         </div>
 
-        {/* Toggle aprovada/recusada */}
-        <div className="mb-5 flex gap-3">
+        <div className="space-y-3">
+          <AutoPdfAutomation
+            mode="orcamento"
+            file={pdfFile}
+            status={pdfStatus}
+            result={pdfResult}
+            error={pdfError}
+            applied={pdfApplied}
+            onFile={handlePdf}
+            onApply={applyPdf}
+            onClear={() => { setPdfFile(null); setPdfStatus('idle'); setPdfResult(null); setPdfError(''); setPdfApplied(false) }}
+            compact
+          />
+          <p className="text-xs text-dark-muted">
+            Adicione ao menos uma seguradora com os valores cotados.
+          </p>
+          {herdouDaCotacao && (
+            <div className="rounded-2xl border border-status-success/25 bg-status-success/8 px-3 py-2 text-xs text-status-success">
+              Seguradora e valores preenchidos automaticamente a partir da cotacao. Confira antes de salvar.
+            </div>
+          )}
+          {seguradoras.map((seg, idx) => (
+            <FormSeguradora
+              key={idx}
+              seg={seg}
+              idx={idx}
+              onChange={(campo, valor) => updateSeg(idx, campo, valor)}
+              onRemove={() => removeSeg(idx)}
+              showRemove={seguradoras.length > 1}
+            />
+          ))}
           <button
             type="button"
-            onClick={() => setResultado('aprovada')}
-            className={`flex-1 rounded-2xl border py-3 text-sm font-semibold transition-all ${
-              resultado === 'aprovada'
-                ? 'border-status-success bg-status-success/10 text-status-success shadow-sm'
-                : 'border-dark-border bg-dark-surface/60 text-dark-muted hover:border-status-success/40'
-            }`}
+            onClick={addSeg}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-brand-secondary/30 py-2.5 text-sm text-status-info hover:border-brand-secondary/60 hover:bg-brand-secondary/5 transition-colors"
           >
-            Aprovada
-          </button>
-          <button
-            type="button"
-            onClick={() => setResultado('recusada')}
-            className={`flex-1 rounded-2xl border py-3 text-sm font-semibold transition-all ${
-              resultado === 'recusada'
-                ? 'border-red-300 bg-red-50 text-red-600 shadow-sm'
-                : 'border-dark-border bg-dark-surface/60 text-dark-muted hover:border-red-200'
-            }`}
-          >
-            Recusada
+            <Plus className="w-3.5 h-3.5" />
+            Adicionar outra seguradora
           </button>
         </div>
-
-        {resultado === 'aprovada' && (
-          <div className="space-y-3">
-            <AutoPdfAutomation
-              mode="orcamento"
-              file={pdfFile}
-              status={pdfStatus}
-              result={pdfResult}
-              error={pdfError}
-              applied={pdfApplied}
-              onFile={handlePdf}
-              onApply={applyPdf}
-              onClear={() => { setPdfFile(null); setPdfStatus('idle'); setPdfResult(null); setPdfError(''); setPdfApplied(false) }}
-              compact
-            />
-            <p className="text-xs text-dark-muted">
-              Adicione ao menos uma seguradora com o resultado da cotacao.
-            </p>
-            {herdouDaCotacao && (
-              <div className="rounded-2xl border border-status-success/25 bg-status-success/8 px-3 py-2 text-xs text-status-success">
-                Seguradora e valores preenchidos automaticamente a partir da cotacao. Confira antes de salvar.
-              </div>
-            )}
-            {seguradoras.map((seg, idx) => (
-              <FormSeguradora
-                key={idx}
-                seg={seg}
-                idx={idx}
-                onChange={(campo, valor) => updateSeg(idx, campo, valor)}
-                onRemove={() => removeSeg(idx)}
-                showRemove={seguradoras.length > 1}
-              />
-            ))}
-            <button
-              type="button"
-              onClick={addSeg}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-brand-secondary/30 py-2.5 text-sm text-status-info hover:border-brand-secondary/60 hover:bg-brand-secondary/5 transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Adicionar outra seguradora
-            </button>
-          </div>
-        )}
-
-        {resultado === 'recusada' && (
-          <div className="rounded-3xl border border-red-100 bg-red-50/70 p-4 text-sm text-red-500">
-            O card ficara vermelho e marcado como recusado. Esta acao pode ser revertida arrastando de volta para outra coluna.
-          </div>
-        )}
 
         <div className="mt-5 flex gap-3 border-t border-dark-border/60 pt-5">
           <button onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
@@ -1387,7 +1340,7 @@ function ModalResultado({ emissao, onClose, onSave, isSaving }) {
             disabled={!canSave || isSaving}
             className="btn-primary flex-1 disabled:opacity-50"
           >
-            {isSaving ? 'Salvando...' : 'Salvar resultado'}
+            {isSaving ? 'Salvando...' : 'Salvar seguradoras'}
           </button>
         </div>
       </div>
@@ -1710,7 +1663,7 @@ export default function AutoEmissoes() {
     return 'horizontal'
   })
   const [colunasRecolhidas, setColunasRecolhidas] = useState(preferenciasIniciais.recolhidas)
-  const [modalResultado, setModalResultado] = useState(null)
+  const [modalSeguradoras, setModalSeguradoras] = useState(null)
   const [modalEmissao, setModalEmissao] = useState(null)
   const [detalhe, setDetalhe] = useState(null)
   const [editando, setEditando] = useState(null)
@@ -1852,11 +1805,11 @@ export default function AutoEmissoes() {
     ]),
   })
 
-  // Passagem para "Cotacoes feitas" sem perguntar nada (ver `moverCardPipeline`).
-  const { mutate: marcarCotacaoFeita } = useMutation({
-    mutationFn: ({ id, payload }) => salvarResultadoCotacao(id, payload),
-    onMutate: ({ id, payload }) => aplicarColunaLocalmente(id, { coluna: 'cotacao_feita', resultado: payload.resultado }),
-    onError: error => toast({ type: 'error', title: 'Erro ao mover para Cotações feitas', message: error?.message || 'Tente novamente.' }),
+  const { mutate: salvarSeguradorasCotadas, isPending: isSavingSeguradoras } = useMutation({
+    mutationFn: ({ id, payload }) => registrarCotacaoFeita(id, payload),
+    onMutate: ({ id, payload }) => aplicarColunaLocalmente(id, { coluna: 'cotacao_feita', seguradoras_cotadas: payload.seguradoras_cotadas }),
+    onSuccess: () => setModalSeguradoras(null),
+    onError: error => toast({ type: 'error', title: 'Erro ao salvar as seguradoras', message: error?.message || 'Tente novamente.' }),
     onSettled: () => Promise.all([
       qc.invalidateQueries({ queryKey: ['auto-emissoes'] }),
       qc.invalidateQueries({ queryKey: ['auto-pendencias'] }),
@@ -2086,17 +2039,6 @@ export default function AutoEmissoes() {
     if (motivo === null) return
     cancelarRenovacaoAsync({ id, motivo: motivo || null })
   }
-
-  const { mutate: salvarResultado, isPending: isSavingResultado } = useMutation({
-    mutationFn: ({ id, payload }) => salvarResultadoCotacao(id, payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['auto-emissoes'] })
-      setModalResultado(null)
-    },
-    onError: error => {
-      toast({ type: 'error', title: 'Erro ao salvar o resultado', message: error?.message || 'Tente novamente.' })
-    },
-  })
 
   const { mutateAsync: emitirAsync, isPending } = useMutation({
     mutationFn: payload => emitirApoliceAuto(payload),
@@ -2366,40 +2308,34 @@ export default function AutoEmissoes() {
   /**
    * Move um card de etapa — por arraste ou pelos botoes de avancar/voltar.
    *
-   * "Cotacoes feitas" NAO abre mais formulario. O que ele pedia (resultado e
-   * seguradoras cotadas) ja e preenchido dentro do proprio card, no detalhe.
-   * O que a coluna precisa e apenas de um `resultado` gravado: sem ele
-   * `resolveAutoEmissionStage` devolve `pendentes` e o card volta sozinho para
-   * a coluna anterior. `cotada` e o resultado NEUTRO aceito pela migration 64
-   * exatamente para isso — nao afirma aprovacao nem recusa, so registra que a
-   * cotacao foi feita. Um resultado ja existente (aprovada/recusada) e
-   * preservado, e as seguradoras cotadas nunca sao zeradas pela movimentacao.
+   * REGRA UNICA: soltar o card grava a coluna. Nenhuma etapa exige formulario
+   * antes de mover. Antes, "Aguardando vistoria" e "Proposta transmitida"
+   * abriam o formulario e so gravavam a coluna no fim dele — fechar o modal
+   * (ou nao ter todos os dados em maos) deixava o card exatamente onde estava,
+   * que e a queixa de "transmiti e a cotacao nao saiu do lugar". Agora a
+   * transmissao e registrada na hora e o formulario vira COMPLEMENTO opcional,
+   * aberto depois da gravacao para preencher premio, comissao e vigencia.
    *
-   * "Aguardando vistoria", "Proposta transmitida" e "Apolice emitida" abrem
-   * o formulario. Vistoria ja significa que a proposta foi transmitida e, por
-   * isso, coleta os mesmos dados operacionais e financeiros da proposta. A
-   * apolice emitida ainda exige os dados e o documento finais.
+   * "Apolice emitida" continua abrindo o formulario porque essa etapa nao
+   * apenas move o card: ela cria a linha em `apolices_auto` com numero da
+   * apolice e vigencia. Mover sem esses dados criaria uma apolice fantasma.
    */
   function moverCardPipeline(item, colunaDestino) {
     if (!item || !colunaDestino) return
     if (getEmissaoColuna(item) === colunaDestino) return
 
-    if (requiresAutoEmissionRegistration(colunaDestino)) {
+    if (colunaDestino === 'apolice_emitida') {
       setManualStage(colunaDestino)
       setModalEmissao(item)
       return
     }
-    if (colunaDestino === 'cotacao_feita') {
-      marcarCotacaoFeita({
-        id: item.id,
-        payload: {
-          resultado: item.resultado || 'cotada',
-          seguradoras_cotadas: Array.isArray(item.seguradoras_cotadas) ? item.seguradoras_cotadas : [],
-        },
-      })
-      return
-    }
+
     mover({ id: item.id, coluna: colunaDestino === 'pendentes' ? null : colunaDestino })
+
+    if (isProposalTransmissionStage(colunaDestino)) {
+      setManualStage(colunaDestino)
+      setModalEmissao(item)
+    }
   }
 
   function iniciarEmissaoPipeline(item) {
@@ -2436,25 +2372,40 @@ export default function AutoEmissoes() {
   function moverRenovacaoPipeline(item, colunaDestino) {
     if (!item || !colunaDestino) return
     if (resolveRenovacaoStage(item) === colunaDestino) return
-    if (requiresAutoEmissionRegistration(colunaDestino)) {
-      if (!item.cotacao_id) {
-        toast({ type: 'info', title: 'Inicie a cotação primeiro', message: 'Para transmitir proposta ou emitir apólice, a renovação precisa ter uma cotação vinculada.' })
-        return
-      }
-      const emissao = emissoes.find(registro => (
-        (registro.cotacao_id || registro.cotacoes_auto?.id) === item.cotacao_id
-      ))
-      if (!emissao) {
-        toast({ type: 'info', title: 'Cotação ainda sem emissão', message: 'Abra a cotação e conclua o cálculo antes de registrar a transmissão.' })
+    const emissaoVinculada = item.cotacao_id
+      ? emissoes.find(registro => (registro.cotacao_id || registro.cotacoes_auto?.id) === item.cotacao_id)
+      : null
+
+    // Emitir apolice continua exigindo o formulario: essa etapa cria a linha em
+    // `apolices_auto`, nao so muda a coluna do card.
+    if (colunaDestino === 'apolice_emitida') {
+      if (!emissaoVinculada) {
+        toast({ type: 'info', title: 'Inicie a cotação primeiro', message: 'Para emitir a apólice, a renovação precisa de uma cotação com emissão vinculada.' })
         return
       }
       setManualStage(colunaDestino)
-      setModalEmissao(emissao)
+      setModalEmissao(emissaoVinculada)
       return
     }
+
+    // Nas demais etapas — transmissao inclusive — o status da renovacao e
+    // gravado na hora e o card sai do lugar imediatamente. O formulario da
+    // emissao, quando existe, abre depois apenas para completar os valores.
     const campos = renovacaoStageFields(colunaDestino)
     if (!campos) return
     moverRenovacao({ id: item.id, campos })
+
+    if (!isProposalTransmissionStage(colunaDestino)) return
+    if (!emissaoVinculada) {
+      toast({
+        type: 'info',
+        title: 'Card movido',
+        message: 'Para lançar prêmio e comissão desta transmissão, inicie a cotação da renovação.',
+      })
+      return
+    }
+    setManualStage(colunaDestino)
+    setModalEmissao(emissaoVinculada)
   }
 
   // O quadro tem dois tipos de card e cada um grava numa tabela diferente, por
@@ -2610,7 +2561,6 @@ export default function AutoEmissoes() {
       parcelamento: form.parcelamento,
       tipo_producao: form.tipo_producao,
       responsavel: form.tipo_producao === 'individual' ? form.responsavel : null,
-      resultado: 'aprovada',
       eh_renovacao: form.eh_renovacao,
       ...renovacaoComparativo,
       tem_repasse: form.tem_repasse,
@@ -2748,7 +2698,7 @@ export default function AutoEmissoes() {
           <ArrowLeft className="h-4 w-4" /> Voltar
         </button>
         <ModalDetalhe page emissao={emissaoDetalhada} onClose={voltar}
-          onAbrirCotacao={() => abrirCotacaoCompleta(emissaoDetalhada)} onRegistrarResultado={setModalResultado}
+          onAbrirCotacao={() => abrirCotacaoCompleta(emissaoDetalhada)} onRegistrarSeguradoras={setModalSeguradoras}
           onEmitirApolice={setModalEmissao} onEditar={abrirEditor} onExcluir={handleExcluir} isDeleting={isDeleting}
           tagsAtivas={tagsAtivas} onSalvarTags={(id, tags) => salvarTagsEmissao({ id, tags })} />
       </div>
@@ -3249,13 +3199,13 @@ export default function AutoEmissoes() {
         </>
       )}
 
-      {/* Modal: resultado da cotacao (drag para cotacao_feita) */}
-      {modalResultado && (
-        <ModalResultado
-          emissao={modalResultado}
-          onClose={() => setModalResultado(null)}
-          onSave={(id, payload) => salvarResultado({ id, payload })}
-          isSaving={isSavingResultado}
+      {/* Modal: seguradoras cotadas (abre pelo detalhe do card) */}
+      {modalSeguradoras && (
+        <ModalSeguradorasCotadas
+          emissao={modalSeguradoras}
+          onClose={() => setModalSeguradoras(null)}
+          onSave={(id, payload) => salvarSeguradorasCotadas({ id, payload })}
+          isSaving={isSavingSeguradoras}
         />
       )}
 
@@ -3915,7 +3865,7 @@ export default function AutoEmissoes() {
           emissao={detalhe}
           onClose={() => setDetalhe(null)}
           onAbrirCotacao={() => abrirCotacaoCompleta(detalhe)}
-          onRegistrarResultado={(em) => { setDetalhe(null); setModalResultado(em) }}
+          onRegistrarSeguradoras={(em) => { setDetalhe(null); setModalSeguradoras(em) }}
           onEmitirApolice={(em) => { setDetalhe(null); iniciarEmissaoPipeline(em) }}
           onEditar={abrirEditor}
           onExcluir={handleExcluir}

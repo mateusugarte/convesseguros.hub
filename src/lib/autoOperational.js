@@ -121,7 +121,11 @@ export function resolveAutoEmissionStage(item = {}) {
       : 'pendentes'
   }
   if (raw === 'emitida') return 'apolice_emitida'
-  if (raw === 'cotacao_feita' && !item?.resultado) return 'pendentes'
+  // A coluna gravada e a unica fonte da verdade da etapa. Antes, um card em
+  // 'cotacao_feita' sem `resultado` (aprovada/recusada) era desenhado em
+  // 'pendentes': o usuario movia/transmitia a cotacao, o banco gravava a nova
+  // coluna e a tela continuava mostrando o card no lugar antigo. O conceito de
+  // resultado aprovada/recusada saiu do fluxo justamente por causa disso.
   return raw
 }
 
@@ -337,7 +341,6 @@ export function scoreCotacaoSuggestion(item, term, referenceDate) {
     const distance = Math.abs(new Date(date).getTime() - new Date(referenceDate).getTime()) / 86400000
     score += Math.max(0, 30 - Math.min(distance, 30))
   }
-  if (item?.resultado === 'aprovada') score += 15
   if (item?.cotacao_id || item?.cotacoes_auto?.id) score += 10
   return score
 }

@@ -113,12 +113,10 @@ const EMISSAO_AUTO_COLUMNS = 'id, cotacao_id, cliente_id, tipo, coluna, data_tra
 const COTACAO_AUTO_COLUMNS = 'id, cliente_id, tipo, origem_lead, nome_cliente, cpf_cliente, celular_cliente, email_cliente, estado_civil_cliente, profissao_cliente, condutor_nome, condutor_cpf, estado_civil_condutor, cep_pernoite, uso_veiculo, tipo_residencia, passagem_leilao, garagem_residencia, garagem_trabalho, garagem_estudo, jovens_18_26, modelo_veiculo, placa, veiculo_financiado, possui_kit_gas, possui_blindagem, isento_imposto, seguradora_preferencial, seguradora_mais_barata, vigencia_inicio, vigencia_fim, status, created_at, updated_at'
 
 const RENOVACAO_AUTO_COLUMNS = 'id, apolice_id, cliente_id, seguradora, outra_seguradora, identificacao_veiculo, vigencia_fim, data_limite_envio, pct_comissao_anterior, status_cotacao, status_renovacao, created_at'
-const AUTO_PROPOSTA_TRANSMITIDA_COLUNAS = new Set(['proposta_transmitida', 'aguardando_vistoria'])
-
-function resultadoEmissaoParaColuna(coluna, atual = null) {
-  if (atual) return atual
-  return AUTO_PROPOSTA_TRANSMITIDA_COLUNAS.has(coluna) || coluna === 'apolice_emitida' ? 'aprovada' : null
-}
+// `emissoes_auto.resultado` (aprovada/recusada/cotada) saiu do fluxo do setor
+// Auto: a etapa do card e definida exclusivamente por `coluna`. A coluna do
+// banco continua existindo por causa dos registros antigos, mas nenhuma escrita
+// nova a preenche e nenhuma tela decide nada com base nela.
 
 function pickDefined(source, fields) {
   return fields.reduce((acc, field) => {
@@ -1000,7 +998,6 @@ export async function salvarPropostaPlanilhaAuto(payload) {
     tem_repasse: valorRepasse !== null && valorRepasse !== 0,
     responsavel: payload.responsavel || null,
     emissor: payload.emissor || null,
-    resultado: resultadoEmissaoParaColuna(payload.coluna || 'proposta_transmitida', payload.resultado || null),
     updated_at: new Date().toISOString(),
   }
 
@@ -1032,13 +1029,14 @@ export async function salvarPropostaPlanilhaAuto(payload) {
   return result.data
 }
 
-export async function salvarResultadoCotacao(id, { resultado, seguradoras_cotadas }) {
+// Marca a cotacao como feita e guarda as seguradoras cotadas. Nao existe mais
+// aprovacao/recusa aqui: mover o card ja e a decisao operacional.
+export async function registrarCotacaoFeita(id, { seguradoras_cotadas } = {}) {
   const { error } = await supabase
     .from('emissoes_auto')
     .update({
       coluna: 'cotacao_feita',
-      resultado,
-      seguradoras_cotadas: seguradoras_cotadas ?? [],
+      ...(seguradoras_cotadas === undefined ? {} : { seguradoras_cotadas: seguradoras_cotadas ?? [] }),
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
@@ -1067,7 +1065,6 @@ export async function atualizarEmissaoAutoCompleta(payload) {
     tipo_producao: payload.tipo_producao || null,
     responsavel: payload.responsavel || null,
     emissor: payload.emissor || null,
-    resultado: resultadoEmissaoParaColuna(payload.coluna, payload.resultado || null),
     seguradoras_cotadas: Array.isArray(payload.seguradoras_cotadas) ? payload.seguradoras_cotadas : [],
     nome_cliente: payload.nome_cliente || null,
     cpf_cliente: payload.cpf_cliente || null,
@@ -1203,7 +1200,6 @@ export async function emitirApoliceAuto(payload) {
   if (payload.emissao_id) {
     const emissaoUpdate = {
       coluna: colunaDestino,
-      resultado: resultadoEmissaoParaColuna(colunaDestino, payload.resultado || null),
       cliente_id: clienteId,
       data_transmissao: payload.data_transmissao || null,
       tipo_producao: payload.tipo_producao || null,
@@ -1351,7 +1347,6 @@ export async function criarEmissaoManualAuto(payload) {
     cliente_id: clienteId,
     tipo: payload.tipo || 'novo',
     coluna: colunaDestino,
-    resultado: resultadoEmissaoParaColuna(colunaDestino, payload.resultado || null),
     data_transmissao: payload.data_transmissao || payload.data_emissao || null,
     tipo_producao: payload.tipo_producao || null,
     responsavel: payload.responsavel || null,
@@ -1547,9 +1542,9 @@ export async function atualizarTagsRenovacao(id, tags) {
 }
 
 // Conclui a etapa de cotacao da renovacao e move o mesmo negocio para
-// "Cotacoes feitas" na Pipeline. A emissao criada junto da cotacao recebe um
-// resultado neutro (cotada): aprovada/recusada continuam sendo decisoes
-// posteriores da negociacao.
+// "Cotacoes feitas" na Pipeline. A RPC ainda grava o resultado neutro
+// (`cotada`) por compatibilidade com o banco; a Pipeline nao le mais esse
+// campo — quem manda na etapa do card e a coluna.
 export async function marcarRenovacaoCotada(renovacaoId) {
   const { cotacaoId } = await iniciarCotacaoRenovacao(renovacaoId)
   const { data, error } = await supabase.rpc('marcar_renovacao_auto_cotada', {
@@ -2443,7 +2438,6 @@ export async function importarApolicesAutoPlanilha(rows = []) {
         cliente_id: clienteId,
         tipo,
         coluna: colunaDestino,
-        resultado: registrarApoliceEmitida ? 'aprovada' : null,
         data_transmissao: row.data_transmissao || row.data_emissao || new Date().toISOString().slice(0, 10),
         tipo_producao: row.tipo_producao || 'individual',
         responsavel: normalizeImportText(row.responsavel) || null,
